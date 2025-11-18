@@ -423,6 +423,20 @@ export default function DrawSketchScreen() {
           <Ionicons name="square-outline" size={24} color={drawMode === 'rect' ? '#fff' : '#1976d2'} />
         </TouchableOpacity>
 
+        <TouchableOpacity 
+          style={[styles.toolButton, drawMode === 'text' && styles.toolButtonActive]} 
+          onPress={() => setDrawMode('text')}
+        >
+          <Ionicons name="text" size={24} color={drawMode === 'text' ? '#fff' : '#1976d2'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.toolButton, drawMode === 'dimension' && styles.toolButtonActive]} 
+          onPress={() => setDrawMode('dimension')}
+        >
+          <Ionicons name="resize" size={24} color={drawMode === 'dimension' ? '#fff' : '#1976d2'} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.toolButton} onPress={toggleStrokeWidth}>
           <View style={[styles.strokePreview, { width: strokeWidth * 3, height: strokeWidth * 3 }]} />
         </TouchableOpacity>
@@ -444,7 +458,7 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.toolButton} onPress={() => setShowTitleInput(!showTitleInput)}>
-          <Ionicons name="text" size={24} color="#1976d2" />
+          <Ionicons name="create-outline" size={24} color="#1976d2" />
         </TouchableOpacity>
         
         <TouchableOpacity 

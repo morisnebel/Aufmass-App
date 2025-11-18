@@ -202,7 +202,65 @@ backend:
           comment: "PDF Export working perfectly - GET /api/export/pdf/{project_id} generates complete project PDF with customer data, roof measurements, photos, sketches, and checklists. Returns valid base64 PDF data with proper filename."
 
 frontend:
-  # No frontend testing performed as per instructions
+  - task: "Home Screen Display"
+    implemented: true
+    working: true
+    file: "frontend/app/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Home screen loads correctly with NEBEL-BEDACHUNG logo, navigation buttons (Neues Projekt, Kunden, Checklisten) are visible and functional. Projects are displayed properly when available."
+
+  - task: "Customer Creation Form"
+    implemented: true
+    working: false
+    file: "frontend/app/customers/new.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL ISSUE: Customer creation form shows 'Kunde bearbeiten' (Edit Customer) instead of 'Neuer Kunde' (New Customer) in header. Save button shows 'Änderungen speichern' instead of 'Kunde speichern'. Form appears to be in edit mode rather than create mode. Additionally, routing issue causes API call to non-existent /api/customers/index endpoint (500 error)."
+
+  - task: "Customer List Display"
+    implemented: true
+    working: false
+    file: "frontend/app/customers/index.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL ROUTING ISSUE: Navigation to /customers/index triggers incorrect API call to /api/customers/index (returns 500 error). Backend only supports /api/customers. Fixed routing in index.tsx and _layout.tsx but issue persists. Add customer button (+ icon) not accessible via automation testing."
+
+  - task: "Project Creation Form"
+    implemented: true
+    working: true
+    file: "frontend/app/projects/new.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Project creation works perfectly. Form loads correctly, can be filled out, and successfully submits to /api/projects with 200 response. Navigation, form validation, and customer selection dropdown all functional."
+
+  - task: "Navigation and Routing"
+    implemented: true
+    working: false
+    file: "frontend/app/_layout.tsx, frontend/app/index.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "ROUTING BUG: Despite fixing navigation paths from /customers/index to /customers in both index.tsx and _layout.tsx, the app still makes API calls to /api/customers/index. This suggests a deeper expo-router configuration issue or caching problem that needs investigation."
 
 metadata:
   created_by: "testing_agent"
@@ -212,13 +270,19 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Complete Backend API Testing"
-  stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+    - "Fix Customer Creation and Routing Issues"
+    - "Resolve /api/customers/index routing bug"
+  stuck_tasks:
+    - "Customer Creation Form"
+    - "Customer List Display"
+    - "Navigation and Routing"
+  test_all: false
+  test_priority: "stuck_first"
 
 agent_communication:
     - agent: "testing"
       message: "Comprehensive backend API testing completed successfully. All 8 major API endpoint groups tested with complete CRUD operations. Total 28 successful operations, 0 failures. Complete workflow tested: Customer → Project → Roof → Photo → Sketch → Checklist Template → Checklist → PDF Export → Cleanup. All APIs working perfectly with proper error handling, data validation, and relationships between entities."
     - agent: "testing"
       message: "Re-verified all backend APIs on user request. Created comprehensive backend_test.py and executed full test suite. All 28 operations passed: Customer CRUD (4/4), Project CRUD (4/4), Roof CRUD (3/3), Photo CRUD (2/2), Sketch CRUD (2/2), Checklist Template CRUD (2/2), Checklist CRUD (3/3), PDF Export (1/1), DELETE operations (7/7). Backend is fully functional and ready for production use."
+    - agent: "testing"
+      message: "FRONTEND TESTING COMPLETED: Found critical routing issue preventing customer creation. Backend APIs work perfectly (confirmed via curl), but frontend makes incorrect API call to /api/customers/index instead of /api/customers. Fixed routing paths in index.tsx and _layout.tsx but issue persists - likely expo-router caching or configuration problem. Project creation works perfectly. Customer form shows edit mode instead of create mode. Users cannot create customers due to these routing/UI issues."

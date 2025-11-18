@@ -207,6 +207,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  logo: {
+    width: 200,
+    height: 80,
+  },
   actionButtons: {
     flexDirection: 'row',
     padding: 16,

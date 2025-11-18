@@ -24,7 +24,7 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="customers/index" 
+          name="customers" 
           options={{ title: 'Kunden' }} 
         />
         <Stack.Screen 

@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { captureRef } from 'react-native-view-shot';
 import axios from 'axios';
 import Constants from 'expo-constants';
-import Svg, { Path, Line, Circle, Rect, Image as SvgImage } from 'react-native-svg';
+import Svg, { Path, Line, Circle, Rect, Image as SvgImage, Text as SvgText, G, Polygon } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width, height } = Dimensions.get('window');

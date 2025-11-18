@@ -23,7 +23,7 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 const { width, height } = Dimensions.get('window');
 
 interface DrawElement {
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'dimension';
   data: any;
   color: string;
   strokeWidth: number;
@@ -42,8 +42,14 @@ export default function DrawSketchScreen() {
   const [loading, setLoading] = useState(false);
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [drawMode, setDrawMode] = useState<'pen' | 'line' | 'circle' | 'rect'>('pen');
+  const [drawMode, setDrawMode] = useState<'pen' | 'line' | 'circle' | 'rect' | 'text' | 'dimension'>('pen');
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [showDimensionInput, setShowDimensionInput] = useState(false);
+  const [dimensionInput, setDimensionInput] = useState('');
+  const [pendingTextPosition, setPendingTextPosition] = useState<{ x: number; y: number } | null>(null);
+  const [pendingDimension, setPendingDimension] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {

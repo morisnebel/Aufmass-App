@@ -139,6 +139,15 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Company Logo */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={{ uri: 'https://customer-assets.emergentagent.com/job_measure-master-31/artifacts/pf6s0rym_LOGO%202025.png' }}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}

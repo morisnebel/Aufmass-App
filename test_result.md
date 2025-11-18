@@ -231,7 +231,7 @@ frontend:
 
   - task: "Customer List Display"
     implemented: true
-    working: false
+    working: true
     file: "frontend/app/customers/index.tsx"
     stuck_count: 1
     priority: "high"
@@ -240,6 +240,9 @@ frontend:
         - working: false
           agent: "testing"
           comment: "CRITICAL ROUTING ISSUE: Navigation to /customers/index triggers incorrect API call to /api/customers/index (returns 500 error). Backend only supports /api/customers. Fixed routing in index.tsx and _layout.tsx but issue persists. Add customer button (+ icon) not accessible via automation testing."
+        - working: true
+          agent: "testing"
+          comment: "MOSTLY FIXED: Customer list displays correctly at /customers route. Search functionality works perfectly - can search by name ('Max' shows Max Mustermann) and email ('max@' shows Max Mustermann). Existing customers are displayed properly with contact details. Minor issue: Add customer button (+) is visible but doesn't navigate to new customer form when clicked - requires direct navigation to /customers/new."
 
   - task: "Project Creation Form"
     implemented: true

@@ -279,14 +279,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Fix Customer Creation and Routing Issues"
-    - "Resolve /api/customers/index routing bug"
+    - "Test Project Creation End-to-End"
+    - "Verify Customer-Project Integration"
   stuck_tasks:
-    - "Customer Creation Form"
-    - "Customer List Display"
-    - "Navigation and Routing"
+    - "Add Customer Button Functionality"
   test_all: false
-  test_priority: "stuck_first"
+  test_priority: "high_first"
 
 agent_communication:
     - agent: "testing"

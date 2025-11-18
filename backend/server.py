@@ -33,7 +33,8 @@ api_router = APIRouter(prefix="/api")
 # Helper function to convert ObjectId to string
 def serialize_doc(doc):
     if doc and "_id" in doc:
-        doc["_id"] = str(doc["_id"])
+        doc["id"] = str(doc["_id"])
+        del doc["_id"]
     return doc
 
 # Models

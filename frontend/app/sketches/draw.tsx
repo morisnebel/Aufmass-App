@@ -575,6 +575,70 @@ export default function DrawSketchScreen() {
                       height={element.data.height}
                     />
                   );
+                case 'text':
+                  return (
+                    <SvgText
+                      key={index}
+                      x={element.data.x}
+                      y={element.data.y}
+                      fill={element.color}
+                      fontSize={16}
+                      fontWeight="bold"
+                    >
+                      {element.data.text}
+                    </SvgText>
+                  );
+                case 'dimension':
+                  const { x1: dx1, y1: dy1, x2: dx2, y2: dy2, text: dimText, angle: dimAngle, arrowSize } = element.data;
+                  const midX = (dx1 + dx2) / 2;
+                  const midY = (dy1 + dy2) / 2;
+                  
+                  // Calculate arrow heads
+                  const arrowAngle1 = Math.PI / 6;
+                  const arrow1_1_x = dx1 + arrowSize * Math.cos(dimAngle + Math.PI - arrowAngle1);
+                  const arrow1_1_y = dy1 + arrowSize * Math.sin(dimAngle + Math.PI - arrowAngle1);
+                  const arrow1_2_x = dx1 + arrowSize * Math.cos(dimAngle + Math.PI + arrowAngle1);
+                  const arrow1_2_y = dy1 + arrowSize * Math.sin(dimAngle + Math.PI + arrowAngle1);
+                  
+                  const arrow2_1_x = dx2 + arrowSize * Math.cos(dimAngle - arrowAngle1);
+                  const arrow2_1_y = dy2 + arrowSize * Math.sin(dimAngle - arrowAngle1);
+                  const arrow2_2_x = dx2 + arrowSize * Math.cos(dimAngle + arrowAngle1);
+                  const arrow2_2_y = dy2 + arrowSize * Math.sin(dimAngle + arrowAngle1);
+                  
+                  return (
+                    <G key={index}>
+                      {/* Main line */}
+                      <Line
+                        x1={dx1}
+                        y1={dy1}
+                        x2={dx2}
+                        y2={dy2}
+                        stroke={element.color}
+                        strokeWidth={2}
+                      />
+                      {/* Arrow head 1 */}
+                      <Polygon
+                        points={`${dx1},${dy1} ${arrow1_1_x},${arrow1_1_y} ${arrow1_2_x},${arrow1_2_y}`}
+                        fill={element.color}
+                      />
+                      {/* Arrow head 2 */}
+                      <Polygon
+                        points={`${dx2},${dy2} ${arrow2_1_x},${arrow2_1_y} ${arrow2_2_x},${arrow2_2_y}`}
+                        fill={element.color}
+                      />
+                      {/* Text */}
+                      <SvgText
+                        x={midX}
+                        y={midY - 10}
+                        fill={element.color}
+                        fontSize={14}
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        {dimText}
+                      </SvgText>
+                    </G>
+                  );
                 default:
                   return null;
               }
@@ -595,9 +659,79 @@ export default function DrawSketchScreen() {
         </View>
       </View>
 
+      {/* Text Input Modal */}
+      {showTextInput && (
+        <View style={styles.inputModal}>
+          <View style={styles.inputModalContent}>
+            <Text style={styles.inputModalTitle}>Text hinzufügen</Text>
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="Text eingeben..."
+              value={textInput}
+              onChangeText={setTextInput}
+              autoFocus
+            />
+            <View style={styles.inputModalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowTextInput(false);
+                  setTextInput('');
+                  setPendingTextPosition(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addTextElement}
+              >
+                <Text style={styles.modalButtonTextWhite}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Dimension Input Modal */}
+      {showDimensionInput && (
+        <View style={styles.inputModal}>
+          <View style={styles.inputModalContent}>
+            <Text style={styles.inputModalTitle}>Maßangabe hinzufügen</Text>
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="z.B. 5,40 m"
+              value={dimensionInput}
+              onChangeText={setDimensionInput}
+              autoFocus
+            />
+            <View style={styles.inputModalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowDimensionInput(false);
+                  setDimensionInput('');
+                  setPendingDimension(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addDimensionElement}
+              >
+                <Text style={styles.modalButtonTextWhite}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       <View style={styles.hint}>
         <Text style={styles.hintText}>
-          Zeichnen Sie, fügen Sie Formen hinzu oder importieren Sie Bilder
+          {drawMode === 'text' && 'Tippen Sie auf die Zeichenfläche, um Text hinzuzufügen'}
+          {drawMode === 'dimension' && 'Zeichnen Sie eine Linie für die Maßangabe'}
+          {drawMode !== 'text' && drawMode !== 'dimension' && 'Zeichnen Sie, fügen Sie Formen, Texte oder Maßpfeile hinzu'}
         </Text>
       </View>
     </View>

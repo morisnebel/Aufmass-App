@@ -1,0 +1,312 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Picker } from '@react-native-picker/picker';
+import axios from 'axios';
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+
+const ROOF_TYPES = [
+  'Satteldach',
+  'Walmdach',
+  'Flachdach',
+  'Pultdach',
+  'Zeltdach',
+  'Mansarddach',
+];
+
+export default function NewRoofScreen() {
+  const router = useRouter();
+  const { projectId } = useLocalSearchParams();
+  const [roofType, setRoofType] = useState('Satteldach');
+  const [length, setLength] = useState('');
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  const [angle, setAngle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const calculateArea = () => {
+    const l = parseFloat(length) || 0;
+    const w = parseFloat(width) || 0;
+    const h = parseFloat(height) || 0;
+    const a = parseFloat(angle) || 0;
+
+    let area = 0;
+
+    switch (roofType) {
+      case 'Flachdach':
+        area = l * w;
+        break;
+      case 'Pultdach':
+        // Berechnung mit Dachneigung
+        if (a > 0) {
+          const radian = (a * Math.PI) / 180;
+          const hypotenuse = w / Math.cos(radian);
+          area = l * hypotenuse;
+        } else {
+          area = l * w;
+        }
+        break;
+      case 'Satteldach':
+      case 'Walmdach':
+      case 'Zeltdach':
+      case 'Mansarddach':
+        // Vereinfachte Berechnung mit Firsthöhe
+        if (h > 0) {
+          const hypotenuse = Math.sqrt((w / 2) ** 2 + h ** 2);
+          area = l * hypotenuse * 2; // Beide Dachseiten
+        } else if (a > 0) {
+          const radian = (a * Math.PI) / 180;
+          const hypotenuse = (w / 2) / Math.cos(radian);
+          area = l * hypotenuse * 2;
+        } else {
+          area = l * w;
+        }
+        break;
+      default:
+        area = l * w;
+    }
+
+    return area;
+  };
+
+  const handleSave = async () => {
+    if (!length || !width) {
+      Alert.alert('Fehler', 'Bitte geben Sie mindestens Länge und Breite ein');
+      return;
+    }
+
+    const area = calculateArea();
+
+    setLoading(true);
+    try {
+      await axios.post(`${API_URL}/api/roofs`, {
+        project_id: projectId,
+        roof_type: roofType,
+        measurements: {
+          length: parseFloat(length),
+          width: parseFloat(width),
+          height: parseFloat(height) || 0,
+          angle: parseFloat(angle) || 0,
+        },
+        area,
+        notes: notes || undefined,
+      });
+      Alert.alert('Erfolg', 'Dachmessung wurde gespeichert', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (error) {
+      console.error('Error creating roof:', error);
+      Alert.alert('Fehler', 'Dachmessung konnte nicht gespeichert werden');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculatedArea = calculateArea();
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Dachtyp *</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={roofType}
+                onValueChange={setRoofType}
+                style={styles.picker}
+              >
+                {ROOF_TYPES.map((type) => (
+                  <Picker.Item key={type} label={type} value={type} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.measurementsCard}>
+            <Text style={styles.cardTitle}>Maße</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Länge (m) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 12.5"
+                value={length}
+                onChangeText={setLength}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Breite (m) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 8.0"
+                value={width}
+                onChangeText={setWidth}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            {roofType !== 'Flachdach' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Firsthöhe (m)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="z.B. 3.5"
+                    value={height}
+                    onChangeText={setHeight}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Dachneigung (°)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="z.B. 35"
+                    value={angle}
+                    onChangeText={setAngle}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </>
+            )}
+          </View>
+
+          <View style={styles.resultCard}>
+            <Text style={styles.resultLabel}>Berechnete Dachfläche:</Text>
+            <Text style={styles.resultValue}>{calculatedArea.toFixed(2)} m²</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Notizen</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Zusätzliche Hinweise..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Wird gespeichert...' : 'Dachmessung speichern'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  form: {
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  measurementsCard: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    marginBottom: 16,
+  },
+  resultCard: {
+    backgroundColor: '#4caf50',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resultLabel: {
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 8,
+  },
+  resultValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  button: {
+    backgroundColor: '#1976d2',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

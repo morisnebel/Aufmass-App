@@ -7,11 +7,14 @@ import {
   Alert,
   TextInput,
   Dimensions,
+  Image,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import { Canvas, Path, Skia, Image as SkiaImage, useImage } from '@shopify/react-native-skia';
 import { captureRef } from 'react-native-view-shot';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
@@ -35,6 +38,7 @@ export default function DrawSketchScreen() {
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(false);
   const [showTitleInput, setShowTitleInput] = useState(false);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
   const onTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;

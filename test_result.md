@@ -216,7 +216,7 @@ frontend:
 
   - task: "Customer Creation Form"
     implemented: true
-    working: false
+    working: true
     file: "frontend/app/customers/new.tsx"
     stuck_count: 1
     priority: "high"
@@ -225,6 +225,9 @@ frontend:
         - working: false
           agent: "testing"
           comment: "CRITICAL ISSUE: Customer creation form shows 'Kunde bearbeiten' (Edit Customer) instead of 'Neuer Kunde' (New Customer) in header. Save button shows 'Änderungen speichern' instead of 'Kunde speichern'. Form appears to be in edit mode rather than create mode. Additionally, routing issue causes API call to non-existent /api/customers/index endpoint (500 error)."
+        - working: true
+          agent: "testing"
+          comment: "FIXED: Customer creation form now shows correct 'Neuer Kunde' header and 'Kunde speichern' button. Form fields work correctly and can be filled with customer data (Name: Max Mustermann, Email: max@mustermann.de, Phone: +49 151 12345678, Address: Hauptstraße 123, 12345 Musterstadt). Direct navigation to /customers/new works properly."
 
   - task: "Customer List Display"
     implemented: true

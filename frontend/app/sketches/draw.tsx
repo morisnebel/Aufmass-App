@@ -172,6 +172,12 @@ export default function DrawSketchScreen() {
   const onTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
     
+    if (drawMode === 'text') {
+      setPendingTextPosition({ x: locationX, y: locationY });
+      setShowTextInput(true);
+      return;
+    }
+    
     if (drawMode === 'pen') {
       setCurrentPath(`M ${locationX} ${locationY}`);
     } else {
@@ -189,6 +195,10 @@ export default function DrawSketchScreen() {
   const onTouchEnd = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
 
+    if (drawMode === 'text' || drawMode === 'dimension') {
+      return; // Handled by input dialogs
+    }
+
     if (drawMode === 'pen' && currentPath) {
       const newElement: DrawElement = {
         type: 'path',
@@ -199,7 +209,7 @@ export default function DrawSketchScreen() {
       setElements([...elements, newElement]);
       setCurrentPath('');
     } else if (startPoint) {
-      let newElement: DrawElement;
+      let newElement: DrawElement | null = null;
       
       switch (drawMode) {
         case 'line':
@@ -234,12 +244,80 @@ export default function DrawSketchScreen() {
             strokeWidth,
           };
           break;
-        default:
+        case 'dimension':
+          setPendingDimension({
+            x1: startPoint.x,
+            y1: startPoint.y,
+            x2: locationX,
+            y2: locationY,
+          });
+          setShowDimensionInput(true);
+          setStartPoint(null);
           return;
       }
       
-      setElements([...elements, newElement]);
+      if (newElement) {
+        setElements([...elements, newElement]);
+      }
       setStartPoint(null);
+    }
+  };
+
+  const addTextElement = () => {
+    if (textInput.trim() && pendingTextPosition) {
+      const newElement: DrawElement = {
+        type: 'text',
+        data: {
+          text: textInput,
+          x: pendingTextPosition.x,
+          y: pendingTextPosition.y,
+        },
+        color: drawColor,
+        strokeWidth,
+      };
+      setElements([...elements, newElement]);
+      setTextInput('');
+      setPendingTextPosition(null);
+      setShowTextInput(false);
+    }
+  };
+
+  const addDimensionElement = () => {
+    if (dimensionInput.trim() && pendingDimension) {
+      const { x1, y1, x2, y2 } = pendingDimension;
+      
+      // Calculate arrow positions
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+      
+      // Arrow head size
+      const arrowSize = 15;
+      
+      // Calculate arrow head points
+      const arrowAngle = Math.PI / 6; // 30 degrees
+      
+      const newElement: DrawElement = {
+        type: 'dimension',
+        data: {
+          x1,
+          y1,
+          x2,
+          y2,
+          text: dimensionInput,
+          angle,
+          length,
+          arrowSize,
+        },
+        color: drawColor,
+        strokeWidth: 2,
+      };
+      
+      setElements([...elements, newElement]);
+      setDimensionInput('');
+      setPendingDimension(null);
+      setShowDimensionInput(false);
     }
   };
 

@@ -1030,6 +1030,11 @@ export default function DrawSketchScreen() {
                   <Circle cx={imgX + imgW} cy={imgY + imgH / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
                   <SvgText x={imgX + imgW - 4} y={imgY + imgH / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
                 </G>
+                {/* Rotation handle (top center, above the image) */}
+                <G>
+                  <Circle cx={imgX + imgW / 2} cy={imgY - 20} r={8} fill="#FF9800" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={imgX + imgW / 2 - 4} y={imgY - 20 + 5} fill="#fff" fontSize={10}>↻</SvgText>
+                </G>
               </>
             )}
           </G>

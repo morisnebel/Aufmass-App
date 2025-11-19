@@ -955,6 +955,11 @@ export default function DrawSketchScreen() {
                   <Circle cx={element.data.x + element.data.width} cy={element.data.y + element.data.height / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
                   <SvgText x={element.data.x + element.data.width - 4} y={element.data.y + element.data.height / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
                 </G>
+                {/* Rotation handle (top center, above the rect) */}
+                <G>
+                  <Circle cx={element.data.x + element.data.width / 2} cy={element.data.y - 20} r={8} fill="#FF9800" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={element.data.x + element.data.width / 2 - 4} y={element.data.y - 20 + 5} fill="#fff" fontSize={10}>↻</SvgText>
+                </G>
               </>
             )}
           </G>

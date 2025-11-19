@@ -11,6 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Contacts from 'expo-contacts';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
@@ -23,6 +25,55 @@ export default function NewCustomerScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const importFromContacts = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
+        return;
+      }
+
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails, Contacts.Fields.Addresses],
+      });
+
+      if (data.length > 0) {
+        // Show contact picker
+        Alert.alert(
+          'Kontakt auswählen',
+          `${data.length} Kontakte gefunden`,
+          data.slice(0, 10).map(contact => ({
+            text: contact.name || 'Unbekannt',
+            onPress: () => {
+              setName(contact.name || '');
+              if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+                setPhone(contact.phoneNumbers[0].number || '');
+              }
+              if (contact.emails && contact.emails.length > 0) {
+                setEmail(contact.emails[0].email || '');
+              }
+              if (contact.addresses && contact.addresses.length > 0) {
+                const addr = contact.addresses[0];
+                const addressParts = [
+                  addr.street,
+                  addr.postalCode,
+                  addr.city,
+                  addr.country
+                ].filter(Boolean);
+                setAddress(addressParts.join(', '));
+              }
+            },
+          })).concat([{ text: 'Abbrechen', style: 'cancel' }])
+        );
+      } else {
+        Alert.alert('Keine Kontakte', 'Keine Kontakte auf Ihrem Gerät gefunden');
+      }
+    } catch (error) {
+      console.error('Error importing contacts:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -56,6 +107,14 @@ export default function NewCustomerScreen() {
     >
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={importFromContacts}
+          >
+            <Ionicons name="people" size={20} color="#1976d2" />
+            <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
+          </TouchableOpacity>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Name *</Text>
             <TextInput
@@ -126,6 +185,21 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 16,
+  },
+  importButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 24,
+    gap: 8,
+  },
+  importButtonText: {
+    color: '#1976d2',
+    fontSize: 16,
+    fontWeight: '600',
   },
   inputGroup: {
     marginBottom: 20,

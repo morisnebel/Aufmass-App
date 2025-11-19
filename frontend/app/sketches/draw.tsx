@@ -65,6 +65,10 @@ export default function DrawSketchScreen() {
   const [pendingArrow, setPendingArrow] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [arrowConfig, setArrowConfig] = useState<ArrowConfig>({ heads: 'double', strokeWidth: 2 });
   const [showArrowConfig, setShowArrowConfig] = useState(false);
+  const [dragMode, setDragMode] = useState<'move' | 'resize' | null>(null);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [originalElement, setOriginalElement] = useState<DrawElement | null>(null);
 
   React.useEffect(() => {
     if (sketchId) {

@@ -980,6 +980,7 @@ export default function DrawSketchScreen() {
               fill={element.color}
               fontSize={16}
               fontWeight="bold"
+              transform={element.rotation ? `rotate(${element.rotation} ${element.x} ${element.y})` : undefined}
             >
               {element.data.text}
             </SvgText>

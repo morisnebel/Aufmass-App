@@ -10,6 +10,8 @@ import {
   Image,
   Platform,
   ScrollView,
+  PanResponder,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,39 +19,74 @@ import * as ImagePicker from 'expo-image-picker';
 import { captureRef } from 'react-native-view-shot';
 import axios from 'axios';
 import Constants from 'expo-constants';
-import Svg, { Path, Line, Circle, Rect, Image as SvgImage, Text as SvgText, G, Polygon } from 'react-native-svg';
+import Svg, { Path, Line, Circle, Rect, Image as SvgImage, Text as SvgText, G, Polygon, Defs, Marker } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width, height } = Dimensions.get('window');
 
 interface DrawElement {
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'dimension';
+  id: string;
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow';
   data: any;
   color: string;
+  strokeWidth: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+}
+
+interface ArrowConfig {
+  heads: 'single' | 'double';
   strokeWidth: number;
 }
 
 export default function DrawSketchScreen() {
   const router = useRouter();
-  const { projectId } = useLocalSearchParams();
+  const { projectId, sketchId } = useLocalSearchParams();
   const canvasRef = useRef(null);
-  const svgRef = useRef(null);
   const [title, setTitle] = useState('');
   const [elements, setElements] = useState<DrawElement[]>([]);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#000000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(false);
   const [showTitleInput, setShowTitleInput] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [drawMode, setDrawMode] = useState<'pen' | 'line' | 'circle' | 'rect' | 'text' | 'dimension'>('pen');
+  const [drawMode, setDrawMode] = useState<'pen' | 'line' | 'circle' | 'rect' | 'text' | 'arrow' | 'select'>('pen');
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [showDimensionInput, setShowDimensionInput] = useState(false);
   const [dimensionInput, setDimensionInput] = useState('');
   const [pendingTextPosition, setPendingTextPosition] = useState<{ x: number; y: number } | null>(null);
-  const [pendingDimension, setPendingDimension] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [pendingArrow, setPendingArrow] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [arrowConfig, setArrowConfig] = useState<ArrowConfig>({ heads: 'double', strokeWidth: 2 });
+  const [showArrowConfig, setShowArrowConfig] = useState(false);
+
+  React.useEffect(() => {
+    if (sketchId) {
+      loadSketch();
+    }
+  }, [sketchId]);
+
+  const loadSketch = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/sketches/project/${projectId}`);
+      const sketch = response.data.find((s: any) => s.id === sketchId);
+      if (sketch) {
+        setTitle(sketch.title || '');
+        setBackgroundImage(sketch.sketch_data);
+        // TODO: Load elements from sketch metadata if saved
+      }
+    } catch (error) {
+      console.error('Error loading sketch:', error);
+    }
+  };
+
+  const generateId = () => `${Date.now()}_${Math.random()}`;
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -104,16 +141,18 @@ export default function DrawSketchScreen() {
             if (!result.canceled && result.assets[0]) {
               const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
               const newElement: DrawElement = {
+                id: generateId(),
                 type: 'image',
                 data: {
                   uri: base64Image,
-                  x: 50,
-                  y: 100,
-                  width: 200,
-                  height: 150,
                 },
+                x: 50,
+                y: 100,
+                width: 200,
+                height: 150,
                 color: drawColor,
                 strokeWidth,
+                rotation: 0,
               };
               setElements([...elements, newElement]);
             }
@@ -149,16 +188,16 @@ export default function DrawSketchScreen() {
             text: 'Auf Zeichenfläche',
             onPress: () => {
               const newElement: DrawElement = {
+                id: generateId(),
                 type: 'image',
-                data: {
-                  uri: base64Image,
-                  x: 50,
-                  y: 100,
-                  width: 200,
-                  height: 150,
-                },
+                data: { uri: base64Image },
+                x: 50,
+                y: 100,
+                width: 200,
+                height: 150,
                 color: drawColor,
                 strokeWidth,
+                rotation: 0,
               };
               setElements([...elements, newElement]);
             },
@@ -170,6 +209,8 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchStart = (event: any) => {
+    if (drawMode === 'select') return;
+    
     const { locationX, locationY } = event.nativeEvent;
     
     if (drawMode === 'text') {
@@ -193,14 +234,13 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
-    const { locationX, locationY } = event.nativeEvent;
+    if (drawMode === 'text' || drawMode === 'select') return;
 
-    if (drawMode === 'text' || drawMode === 'dimension') {
-      return; // Handled by input dialogs
-    }
+    const { locationX, locationY } = event.nativeEvent;
 
     if (drawMode === 'pen' && currentPath) {
       const newElement: DrawElement = {
+        id: generateId(),
         type: 'path',
         data: currentPath,
         color: drawColor,
@@ -214,6 +254,7 @@ export default function DrawSketchScreen() {
       switch (drawMode) {
         case 'line':
           newElement = {
+            id: generateId(),
             type: 'line',
             data: { x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY },
             color: drawColor,
@@ -225,6 +266,7 @@ export default function DrawSketchScreen() {
             Math.pow(locationX - startPoint.x, 2) + Math.pow(locationY - startPoint.y, 2)
           );
           newElement = {
+            id: generateId(),
             type: 'circle',
             data: { cx: startPoint.x, cy: startPoint.y, r: radius },
             color: drawColor,
@@ -233,6 +275,7 @@ export default function DrawSketchScreen() {
           break;
         case 'rect':
           newElement = {
+            id: generateId(),
             type: 'rect',
             data: {
               x: Math.min(startPoint.x, locationX),
@@ -244,8 +287,8 @@ export default function DrawSketchScreen() {
             strokeWidth,
           };
           break;
-        case 'dimension':
-          setPendingDimension({
+        case 'arrow':
+          setPendingArrow({
             x1: startPoint.x,
             y1: startPoint.y,
             x2: locationX,
@@ -266,14 +309,16 @@ export default function DrawSketchScreen() {
   const addTextElement = () => {
     if (textInput.trim() && pendingTextPosition) {
       const newElement: DrawElement = {
+        id: generateId(),
         type: 'text',
         data: {
           text: textInput,
-          x: pendingTextPosition.x,
-          y: pendingTextPosition.y,
         },
+        x: pendingTextPosition.x,
+        y: pendingTextPosition.y,
         color: drawColor,
         strokeWidth,
+        rotation: 0,
       };
       setElements([...elements, newElement]);
       setTextInput('');
@@ -282,48 +327,54 @@ export default function DrawSketchScreen() {
     }
   };
 
-  const addDimensionElement = () => {
-    if (dimensionInput.trim() && pendingDimension) {
-      const { x1, y1, x2, y2 } = pendingDimension;
-      
-      // Calculate arrow positions
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
-      
-      // Arrow head size
-      const arrowSize = 15;
-      
-      // Calculate arrow head points
-      const arrowAngle = Math.PI / 6; // 30 degrees
+  const addArrowElement = () => {
+    if (dimensionInput.trim() && pendingArrow) {
+      const { x1, y1, x2, y2 } = pendingArrow;
       
       const newElement: DrawElement = {
-        type: 'dimension',
+        id: generateId(),
+        type: 'arrow',
         data: {
           x1,
           y1,
           x2,
           y2,
           text: dimensionInput,
-          angle,
-          length,
-          arrowSize,
+          heads: arrowConfig.heads,
         },
         color: drawColor,
-        strokeWidth: 2,
+        strokeWidth: arrowConfig.strokeWidth,
       };
       
       setElements([...elements, newElement]);
       setDimensionInput('');
-      setPendingDimension(null);
+      setPendingArrow(null);
       setShowDimensionInput(false);
     }
+  };
+
+  const deleteElement = (id: string) => {
+    Alert.alert(
+      'Element löschen',
+      'Möchten Sie dieses Element wirklich löschen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: () => {
+            setElements(elements.filter(el => el.id !== id));
+            setSelectedElementId(null);
+          },
+        },
+      ]
+    );
   };
 
   const undo = () => {
     if (elements.length > 0) {
       setElements(elements.slice(0, -1));
+      setSelectedElementId(null);
     }
   };
 
@@ -338,6 +389,7 @@ export default function DrawSketchScreen() {
           onPress: () => {
             setElements([]);
             setBackgroundImage(null);
+            setSelectedElementId(null);
           } 
         },
       ]
@@ -352,7 +404,6 @@ export default function DrawSketchScreen() {
 
     setLoading(true);
     try {
-      // Capture the sketch
       const uri = await captureRef(canvasRef, {
         format: 'png',
         quality: 0.8,
@@ -361,11 +412,21 @@ export default function DrawSketchScreen() {
 
       const base64Image = `data:image/png;base64,${uri}`;
 
-      await axios.post(`${API_URL}/api/sketches`, {
-        project_id: projectId,
-        sketch_data: base64Image,
-        title: title || undefined,
-      });
+      if (sketchId) {
+        // Update existing sketch
+        await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
+          project_id: projectId,
+          sketch_data: base64Image,
+          title: title || undefined,
+        });
+      } else {
+        // Create new sketch
+        await axios.post(`${API_URL}/api/sketches`, {
+          project_id: projectId,
+          sketch_data: base64Image,
+          title: title || undefined,
+        });
+      }
 
       Alert.alert('Erfolg', 'Skizze wurde gespeichert', [
         { text: 'OK', onPress: () => router.back() },
@@ -382,6 +443,193 @@ export default function DrawSketchScreen() {
     setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 10 : 3);
   };
 
+  const renderElement = (element: DrawElement, index: number) => {
+    const isSelected = element.id === selectedElementId;
+    
+    switch (element.type) {
+      case 'path':
+        return (
+          <G key={element.id}>
+            <Path
+              d={element.data}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {isSelected && (
+              <Circle cx={0} cy={0} r={8} fill="#1976d2" opacity={0.5} />
+            )}
+          </G>
+        );
+      case 'line':
+        return (
+          <G key={element.id}>
+            <Line
+              x1={element.data.x1}
+              y1={element.data.y1}
+              x2={element.data.x2}
+              y2={element.data.y2}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+            />
+            {isSelected && (
+              <>
+                <Circle cx={element.data.x1} cy={element.data.y1} r={8} fill="#1976d2" opacity={0.5} />
+                <Circle cx={element.data.x2} cy={element.data.y2} r={8} fill="#1976d2" opacity={0.5} />
+              </>
+            )}
+          </G>
+        );
+      case 'circle':
+        return (
+          <G key={element.id}>
+            <Circle
+              cx={element.data.cx}
+              cy={element.data.cy}
+              r={element.data.r}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill="none"
+            />
+            {isSelected && (
+              <Circle cx={element.data.cx} cy={element.data.cy} r={8} fill="#1976d2" opacity={0.5} />
+            )}
+          </G>
+        );
+      case 'rect':
+        return (
+          <G key={element.id}>
+            <Rect
+              x={element.data.x}
+              y={element.data.y}
+              width={element.data.width}
+              height={element.data.height}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill="none"
+            />
+            {isSelected && (
+              <Rect
+                x={element.data.x - 4}
+                y={element.data.y - 4}
+                width={element.data.width + 8}
+                height={element.data.height + 8}
+                stroke="#1976d2"
+                strokeWidth={2}
+                strokeDasharray="5,5"
+                fill="none"
+              />
+            )}
+          </G>
+        );
+      case 'text':
+        return (
+          <G key={element.id}>
+            <SvgText
+              x={element.x}
+              y={element.y}
+              fill={element.color}
+              fontSize={16}
+              fontWeight="bold"
+            >
+              {element.data.text}
+            </SvgText>
+            {isSelected && (
+              <Circle cx={element.x} cy={element.y} r={8} fill="#1976d2" opacity={0.5} />
+            )}
+          </G>
+        );
+      case 'image':
+        return (
+          <G key={element.id}>
+            <SvgImage
+              href={element.data.uri}
+              x={element.x}
+              y={element.y}
+              width={element.width}
+              height={element.height}
+            />
+            {isSelected && (
+              <Rect
+                x={element.x! - 4}
+                y={element.y! - 4}
+                width={element.width! + 8}
+                height={element.height! + 8}
+                stroke="#1976d2"
+                strokeWidth={2}
+                strokeDasharray="5,5"
+                fill="none"
+              />
+            )}
+          </G>
+        );
+      case 'arrow':
+        const { x1, y1, x2, y2, text: arrowText, heads } = element.data;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const angle = Math.atan2(dy, dx);
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const arrowSize = 15;
+        const arrowAngle = Math.PI / 6;
+        
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        
+        return (
+          <G key={element.id}>
+            <Defs>
+              <Marker
+                id={`arrowhead-${element.id}`}
+                markerWidth="10"
+                markerHeight="10"
+                refX="5"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <Polygon
+                  points="0,0 0,6 9,3"
+                  fill={element.color}
+                />
+              </Marker>
+            </Defs>
+            <Line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              markerEnd={`url(#arrowhead-${element.id})`}
+              markerStart={heads === 'double' ? `url(#arrowhead-${element.id})` : undefined}
+            />
+            {arrowText && (
+              <SvgText
+                x={midX}
+                y={midY - 10}
+                fill={element.color}
+                fontSize={14}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {arrowText}
+              </SvgText>
+            )}
+            {isSelected && (
+              <>
+                <Circle cx={x1} cy={y1} r={8} fill="#1976d2" opacity={0.5} />
+                <Circle cx={x2} cy={y2} r={8} fill="#1976d2" opacity={0.5} />
+              </>
+            )}
+          </G>
+        );
+      default:
+        return null;
+    }
+  };
+
   const colors = [
     { color: '#000000', name: 'Schwarz' },
     { color: '#FF0000', name: 'Rot' },
@@ -395,6 +643,13 @@ export default function DrawSketchScreen() {
     <View style={styles.container}>
       {/* Toolbar */}
       <ScrollView horizontal style={styles.toolbar} contentContainerStyle={styles.toolbarContent}>
+        <TouchableOpacity 
+          style={[styles.toolButton, drawMode === 'select' && styles.toolButtonActive]} 
+          onPress={() => setDrawMode('select')}
+        >
+          <Ionicons name="hand-left" size={24} color={drawMode === 'select' ? '#fff' : '#1976d2'} />
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={[styles.toolButton, drawMode === 'pen' && styles.toolButtonActive]} 
           onPress={() => setDrawMode('pen')}
@@ -431,10 +686,13 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.toolButton, drawMode === 'dimension' && styles.toolButtonActive]} 
-          onPress={() => setDrawMode('dimension')}
+          style={[styles.toolButton, drawMode === 'arrow' && styles.toolButtonActive]} 
+          onPress={() => {
+            setDrawMode('arrow');
+            setShowArrowConfig(true);
+          }}
         >
-          <Ionicons name="resize" size={24} color={drawMode === 'dimension' ? '#fff' : '#1976d2'} />
+          <Ionicons name="arrow-forward" size={24} color={drawMode === 'arrow' ? '#fff' : '#1976d2'} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={toggleStrokeWidth}>
@@ -448,6 +706,15 @@ export default function DrawSketchScreen() {
         <TouchableOpacity style={styles.toolButton} onPress={takePhoto}>
           <Ionicons name="camera" size={24} color="#1976d2" />
         </TouchableOpacity>
+
+        {selectedElementId && (
+          <TouchableOpacity 
+            style={[styles.toolButton, styles.deleteButton]} 
+            onPress={() => deleteElement(selectedElementId)}
+          >
+            <Ionicons name="trash" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.toolButton} onPress={undo}>
           <Ionicons name="arrow-undo" size={24} color="#1976d2" />
@@ -511,140 +778,9 @@ export default function DrawSketchScreen() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <Svg height="100%" width="100%" ref={svgRef}>
-            {/* Render saved elements */}
-            {elements.map((element, index) => {
-              switch (element.type) {
-                case 'path':
-                  return (
-                    <Path
-                      key={index}
-                      d={element.data}
-                      stroke={element.color}
-                      strokeWidth={element.strokeWidth}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  );
-                case 'line':
-                  return (
-                    <Line
-                      key={index}
-                      x1={element.data.x1}
-                      y1={element.data.y1}
-                      x2={element.data.x2}
-                      y2={element.data.y2}
-                      stroke={element.color}
-                      strokeWidth={element.strokeWidth}
-                    />
-                  );
-                case 'circle':
-                  return (
-                    <Circle
-                      key={index}
-                      cx={element.data.cx}
-                      cy={element.data.cy}
-                      r={element.data.r}
-                      stroke={element.color}
-                      strokeWidth={element.strokeWidth}
-                      fill="none"
-                    />
-                  );
-                case 'rect':
-                  return (
-                    <Rect
-                      key={index}
-                      x={element.data.x}
-                      y={element.data.y}
-                      width={element.data.width}
-                      height={element.data.height}
-                      stroke={element.color}
-                      strokeWidth={element.strokeWidth}
-                      fill="none"
-                    />
-                  );
-                case 'image':
-                  return (
-                    <SvgImage
-                      key={index}
-                      href={element.data.uri}
-                      x={element.data.x}
-                      y={element.data.y}
-                      width={element.data.width}
-                      height={element.data.height}
-                    />
-                  );
-                case 'text':
-                  return (
-                    <SvgText
-                      key={index}
-                      x={element.data.x}
-                      y={element.data.y}
-                      fill={element.color}
-                      fontSize={16}
-                      fontWeight="bold"
-                    >
-                      {element.data.text}
-                    </SvgText>
-                  );
-                case 'dimension':
-                  const { x1: dx1, y1: dy1, x2: dx2, y2: dy2, text: dimText, angle: dimAngle, arrowSize } = element.data;
-                  const midX = (dx1 + dx2) / 2;
-                  const midY = (dy1 + dy2) / 2;
-                  
-                  // Calculate arrow heads
-                  const arrowAngle1 = Math.PI / 6;
-                  const arrow1_1_x = dx1 + arrowSize * Math.cos(dimAngle + Math.PI - arrowAngle1);
-                  const arrow1_1_y = dy1 + arrowSize * Math.sin(dimAngle + Math.PI - arrowAngle1);
-                  const arrow1_2_x = dx1 + arrowSize * Math.cos(dimAngle + Math.PI + arrowAngle1);
-                  const arrow1_2_y = dy1 + arrowSize * Math.sin(dimAngle + Math.PI + arrowAngle1);
-                  
-                  const arrow2_1_x = dx2 + arrowSize * Math.cos(dimAngle - arrowAngle1);
-                  const arrow2_1_y = dy2 + arrowSize * Math.sin(dimAngle - arrowAngle1);
-                  const arrow2_2_x = dx2 + arrowSize * Math.cos(dimAngle + arrowAngle1);
-                  const arrow2_2_y = dy2 + arrowSize * Math.sin(dimAngle + arrowAngle1);
-                  
-                  return (
-                    <G key={index}>
-                      {/* Main line */}
-                      <Line
-                        x1={dx1}
-                        y1={dy1}
-                        x2={dx2}
-                        y2={dy2}
-                        stroke={element.color}
-                        strokeWidth={2}
-                      />
-                      {/* Arrow head 1 */}
-                      <Polygon
-                        points={`${dx1},${dy1} ${arrow1_1_x},${arrow1_1_y} ${arrow1_2_x},${arrow1_2_y}`}
-                        fill={element.color}
-                      />
-                      {/* Arrow head 2 */}
-                      <Polygon
-                        points={`${dx2},${dy2} ${arrow2_1_x},${arrow2_1_y} ${arrow2_2_x},${arrow2_2_y}`}
-                        fill={element.color}
-                      />
-                      {/* Text */}
-                      <SvgText
-                        x={midX}
-                        y={midY - 10}
-                        fill={element.color}
-                        fontSize={14}
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        {dimText}
-                      </SvgText>
-                    </G>
-                  );
-                default:
-                  return null;
-              }
-            })}
+          <Svg height="100%" width="100%">
+            {elements.map((element, index) => renderElement(element, index))}
             
-            {/* Render current path being drawn */}
             {currentPath && (
               <Path
                 d={currentPath}
@@ -693,6 +829,62 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
+      {/* Arrow Config Modal */}
+      {showArrowConfig && (
+        <View style={styles.inputModal}>
+          <View style={styles.inputModalContent}>
+            <Text style={styles.inputModalTitle}>Pfeil-Einstellungen</Text>
+            
+            <Text style={styles.label}>Pfeilspitzen:</Text>
+            <View style={styles.optionButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.optionButton,
+                  arrowConfig.heads === 'single' && styles.optionButtonActive,
+                ]}
+                onPress={() => setArrowConfig({ ...arrowConfig, heads: 'single' })}
+              >
+                <Text style={styles.optionButtonText}>Einfach →</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.optionButton,
+                  arrowConfig.heads === 'double' && styles.optionButtonActive,
+                ]}
+                onPress={() => setArrowConfig({ ...arrowConfig, heads: 'double' })}
+              >
+                <Text style={styles.optionButtonText}>Doppelt ↔</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.label}>Linienstärke:</Text>
+            <View style={styles.optionButtons}>
+              {[2, 4, 6].map(width => (
+                <TouchableOpacity
+                  key={width}
+                  style={[
+                    styles.optionButton,
+                    arrowConfig.strokeWidth === width && styles.optionButtonActive,
+                  ]}
+                  onPress={() => setArrowConfig({ ...arrowConfig, strokeWidth: width })}
+                >
+                  <Text style={styles.optionButtonText}>{width}px</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.inputModalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => setShowArrowConfig(false)}
+              >
+                <Text style={styles.modalButtonTextWhite}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Dimension Input Modal */}
       {showDimensionInput && (
         <View style={styles.inputModal}>
@@ -711,14 +903,14 @@ export default function DrawSketchScreen() {
                 onPress={() => {
                   setShowDimensionInput(false);
                   setDimensionInput('');
-                  setPendingDimension(null);
+                  setPendingArrow(null);
                 }}
               >
                 <Text style={styles.modalButtonText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
-                onPress={addDimensionElement}
+                onPress={addArrowElement}
               >
                 <Text style={styles.modalButtonTextWhite}>Hinzufügen</Text>
               </TouchableOpacity>
@@ -729,10 +921,14 @@ export default function DrawSketchScreen() {
 
       <View style={styles.hint}>
         <Text style={styles.hintText}>
-          {drawMode === 'text' && 'Tippen Sie auf die Zeichenfläche, um Text hinzuzufügen'}
-          {drawMode === 'dimension' && 'Zeichnen Sie eine Linie für die Maßangabe'}
-          {drawMode !== 'text' && drawMode !== 'dimension' && 'Zeichnen Sie, fügen Sie Formen, Texte oder Maßpfeile hinzu'}
+          {drawMode === 'select' && 'Wählen Sie ein Element zum Bearbeiten'}
+          {drawMode === 'text' && 'Tippen Sie auf die Zeichenfläche für Text'}
+          {drawMode === 'arrow' && 'Zeichnen Sie eine Linie für Maßpfeil'}
+          {!['select', 'text', 'arrow'].includes(drawMode) && 'Zeichnen Sie oder wählen Sie ein Werkzeug'}
         </Text>
+        {selectedElementId && (
+          <Text style={styles.hintTextSmall}>Element ausgewählt - Löschen im Toolbar</Text>
+        )}
       </View>
     </View>
   );
@@ -767,6 +963,9 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#4caf50',
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
   },
   strokePreview: {
     backgroundColor: '#333',
@@ -832,6 +1031,12 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 14,
     color: '#1976d2',
+    fontWeight: '600',
+  },
+  hintTextSmall: {
+    fontSize: 12,
+    color: '#1976d2',
+    marginTop: 4,
   },
   inputModal: {
     position: 'absolute',
@@ -864,6 +1069,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  optionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  optionButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  optionButtonActive: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  optionButtonText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
   },
   inputModalButtons: {
     flexDirection: 'row',

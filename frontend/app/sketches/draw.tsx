@@ -731,8 +731,25 @@ export default function DrawSketchScreen() {
             />
             {isSelected && (
               <>
-                <Circle cx={element.data.x1} cy={element.data.y1} r={8} fill="#1976d2" opacity={0.5} />
-                <Circle cx={element.data.x2} cy={element.data.y2} r={8} fill="#1976d2" opacity={0.5} />
+                {/* Start point handle (green) */}
+                <Circle cx={element.data.x1} cy={element.data.y1} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                {/* End point handle (green) */}
+                <Circle cx={element.data.x2} cy={element.data.y2} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                {/* Rotation handle (orange) at midpoint */}
+                <Circle 
+                  cx={(element.data.x1 + element.data.x2) / 2} 
+                  cy={(element.data.y1 + element.data.y2) / 2} 
+                  r={8} 
+                  fill="#FF9800" 
+                  stroke="#fff" 
+                  strokeWidth={2} 
+                />
+                <SvgText 
+                  x={(element.data.x1 + element.data.x2) / 2 - 4} 
+                  y={(element.data.y1 + element.data.y2) / 2 + 5} 
+                  fill="#fff" 
+                  fontSize={10}
+                >↻</SvgText>
               </>
             )}
           </G>

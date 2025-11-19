@@ -467,8 +467,37 @@ export default function DrawSketchScreen() {
             };
           }
         } else if (dragMode === 'resize' && resizeHandle) {
+          // Handle rotation
+          if (resizeHandle === 'rotate') {
+            let centerX = 0, centerY = 0;
+            
+            // Calculate center based on element type
+            if (el.type === 'circle') {
+              centerX = originalElement.data.cx;
+              centerY = originalElement.data.cy;
+            } else if (el.type === 'line' || el.type === 'arrow') {
+              centerX = (originalElement.data.x1 + originalElement.data.x2) / 2;
+              centerY = (originalElement.data.y1 + originalElement.data.y2) / 2;
+            } else if (el.type === 'rect') {
+              centerX = originalElement.data.x + originalElement.data.width / 2;
+              centerY = originalElement.data.y + originalElement.data.height / 2;
+            } else if (el.type === 'image' || el.type === 'text') {
+              centerX = (originalElement.x || 0) + ((originalElement.width || 50) / 2);
+              centerY = (originalElement.y || 0) + ((originalElement.height || 50) / 2);
+            }
+            
+            // Calculate angle from center to original drag start
+            const startAngle = Math.atan2(dragStart.y - centerY, dragStart.x - centerX);
+            // Calculate angle from center to current position
+            const currentAngle = Math.atan2(locationY - centerY, locationX - centerX);
+            // Calculate rotation delta in degrees
+            const rotationDelta = ((currentAngle - startAngle) * 180 / Math.PI);
+            const originalRotation = originalElement.rotation || 0;
+            
+            newEl.rotation = originalRotation + rotationDelta;
+          }
           // Resize element
-          if (el.type === 'circle') {
+          else if (el.type === 'circle') {
             if (resizeHandle === 'radius') {
               const newRadius = Math.sqrt(
                 Math.pow(locationX - originalElement.data.cx, 2) + 

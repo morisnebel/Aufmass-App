@@ -766,7 +766,16 @@ export default function DrawSketchScreen() {
               fill="none"
             />
             {isSelected && (
-              <Circle cx={element.data.cx} cy={element.data.cy} r={8} fill="#1976d2" opacity={0.5} />
+              <>
+                {/* Center handle */}
+                <Circle cx={element.data.cx} cy={element.data.cy} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                {/* Radius handle (right side) */}
+                <Circle cx={element.data.cx + element.data.r} cy={element.data.cy} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                <SvgText x={element.data.cx + element.data.r - 4} y={element.data.cy + 5} fill="#fff" fontSize={10}>↔</SvgText>
+                {/* Rotation handle (top) */}
+                <Circle cx={element.data.cx} cy={element.data.cy - element.data.r} r={8} fill="#FF9800" stroke="#fff" strokeWidth={2} />
+                <SvgText x={element.data.cx - 4} y={element.data.cy - element.data.r + 5} fill="#fff" fontSize={10}>↻</SvgText>
+              </>
             )}
           </G>
         );

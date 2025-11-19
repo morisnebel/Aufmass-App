@@ -215,11 +215,79 @@ export default function DrawSketchScreen() {
   const onTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
     
-    // In select mode, check if we clicked on an element
+    // In select mode, check if we clicked on an element or handle
     if (drawMode === 'select') {
+      // First check if we clicked on a resize handle of selected element
+      if (selectedElementId) {
+        const selectedEl = elements.find(el => el.id === selectedElementId);
+        if (selectedEl) {
+          let handleHit = null;
+          const handleRadius = 10;
+          
+          if (selectedEl.type === 'rect') {
+            const x = selectedEl.data.x;
+            const y = selectedEl.data.y;
+            const w = selectedEl.data.width;
+            const h = selectedEl.data.height;
+            
+            // Check corners
+            if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top-left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top-right';
+            } else if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom-left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom-right';
+            }
+            // Check sides
+            else if (Math.sqrt(Math.pow(locationX - (x + w / 2), 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w / 2), 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom';
+            } else if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
+              handleHit = 'left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
+              handleHit = 'right';
+            }
+          } else if (selectedEl.type === 'image') {
+            const x = selectedEl.x || 0;
+            const y = selectedEl.y || 0;
+            const w = selectedEl.width || 100;
+            const h = selectedEl.height || 100;
+            
+            if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top-left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top-right';
+            } else if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom-left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom-right';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w / 2), 2) + Math.pow(locationY - y, 2)) < handleRadius) {
+              handleHit = 'top';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w / 2), 2) + Math.pow(locationY - (y + h), 2)) < handleRadius) {
+              handleHit = 'bottom';
+            } else if (Math.sqrt(Math.pow(locationX - x, 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
+              handleHit = 'left';
+            } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
+              handleHit = 'right';
+            }
+          }
+          
+          if (handleHit) {
+            setDragMode('resize');
+            setResizeHandle(handleHit);
+            setDragStart({ x: locationX, y: locationY });
+            setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+            return;
+          }
+        }
+      }
+      
+      // Check if we clicked on an element
       let foundElement = null;
       
-      // Check elements in reverse order (top to bottom)
       for (let i = elements.length - 1; i >= 0; i--) {
         const el = elements[i];
         let hit = false;
@@ -251,7 +319,6 @@ export default function DrawSketchScreen() {
                   locationY <= (el.y || 0) + (el.height || 0);
             break;
           case 'line':
-            // Simple line hit detection
             const lineThreshold = 10;
             const dx = el.data.x2 - el.data.x1;
             const dy = el.data.y2 - el.data.y1;
@@ -266,7 +333,6 @@ export default function DrawSketchScreen() {
             hit = distance <= lineThreshold && dot >= 0 && dot <= 1;
             break;
           case 'arrow':
-            // Similar to line
             const arrowThreshold = 10;
             const adx = el.data.x2 - el.data.x1;
             const ady = el.data.y2 - el.data.y1;
@@ -290,6 +356,9 @@ export default function DrawSketchScreen() {
       
       if (foundElement) {
         setSelectedElementId(foundElement.id);
+        setDragMode('move');
+        setDragStart({ x: locationX, y: locationY });
+        setOriginalElement(JSON.parse(JSON.stringify(foundElement)));
       } else {
         setSelectedElementId(null);
       }

@@ -364,16 +364,23 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {sketches.map((sketch) => (
-              <View key={sketch.id} style={styles.itemCard}>
-                {sketch.title && (
-                  <Text style={styles.itemTitle}>{sketch.title}</Text>
-                )}
+              <TouchableOpacity
+                key={sketch.id}
+                style={styles.itemCard}
+                onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
+              >
+                <View style={styles.itemHeader}>
+                  {sketch.title && (
+                    <Text style={styles.itemTitle}>{sketch.title}</Text>
+                  )}
+                  <Ionicons name="create-outline" size={20} color="#1976d2" />
+                </View>
                 <Image
                   source={{ uri: sketch.sketch_data }}
                   style={styles.sketchImage}
                   resizeMode="contain"
                 />
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}

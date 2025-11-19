@@ -889,6 +889,7 @@ export default function DrawSketchScreen() {
               stroke={element.color}
               strokeWidth={element.strokeWidth}
               fill="none"
+              transform={element.rotation ? `rotate(${element.rotation} ${element.data.cx} ${element.data.cy})` : undefined}
             />
             {isSelected && (
               <>

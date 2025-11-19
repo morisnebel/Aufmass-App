@@ -728,6 +728,7 @@ export default function DrawSketchScreen() {
         },
         color: drawColor,
         strokeWidth: arrowConfig.strokeWidth,
+        rotation: 0,
       };
       
       setElements([...elements, newElement]);

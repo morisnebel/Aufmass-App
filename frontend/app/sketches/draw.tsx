@@ -468,7 +468,46 @@ export default function DrawSketchScreen() {
           }
         } else if (dragMode === 'resize' && resizeHandle) {
           // Resize element
-          if (el.type === 'rect') {
+          if (el.type === 'circle') {
+            if (resizeHandle === 'radius') {
+              const newRadius = Math.sqrt(
+                Math.pow(locationX - originalElement.data.cx, 2) + 
+                Math.pow(locationY - originalElement.data.cy, 2)
+              );
+              newEl.data = {
+                ...el.data,
+                r: Math.max(10, newRadius),
+              };
+            }
+          } else if (el.type === 'line') {
+            if (resizeHandle === 'start') {
+              newEl.data = {
+                ...el.data,
+                x1: locationX,
+                y1: locationY,
+              };
+            } else if (resizeHandle === 'end') {
+              newEl.data = {
+                ...el.data,
+                x2: locationX,
+                y2: locationY,
+              };
+            }
+          } else if (el.type === 'arrow') {
+            if (resizeHandle === 'start') {
+              newEl.data = {
+                ...el.data,
+                x1: locationX,
+                y1: locationY,
+              };
+            } else if (resizeHandle === 'end') {
+              newEl.data = {
+                ...el.data,
+                x2: locationX,
+                y2: locationY,
+              };
+            }
+          } else if (el.type === 'rect') {
             const origData = originalElement.data;
             let newData = { ...el.data };
             

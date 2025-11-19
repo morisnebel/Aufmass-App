@@ -480,6 +480,15 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
+    // End drag/resize operation
+    if (drawMode === 'select' && (dragMode === 'move' || dragMode === 'resize')) {
+      setDragMode(null);
+      setResizeHandle(null);
+      setDragStart(null);
+      setOriginalElement(null);
+      return;
+    }
+    
     if (drawMode === 'text' || drawMode === 'select') return;
 
     const { locationX, locationY } = event.nativeEvent;

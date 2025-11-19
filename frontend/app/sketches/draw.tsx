@@ -909,6 +909,8 @@ export default function DrawSketchScreen() {
           </G>
         );
       case 'rect':
+        const rectCenterX = element.data.x + element.data.width / 2;
+        const rectCenterY = element.data.y + element.data.height / 2;
         return (
           <G key={element.id}>
             <Rect
@@ -919,6 +921,7 @@ export default function DrawSketchScreen() {
               stroke={element.color}
               strokeWidth={element.strokeWidth}
               fill="none"
+              transform={element.rotation ? `rotate(${element.rotation} ${rectCenterX} ${rectCenterY})` : undefined}
             />
             {isSelected && (
               <>

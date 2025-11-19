@@ -631,4 +631,10 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  moreItemsText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
 });

@@ -326,6 +326,10 @@ export default function DrawSketchScreen() {
             } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
               handleHit = 'right';
             }
+            // Check rotation handle (top center, above the image)
+            else if (Math.sqrt(Math.pow(locationX - (x + w / 2), 2) + Math.pow(locationY - (y - 20), 2)) < handleRadius) {
+              handleHit = 'rotate';
+            }
           }
           
           if (handleHit) {

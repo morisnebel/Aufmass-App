@@ -625,6 +625,7 @@ export default function DrawSketchScreen() {
         data: currentPath,
         color: drawColor,
         strokeWidth,
+        rotation: 0,
       };
       setElements([...elements, newElement]);
       setCurrentPath('');

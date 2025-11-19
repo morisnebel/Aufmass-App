@@ -1089,6 +1089,7 @@ export default function DrawSketchScreen() {
               strokeWidth={element.strokeWidth}
               markerEnd={`url(#arrowhead-${element.id})`}
               markerStart={heads === 'double' ? `url(#arrowhead-${element.id})` : undefined}
+              transform={element.rotation ? `rotate(${element.rotation} ${midX} ${midY})` : undefined}
             />
             {arrowText && (
               <SvgText

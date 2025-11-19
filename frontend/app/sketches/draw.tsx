@@ -250,6 +250,55 @@ export default function DrawSketchScreen() {
             } else if (Math.sqrt(Math.pow(locationX - (x + w), 2) + Math.pow(locationY - (y + h / 2), 2)) < handleRadius) {
               handleHit = 'right';
             }
+          } else if (selectedEl.type === 'circle') {
+            const cx = selectedEl.data.cx;
+            const cy = selectedEl.data.cy;
+            const r = selectedEl.data.r;
+            
+            // Check radius handle (right side)
+            if (Math.sqrt(Math.pow(locationX - (cx + r), 2) + Math.pow(locationY - cy, 2)) < handleRadius) {
+              handleHit = 'radius';
+            }
+            // Check rotation handle (top)
+            else if (Math.sqrt(Math.pow(locationX - cx, 2) + Math.pow(locationY - (cy - r), 2)) < handleRadius) {
+              handleHit = 'rotate';
+            }
+          } else if (selectedEl.type === 'line') {
+            const x1 = selectedEl.data.x1;
+            const y1 = selectedEl.data.y1;
+            const x2 = selectedEl.data.x2;
+            const y2 = selectedEl.data.y2;
+            
+            // Check start point
+            if (Math.sqrt(Math.pow(locationX - x1, 2) + Math.pow(locationY - y1, 2)) < handleRadius) {
+              handleHit = 'start';
+            }
+            // Check end point
+            else if (Math.sqrt(Math.pow(locationX - x2, 2) + Math.pow(locationY - y2, 2)) < handleRadius) {
+              handleHit = 'end';
+            }
+            // Check rotation handle (midpoint)
+            else if (Math.sqrt(Math.pow(locationX - (x1 + x2) / 2, 2) + Math.pow(locationY - (y1 + y2) / 2, 2)) < handleRadius) {
+              handleHit = 'rotate';
+            }
+          } else if (selectedEl.type === 'arrow') {
+            const x1 = selectedEl.data.x1;
+            const y1 = selectedEl.data.y1;
+            const x2 = selectedEl.data.x2;
+            const y2 = selectedEl.data.y2;
+            
+            // Check start point
+            if (Math.sqrt(Math.pow(locationX - x1, 2) + Math.pow(locationY - y1, 2)) < handleRadius) {
+              handleHit = 'start';
+            }
+            // Check end point
+            else if (Math.sqrt(Math.pow(locationX - x2, 2) + Math.pow(locationY - y2, 2)) < handleRadius) {
+              handleHit = 'end';
+            }
+            // Check rotation handle (midpoint)
+            else if (Math.sqrt(Math.pow(locationX - (x1 + x2) / 2, 2) + Math.pow(locationY - (y1 + y2) / 2, 2)) < handleRadius) {
+              handleHit = 'rotate';
+            }
           } else if (selectedEl.type === 'image') {
             const x = selectedEl.x || 0;
             const y = selectedEl.y || 0;

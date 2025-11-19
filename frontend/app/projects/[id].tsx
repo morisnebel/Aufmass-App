@@ -302,16 +302,21 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {roofs.map((roof) => (
-              <View key={roof.id} style={styles.itemCard}>
+              <TouchableOpacity
+                key={roof.id}
+                style={styles.itemCard}
+                onPress={() => router.push(`/roofs/${roof.id}`)}
+              >
                 <View style={styles.itemHeader}>
                   <Ionicons name="home" size={24} color="#1976d2" />
                   <Text style={styles.itemTitle}>{roof.roof_type}</Text>
+                  <Ionicons name="create-outline" size={20} color="#1976d2" />
                 </View>
                 <Text style={styles.itemDetail}>Fläche: {roof.area.toFixed(2)} m²</Text>
                 {roof.notes && (
                   <Text style={styles.itemNotes}>{roof.notes}</Text>
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}

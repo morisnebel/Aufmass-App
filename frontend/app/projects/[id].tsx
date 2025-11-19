@@ -333,10 +333,9 @@ export default function ProjectDetailScreen() {
 
             <View style={styles.photoGrid}>
               {photos.map((photo) => (
-                <TouchableOpacity
+                <View
                   key={photo.id}
                   style={styles.photoItem}
-                  onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
                 >
                   <Image
                     source={{ uri: photo.image_data }}
@@ -348,7 +347,7 @@ export default function ProjectDetailScreen() {
                       {photo.description}
                     </Text>
                   )}
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>

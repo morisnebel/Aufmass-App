@@ -1,0 +1,85 @@
+<analysis>
+The user requested a Aufmaß-App (measurement app) for a roofing company. The AI engineer initiated the project by clarifying requirements, which include roof measurements, photo annotation, sketching, checklists, customer/project management, and PDF/email exporting.
+
+The development process was iterative, involving scaffolding the full-stack application (Expo frontend, FastAPI backend), implementing core features, and then refining them based on user feedback. The initial build included basic CRUD operations and a screen structure based on .
+
+User feedback drove several major revisions. The sketching feature was rewritten multiple times, evolving from a simple drawing pad to a sophisticated interactive editor. The user reported numerous critical bugs, such as inability to create customers/projects, app crashes, and non-functional exports. The AI attempted to fix these issues by creating new edit screens, fixing routing, and adjusting component interactions.
+
+The most recent work focuses exclusively on a complete overhaul of the sketch editor (). The AI has implemented a system for selecting and moving individual sketch elements (shapes, lines, images). The current, unfinished task is the implementation of resizing and rotation functionalities for these selected elements via interactive transformation handles. The user's primary language is German, and all interactions should continue in German.
+</analysis>
+
+<product_requirements>
+The goal is to build a comprehensive measurement application for a roofing company, NEBEL-BEDACHUNG. The application should run on an iPad and mobile devices.
+
+**Core Features:**
+1.  **Customer & Project Management:** Create, view, and edit customer and project data.
+2.  **Roof Measurement:** Input measurements for various roof types and automatically calculate area. These measurements must be editable later.
+3.  **Photo Management:** Add photos to projects, with the ability to draw/annotate on them. Tapping on a photo should not crash the app.
+4.  **Checklists:** Create and use checklists for different roofing tasks. Completed checklists must be editable.
+5.  **Sketching/Drawing Tool:** A highly interactive canvas where users can:
+    *   Draw freehand, lines, circles, and rectangles.
+    *   Insert text and dimension arrows.
+    *   Import images from the camera or gallery onto the canvas.
+    *   Select, move, resize, and rotate any individual element on the canvas.
+    *   Delete individual elements.
+    *   Saved sketches must be re-editable.
+6.  **Reporting:** Generate a PDF report containing all project details (measurements, photos, sketches, checklists) and send it via email.
+7.  **Contact Integration:** Import customer information directly from the device's contacts.
+8.  **Branding:** The home screen must feature the NEBEL-BEDACHUNG company logo.
+</product_requirements>
+
+<key_technical_concepts>
+- **Frameworks:** Expo (React Native) for the frontend, FastAPI (Python) for the backend.
+- **Database:** MongoDB for data persistence.
+- **Routing:** File-based routing using .
+- **Drawing/Graphics:**  for creating the interactive sketch canvas.
+- **Gesture Handling:**  or direct  events for implementing drag, resize, and rotate functionality in the sketch editor.
+- **API:** RESTful API for CRUD operations between the frontend and backend.
+- **Device Integration:**  for accessing device contacts.
+</key_technical_concepts>
+
+<code_architecture>
+The application follows a monorepo structure with a frontend and a backend.
+
+**Directory Structure:**
+
+
+**Key Files:**
+
+-   ****
+    -   **Importance:** This is the entire backend. It defines all data models (Customer, Project, Roof, Sketch, etc.) using Pydantic and exposes all API endpoints for the frontend to consume.
+    -   **Changes:** It was modified early on to fix a serialization issue with MongoDB's  field, ensuring correct data transfer to the frontend.
+
+-   ****
+    -   **Importance:** This is the central hub for a project, displaying all related information like roof measurements, photos, sketches, and checklists.
+    -   **Changes:** It has been modified to make list items (roofs, checklists, sketches) tappable, routing the user to their respective editing screens. A  causing crashes on photos was removed.
+
+-   ****
+    -   **Importance:** This file contains the most complex piece of UI: the interactive sketch editor. All drawing, selection, and transformation logic resides here.
+    -   **Changes:** This file has undergone a complete rewrite. It now manages an array of  in its state, handles tool selection, renders SVG elements, and includes logic for selecting an element and displaying transformation handles. It is currently being modified to add resize and rotate functionality.
+</code_architecture>
+
+<pending_tasks>
+- Complete the resize and rotation logic in the  handler in .
+- Verify and fix the following user-reported bugs that may persist despite previous attempts:
+  - Project creation flow, especially customer selection.
+  - Picker components (e.g., roof type) not working on mobile/iPad.
+  - App crashing when tapping on photos.
+  - PDF and Email generation not including all the required data.
+  - Contact import functionality not working correctly.
+</pending_tasks>
+
+<current_work>
+The immediate focus is the enhancement of the sketch editor in . The user has confirmed that moving elements (shapes, lines, arrows) now works correctly after the recent implementation of a selection and drag-and-drop system.
+
+The current request is to build upon this by adding **resizing and rotation** capabilities.
+
+The work-in-progress involves the following steps:
+1.  **Adding Transformation Handles:** The code was modified to render interactive handles (small circles) at the corners and edges of a selected element's bounding box. A rotation handle was also added. These handles are now visually present for rectangles, circles, lines, and arrows.
+2.  **Detecting Handle Interaction:** The  event handler was updated to detect not only if an element is being dragged, but also if a specific transformation handle (e.g., , ) is being pressed.
+3.  **Implementing Transformation Logic:** The AI is currently in the middle of writing the core logic within the  handler. This logic needs to check which handle is being dragged (the ) and then apply the corresponding transformation (resizing or rotation) to the selected element's properties (width, height, coordinates, rotation angle) based on the user's finger movement. This is a complex task involving geometric calculations.
+</current_work>
+
+<optional_next_step>
+Continue implementing the  function in  to handle the resize logic for circles, lines, and arrows based on which transformation handle is being manipulated.
+</optional_next_step>

@@ -650,26 +650,55 @@ export default function DrawSketchScreen() {
           </G>
         );
       case 'image':
+        const imgX = element.x || 0;
+        const imgY = element.y || 0;
+        const imgW = element.width || 100;
+        const imgH = element.height || 100;
         return (
           <G key={element.id}>
             <SvgImage
               href={element.data.uri}
-              x={element.x}
-              y={element.y}
-              width={element.width}
-              height={element.height}
+              x={imgX}
+              y={imgY}
+              width={imgW}
+              height={imgH}
             />
             {isSelected && (
-              <Rect
-                x={element.x! - 4}
-                y={element.y! - 4}
-                width={element.width! + 8}
-                height={element.height! + 8}
-                stroke="#1976d2"
-                strokeWidth={2}
-                strokeDasharray="5,5"
-                fill="none"
-              />
+              <>
+                {/* Selection border */}
+                <Rect
+                  x={imgX - 4}
+                  y={imgY - 4}
+                  width={imgW + 8}
+                  height={imgH + 8}
+                  stroke="#1976d2"
+                  strokeWidth={2}
+                  strokeDasharray="5,5"
+                  fill="none"
+                />
+                {/* Corner handles */}
+                <Circle cx={imgX} cy={imgY} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={imgX + imgW} cy={imgY} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={imgX} cy={imgY + imgH} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={imgX + imgW} cy={imgY + imgH} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                {/* Side handles with arrows */}
+                <G>
+                  <Circle cx={imgX + imgW / 2} cy={imgY} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={imgX + imgW / 2 - 4} y={imgY + 5} fill="#fff" fontSize={10}>↕</SvgText>
+                </G>
+                <G>
+                  <Circle cx={imgX + imgW / 2} cy={imgY + imgH} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={imgX + imgW / 2 - 4} y={imgY + imgH + 5} fill="#fff" fontSize={10}>↕</SvgText>
+                </G>
+                <G>
+                  <Circle cx={imgX} cy={imgY + imgH / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={imgX - 4} y={imgY + imgH / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
+                </G>
+                <G>
+                  <Circle cx={imgX + imgW} cy={imgY + imgH / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={imgX + imgW - 4} y={imgY + imgH / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
+                </G>
+              </>
             )}
           </G>
         );

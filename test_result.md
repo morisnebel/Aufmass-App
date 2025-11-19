@@ -271,6 +271,18 @@ frontend:
           agent: "testing"
           comment: "FIXED: Main navigation routes work correctly. Home -> Kunden button navigates to /customers properly. Home -> Neues Projekt navigates to /projects/new correctly. Direct navigation to /customers/new works. Project creation form loads with customer dropdown populated with existing customers (Max Mustermann, Test Kunde Frontend). Only minor issue is the add customer button (+) in customer list not functioning, but direct navigation works as workaround."
 
+  - task: "Sketch Editor - Resize & Rotation Functionality"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/sketches/draw.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "IMPLEMENTED: Complete resize and rotation functionality for sketch editor. Features include: 1) Rotation handles (orange circles with ↻ icon) for all element types (circles, lines, arrows, rectangles, images, text). 2) Rotation logic calculates angle between element center and touch position, applies SVG transform. 3) Resize functionality working for rectangles (8 handles), circles (radius handle), lines/arrows (endpoint handles), and images (8 handles). 4) All elements initialize with rotation: 0 property. 5) Visual handles with different colors: blue for corners, green for sides/endpoints, orange for rotation. User can now select, move, resize, and rotate any element on the canvas. Needs frontend testing to verify touch gestures work correctly on iPad/mobile devices."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

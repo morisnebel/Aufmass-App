@@ -639,6 +639,7 @@ export default function DrawSketchScreen() {
             data: { x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY },
             color: drawColor,
             strokeWidth,
+            rotation: 0,
           };
           break;
         case 'circle':
@@ -651,6 +652,7 @@ export default function DrawSketchScreen() {
             data: { cx: startPoint.x, cy: startPoint.y, r: radius },
             color: drawColor,
             strokeWidth,
+            rotation: 0,
           };
           break;
         case 'rect':
@@ -665,6 +667,7 @@ export default function DrawSketchScreen() {
             },
             color: drawColor,
             strokeWidth,
+            rotation: 0,
           };
           break;
         case 'arrow':

@@ -379,9 +379,103 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
+    const { locationX, locationY } = event.nativeEvent;
+    
+    // Handle dragging/resizing in select mode
+    if (drawMode === 'select' && dragStart && originalElement) {
+      const dx = locationX - dragStart.x;
+      const dy = locationY - dragStart.y;
+      
+      const updatedElements = elements.map(el => {
+        if (el.id !== selectedElementId) return el;
+        
+        const newEl = { ...el };
+        
+        if (dragMode === 'move') {
+          // Move element
+          if (el.type === 'rect') {
+            newEl.data = {
+              ...el.data,
+              x: originalElement.data.x + dx,
+              y: originalElement.data.y + dy,
+            };
+          } else if (el.type === 'image' || el.type === 'text') {
+            newEl.x = (originalElement.x || 0) + dx;
+            newEl.y = (originalElement.y || 0) + dy;
+          } else if (el.type === 'circle') {
+            newEl.data = {
+              ...el.data,
+              cx: originalElement.data.cx + dx,
+              cy: originalElement.data.cy + dy,
+            };
+          } else if (el.type === 'line' || el.type === 'arrow') {
+            newEl.data = {
+              ...el.data,
+              x1: originalElement.data.x1 + dx,
+              y1: originalElement.data.y1 + dy,
+              x2: originalElement.data.x2 + dx,
+              y2: originalElement.data.y2 + dy,
+            };
+          }
+        } else if (dragMode === 'resize' && resizeHandle) {
+          // Resize element
+          if (el.type === 'rect') {
+            const origData = originalElement.data;
+            let newData = { ...el.data };
+            
+            if (resizeHandle.includes('right')) {
+              newData.width = origData.width + dx;
+            }
+            if (resizeHandle.includes('left')) {
+              newData.x = origData.x + dx;
+              newData.width = origData.width - dx;
+            }
+            if (resizeHandle.includes('bottom')) {
+              newData.height = origData.height + dy;
+            }
+            if (resizeHandle.includes('top')) {
+              newData.y = origData.y + dy;
+              newData.height = origData.height - dy;
+            }
+            
+            newEl.data = newData;
+          } else if (el.type === 'image') {
+            let newX = originalElement.x || 0;
+            let newY = originalElement.y || 0;
+            let newW = originalElement.width || 100;
+            let newH = originalElement.height || 100;
+            
+            if (resizeHandle.includes('right')) {
+              newW = (originalElement.width || 100) + dx;
+            }
+            if (resizeHandle.includes('left')) {
+              newX = (originalElement.x || 0) + dx;
+              newW = (originalElement.width || 100) - dx;
+            }
+            if (resizeHandle.includes('bottom')) {
+              newH = (originalElement.height || 100) + dy;
+            }
+            if (resizeHandle.includes('top')) {
+              newY = (originalElement.y || 0) + dy;
+              newH = (originalElement.height || 100) - dy;
+            }
+            
+            newEl.x = newX;
+            newEl.y = newY;
+            newEl.width = Math.max(20, newW);
+            newEl.height = Math.max(20, newH);
+          }
+        }
+        
+        return newEl;
+      });
+      
+      setElements(updatedElements);
+      return;
+    }
+    
     if (drawMode !== 'pen') return;
     
-    const { locationX, locationY } = event.nativeEvent;
     setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
   };
 

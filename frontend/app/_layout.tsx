@@ -67,6 +67,14 @@ export default function RootLayout() {
           name="checklists/new" 
           options={{ title: 'Neue Checkliste' }} 
         />
+        <Stack.Screen 
+          name="checklists/[id]" 
+          options={{ title: 'Checkliste bearbeiten' }} 
+        />
+        <Stack.Screen 
+          name="roofs/[id]" 
+          options={{ title: 'Dachmessung bearbeiten' }} 
+        />
       </Stack>
     </>
   );

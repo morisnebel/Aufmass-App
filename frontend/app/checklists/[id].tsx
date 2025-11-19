@@ -41,10 +41,23 @@ export default function EditChecklistScreen() {
 
   const loadChecklist = async () => {
     try {
-      // Get checklist from project checklists
-      const response = await axios.get(`${API_URL}/api/checklists/project/${id}`);
-      if (response.data && response.data.length > 0) {
-        setChecklist(response.data[0]);
+      // First try to get all projects to find which project has this checklist
+      const projectsRes = await axios.get(`${API_URL}/api/projects`);
+      let foundChecklist = null;
+      
+      for (const project of projectsRes.data) {
+        const checklistsRes = await axios.get(`${API_URL}/api/checklists/project/${project.id}`);
+        const checklist = checklistsRes.data.find((c: any) => c.id === id);
+        if (checklist) {
+          foundChecklist = checklist;
+          break;
+        }
+      }
+      
+      if (foundChecklist) {
+        setChecklist(foundChecklist);
+      } else {
+        Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');
       }
     } catch (error) {
       console.error('Error loading checklist:', error);

@@ -590,16 +590,45 @@ export default function DrawSketchScreen() {
               fill="none"
             />
             {isSelected && (
-              <Rect
-                x={element.data.x - 4}
-                y={element.data.y - 4}
-                width={element.data.width + 8}
-                height={element.data.height + 8}
-                stroke="#1976d2"
-                strokeWidth={2}
-                strokeDasharray="5,5"
-                fill="none"
-              />
+              <>
+                {/* Selection border */}
+                <Rect
+                  x={element.data.x - 4}
+                  y={element.data.y - 4}
+                  width={element.data.width + 8}
+                  height={element.data.height + 8}
+                  stroke="#1976d2"
+                  strokeWidth={2}
+                  strokeDasharray="5,5"
+                  fill="none"
+                />
+                {/* Corner handles */}
+                <Circle cx={element.data.x} cy={element.data.y} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={element.data.x + element.data.width} cy={element.data.y} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={element.data.x} cy={element.data.y + element.data.height} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                <Circle cx={element.data.x + element.data.width} cy={element.data.y + element.data.height} r={6} fill="#1976d2" stroke="#fff" strokeWidth={2} />
+                {/* Side handles with arrows */}
+                {/* Top */}
+                <G>
+                  <Circle cx={element.data.x + element.data.width / 2} cy={element.data.y} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={element.data.x + element.data.width / 2 - 4} y={element.data.y + 5} fill="#fff" fontSize={10}>↕</SvgText>
+                </G>
+                {/* Bottom */}
+                <G>
+                  <Circle cx={element.data.x + element.data.width / 2} cy={element.data.y + element.data.height} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={element.data.x + element.data.width / 2 - 4} y={element.data.y + element.data.height + 5} fill="#fff" fontSize={10}>↕</SvgText>
+                </G>
+                {/* Left */}
+                <G>
+                  <Circle cx={element.data.x} cy={element.data.y + element.data.height / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={element.data.x - 4} y={element.data.y + element.data.height / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
+                </G>
+                {/* Right */}
+                <G>
+                  <Circle cx={element.data.x + element.data.width} cy={element.data.y + element.data.height / 2} r={6} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                  <SvgText x={element.data.x + element.data.width - 4} y={element.data.y + element.data.height / 2 + 5} fill="#fff" fontSize={10}>↔</SvgText>
+                </G>
+              </>
             )}
           </G>
         );

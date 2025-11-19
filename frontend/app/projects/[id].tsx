@@ -385,9 +385,16 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {checklists.map((checklist) => (
-              <View key={checklist.id} style={styles.itemCard}>
-                <Text style={styles.itemTitle}>{checklist.template_name}</Text>
-                {checklist.items.map((item, index) => (
+              <TouchableOpacity
+                key={checklist.id}
+                style={styles.itemCard}
+                onPress={() => router.push(`/checklists/${checklist.id}`)}
+              >
+                <View style={styles.itemHeader}>
+                  <Text style={styles.itemTitle}>{checklist.template_name}</Text>
+                  <Ionicons name="create-outline" size={20} color="#1976d2" />
+                </View>
+                {checklist.items.slice(0, 3).map((item, index) => (
                   <View key={index} style={styles.checklistItem}>
                     <Ionicons
                       name={item.checked ? 'checkbox' : 'square-outline'}
@@ -397,7 +404,12 @@ export default function ProjectDetailScreen() {
                     <Text style={styles.checklistText}>{item.text}</Text>
                   </View>
                 ))}
-              </View>
+                {checklist.items.length > 3 && (
+                  <Text style={styles.moreItemsText}>
+                    + {checklist.items.length - 3} weitere Punkte
+                  </Text>
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         )}

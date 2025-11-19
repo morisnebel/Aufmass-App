@@ -958,8 +958,13 @@ export default function DrawSketchScreen() {
             )}
             {isSelected && (
               <>
-                <Circle cx={x1} cy={y1} r={8} fill="#1976d2" opacity={0.5} />
-                <Circle cx={x2} cy={y2} r={8} fill="#1976d2" opacity={0.5} />
+                {/* Start point handle (green) */}
+                <Circle cx={x1} cy={y1} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                {/* End point handle (green) */}
+                <Circle cx={x2} cy={y2} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+                {/* Rotation handle (orange) at midpoint */}
+                <Circle cx={midX} cy={midY} r={8} fill="#FF9800" stroke="#fff" strokeWidth={2} />
+                <SvgText x={midX - 4} y={midY + 5} fill="#fff" fontSize={10}>↻</SvgText>
               </>
             )}
           </G>

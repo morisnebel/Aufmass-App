@@ -209,9 +209,88 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchStart = (event: any) => {
-    if (drawMode === 'select') return;
-    
     const { locationX, locationY } = event.nativeEvent;
+    
+    // In select mode, check if we clicked on an element
+    if (drawMode === 'select') {
+      let foundElement = null;
+      
+      // Check elements in reverse order (top to bottom)
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        let hit = false;
+        
+        switch (el.type) {
+          case 'rect':
+            hit = locationX >= el.data.x && 
+                  locationX <= el.data.x + el.data.width &&
+                  locationY >= el.data.y && 
+                  locationY <= el.data.y + el.data.height;
+            break;
+          case 'circle':
+            const dist = Math.sqrt(
+              Math.pow(locationX - el.data.cx, 2) + 
+              Math.pow(locationY - el.data.cy, 2)
+            );
+            hit = dist <= el.data.r;
+            break;
+          case 'text':
+            hit = locationX >= (el.x || 0) - 20 && 
+                  locationX <= (el.x || 0) + 100 &&
+                  locationY >= (el.y || 0) - 20 && 
+                  locationY <= (el.y || 0) + 20;
+            break;
+          case 'image':
+            hit = locationX >= (el.x || 0) && 
+                  locationX <= (el.x || 0) + (el.width || 0) &&
+                  locationY >= (el.y || 0) && 
+                  locationY <= (el.y || 0) + (el.height || 0);
+            break;
+          case 'line':
+            // Simple line hit detection
+            const lineThreshold = 10;
+            const dx = el.data.x2 - el.data.x1;
+            const dy = el.data.y2 - el.data.y1;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const dot = ((locationX - el.data.x1) * dx + (locationY - el.data.y1) * dy) / (length * length);
+            const closestX = el.data.x1 + dot * dx;
+            const closestY = el.data.y1 + dot * dy;
+            const distance = Math.sqrt(
+              Math.pow(locationX - closestX, 2) + 
+              Math.pow(locationY - closestY, 2)
+            );
+            hit = distance <= lineThreshold && dot >= 0 && dot <= 1;
+            break;
+          case 'arrow':
+            // Similar to line
+            const arrowThreshold = 10;
+            const adx = el.data.x2 - el.data.x1;
+            const ady = el.data.y2 - el.data.y1;
+            const alength = Math.sqrt(adx * adx + ady * ady);
+            const adot = ((locationX - el.data.x1) * adx + (locationY - el.data.y1) * ady) / (alength * alength);
+            const aclosestX = el.data.x1 + adot * adx;
+            const aclosestY = el.data.y1 + adot * ady;
+            const adistance = Math.sqrt(
+              Math.pow(locationX - aclosestX, 2) + 
+              Math.pow(locationY - aclosestY, 2)
+            );
+            hit = adistance <= arrowThreshold && adot >= 0 && adot <= 1;
+            break;
+        }
+        
+        if (hit) {
+          foundElement = el;
+          break;
+        }
+      }
+      
+      if (foundElement) {
+        setSelectedElementId(foundElement.id);
+      } else {
+        setSelectedElementId(null);
+      }
+      return;
+    }
     
     if (drawMode === 'text') {
       setPendingTextPosition({ x: locationX, y: locationY });

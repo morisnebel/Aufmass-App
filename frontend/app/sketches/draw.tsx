@@ -844,6 +844,8 @@ export default function DrawSketchScreen() {
           </G>
         );
       case 'line':
+        const lineCenterX = (element.data.x1 + element.data.x2) / 2;
+        const lineCenterY = (element.data.y1 + element.data.y2) / 2;
         return (
           <G key={element.id}>
             <Line
@@ -853,6 +855,7 @@ export default function DrawSketchScreen() {
               y2={element.data.y2}
               stroke={element.color}
               strokeWidth={element.strokeWidth}
+              transform={element.rotation ? `rotate(${element.rotation} ${lineCenterX} ${lineCenterY})` : undefined}
             />
             {isSelected && (
               <>

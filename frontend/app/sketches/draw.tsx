@@ -994,6 +994,8 @@ export default function DrawSketchScreen() {
         const imgY = element.y || 0;
         const imgW = element.width || 100;
         const imgH = element.height || 100;
+        const imgCenterX = imgX + imgW / 2;
+        const imgCenterY = imgY + imgH / 2;
         return (
           <G key={element.id}>
             <SvgImage
@@ -1002,6 +1004,7 @@ export default function DrawSketchScreen() {
               y={imgY}
               width={imgW}
               height={imgH}
+              transform={element.rotation ? `rotate(${element.rotation} ${imgCenterX} ${imgCenterY})` : undefined}
             />
             {isSelected && (
               <>

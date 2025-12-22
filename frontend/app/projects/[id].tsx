@@ -623,12 +623,21 @@ const styles = StyleSheet.create({
   },
   photoImage: {
     width: '100%',
-    height: 150,
+    height: 200,
+    backgroundColor: '#f5f5f5',
   },
   photoDescription: {
     padding: 8,
     fontSize: 12,
     color: '#666',
+  },
+  photoEditOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(25, 118, 210, 0.8)',
+    borderRadius: 20,
+    padding: 8,
   },
   sketchImage: {
     width: '100%',

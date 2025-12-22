@@ -669,9 +669,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(25, 118, 210, 0.8)',
+    backgroundColor: 'rgba(25, 118, 210, 0.9)',
     borderRadius: 20,
     padding: 8,
+    zIndex: 10,
   },
   photoDeleteButton: {
     position: 'absolute',
@@ -680,6 +681,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(244, 67, 54, 0.9)',
     borderRadius: 20,
     padding: 8,
+    zIndex: 10,
   },
   sketchImage: {
     width: '100%',

@@ -257,6 +257,11 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
   },
+  svgContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   canvas: {
     flex: 1,
   },

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Canvas, Path, Skia, useCanvasRef } from '@shopify/react-native-skia';
+import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import axios from 'axios';
 import Constants from 'expo-constants';

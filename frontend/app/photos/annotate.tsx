@@ -66,9 +66,9 @@ export default function AnnotatePhotoScreen() {
   };
 
   const onTouchEnd = () => {
-    if (currentPath) {
+    if (currentPath && currentPath.length > 0) {
       setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
-      setCurrentPath(null);
+      setCurrentPath('');
     }
   };
 

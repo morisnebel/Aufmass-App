@@ -365,7 +365,8 @@ export default function ProjectDetailScreen() {
                             onPress: async () => {
                               try {
                                 await axios.delete(`${API_URL}/api/photos/${photo.id}`);
-                                loadProjectData();
+                                // Reload data first, then show success
+                                await loadProjectData();
                                 Alert.alert('Erfolg', 'Foto wurde gelöscht');
                               } catch (error) {
                                 console.error('Error deleting photo:', error);

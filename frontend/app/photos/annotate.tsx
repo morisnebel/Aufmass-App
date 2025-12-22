@@ -55,13 +55,17 @@ export default function AnnotatePhotoScreen() {
   };
 
   const onTouchStart = (event: any) => {
-    const { locationX, locationY } = event.nativeEvent;
+    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
+    const locationX = touch.locationX || touch.pageX;
+    const locationY = touch.locationY || touch.pageY;
     setCurrentPath(`M ${locationX} ${locationY}`);
   };
 
   const onTouchMove = (event: any) => {
     if (!currentPath) return;
-    const { locationX, locationY } = event.nativeEvent;
+    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
+    const locationX = touch.locationX || touch.pageX;
+    const locationY = touch.locationY || touch.pageY;
     setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
   };
 

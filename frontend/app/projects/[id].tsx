@@ -336,6 +336,7 @@ export default function ProjectDetailScreen() {
                 <View key={photo.id} style={styles.photoItem}>
                   <TouchableOpacity
                     onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
+                    style={{ flex: 1 }}
                   >
                     <Image
                       source={{ uri: photo.image_data }}
@@ -347,10 +348,14 @@ export default function ProjectDetailScreen() {
                         {photo.description}
                       </Text>
                     )}
-                    <View style={styles.photoEditOverlay}>
-                      <Ionicons name="create-outline" size={20} color="#fff" />
-                    </View>
                   </TouchableOpacity>
+                  
+                  {/* Edit Icon - Top Right */}
+                  <View style={styles.photoEditOverlay}>
+                    <Ionicons name="create-outline" size={20} color="#fff" />
+                  </View>
+                  
+                  {/* Delete Button - Bottom Right */}
                   <TouchableOpacity
                     style={styles.photoDeleteButton}
                     onPress={() => {

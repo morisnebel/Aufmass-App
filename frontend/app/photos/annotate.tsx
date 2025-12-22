@@ -56,19 +56,13 @@ export default function AnnotatePhotoScreen() {
 
   const onTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
-    const path = Skia.Path.Make();
-    path.moveTo(locationX, locationY);
-    setCurrentPath(path.toSVGString());
+    setCurrentPath(`M ${locationX} ${locationY}`);
   };
 
   const onTouchMove = (event: any) => {
     if (!currentPath) return;
     const { locationX, locationY } = event.nativeEvent;
-    const path = Skia.Path.MakeFromSVGString(currentPath);
-    if (path) {
-      path.lineTo(locationX, locationY);
-      setCurrentPath(path.toSVGString());
-    }
+    setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
   };
 
   const onTouchEnd = () => {

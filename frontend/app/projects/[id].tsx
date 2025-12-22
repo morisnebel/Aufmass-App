@@ -667,6 +667,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
   },
+  photoDeleteButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 20,
+    padding: 8,
+  },
   sketchImage: {
     width: '100%',
     height: 200,

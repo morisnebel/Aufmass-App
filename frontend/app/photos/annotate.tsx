@@ -266,6 +266,9 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 4,
   },
+  deletePhotoButton: {
+    backgroundColor: '#f44336',
+  },
   colorPicker: {
     flexDirection: 'row',
     backgroundColor: '#fff',

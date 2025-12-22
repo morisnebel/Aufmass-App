@@ -241,6 +241,52 @@ class AufmassAPITester:
         else:
             self.log_error("Failed to retrieve project photos")
             
+        # 3. 🎯 TEST PUT ENDPOINT - Update Photo (NEW FUNCTIONALITY)
+        print("\n🎯 TESTING PUT ENDPOINT: /api/photos/{photo_id}")
+        if 'photo_id' in self.test_data:
+            photo_id = self.test_data['photo_id']
+            original_photo_id = photo_id
+            
+            # Updated photo data with new annotations
+            updated_photo_data = {
+                "project_id": self.test_data['project_id'],
+                "image_data": self.create_sample_base64_image(),
+                "annotations": '{"markers": [{"x": 100, "y": 150, "text": "Schaden - REPARIERT"}, {"x": 200, "y": 250, "text": "Neue Markierung"}], "version": "2.0"}',
+                "description": "Dachschaden an der Südseite - Nach Reparatur"
+            }
+            
+            updated_photo = self.make_request('PUT', f'/photos/{photo_id}', updated_photo_data, 200)
+            if updated_photo:
+                updated_photo_id = updated_photo['id']
+                
+                # Verify Photo ID persistence
+                if original_photo_id == updated_photo_id:
+                    self.log_success("PUT endpoint: Photo ID remained the same after update")
+                else:
+                    self.log_error(f"PUT endpoint: Photo ID changed! Original: {original_photo_id}, Updated: {updated_photo_id}")
+                    return False
+                
+                # Verify annotations were updated
+                if '"version": "2.0"' in updated_photo.get('annotations', ''):
+                    self.log_success("PUT endpoint: Annotations updated correctly")
+                else:
+                    self.log_error("PUT endpoint: Annotations not updated properly")
+                    return False
+                    
+                # Verify description was updated
+                if updated_photo.get('description') == "Dachschaden an der Südseite - Nach Reparatur":
+                    self.log_success("PUT endpoint: Description updated correctly")
+                else:
+                    self.log_error(f"PUT endpoint: Description not updated. Got: {updated_photo.get('description')}")
+                    
+                self.log_success("PUT /api/photos/{photo_id} endpoint working correctly")
+            else:
+                self.log_error("PUT endpoint failed to update photo")
+                return False
+        else:
+            self.log_error("Photo ID not available for PUT testing")
+            return False
+            
         return True
     
     def test_sketches_crud(self):

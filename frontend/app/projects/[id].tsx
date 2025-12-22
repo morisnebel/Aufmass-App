@@ -516,8 +516,11 @@ export default function ProjectDetailScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.deleteButton]}
                 onPress={handleDeletePhoto}
+                disabled={isDeleting}
               >
-                <Text style={styles.deleteButtonText}>Löschen</Text>
+                <Text style={styles.deleteButtonText}>
+                  {isDeleting ? 'Wird gelöscht...' : 'Löschen'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

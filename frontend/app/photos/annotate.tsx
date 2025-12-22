@@ -30,7 +30,7 @@ export default function AnnotatePhotoScreen() {
   const canvasRef = useRef(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [paths, setPaths] = useState<DrawPath[]>([]);
-  const [currentPath, setCurrentPath] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(true);

@@ -95,21 +95,20 @@ export default function AnnotatePhotoScreen() {
 
   const save = async () => {
     try {
-      // Capture the annotated image
-      const uri = await captureRef(canvasRef, {
-        format: 'png',
-        quality: 0.8,
-        result: 'base64',
-      });
+      setLoading(true);
+      
+      // Create a combined image data with the original image and paths
+      const annotationData = {
+        paths: paths,
+        originalImage: imageUri,
+      };
 
-      const base64Image = `data:image/png;base64,${uri}`;
-
-      // Update photo with annotations
+      // Delete old photo and create new one with annotations
       await axios.delete(`${API_URL}/api/photos/${photoId}`);
       await axios.post(`${API_URL}/api/photos`, {
         project_id: projectId,
-        image_data: base64Image,
-        annotations: JSON.stringify(paths),
+        image_data: imageUri, // Keep original image
+        annotations: JSON.stringify(annotationData),
       });
 
       Alert.alert('Erfolg', 'Foto wurde gespeichert', [
@@ -118,6 +117,8 @@ export default function AnnotatePhotoScreen() {
     } catch (error) {
       console.error('Error saving annotated photo:', error);
       Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+    } finally {
+      setLoading(false);
     }
   };
 

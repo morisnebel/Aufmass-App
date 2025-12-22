@@ -88,19 +88,24 @@ export default function NewPhotoScreen() {
         description: description || undefined,
       });
 
-      Alert.alert('Erfolg', 'Foto wurde hinzugefügt', [
-        {
-          text: 'Bearbeiten',
-          onPress: () => router.replace(`/photos/annotate?photoId=${response.data.id}&projectId=${projectId}`),
-        },
-        {
-          text: 'Fertig',
-          onPress: () => router.back(),
-        },
-      ]);
+      // Navigate back to project page - it will auto-refresh
+      router.back();
+      
+      // Show success message based on platform
+      setTimeout(() => {
+        if (Platform.OS === 'web') {
+          alert('Foto wurde hinzugefügt');
+        } else {
+          Alert.alert('Erfolg', 'Foto wurde hinzugefügt');
+        }
+      }, 300);
     } catch (error) {
       console.error('Error saving photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+      if (Platform.OS === 'web') {
+        alert('Fehler: Foto konnte nicht gespeichert werden');
+      } else {
+        Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+      }
     } finally {
       setLoading(false);
     }

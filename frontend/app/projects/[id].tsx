@@ -333,25 +333,53 @@ export default function ProjectDetailScreen() {
 
             <View style={styles.photoGrid}>
               {photos.map((photo) => (
-                <TouchableOpacity
-                  key={photo.id}
-                  style={styles.photoItem}
-                  onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
-                >
-                  <Image
-                    source={{ uri: photo.image_data }}
-                    style={styles.photoImage}
-                    resizeMode="contain"
-                  />
-                  {photo.description && (
-                    <Text style={styles.photoDescription} numberOfLines={2}>
-                      {photo.description}
-                    </Text>
-                  )}
-                  <View style={styles.photoEditOverlay}>
-                    <Ionicons name="create-outline" size={20} color="#fff" />
-                  </View>
-                </TouchableOpacity>
+                <View key={photo.id} style={styles.photoItem}>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
+                  >
+                    <Image
+                      source={{ uri: photo.image_data }}
+                      style={styles.photoImage}
+                      resizeMode="contain"
+                    />
+                    {photo.description && (
+                      <Text style={styles.photoDescription} numberOfLines={2}>
+                        {photo.description}
+                      </Text>
+                    )}
+                    <View style={styles.photoEditOverlay}>
+                      <Ionicons name="create-outline" size={20} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.photoDeleteButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Foto löschen',
+                        'Möchten Sie dieses Foto wirklich löschen?',
+                        [
+                          { text: 'Abbrechen', style: 'cancel' },
+                          {
+                            text: 'Löschen',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await axios.delete(`${API_URL}/api/photos/${photo.id}`);
+                                loadProjectData();
+                                Alert.alert('Erfolg', 'Foto wurde gelöscht');
+                              } catch (error) {
+                                console.error('Error deleting photo:', error);
+                                Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="trash" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>

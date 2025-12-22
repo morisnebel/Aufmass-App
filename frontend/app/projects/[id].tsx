@@ -471,6 +471,40 @@ export default function ProjectDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Foto löschen</Text>
+            <Text style={styles.modalMessage}>
+              Möchten Sie dieses Foto wirklich löschen?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setPhotoToDelete(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleDeletePhoto}
+              >
+                <Text style={styles.deleteButtonText}>Löschen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

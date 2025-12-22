@@ -76,6 +76,7 @@ export default function ProjectDetailScreen() {
   const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists'>('overview');
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadProjectData();

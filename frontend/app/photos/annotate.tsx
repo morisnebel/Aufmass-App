@@ -167,36 +167,36 @@ export default function AnnotatePhotoScreen() {
 
       <View style={styles.canvasContainer} ref={canvasRef}>
         <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
-        <Canvas
-          style={styles.canvas}
+        <View
+          style={styles.svgContainer}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          {paths.map((p, index) => {
-            const path = Skia.Path.MakeFromSVGString(p.path);
-            return path ? (
+          <Svg height="100%" width="100%">
+            {paths.map((p, index) => (
               <Path
                 key={index}
-                path={path}
-                color={p.color}
-                style="stroke"
+                d={p.path}
+                stroke={p.color}
                 strokeWidth={p.strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            ) : null;
-          })}
-          {currentPath && (() => {
-            const path = Skia.Path.MakeFromSVGString(currentPath);
-            return path ? (
+            ))}
+            {currentPath && (
               <Path
-                path={path}
-                color={drawColor}
-                style="stroke"
+                d={currentPath}
+                stroke={drawColor}
                 strokeWidth={strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            ) : null;
-          })()}
-        </Canvas>
+            )}
+          </Svg>
+        </View>
       </View>
     </View>
   );

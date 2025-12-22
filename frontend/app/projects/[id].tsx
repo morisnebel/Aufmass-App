@@ -109,6 +109,30 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleDeletePhoto = async () => {
+    if (!photoToDelete) return;
+    
+    try {
+      await axios.delete(`${API_URL}/api/photos/${photoToDelete}`);
+      await loadProjectData();
+      setDeleteModalVisible(false);
+      setPhotoToDelete(null);
+      
+      if (Platform.OS === 'web') {
+        alert('Foto wurde gelöscht');
+      } else {
+        Alert.alert('Erfolg', 'Foto wurde gelöscht');
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      if (Platform.OS === 'web') {
+        alert('Fehler: Foto konnte nicht gelöscht werden');
+      } else {
+        Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+      }
+    }
+  };
+
   const exportToPDF = async () => {
     try {
       Alert.alert('PDF Export', 'PDF wird erstellt...');

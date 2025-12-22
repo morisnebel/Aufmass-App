@@ -111,10 +111,9 @@ export default function AnnotatePhotoScreen() {
     try {
       setLoading(true);
       
-      // Create a combined image data with the original image and paths
+      // Create annotation data WITHOUT the original image (to avoid size limit)
       const annotationData = {
         paths: paths,
-        originalImage: imageUri,
       };
 
       // Delete old photo and create new one with annotations

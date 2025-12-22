@@ -333,21 +333,25 @@ export default function ProjectDetailScreen() {
 
             <View style={styles.photoGrid}>
               {photos.map((photo) => (
-                <View
+                <TouchableOpacity
                   key={photo.id}
                   style={styles.photoItem}
+                  onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
                 >
                   <Image
                     source={{ uri: photo.image_data }}
                     style={styles.photoImage}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                   {photo.description && (
                     <Text style={styles.photoDescription} numberOfLines={2}>
                       {photo.description}
                     </Text>
                   )}
-                </View>
+                  <View style={styles.photoEditOverlay}>
+                    <Ionicons name="create-outline" size={20} color="#fff" />
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>

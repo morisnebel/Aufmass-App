@@ -644,17 +644,16 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   photoItem: {
-    position: 'relative',
     width: '48%',
     margin: '1%',
     backgroundColor: '#fff',
     borderRadius: 12,
-    overflow: 'visible',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 200,
   },
   photoImage: {
     width: '100%',

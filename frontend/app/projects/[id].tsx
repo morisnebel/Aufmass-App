@@ -387,28 +387,8 @@ export default function ProjectDetailScreen() {
                   <TouchableOpacity
                     style={styles.photoDeleteButton}
                     onPress={() => {
-                      Alert.alert(
-                        'Foto löschen',
-                        'Möchten Sie dieses Foto wirklich löschen?',
-                        [
-                          { text: 'Abbrechen', style: 'cancel' },
-                          {
-                            text: 'Löschen',
-                            style: 'destructive',
-                            onPress: async () => {
-                              try {
-                                await axios.delete(`${API_URL}/api/photos/${photo.id}`);
-                                // Reload data first, then show success
-                                await loadProjectData();
-                                Alert.alert('Erfolg', 'Foto wurde gelöscht');
-                              } catch (error) {
-                                console.error('Error deleting photo:', error);
-                                Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
-                              }
-                            },
-                          },
-                        ]
-                      );
+                      setPhotoToDelete(photo.id);
+                      setDeleteModalVisible(true);
                     }}
                   >
                     <Ionicons name="trash" size={20} color="#fff" />

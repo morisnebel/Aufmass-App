@@ -26,7 +26,9 @@ interface DrawPath {
 
 export default function AnnotatePhotoScreen() {
   const router = useRouter();
-  const { photoId, projectId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
+  const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
   const canvasRef = useRef(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [paths, setPaths] = useState<DrawPath[]>([]);

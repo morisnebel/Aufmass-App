@@ -111,26 +111,43 @@ export default function ProjectDetailScreen() {
   };
 
   const handleDeletePhoto = async () => {
-    if (!photoToDelete) return;
+    if (!photoToDelete || isDeleting) return;
+    
+    setIsDeleting(true);
     
     try {
       await axios.delete(`${API_URL}/api/photos/${photoToDelete}`);
-      await loadProjectData();
+      
+      // Close modal and reset state
       setDeleteModalVisible(false);
       setPhotoToDelete(null);
+      
+      // Reload data
+      await loadProjectData();
       
       if (Platform.OS === 'web') {
         alert('Foto wurde gelöscht');
       } else {
         Alert.alert('Erfolg', 'Foto wurde gelöscht');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting photo:', error);
-      if (Platform.OS === 'web') {
-        alert('Fehler: Foto konnte nicht gelöscht werden');
+      
+      // Only show error if it's not a 404 (photo already deleted)
+      if (error?.response?.status !== 404) {
+        if (Platform.OS === 'web') {
+          alert('Fehler: Foto konnte nicht gelöscht werden');
+        } else {
+          Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+        }
       } else {
-        Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+        // Photo was already deleted, just close modal and reload
+        setDeleteModalVisible(false);
+        setPhotoToDelete(null);
+        await loadProjectData();
       }
+    } finally {
+      setIsDeleting(false);
     }
   };
 

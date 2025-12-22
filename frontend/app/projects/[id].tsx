@@ -78,9 +78,12 @@ export default function ProjectDetailScreen() {
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    loadProjectData();
-  }, [id]);
+  // Use useFocusEffect to reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadProjectData();
+    }, [id])
+  );
 
   const loadProjectData = async () => {
     try {

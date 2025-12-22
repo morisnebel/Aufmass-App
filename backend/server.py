@@ -223,6 +223,18 @@ async def get_project_photos(project_id: str):
     photos = await db.photos.find({"project_id": project_id}).to_list(1000)
     return [Photo(**serialize_doc(p)) for p in photos]
 
+@api_router.put("/photos/{photo_id}", response_model=Photo)
+async def update_photo(photo_id: str, photo: Photo):
+    photo_dict = photo.dict(exclude={'id'})
+    result = await db.photos.update_one(
+        {"_id": ObjectId(photo_id)},
+        {"$set": photo_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    photo_dict['id'] = photo_id
+    return Photo(**photo_dict)
+
 @api_router.delete("/photos/{photo_id}")
 async def delete_photo(photo_id: str):
     result = await db.photos.delete_one({"_id": ObjectId(photo_id)})

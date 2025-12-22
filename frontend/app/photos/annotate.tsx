@@ -169,11 +169,13 @@ export default function AnnotatePhotoScreen() {
         <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
         <View
           style={styles.svgContainer}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={onTouchStart}
+          onResponderMove={onTouchMove}
+          onResponderRelease={onTouchEnd}
         >
-          <Svg height="100%" width="100%">
+          <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
             {paths.map((p, index) => (
               <Path
                 key={index}
@@ -185,7 +187,7 @@ export default function AnnotatePhotoScreen() {
                 strokeLinejoin="round"
               />
             ))}
-            {currentPath && (
+            {currentPath && currentPath.length > 0 && (
               <Path
                 d={currentPath}
                 stroke={drawColor}

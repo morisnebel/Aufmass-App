@@ -152,6 +152,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "All Photo CRUD operations working perfectly - POST /api/photos (create with base64 image), GET /api/photos/project/{project_id} (get by project), DELETE /api/photos/{photo_id} (delete). Supports base64 image data and annotations."
+        - working: true
+          agent: "testing"
+          comment: "FOCUSED PUT ENDPOINT TESTING COMPLETED: Comprehensive validation of newly implemented PUT /api/photos/{photo_id} endpoint. ✅ PUT endpoint returns 200 OK with 0.035s response time. ✅ CRITICAL REQUIREMENT MET: Photo ID persistence verified - ID remains identical after update (6949401ba4e5d5205b749568 → 6949401ba4e5d5205b749568). ✅ CRITICAL REQUIREMENT MET: Annotations correctly saved and updated - supports complex annotation objects with version tracking (1.0 → 2.0), multiple annotation types (arrow, circle, rectangle, text), and metadata (updated_by, update_date, changes). ✅ CRITICAL REQUIREMENT MET: DELETE functionality works correctly with photo ID after PUT update. ✅ Description updates working correctly. ✅ GET endpoint returns updated data immediately. All 8 test scenarios passed successfully. The newly implemented PUT endpoint fully meets all specified requirements."
 
   - task: "Sketches CRUD Operations"
     implemented: true

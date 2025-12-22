@@ -116,9 +116,8 @@ export default function AnnotatePhotoScreen() {
         paths: paths,
       };
 
-      // Delete old photo and create new one with annotations
-      await axios.delete(`${API_URL}/api/photos/${photoId}`);
-      await axios.post(`${API_URL}/api/photos`, {
+      // Update photo with annotations (using PUT to keep the same ID)
+      await axios.put(`${API_URL}/api/photos/${photoId}`, {
         project_id: projectId,
         image_data: imageUri, // Keep original image
         annotations: JSON.stringify(annotationData),

@@ -149,6 +149,36 @@ export default function AnnotatePhotoScreen() {
           <Ionicons name="trash-outline" size={24} color="#f44336" />
           <Text style={styles.toolText}>Löschen</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.toolButton, styles.deletePhotoButton]} 
+          onPress={() => {
+            Alert.alert(
+              'Foto löschen',
+              'Möchten Sie dieses Foto komplett löschen?',
+              [
+                { text: 'Abbrechen', style: 'cancel' },
+                {
+                  text: 'Löschen',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await axios.delete(`${API_URL}/api/photos/${photoId}`);
+                      Alert.alert('Erfolg', 'Foto wurde gelöscht', [
+                        { text: 'OK', onPress: () => router.back() },
+                      ]);
+                    } catch (error) {
+                      console.error('Error deleting photo:', error);
+                      Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+        >
+          <Ionicons name="trash" size={24} color="#fff" />
+          <Text style={[styles.toolText, { color: '#fff' }]}>Foto löschen</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.toolButton} onPress={save}>
           <Ionicons name="checkmark-circle" size={24} color="#4caf50" />
           <Text style={styles.toolText}>Speichern</Text>

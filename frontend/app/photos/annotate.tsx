@@ -45,6 +45,18 @@ export default function AnnotatePhotoScreen() {
       const photo = response.data.find((p: any) => p.id === photoId);
       if (photo) {
         setImageUri(photo.image_data);
+        
+        // Load existing annotations if available
+        if (photo.annotations) {
+          try {
+            const annotationData = JSON.parse(photo.annotations);
+            if (annotationData.paths && Array.isArray(annotationData.paths)) {
+              setPaths(annotationData.paths);
+            }
+          } catch (e) {
+            console.error('Error parsing annotations:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading photo:', error);

@@ -443,6 +443,12 @@ export default function ProjectDetailScreen() {
                     <Text style={styles.infoValue}>{customer.phone}</Text>
                   </View>
                 )}
+                {customer.address && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Adresse:</Text>
+                    <Text style={styles.infoValue}>{customer.address}</Text>
+                  </View>
+                )}
               </View>
             )}
 

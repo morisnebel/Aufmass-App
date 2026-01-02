@@ -1164,15 +1164,29 @@ export default function DrawSketchScreen() {
       console.log('Saving sketch with', elements.length, 'elements');
       console.log('Metadata:', metadata);
 
-      // Generate preview: Use background image if available, otherwise create mini-sketch preview
-      let sketchData = backgroundImage;
+      // Generate preview image
+      let sketchData = '';
       
-      if (!sketchData && elements.length > 0) {
-        console.log('Generating mini-sketch preview...');
-        sketchData = generatePreviewSvg();
-        console.log('Mini-sketch preview generated');
-      } else if (!sketchData) {
-        // Fallback: colored badge
+      // Priority 1: Generate mini-sketch from elements if we have any
+      if (elements.length > 0) {
+        console.log('Generating mini-sketch preview from', elements.length, 'elements...');
+        try {
+          sketchData = generatePreviewSvg();
+          console.log('Mini-sketch preview generated, length:', sketchData.length);
+        } catch (previewError) {
+          console.error('Error generating preview:', previewError);
+        }
+      }
+      
+      // Priority 2: Use background image if no elements preview available
+      if (!sketchData && backgroundImage) {
+        console.log('Using background image as preview');
+        sketchData = backgroundImage;
+      }
+      
+      // Priority 3: Fallback colored badge
+      if (!sketchData) {
+        console.log('Using fallback badge preview');
         const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
         const colorIndex = elements.length % colors.length;
         const previewColor = colors[colorIndex];

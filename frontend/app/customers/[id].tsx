@@ -226,11 +226,29 @@ export default function EditCustomerScreen() {
     console.log('Phone:', extractedPhone);
     console.log('Address:', extractedAddress);
     
-    // Now set all the values
-    if (extractedName) setName(extractedName);
-    if (extractedEmail) setEmail(extractedEmail);
-    if (extractedPhone) setPhone(extractedPhone);
-    if (extractedAddress) setAddress(extractedAddress);
+    // Close modal first
+    setShowContactPicker(false);
+    setSearchQuery('');
+    
+    // Then set all the values with a small delay to ensure modal is closed
+    setTimeout(() => {
+      if (extractedName) {
+        console.log('Setting name state to:', extractedName);
+        setName(extractedName);
+      }
+      if (extractedEmail) {
+        console.log('Setting email state to:', extractedEmail);
+        setEmail(extractedEmail);
+      }
+      if (extractedPhone) {
+        console.log('Setting phone state to:', extractedPhone);
+        setPhone(extractedPhone);
+      }
+      if (extractedAddress) {
+        console.log('Setting address state to:', extractedAddress);
+        setAddress(extractedAddress);
+      }
+    }, 100);
     
     // Show debug alert on mobile
     if (Platform.OS !== 'web') {
@@ -240,9 +258,6 @@ export default function EditCustomerScreen() {
         [{ text: 'OK' }]
       );
     }
-    
-    setShowContactPicker(false);
-    setSearchQuery('');
   };
 
   const filteredContacts = contacts.filter(contact => {

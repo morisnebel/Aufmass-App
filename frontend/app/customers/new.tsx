@@ -85,28 +85,6 @@ export default function NewCustomerScreen() {
   const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Selected contact data (temporary storage)
-  const [selectedContactData, setSelectedContactData] = useState<{
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-  } | null>(null);
-
-  // Apply selected contact data when modal closes
-  useEffect(() => {
-    if (!showContactPicker && selectedContactData) {
-      const timer = setTimeout(() => {
-        if (selectedContactData.name) setName(selectedContactData.name);
-        if (selectedContactData.email) setEmail(selectedContactData.email);
-        if (selectedContactData.phone) setPhone(selectedContactData.phone);
-        if (selectedContactData.address) setAddress(selectedContactData.address);
-        setSelectedContactData(null);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [showContactPicker, selectedContactData]);
 
   const openContactPicker = async () => {
     if (Platform.OS === 'web') {

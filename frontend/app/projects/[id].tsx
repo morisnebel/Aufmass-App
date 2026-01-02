@@ -330,7 +330,16 @@ export default function ProjectDetailScreen() {
         {activeTab === 'overview' && (
           <View style={styles.overviewSection}>
             <View style={styles.infoCard}>
-              <Text style={styles.cardTitle}>Projektinformationen</Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Projektinformationen</Text>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => setShowEditProjectModal(true)}
+                >
+                  <Ionicons name="create-outline" size={20} color="#1976d2" />
+                  <Text style={styles.editButtonText}>Bearbeiten</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Name:</Text>
                 <Text style={styles.infoValue}>{project.name}</Text>
@@ -349,7 +358,16 @@ export default function ProjectDetailScreen() {
 
             {customer && (
               <View style={styles.infoCard}>
-                <Text style={styles.cardTitle}>Kundendaten</Text>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Kundendaten</Text>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => router.push(`/customers/${customer.id}`)}
+                  >
+                    <Ionicons name="create-outline" size={20} color="#1976d2" />
+                    <Text style={styles.editButtonText}>Bearbeiten</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Name:</Text>
                   <Text style={styles.infoValue}>{customer.name}</Text>

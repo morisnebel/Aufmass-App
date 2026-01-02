@@ -77,6 +77,9 @@ export default function ProjectDetailScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSketchModalVisible, setDeleteSketchModalVisible] = useState(false);
+  const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
+  const [isDeletingSketch, setIsDeletingSketch] = useState(false);
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(

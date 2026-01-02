@@ -170,7 +170,7 @@ export default function EditCustomerScreen() {
     // Extract phone
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
       const phoneObj = contact.phoneNumbers[0] as any;
-      console.log('Phone object type:', typeof phoneObj, 'value:', JSON.stringify(phoneObj));
+      console.log('Phone object:', JSON.stringify(phoneObj));
       if (typeof phoneObj === 'string') {
         extractedPhone = phoneObj;
       } else if (phoneObj?.number) {
@@ -179,17 +179,12 @@ export default function EditCustomerScreen() {
         extractedPhone = phoneObj.digits;
       } else if (phoneObj?.value) {
         extractedPhone = phoneObj.value;
-      } else if (phoneObj?.phoneNumber) {
-        extractedPhone = phoneObj.phoneNumber;
       } else if (phoneObj) {
-        // Try all keys
         const keys = Object.keys(phoneObj);
-        console.log('Phone object keys:', keys);
         for (const key of keys) {
           const val = phoneObj[key];
           if (typeof val === 'string' && val.match(/[\d+\-\s]/)) {
             extractedPhone = val;
-            console.log('Found phone in key:', key, 'value:', val);
             break;
           }
         }
@@ -199,7 +194,7 @@ export default function EditCustomerScreen() {
     // Extract address
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0] as any;
-      console.log('Address object type:', typeof addr, 'value:', JSON.stringify(addr));
+      console.log('Address object:', JSON.stringify(addr));
       
       if (addr?.formattedAddress) {
         extractedAddress = addr.formattedAddress;
@@ -214,9 +209,7 @@ export default function EditCustomerScreen() {
         if (addr.country) parts.push(addr.country);
         
         if (parts.length === 0) {
-          // Try all string keys
           const keys = Object.keys(addr);
-          console.log('Address object keys:', keys);
           for (const key of keys) {
             const val = addr[key];
             if (typeof val === 'string' && val.length > 0 && !['id', 'label', 'type'].includes(key)) {
@@ -234,36 +227,17 @@ export default function EditCustomerScreen() {
     console.log('Phone:', extractedPhone);
     console.log('Address:', extractedAddress);
     
-    // IMMEDIATELY set all values before closing modal
-    console.log('Setting states NOW...');
-    if (extractedName) {
-      console.log('Calling setName with:', extractedName);
-      setName(extractedName);
-    }
-    if (extractedEmail) {
-      console.log('Calling setEmail with:', extractedEmail);
-      setEmail(extractedEmail);
-    }
-    if (extractedPhone) {
-      console.log('Calling setPhone with:', extractedPhone);
-      setPhone(extractedPhone);
-    }
-    if (extractedAddress) {
-      console.log('Calling setAddress with:', extractedAddress);
-      setAddress(extractedAddress);
-    }
-    console.log('All setState calls completed');
+    // Store data in ref - will be applied when modal closes
+    pendingContactData.current = {
+      name: extractedName,
+      email: extractedEmail,
+      phone: extractedPhone,
+      address: extractedAddress,
+    };
     
-    // Close modal AFTER setting values
-    setShowContactPicker(false);
+    // Close modal and clear search
     setSearchQuery('');
-    
-    // Show confirmation
-    Alert.alert(
-      'Kontakt übernommen',
-      `Die folgenden Daten wurden übernommen:\n\nName: ${extractedName || '-'}\nEmail: ${extractedEmail || '-'}\nTelefon: ${extractedPhone || '-'}\nAdresse: ${extractedAddress || '-'}`,
-      [{ text: 'OK' }]
-    );
+    setShowContactPicker(false);
   };
 
   const filteredContacts = contacts.filter(contact => {

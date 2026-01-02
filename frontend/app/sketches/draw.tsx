@@ -105,8 +105,11 @@ export default function DrawSketchScreen() {
   const loadSketch = async () => {
     try {
       setLoading(true);
+      console.log('Loading sketch with ID:', sketchId, 'for project:', projectId);
       const response = await axios.get(`${API_URL}/api/sketches/project/${projectId}`);
+      console.log('All sketches:', response.data);
       const sketch = response.data.find((s: any) => s.id === sketchId);
+      console.log('Found sketch:', sketch);
       
       if (sketch) {
         setTitle(sketch.title || 'Skizze');
@@ -114,11 +117,16 @@ export default function DrawSketchScreen() {
         // Parse saved elements if available
         if (sketch.metadata) {
           try {
+            console.log('Parsing metadata:', sketch.metadata);
             const metadata = JSON.parse(sketch.metadata);
+            console.log('Parsed metadata:', metadata);
             if (metadata.elements && Array.isArray(metadata.elements)) {
+              console.log('Setting elements:', metadata.elements.length, 'elements');
               setElements(metadata.elements);
               setHistory([metadata.elements]);
               setHistoryIndex(0);
+            } else {
+              console.log('No elements in metadata');
             }
             if (metadata.backgroundImage) {
               setBackgroundImage(metadata.backgroundImage);
@@ -126,7 +134,11 @@ export default function DrawSketchScreen() {
           } catch (e) {
             console.error('Error parsing metadata:', e);
           }
+        } else {
+          console.log('No metadata in sketch');
         }
+      } else {
+        console.log('Sketch not found in response');
       }
     } catch (error) {
       console.error('Error loading sketch:', error);

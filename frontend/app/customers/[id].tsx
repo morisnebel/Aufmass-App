@@ -30,6 +30,12 @@ export default function EditCustomerScreen() {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Contact picker state
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadCustomer();
@@ -50,6 +56,94 @@ export default function EditCustomerScreen() {
       setLoading(false);
     }
   };
+
+  const openContactPicker = async () => {
+    try {
+      // Check if we're on web
+      if (Platform.OS === 'web') {
+        Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar');
+        return;
+      }
+
+      setLoadingContacts(true);
+      setShowContactPicker(true);
+      
+      const { status } = await Contacts.requestPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
+        setShowContactPicker(false);
+        setLoadingContacts(false);
+        return;
+      }
+      
+      const { data } = await Contacts.getContactsAsync({
+        fields: [
+          Contacts.Fields.Name,
+          Contacts.Fields.Emails,
+          Contacts.Fields.PhoneNumbers,
+          Contacts.Fields.Addresses,
+        ],
+      });
+      
+      // Sort contacts by name
+      const sortedContacts = data.sort((a, b) => {
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
+      });
+      
+      setContacts(sortedContacts);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      setShowContactPicker(false);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const selectContact = (contact: Contacts.Contact) => {
+    // Set name
+    if (contact.name) {
+      setName(contact.name);
+    }
+    
+    // Set email (first email if available)
+    if (contact.emails && contact.emails.length > 0) {
+      setEmail(contact.emails[0].email || '');
+    }
+    
+    // Set phone (first phone number if available)
+    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+      setPhone(contact.phoneNumbers[0].number || '');
+    }
+    
+    // Set address (first address if available)
+    if (contact.addresses && contact.addresses.length > 0) {
+      const addr = contact.addresses[0];
+      const addressParts = [];
+      if (addr.street) addressParts.push(addr.street);
+      if (addr.postalCode || addr.city) {
+        addressParts.push([addr.postalCode, addr.city].filter(Boolean).join(' '));
+      }
+      if (addr.country) addressParts.push(addr.country);
+      setAddress(addressParts.join(', '));
+    }
+    
+    setShowContactPicker(false);
+    setSearchQuery('');
+  };
+
+  const filteredContacts = contacts.filter(contact => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (contact.name?.toLowerCase().includes(query)) ||
+      (contact.emails?.some(e => e.email?.toLowerCase().includes(query))) ||
+      (contact.phoneNumbers?.some(p => p.number?.includes(query)))
+    );
+  });
 
   const handleSave = async () => {
     if (!name.trim()) {

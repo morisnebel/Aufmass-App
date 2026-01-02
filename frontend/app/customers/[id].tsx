@@ -61,13 +61,9 @@ export default function EditCustomerScreen() {
     try {
       console.log('Opening contact picker, Platform:', Platform.OS);
       
-      // Check if we're on web
+      // Check if we're on web - show manual entry modal instead
       if (Platform.OS === 'web') {
-        if (Platform.OS === 'web') {
-          alert('Kontakt-Import ist nur in der mobilen App verfügbar');
-        } else {
-          Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar');
-        }
+        setShowManualEntryModal(true);
         return;
       }
 

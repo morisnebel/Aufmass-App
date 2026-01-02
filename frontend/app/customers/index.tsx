@@ -151,6 +151,45 @@ export default function CustomersScreen() {
           contentContainerStyle={styles.customerList}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="warning" size={48} color="#f44336" style={{ marginBottom: 16 }} />
+            <Text style={styles.modalTitle}>Kunde löschen?</Text>
+            <Text style={styles.modalText}>
+              Möchten Sie "{customerToDelete?.name}" wirklich löschen?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setCustomerToDelete(null);
+                }}
+                disabled={isDeleting}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={confirmDelete}
+                disabled={isDeleting}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {isDeleting ? 'Löschen...' : 'Löschen'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -102,7 +102,7 @@ export default function CustomersScreen() {
         )}
       </View>
       <TouchableOpacity
-        onPress={() => deleteCustomer(item.id)}
+        onPress={() => openDeleteModal(item)}
         style={styles.deleteButton}
       >
         <Ionicons name="trash-outline" size={20} color="#f44336" />

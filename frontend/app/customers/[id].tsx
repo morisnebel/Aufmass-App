@@ -161,19 +161,38 @@ export default function EditCustomerScreen() {
   const selectContact = (contact: Contacts.Contact) => {
     const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
-    console.log('Selected contact data:', { extractedName, extractedEmail, extractedPhone, extractedAddress });
+    console.log('=== CONTACT IMPORT DEBUG ===');
+    console.log('Raw contact object:', JSON.stringify(contact, null, 2));
+    console.log('Extracted name:', extractedName);
+    console.log('Extracted email:', extractedEmail);
+    console.log('Extracted phone:', extractedPhone);
+    console.log('Extracted address:', extractedAddress);
     
-    // Store the data - it will be applied when modal closes
-    setSelectedContactData({
-      name: extractedName,
-      email: extractedEmail,
-      phone: extractedPhone,
-      address: extractedAddress,
-    });
+    // Prevent loadCustomer from overwriting our imported data
+    setHasImportedContact(true);
     
-    // Close modal
+    // Set all values directly with a small delay to ensure modal animation doesn't interfere
     setSearchQuery('');
     setShowContactPicker(false);
+    
+    // Use requestAnimationFrame + setTimeout for reliable iOS state updates
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        console.log('=== APPLYING CONTACT DATA ===');
+        console.log('Setting name to:', extractedName);
+        console.log('Setting email to:', extractedEmail);
+        console.log('Setting phone to:', extractedPhone);
+        console.log('Setting address to:', extractedAddress);
+        
+        // Apply all values
+        setName(extractedName || '');
+        setEmail(extractedEmail || '');
+        setPhone(extractedPhone || '');
+        setAddress(extractedAddress || '');
+        
+        console.log('=== CONTACT DATA APPLIED ===');
+      }, 300);
+    });
   };
 
   const filteredContacts = contacts.filter(contact => {

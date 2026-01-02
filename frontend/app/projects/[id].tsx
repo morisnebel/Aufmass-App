@@ -84,6 +84,13 @@ export default function ProjectDetailScreen() {
   const [deleteSketchModalVisible, setDeleteSketchModalVisible] = useState(false);
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
+  
+  // Project edit modal state
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectDescription, setEditProjectDescription] = useState('');
+  const [editProjectStatus, setEditProjectStatus] = useState('');
+  const [isSavingProject, setIsSavingProject] = useState(false);
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(

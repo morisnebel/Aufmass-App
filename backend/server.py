@@ -68,6 +68,7 @@ class Sketch(BaseModel):
     project_id: str
     sketch_data: str  # base64 image
     title: Optional[str] = None
+    metadata: Optional[str] = None  # JSON string of sketch elements and settings
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class ChecklistTemplate(BaseModel):

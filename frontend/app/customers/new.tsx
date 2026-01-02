@@ -29,18 +29,15 @@ function extractContactData(contact: Contacts.Contact) {
   let extractedPhone = '';
   let extractedAddress = '';
 
-  // Name
   extractedName = contact.name || 
     [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
 
-  // Email
   if (contact.emails && contact.emails.length > 0) {
     const emailObj = contact.emails[0] as any;
     extractedEmail = typeof emailObj === 'string' ? emailObj : 
       (emailObj?.email || emailObj?.value || '');
   }
 
-  // Phone
   if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
     const phoneObj = contact.phoneNumbers[0] as any;
     if (typeof phoneObj === 'string') {
@@ -50,7 +47,6 @@ function extractContactData(contact: Contacts.Contact) {
     }
   }
 
-  // Address
   if (contact.addresses && contact.addresses.length > 0) {
     const addr = contact.addresses[0] as any;
     if (typeof addr === 'string') {
@@ -81,36 +77,61 @@ export default function NewCustomerScreen() {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Import options modal
+  const [showImportOptions, setShowImportOptions] = useState(false);
+  
+  // Quick entry modal state
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickEmail, setQuickEmail] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
+  const [quickAddress, setQuickAddress] = useState('');
+  
   // Contact picker state
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleImportPress = () => {
+    setShowImportOptions(true);
+  };
+
+  const openQuickEntry = () => {
+    setShowImportOptions(false);
+    setQuickName('');
+    setQuickEmail('');
+    setQuickPhone('');
+    setQuickAddress('');
+    setShowQuickEntry(true);
+  };
+
+  const applyQuickEntry = () => {
+    if (quickName) setName(quickName);
+    if (quickEmail) setEmail(quickEmail);
+    if (quickPhone) setPhone(quickPhone);
+    if (quickAddress) setAddress(quickAddress);
+    setShowQuickEntry(false);
+  };
+
   const openContactPicker = async () => {
-    console.log('=== OPEN CONTACT PICKER CALLED (NEW) ===');
-    console.log('Platform.OS:', Platform.OS);
+    setShowImportOptions(false);
     
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Import ist nur auf dem iPad/iPhone verfügbar');
+      Alert.alert('Hinweis', 'Kontakt-Import aus dem Adressbuch ist nur in der mobilen App verfügbar. Bitte nutzen Sie die manuelle Eingabe.');
       return;
     }
 
     try {
-      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
-      console.log('Permission status:', status);
-      
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen.');
         return;
       }
 
-      console.log('Opening contact picker modal...');
       setShowContactPicker(true);
       setLoadingContacts(true);
 
-      console.log('Fetching contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -122,17 +143,14 @@ export default function NewCustomerScreen() {
         ],
       });
 
-      console.log('Contacts fetched:', data.length);
-
       const sortedContacts = data
         .filter(c => c.name || c.firstName || c.lastName)
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       
       setContacts(sortedContacts);
-      console.log('Contacts set:', sortedContacts.length);
     } catch (error) {
-      console.error('Error in openContactPicker:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
+      console.error('Error loading contacts:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
       setShowContactPicker(false);
     } finally {
       setLoadingContacts(false);
@@ -142,23 +160,13 @@ export default function NewCustomerScreen() {
   const selectContact = (contact: Contacts.Contact) => {
     const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
-    console.log('=== CONTACT IMPORT DEBUG (NEW CUSTOMER) ===');
-    console.log('Extracted name:', extractedName);
-    console.log('Extracted email:', extractedEmail);
-    console.log('Extracted phone:', extractedPhone);
-    console.log('Extracted address:', extractedAddress);
-    
-    // Apply all values IMMEDIATELY - no delays
     setName(extractedName || '');
     setEmail(extractedEmail || '');
     setPhone(extractedPhone || '');
     setAddress(extractedAddress || '');
     
-    // Close modal and reset search
     setSearchQuery('');
     setShowContactPicker(false);
-    
-    console.log('=== CONTACT DATA APPLIED (NEW CUSTOMER) ===');
   };
 
   const filteredContacts = contacts.filter(contact => {
@@ -200,26 +208,16 @@ export default function NewCustomerScreen() {
     >
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
-          {/* Import from Contacts Button */}
+          {/* Import Button */}
           <Pressable
             style={({ pressed }) => [
               styles.importButton,
               pressed && { opacity: 0.7, backgroundColor: '#bbdefb' }
             ]}
-            onPress={() => {
-              console.log('=== BUTTON PRESSED (NEW) ===');
-              Alert.alert(
-                'Kontakt importieren',
-                'Möchten Sie einen Kontakt aus Ihrem Adressbuch importieren?',
-                [
-                  { text: 'Abbrechen', style: 'cancel' },
-                  { text: 'Ja', onPress: () => openContactPicker() }
-                ]
-              );
-            }}
+            onPress={handleImportPress}
           >
             <Ionicons name="person-add" size={20} color="#1976d2" />
-            <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
+            <Text style={styles.importButtonText}>Daten importieren / Schnelleingabe</Text>
           </Pressable>
 
           <View style={styles.inputGroup}>
@@ -286,6 +284,135 @@ export default function NewCustomerScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Import Options Modal */}
+      <Modal
+        visible={showImportOptions}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImportOptions(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setShowImportOptions(false)}
+        >
+          <View style={styles.optionsModalContent}>
+            <Text style={styles.optionsTitle}>Daten importieren</Text>
+            
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={openQuickEntry}
+            >
+              <Ionicons name="create-outline" size={24} color="#1976d2" />
+              <View style={styles.optionTextContainer}>
+                <Text style={styles.optionTitle}>Schnelleingabe</Text>
+                <Text style={styles.optionSubtitle}>Daten manuell eingeben</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            </TouchableOpacity>
+
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={openContactPicker}
+              >
+                <Ionicons name="people-outline" size={24} color="#1976d2" />
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Aus Kontakten</Text>
+                  <Text style={styles.optionSubtitle}>Vom Adressbuch importieren</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowImportOptions(false)}
+            >
+              <Text style={styles.cancelButtonText}>Abbrechen</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Quick Entry Modal */}
+      <Modal
+        visible={showQuickEntry}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowQuickEntry(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.quickEntryContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.quickEntryHeader}>
+            <Text style={styles.quickEntryTitle}>Schnelleingabe</Text>
+            <TouchableOpacity
+              onPress={() => setShowQuickEntry(false)}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.quickEntryForm}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Kundenname"
+                value={quickName}
+                onChangeText={setQuickName}
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>E-Mail</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="kunde@beispiel.de"
+                value={quickEmail}
+                onChangeText={setQuickEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Telefon</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+49 123 456789"
+                value={quickPhone}
+                onChangeText={setQuickPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Adresse</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Straße, PLZ, Stadt"
+                value={quickAddress}
+                onChangeText={setQuickAddress}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={applyQuickEntry}
+            >
+              <Ionicons name="checkmark" size={20} color="#fff" />
+              <Text style={styles.applyButtonText}>Übernehmen</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Contact Picker Modal */}
       <Modal
@@ -429,7 +556,97 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Modal styles
+  // Import Options Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  optionsModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+  },
+  optionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  optionTextContainer: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  cancelButton: {
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  // Quick Entry Modal
+  quickEntryContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  quickEntryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  quickEntryTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  quickEntryForm: {
+    flex: 1,
+    padding: 16,
+  },
+  applyButton: {
+    flexDirection: 'row',
+    backgroundColor: '#4caf50',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Contact Picker Modal
   modalContainer: {
     flex: 1,
     backgroundColor: '#fff',

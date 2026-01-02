@@ -92,14 +92,15 @@ export default function EditCustomerScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Flag to prevent loadCustomer from overwriting imported data
-  const [hasImportedContact, setHasImportedContact] = useState(false);
+  // Ref for immediate synchronous protection against loadCustomer overwriting imported data
+  const isImportingRef = useRef(false);
 
   useEffect(() => {
-    if (!hasImportedContact) {
+    // Only load customer data if we're not currently importing a contact
+    if (!isImportingRef.current) {
       loadCustomer();
     }
-  }, [id, hasImportedContact]);
+  }, [id]);
 
   const loadCustomer = async () => {
     try {

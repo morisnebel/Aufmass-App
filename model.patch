@@ -21,7 +21,7 @@ index f6a58d4..e69de29 100644
 -+import sys
 -+from datetime import datetime
 -+
--+BACKEND_URL = "https://nebel-roofer.preview.emergentagent.com/api"
+-+BACKEND_URL = "https://roof-sketch-app-1.preview.emergentagent.com/api"
 -+
 -+def comprehensive_sketch_test():
 -+    """Test all scenarios from the review request"""
@@ -920,7 +920,7 @@ index f6a58d4..e69de29 100644
 ---+from datetime import datetime
 ---+
 ---+# Configuration
----+BASE_URL = "https://nebel-roofer.preview.emergentagent.com/api"
+---+BASE_URL = "https://roof-sketch-app-1.preview.emergentagent.com/api"
 ---+
 ---+def create_test_image_data():
 ---+    """Create a simple base64 encoded test image"""
@@ -1229,7 +1229,7 @@ index f6a58d4..e69de29 100644
 -+from datetime import datetime
 -+
 -+# Backend URL from frontend .env
--+BACKEND_URL = "https://nebel-roofer.preview.emergentagent.com/api"
+-+BACKEND_URL = "https://roof-sketch-app-1.preview.emergentagent.com/api"
 -+
 -+def test_sketch_metadata_issue():
 -+    """Test the specific sketch metadata save/load issue reported by user"""

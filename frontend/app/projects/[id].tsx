@@ -56,6 +56,7 @@ interface Sketch {
   id: string;
   sketch_data: string;
   title?: string;
+  metadata?: string;
 }
 
 interface Checklist {

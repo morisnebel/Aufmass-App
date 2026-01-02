@@ -581,6 +581,42 @@ export default function EditCustomerScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Customer Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <Ionicons name="warning" size={48} color="#f44336" style={{ marginBottom: 16 }} />
+            <Text style={styles.deleteModalTitle}>Kunde löschen?</Text>
+            <Text style={styles.deleteModalText}>
+              Möchten Sie diesen Kunden wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalCancelButton]}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                <Text style={styles.deleteModalCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalConfirmButton]}
+                onPress={confirmDeleteCustomer}
+                disabled={isDeleting}
+              >
+                <Text style={styles.deleteModalConfirmText}>
+                  {isDeleting ? 'Wird gelöscht...' : 'Löschen'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

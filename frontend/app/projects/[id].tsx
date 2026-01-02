@@ -861,6 +861,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     marginTop: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  sketchInfo: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  sketchDeleteButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 20,
+    padding: 8,
+    zIndex: 10,
   },
   modalOverlay: {
     flex: 1,

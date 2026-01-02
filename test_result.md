@@ -158,15 +158,18 @@ backend:
 
   - task: "Sketches CRUD Operations"
     implemented: true
-    working: true
+    working: false
     file: "backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
         - working: true
           agent: "testing"
           comment: "All Sketch CRUD operations working perfectly - POST /api/sketches (create with base64 sketch), GET /api/sketches/project/{project_id} (get by project), DELETE /api/sketches/{sketch_id} (delete). Supports base64 sketch data with titles."
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL ISSUE IDENTIFIED: Sketch metadata field is NOT saved/loaded. ROOT CAUSE: Backend Sketch model missing 'metadata' field. Frontend sends metadata (sketch elements like lines, circles, etc.) in POST/PUT requests, but Pydantic model validation drops this field. MongoDB only stores: id, project_id, sketch_data, title, created_at. The metadata field containing sketch elements is completely ignored. IMPACT: Users lose all drawing elements when reopening sketches. REQUIRED FIX: Add 'metadata: Optional[str] = None' to Sketch model in backend/server.py. Tested all scenarios from review request - confirmed metadata is never stored in database."
 
   - task: "Checklist Templates CRUD Operations"
     implemented: true

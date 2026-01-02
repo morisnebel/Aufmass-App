@@ -852,15 +852,26 @@ export default function DrawSketchScreen() {
           <G key={element.id}>
             <Defs>
               <Marker
-                id={`arrowhead-${element.id}`}
+                id={`arrowhead-end-${element.id}`}
                 markerWidth="10"
                 markerHeight="10"
-                refX="5"
+                refX="9"
                 refY="3"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <Polygon points="0,0 0,6 9,3" fill={element.color} />
+              </Marker>
+              <Marker
+                id={`arrowhead-start-${element.id}`}
+                markerWidth="10"
+                markerHeight="10"
+                refX="0"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <Polygon points="9,0 9,6 0,3" fill={element.color} />
               </Marker>
             </Defs>
             <Line
@@ -870,8 +881,8 @@ export default function DrawSketchScreen() {
               y2={y2}
               stroke={element.color}
               strokeWidth={element.strokeWidth}
-              markerEnd={`url(#arrowhead-${element.id})`}
-              markerStart={heads === 'double' ? `url(#arrowhead-${element.id})` : undefined}
+              markerEnd={`url(#arrowhead-end-${element.id})`}
+              markerStart={heads === 'double' ? `url(#arrowhead-start-${element.id})` : undefined}
               transform={element.rotation ? `rotate(${element.rotation} ${midX} ${midY})` : undefined}
             />
             {text && (

@@ -201,18 +201,26 @@ export default function NewCustomerScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
           {/* Import from Contacts Button */}
-          <TouchableOpacity
-            style={styles.importButton}
+          <Pressable
+            style={({ pressed }) => [
+              styles.importButton,
+              pressed && { opacity: 0.7, backgroundColor: '#bbdefb' }
+            ]}
             onPress={() => {
-              console.log('Button pressed! (NEW)');
-              Alert.alert('Button gedrückt', 'Die openContactPicker Funktion wird jetzt aufgerufen...');
-              openContactPicker();
+              console.log('=== BUTTON PRESSED (NEW) ===');
+              Alert.alert(
+                'Kontakt importieren',
+                'Möchten Sie einen Kontakt aus Ihrem Adressbuch importieren?',
+                [
+                  { text: 'Abbrechen', style: 'cancel' },
+                  { text: 'Ja', onPress: () => openContactPicker() }
+                ]
+              );
             }}
-            activeOpacity={0.7}
           >
             <Ionicons name="person-add" size={20} color="#1976d2" />
             <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Name *</Text>

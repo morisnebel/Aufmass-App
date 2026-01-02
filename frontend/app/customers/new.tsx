@@ -99,10 +99,19 @@ export default function NewCustomerScreen() {
     console.log('=== SELECTED CONTACT ===');
     console.log('Full contact object:', JSON.stringify(contact, null, 2));
     
+    // Debug: Show what we received
+    let debugInfo = `Name: ${contact.name || 'nicht gefunden'}\n`;
+    debugInfo += `Emails: ${JSON.stringify(contact.emails)}\n`;
+    debugInfo += `Phones: ${JSON.stringify(contact.phoneNumbers)}\n`;
+    debugInfo += `Addresses: ${JSON.stringify(contact.addresses)}`;
+    console.log('Debug Info:', debugInfo);
+    
     // Set name - try different name fields
-    const contactName = contact.name || contact.firstName || 
-      (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}` : '') ||
-      contact.displayName || '';
+    const contactName = contact.name || 
+      (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}`.trim() : '') ||
+      contact.firstName || 
+      contact.lastName ||
+      '';
     if (contactName) {
       console.log('Setting name:', contactName);
       setName(contactName);
@@ -110,20 +119,28 @@ export default function NewCustomerScreen() {
     
     // Set email (first email if available)
     if (contact.emails && contact.emails.length > 0) {
-      const emailObj = contact.emails[0];
-      const emailValue = emailObj?.email || emailObj?.value || String(emailObj) || '';
-      console.log('Email object:', emailObj);
+      const emailObj = contact.emails[0] as any;
+      console.log('Raw email object:', emailObj, typeof emailObj);
+      let emailValue = '';
+      if (typeof emailObj === 'string') {
+        emailValue = emailObj;
+      } else if (emailObj?.email) {
+        emailValue = emailObj.email;
+      } else if (emailObj?.value) {
+        emailValue = emailObj.value;
+      } else if (emailObj?.address) {
+        emailValue = emailObj.address;
+      }
       console.log('Setting email:', emailValue);
-      if (emailValue && emailValue !== '[object Object]') {
+      if (emailValue) {
         setEmail(emailValue);
       }
     }
     
     // Set phone (first phone number if available)
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      const phoneObj = contact.phoneNumbers[0];
-      console.log('Phone object:', phoneObj);
-      // Try different ways to get the phone number
+      const phoneObj = contact.phoneNumbers[0] as any;
+      console.log('Raw phone object:', phoneObj, typeof phoneObj);
       let phoneValue = '';
       if (typeof phoneObj === 'string') {
         phoneValue = phoneObj;
@@ -133,6 +150,17 @@ export default function NewCustomerScreen() {
         phoneValue = phoneObj.digits;
       } else if (phoneObj?.value) {
         phoneValue = phoneObj.value;
+      } else if (phoneObj?.phoneNumber) {
+        phoneValue = phoneObj.phoneNumber;
+      } else {
+        // Try to extract any string value from the object
+        const keys = Object.keys(phoneObj || {});
+        for (const key of keys) {
+          if (typeof phoneObj[key] === 'string' && phoneObj[key].match(/[\d+]/)) {
+            phoneValue = phoneObj[key];
+            break;
+          }
+        }
       }
       console.log('Setting phone:', phoneValue);
       if (phoneValue) {
@@ -142,39 +170,52 @@ export default function NewCustomerScreen() {
     
     // Set address (first address if available)
     if (contact.addresses && contact.addresses.length > 0) {
-      const addr = contact.addresses[0];
-      console.log('Address object:', addr);
+      const addr = contact.addresses[0] as any;
+      console.log('Raw address object:', addr, typeof addr);
       
-      const addressParts: string[] = [];
+      let addressValue = '';
       
-      // Try to build address from different possible fields
-      if (addr.street) addressParts.push(addr.street);
-      if (addr.streetNumber) addressParts.push(addr.streetNumber);
-      
-      // City, postal code
-      const cityParts: string[] = [];
-      if (addr.postalCode) cityParts.push(addr.postalCode);
-      if (addr.city) cityParts.push(addr.city);
-      if (cityParts.length > 0) {
-        addressParts.push(cityParts.join(' '));
+      // Try formatted address first
+      if (addr?.formattedAddress) {
+        addressValue = addr.formattedAddress;
+      } else if (typeof addr === 'string') {
+        addressValue = addr;
+      } else if (addr) {
+        const addressParts: string[] = [];
+        
+        // Street
+        if (addr.street) addressParts.push(addr.street);
+        if (addr.streetNumber) addressParts.push(addr.streetNumber);
+        
+        // City line
+        const cityLine: string[] = [];
+        if (addr.postalCode) cityLine.push(addr.postalCode);
+        if (addr.city) cityLine.push(addr.city);
+        if (cityLine.length > 0) addressParts.push(cityLine.join(' '));
+        
+        // Region
+        if (addr.region) addressParts.push(addr.region);
+        if (addr.state) addressParts.push(addr.state);
+        
+        // Country
+        if (addr.country) addressParts.push(addr.country);
+        
+        // If still empty, try to get any string values
+        if (addressParts.length === 0) {
+          const keys = Object.keys(addr);
+          for (const key of keys) {
+            if (typeof addr[key] === 'string' && addr[key].length > 0 && key !== 'id' && key !== 'label') {
+              addressParts.push(addr[key]);
+            }
+          }
+        }
+        
+        addressValue = addressParts.join(', ');
       }
       
-      // Region/State
-      if (addr.region) addressParts.push(addr.region);
-      
-      // Country
-      if (addr.country) addressParts.push(addr.country);
-      
-      // If we have a formatted address, use that instead
-      if (addr.formattedAddress) {
-        console.log('Using formatted address:', addr.formattedAddress);
-        setAddress(addr.formattedAddress);
-      } else {
-        const addressValue = addressParts.join(', ');
-        console.log('Setting address:', addressValue);
-        if (addressValue) {
-          setAddress(addressValue);
-        }
+      console.log('Setting address:', addressValue);
+      if (addressValue) {
+        setAddress(addressValue);
       }
     }
     

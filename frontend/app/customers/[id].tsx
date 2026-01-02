@@ -250,6 +250,84 @@ export default function EditCustomerScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Contact Picker Modal */}
+      <Modal
+        visible={showContactPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowContactPicker(false);
+          setSearchQuery('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kontakt auswählen</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowContactPicker(false);
+                  setSearchQuery('');
+                }}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Kontakt suchen..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+
+            {loadingContacts ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1976d2" />
+                <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
+              </View>
+            ) : filteredContacts.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="people-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'Keine Kontakte gefunden' : 'Keine Kontakte verfügbar'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredContacts}
+                keyExtractor={(item) => item.id || Math.random().toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.contactItem}
+                    onPress={() => selectContact(item)}
+                  >
+                    <View style={styles.contactAvatar}>
+                      <Ionicons name="person" size={24} color="#fff" />
+                    </View>
+                    <View style={styles.contactInfo}>
+                      <Text style={styles.contactName}>{item.name || 'Unbekannt'}</Text>
+                      {item.phoneNumbers && item.phoneNumbers.length > 0 && (
+                        <Text style={styles.contactDetail}>
+                          {item.phoneNumbers[0].number}
+                        </Text>
+                      )}
+                      {item.emails && item.emails.length > 0 && (
+                        <Text style={styles.contactDetail}>
+                          {item.emails[0].email}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                  </TouchableOpacity>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

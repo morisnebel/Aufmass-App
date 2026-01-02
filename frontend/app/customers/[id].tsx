@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,60 @@ import { Ionicons } from '@expo/vector-icons';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
+// Helper function to extract contact data
+function extractContactData(contact: Contacts.Contact) {
+  let extractedName = '';
+  let extractedEmail = '';
+  let extractedPhone = '';
+  let extractedAddress = '';
+
+  // Name
+  extractedName = contact.name || 
+    [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
+
+  // Email
+  if (contact.emails && contact.emails.length > 0) {
+    const emailObj = contact.emails[0] as any;
+    extractedEmail = typeof emailObj === 'string' ? emailObj : 
+      (emailObj?.email || emailObj?.value || '');
+  }
+
+  // Phone
+  if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+    const phoneObj = contact.phoneNumbers[0] as any;
+    if (typeof phoneObj === 'string') {
+      extractedPhone = phoneObj;
+    } else {
+      extractedPhone = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
+    }
+  }
+
+  // Address
+  if (contact.addresses && contact.addresses.length > 0) {
+    const addr = contact.addresses[0] as any;
+    if (typeof addr === 'string') {
+      extractedAddress = addr;
+    } else if (addr?.formattedAddress) {
+      extractedAddress = addr.formattedAddress;
+    } else {
+      const parts = [
+        addr?.street,
+        [addr?.postalCode, addr?.city].filter(Boolean).join(' '),
+        addr?.region,
+        addr?.country
+      ].filter(Boolean);
+      extractedAddress = parts.join(', ');
+    }
+  }
+
+  return { extractedName, extractedEmail, extractedPhone, extractedAddress };
+}
+
 export default function EditCustomerScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  
+  // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -37,39 +88,36 @@ export default function EditCustomerScreen() {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Manual entry modal for web
-  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
-  const [manualName, setManualName] = useState('');
-  const [manualEmail, setManualEmail] = useState('');
-  const [manualPhone, setManualPhone] = useState('');
-  const [manualAddress, setManualAddress] = useState('');
-
-  // Ref to store pending contact data
-  const pendingContactData = useRef<{name: string, email: string, phone: string, address: string} | null>(null);
+  // Selected contact data (temporary storage)
+  const [selectedContactData, setSelectedContactData] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+  } | null>(null);
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadCustomer();
   }, [id]);
 
-  // Apply pending contact data when modal closes
+  // Apply selected contact data when modal closes
   useEffect(() => {
-    if (!showContactPicker && pendingContactData.current) {
-      const data = pendingContactData.current;
-      console.log('Applying pending contact data:', data);
-      
-      // Use a small delay to ensure modal is fully closed
-      setTimeout(() => {
-        if (data.name) setName(data.name);
-        if (data.email) setEmail(data.email);
-        if (data.phone) setPhone(data.phone);
-        if (data.address) setAddress(data.address);
-        pendingContactData.current = null;
-        
-        // Show success message after values are set
-        Alert.alert('Erfolg', 'Kontaktdaten wurden übernommen');
-      }, 300);
+    if (!showContactPicker && selectedContactData) {
+      // Apply data after modal is closed
+      const timer = setTimeout(() => {
+        if (selectedContactData.name) setName(selectedContactData.name);
+        if (selectedContactData.email) setEmail(selectedContactData.email);
+        if (selectedContactData.phone) setPhone(selectedContactData.phone);
+        if (selectedContactData.address) setAddress(selectedContactData.address);
+        setSelectedContactData(null);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [showContactPicker]);
+  }, [showContactPicker, selectedContactData]);
 
   const loadCustomer = async () => {
     try {
@@ -88,154 +136,60 @@ export default function EditCustomerScreen() {
   };
 
   const openContactPicker = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Hinweis', 'Kontakt-Import ist nur auf dem iPad/iPhone verfügbar');
+      return;
+    }
+
     try {
-      console.log('Opening contact picker, Platform:', Platform.OS);
-      
-      // Check if we're on web - show manual entry modal instead
-      if (Platform.OS === 'web') {
-        setShowManualEntryModal(true);
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
         return;
       }
 
       setShowContactPicker(true);
       setLoadingContacts(true);
-      
-      console.log('Requesting contacts permission...');
-      const { status } = await Contacts.requestPermissionsAsync();
-      console.log('Permission status:', status);
-      
-      if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen');
-        setShowContactPicker(false);
-        setLoadingContacts(false);
-        return;
-      }
-      
-      console.log('Loading contacts...');
+
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
+          Contacts.Fields.FirstName,
+          Contacts.Fields.LastName,
           Contacts.Fields.Emails,
           Contacts.Fields.PhoneNumbers,
           Contacts.Fields.Addresses,
         ],
       });
-      
-      console.log('Loaded', data.length, 'contacts');
-      
-      // Sort contacts by name
-      const sortedContacts = data.sort((a, b) => {
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
-      });
+
+      const sortedContacts = data
+        .filter(c => c.name || c.firstName || c.lastName)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       
       setContacts(sortedContacts);
-      setLoadingContacts(false);
     } catch (error) {
       console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
       setShowContactPicker(false);
+    } finally {
       setLoadingContacts(false);
     }
   };
 
   const selectContact = (contact: Contacts.Contact) => {
-    console.log('=== SELECTED CONTACT ===');
+    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
-    // Variables to store extracted values
-    let extractedName = '';
-    let extractedEmail = '';
-    let extractedPhone = '';
-    let extractedAddress = '';
+    console.log('Selected contact data:', { extractedName, extractedEmail, extractedPhone, extractedAddress });
     
-    // Extract name
-    extractedName = contact.name || 
-      (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}`.trim() : '') ||
-      contact.firstName || 
-      contact.lastName || '';
-    
-    // Extract email
-    if (contact.emails && contact.emails.length > 0) {
-      const emailObj = contact.emails[0] as any;
-      if (typeof emailObj === 'string') {
-        extractedEmail = emailObj;
-      } else if (emailObj?.email) {
-        extractedEmail = emailObj.email;
-      } else if (emailObj?.value) {
-        extractedEmail = emailObj.value;
-      }
-    }
-    
-    // Extract phone
-    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      const phoneObj = contact.phoneNumbers[0] as any;
-      console.log('Phone object:', JSON.stringify(phoneObj));
-      if (typeof phoneObj === 'string') {
-        extractedPhone = phoneObj;
-      } else if (phoneObj?.number) {
-        extractedPhone = phoneObj.number;
-      } else if (phoneObj?.digits) {
-        extractedPhone = phoneObj.digits;
-      } else if (phoneObj?.value) {
-        extractedPhone = phoneObj.value;
-      } else if (phoneObj) {
-        const keys = Object.keys(phoneObj);
-        for (const key of keys) {
-          const val = phoneObj[key];
-          if (typeof val === 'string' && val.match(/[\d+\-\s]/)) {
-            extractedPhone = val;
-            break;
-          }
-        }
-      }
-    }
-    
-    // Extract address
-    if (contact.addresses && contact.addresses.length > 0) {
-      const addr = contact.addresses[0] as any;
-      console.log('Address object:', JSON.stringify(addr));
-      
-      if (addr?.formattedAddress) {
-        extractedAddress = addr.formattedAddress;
-      } else if (typeof addr === 'string') {
-        extractedAddress = addr;
-      } else if (addr) {
-        const parts: string[] = [];
-        if (addr.street) parts.push(addr.street);
-        if (addr.city) parts.push(addr.city);
-        if (addr.postalCode) parts.push(addr.postalCode);
-        if (addr.region) parts.push(addr.region);
-        if (addr.country) parts.push(addr.country);
-        
-        if (parts.length === 0) {
-          const keys = Object.keys(addr);
-          for (const key of keys) {
-            const val = addr[key];
-            if (typeof val === 'string' && val.length > 0 && !['id', 'label', 'type'].includes(key)) {
-              parts.push(val);
-            }
-          }
-        }
-        extractedAddress = parts.join(', ');
-      }
-    }
-    
-    console.log('=== EXTRACTED VALUES ===');
-    console.log('Name:', extractedName);
-    console.log('Email:', extractedEmail);
-    console.log('Phone:', extractedPhone);
-    console.log('Address:', extractedAddress);
-    
-    // Store data in ref - will be applied when modal closes
-    pendingContactData.current = {
+    // Store the data - it will be applied when modal closes
+    setSelectedContactData({
       name: extractedName,
       email: extractedEmail,
       phone: extractedPhone,
       address: extractedAddress,
-    };
+    });
     
-    // Close modal and clear search
+    // Close modal
     setSearchQuery('');
     setShowContactPicker(false);
   };
@@ -243,35 +197,9 @@ export default function EditCustomerScreen() {
   const filteredContacts = contacts.filter(contact => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return (
-      (contact.name?.toLowerCase().includes(query)) ||
-      (contact.emails?.some(e => e.email?.toLowerCase().includes(query))) ||
-      (contact.phoneNumbers?.some(p => p.number?.includes(query)))
-    );
+    const contactName = contact.name?.toLowerCase() || '';
+    return contactName.includes(query);
   });
-
-  // Apply manual entry data
-  const applyManualEntry = () => {
-    // Set all values that were entered
-    if (manualName.trim()) setName(manualName.trim());
-    if (manualEmail.trim()) setEmail(manualEmail.trim());
-    if (manualPhone.trim()) setPhone(manualPhone.trim());
-    if (manualAddress.trim()) setAddress(manualAddress.trim());
-    
-    console.log('Applied manual entry:', {
-      name: manualName,
-      email: manualEmail,
-      phone: manualPhone,
-      address: manualAddress
-    });
-    
-    // Reset and close modal
-    setManualName('');
-    setManualEmail('');
-    setManualPhone('');
-    setManualAddress('');
-    setShowManualEntryModal(false);
-  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -297,10 +225,6 @@ export default function EditCustomerScreen() {
       setSaving(false);
     }
   };
-
-  // Delete customer state
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteCustomer = () => {
     setShowDeleteModal(true);
@@ -343,7 +267,7 @@ export default function EditCustomerScreen() {
             onPress={openContactPicker}
           >
             <Ionicons name="person-add" size={20} color="#1976d2" />
-            <Text style={styles.importButtonText}>Aus Adressbuch importieren</Text>
+            <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
           </TouchableOpacity>
 
           <View style={styles.inputGroup}>
@@ -423,50 +347,50 @@ export default function EditCustomerScreen() {
       <Modal
         visible={showContactPicker}
         animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setShowContactPicker(false);
-          setSearchQuery('');
-        }}
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowContactPicker(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kontakt auswählen</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowContactPicker(false);
-                  setSearchQuery('');
-                }}
-              >
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Kontakt auswählen</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery('');
+                setShowContactPicker(false);
+              }}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Kontakt suchen..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
+
+          {loadingContacts ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#1976d2" />
+              <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
             </View>
-
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Kontakt suchen..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-
-            {loadingContacts ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1976d2" />
-                <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
-              </View>
-            ) : filteredContacts.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="people-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'Keine Kontakte gefunden' : 'Keine Kontakte verfügbar'}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredContacts}
-                keyExtractor={(item) => item.id || Math.random().toString()}
-                renderItem={({ item }) => (
+          ) : filteredContacts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'Keine Kontakte gefunden' : 'Keine Kontakte verfügbar'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredContacts}
+              keyExtractor={(item) => item.id || Math.random().toString()}
+              renderItem={({ item }) => {
+                const { extractedPhone, extractedEmail } = extractContactData(item);
+                return (
                   <TouchableOpacity
                     style={styles.contactItem}
                     onPress={() => selectContact(item)}
@@ -476,109 +400,20 @@ export default function EditCustomerScreen() {
                     </View>
                     <View style={styles.contactInfo}>
                       <Text style={styles.contactName}>{item.name || 'Unbekannt'}</Text>
-                      {item.phoneNumbers && item.phoneNumbers.length > 0 && (
-                        <Text style={styles.contactDetail}>
-                          {item.phoneNumbers[0].number}
-                        </Text>
-                      )}
-                      {item.emails && item.emails.length > 0 && (
-                        <Text style={styles.contactDetail}>
-                          {item.emails[0].email}
-                        </Text>
-                      )}
+                      {extractedPhone ? (
+                        <Text style={styles.contactDetail}>{extractedPhone}</Text>
+                      ) : null}
+                      {extractedEmail ? (
+                        <Text style={styles.contactDetail}>{extractedEmail}</Text>
+                      ) : null}
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                   </TouchableOpacity>
-                )}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Manual Entry Modal for Web */}
-      <Modal
-        visible={showManualEntryModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowManualEntryModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.manualEntryModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kontaktdaten eingeben</Text>
-              <TouchableOpacity onPress={() => setShowManualEntryModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.manualEntryForm}>
-              <Text style={styles.manualEntryHint}>
-                💡 Tipp: Auf dem Handy können Sie Kontakte direkt aus dem Adressbuch importieren.
-              </Text>
-
-              <View style={styles.manualInputGroup}>
-                <Text style={styles.manualInputLabel}>Name</Text>
-                <TextInput
-                  style={styles.manualInput}
-                  placeholder="Max Mustermann"
-                  value={manualName}
-                  onChangeText={setManualName}
-                />
-              </View>
-
-              <View style={styles.manualInputGroup}>
-                <Text style={styles.manualInputLabel}>E-Mail</Text>
-                <TextInput
-                  style={styles.manualInput}
-                  placeholder="max@beispiel.de"
-                  value={manualEmail}
-                  onChangeText={setManualEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.manualInputGroup}>
-                <Text style={styles.manualInputLabel}>Telefon</Text>
-                <TextInput
-                  style={styles.manualInput}
-                  placeholder="+49 123 456789"
-                  value={manualPhone}
-                  onChangeText={setManualPhone}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.manualInputGroup}>
-                <Text style={styles.manualInputLabel}>Adresse</Text>
-                <TextInput
-                  style={[styles.manualInput, styles.manualTextArea]}
-                  placeholder="Musterstraße 1, 12345 Musterstadt"
-                  value={manualAddress}
-                  onChangeText={setManualAddress}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.manualEntryButtons}>
-                <TouchableOpacity
-                  style={[styles.manualEntryButton, styles.cancelButton]}
-                  onPress={() => setShowManualEntryModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.manualEntryButton, styles.applyButton]}
-                  onPress={applyManualEntry}
-                >
-                  <Text style={styles.applyButtonText}>Übernehmen</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
         </View>
       </Modal>
 
@@ -594,7 +429,7 @@ export default function EditCustomerScreen() {
             <Ionicons name="warning" size={48} color="#f44336" style={{ marginBottom: 16 }} />
             <Text style={styles.deleteModalTitle}>Kunde löschen?</Text>
             <Text style={styles.deleteModalText}>
-              Möchten Sie diesen Kunden wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+              Möchten Sie diesen Kunden wirklich löschen?
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -637,37 +472,16 @@ const styles = StyleSheet.create({
   form: {
     padding: 16,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
   importButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#e3f2fd',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#1976d2',
     borderStyle: 'dashed',
   },
@@ -675,6 +489,27 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     fontSize: 16,
     fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
   button: {
     backgroundColor: '#1976d2',
@@ -708,17 +543,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  modalOverlay: {
+  // Modal styles
+  modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -729,33 +557,38 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
+  closeButton: {
+    padding: 4,
+  },
   searchInput: {
     margin: 16,
-    padding: 12,
+    padding: 14,
     backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 16,
   },
   loadingContainer: {
-    padding: 40,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
   },
   emptyContainer: {
-    padding: 40,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   emptyText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
   },
   contactItem: {
@@ -765,19 +598,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   contactAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#1976d2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   contactInfo: {
     flex: 1,
   },
   contactName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#333',
   },
@@ -789,74 +622,9 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#eee',
-    marginLeft: 72,
+    marginLeft: 78,
   },
-  manualEntryModal: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
-    paddingBottom: 20,
-  },
-  manualEntryForm: {
-    padding: 16,
-  },
-  manualEntryHint: {
-    backgroundColor: '#e3f2fd',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    fontSize: 14,
-    color: '#1976d2',
-  },
-  manualInputGroup: {
-    marginBottom: 16,
-  },
-  manualInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  manualInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  manualTextArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  manualEntryButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  manualEntryButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  applyButton: {
-    backgroundColor: '#1976d2',
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  // Delete modal styles
   deleteModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -883,7 +651,6 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginBottom: 24,
-    lineHeight: 22,
   },
   deleteModalButtons: {
     flexDirection: 'row',

@@ -1040,11 +1040,21 @@ export default function DrawSketchScreen() {
       let sketchData = backgroundImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       
       try {
-        if (canvasRef.current) {
-          console.log('Capturing canvas screenshot...');
+        if (Platform.OS === 'web' && svgRef.current) {
+          // For Web: Use SVG to Base64 conversion
+          console.log('Capturing SVG as image (Web)...');
+          const svgString = new XMLSerializer().serializeToString(svgRef.current);
+          const encodedSvg = btoa(unescape(encodeURIComponent(svgString)));
+          sketchData = `data:image/svg+xml;base64,${encodedSvg}`;
+          console.log('SVG captured successfully');
+        } else if (canvasRef.current) {
+          // For Mobile: Use captureRef
+          console.log('Capturing canvas screenshot (Mobile)...');
           const uri = await captureRef(canvasRef, {
             format: 'png',
-            quality: 0.5,
+            quality: 0.3,
+            width: 400,
+            height: 400,
             result: 'base64',
           });
           sketchData = `data:image/png;base64,${uri}`;
@@ -1052,7 +1062,7 @@ export default function DrawSketchScreen() {
         }
       } catch (screenshotError) {
         console.error('Error capturing screenshot:', screenshotError);
-        // Continue with placeholder if screenshot fails
+        // Continue with placeholder or background if screenshot fails
       }
 
       if (sketchId) {

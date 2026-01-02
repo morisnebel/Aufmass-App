@@ -336,6 +336,91 @@ export default function NewCustomerScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Manual Entry Modal for Web */}
+      <Modal
+        visible={showManualEntryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowManualEntryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.manualEntryModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kontaktdaten eingeben</Text>
+              <TouchableOpacity onPress={() => setShowManualEntryModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.manualEntryForm}>
+              <Text style={styles.manualEntryHint}>
+                💡 Tipp: Auf dem Handy können Sie Kontakte direkt aus dem Adressbuch importieren.
+              </Text>
+
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualInputLabel}>Name</Text>
+                <TextInput
+                  style={styles.manualInput}
+                  placeholder="Max Mustermann"
+                  value={manualName}
+                  onChangeText={setManualName}
+                />
+              </View>
+
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualInputLabel}>E-Mail</Text>
+                <TextInput
+                  style={styles.manualInput}
+                  placeholder="max@beispiel.de"
+                  value={manualEmail}
+                  onChangeText={setManualEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualInputLabel}>Telefon</Text>
+                <TextInput
+                  style={styles.manualInput}
+                  placeholder="+49 123 456789"
+                  value={manualPhone}
+                  onChangeText={setManualPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualInputLabel}>Adresse</Text>
+                <TextInput
+                  style={[styles.manualInput, styles.manualTextArea]}
+                  placeholder="Musterstraße 1, 12345 Musterstadt"
+                  value={manualAddress}
+                  onChangeText={setManualAddress}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.manualEntryButtons}>
+                <TouchableOpacity
+                  style={[styles.manualEntryButton, styles.cancelButton]}
+                  onPress={() => setShowManualEntryModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.manualEntryButton, styles.applyButton]}
+                  onPress={applyManualEntry}
+                >
+                  <Text style={styles.applyButtonText}>Übernehmen</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

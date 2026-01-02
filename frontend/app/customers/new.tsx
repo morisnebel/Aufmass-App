@@ -239,7 +239,7 @@ export default function NewCustomerScreen() {
               placeholder="+49 123 456789"
               value={phone}
               onChangeText={setPhone}
-              keyboardType="phone-pad"
+              autoCapitalize="none"
             />
           </View>
 

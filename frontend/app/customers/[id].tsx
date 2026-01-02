@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -44,9 +44,32 @@ export default function EditCustomerScreen() {
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');
 
+  // Ref to store pending contact data
+  const pendingContactData = useRef<{name: string, email: string, phone: string, address: string} | null>(null);
+
   useEffect(() => {
     loadCustomer();
   }, [id]);
+
+  // Apply pending contact data when modal closes
+  useEffect(() => {
+    if (!showContactPicker && pendingContactData.current) {
+      const data = pendingContactData.current;
+      console.log('Applying pending contact data:', data);
+      
+      // Use a small delay to ensure modal is fully closed
+      setTimeout(() => {
+        if (data.name) setName(data.name);
+        if (data.email) setEmail(data.email);
+        if (data.phone) setPhone(data.phone);
+        if (data.address) setAddress(data.address);
+        pendingContactData.current = null;
+        
+        // Show success message after values are set
+        Alert.alert('Erfolg', 'Kontaktdaten wurden übernommen');
+      }, 300);
+    }
+  }, [showContactPicker]);
 
   const loadCustomer = async () => {
     try {

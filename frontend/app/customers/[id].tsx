@@ -270,7 +270,8 @@ export default function EditCustomerScreen() {
               placeholder="+49 123 456789"
               value={phone}
               onChangeText={setPhone}
-              keyboardType="phone-pad"
+              keyboardType="default"
+              autoCapitalize="none"
             />
           </View>
 

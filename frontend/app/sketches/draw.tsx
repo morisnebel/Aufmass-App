@@ -95,12 +95,15 @@ export default function DrawSketchScreen() {
   // Background
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  // Load existing sketch
-  React.useEffect(() => {
-    if (sketchId) {
-      loadSketch();
-    }
-  }, [sketchId]);
+  // Load existing sketch when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (sketchId) {
+        console.log('useFocusEffect: Loading sketch', sketchId);
+        loadSketch();
+      }
+    }, [sketchId])
+  );
 
   const loadSketch = async () => {
     try {

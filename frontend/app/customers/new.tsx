@@ -149,10 +149,18 @@ export default function NewCustomerScreen() {
 
   // Apply manual entry data
   const applyManualEntry = () => {
-    if (manualName) setName(manualName);
-    if (manualEmail) setEmail(manualEmail);
-    if (manualPhone) setPhone(manualPhone);
-    if (manualAddress) setAddress(manualAddress);
+    // Set all values that were entered
+    if (manualName.trim()) setName(manualName.trim());
+    if (manualEmail.trim()) setEmail(manualEmail.trim());
+    if (manualPhone.trim()) setPhone(manualPhone.trim());
+    if (manualAddress.trim()) setAddress(manualAddress.trim());
+    
+    console.log('Applied manual entry:', {
+      name: manualName,
+      email: manualEmail,
+      phone: manualPhone,
+      address: manualAddress
+    });
     
     // Reset and close modal
     setManualName('');

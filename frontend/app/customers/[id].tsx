@@ -387,6 +387,14 @@ export default function EditCustomerScreen() {
               {saving ? 'Wird gespeichert...' : 'Änderungen speichern'}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteCustomerButton}
+            onPress={handleDeleteCustomer}
+          >
+            <Ionicons name="trash-outline" size={20} color="#f44336" />
+            <Text style={styles.deleteCustomerButtonText}>Kunde löschen</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 

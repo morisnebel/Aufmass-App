@@ -255,6 +255,18 @@ async def get_project_sketches(project_id: str):
     sketches = await db.sketches.find({"project_id": project_id}).to_list(1000)
     return [Sketch(**serialize_doc(s)) for s in sketches]
 
+@api_router.put("/sketches/{sketch_id}", response_model=Sketch)
+async def update_sketch(sketch_id: str, sketch: Sketch):
+    sketch_dict = sketch.dict(exclude={'id'})
+    result = await db.sketches.update_one(
+        {"_id": ObjectId(sketch_id)},
+        {"$set": sketch_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Sketch not found")
+    sketch_dict['id'] = sketch_id
+    return Sketch(**sketch_dict)
+
 @api_router.delete("/sketches/{sketch_id}")
 async def delete_sketch(sketch_id: str):
     result = await db.sketches.delete_one({"_id": ObjectId(sketch_id)})

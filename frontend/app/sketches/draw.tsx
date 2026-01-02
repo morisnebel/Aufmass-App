@@ -1028,26 +1028,33 @@ export default function DrawSketchScreen() {
         backgroundImage,
       };
 
+      console.log('Saving sketch with', elements.length, 'elements');
+      console.log('Metadata:', metadata);
+
       // For sketch_data, we'll save a placeholder or the background image
       const sketchData = backgroundImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
       if (sketchId) {
         // Update existing sketch
-        await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
+        console.log('Updating sketch ID:', sketchId);
+        const response = await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
           project_id: projectId,
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
         });
+        console.log('Update response:', response.data);
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
       } else {
         // Create new sketch
-        await axios.post(`${API_URL}/api/sketches`, {
+        console.log('Creating new sketch');
+        const response = await axios.post(`${API_URL}/api/sketches`, {
           project_id: projectId,
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
         });
+        console.log('Create response:', response.data);
         showAlert('Erfolg', 'Skizze wurde gespeichert');
       }
 

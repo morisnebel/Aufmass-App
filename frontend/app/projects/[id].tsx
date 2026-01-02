@@ -19,6 +19,7 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { SvgXml } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 

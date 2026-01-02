@@ -922,11 +922,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 6,
+    gap: 4,
+  },
+  editButtonText: {
+    color: '#1976d2',
+    fontSize: 14,
+    fontWeight: '500',
   },
   infoRow: {
     marginBottom: 8,

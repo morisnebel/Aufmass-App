@@ -89,6 +89,7 @@ export default function DrawSketchScreen() {
   const [showTextModal, setShowTextModal] = useState(false);
   const [showArrowModal, setShowArrowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditArrowModal, setShowEditArrowModal] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');

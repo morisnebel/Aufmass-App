@@ -312,7 +312,7 @@ export default function EditCustomerScreen() {
       await axios.delete(`${API_URL}/api/customers/${id}`);
       setShowDeleteModal(false);
       Alert.alert('Erfolg', 'Kunde wurde gelöscht', [
-        { text: 'OK', onPress: () => router.replace('/customers') },
+        { text: 'OK', onPress: () => router.replace('/customers/') },
       ]);
     } catch (error) {
       console.error('Error deleting customer:', error);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,27 @@ export default function NewCustomerScreen() {
   // Manual entry modal for web
   const [showManualEntryModal, setShowManualEntryModal] = useState(false);
   const [manualName, setManualName] = useState('');
+
+  // Ref to store pending contact data
+  const pendingContactData = useRef<{name: string, email: string, phone: string, address: string} | null>(null);
+
+  // Apply pending contact data when modal closes
+  useEffect(() => {
+    if (!showContactPicker && pendingContactData.current) {
+      const data = pendingContactData.current;
+      console.log('Applying pending contact data:', data);
+      
+      setTimeout(() => {
+        if (data.name) setName(data.name);
+        if (data.email) setEmail(data.email);
+        if (data.phone) setPhone(data.phone);
+        if (data.address) setAddress(data.address);
+        pendingContactData.current = null;
+        
+        Alert.alert('Erfolg', 'Kontaktdaten wurden übernommen');
+      }, 300);
+    }
+  }, [showContactPicker]);
   const [manualEmail, setManualEmail] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualAddress, setManualAddress] = useState('');

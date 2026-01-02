@@ -147,6 +147,21 @@ export default function NewCustomerScreen() {
     );
   });
 
+  // Apply manual entry data
+  const applyManualEntry = () => {
+    if (manualName) setName(manualName);
+    if (manualEmail) setEmail(manualEmail);
+    if (manualPhone) setPhone(manualPhone);
+    if (manualAddress) setAddress(manualAddress);
+    
+    // Reset and close modal
+    setManualName('');
+    setManualEmail('');
+    setManualPhone('');
+    setManualAddress('');
+    setShowManualEntryModal(false);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');

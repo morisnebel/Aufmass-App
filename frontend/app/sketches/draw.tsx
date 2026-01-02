@@ -1454,6 +1454,91 @@ export default function DrawSketchScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Arrow Modal */}
+      <Modal visible={showEditArrowModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={arrowText}
+              onChangeText={setArrowText}
+              placeholder="Maß eingeben (z.B. 5.5m)"
+            />
+            <View style={styles.arrowHeadsContainer}>
+              <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
+              <View style={styles.arrowHeadsButtons}>
+                <TouchableOpacity
+                  style={[styles.arrowHeadButton, arrowHeads === 'single' && styles.arrowHeadButtonActive]}
+                  onPress={() => setArrowHeads('single')}
+                >
+                  <Text style={styles.arrowHeadButtonText}>Einfach →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.arrowHeadButton, arrowHeads === 'double' && styles.arrowHeadButtonActive]}
+                  onPress={() => setArrowHeads('double')}
+                >
+                  <Text style={styles.arrowHeadButtonText}>Doppelt ↔</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.colorPickerContainer}>
+              <Text style={styles.modalLabel}>Farbe:</Text>
+              <View style={styles.colorGrid}>
+                {colors.map(color => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      drawColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setDrawColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowEditArrowModal(false);
+                  setArrowText('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => {
+                  if (selectedElementId) {
+                    const newElements = elements.map(el => {
+                      if (el.id === selectedElementId && el.type === 'arrow') {
+                        return {
+                          ...el,
+                          data: {
+                            ...el.data,
+                            text: arrowText,
+                            heads: arrowHeads,
+                          },
+                          color: drawColor,
+                        };
+                      }
+                      return el;
+                    });
+                    addToHistory(newElements);
+                    setShowEditArrowModal(false);
+                    setArrowText('');
+                  }
+                }}
+              >
+                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

@@ -103,13 +103,24 @@ export default function EditCustomerScreen() {
   }, [id]);
 
   const loadCustomer = async () => {
+    // Double-check the ref in case of race conditions
+    if (isImportingRef.current) {
+      console.log('loadCustomer skipped - import in progress');
+      setLoading(false);
+      return;
+    }
+    
     try {
       const response = await axios.get(`${API_URL}/api/customers/${id}`);
       const customer = response.data;
-      setName(customer.name || '');
-      setEmail(customer.email || '');
-      setPhone(customer.phone || '');
-      setAddress(customer.address || '');
+      
+      // Check again before setting state
+      if (!isImportingRef.current) {
+        setName(customer.name || '');
+        setEmail(customer.email || '');
+        setPhone(customer.phone || '');
+        setAddress(customer.address || '');
+      }
     } catch (error) {
       console.error('Error loading customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht geladen werden');

@@ -115,31 +115,41 @@ export default function EditCustomerScreen() {
   };
 
   const selectContact = (contact: Contacts.Contact) => {
+    console.log('Selected contact:', JSON.stringify(contact, null, 2));
+    
     // Set name
     if (contact.name) {
+      console.log('Setting name:', contact.name);
       setName(contact.name);
     }
     
     // Set email (first email if available)
     if (contact.emails && contact.emails.length > 0) {
-      setEmail(contact.emails[0].email || '');
+      const emailValue = contact.emails[0].email || '';
+      console.log('Setting email:', emailValue);
+      setEmail(emailValue);
     }
     
     // Set phone (first phone number if available)
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      setPhone(contact.phoneNumbers[0].number || '');
+      const phoneValue = contact.phoneNumbers[0].number || '';
+      console.log('Setting phone:', phoneValue);
+      setPhone(phoneValue);
     }
     
     // Set address (first address if available)
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0];
+      console.log('Address data:', addr);
       const addressParts = [];
       if (addr.street) addressParts.push(addr.street);
       if (addr.postalCode || addr.city) {
         addressParts.push([addr.postalCode, addr.city].filter(Boolean).join(' '));
       }
       if (addr.country) addressParts.push(addr.country);
-      setAddress(addressParts.join(', '));
+      const addressValue = addressParts.join(', ');
+      console.log('Setting address:', addressValue);
+      setAddress(addressValue);
     }
     
     setShowContactPicker(false);

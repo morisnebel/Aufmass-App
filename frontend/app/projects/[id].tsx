@@ -431,23 +431,50 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {sketches.map((sketch) => (
-              <TouchableOpacity
-                key={sketch.id}
-                style={styles.itemCard}
-                onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
-              >
-                <View style={styles.itemHeader}>
-                  {sketch.title && (
-                    <Text style={styles.itemTitle}>{sketch.title}</Text>
+              <View key={sketch.id} style={styles.itemCard}>
+                <TouchableOpacity
+                  onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
+                  style={{ flex: 1 }}
+                >
+                  <View style={styles.itemHeader}>
+                    {sketch.title && (
+                      <Text style={styles.itemTitle}>{sketch.title}</Text>
+                    )}
+                    <Ionicons name="create-outline" size={20} color="#1976d2" />
+                  </View>
+                  {sketch.sketch_data && (
+                    <Image
+                      source={{ uri: sketch.sketch_data }}
+                      style={styles.sketchImage}
+                      resizeMode="contain"
+                    />
                   )}
-                  <Ionicons name="create-outline" size={20} color="#1976d2" />
-                </View>
-                <Image
-                  source={{ uri: sketch.sketch_data }}
-                  style={styles.sketchImage}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
+                  {sketch.metadata && (() => {
+                    try {
+                      const metadata = JSON.parse(sketch.metadata);
+                      const elementCount = metadata.elements?.length || 0;
+                      return (
+                        <Text style={styles.sketchInfo}>
+                          {elementCount} Element{elementCount !== 1 ? 'e' : ''}
+                        </Text>
+                      );
+                    } catch (e) {
+                      return null;
+                    }
+                  })()}
+                </TouchableOpacity>
+                
+                {/* Delete Button */}
+                <TouchableOpacity
+                  style={styles.sketchDeleteButton}
+                  onPress={() => {
+                    setSketchToDelete(sketch.id);
+                    setDeleteSketchModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="trash" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}

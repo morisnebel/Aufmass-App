@@ -1021,6 +1021,7 @@ export default function DrawSketchScreen() {
   const generatePreviewSvg = () => {
     // Calculate bounds of all elements to fit them in preview
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let hasValidBounds = false;
     
     elements.forEach(el => {
       if (el.type === 'path') {
@@ -1035,6 +1036,7 @@ export default function DrawSketchScreen() {
               maxX = Math.max(maxX, x);
               minY = Math.min(minY, y);
               maxY = Math.max(maxY, y);
+              hasValidBounds = true;
             }
           }
         }
@@ -1043,16 +1045,19 @@ export default function DrawSketchScreen() {
         maxX = Math.max(maxX, el.data.x1, el.data.x2);
         minY = Math.min(minY, el.data.y1, el.data.y2);
         maxY = Math.max(maxY, el.data.y1, el.data.y2);
+        hasValidBounds = true;
       } else if (el.type === 'circle') {
         minX = Math.min(minX, el.data.cx - el.data.r);
         maxX = Math.max(maxX, el.data.cx + el.data.r);
         minY = Math.min(minY, el.data.cy - el.data.r);
         maxY = Math.max(maxY, el.data.cy + el.data.r);
+        hasValidBounds = true;
       } else if (el.type === 'rect') {
         minX = Math.min(minX, el.data.x);
         maxX = Math.max(maxX, el.data.x + el.data.width);
         minY = Math.min(minY, el.data.y);
         maxY = Math.max(maxY, el.data.y + el.data.height);
+        hasValidBounds = true;
       } else if (el.type === 'image' || el.type === 'text') {
         const x = el.x || 0;
         const y = el.y || 0;
@@ -1062,8 +1067,17 @@ export default function DrawSketchScreen() {
         maxX = Math.max(maxX, x + w);
         minY = Math.min(minY, y);
         maxY = Math.max(maxY, y + h);
+        hasValidBounds = true;
       }
     });
+    
+    // If no valid bounds found, use default canvas size
+    if (!hasValidBounds) {
+      minX = 0;
+      minY = 0;
+      maxX = 400;
+      maxY = 400;
+    }
     
     // Add padding
     const padding = 20;
@@ -1075,73 +1089,95 @@ export default function DrawSketchScreen() {
     // Calculate dimensions
     const drawWidth = maxX - minX || 200;
     const drawHeight = maxY - minY || 200;
-    const scale = Math.min(200 / drawWidth, 200 / drawHeight, 1);
+    const previewSize = 200;
+    const scale = Math.min(previewSize / drawWidth, previewSize / drawHeight, 1);
+    
+    // Calculate offset to center the drawing
+    const scaledWidth = drawWidth * scale;
+    const scaledHeight = drawHeight * scale;
+    const offsetX = (previewSize - scaledWidth) / 2;
+    const offsetY = (previewSize - scaledHeight) / 2;
     
     // Generate SVG with elements
     let svgElements = '';
     
     elements.forEach(el => {
-      const scaledStrokeWidth = (el.strokeWidth || 2) * scale;
+      const scaledStrokeWidth = Math.max(1, (el.strokeWidth || 2) * scale);
       
       if (el.type === 'path') {
-        // Scale path coordinates
-        const scaledPath = el.data.replace(/(-?\d+\.?\d*)/g, (match: string) => {
-          const num = parseFloat(match);
-          return ((num - minX) * scale).toFixed(1);
-        });
+        // Transform path coordinates
+        let pathIndex = 0;
+        const scaledPath = el.data.replace(/([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g, 
+          (match: string, cmd: string, xStr: string, yStr: string) => {
+            const x = ((parseFloat(xStr) - minX) * scale) + offsetX;
+            const y = ((parseFloat(yStr) - minY) * scale) + offsetY;
+            return `${cmd} ${x.toFixed(1)} ${y.toFixed(1)}`;
+          });
         svgElements += `<path d="${scaledPath}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else if (el.type === 'line') {
-        const x1 = (el.data.x1 - minX) * scale;
-        const y1 = (el.data.y1 - minY) * scale;
-        const x2 = (el.data.x2 - minX) * scale;
-        const y2 = (el.data.y2 - minY) * scale;
-        svgElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}"/>`;
+        const x1 = ((el.data.x1 - minX) * scale) + offsetX;
+        const y1 = ((el.data.y1 - minY) * scale) + offsetY;
+        const x2 = ((el.data.x2 - minX) * scale) + offsetX;
+        const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+        svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}"/>`;
       } else if (el.type === 'circle') {
-        const cx = (el.data.cx - minX) * scale;
-        const cy = (el.data.cy - minY) * scale;
-        const r = el.data.r * scale;
-        svgElements += `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none"/>`;
+        const cx = ((el.data.cx - minX) * scale) + offsetX;
+        const cy = ((el.data.cy - minY) * scale) + offsetY;
+        const r = Math.max(2, el.data.r * scale);
+        svgElements += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none"/>`;
       } else if (el.type === 'rect') {
-        const x = (el.data.x - minX) * scale;
-        const y = (el.data.y - minY) * scale;
-        const w = el.data.width * scale;
-        const h = el.data.height * scale;
-        svgElements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none"/>`;
+        const x = ((el.data.x - minX) * scale) + offsetX;
+        const y = ((el.data.y - minY) * scale) + offsetY;
+        const w = Math.max(2, el.data.width * scale);
+        const h = Math.max(2, el.data.height * scale);
+        svgElements += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none"/>`;
       } else if (el.type === 'arrow') {
-        const x1 = (el.data.x1 - minX) * scale;
-        const y1 = (el.data.y1 - minY) * scale;
-        const x2 = (el.data.x2 - minX) * scale;
-        const y2 = (el.data.y2 - minY) * scale;
+        const x1 = ((el.data.x1 - minX) * scale) + offsetX;
+        const y1 = ((el.data.y1 - minY) * scale) + offsetY;
+        const x2 = ((el.data.x2 - minX) * scale) + offsetX;
+        const y2 = ((el.data.y2 - minY) * scale) + offsetY;
         const arrowId = `arrow-${Math.random().toString(36).substr(2, 9)}`;
-        svgElements += `
-          <defs>
-            <marker id="${arrowId}-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-              <polygon points="0,0 0,6 9,3" fill="${el.color}"/>
-            </marker>
-            ${el.data.heads === 'double' ? `<marker id="${arrowId}-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"><polygon points="9,0 9,6 0,3" fill="${el.color}"/></marker>` : ''}
-          </defs>
-          <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" marker-end="url(#${arrowId}-end)" ${el.data.heads === 'double' ? `marker-start="url(#${arrowId}-start)"` : ''}/>`;
+        
+        // Draw arrow with simple arrowhead triangles
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const arrowSize = 8;
+        
+        // End arrowhead
+        const endX1 = x2 - arrowSize * Math.cos(angle - Math.PI / 6);
+        const endY1 = y2 - arrowSize * Math.sin(angle - Math.PI / 6);
+        const endX2 = x2 - arrowSize * Math.cos(angle + Math.PI / 6);
+        const endY2 = y2 - arrowSize * Math.sin(angle + Math.PI / 6);
+        
+        svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}"/>`;
+        svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${endX1.toFixed(1)},${endY1.toFixed(1)} ${endX2.toFixed(1)},${endY2.toFixed(1)}" fill="${el.color}"/>`;
+        
+        // Start arrowhead if double
+        if (el.data.heads === 'double') {
+          const startX1 = x1 + arrowSize * Math.cos(angle - Math.PI / 6);
+          const startY1 = y1 + arrowSize * Math.sin(angle - Math.PI / 6);
+          const startX2 = x1 + arrowSize * Math.cos(angle + Math.PI / 6);
+          const startY2 = y1 + arrowSize * Math.sin(angle + Math.PI / 6);
+          svgElements += `<polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${startX1.toFixed(1)},${startY1.toFixed(1)} ${startX2.toFixed(1)},${startY2.toFixed(1)}" fill="${el.color}"/>`;
+        }
         
         if (el.data.text) {
           const midX = (x1 + x2) / 2;
           const midY = (y1 + y2) / 2;
-          const fontSize = 12 * scale;
-          svgElements += `<text x="${midX}" y="${midY - 5}" text-anchor="middle" font-size="${fontSize}" fill="${el.color}">${el.data.text}</text>`;
+          const fontSize = Math.max(8, 10 * scale);
+          svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 5).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" fill="${el.color}">${el.data.text}</text>`;
         }
       } else if (el.type === 'text') {
-        const x = ((el.x || 0) - minX) * scale;
-        const y = ((el.y || 0) - minY) * scale;
-        const fontSize = 16 * scale;
-        svgElements += `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${el.data.text}</text>`;
+        const x = (((el.x || 0) - minX) * scale) + offsetX;
+        const y = (((el.y || 0) - minY) * scale) + offsetY;
+        const fontSize = Math.max(8, 14 * scale);
+        svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${el.data.text}</text>`;
       }
+      // Skip images in preview as they're complex
     });
     
-    const previewSvg = `
-      <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="200" fill="#ffffff"/>
-        ${svgElements}
-      </svg>
-    `;
+    const previewSvg = `<svg width="${previewSize}" height="${previewSize}" viewBox="0 0 ${previewSize} ${previewSize}" xmlns="http://www.w3.org/2000/svg"><rect width="${previewSize}" height="${previewSize}" fill="#ffffff"/>${svgElements}</svg>`;
+    
+    console.log('Generated SVG preview:', previewSvg.substring(0, 200) + '...');
     
     return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
   };

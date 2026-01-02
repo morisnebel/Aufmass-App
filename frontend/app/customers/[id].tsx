@@ -121,87 +121,71 @@ export default function EditCustomerScreen() {
     console.log('=== SELECTED CONTACT ===');
     console.log('Full contact object:', JSON.stringify(contact, null, 2));
     
-    // Debug: Show what we received
-    let debugInfo = `Name: ${contact.name || 'nicht gefunden'}\n`;
-    debugInfo += `Emails: ${JSON.stringify(contact.emails)}\n`;
-    debugInfo += `Phones: ${JSON.stringify(contact.phoneNumbers)}\n`;
-    debugInfo += `Addresses: ${JSON.stringify(contact.addresses)}`;
-    console.log('Debug Info:', debugInfo);
+    // Variables to store extracted values
+    let extractedName = '';
+    let extractedEmail = '';
+    let extractedPhone = '';
+    let extractedAddress = '';
     
-    // Set name - try different name fields
-    const contactName = contact.name || 
+    // Extract name - try different name fields
+    extractedName = contact.name || 
       (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}`.trim() : '') ||
       contact.firstName || 
       contact.lastName ||
       '';
-    if (contactName) {
-      console.log('Setting name:', contactName);
-      setName(contactName);
-    }
     
-    // Set email (first email if available)
+    // Extract email (first email if available)
     if (contact.emails && contact.emails.length > 0) {
       const emailObj = contact.emails[0] as any;
       console.log('Raw email object:', emailObj, typeof emailObj);
-      let emailValue = '';
       if (typeof emailObj === 'string') {
-        emailValue = emailObj;
+        extractedEmail = emailObj;
       } else if (emailObj?.email) {
-        emailValue = emailObj.email;
+        extractedEmail = emailObj.email;
       } else if (emailObj?.value) {
-        emailValue = emailObj.value;
+        extractedEmail = emailObj.value;
       } else if (emailObj?.address) {
-        emailValue = emailObj.address;
-      }
-      console.log('Setting email:', emailValue);
-      if (emailValue) {
-        setEmail(emailValue);
+        extractedEmail = emailObj.address;
       }
     }
     
-    // Set phone (first phone number if available)
+    // Extract phone (first phone number if available)
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
       const phoneObj = contact.phoneNumbers[0] as any;
       console.log('Raw phone object:', phoneObj, typeof phoneObj);
-      let phoneValue = '';
       if (typeof phoneObj === 'string') {
-        phoneValue = phoneObj;
+        extractedPhone = phoneObj;
       } else if (phoneObj?.number) {
-        phoneValue = phoneObj.number;
+        extractedPhone = phoneObj.number;
       } else if (phoneObj?.digits) {
-        phoneValue = phoneObj.digits;
+        extractedPhone = phoneObj.digits;
       } else if (phoneObj?.value) {
-        phoneValue = phoneObj.value;
+        extractedPhone = phoneObj.value;
       } else if (phoneObj?.phoneNumber) {
-        phoneValue = phoneObj.phoneNumber;
-      } else {
+        extractedPhone = phoneObj.phoneNumber;
+      } else if (phoneObj) {
         // Try to extract any string value from the object
-        const keys = Object.keys(phoneObj || {});
+        const keys = Object.keys(phoneObj);
         for (const key of keys) {
           if (typeof phoneObj[key] === 'string' && phoneObj[key].match(/[\d+]/)) {
-            phoneValue = phoneObj[key];
+            extractedPhone = phoneObj[key];
+            console.log('Found phone in key:', key);
             break;
           }
         }
       }
-      console.log('Setting phone:', phoneValue);
-      if (phoneValue) {
-        setPhone(phoneValue);
-      }
     }
     
-    // Set address (first address if available)
+    // Extract address (first address if available)
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0] as any;
       console.log('Raw address object:', addr, typeof addr);
       
-      let addressValue = '';
-      
       // Try formatted address first
       if (addr?.formattedAddress) {
-        addressValue = addr.formattedAddress;
+        extractedAddress = addr.formattedAddress;
       } else if (typeof addr === 'string') {
-        addressValue = addr;
+        extractedAddress = addr;
       } else if (addr) {
         const addressParts: string[] = [];
         
@@ -232,30 +216,27 @@ export default function EditCustomerScreen() {
           }
         }
         
-        addressValue = addressParts.join(', ');
-      }
-      
-      console.log('Setting address:', addressValue);
-      if (addressValue) {
-        setAddress(addressValue);
+        extractedAddress = addressParts.join(', ');
       }
     }
     
-    console.log('=== CONTACT SELECTION COMPLETE ===');
-    console.log('Final values - Name:', contactName, 'Phone:', phoneValue, 'Address:', addressValue);
+    console.log('=== EXTRACTED VALUES ===');
+    console.log('Name:', extractedName);
+    console.log('Email:', extractedEmail);
+    console.log('Phone:', extractedPhone);
+    console.log('Address:', extractedAddress);
     
-    // Show debug alert on mobile with the values we're about to set
+    // Now set all the values
+    if (extractedName) setName(extractedName);
+    if (extractedEmail) setEmail(extractedEmail);
+    if (extractedPhone) setPhone(extractedPhone);
+    if (extractedAddress) setAddress(extractedAddress);
+    
+    // Show debug alert on mobile
     if (Platform.OS !== 'web') {
-      const phoneToShow = contact.phoneNumbers && contact.phoneNumbers.length > 0 
-        ? JSON.stringify(contact.phoneNumbers[0]) 
-        : '(keine Telefonnummer)';
-      const addrToShow = contact.addresses && contact.addresses.length > 0 
-        ? JSON.stringify(contact.addresses[0]) 
-        : '(keine Adresse)';
-      
       Alert.alert(
-        'Debug: Rohdaten',
-        `Phone-Objekt: ${phoneToShow}\n\nAddress-Objekt: ${addrToShow}`,
+        'Kontaktdaten',
+        `Name: ${extractedName || '(nicht gefunden)'}\nEmail: ${extractedEmail || '(nicht gefunden)'}\nTelefon: ${extractedPhone || '(nicht gefunden)'}\nAdresse: ${extractedAddress || '(nicht gefunden)'}`,
         [{ text: 'OK' }]
       );
     }

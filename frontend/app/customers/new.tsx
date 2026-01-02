@@ -202,7 +202,12 @@ export default function NewCustomerScreen() {
           {/* Import from Contacts Button */}
           <TouchableOpacity
             style={styles.importButton}
-            onPress={openContactPicker}
+            onPress={() => {
+              console.log('Button pressed! (NEW)');
+              Alert.alert('Button gedrückt', 'Die openContactPicker Funktion wird jetzt aufgerufen...');
+              openContactPicker();
+            }}
+            activeOpacity={0.7}
           >
             <Ionicons name="person-add" size={20} color="#1976d2" />
             <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>

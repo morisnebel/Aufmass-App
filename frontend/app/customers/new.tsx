@@ -97,7 +97,6 @@ export default function NewCustomerScreen() {
 
   const selectContact = (contact: Contacts.Contact) => {
     console.log('=== SELECTED CONTACT ===');
-    console.log('Full contact object:', JSON.stringify(contact, null, 2));
     
     // Variables to store extracted values
     let extractedName = '';
@@ -105,32 +104,28 @@ export default function NewCustomerScreen() {
     let extractedPhone = '';
     let extractedAddress = '';
     
-    // Extract name - try different name fields
+    // Extract name
     extractedName = contact.name || 
       (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}`.trim() : '') ||
       contact.firstName || 
-      contact.lastName ||
-      '';
+      contact.lastName || '';
     
-    // Extract email (first email if available)
+    // Extract email
     if (contact.emails && contact.emails.length > 0) {
       const emailObj = contact.emails[0] as any;
-      console.log('Raw email object:', emailObj, typeof emailObj);
       if (typeof emailObj === 'string') {
         extractedEmail = emailObj;
       } else if (emailObj?.email) {
         extractedEmail = emailObj.email;
       } else if (emailObj?.value) {
         extractedEmail = emailObj.value;
-      } else if (emailObj?.address) {
-        extractedEmail = emailObj.address;
       }
     }
     
-    // Extract phone (first phone number if available)
+    // Extract phone
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
       const phoneObj = contact.phoneNumbers[0] as any;
-      console.log('Raw phone object:', phoneObj, typeof phoneObj);
+      console.log('Phone object type:', typeof phoneObj, 'value:', JSON.stringify(phoneObj));
       if (typeof phoneObj === 'string') {
         extractedPhone = phoneObj;
       } else if (phoneObj?.number) {
@@ -142,59 +137,49 @@ export default function NewCustomerScreen() {
       } else if (phoneObj?.phoneNumber) {
         extractedPhone = phoneObj.phoneNumber;
       } else if (phoneObj) {
-        // Try to extract any string value from the object
+        // Try all keys
         const keys = Object.keys(phoneObj);
+        console.log('Phone object keys:', keys);
         for (const key of keys) {
-          if (typeof phoneObj[key] === 'string' && phoneObj[key].match(/[\d+]/)) {
-            extractedPhone = phoneObj[key];
-            console.log('Found phone in key:', key);
+          const val = phoneObj[key];
+          if (typeof val === 'string' && val.match(/[\d+\-\s]/)) {
+            extractedPhone = val;
+            console.log('Found phone in key:', key, 'value:', val);
             break;
           }
         }
       }
     }
     
-    // Extract address (first address if available)
+    // Extract address
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0] as any;
-      console.log('Raw address object:', addr, typeof addr);
+      console.log('Address object type:', typeof addr, 'value:', JSON.stringify(addr));
       
-      // Try formatted address first
       if (addr?.formattedAddress) {
         extractedAddress = addr.formattedAddress;
       } else if (typeof addr === 'string') {
         extractedAddress = addr;
       } else if (addr) {
-        const addressParts: string[] = [];
+        const parts: string[] = [];
+        if (addr.street) parts.push(addr.street);
+        if (addr.city) parts.push(addr.city);
+        if (addr.postalCode) parts.push(addr.postalCode);
+        if (addr.region) parts.push(addr.region);
+        if (addr.country) parts.push(addr.country);
         
-        // Street
-        if (addr.street) addressParts.push(addr.street);
-        if (addr.streetNumber) addressParts.push(addr.streetNumber);
-        
-        // City line
-        const cityLine: string[] = [];
-        if (addr.postalCode) cityLine.push(addr.postalCode);
-        if (addr.city) cityLine.push(addr.city);
-        if (cityLine.length > 0) addressParts.push(cityLine.join(' '));
-        
-        // Region
-        if (addr.region) addressParts.push(addr.region);
-        if (addr.state) addressParts.push(addr.state);
-        
-        // Country
-        if (addr.country) addressParts.push(addr.country);
-        
-        // If still empty, try to get any string values
-        if (addressParts.length === 0) {
+        if (parts.length === 0) {
+          // Try all string keys
           const keys = Object.keys(addr);
+          console.log('Address object keys:', keys);
           for (const key of keys) {
-            if (typeof addr[key] === 'string' && addr[key].length > 0 && key !== 'id' && key !== 'label') {
-              addressParts.push(addr[key]);
+            const val = addr[key];
+            if (typeof val === 'string' && val.length > 0 && !['id', 'label', 'type'].includes(key)) {
+              parts.push(val);
             }
           }
         }
-        
-        extractedAddress = addressParts.join(', ');
+        extractedAddress = parts.join(', ');
       }
     }
     
@@ -204,38 +189,36 @@ export default function NewCustomerScreen() {
     console.log('Phone:', extractedPhone);
     console.log('Address:', extractedAddress);
     
-    // Close modal first
+    // IMMEDIATELY set all values before closing modal
+    console.log('Setting states NOW...');
+    if (extractedName) {
+      console.log('Calling setName with:', extractedName);
+      setName(extractedName);
+    }
+    if (extractedEmail) {
+      console.log('Calling setEmail with:', extractedEmail);
+      setEmail(extractedEmail);
+    }
+    if (extractedPhone) {
+      console.log('Calling setPhone with:', extractedPhone);
+      setPhone(extractedPhone);
+    }
+    if (extractedAddress) {
+      console.log('Calling setAddress with:', extractedAddress);
+      setAddress(extractedAddress);
+    }
+    console.log('All setState calls completed');
+    
+    // Close modal AFTER setting values
     setShowContactPicker(false);
     setSearchQuery('');
     
-    // Then set all the values with a small delay to ensure modal is closed
-    setTimeout(() => {
-      if (extractedName) {
-        console.log('Setting name state to:', extractedName);
-        setName(extractedName);
-      }
-      if (extractedEmail) {
-        console.log('Setting email state to:', extractedEmail);
-        setEmail(extractedEmail);
-      }
-      if (extractedPhone) {
-        console.log('Setting phone state to:', extractedPhone);
-        setPhone(extractedPhone);
-      }
-      if (extractedAddress) {
-        console.log('Setting address state to:', extractedAddress);
-        setAddress(extractedAddress);
-      }
-    }, 100);
-    
-    // Show debug alert on mobile
-    if (Platform.OS !== 'web') {
-      Alert.alert(
-        'Kontaktdaten',
-        `Name: ${extractedName || '(nicht gefunden)'}\nEmail: ${extractedEmail || '(nicht gefunden)'}\nTelefon: ${extractedPhone || '(nicht gefunden)'}\nAdresse: ${extractedAddress || '(nicht gefunden)'}`,
-        [{ text: 'OK' }]
-      );
-    }
+    // Show confirmation
+    Alert.alert(
+      'Kontakt übernommen',
+      `Die folgenden Daten wurden übernommen:\n\nName: ${extractedName || '-'}\nEmail: ${extractedEmail || '-'}\nTelefon: ${extractedPhone || '-'}\nAdresse: ${extractedAddress || '-'}`,
+      [{ text: 'OK' }]
+    );
   };
 
   const filteredContacts = contacts.filter(contact => {

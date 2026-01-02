@@ -1044,7 +1044,7 @@ export default function DrawSketchScreen() {
   ];
 
   // Stroke widths
-  const strokeWidths = [1, 2, 3, 5, 8, 12];
+  const strokeWidths = [1, 2, 3, 5, 8];
 
   return (
     <View style={styles.container}>
@@ -1065,7 +1065,7 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Main toolbar */}
+      {/* Compact toolbar - Row 1: Main tools */}
       <ScrollView horizontal style={styles.toolbar} showsHorizontalScrollIndicator={false}>
         {/* Undo/Redo */}
         <TouchableOpacity
@@ -1073,8 +1073,7 @@ export default function DrawSketchScreen() {
           onPress={undo}
           disabled={!canUndo}
         >
-          <Ionicons name="arrow-undo" size={24} color={canUndo ? '#1976d2' : '#ccc'} />
-          <Text style={styles.toolLabel}>Zurück</Text>
+          <Ionicons name="arrow-undo" size={20} color={canUndo ? '#1976d2' : '#ccc'} />
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -1082,8 +1081,7 @@ export default function DrawSketchScreen() {
           onPress={redo}
           disabled={!canRedo}
         >
-          <Ionicons name="arrow-redo" size={24} color={canRedo ? '#1976d2' : '#ccc'} />
-          <Text style={styles.toolLabel}>Weiter</Text>
+          <Ionicons name="arrow-redo" size={20} color={canRedo ? '#1976d2' : '#ccc'} />
         </TouchableOpacity>
 
         <View style={styles.separator} />
@@ -1093,61 +1091,53 @@ export default function DrawSketchScreen() {
           style={[styles.toolButton, drawMode === 'select' && styles.toolButtonActive]}
           onPress={() => setDrawMode('select')}
         >
-          <Ionicons name="hand-left" size={24} color={drawMode === 'select' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
+          <Ionicons name="hand-left" size={20} color={drawMode === 'select' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'pen' && styles.toolButtonActive]}
           onPress={() => setDrawMode('pen')}
         >
-          <Ionicons name="create" size={24} color={drawMode === 'pen' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'pen' && styles.toolLabelActive]}>Stift</Text>
+          <Ionicons name="create" size={20} color={drawMode === 'pen' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'line' && styles.toolButtonActive]}
           onPress={() => setDrawMode('line')}
         >
-          <Ionicons name="remove" size={24} color={drawMode === 'line' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'line' && styles.toolLabelActive]}>Linie</Text>
+          <Ionicons name="remove" size={20} color={drawMode === 'line' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'circle' && styles.toolButtonActive]}
           onPress={() => setDrawMode('circle')}
         >
-          <Ionicons name="ellipse-outline" size={24} color={drawMode === 'circle' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'circle' && styles.toolLabelActive]}>Kreis</Text>
+          <Ionicons name="ellipse-outline" size={20} color={drawMode === 'circle' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'rect' && styles.toolButtonActive]}
           onPress={() => setDrawMode('rect')}
         >
-          <Ionicons name="square-outline" size={24} color={drawMode === 'rect' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'rect' && styles.toolLabelActive]}>Rechteck</Text>
+          <Ionicons name="square-outline" size={20} color={drawMode === 'rect' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'arrow' && styles.toolButtonActive]}
           onPress={() => setDrawMode('arrow')}
         >
-          <Ionicons name="arrow-forward" size={24} color={drawMode === 'arrow' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'arrow' && styles.toolLabelActive]}>Pfeil</Text>
+          <Ionicons name="arrow-forward" size={20} color={drawMode === 'arrow' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'text' && styles.toolButtonActive]}
           onPress={() => setDrawMode('text')}
         >
-          <Ionicons name="text" size={24} color={drawMode === 'text' ? '#fff' : '#333'} />
-          <Text style={[styles.toolLabel, drawMode === 'text' && styles.toolLabelActive]}>Text</Text>
+          <Ionicons name="text" size={20} color={drawMode === 'text' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={insertImage}>
-          <Ionicons name="image" size={24} color="#333" />
-          <Text style={styles.toolLabel}>Bild</Text>
+          <Ionicons name="image" size={20} color="#333" />
         </TouchableOpacity>
 
         <View style={styles.separator} />
@@ -1155,23 +1145,19 @@ export default function DrawSketchScreen() {
         {/* Color picker */}
         <TouchableOpacity style={styles.toolButton} onPress={() => setShowColorPicker(!showColorPicker)}>
           <View style={[styles.colorPreview, { backgroundColor: drawColor }]} />
-          <Text style={styles.toolLabel}>Farbe</Text>
         </TouchableOpacity>
 
         {/* Stroke width */}
-        <View style={styles.strokeWidthContainer}>
-          <Text style={styles.toolLabel}>Stärke: {strokeWidth}px</Text>
-          <View style={styles.strokeWidthButtons}>
-            {strokeWidths.map(w => (
-              <TouchableOpacity
-                key={w}
-                style={[styles.strokeWidthButton, strokeWidth === w && styles.strokeWidthButtonActive]}
-                onPress={() => setStrokeWidth(w)}
-              >
-                <View style={[styles.strokeWidthDot, { width: w * 2, height: w * 2 }]} />
-              </TouchableOpacity>
-            ))}
-          </View>
+        <View style={styles.strokeWidthPicker}>
+          {strokeWidths.map(w => (
+            <TouchableOpacity
+              key={w}
+              style={[styles.strokeWidthButton, strokeWidth === w && styles.strokeWidthButtonActive]}
+              onPress={() => setStrokeWidth(w)}
+            >
+              <View style={[styles.strokeWidthDot, { width: w * 2, height: w * 2 }]} />
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.separator} />
@@ -1182,8 +1168,7 @@ export default function DrawSketchScreen() {
           onPress={() => selectedElementId && setShowDeleteConfirm(true)}
           disabled={!selectedElementId}
         >
-          <Ionicons name="trash" size={24} color={selectedElementId ? '#f44336' : '#ccc'} />
-          <Text style={styles.toolLabel}>Löschen</Text>
+          <Ionicons name="trash" size={20} color={selectedElementId ? '#f44336' : '#ccc'} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
@@ -1198,21 +1183,18 @@ export default function DrawSketchScreen() {
             ]);
           }
         }}>
-          <Ionicons name="trash-bin" size={24} color="#f44336" />
-          <Text style={styles.toolLabel}>Alle</Text>
+          <Ionicons name="trash-bin" size={20} color="#f44336" />
         </TouchableOpacity>
 
         <View style={styles.separator} />
 
         {/* Background */}
         <TouchableOpacity style={styles.toolButton} onPress={pickBackgroundImage}>
-          <Ionicons name="images" size={24} color="#333" />
-          <Text style={styles.toolLabel}>Hintergrund</Text>
+          <Ionicons name="images" size={20} color="#333" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={takeBackgroundPhoto}>
-          <Ionicons name="camera" size={24} color="#333" />
-          <Text style={styles.toolLabel}>Foto</Text>
+          <Ionicons name="camera" size={20} color="#333" />
         </TouchableOpacity>
       </ScrollView>
 

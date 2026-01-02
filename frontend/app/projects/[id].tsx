@@ -476,52 +476,99 @@ export default function ProjectDetailScreen() {
               <Text style={styles.addButtonText}>Neue Skizze</Text>
             </TouchableOpacity>
 
-            {sketches.map((sketch) => (
-              <View key={sketch.id} style={styles.itemCard}>
-                <TouchableOpacity
-                  onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
-                  style={{ flex: 1 }}
-                >
-                  <View style={styles.itemHeader}>
-                    {sketch.title && (
-                      <Text style={styles.itemTitle}>{sketch.title}</Text>
-                    )}
-                    <Ionicons name="create-outline" size={20} color="#1976d2" />
-                  </View>
-                  {sketch.sketch_data && (
-                    <Image
-                      source={{ uri: sketch.sketch_data }}
-                      style={styles.sketchImage}
-                      resizeMode="contain"
-                    />
-                  )}
-                  {sketch.metadata && (() => {
-                    try {
-                      const metadata = JSON.parse(sketch.metadata);
-                      const elementCount = metadata.elements?.length || 0;
-                      return (
-                        <Text style={styles.sketchInfo}>
-                          {elementCount} Element{elementCount !== 1 ? 'e' : ''}
-                        </Text>
-                      );
-                    } catch (e) {
-                      return null;
-                    }
-                  })()}
-                </TouchableOpacity>
+            {sketches.map((sketch) => {
+              // Extract SVG XML from base64 data URI if it's an SVG
+              const getSvgXml = (dataUri: string): string | null => {
+                if (!dataUri) return null;
                 
-                {/* Delete Button */}
-                <TouchableOpacity
-                  style={styles.sketchDeleteButton}
-                  onPress={() => {
-                    setSketchToDelete(sketch.id);
-                    setDeleteSketchModalVisible(true);
-                  }}
-                >
-                  <Ionicons name="trash" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ))}
+                // Check if it's an SVG data URI
+                if (dataUri.startsWith('data:image/svg+xml;base64,')) {
+                  try {
+                    const base64Part = dataUri.replace('data:image/svg+xml;base64,', '');
+                    // Decode base64 to SVG string
+                    const svgString = decodeURIComponent(escape(atob(base64Part)));
+                    return svgString;
+                  } catch (e) {
+                    console.log('Error decoding SVG:', e);
+                    return null;
+                  }
+                }
+                return null;
+              };
+
+              const svgXml = getSvgXml(sketch.sketch_data);
+              const isRegularImage = sketch.sketch_data && !sketch.sketch_data.startsWith('data:image/svg+xml');
+
+              return (
+                <View key={sketch.id} style={styles.itemCard}>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
+                    style={{ flex: 1 }}
+                  >
+                    <View style={styles.itemHeader}>
+                      {sketch.title && (
+                        <Text style={styles.itemTitle}>{sketch.title}</Text>
+                      )}
+                      <Ionicons name="create-outline" size={20} color="#1976d2" />
+                    </View>
+                    
+                    {/* Render SVG preview */}
+                    {svgXml && (
+                      <View style={styles.sketchPreviewContainer}>
+                        <SvgXml
+                          xml={svgXml}
+                          width="100%"
+                          height={150}
+                          preserveAspectRatio="xMidYMid meet"
+                        />
+                      </View>
+                    )}
+                    
+                    {/* Render regular image (e.g., background photo) */}
+                    {isRegularImage && (
+                      <Image
+                        source={{ uri: sketch.sketch_data }}
+                        style={styles.sketchImage}
+                        resizeMode="contain"
+                      />
+                    )}
+                    
+                    {/* Show placeholder if no preview available */}
+                    {!svgXml && !isRegularImage && (
+                      <View style={styles.sketchPlaceholder}>
+                        <Ionicons name="create-outline" size={40} color="#ccc" />
+                        <Text style={styles.sketchPlaceholderText}>Skizze</Text>
+                      </View>
+                    )}
+                    
+                    {sketch.metadata && (() => {
+                      try {
+                        const metadata = JSON.parse(sketch.metadata);
+                        const elementCount = metadata.elements?.length || 0;
+                        return (
+                          <Text style={styles.sketchInfo}>
+                            {elementCount} Element{elementCount !== 1 ? 'e' : ''}
+                          </Text>
+                        );
+                      } catch (e) {
+                        return null;
+                      }
+                    })()}
+                  </TouchableOpacity>
+                  
+                  {/* Delete Button */}
+                  <TouchableOpacity
+                    style={styles.sketchDeleteButton}
+                    onPress={() => {
+                      setSketchToDelete(sketch.id);
+                      setDeleteSketchModalVisible(true);
+                    }}
+                  >
+                    <Ionicons name="trash" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         )}
 

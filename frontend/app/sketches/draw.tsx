@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { captureRef } from 'react-native-view-shot';
 import Svg, { 
   Path, 
   Line, 

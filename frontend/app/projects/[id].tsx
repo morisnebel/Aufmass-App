@@ -157,6 +157,47 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleDeleteSketch = async () => {
+    if (!sketchToDelete || isDeletingSketch) return;
+    
+    setIsDeletingSketch(true);
+    
+    try {
+      await axios.delete(`${API_URL}/api/sketches/${sketchToDelete}`);
+      
+      // Close modal and reset state
+      setDeleteSketchModalVisible(false);
+      setSketchToDelete(null);
+      
+      // Reload data
+      await loadProjectData();
+      
+      if (Platform.OS === 'web') {
+        alert('Skizze wurde gelöscht');
+      } else {
+        Alert.alert('Erfolg', 'Skizze wurde gelöscht');
+      }
+    } catch (error: any) {
+      console.error('Error deleting sketch:', error);
+      
+      // Only show error if it's not a 404 (sketch already deleted)
+      if (error?.response?.status !== 404) {
+        if (Platform.OS === 'web') {
+          alert('Fehler: Skizze konnte nicht gelöscht werden');
+        } else {
+          Alert.alert('Fehler', 'Skizze konnte nicht gelöscht werden');
+        }
+      } else {
+        // Sketch was already deleted, just close modal and reload
+        setDeleteSketchModalVisible(false);
+        setSketchToDelete(null);
+        await loadProjectData();
+      }
+    } finally {
+      setIsDeletingSketch(false);
+    }
+  };
+
   const exportToPDF = async () => {
     try {
       Alert.alert('PDF Export', 'PDF wird erstellt...');

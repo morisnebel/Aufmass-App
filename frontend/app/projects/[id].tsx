@@ -600,6 +600,43 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Sketch Confirmation Modal */}
+      <Modal
+        visible={deleteSketchModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteSketchModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Skizze löschen</Text>
+            <Text style={styles.modalMessage}>
+              Möchten Sie diese Skizze wirklich löschen?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setDeleteSketchModalVisible(false);
+                  setSketchToDelete(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleDeleteSketch}
+                disabled={isDeletingSketch}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isDeletingSketch ? 'Wird gelöscht...' : 'Löschen'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

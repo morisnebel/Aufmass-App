@@ -87,21 +87,29 @@ export default function NewCustomerScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const openContactPicker = async () => {
+    console.log('=== OPEN CONTACT PICKER CALLED (NEW) ===');
+    console.log('Platform.OS:', Platform.OS);
+    
     if (Platform.OS === 'web') {
       Alert.alert('Hinweis', 'Kontakt-Import ist nur auf dem iPad/iPhone verfügbar');
       return;
     }
 
     try {
+      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
+      console.log('Permission status:', status);
+      
       if (status !== 'granted') {
         Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
         return;
       }
 
+      console.log('Opening contact picker modal...');
       setShowContactPicker(true);
       setLoadingContacts(true);
 
+      console.log('Fetching contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -113,14 +121,17 @@ export default function NewCustomerScreen() {
         ],
       });
 
+      console.log('Contacts fetched:', data.length);
+
       const sortedContacts = data
         .filter(c => c.name || c.firstName || c.lastName)
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       
       setContacts(sortedContacts);
+      console.log('Contacts set:', sortedContacts.length);
     } catch (error) {
-      console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      console.error('Error in openContactPicker:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
       setShowContactPicker(false);
     } finally {
       setLoadingContacts(false);

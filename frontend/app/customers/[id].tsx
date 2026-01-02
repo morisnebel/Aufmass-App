@@ -171,17 +171,18 @@ export default function EditCustomerScreen() {
 
   // Apply manual entry data
   const applyManualEntry = () => {
-    // Always set values, even if empty (to allow clearing)
-    setName(manualName || name);
-    setEmail(manualEmail || email);
-    setPhone(manualPhone || phone);
-    setAddress(manualAddress || address);
+    // Set all values that were entered
+    if (manualName.trim()) setName(manualName.trim());
+    if (manualEmail.trim()) setEmail(manualEmail.trim());
+    if (manualPhone.trim()) setPhone(manualPhone.trim());
+    if (manualAddress.trim()) setAddress(manualAddress.trim());
     
-    // If user entered any data, use it (even empty to clear)
-    if (manualName !== '') setName(manualName);
-    if (manualEmail !== '') setEmail(manualEmail);
-    if (manualPhone !== '') setPhone(manualPhone);
-    if (manualAddress !== '') setAddress(manualAddress);
+    console.log('Applied manual entry:', {
+      name: manualName,
+      email: manualEmail,
+      phone: manualPhone,
+      address: manualAddress
+    });
     
     // Reset and close modal
     setManualName('');

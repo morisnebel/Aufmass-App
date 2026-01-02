@@ -131,34 +131,22 @@ export default function NewCustomerScreen() {
     const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
     console.log('=== CONTACT IMPORT DEBUG (NEW CUSTOMER) ===');
-    console.log('Raw contact object:', JSON.stringify(contact, null, 2));
     console.log('Extracted name:', extractedName);
     console.log('Extracted email:', extractedEmail);
     console.log('Extracted phone:', extractedPhone);
     console.log('Extracted address:', extractedAddress);
     
-    // Close modal first
+    // Apply all values IMMEDIATELY - no delays
+    setName(extractedName || '');
+    setEmail(extractedEmail || '');
+    setPhone(extractedPhone || '');
+    setAddress(extractedAddress || '');
+    
+    // Close modal and reset search
     setSearchQuery('');
     setShowContactPicker(false);
     
-    // Use requestAnimationFrame + setTimeout for reliable iOS state updates
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        console.log('=== APPLYING CONTACT DATA (NEW CUSTOMER) ===');
-        console.log('Setting name to:', extractedName);
-        console.log('Setting email to:', extractedEmail);
-        console.log('Setting phone to:', extractedPhone);
-        console.log('Setting address to:', extractedAddress);
-        
-        // Apply all values
-        setName(extractedName || '');
-        setEmail(extractedEmail || '');
-        setPhone(extractedPhone || '');
-        setAddress(extractedAddress || '');
-        
-        console.log('=== CONTACT DATA APPLIED (NEW CUSTOMER) ===');
-      }, 300);
-    });
+    console.log('=== CONTACT DATA APPLIED (NEW CUSTOMER) ===');
   };
 
   const filteredContacts = contacts.filter(contact => {

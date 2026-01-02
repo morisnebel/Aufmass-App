@@ -118,43 +118,89 @@ export default function EditCustomerScreen() {
   };
 
   const selectContact = (contact: Contacts.Contact) => {
-    console.log('Selected contact:', JSON.stringify(contact, null, 2));
+    console.log('=== SELECTED CONTACT ===');
+    console.log('Full contact object:', JSON.stringify(contact, null, 2));
     
-    // Set name
-    if (contact.name) {
-      console.log('Setting name:', contact.name);
-      setName(contact.name);
+    // Set name - try different name fields
+    const contactName = contact.name || contact.firstName || 
+      (contact.firstName && contact.lastName ? `${contact.firstName} ${contact.lastName}` : '') ||
+      contact.displayName || '';
+    if (contactName) {
+      console.log('Setting name:', contactName);
+      setName(contactName);
     }
     
     // Set email (first email if available)
     if (contact.emails && contact.emails.length > 0) {
-      const emailValue = contact.emails[0].email || '';
+      const emailObj = contact.emails[0];
+      const emailValue = emailObj?.email || emailObj?.value || String(emailObj) || '';
+      console.log('Email object:', emailObj);
       console.log('Setting email:', emailValue);
-      setEmail(emailValue);
+      if (emailValue && emailValue !== '[object Object]') {
+        setEmail(emailValue);
+      }
     }
     
     // Set phone (first phone number if available)
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      const phoneValue = contact.phoneNumbers[0].number || '';
+      const phoneObj = contact.phoneNumbers[0];
+      console.log('Phone object:', phoneObj);
+      // Try different ways to get the phone number
+      let phoneValue = '';
+      if (typeof phoneObj === 'string') {
+        phoneValue = phoneObj;
+      } else if (phoneObj?.number) {
+        phoneValue = phoneObj.number;
+      } else if (phoneObj?.digits) {
+        phoneValue = phoneObj.digits;
+      } else if (phoneObj?.value) {
+        phoneValue = phoneObj.value;
+      }
       console.log('Setting phone:', phoneValue);
-      setPhone(phoneValue);
+      if (phoneValue) {
+        setPhone(phoneValue);
+      }
     }
     
     // Set address (first address if available)
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0];
-      console.log('Address data:', addr);
-      const addressParts = [];
+      console.log('Address object:', addr);
+      
+      const addressParts: string[] = [];
+      
+      // Try to build address from different possible fields
       if (addr.street) addressParts.push(addr.street);
-      if (addr.postalCode || addr.city) {
-        addressParts.push([addr.postalCode, addr.city].filter(Boolean).join(' '));
+      if (addr.streetNumber) addressParts.push(addr.streetNumber);
+      
+      // City, postal code
+      const cityParts: string[] = [];
+      if (addr.postalCode) cityParts.push(addr.postalCode);
+      if (addr.city) cityParts.push(addr.city);
+      if (cityParts.length > 0) {
+        addressParts.push(cityParts.join(' '));
       }
+      
+      // Region/State
+      if (addr.region) addressParts.push(addr.region);
+      
+      // Country
       if (addr.country) addressParts.push(addr.country);
-      const addressValue = addressParts.join(', ');
-      console.log('Setting address:', addressValue);
-      setAddress(addressValue);
+      
+      // If we have a formatted address, use that instead
+      if (addr.formattedAddress) {
+        console.log('Using formatted address:', addr.formattedAddress);
+        setAddress(addr.formattedAddress);
+      } else {
+        const addressValue = addressParts.join(', ');
+        console.log('Setting address:', addressValue);
+        if (addressValue) {
+          setAddress(addressValue);
+        }
+      }
     }
     
+    console.log('=== CONTACT SELECTION COMPLETE ===');
     setShowContactPicker(false);
     setSearchQuery('');
   };

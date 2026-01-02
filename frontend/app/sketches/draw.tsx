@@ -1214,10 +1214,30 @@ export default function DrawSketchScreen() {
         {/* Delete */}
         <TouchableOpacity
           style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
-          onPress={() => selectedElementId && setShowDeleteConfirm(true)}
+          onPress={() => {
+            if (selectedElementId) {
+              const selectedEl = elements.find(el => el.id === selectedElementId);
+              if (selectedEl?.type === 'arrow') {
+                // Open edit modal for arrow
+                setArrowText(selectedEl.data.text || '');
+                setArrowHeads(selectedEl.data.heads || 'double');
+                setDrawColor(selectedEl.color);
+                setShowEditArrowModal(true);
+              } else {
+                setShowDeleteConfirm(true);
+              }
+            }
+          }}
           disabled={!selectedElementId}
         >
-          <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
+          <Ionicons 
+            name={(() => {
+              const selectedEl = elements.find(el => el.id === selectedElementId);
+              return selectedEl?.type === 'arrow' ? 'create' : 'trash';
+            })()} 
+            size={18} 
+            color={selectedElementId ? (elements.find(el => el.id === selectedElementId)?.type === 'arrow' ? '#1976d2' : '#f44336') : '#ccc'} 
+          />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {

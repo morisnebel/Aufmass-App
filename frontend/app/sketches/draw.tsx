@@ -1633,6 +1633,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  colorPickerContainer: {
+    marginBottom: 16,
+  },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

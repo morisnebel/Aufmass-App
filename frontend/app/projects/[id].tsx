@@ -518,7 +518,7 @@ export default function ProjectDetailScreen() {
                         <SvgXml
                           xml={svgXml}
                           width="100%"
-                          height={150}
+                          height={250}
                           preserveAspectRatio="xMidYMid meet"
                         />
                       </View>

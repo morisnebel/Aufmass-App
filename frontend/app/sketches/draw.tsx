@@ -1262,7 +1262,7 @@ export default function DrawSketchScreen() {
         <Svg
           ref={svgRef}
           width={width}
-          height={height - 200}
+          height={height - 120}
           style={styles.svg}
         >
           {/* Background image */}
@@ -1272,7 +1272,7 @@ export default function DrawSketchScreen() {
               x={0}
               y={0}
               width={width}
-              height={height - 200}
+              height={height - 120}
               preserveAspectRatio="xMidYMid meet"
               opacity={0.5}
             />

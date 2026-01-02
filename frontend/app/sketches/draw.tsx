@@ -1036,33 +1036,29 @@ export default function DrawSketchScreen() {
       console.log('Saving sketch with', elements.length, 'elements');
       console.log('Metadata:', metadata);
 
-      // Capture screenshot of canvas for preview
-      let sketchData = backgroundImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      // Create a simple preview: Use background image if available, otherwise create a colored placeholder
+      let sketchData = backgroundImage;
       
-      try {
-        if (Platform.OS === 'web' && svgRef.current) {
-          // For Web: Use SVG to Base64 conversion
-          console.log('Capturing SVG as image (Web)...');
-          const svgString = new XMLSerializer().serializeToString(svgRef.current);
-          const encodedSvg = btoa(unescape(encodeURIComponent(svgString)));
-          sketchData = `data:image/svg+xml;base64,${encodedSvg}`;
-          console.log('SVG captured successfully');
-        } else if (canvasRef.current) {
-          // For Mobile: Use captureRef
-          console.log('Capturing canvas screenshot (Mobile)...');
-          const uri = await captureRef(canvasRef, {
-            format: 'png',
-            quality: 0.3,
-            width: 400,
-            height: 400,
-            result: 'base64',
-          });
-          sketchData = `data:image/png;base64,${uri}`;
-          console.log('Screenshot captured successfully');
-        }
-      } catch (screenshotError) {
-        console.error('Error capturing screenshot:', screenshotError);
-        // Continue with placeholder or background if screenshot fails
+      if (!sketchData) {
+        // Create a simple colored preview based on number of elements
+        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
+        const colorIndex = elements.length % colors.length;
+        const previewColor = colors[colorIndex];
+        
+        // Create a simple SVG preview
+        const previewSvg = `
+          <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="200" fill="${previewColor}" opacity="0.3"/>
+            <text x="100" y="100" text-anchor="middle" font-size="24" fill="#333">
+              ${elements.length} Element${elements.length !== 1 ? 'e' : ''}
+            </text>
+            <text x="100" y="130" text-anchor="middle" font-size="14" fill="#666">
+              ${title || 'Skizze'}
+            </text>
+          </svg>
+        `;
+        
+        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
       }
 
       if (sketchId) {

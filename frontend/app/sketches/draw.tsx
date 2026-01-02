@@ -1164,16 +1164,19 @@ export default function DrawSketchScreen() {
       console.log('Saving sketch with', elements.length, 'elements');
       console.log('Metadata:', metadata);
 
-      // Create a simple preview: Use background image if available, otherwise create a colored placeholder
+      // Generate preview: Use background image if available, otherwise create mini-sketch preview
       let sketchData = backgroundImage;
       
-      if (!sketchData) {
-        // Create a simple colored preview based on number of elements
+      if (!sketchData && elements.length > 0) {
+        console.log('Generating mini-sketch preview...');
+        sketchData = generatePreviewSvg();
+        console.log('Mini-sketch preview generated');
+      } else if (!sketchData) {
+        // Fallback: colored badge
         const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
         const colorIndex = elements.length % colors.length;
         const previewColor = colors[colorIndex];
         
-        // Create a simple SVG preview
         const previewSvg = `
           <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
             <rect width="200" height="200" fill="${previewColor}" opacity="0.3"/>

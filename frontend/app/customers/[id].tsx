@@ -36,6 +36,13 @@ export default function EditCustomerScreen() {
   const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Manual entry modal for web
+  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
 
   useEffect(() => {
     loadCustomer();

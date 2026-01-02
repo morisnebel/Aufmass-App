@@ -37,24 +37,29 @@ export default function NewCustomerScreen() {
 
   const importFromContacts = async () => {
     try {
+      console.log('Opening contact picker, Platform:', Platform.OS);
+      
       // Check if we're on web
       if (Platform.OS === 'web') {
-        Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar');
+        alert('Kontakt-Import ist nur in der mobilen App verfügbar');
         return;
       }
 
-      setLoadingContacts(true);
       setShowContactPicker(true);
+      setLoadingContacts(true);
       
+      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
+      console.log('Permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen');
         setShowContactPicker(false);
         setLoadingContacts(false);
         return;
       }
       
+      console.log('Loading contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -64,6 +69,8 @@ export default function NewCustomerScreen() {
         ],
       });
       
+      console.log('Loaded', data.length, 'contacts');
+      
       // Sort contacts by name
       const sortedContacts = data.sort((a, b) => {
         const nameA = a.name || '';
@@ -72,41 +79,51 @@ export default function NewCustomerScreen() {
       });
       
       setContacts(sortedContacts);
+      setLoadingContacts(false);
     } catch (error) {
       console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
       setShowContactPicker(false);
-    } finally {
       setLoadingContacts(false);
     }
   };
 
   const selectContact = (contact: Contacts.Contact) => {
+    console.log('Selected contact:', JSON.stringify(contact, null, 2));
+    
     // Set name
     if (contact.name) {
+      console.log('Setting name:', contact.name);
       setName(contact.name);
     }
     
     // Set email (first email if available)
     if (contact.emails && contact.emails.length > 0) {
-      setEmail(contact.emails[0].email || '');
+      const emailValue = contact.emails[0].email || '';
+      console.log('Setting email:', emailValue);
+      setEmail(emailValue);
     }
     
     // Set phone (first phone number if available)
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      setPhone(contact.phoneNumbers[0].number || '');
+      const phoneValue = contact.phoneNumbers[0].number || '';
+      console.log('Setting phone:', phoneValue);
+      setPhone(phoneValue);
     }
     
     // Set address (first address if available)
     if (contact.addresses && contact.addresses.length > 0) {
       const addr = contact.addresses[0];
+      console.log('Address data:', addr);
       const addressParts = [];
       if (addr.street) addressParts.push(addr.street);
       if (addr.postalCode || addr.city) {
         addressParts.push([addr.postalCode, addr.city].filter(Boolean).join(' '));
       }
       if (addr.country) addressParts.push(addr.country);
-      setAddress(addressParts.join(', '));
+      const addressValue = addressParts.join(', ');
+      console.log('Setting address:', addressValue);
+      setAddress(addressValue);
     }
     
     setShowContactPicker(false);

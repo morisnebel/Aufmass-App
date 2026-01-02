@@ -185,6 +185,15 @@ export default function EditCustomerScreen() {
     >
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
+          {/* Import from Contacts Button */}
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={openContactPicker}
+          >
+            <Ionicons name="person-add" size={20} color="#1976d2" />
+            <Text style={styles.importButtonText}>Aus Adressbuch importieren</Text>
+          </TouchableOpacity>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Name *</Text>
             <TextInput

@@ -209,6 +209,56 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  // Open edit project modal with current values
+  const openEditProjectModal = () => {
+    if (project) {
+      setEditProjectName(project.name);
+      setEditProjectDescription(project.description || '');
+      setEditProjectStatus(project.status);
+      setShowEditProjectModal(true);
+    }
+  };
+
+  // Save project changes
+  const handleSaveProject = async () => {
+    if (!editProjectName.trim()) {
+      if (Platform.OS === 'web') {
+        alert('Bitte geben Sie einen Projektnamen ein');
+      } else {
+        Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');
+      }
+      return;
+    }
+
+    setIsSavingProject(true);
+    try {
+      await axios.put(`${API_URL}/api/projects/${id}`, {
+        name: editProjectName,
+        description: editProjectDescription || undefined,
+        status: editProjectStatus,
+        customer_id: project?.customer_id,
+      });
+
+      setShowEditProjectModal(false);
+      await loadProjectData();
+
+      if (Platform.OS === 'web') {
+        alert('Projekt wurde aktualisiert');
+      } else {
+        Alert.alert('Erfolg', 'Projekt wurde aktualisiert');
+      }
+    } catch (error) {
+      console.error('Error updating project:', error);
+      if (Platform.OS === 'web') {
+        alert('Fehler: Projekt konnte nicht aktualisiert werden');
+      } else {
+        Alert.alert('Fehler', 'Projekt konnte nicht aktualisiert werden');
+      }
+    } finally {
+      setIsSavingProject(false);
+    }
+  };
+
   const exportToPDF = async () => {
     try {
       Alert.alert('PDF Export', 'PDF wird erstellt...');

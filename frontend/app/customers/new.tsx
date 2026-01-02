@@ -318,6 +318,8 @@ export default function NewCustomerScreen() {
               placeholder="Kundenname"
               value={name}
               onChangeText={setName}
+              textContentType="name"
+              autoComplete="name"
             />
           </View>
 
@@ -330,6 +332,8 @@ export default function NewCustomerScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              textContentType="emailAddress"
+              autoComplete="email"
             />
           </View>
 
@@ -340,7 +344,9 @@ export default function NewCustomerScreen() {
               placeholder="+49 123 456789"
               value={phone}
               onChangeText={setPhone}
-              autoCapitalize="none"
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
             />
           </View>
 
@@ -353,6 +359,8 @@ export default function NewCustomerScreen() {
               onChangeText={setAddress}
               multiline
               numberOfLines={3}
+              textContentType="fullStreetAddress"
+              autoComplete="street-address"
             />
           </View>
 

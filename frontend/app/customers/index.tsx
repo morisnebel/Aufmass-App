@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,11 @@ export default function CustomersScreen() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadCustomers = async () => {
     try {
@@ -46,27 +52,26 @@ export default function CustomersScreen() {
     loadCustomers();
   }, []);
 
-  const deleteCustomer = async (customerId: string) => {
-    Alert.alert(
-      'Kunde löschen',
-      'Möchten Sie diesen Kunden wirklich löschen?',
-      [
-        { text: 'Abbrechen', style: 'cancel' },
-        {
-          text: 'Löschen',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await axios.delete(`${API_URL}/api/customers/${customerId}`);
-              loadCustomers();
-            } catch (error) {
-              console.error('Error deleting customer:', error);
-              Alert.alert('Fehler', 'Kunde konnte nicht gelöscht werden');
-            }
-          },
-        },
-      ]
-    );
+  const openDeleteModal = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await axios.delete(`${API_URL}/api/customers/${customerToDelete.id}`);
+      setShowDeleteModal(false);
+      setCustomerToDelete(null);
+      loadCustomers();
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      Alert.alert('Fehler', 'Kunde konnte nicht gelöscht werden');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredCustomers = customers.filter(customer =>

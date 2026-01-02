@@ -1036,8 +1036,24 @@ export default function DrawSketchScreen() {
       console.log('Saving sketch with', elements.length, 'elements');
       console.log('Metadata:', metadata);
 
-      // For sketch_data, we'll save a placeholder or the background image
-      const sketchData = backgroundImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      // Capture screenshot of canvas for preview
+      let sketchData = backgroundImage || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      
+      try {
+        if (canvasRef.current) {
+          console.log('Capturing canvas screenshot...');
+          const uri = await captureRef(canvasRef, {
+            format: 'png',
+            quality: 0.5,
+            result: 'base64',
+          });
+          sketchData = `data:image/png;base64,${uri}`;
+          console.log('Screenshot captured successfully');
+        }
+      } catch (screenshotError) {
+        console.error('Error capturing screenshot:', screenshotError);
+        // Continue with placeholder if screenshot fails
+      }
 
       if (sketchId) {
         // Update existing sketch

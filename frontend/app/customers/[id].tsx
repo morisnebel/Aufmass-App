@@ -59,24 +59,33 @@ export default function EditCustomerScreen() {
 
   const openContactPicker = async () => {
     try {
+      console.log('Opening contact picker, Platform:', Platform.OS);
+      
       // Check if we're on web
       if (Platform.OS === 'web') {
-        Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar');
+        if (Platform.OS === 'web') {
+          alert('Kontakt-Import ist nur in der mobilen App verfügbar');
+        } else {
+          Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar');
+        }
         return;
       }
 
-      setLoadingContacts(true);
       setShowContactPicker(true);
+      setLoadingContacts(true);
       
+      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
+      console.log('Permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte');
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen');
         setShowContactPicker(false);
         setLoadingContacts(false);
         return;
       }
       
+      console.log('Loading contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -86,6 +95,8 @@ export default function EditCustomerScreen() {
         ],
       });
       
+      console.log('Loaded', data.length, 'contacts');
+      
       // Sort contacts by name
       const sortedContacts = data.sort((a, b) => {
         const nameA = a.name || '';
@@ -94,11 +105,11 @@ export default function EditCustomerScreen() {
       });
       
       setContacts(sortedContacts);
+      setLoadingContacts(false);
     } catch (error) {
       console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
       setShowContactPicker(false);
-    } finally {
       setLoadingContacts(false);
     }
   };

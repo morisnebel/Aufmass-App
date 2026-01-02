@@ -763,6 +763,86 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal
+        visible={showEditProjectModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditProjectModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Projekt bearbeiten</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Projektname *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editProjectName}
+                onChangeText={setEditProjectName}
+                placeholder="Projektname"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Beschreibung</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={editProjectDescription}
+                onChangeText={setEditProjectDescription}
+                placeholder="Beschreibung (optional)"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Status</Text>
+              <View style={styles.statusButtons}>
+                {['active', 'completed', 'cancelled'].map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[
+                      styles.statusButton,
+                      editProjectStatus === status && styles.statusButtonActive,
+                    ]}
+                    onPress={() => setEditProjectStatus(status)}
+                  >
+                    <Text style={[
+                      styles.statusButtonText,
+                      editProjectStatus === status && styles.statusButtonTextActive,
+                    ]}>
+                      {status === 'active' ? 'Aktiv' : status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowEditProjectModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleSaveProject}
+                disabled={isSavingProject}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isSavingProject ? 'Wird gespeichert...' : 'Speichern'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

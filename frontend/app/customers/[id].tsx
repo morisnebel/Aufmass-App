@@ -301,6 +301,31 @@ export default function EditCustomerScreen() {
     }
   };
 
+  const handleDeleteCustomer = () => {
+    Alert.alert(
+      'Kunde löschen',
+      'Möchten Sie diesen Kunden wirklich löschen? Alle zugehörigen Projekte bleiben erhalten.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(`${API_URL}/api/customers/${id}`);
+              Alert.alert('Erfolg', 'Kunde wurde gelöscht', [
+                { text: 'OK', onPress: () => router.replace('/customers') },
+              ]);
+            } catch (error) {
+              console.error('Error deleting customer:', error);
+              Alert.alert('Fehler', 'Kunde konnte nicht gelöscht werden');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>

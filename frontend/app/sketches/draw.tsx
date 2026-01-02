@@ -1171,8 +1171,14 @@ export default function DrawSketchScreen() {
         const y = (((el.y || 0) - minY) * scale) + offsetY;
         const fontSize = Math.max(8, 14 * scale);
         svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${el.data.text}</text>`;
+      } else if (el.type === 'image' && el.data?.uri) {
+        // Include images in preview
+        const x = (((el.x || 0) - minX) * scale) + offsetX;
+        const y = (((el.y || 0) - minY) * scale) + offsetY;
+        const w = Math.max(10, (el.width || 100) * scale);
+        const h = Math.max(10, (el.height || 100) * scale);
+        svgElements += `<image href="${el.data.uri}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
       }
-      // Skip images in preview as they're complex
     });
     
     const previewSvg = `<svg width="${previewSize}" height="${previewSize}" viewBox="0 0 ${previewSize} ${previewSize}" xmlns="http://www.w3.org/2000/svg"><rect width="${previewSize}" height="${previewSize}" fill="#ffffff"/>${svgElements}</svg>`;

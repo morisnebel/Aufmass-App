@@ -393,7 +393,7 @@ export default function ProjectDetailScreen() {
                 <Text style={styles.cardTitle}>Projektinformationen</Text>
                 <TouchableOpacity
                   style={styles.editButton}
-                  onPress={() => setShowEditProjectModal(true)}
+                  onPress={openEditProjectModal}
                 >
                   <Ionicons name="create-outline" size={20} color="#1976d2" />
                   <Text style={styles.editButtonText}>Bearbeiten</Text>

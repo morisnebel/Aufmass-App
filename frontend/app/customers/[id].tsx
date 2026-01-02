@@ -242,12 +242,20 @@ export default function EditCustomerScreen() {
     }
     
     console.log('=== CONTACT SELECTION COMPLETE ===');
+    console.log('Final values - Name:', contactName, 'Phone:', phoneValue, 'Address:', addressValue);
     
-    // Show debug alert on mobile
+    // Show debug alert on mobile with the values we're about to set
     if (Platform.OS !== 'web') {
+      const phoneToShow = contact.phoneNumbers && contact.phoneNumbers.length > 0 
+        ? JSON.stringify(contact.phoneNumbers[0]) 
+        : '(keine Telefonnummer)';
+      const addrToShow = contact.addresses && contact.addresses.length > 0 
+        ? JSON.stringify(contact.addresses[0]) 
+        : '(keine Adresse)';
+      
       Alert.alert(
-        'Kontakt übernommen',
-        `Name: ${contactName || '(leer)'}\nTelefon: ${phone || '(nicht gefunden)'}\nAdresse: ${address || '(nicht gefunden)'}`,
+        'Debug: Rohdaten',
+        `Phone-Objekt: ${phoneToShow}\n\nAddress-Objekt: ${addrToShow}`,
         [{ text: 'OK' }]
       );
     }

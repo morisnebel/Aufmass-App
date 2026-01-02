@@ -88,36 +88,18 @@ export default function EditCustomerScreen() {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Selected contact data (temporary storage)
-  const [selectedContactData, setSelectedContactData] = useState<{
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-  } | null>(null);
-  
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Flag to prevent loadCustomer from overwriting imported data
+  const [hasImportedContact, setHasImportedContact] = useState(false);
 
   useEffect(() => {
-    loadCustomer();
-  }, [id]);
-
-  // Apply selected contact data when modal closes
-  useEffect(() => {
-    if (!showContactPicker && selectedContactData) {
-      // Apply data after modal is closed
-      const timer = setTimeout(() => {
-        if (selectedContactData.name) setName(selectedContactData.name);
-        if (selectedContactData.email) setEmail(selectedContactData.email);
-        if (selectedContactData.phone) setPhone(selectedContactData.phone);
-        if (selectedContactData.address) setAddress(selectedContactData.address);
-        setSelectedContactData(null);
-      }, 100);
-      return () => clearTimeout(timer);
+    if (!hasImportedContact) {
+      loadCustomer();
     }
-  }, [showContactPicker, selectedContactData]);
+  }, [id, hasImportedContact]);
 
   const loadCustomer = async () => {
     try {

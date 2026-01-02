@@ -242,6 +242,16 @@ export default function EditCustomerScreen() {
     }
     
     console.log('=== CONTACT SELECTION COMPLETE ===');
+    
+    // Show debug alert on mobile
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        'Kontakt übernommen',
+        `Name: ${contactName || '(leer)'}\nTelefon: ${phone || '(nicht gefunden)'}\nAdresse: ${address || '(nicht gefunden)'}`,
+        [{ text: 'OK' }]
+      );
+    }
+    
     setShowContactPicker(false);
     setSearchQuery('');
   };

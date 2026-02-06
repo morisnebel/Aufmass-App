@@ -126,7 +126,7 @@ export default function NewCustomerScreen() {
     }
 
     try {
-      console.log('Requesting permission...');
+      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
       console.log('Permission status:', status);
       
@@ -135,35 +135,33 @@ export default function NewCustomerScreen() {
         return;
       }
 
-      console.log('Opening contact picker modal...');
-      setShowContactPicker(true);
-      setLoadingContacts(true);
-
-      console.log('Fetching contacts...');
-      const { data } = await Contacts.getContactsAsync({
-        fields: [
-          Contacts.Fields.Name,
-          Contacts.Fields.FirstName,
-          Contacts.Fields.LastName,
-          Contacts.Fields.Emails,
-          Contacts.Fields.PhoneNumbers,
-          Contacts.Fields.Addresses,
-        ],
-      });
+      // Use native iOS contact picker
+      console.log('Opening native contact picker...');
+      const contact = await Contacts.presentContactPickerAsync();
       
-      console.log('Contacts fetched:', data.length);
-
-      const sortedContacts = data
-        .filter(c => c.name || c.firstName || c.lastName)
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      
-      setContacts(sortedContacts);
+      if (contact) {
+        console.log('Contact selected:', JSON.stringify(contact, null, 2));
+        const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+        
+        console.log('=== CONTACT IMPORT DEBUG (NEW CUSTOMER) ===');
+        console.log('Extracted name:', extractedName);
+        console.log('Extracted email:', extractedEmail);
+        console.log('Extracted phone:', extractedPhone);
+        console.log('Extracted address:', extractedAddress);
+        
+        // Apply all values
+        setName(extractedName || '');
+        setEmail(extractedEmail || '');
+        setPhone(extractedPhone || '');
+        setAddress(extractedAddress || '');
+        
+        console.log('=== CONTACT DATA APPLIED (NEW CUSTOMER) ===');
+      } else {
+        console.log('No contact selected');
+      }
     } catch (error) {
-      console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
-      setShowContactPicker(false);
-    } finally {
-      setLoadingContacts(false);
+      console.error('Error in openContactPicker:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
     }
   };
 

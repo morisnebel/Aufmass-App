@@ -271,17 +271,23 @@ export default function ProjectDetailScreen() {
       }
       
       const filename = response.data.filename || 'Aufmass.pdf';
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
       
-      // Write base64 data to file
-      await FileSystem.writeAsStringAsync(fileUri, response.data.pdf_data, {
-        encoding: 'base64',
-      });
+      // Use new File API
+      const file = new File(Paths.cache, filename);
+      
+      // Decode base64 and write to file
+      const binaryString = atob(response.data.pdf_data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      await file.write(bytes);
 
       // Check if sharing is available
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(fileUri, {
+        await Sharing.shareAsync(file.uri, {
           mimeType: 'application/pdf',
           dialogTitle: 'PDF teilen',
           UTI: 'com.adobe.pdf',

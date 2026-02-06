@@ -263,22 +263,35 @@ export default function ProjectDetailScreen() {
   const exportToPDF = async () => {
     try {
       Alert.alert('PDF Export', 'PDF wird erstellt...');
+      
       const response = await axios.get(`${API_URL}/api/export/pdf/${id}`);
       
-      const fileUri = `${FileSystem.documentDirectory}${response.data.filename}`;
+      if (!response.data || !response.data.pdf_data) {
+        throw new Error('Keine PDF-Daten erhalten');
+      }
+      
+      const filename = response.data.filename || 'Aufmass.pdf';
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      
+      // Write base64 data to file
       await FileSystem.writeAsStringAsync(fileUri, response.data.pdf_data, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
+      // Check if sharing is available
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(fileUri);
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'PDF teilen',
+          UTI: 'com.adobe.pdf',
+        });
       } else {
-        Alert.alert('Erfolg', 'PDF wurde erstellt und gespeichert');
+        Alert.alert('Erfolg', `PDF wurde erstellt: ${filename}`);
       }
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
     }
   };
 

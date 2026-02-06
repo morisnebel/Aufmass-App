@@ -239,20 +239,6 @@ export default function EditCustomerScreen() {
     console.log('=== CONTACT DATA APPLIED ===');
   };
 
-  const selectContact = (contact: Contacts.Contact) => {
-    isImportingRef.current = true;
-    
-    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
-    
-    setName(extractedName || '');
-    setEmail(extractedEmail || '');
-    setPhone(extractedPhone || '');
-    setAddress(extractedAddress || '');
-    
-    setSearchQuery('');
-    setShowContactPicker(false);
-  };
-
   const filteredContacts = contacts.filter(contact => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();

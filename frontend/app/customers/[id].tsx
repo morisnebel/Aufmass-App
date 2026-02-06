@@ -175,38 +175,68 @@ export default function EditCustomerScreen() {
         return;
       }
 
-      // Use native iOS contact picker
-      console.log('Opening native contact picker...');
-      const contact = await Contacts.presentContactPickerAsync();
+      // Use modal-based contact picker
+      setShowContactPicker(true);
+      setLoadingContacts(true);
+
+      console.log('Fetching contacts...');
+      const { data } = await Contacts.getContactsAsync({
+        fields: [
+          Contacts.Fields.Name,
+          Contacts.Fields.FirstName,
+          Contacts.Fields.LastName,
+          Contacts.Fields.Emails,
+          Contacts.Fields.PhoneNumbers,
+          Contacts.Fields.Addresses,
+        ],
+        pageSize: 10000, // Load more contacts
+        pageOffset: 0,
+      });
+
+      console.log('Contacts fetched:', data.length);
+
+      // Sort contacts alphabetically
+      const sortedContacts = data
+        .sort((a, b) => {
+          const nameA = a.name || a.firstName || a.lastName || '';
+          const nameB = b.name || b.firstName || b.lastName || '';
+          return nameA.localeCompare(nameB);
+        });
       
-      if (contact) {
-        console.log('Contact selected:', JSON.stringify(contact, null, 2));
-        
-        // Prevent loadCustomer from overwriting
-        isImportingRef.current = true;
-        
-        const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
-        
-        console.log('=== CONTACT IMPORT DEBUG ===');
-        console.log('Extracted name:', extractedName);
-        console.log('Extracted email:', extractedEmail);
-        console.log('Extracted phone:', extractedPhone);
-        console.log('Extracted address:', extractedAddress);
-        
-        // Apply all values
-        setName(extractedName || '');
-        setEmail(extractedEmail || '');
-        setPhone(extractedPhone || '');
-        setAddress(extractedAddress || '');
-        
-        console.log('=== CONTACT DATA APPLIED ===');
-      } else {
-        console.log('No contact selected');
-      }
+      setContacts(sortedContacts);
+      console.log('Contacts set:', sortedContacts.length);
     } catch (error) {
       console.error('Error in openContactPicker:', error);
       Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
+      setShowContactPicker(false);
+    } finally {
+      setLoadingContacts(false);
     }
+  };
+
+  const selectContact = (contact: Contacts.Contact) => {
+    // Prevent loadCustomer from overwriting
+    isImportingRef.current = true;
+    
+    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+    
+    console.log('=== CONTACT IMPORT DEBUG ===');
+    console.log('Extracted name:', extractedName);
+    console.log('Extracted email:', extractedEmail);
+    console.log('Extracted phone:', extractedPhone);
+    console.log('Extracted address:', extractedAddress);
+    
+    // Apply all values
+    setName(extractedName || '');
+    setEmail(extractedEmail || '');
+    setPhone(extractedPhone || '');
+    setAddress(extractedAddress || '');
+    
+    // Close modal
+    setSearchQuery('');
+    setShowContactPicker(false);
+    
+    console.log('=== CONTACT DATA APPLIED ===');
   };
 
   const selectContact = (contact: Contacts.Contact) => {

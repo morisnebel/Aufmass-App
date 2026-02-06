@@ -196,18 +196,6 @@ export default function NewCustomerScreen() {
     console.log('=== CONTACT DATA APPLIED (NEW CUSTOMER) ===');
   };
 
-  const selectContact = (contact: Contacts.Contact) => {
-    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
-    
-    setName(extractedName || '');
-    setEmail(extractedEmail || '');
-    setPhone(extractedPhone || '');
-    setAddress(extractedAddress || '');
-    
-    setSearchQuery('');
-    setShowContactPicker(false);
-  };
-
   const filteredContacts = contacts.filter(contact => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();

@@ -155,6 +155,9 @@ export default function EditCustomerScreen() {
   };
 
   const openContactPicker = async () => {
+    console.log('=== openContactPicker called ===');
+    console.log('Platform.OS:', Platform.OS);
+    
     setShowImportOptions(false);
     
     if (Platform.OS === 'web') {
@@ -163,37 +166,46 @@ export default function EditCustomerScreen() {
     }
 
     try {
+      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
+      console.log('Permission status:', status);
+      
       if (status !== 'granted') {
         Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen.');
         return;
       }
 
-      setShowContactPicker(true);
-      setLoadingContacts(true);
-
-      const { data } = await Contacts.getContactsAsync({
-        fields: [
-          Contacts.Fields.Name,
-          Contacts.Fields.FirstName,
-          Contacts.Fields.LastName,
-          Contacts.Fields.Emails,
-          Contacts.Fields.PhoneNumbers,
-          Contacts.Fields.Addresses,
-        ],
-      });
-
-      const sortedContacts = data
-        .filter(c => c.name || c.firstName || c.lastName)
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // Use native iOS contact picker
+      console.log('Opening native contact picker...');
+      const contact = await Contacts.presentContactPickerAsync();
       
-      setContacts(sortedContacts);
+      if (contact) {
+        console.log('Contact selected:', JSON.stringify(contact, null, 2));
+        
+        // Prevent loadCustomer from overwriting
+        isImportingRef.current = true;
+        
+        const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+        
+        console.log('=== CONTACT IMPORT DEBUG ===');
+        console.log('Extracted name:', extractedName);
+        console.log('Extracted email:', extractedEmail);
+        console.log('Extracted phone:', extractedPhone);
+        console.log('Extracted address:', extractedAddress);
+        
+        // Apply all values
+        setName(extractedName || '');
+        setEmail(extractedEmail || '');
+        setPhone(extractedPhone || '');
+        setAddress(extractedAddress || '');
+        
+        console.log('=== CONTACT DATA APPLIED ===');
+      } else {
+        console.log('No contact selected');
+      }
     } catch (error) {
-      console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
-      setShowContactPicker(false);
-    } finally {
-      setLoadingContacts(false);
+      console.error('Error in openContactPicker:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
     }
   };
 

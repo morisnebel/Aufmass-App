@@ -115,6 +115,9 @@ export default function NewCustomerScreen() {
   };
 
   const openContactPicker = async () => {
+    console.log('=== openContactPicker called ===');
+    console.log('Platform.OS:', Platform.OS);
+    
     setShowImportOptions(false);
     
     if (Platform.OS === 'web') {
@@ -123,15 +126,20 @@ export default function NewCustomerScreen() {
     }
 
     try {
+      console.log('Requesting permission...');
       const { status } = await Contacts.requestPermissionsAsync();
+      console.log('Permission status:', status);
+      
       if (status !== 'granted') {
         Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen.');
         return;
       }
 
+      console.log('Opening contact picker modal...');
       setShowContactPicker(true);
       setLoadingContacts(true);
 
+      console.log('Fetching contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -142,6 +150,8 @@ export default function NewCustomerScreen() {
           Contacts.Fields.Addresses,
         ],
       });
+      
+      console.log('Contacts fetched:', data.length);
 
       const sortedContacts = data
         .filter(c => c.name || c.firstName || c.lastName)

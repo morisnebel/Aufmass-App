@@ -728,20 +728,38 @@ async def export_project_pdf(project_id: str):
     # ============ HEADER WITH LOGO ============
     logo_path = Path(__file__).parent / 'logo.png'
     
-    # Create header table with logo and company info
-    if logo_path.exists():
+    # Check for custom logo in settings
+    logo_data = settings.get('logo_data')
+    if logo_data and logo_data.startswith('data:'):
+        # Use custom logo from settings
+        try:
+            img_data = base64.b64decode(logo_data.split(',')[1])
+            logo_buffer = BytesIO(img_data)
+            logo_img = RLImage(logo_buffer, width=50*mm, height=35*mm)
+        except:
+            logo_img = Paragraph(settings.get('company_name', 'NEBEL-BEDACHUNG'), title_style)
+    elif logo_path.exists():
         logo_img = RLImage(str(logo_path), width=50*mm, height=35*mm)
     else:
-        logo_img = Paragraph("NEBEL-BEDACHUNG", title_style)
+        logo_img = Paragraph(settings.get('company_name', 'NEBEL-BEDACHUNG'), title_style)
+    
+    # Build company address
+    company_address_parts = []
+    if settings.get('zip_code') or settings.get('city'):
+        company_address_parts.append(f"{settings.get('zip_code', '')} {settings.get('city', '')}".strip())
+    if settings.get('street'):
+        company_address_parts.insert(0, settings.get('street'))
+    company_address = '<br/>'.join(company_address_parts) if company_address_parts else ''
+    
+    # Build services list
+    services_text = settings.get('services', '').replace('\n', '<br/>')
     
     # Company info text
-    company_info = """<b>Dachdeckermeister</b><br/>
-    Moris Nebel<br/>
-    37339 Hundeshagen<br/>
+    company_info = f"""<b>{settings.get('company_subtitle', 'Dachdeckermeister')}</b><br/>
+    {settings.get('owner_name', '')}<br/>
+    {company_address}<br/>
     <br/>
-    <font size="8">Dächer aller Art<br/>
-    Fassadenarbeiten<br/>
-    Zimmerer- und Spenglerarbeiten</font>"""
+    <font size="8">{services_text}</font>"""
     
     header_table = Table(
         [[logo_img, Paragraph(company_info, header_style)]],

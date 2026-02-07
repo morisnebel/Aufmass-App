@@ -17,7 +17,7 @@ index 0000000..fe68351
 +from datetime import datetime
 +
 +# Get backend URL from environment
-+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://roofpro-pdffix.preview.emergentagent.com')
++BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://checklist-pdf-fix.preview.emergentagent.com')
 +API_BASE = f"{BACKEND_URL}/api"
 +
 +def test_comprehensive_pdf_scenarios():
@@ -380,7 +380,7 @@ index 0000000..e097e59
 +from datetime import datetime
 +
 +# Get backend URL from environment
-+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://roofpro-pdffix.preview.emergentagent.com')
++BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://checklist-pdf-fix.preview.emergentagent.com')
 +API_BASE = f"{BACKEND_URL}/api"
 +
 +def test_enhanced_pdf_export():
@@ -782,7 +782,7 @@ index 663d984..3d90079 100644
 -----+import sys
 -----+from datetime import datetime
 -----+
------+BACKEND_URL = "https://roofpro-pdffix.preview.emergentagent.com/api"
+-----+BACKEND_URL = "https://checklist-pdf-fix.preview.emergentagent.com/api"
 -----+
 -----+def comprehensive_sketch_test():
 -----+    """Test all scenarios from the review request"""
@@ -1681,7 +1681,7 @@ index 663d984..3d90079 100644
 -------+from datetime import datetime
 -------+
 -------+# Configuration
--------+BASE_URL = "https://roofpro-pdffix.preview.emergentagent.com/api"
+-------+BASE_URL = "https://checklist-pdf-fix.preview.emergentagent.com/api"
 -------+
 -------+def create_test_image_data():
 -------+    """Create a simple base64 encoded test image"""
@@ -1990,7 +1990,7 @@ index 663d984..3d90079 100644
 -----+from datetime import datetime
 -----+
 -----+# Backend URL from frontend .env
------+BACKEND_URL = "https://roofpro-pdffix.preview.emergentagent.com/api"
+-----+BACKEND_URL = "https://checklist-pdf-fix.preview.emergentagent.com/api"
 -----+
 -----+def test_sketch_metadata_issue():
 -----+    """Test the specific sketch metadata save/load issue reported by user"""

@@ -642,9 +642,9 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
     Returns a BytesIO object with the final PNG data.
     """
     try:
-        # Output dimensions for PDF
-        output_width = 800
-        output_height = 600
+        # Output dimensions for PDF - A4 format (595 x 842 pixels at 72 DPI)
+        output_width = 595
+        output_height = 842
         
         # Create output canvas
         canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))

@@ -792,8 +792,10 @@ async def export_project_pdf(project_id: str):
     from datetime import datetime
     current_date = datetime.now().strftime("%d.%m.%Y")
     
+    author_name = settings.get('author_name', 'Moris Nebel')
+    
     info_data = [
-        [Paragraph("<b>Verfasser:</b>", label_style), Paragraph("Moris Nebel", value_style),
+        [Paragraph("<b>Verfasser:</b>", label_style), Paragraph(author_name, value_style),
          Paragraph("<b>Datum:</b>", label_style), Paragraph(current_date, value_style)],
     ]
     info_table = Table(info_data, colWidths=[25*mm, 55*mm, 20*mm, 40*mm])

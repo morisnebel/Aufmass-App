@@ -315,10 +315,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PDF Export Annotation Scaling Fix"
-    - "PDF Export Checklist Regression Verification"
+    - "PDF Export Fundamental Generation Failure"
+    - "Sketch Metadata Save/Load Issue"
   stuck_tasks:
-    - "Add Customer Button Functionality"
+    - "PDF Export Functionality"
+    - "Sketches CRUD Operations"
   test_all: false
   test_priority: "high_first"
 

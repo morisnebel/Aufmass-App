@@ -288,6 +288,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 12,
   },
+  editButton: {
+    padding: 4,
+  },
   templateName: {
     flex: 1,
     fontSize: 18,

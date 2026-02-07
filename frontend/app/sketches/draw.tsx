@@ -1490,6 +1490,24 @@ export default function DrawSketchScreen() {
           />
         </TouchableOpacity>
 
+        {/* Bring to front */}
+        <TouchableOpacity
+          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
+          onPress={bringToFront}
+          disabled={!selectedElementId}
+        >
+          <Ionicons name="arrow-up" size={18} color={selectedElementId ? '#4caf50' : '#ccc'} />
+        </TouchableOpacity>
+
+        {/* Send to back */}
+        <TouchableOpacity
+          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
+          onPress={sendToBack}
+          disabled={!selectedElementId}
+        >
+          <Ionicons name="arrow-down" size={18} color={selectedElementId ? '#ff9800' : '#ccc'} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
             if (confirm('Möchten Sie alle Elemente löschen?')) {

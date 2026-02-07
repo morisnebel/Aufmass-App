@@ -188,8 +188,6 @@ export default function DrawSketchScreen() {
     }
   };
 
-  const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       alert(`${title}: ${message}`);

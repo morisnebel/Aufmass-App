@@ -32,15 +32,15 @@ import Svg, {
 } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 // A4 aspect ratio: 210mm x 297mm = 1:1.414
 const A4_ASPECT_RATIO = 297 / 210; // ~1.414
 
 // Calculate canvas dimensions to fit A4 aspect ratio
 const calculateA4Dimensions = () => {
-  const availableHeight = screenHeight - 180; // Header + toolbar space
-  const availableWidth = screenWidth - 20; // Padding
+  const availableHeight = height - 180; // Header + toolbar space
+  const availableWidth = width - 20; // Padding
   
   // Try fitting by width first
   let canvasWidth = availableWidth;

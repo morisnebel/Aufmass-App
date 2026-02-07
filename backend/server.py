@@ -332,7 +332,7 @@ async def delete_checklist(checklist_id: str):
     return {"message": "Checklist deleted"}
 
 # Helper function to draw annotations on a photo
-def draw_annotations_on_photo(image_data_base64: str, annotations_json: str, canvas_width: float = 390, canvas_height: float = 600) -> BytesIO:
+def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> BytesIO:
     """
     Takes a base64 image and JSON annotations, draws the annotations on the image,
     and returns the result as a BytesIO object.
@@ -360,8 +360,34 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str, can
         paths = annotations.get('paths', [])
         
         # Get canvas dimensions from annotations if available
-        annotation_canvas_width = annotations.get('canvasWidth', canvas_width)
-        annotation_canvas_height = annotations.get('canvasHeight', canvas_height)
+        # If not available, try to estimate from the path coordinates
+        annotation_canvas_width = annotations.get('canvasWidth')
+        annotation_canvas_height = annotations.get('canvasHeight')
+        
+        # If canvas dimensions not provided, estimate from max coordinates in paths
+        if not annotation_canvas_width or not annotation_canvas_height:
+            max_x, max_y = 0, 0
+            for path_obj in paths:
+                path_str = path_obj.get('path', '')
+                parts = path_str.replace('M', ' ').replace('L', ' ').split()
+                for i in range(0, len(parts) - 1, 2):
+                    try:
+                        x = float(parts[i])
+                        y = float(parts[i + 1])
+                        max_x = max(max_x, x)
+                        max_y = max(max_y, y)
+                    except (ValueError, IndexError):
+                        pass
+            
+            # Add some margin and use as canvas size
+            # If coordinates are large, assume tablet/large screen
+            if max_x > 0 and max_y > 0:
+                annotation_canvas_width = max_x + 100  # Add margin
+                annotation_canvas_height = max_y + 100
+            else:
+                # Fallback to common mobile dimensions
+                annotation_canvas_width = 390
+                annotation_canvas_height = 600
         
         if paths:
             # Calculate scale factors to map canvas coordinates to image coordinates

@@ -640,17 +640,10 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
     Renders a sketch with all its elements (images, shapes, text) from metadata.
     Elements are rendered in order (first element at bottom, last at top).
     Returns a BytesIO object with the final PNG data.
+    Maintains the original aspect ratio of the sketch from the device.
     """
     try:
-        # Output dimensions for PDF
-        output_width = 800
-        output_height = 600
-        
-        # Create output canvas
-        canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
-        draw = ImageDraw.Draw(canvas)
-        
-        # Parse metadata to get elements
+        # Parse metadata first to get original canvas dimensions
         elements = []
         background_image = None
         original_canvas_width = None
@@ -661,18 +654,37 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                 metadata = json.loads(metadata_json)
                 elements = metadata.get('elements', [])
                 background_image = metadata.get('backgroundImage')
-                # Try to get original canvas dimensions for scaling
+                # Get original canvas dimensions from the device
                 original_canvas_width = metadata.get('canvasWidth')
                 original_canvas_height = metadata.get('canvasHeight')
             except:
                 pass
         
-        # Calculate scale factors if we have original dimensions
-        # Default to common device dimensions if not provided
+        # Use original canvas dimensions if available, otherwise use defaults
         if not original_canvas_width:
             original_canvas_width = 800
         if not original_canvas_height:
             original_canvas_height = 600
+        
+        # Output dimensions maintain the original aspect ratio
+        # Scale to a reasonable size for PDF while preserving proportions
+        max_output_width = 1200
+        max_output_height = 1200
+        
+        aspect_ratio = original_canvas_width / original_canvas_height
+        
+        if aspect_ratio >= 1:
+            # Landscape or square
+            output_width = min(original_canvas_width, max_output_width)
+            output_height = int(output_width / aspect_ratio)
+        else:
+            # Portrait
+            output_height = min(original_canvas_height, max_output_height)
+            output_width = int(output_height * aspect_ratio)
+        
+        # Create output canvas with dynamic dimensions
+        canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
             
         scale_x = output_width / original_canvas_width
         scale_y = output_height / original_canvas_height

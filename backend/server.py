@@ -332,10 +332,13 @@ async def delete_checklist(checklist_id: str):
     return {"message": "Checklist deleted"}
 
 # Helper function to draw annotations on a photo
-def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> BytesIO:
+def draw_annotations_on_photo(image_data_base64: str, annotations_json: str, canvas_width: float = 390, canvas_height: float = 600) -> BytesIO:
     """
     Takes a base64 image and JSON annotations, draws the annotations on the image,
     and returns the result as a BytesIO object.
+    
+    The annotations are drawn in screen coordinates (based on mobile device canvas).
+    We need to scale them to match the actual image dimensions.
     """
     try:
         # Decode the base64 image
@@ -346,6 +349,7 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
         
         # Open with Pillow
         pil_image = PILImage.open(BytesIO(img_data))
+        img_width, img_height = pil_image.size
         
         # Convert to RGBA if needed for proper drawing
         if pil_image.mode != 'RGBA':
@@ -355,7 +359,36 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
         annotations = json.loads(annotations_json)
         paths = annotations.get('paths', [])
         
+        # Get canvas dimensions from annotations if available
+        annotation_canvas_width = annotations.get('canvasWidth', canvas_width)
+        annotation_canvas_height = annotations.get('canvasHeight', canvas_height)
+        
         if paths:
+            # Calculate scale factors to map canvas coordinates to image coordinates
+            # The annotations are drawn on a canvas that shows the image with "contain" mode
+            # We need to figure out how the image was displayed and scale accordingly
+            
+            # Assume the canvas displays the image centered with aspect ratio preserved
+            canvas_aspect = annotation_canvas_width / annotation_canvas_height
+            img_aspect = img_width / img_height
+            
+            if img_aspect > canvas_aspect:
+                # Image is wider - constrained by width
+                displayed_width = annotation_canvas_width
+                displayed_height = annotation_canvas_width / img_aspect
+                offset_x = 0
+                offset_y = (annotation_canvas_height - displayed_height) / 2
+            else:
+                # Image is taller - constrained by height
+                displayed_height = annotation_canvas_height
+                displayed_width = annotation_canvas_height * img_aspect
+                offset_x = (annotation_canvas_width - displayed_width) / 2
+                offset_y = 0
+            
+            # Scale factors from displayed size to actual image size
+            scale_x = img_width / displayed_width if displayed_width > 0 else 1
+            scale_y = img_height / displayed_height if displayed_height > 0 else 1
+            
             # Create a transparent overlay for drawing
             overlay = PILImage.new('RGBA', pil_image.size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(overlay)
@@ -377,7 +410,17 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
                             try:
                                 x = float(parts[i + 1])
                                 y = float(parts[i + 2])
-                                points.append((x, y))
+                                
+                                # Transform from canvas coordinates to image coordinates
+                                # Subtract offset to account for image centering, then scale
+                                img_x = (x - offset_x) * scale_x
+                                img_y = (y - offset_y) * scale_y
+                                
+                                # Clamp to image bounds
+                                img_x = max(0, min(img_width, img_x))
+                                img_y = max(0, min(img_height, img_y))
+                                
+                                points.append((img_x, img_y))
                                 i += 3
                             except ValueError:
                                 i += 1
@@ -393,13 +436,16 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
                 except:
                     rgb = (255, 0, 0)  # Default to red
                 
+                # Scale stroke width proportionally
+                scaled_stroke = max(1, int(stroke_width * max(scale_x, scale_y)))
+                
                 # Draw lines between consecutive points
                 if len(points) >= 2:
                     for j in range(len(points) - 1):
                         draw.line(
                             [points[j], points[j + 1]],
                             fill=(*rgb, 255),
-                            width=max(1, int(stroke_width))
+                            width=scaled_stroke
                         )
             
             # Composite the overlay onto the original image

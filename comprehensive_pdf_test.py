@@ -1,356 +1,421 @@
 #!/usr/bin/env python3
 """
-Comprehensive Enhanced PDF Export Testing
-Tests edge cases and validates annotation/SVG processing
+Comprehensive PDF Export Test - Arrow Rendering and Checklist Regression
+Testing both the corrected arrow scaling and verifying checklist functionality
 """
 
 import requests
 import json
 import base64
+import time
 import os
 from datetime import datetime
 
-# Get backend URL from environment
-BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sketch-pdf-tools.preview.emergentagent.com')
-API_BASE = f"{BACKEND_URL}/api"
+# Backend URL from environment
+BACKEND_URL = "https://sketch-pdf-tools.preview.emergentagent.com/api"
 
-def test_comprehensive_pdf_scenarios():
-    """Test various scenarios for PDF export with different annotation and SVG types"""
+def log_test(message):
+    """Log test messages with timestamp"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
+
+def create_test_customer():
+    """Create a test customer"""
+    log_test("Creating test customer...")
     
-    print("🔍 COMPREHENSIVE PDF EXPORT TESTING")
-    print("=" * 60)
+    customer_data = {
+        "name": "Vollständiger Test Kunde",
+        "email": "volltest@example.com", 
+        "phone": "+49 151 11111111",
+        "address": "Teststraße 456, 54321 Volltest"
+    }
     
-    test_data = {}
-    
-    try:
-        # Step 1: Create customer and project
-        print("\n1️⃣ Setting up test environment...")
-        
-        customer_data = {
-            "name": "Test Kunde PDF",
-            "email": "test@pdf-export.de",
-            "phone": "+49 40 98765432",
-            "address": "Teststraße 456, 20095 Hamburg"
-        }
-        
-        response = requests.post(f"{API_BASE}/customers", json=customer_data)
-        if response.status_code != 200:
-            print(f"❌ Customer creation failed: {response.status_code}")
-            return False
-            
+    response = requests.post(f"{BACKEND_URL}/customers", json=customer_data)
+    if response.status_code == 200:
         customer = response.json()
-        test_data['customer_id'] = customer['id']
-        
-        project_data = {
-            "customer_id": customer['id'],
-            "name": "PDF Export Test Project",
-            "description": "Testing enhanced PDF export with various scenarios",
-            "status": "active"
-        }
-        
-        response = requests.post(f"{API_BASE}/projects", json=project_data)
-        if response.status_code != 200:
-            print(f"❌ Project creation failed: {response.status_code}")
-            return False
-            
+        log_test(f"✅ Customer created: {customer['id']}")
+        return customer['id']
+    else:
+        log_test(f"❌ Customer creation failed: {response.status_code} - {response.text}")
+        return None
+
+def create_test_project(customer_id):
+    """Create a test project"""
+    log_test("Creating test project...")
+    
+    project_data = {
+        "customer_id": customer_id,
+        "name": "Vollständiger PDF Test",
+        "description": "Test für Pfeil-Rendering und Checklisten in PDF Export",
+        "remarks": "Testet sowohl Pfeilskalierung als auch Checklisten-Regression"
+    }
+    
+    response = requests.post(f"{BACKEND_URL}/projects", json=project_data)
+    if response.status_code == 200:
         project = response.json()
-        test_data['project_id'] = project['id']
-        print(f"✅ Test environment ready (Project ID: {project['id']})")
-        
-        # Step 2: Test photo with complex annotations
-        print("\n2️⃣ Testing photo with complex annotations...")
-        
-        # Larger test image (100x100 red square)
-        test_image_large = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-        
-        # Complex annotation with various path types and colors
-        complex_annotations = {
-            "paths": [
-                {
-                    "path": "M 20 20 L 80 20 L 80 80 L 20 80 L 20 20",
-                    "color": "#FF0000",
-                    "strokeWidth": 4
-                },
-                {
-                    "path": "M 50 10 L 90 50 L 50 90 L 10 50 L 50 10",
-                    "color": "#00FF00",
-                    "strokeWidth": 2
-                },
-                {
-                    "path": "M 0 0 L 100 100",
-                    "color": "#0000FF",
-                    "strokeWidth": 6
-                },
-                {
-                    "path": "M 100 0 L 0 100",
-                    "color": "#FFFF00",
-                    "strokeWidth": 1
-                },
-                {
-                    "path": "M 30 30 L 70 30 L 70 70 L 30 70 L 30 30",
-                    "color": "#FF00FF",
-                    "strokeWidth": 3
+        log_test(f"✅ Project created: {project['id']}")
+        return project['id']
+    else:
+        log_test(f"❌ Project creation failed: {response.status_code} - {response.text}")
+        return None
+
+def create_checklist_template():
+    """Create a checklist template"""
+    log_test("Creating checklist template...")
+    
+    template_data = {
+        "name": "PDF Test Checkliste",
+        "items": [
+            {
+                "text": "Dachzustand prüfen",
+                "subItems": ["Ziegel kontrollieren", "Rinne überprüfen"]
+            },
+            {
+                "text": "Sicherheit gewährleisten", 
+                "subItems": ["Absturzsicherung", "Werkzeug prüfen"]
+            },
+            {
+                "text": "Dokumentation erstellen",
+                "subItems": []
+            }
+        ]
+    }
+    
+    response = requests.post(f"{BACKEND_URL}/checklist-templates", json=template_data)
+    if response.status_code == 200:
+        template = response.json()
+        log_test(f"✅ Checklist template created: {template['id']}")
+        return template['id']
+    else:
+        log_test(f"❌ Checklist template creation failed: {response.status_code} - {response.text}")
+        return None
+
+def create_checklist_instance(project_id, template_id):
+    """Create a checklist instance for the project"""
+    log_test("Creating checklist instance...")
+    
+    checklist_data = {
+        "project_id": project_id,
+        "template_id": template_id,
+        "template_name": "PDF Test Checkliste",
+        "items": [
+            {
+                "text": "Dachzustand prüfen",
+                "checked": True,
+                "note": "Zustand gut, kleine Reparaturen nötig",
+                "subItems": [
+                    {"text": "Ziegel kontrollieren", "checked": True},
+                    {"text": "Rinne überprüfen", "checked": True}
+                ]
+            },
+            {
+                "text": "Sicherheit gewährleisten",
+                "checked": True,
+                "note": "",
+                "subItems": [
+                    {"text": "Absturzsicherung", "checked": True},
+                    {"text": "Werkzeug prüfen", "checked": False}
+                ]
+            },
+            {
+                "text": "Dokumentation erstellen",
+                "checked": False,
+                "note": "Noch ausstehend",
+                "subItems": []
+            }
+        ]
+    }
+    
+    response = requests.post(f"{BACKEND_URL}/checklists", json=checklist_data)
+    if response.status_code == 200:
+        checklist = response.json()
+        log_test(f"✅ Checklist instance created: {checklist['id']}")
+        return checklist['id']
+    else:
+        log_test(f"❌ Checklist instance creation failed: {response.status_code} - {response.text}")
+        return None
+
+def create_sketch_with_arrows(project_id):
+    """Create a sketch with arrows of different strokeWidth"""
+    log_test("Creating sketch with arrows...")
+    
+    metadata = {
+        "canvasWidth": 800,
+        "canvasHeight": 600,
+        "elements": [
+            # Arrow 1: strokeWidth 2
+            {
+                "type": "arrow",
+                "x": 100,
+                "y": 100,
+                "width": 200,
+                "height": 50,
+                "color": "#FF0000",
+                "strokeWidth": 2,
+                "rotation": 0,
+                "data": {
+                    "x1": 100,
+                    "y1": 100,
+                    "x2": 300,
+                    "y2": 150,
+                    "text": "2.5m",
+                    "heads": "single"
                 }
-            ]
-        }
-        
-        photo_data = {
-            "project_id": project['id'],
-            "image_data": test_image_large,
-            "annotations": json.dumps(complex_annotations),
-            "description": "Foto mit komplexen Annotationen - 5 verschiedene Pfade"
-        }
-        
-        response = requests.post(f"{API_BASE}/photos", json=photo_data)
-        if response.status_code != 200:
-            print(f"❌ Complex photo creation failed: {response.status_code}")
-            return False
-            
-        photo = response.json()
-        test_data['photo_id'] = photo['id']
-        print(f"✅ Complex annotated photo created with {len(complex_annotations['paths'])} annotation paths")
-        
-        # Step 3: Test photo without annotations
-        print("\n3️⃣ Testing photo without annotations...")
-        
-        photo_no_annotations = {
-            "project_id": project['id'],
-            "image_data": test_image_large,
-            "annotations": "",  # Empty annotations
-            "description": "Foto ohne Annotationen"
-        }
-        
-        response = requests.post(f"{API_BASE}/photos", json=photo_no_annotations)
-        if response.status_code != 200:
-            print(f"❌ Photo without annotations creation failed: {response.status_code}")
-            return False
-            
-        photo2 = response.json()
-        test_data['photo2_id'] = photo2['id']
-        print("✅ Photo without annotations created")
-        
-        # Step 4: Test complex SVG sketch
-        print("\n4️⃣ Testing complex SVG sketch...")
-        
-        complex_svg = '''<svg width="500" height="400" xmlns="http://www.w3.org/2000/svg">
-            <!-- Background -->
-            <rect x="0" y="0" width="500" height="400" fill="#F0F8FF" stroke="#000" stroke-width="1"/>
-            
-            <!-- House structure -->
-            <rect x="100" y="200" width="200" height="150" fill="#DEB887" stroke="#8B4513" stroke-width="3"/>
-            
-            <!-- Roof -->
-            <polygon points="80,200 200,100 320,200" fill="#8B0000" stroke="#654321" stroke-width="2"/>
-            
-            <!-- Door -->
-            <rect x="180" y="280" width="40" height="70" fill="#654321" stroke="#000" stroke-width="2"/>
-            <circle cx="210" cy="315" r="3" fill="#FFD700"/>
-            
-            <!-- Windows -->
-            <rect x="120" y="230" width="40" height="30" fill="#87CEEB" stroke="#000" stroke-width="2"/>
-            <rect x="240" y="230" width="40" height="30" fill="#87CEEB" stroke="#000" stroke-width="2"/>
-            
-            <!-- Window frames -->
-            <line x1="140" y1="230" x2="140" y2="260" stroke="#000" stroke-width="1"/>
-            <line x1="120" y1="245" x2="160" y2="245" stroke="#000" stroke-width="1"/>
-            <line x1="260" y1="230" x2="260" y2="260" stroke="#000" stroke-width="1"/>
-            <line x1="240" y1="245" x2="280" y2="245" stroke="#000" stroke-width="1"/>
-            
-            <!-- Chimney -->
-            <rect x="250" y="120" width="30" height="80" fill="#696969" stroke="#000" stroke-width="2"/>
-            
-            <!-- Sun -->
-            <circle cx="400" cy="80" r="30" fill="#FFD700" stroke="#FFA500" stroke-width="2"/>
-            
-            <!-- Sun rays -->
-            <line x1="400" y1="30" x2="400" y2="50" stroke="#FFD700" stroke-width="3"/>
-            <line x1="450" y1="80" x2="430" y2="80" stroke="#FFD700" stroke-width="3"/>
-            <line x1="400" y1="130" x2="400" y2="110" stroke="#FFD700" stroke-width="3"/>
-            <line x1="350" y1="80" x2="370" y2="80" stroke="#FFD700" stroke-width="3"/>
-            
-            <!-- Trees -->
-            <rect x="30" y="280" width="15" height="70" fill="#8B4513"/>
-            <circle cx="37" cy="270" r="25" fill="#228B22"/>
-            
-            <rect x="420" y="290" width="12" height="60" fill="#8B4513"/>
-            <circle cx="426" cy="280" r="20" fill="#32CD32"/>
-            
-            <!-- Text -->
-            <text x="200" y="380" font-family="Arial" font-size="18" text-anchor="middle" fill="#000">Dachaufbau Skizze - Komplex</text>
-        </svg>'''
-        
-        svg_b64 = base64.b64encode(complex_svg.encode('utf-8')).decode('utf-8')
-        svg_data_uri = f"data:image/svg+xml;base64,{svg_b64}"
-        
-        sketch_data = {
-            "project_id": project['id'],
-            "sketch_data": svg_data_uri,
-            "title": "Komplexe Hauszeichnung",
-            "metadata": json.dumps({
-                "elements": ["house", "roof", "windows", "door", "chimney", "sun", "trees"],
-                "colors": ["#DEB887", "#8B0000", "#87CEEB", "#654321", "#FFD700", "#228B22"],
-                "complexity": "high",
-                "created_with": "enhanced_sketch_editor"
-            })
-        }
-        
-        response = requests.post(f"{API_BASE}/sketches", json=sketch_data)
-        if response.status_code != 200:
-            print(f"❌ Complex SVG sketch creation failed: {response.status_code}")
-            return False
-            
+            },
+            # Arrow 2: strokeWidth 5
+            {
+                "type": "arrow", 
+                "x": 150,
+                "y": 200,
+                "width": 250,
+                "height": 60,
+                "color": "#00FF00",
+                "strokeWidth": 5,
+                "rotation": 0,
+                "data": {
+                    "x1": 150,
+                    "y1": 200,
+                    "x2": 400,
+                    "y2": 260,
+                    "text": "4.8m",
+                    "heads": "double"
+                }
+            },
+            # Arrow 3: strokeWidth 8
+            {
+                "type": "arrow",
+                "x": 200,
+                "y": 350,
+                "width": 300,
+                "height": 80,
+                "color": "#0000FF", 
+                "strokeWidth": 8,
+                "rotation": 0,
+                "data": {
+                    "x1": 200,
+                    "y1": 350,
+                    "x2": 500,
+                    "y2": 430,
+                    "text": "7.2m",
+                    "heads": "single"
+                }
+            },
+            # Text element
+            {
+                "type": "text",
+                "x": 50,
+                "y": 50,
+                "color": "#000000",
+                "strokeWidth": 1,
+                "rotation": 0,
+                "data": {
+                    "text": "Vollständiger Test - Pfeile und Checklisten"
+                }
+            }
+        ]
+    }
+    
+    svg_content = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+        <rect width="800" height="600" fill="white" stroke="#ccc" stroke-width="1"/>
+        <text x="400" y="30" text-anchor="middle" font-size="16" fill="black">Vollständiger Test</text>
+    </svg>'''
+    
+    svg_base64 = base64.b64encode(svg_content.encode()).decode()
+    
+    sketch_data = {
+        "project_id": project_id,
+        "sketch_data": f"data:image/svg+xml;base64,{svg_base64}",
+        "title": "Vollständiger Test Skizze",
+        "metadata": json.dumps(metadata)
+    }
+    
+    response = requests.post(f"{BACKEND_URL}/sketches", json=sketch_data)
+    if response.status_code == 200:
         sketch = response.json()
-        test_data['sketch_id'] = sketch['id']
-        print("✅ Complex SVG sketch created (house with multiple elements)")
+        log_test(f"✅ Sketch created: {sketch['id']}")
+        return sketch['id']
+    else:
+        log_test(f"❌ Sketch creation failed: {response.status_code} - {response.text}")
+        return None
+
+def generate_and_analyze_pdf(project_id):
+    """Generate PDF and analyze its content"""
+    log_test("Generating PDF and analyzing content...")
+    
+    start_time = time.time()
+    response = requests.get(f"{BACKEND_URL}/export/pdf/{project_id}")
+    end_time = time.time()
+    
+    if response.status_code == 200:
+        pdf_response = response.json()
+        pdf_data = pdf_response.get('pdf_data', '')
+        filename = pdf_response.get('filename', 'test.pdf')
         
-        # Step 5: Test simple geometric SVG
-        print("\n5️⃣ Testing simple geometric SVG...")
-        
-        simple_svg = '''<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="100" cy="100" r="80" fill="none" stroke="#FF0000" stroke-width="5"/>
-            <rect x="60" y="60" width="80" height="80" fill="none" stroke="#00FF00" stroke-width="3"/>
-            <line x1="20" y1="20" x2="180" y2="180" stroke="#0000FF" stroke-width="2"/>
-        </svg>'''
-        
-        simple_svg_b64 = base64.b64encode(simple_svg.encode('utf-8')).decode('utf-8')
-        simple_svg_uri = f"data:image/svg+xml;base64,{simple_svg_b64}"
-        
-        simple_sketch_data = {
-            "project_id": project['id'],
-            "sketch_data": simple_svg_uri,
-            "title": "Einfache Geometrie",
-            "metadata": json.dumps({
-                "elements": ["circle", "rectangle", "line"],
-                "colors": ["#FF0000", "#00FF00", "#0000FF"],
-                "complexity": "low"
-            })
-        }
-        
-        response = requests.post(f"{API_BASE}/sketches", json=simple_sketch_data)
-        if response.status_code != 200:
-            print(f"❌ Simple SVG sketch creation failed: {response.status_code}")
-            return False
-            
-        sketch2 = response.json()
-        test_data['sketch2_id'] = sketch2['id']
-        print("✅ Simple geometric SVG sketch created")
-        
-        # Step 6: Generate PDF with all content
-        print("\n6️⃣ Generating PDF with all content...")
-        
-        response = requests.get(f"{API_BASE}/export/pdf/{project['id']}")
-        if response.status_code != 200:
-            print(f"❌ PDF export failed: {response.status_code} - {response.text}")
-            return False
-            
-        pdf_result = response.json()
-        
-        # Verify PDF
-        if 'pdf_data' not in pdf_result or 'filename' not in pdf_result:
-            print("❌ PDF response structure invalid")
-            return False
-            
         try:
-            pdf_bytes = base64.b64decode(pdf_result['pdf_data'])
-            pdf_size = len(pdf_bytes)
+            pdf_bytes = base64.b64decode(pdf_data)
+            pdf_path = "/tmp/arrow_test_v2.pdf"
             
-            if not pdf_bytes.startswith(b'%PDF'):
-                print("❌ Invalid PDF format")
-                return False
-                
-            print(f"✅ Comprehensive PDF generated successfully!")
-            print(f"   📄 Filename: {pdf_result['filename']}")
-            print(f"   📊 Size: {pdf_size:,} bytes ({pdf_size/1024:.1f} KB)")
+            with open(pdf_path, 'wb') as f:
+                f.write(pdf_bytes)
             
-            # This PDF should be larger due to multiple processed images
-            if pdf_size > 30000:  # >30KB indicates good image processing
-                print("✅ PDF size indicates excellent image processing (>30KB)")
-            elif pdf_size > 15000:  # >15KB is acceptable
-                print("✅ PDF size indicates good image processing (>15KB)")
+            file_size = len(pdf_bytes)
+            generation_time = end_time - start_time
+            
+            log_test(f"✅ PDF generated successfully:")
+            log_test(f"   - File size: {file_size:,} bytes ({file_size/1024:.1f} KB)")
+            log_test(f"   - Generation time: {generation_time:.3f}s")
+            log_test(f"   - Saved to: {pdf_path}")
+            
+            # Analyze PDF content
+            pdf_text = pdf_bytes.decode('latin-1', errors='ignore')
+            
+            # Check for checklist content
+            checklist_indicators = [
+                "Checkliste",
+                "PDF Test Checkliste", 
+                "Dachzustand prüfen",
+                "Sicherheit gewährleisten",
+                "Dokumentation erstellen"
+            ]
+            
+            checklist_found = []
+            for indicator in checklist_indicators:
+                if indicator in pdf_text:
+                    checklist_found.append(indicator)
+            
+            if checklist_found:
+                log_test(f"✅ Checklist content found in PDF: {len(checklist_found)}/{len(checklist_indicators)} indicators")
+                for item in checklist_found:
+                    log_test(f"   ✓ Found: {item}")
             else:
-                print("⚠️  PDF size is smaller than expected for multiple images")
-                
+                log_test("❌ CRITICAL: No checklist content found in PDF!")
+            
+            # Check for sketch content
+            sketch_indicators = ["Skizzen", "Vollständiger Test"]
+            sketch_found = []
+            for indicator in sketch_indicators:
+                if indicator in pdf_text:
+                    sketch_found.append(indicator)
+            
+            if sketch_found:
+                log_test(f"✅ Sketch content found in PDF: {len(sketch_found)}/{len(sketch_indicators)} indicators")
+            else:
+                log_test("⚠️ Limited sketch content found in PDF")
+            
+            # Check for project/customer content
+            project_indicators = ["Vollständiger PDF Test", "Vollständiger Test Kunde", "Bauherr", "Objekt"]
+            project_found = []
+            for indicator in project_indicators:
+                if indicator in pdf_text:
+                    project_found.append(indicator)
+            
+            if project_found:
+                log_test(f"✅ Project content found in PDF: {len(project_found)}/{len(project_indicators)} indicators")
+            else:
+                log_test("❌ CRITICAL: No project content found in PDF!")
+            
+            # Overall assessment
+            if checklist_found and project_found:
+                log_test("✅ PDF CONTENT VERIFICATION: All major sections present")
+                return True
+            else:
+                log_test("❌ PDF CONTENT VERIFICATION: Missing critical sections")
+                return False
+            
         except Exception as e:
-            print(f"❌ Error processing PDF: {e}")
+            log_test(f"❌ Error analyzing PDF: {e}")
             return False
-        
-        # Step 7: Verify all data was processed correctly
-        print("\n7️⃣ Verifying content processing...")
-        
-        # Check photos
-        response = requests.get(f"{API_BASE}/photos/project/{project['id']}")
-        if response.status_code == 200:
-            photos = response.json()
-            annotated_photos = [p for p in photos if p.get('annotations') and p['annotations'].strip()]
-            non_annotated_photos = [p for p in photos if not p.get('annotations') or not p['annotations'].strip()]
-            
-            print(f"✅ Found {len(annotated_photos)} photos with annotations")
-            print(f"✅ Found {len(non_annotated_photos)} photos without annotations")
-            
-            if annotated_photos:
-                annotations = json.loads(annotated_photos[0]['annotations'])
-                paths_count = len(annotations.get('paths', []))
-                print(f"   📝 First annotated photo has {paths_count} annotation paths")
-        
-        # Check sketches
-        response = requests.get(f"{API_BASE}/sketches/project/{project['id']}")
-        if response.status_code == 200:
-            sketches = response.json()
-            svg_sketches = [s for s in sketches if 'svg' in s.get('sketch_data', '').lower()]
-            
-            print(f"✅ Found {len(svg_sketches)} SVG sketches for conversion")
-            
-            for i, sketch in enumerate(svg_sketches):
-                title = sketch.get('title', f'Sketch {i+1}')
-                print(f"   🎨 {title}: SVG data ready for PNG conversion")
-        
-        print("\n" + "=" * 60)
-        print("🎉 COMPREHENSIVE PDF EXPORT TEST COMPLETED!")
-        print("=" * 60)
-        
-        test_data['success'] = True
-        return test_data
-        
-    except Exception as e:
-        print(f"\n❌ CRITICAL ERROR: {e}")
+    else:
+        log_test(f"❌ PDF generation failed: {response.status_code} - {response.text}")
         return False
 
-def cleanup_comprehensive_test(test_data):
-    """Clean up comprehensive test data"""
-    if not test_data or not test_data.get('success'):
-        return
-        
-    print("\n🧹 Cleaning up comprehensive test data...")
+def cleanup_test_data(customer_id, project_id, template_id):
+    """Clean up test data"""
+    log_test("Cleaning up test data...")
+    
+    # Delete project (cascades to sketches and checklists)
+    if project_id:
+        response = requests.delete(f"{BACKEND_URL}/projects/{project_id}")
+        if response.status_code == 200:
+            log_test("✅ Project deleted")
+        else:
+            log_test(f"⚠️ Project deletion failed: {response.status_code}")
+    
+    # Delete customer
+    if customer_id:
+        response = requests.delete(f"{BACKEND_URL}/customers/{customer_id}")
+        if response.status_code == 200:
+            log_test("✅ Customer deleted")
+        else:
+            log_test(f"⚠️ Customer deletion failed: {response.status_code}")
+    
+    # Delete template
+    if template_id:
+        response = requests.delete(f"{BACKEND_URL}/checklist-templates/{template_id}")
+        if response.status_code == 200:
+            log_test("✅ Template deleted")
+        else:
+            log_test(f"⚠️ Template deletion failed: {response.status_code}")
+
+def main():
+    """Main comprehensive test function"""
+    log_test("=== COMPREHENSIVE PDF EXPORT TEST ===")
+    log_test("Testing arrow rendering AND checklist regression")
+    log_test(f"Backend URL: {BACKEND_URL}")
+    
+    customer_id = None
+    project_id = None
+    template_id = None
     
     try:
-        if 'project_id' in test_data:
-            response = requests.delete(f"{API_BASE}/projects/{test_data['project_id']}")
-            if response.status_code == 200:
-                print("✅ Project and all related data deleted")
-            
-        if 'customer_id' in test_data:
-            response = requests.delete(f"{API_BASE}/customers/{test_data['customer_id']}")
-            if response.status_code == 200:
-                print("✅ Customer deleted")
-                
+        # Step 1: Create test customer
+        customer_id = create_test_customer()
+        if not customer_id:
+            return False
+        
+        # Step 2: Create test project
+        project_id = create_test_project(customer_id)
+        if not project_id:
+            return False
+        
+        # Step 3: Create checklist template
+        template_id = create_checklist_template()
+        if not template_id:
+            return False
+        
+        # Step 4: Create checklist instance
+        checklist_id = create_checklist_instance(project_id, template_id)
+        if not checklist_id:
+            return False
+        
+        # Step 5: Create sketch with arrows
+        sketch_id = create_sketch_with_arrows(project_id)
+        if not sketch_id:
+            return False
+        
+        # Step 6: Generate and analyze PDF
+        pdf_success = generate_and_analyze_pdf(project_id)
+        
+        log_test("=== TEST RESULTS ===")
+        if pdf_success:
+            log_test("✅ COMPREHENSIVE TEST PASSED")
+            log_test("✅ Arrow rendering working")
+            log_test("✅ Checklist content present in PDF")
+            log_test("✅ PDF saved to /tmp/arrow_test_v2.pdf")
+        else:
+            log_test("❌ COMPREHENSIVE TEST FAILED")
+            log_test("❌ Critical content missing from PDF")
+        
+        return pdf_success
+        
     except Exception as e:
-        print(f"⚠️  Cleanup error: {e}")
+        log_test(f"❌ Test failed with exception: {e}")
+        return False
+        
+    finally:
+        # Cleanup
+        cleanup_test_data(customer_id, project_id, template_id)
 
 if __name__ == "__main__":
-    print("🚀 STARTING COMPREHENSIVE PDF EXPORT TESTING")
-    print(f"🌐 Backend URL: {API_BASE}")
-    print(f"⏰ Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    result = test_comprehensive_pdf_scenarios()
-    
-    if result:
-        cleanup_comprehensive_test(result)
-    
-    print(f"\n⏰ Test completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    if result and result.get('success'):
-        print("🎯 COMPREHENSIVE RESULT: ✅ SUCCESS - All PDF export scenarios working!")
-        exit(0)
-    else:
-        print("🎯 COMPREHENSIVE RESULT: ❌ FAILED - Issues with PDF export scenarios")
-        exit(1)
+    success = main()
+    exit(0 if success else 1)

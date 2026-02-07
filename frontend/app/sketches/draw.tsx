@@ -657,6 +657,9 @@ export default function DrawSketchScreen() {
         x: pendingPosition.x,
         y: pendingPosition.y,
         rotation: 0,
+        fontSize: 20,
+        fontWeight: 'bold',
+        fontStyle: 'normal',
       };
       addToHistory([...elements, newElement]);
       setTextInput('');
@@ -678,6 +681,7 @@ export default function DrawSketchScreen() {
           y2: pendingArrow.y2,
           text: arrowText,
           heads: arrowHeads,
+          fontSize: 14,
         },
         color: drawColor,
         strokeWidth: strokeWidth,

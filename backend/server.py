@@ -637,7 +637,7 @@ async def export_project_pdf(project_id: str):
             logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")
             elements.append(Paragraph(checklist['template_name'], styles['Heading3']))
             for j, item in enumerate(checklist['items']):
-                status = '✓' if item['checked'] else '○'
+                status = '[X]' if item['checked'] else '[ ]'  # Use ASCII characters instead
                 logging.info(f"PDF Export Debug: Adding item {j}: {status} {item['text']}")
                 elements.append(Paragraph(f"{status} {item['text']}", styles['Normal']))
             elements.append(Spacer(1, 10))

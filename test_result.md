@@ -303,7 +303,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PDF Export with Annotations and Sketches"
+    - "Sketch Metadata Save/Load Issue"
   stuck_tasks:
     - "Add Customer Button Functionality"
   test_all: false

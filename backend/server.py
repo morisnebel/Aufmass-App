@@ -640,7 +640,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
     Renders a sketch with all its elements (images, shapes, text) from metadata.
     Elements are rendered in order (first element at bottom, last at top).
     Returns a BytesIO object with the final PNG data.
-    Maintains the original aspect ratio of the sketch from the device.
+    Maintains the original aspect ratio of the sketch from the device - NO DISTORTION.
     """
     try:
         # Parse metadata first to get original canvas dimensions
@@ -666,38 +666,45 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
         if not original_canvas_height:
             original_canvas_height = 600
         
-        # Output dimensions maintain the original aspect ratio
-        # Scale to a reasonable size for PDF while preserving proportions
-        max_output_width = 1200
-        max_output_height = 1200
+        # CRITICAL: Output canvas MUST have EXACT same aspect ratio as original
+        # This is the key to preventing distortion
+        max_output_size = 1200  # Maximum dimension for either width or height
         
         aspect_ratio = original_canvas_width / original_canvas_height
         
-        if aspect_ratio >= 1:
-            # Landscape or square
-            output_width = min(original_canvas_width, max_output_width)
-            output_height = int(output_width / aspect_ratio)
+        # Calculate output dimensions that EXACTLY preserve aspect ratio
+        if original_canvas_width >= original_canvas_height:
+            # Landscape or square - scale based on width
+            if original_canvas_width > max_output_size:
+                output_width = max_output_size
+                output_height = int(max_output_size / aspect_ratio)
+            else:
+                # Use original dimensions (1:1 scale, no distortion possible)
+                output_width = int(original_canvas_width)
+                output_height = int(original_canvas_height)
         else:
-            # Portrait
-            output_height = min(original_canvas_height, max_output_height)
-            output_width = int(output_height * aspect_ratio)
+            # Portrait - scale based on height
+            if original_canvas_height > max_output_size:
+                output_height = max_output_size
+                output_width = int(max_output_size * aspect_ratio)
+            else:
+                # Use original dimensions (1:1 scale, no distortion possible)
+                output_width = int(original_canvas_width)
+                output_height = int(original_canvas_height)
         
         # Create output canvas with dynamic dimensions
         canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
         draw = ImageDraw.Draw(canvas)
         
-        # Use UNIFORM scaling to maintain aspect ratio and visual fidelity
-        # This ensures arrows, text, and shapes look identical to the app
-        scale_x = output_width / original_canvas_width
-        scale_y = output_height / original_canvas_height
-        # Use the same scale factor for both X and Y to prevent distortion
-        uniform_scale = min(scale_x, scale_y)
+        # Calculate SINGLE uniform scale factor - same for X and Y
+        # Since output has same aspect ratio as input, these should be equal
+        uniform_scale = output_width / original_canvas_width
         
-        # Calculate offset to center the sketch if scales differ
-        offset_x = (output_width - (original_canvas_width * uniform_scale)) / 2
-        offset_y = (output_height - (original_canvas_height * uniform_scale)) / 2
+        # No offset needed when aspect ratios match exactly
+        offset_x = 0
+        offset_y = 0
         
-        # Override scale_x and scale_y with uniform scale for consistent rendering
+        # Use uniform scale for both axes to prevent ANY distortion
         scale_x = uniform_scale
         scale_y = uniform_scale
         

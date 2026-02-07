@@ -302,6 +302,25 @@ async def get_checklist_templates():
     templates = await db.checklist_templates.find().to_list(1000)
     return [ChecklistTemplate(**serialize_doc(t)) for t in templates]
 
+@api_router.get("/checklist-templates/{template_id}", response_model=ChecklistTemplate)
+async def get_checklist_template(template_id: str):
+    template = await db.checklist_templates.find_one({"_id": ObjectId(template_id)})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return ChecklistTemplate(**serialize_doc(template))
+
+@api_router.put("/checklist-templates/{template_id}", response_model=ChecklistTemplate)
+async def update_checklist_template(template_id: str, template: ChecklistTemplate):
+    template_dict = template.dict(exclude={'id', 'created_at'})
+    result = await db.checklist_templates.update_one(
+        {"_id": ObjectId(template_id)},
+        {"$set": template_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    updated_template = await db.checklist_templates.find_one({"_id": ObjectId(template_id)})
+    return ChecklistTemplate(**serialize_doc(updated_template))
+
 @api_router.delete("/checklist-templates/{template_id}")
 async def delete_checklist_template(template_id: str):
     result = await db.checklist_templates.delete_one({"_id": ObjectId(template_id)})

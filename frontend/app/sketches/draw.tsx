@@ -1961,85 +1961,247 @@ export default function DrawSketchScreen() {
       {/* Edit Arrow Modal */}
       <Modal visible={showEditArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={arrowText}
-              onChangeText={setArrowText}
-              placeholder="Maß eingeben (z.B. 5.5m)"
-            />
-            <View style={styles.arrowHeadsContainer}>
-              <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
-              <View style={styles.arrowHeadsButtons}>
-                <TouchableOpacity
-                  style={[styles.arrowHeadButton, arrowHeads === 'single' && styles.arrowHeadButtonActive]}
-                  onPress={() => setArrowHeads('single')}
-                >
-                  <Text style={styles.arrowHeadButtonText}>Einfach →</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.arrowHeadButton, arrowHeads === 'double' && styles.arrowHeadButtonActive]}
-                  onPress={() => setArrowHeads('double')}
-                >
-                  <Text style={styles.arrowHeadButtonText}>Doppelt ↔</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.colorPickerContainer}>
-              <Text style={styles.modalLabel}>Farbe:</Text>
-              <View style={styles.colorGrid}>
-                {colors.map(color => (
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={arrowText}
+                onChangeText={setArrowText}
+                placeholder="Maß eingeben (z.B. 5.5m)"
+              />
+              <View style={styles.arrowHeadsContainer}>
+                <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
+                <View style={styles.arrowHeadsButtons}>
                   <TouchableOpacity
-                    key={color}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      drawColor === color && styles.colorOptionSelected,
-                    ]}
-                    onPress={() => setDrawColor(color)}
-                  />
-                ))}
+                    style={[styles.arrowHeadButton, arrowHeads === 'single' && styles.arrowHeadButtonActive]}
+                    onPress={() => setArrowHeads('single')}
+                  >
+                    <Text style={styles.arrowHeadButtonText}>Einfach →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.arrowHeadButton, arrowHeads === 'double' && styles.arrowHeadButtonActive]}
+                    onPress={() => setArrowHeads('double')}
+                  >
+                    <Text style={styles.arrowHeadButtonText}>Doppelt ↔</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowEditArrowModal(false);
-                  setArrowText('');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => {
-                  if (selectedElementId) {
-                    const newElements = elements.map(el => {
-                      if (el.id === selectedElementId && el.type === 'arrow') {
-                        return {
-                          ...el,
-                          data: {
-                            ...el.data,
-                            text: arrowText,
-                            heads: arrowHeads,
-                          },
-                          color: drawColor,
-                        };
-                      }
-                      return el;
-                    });
-                    addToHistory(newElements);
+              
+              {/* Stroke Width Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Linienstärke: {editStrokeWidth}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditStrokeWidth(Math.max(1, editStrokeWidth - 1))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${(editStrokeWidth / 10) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditStrokeWidth(Math.min(10, editStrokeWidth + 1))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Font Size Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Schriftgröße: {editArrowFontSize}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditArrowFontSize(Math.max(8, editArrowFontSize - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((editArrowFontSize - 8) / 32) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditArrowFontSize(Math.min(40, editArrowFontSize + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.colorPickerContainer}>
+                <Text style={styles.modalLabel}>Farbe:</Text>
+                <View style={styles.colorGrid}>
+                  {colors.map(color => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        drawColor === color && styles.colorOptionSelected,
+                      ]}
+                      onPress={() => setDrawColor(color)}
+                    />
+                  ))}
+                </View>
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
                     setShowEditArrowModal(false);
                     setArrowText('');
-                  }
-                }}
-              >
-                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
-              </TouchableOpacity>
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={() => {
+                    if (selectedElementId) {
+                      const newElements = elements.map(el => {
+                        if (el.id === selectedElementId && el.type === 'arrow') {
+                          return {
+                            ...el,
+                            data: {
+                              ...el.data,
+                              text: arrowText,
+                              heads: arrowHeads,
+                              fontSize: editArrowFontSize,
+                            },
+                            color: drawColor,
+                            strokeWidth: editStrokeWidth,
+                          };
+                        }
+                        return el;
+                      });
+                      addToHistory(newElements);
+                      setShowEditArrowModal(false);
+                      setArrowText('');
+                    }
+                  }}
+                >
+                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Text Modal */}
+      <Modal visible={showEditTextModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Text bearbeiten</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={textInput}
+                onChangeText={setTextInput}
+                placeholder="Text eingeben"
+                multiline
+              />
+              
+              {/* Font Size Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Schriftgröße: {editFontSize}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditFontSize(Math.max(10, editFontSize - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((editFontSize - 10) / 50) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditFontSize(Math.min(60, editFontSize + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Font Style Buttons */}
+              <View style={styles.fontStyleContainer}>
+                <Text style={styles.modalLabel}>Stil:</Text>
+                <View style={styles.fontStyleButtons}>
+                  <TouchableOpacity
+                    style={[styles.fontStyleButton, editFontWeight === 'bold' && styles.fontStyleButtonActive]}
+                    onPress={() => setEditFontWeight(editFontWeight === 'bold' ? 'normal' : 'bold')}
+                  >
+                    <Text style={[styles.fontStyleButtonText, { fontWeight: 'bold' }]}>F</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.fontStyleButton, editFontStyle === 'italic' && styles.fontStyleButtonActive]}
+                    onPress={() => setEditFontStyle(editFontStyle === 'italic' ? 'normal' : 'italic')}
+                  >
+                    <Text style={[styles.fontStyleButtonText, { fontStyle: 'italic' }]}>K</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.colorPickerContainer}>
+                <Text style={styles.modalLabel}>Farbe:</Text>
+                <View style={styles.colorGrid}>
+                  {colors.map(color => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        drawColor === color && styles.colorOptionSelected,
+                      ]}
+                      onPress={() => setDrawColor(color)}
+                    />
+                  ))}
+                </View>
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowEditTextModal(false);
+                    setTextInput('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={() => {
+                    if (selectedElementId && textInput.trim()) {
+                      const newElements = elements.map(el => {
+                        if (el.id === selectedElementId && el.type === 'text') {
+                          return {
+                            ...el,
+                            data: { ...el.data, text: textInput },
+                            color: drawColor,
+                            fontSize: editFontSize,
+                            fontWeight: editFontWeight,
+                            fontStyle: editFontStyle,
+                          };
+                        }
+                        return el;
+                      });
+                      addToHistory(newElements);
+                      setShowEditTextModal(false);
+                      setTextInput('');
+                    }
+                  }}
+                >
+                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </View>

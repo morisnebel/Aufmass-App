@@ -15,15 +15,27 @@ import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
+interface TemplateItem {
+  text: string;
+  subItems?: string[];
+}
+
 interface ChecklistTemplate {
   id: string;
   name: string;
-  items: string[];
+  items: (string | TemplateItem)[];
+}
+
+interface SubItem {
+  text: string;
+  checked: boolean;
 }
 
 interface ChecklistItem {
   text: string;
   checked: boolean;
+  note?: string;
+  subItems?: SubItem[];
 }
 
 export default function NewChecklistScreen() {

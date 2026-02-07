@@ -309,7 +309,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Sketch Metadata Save/Load Issue"
+    - "PDF Export Annotation Scaling Fix"
+    - "PDF Export Checklist Regression Verification"
   stuck_tasks:
     - "Add Customer Button Functionality"
   test_all: false

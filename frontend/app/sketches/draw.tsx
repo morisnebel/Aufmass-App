@@ -881,6 +881,31 @@ export default function DrawSketchScreen() {
           />
         );
       
+      case 'polygon':
+        // Closed freeform shape - filled with semi-transparent color
+        return (
+          <G key={element.id}>
+            <Path
+              d={element.data}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill={element.color}
+              fillOpacity={0.3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {isSelected && (
+              <Path
+                d={element.data}
+                stroke="#2196f3"
+                strokeWidth={2}
+                fill="none"
+                strokeDasharray="5,5"
+              />
+            )}
+          </G>
+        );
+      
       case 'line':
         const lineCenterX = (element.data.x1 + element.data.x2) / 2;
         const lineCenterY = (element.data.y1 + element.data.y2) / 2;

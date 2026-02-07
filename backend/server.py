@@ -575,69 +575,290 @@ async def export_project_pdf(project_id: str):
     sketches = await db.sketches.find({"project_id": project_id}).to_list(1000)
     checklists = await db.checklists.find({"project_id": project_id}).to_list(1000)
     
-    # Create PDF
+    # Create PDF with margins
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=A4,
+        leftMargin=15*mm,
+        rightMargin=15*mm,
+        topMargin=15*mm,
+        bottomMargin=15*mm
+    )
     elements = []
     styles = getSampleStyleSheet()
     
-    # Title
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=24,
-        textColor=colors.HexColor('#1976d2'),
-        spaceAfter=30,
-        alignment=TA_CENTER
+    # Custom styles
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#333333'),
     )
-    elements.append(Paragraph(f"Dachflächen-Aufmaß: {project['name']}", title_style))
-    elements.append(Spacer(1, 12))
     
-    # Customer info
-    if customer:
-        elements.append(Paragraph("Kundendaten", styles['Heading2']))
-        customer_data = [
-            ['Name:', customer.get('name', '')],
-            ['E-Mail:', customer.get('email', '')],
-            ['Telefon:', customer.get('phone', '')],
-            ['Adresse:', customer.get('address', '')]
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.white,
+        backColor=colors.HexColor('#1976d2'),
+        alignment=TA_CENTER,
+        spaceAfter=0,
+        spaceBefore=0,
+        leftIndent=0,
+        rightIndent=0,
+    )
+    
+    section_title_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor=colors.white,
+        backColor=colors.HexColor('#1976d2'),
+        alignment=TA_LEFT,
+        spaceBefore=10,
+        spaceAfter=5,
+        leftIndent=5,
+    )
+    
+    label_style = ParagraphStyle(
+        'LabelStyle',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor=colors.HexColor('#666666'),
+    )
+    
+    value_style = ParagraphStyle(
+        'ValueStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.black,
+    )
+    
+    # ============ HEADER WITH LOGO ============
+    logo_path = Path(__file__).parent / 'logo.png'
+    
+    # Create header table with logo and company info
+    if logo_path.exists():
+        logo_img = RLImage(str(logo_path), width=50*mm, height=35*mm)
+    else:
+        logo_img = Paragraph("NEBEL-BEDACHUNG", title_style)
+    
+    # Company info text
+    company_info = """<b>Dachdeckermeister</b><br/>
+    Moris Nebel<br/>
+    37339 Hundeshagen<br/>
+    <br/>
+    <font size="8">Dächer aller Art<br/>
+    Fassadenarbeiten<br/>
+    Zimmerer- und Spenglerarbeiten</font>"""
+    
+    header_table = Table(
+        [[logo_img, Paragraph(company_info, header_style)]],
+        colWidths=[100*mm, 80*mm]
+    )
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 5*mm))
+    
+    # ============ TITLE BAR ============
+    title_table = Table(
+        [[Paragraph("Aufmaß", title_style)]],
+        colWidths=[180*mm]
+    )
+    title_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(title_table)
+    elements.append(Spacer(1, 5*mm))
+    
+    # ============ PROJECT INFO ============
+    # Verfasser and Datum
+    from datetime import datetime
+    current_date = datetime.now().strftime("%d.%m.%Y")
+    
+    info_data = [
+        [Paragraph("<b>Verfasser:</b>", label_style), Paragraph("Moris Nebel", value_style),
+         Paragraph("<b>Datum:</b>", label_style), Paragraph(current_date, value_style)],
+    ]
+    info_table = Table(info_data, colWidths=[25*mm, 55*mm, 20*mm, 40*mm])
+    info_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 3*mm))
+    
+    # ============ BAUHERR & OBJEKT ============
+    customer_name = customer.get('name', '') if customer else ''
+    customer_address = customer.get('address', '') if customer else ''
+    customer_phone = customer.get('phone', '') if customer else ''
+    customer_email = customer.get('email', '') if customer else ''
+    
+    # Parse address if available
+    address_parts = customer_address.split(',') if customer_address else ['', '']
+    street = address_parts[0].strip() if len(address_parts) > 0 else ''
+    city_parts = address_parts[1].strip().split(' ') if len(address_parts) > 1 else ['', '']
+    plz = city_parts[0] if len(city_parts) > 0 else ''
+    city = ' '.join(city_parts[1:]) if len(city_parts) > 1 else ''
+    
+    bauherr_objekt_data = [
+        [Paragraph("<b>Bauherr</b>", section_title_style), Paragraph("<b>Objekt</b>", section_title_style)],
+        [
+            Table([
+                [Paragraph("Name:", label_style), Paragraph(customer_name, value_style)],
+                [Paragraph("Straße:", label_style), Paragraph(street, value_style)],
+                [Paragraph("PLZ:", label_style), Paragraph(plz, value_style)],
+                [Paragraph("Ort:", label_style), Paragraph(city, value_style)],
+                [Paragraph("Telefon:", label_style), Paragraph(customer_phone, value_style)],
+                [Paragraph("E-Mail:", label_style), Paragraph(customer_email, value_style)],
+            ], colWidths=[20*mm, 65*mm]),
+            Table([
+                [Paragraph("Projekt:", label_style), Paragraph(project.get('name', ''), value_style)],
+                [Paragraph("Straße:", label_style), Paragraph(street, value_style)],
+                [Paragraph("PLZ:", label_style), Paragraph(plz, value_style)],
+                [Paragraph("Ort:", label_style), Paragraph(city, value_style)],
+                [Paragraph("Beschreibung:", label_style), Paragraph(project.get('description', '') or '', value_style)],
+            ], colWidths=[25*mm, 60*mm]),
         ]
-        customer_table = Table(customer_data, colWidths=[80*mm, 110*mm])
-        customer_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
+    ]
+    
+    bauherr_objekt_table = Table(bauherr_objekt_data, colWidths=[90*mm, 90*mm])
+    bauherr_objekt_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1976d2')),
+        ('TOPPADDING', (0, 0), (-1, 0), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+    ]))
+    elements.append(bauherr_objekt_table)
+    elements.append(Spacer(1, 5*mm))
+    
+    # ============ DACHMESSUNGEN ============
+    if roofs:
+        roof_title = Table(
+            [[Paragraph("Dachmessungen", section_title_style)]],
+            colWidths=[180*mm]
+        )
+        roof_title.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(roof_title)
+        
+        roof_data = [[Paragraph("Dachtyp", label_style), Paragraph("Fläche (m²)", label_style), Paragraph("Notizen", label_style)]]
+        for roof in roofs:
+            roof_data.append([
+                Paragraph(roof.get('roof_type', ''), value_style),
+                Paragraph(f"{roof.get('area', 0):.2f}", value_style),
+                Paragraph(roof.get('notes', '') or '', value_style),
+            ])
+        
+        roof_table = Table(roof_data, colWidths=[50*mm, 30*mm, 100*mm])
+        roof_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ]))
-        elements.append(customer_table)
-        elements.append(Spacer(1, 20))
+        elements.append(roof_table)
+        elements.append(Spacer(1, 5*mm))
     
-    # Roof measurements
-    if roofs:
-        elements.append(Paragraph("Dachmessungen", styles['Heading2']))
-        for roof in roofs:
-            elements.append(Paragraph(f"Dachtyp: {roof['roof_type']}", styles['Heading3']))
-            elements.append(Paragraph(f"Fläche: {roof['area']:.2f} m²", styles['Normal']))
-            if roof.get('notes'):
-                elements.append(Paragraph(f"Notizen: {roof['notes']}", styles['Normal']))
-            elements.append(Spacer(1, 10))
+    # ============ CHECKLISTEN ============
+    if checklists:
+        for checklist in checklists:
+            checklist_title = Table(
+                [[Paragraph(f"Checkliste: {checklist.get('template_name', '')}", section_title_style)]],
+                colWidths=[180*mm]
+            )
+            checklist_title.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
+            elements.append(checklist_title)
+            
+            checklist_data = []
+            for item in checklist.get('items', []):
+                status = "☑" if item.get('checked') else "☐"
+                checklist_data.append([
+                    Paragraph(f"{status} {item.get('text', '')}", value_style),
+                ])
+            
+            if checklist_data:
+                checklist_table = Table(checklist_data, colWidths=[180*mm])
+                checklist_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ]))
+                elements.append(checklist_table)
+            elements.append(Spacer(1, 5*mm))
     
-    # Photos with annotations
+    # ============ SONSTIGES ============
+    sonstiges_title = Table(
+        [[Paragraph("Sonstiges", section_title_style)]],
+        colWidths=[180*mm]
+    )
+    sonstiges_title.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(sonstiges_title)
+    
+    # Empty box for notes
+    sonstiges_box = Table(
+        [[Paragraph(project.get('description', '') or "—", value_style)]],
+        colWidths=[180*mm]
+    )
+    sonstiges_box.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 30),
+    ]))
+    elements.append(sonstiges_box)
+    
+    # ============ FOTOS (separate pages) ============
     if photos:
         elements.append(PageBreak())
-        elements.append(Paragraph("Fotos", styles['Heading2']))
+        
+        photos_title = Table(
+            [[Paragraph("Fotos", section_title_style)]],
+            colWidths=[180*mm]
+        )
+        photos_title.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(photos_title)
+        elements.append(Spacer(1, 5*mm))
+        
         for i, photo in enumerate(photos):
             try:
                 image_data = photo.get('image_data', '')
                 annotations = photo.get('annotations', '')
                 
                 # Check if there are annotations to draw
-                if annotations and annotations.strip():
-                    # Draw annotations on the photo
+                if annotations and annotations.strip() and annotations != 'null':
                     img_buffer = draw_annotations_on_photo(image_data, annotations)
                 else:
-                    # No annotations, use original image
                     if ',' in image_data:
                         img_data = base64.b64decode(image_data.split(',')[1])
                     else:
@@ -645,19 +866,55 @@ async def export_project_pdf(project_id: str):
                     img_buffer = BytesIO(img_data)
                 
                 if img_buffer:
-                    img = RLImage(img_buffer, width=150*mm, height=100*mm)
+                    img = RLImage(img_buffer, width=160*mm, height=110*mm)
                     elements.append(img)
-                    # Only show description if it exists and is not "None"
+                    
                     desc = photo.get('description', '')
                     if desc and desc != 'None' and desc.strip():
-                        elements.append(Paragraph(desc, styles['Normal']))
-                    elements.append(Spacer(1, 10))
+                        elements.append(Paragraph(f"<i>{desc}</i>", value_style))
+                    elements.append(Spacer(1, 10*mm))
             except Exception as e:
                 logging.error(f"Error processing photo {i}: {e}")
-                pass
     
-    # Sketches (convert SVG to PNG if needed)
+    # ============ SKIZZEN (separate pages) ============
     if sketches:
+        elements.append(PageBreak())
+        
+        sketches_title = Table(
+            [[Paragraph("Skizzen", section_title_style)]],
+            colWidths=[180*mm]
+        )
+        sketches_title.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1976d2')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(sketches_title)
+        elements.append(Spacer(1, 5*mm))
+        
+        for i, sketch in enumerate(sketches):
+            try:
+                if sketch.get('title'):
+                    elements.append(Paragraph(f"<b>{sketch['title']}</b>", value_style))
+                
+                sketch_data = sketch.get('sketch_data', '')
+                if sketch_data:
+                    img_buffer = convert_svg_sketch_to_png(sketch_data)
+                    
+                    if img_buffer:
+                        img = RLImage(img_buffer, width=160*mm, height=110*mm)
+                        elements.append(img)
+                        elements.append(Spacer(1, 10*mm))
+            except Exception as e:
+                logging.error(f"Error processing sketch {i}: {e}")
+    
+    doc.build(elements)
+    pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    
+    return {
+        "pdf_data": pdf_data,
+        "filename": f"Aufmass_{project['name'].replace(' ', '_')}.pdf"
+    }
         elements.append(PageBreak())
         elements.append(Paragraph("Skizzen", styles['Heading2']))
         for i, sketch in enumerate(sketches):

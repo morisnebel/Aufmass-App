@@ -548,15 +548,17 @@ async def export_project_pdf(project_id: str):
     logging.info(f"PDF Export Debug: Found {len(checklists)} checklists for project {project_id}")
     if checklists:
         logging.info(f"PDF Export Debug: Adding checklists to PDF (EARLY)")
-        elements.append(Paragraph("=== CHECKLISTEN (EARLY TEST) ===", styles['Heading2']))
+        # Try using simple text instead of Paragraph
+        from reportlab.platypus import Preformatted
+        elements.append(Preformatted("=== CHECKLISTEN (EARLY TEST) ===", styles['Normal']))
         for i, checklist in enumerate(checklists):
             logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")
-            elements.append(Paragraph(f"Checklist: {checklist['template_name']}", styles['Heading3']))
+            elements.append(Preformatted(f"Checklist: {checklist['template_name']}", styles['Normal']))
             for j, item in enumerate(checklist['items']):
                 status = '[X]' if item['checked'] else '[ ]'
                 item_text = f"{status} {item['text']}"
                 logging.info(f"PDF Export Debug: Adding item {j}: {item_text}")
-                elements.append(Paragraph(item_text, styles['Normal']))
+                elements.append(Preformatted(item_text, styles['Normal']))
             elements.append(Spacer(1, 10))
         elements.append(Spacer(1, 20))
     

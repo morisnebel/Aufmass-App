@@ -755,9 +755,14 @@ export default function ProjectDetailScreen() {
                   setIsSavingRemarks(true);
                   try {
                     await axios.put(`${API_URL}/api/projects/${project.id}`, {
-                      ...project,
+                      customer_id: project.customer_id,
+                      name: project.name,
+                      description: project.description || '',
+                      status: project.status,
                       remarks: remarks,
                     });
+                    // Update local project state with new remarks
+                    setProject({ ...project, remarks: remarks });
                     if (Platform.OS === 'web') {
                       alert('Bemerkungen wurden gespeichert');
                     } else {

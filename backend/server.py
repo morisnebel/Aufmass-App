@@ -708,6 +708,9 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
         scale_x = uniform_scale
         scale_y = uniform_scale
         
+        # DEBUG: Log scaling information
+        logging.info(f"PDF RENDER DEBUG - Canvas: {original_canvas_width}x{original_canvas_height}, Output: {output_width}x{output_height}, Scale: {uniform_scale:.4f}")
+        
         # Render old-style background image if present (for backwards compatibility)
         if background_image and not elements:
             try:

@@ -915,44 +915,6 @@ async def export_project_pdf(project_id: str):
         "pdf_data": pdf_data,
         "filename": f"Aufmass_{project['name'].replace(' ', '_')}.pdf"
     }
-        elements.append(PageBreak())
-        elements.append(Paragraph("Skizzen", styles['Heading2']))
-        for i, sketch in enumerate(sketches):
-            try:
-                if sketch.get('title'):
-                    elements.append(Paragraph(sketch['title'], styles['Heading3']))
-                
-                sketch_data = sketch.get('sketch_data', '')
-                if sketch_data:
-                    # Convert SVG to PNG (or use as-is if already raster)
-                    img_buffer = convert_svg_sketch_to_png(sketch_data)
-                    
-                    if img_buffer:
-                        img = RLImage(img_buffer, width=150*mm, height=100*mm)
-                        elements.append(img)
-                        elements.append(Spacer(1, 10))
-            except Exception as e:
-                logging.error(f"Error processing sketch {i}: {e}")
-                pass
-    
-    # Checklists
-    if checklists:
-        elements.append(PageBreak())
-        elements.append(Paragraph("Checklisten", styles['Heading2']))
-        for checklist in checklists:
-            elements.append(Paragraph(checklist['template_name'], styles['Heading3']))
-            for item in checklist['items']:
-                status = '✓' if item['checked'] else '○'
-                elements.append(Paragraph(f"{status} {item['text']}", styles['Normal']))
-            elements.append(Spacer(1, 10))
-    
-    doc.build(elements)
-    pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    
-    return {
-        "pdf_data": pdf_data,
-        "filename": f"Aufmass_{project['name'].replace(' ', '_')}.pdf"
-    }
 
 app.include_router(api_router)
 

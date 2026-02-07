@@ -54,6 +54,10 @@ export default function DrawSketchScreen() {
   const params = useLocalSearchParams();
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
   const sketchId = Array.isArray(params.sketchId) ? params.sketchId[0] : params.sketchId;
+  // Get background image URI from route params (passed from new.tsx)
+  const backgroundImageUri = Array.isArray(params.backgroundImageUri) 
+    ? params.backgroundImageUri[0] 
+    : params.backgroundImageUri;
   
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
@@ -94,11 +98,10 @@ export default function DrawSketchScreen() {
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
   
-  // Background
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  
-  // Start screen - show image selection for new sketches
-  const [showStartScreen, setShowStartScreen] = useState(!sketchId);
+  // Background - initialize from route params if provided
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(
+    backgroundImageUri ? decodeURIComponent(backgroundImageUri) : null
+  );
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
@@ -106,9 +109,11 @@ export default function DrawSketchScreen() {
       if (sketchId) {
         console.log('useFocusEffect: Loading sketch', sketchId);
         loadSketch();
-        setShowStartScreen(false);
+      } else if (backgroundImageUri) {
+        // Set background from route params for new sketch with image
+        setBackgroundImage(decodeURIComponent(backgroundImageUri));
       }
-    }, [sketchId])
+    }, [sketchId, backgroundImageUri])
   );
 
   const loadSketch = async () => {

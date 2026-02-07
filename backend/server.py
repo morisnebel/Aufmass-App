@@ -763,11 +763,30 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         # CRITICAL: Use uniform_scale for BOTH dimensions to prevent distortion
                         x = int((element.get('x', 0)) * uniform_scale + offset_x)
                         y = int((element.get('y', 0)) * uniform_scale + offset_y)
-                        w = int((element.get('width', 100)) * uniform_scale)
-                        h = int((element.get('height', 100)) * uniform_scale)
+                        target_w = int((element.get('width', 100)) * uniform_scale)
+                        target_h = int((element.get('height', 100)) * uniform_scale)
                         
-                        # Resize image - both dimensions use same scale factor
-                        img = img.resize((max(1, w), max(1, h)), PILImage.Resampling.LANCZOS)
+                        # CRITICAL FIX: Preserve image aspect ratio when resizing
+                        # Use thumbnail() to fit image WITHIN the bounding box while keeping proportions
+                        # This matches the frontend SVG behavior: preserveAspectRatio="xMidYMid meet"
+                        original_img_w, original_img_h = img.size
+                        
+                        # Calculate scale to fit within target box while preserving aspect ratio
+                        scale_w = target_w / original_img_w if original_img_w > 0 else 1
+                        scale_h = target_h / original_img_h if original_img_h > 0 else 1
+                        fit_scale = min(scale_w, scale_h)  # Use smaller scale to fit within box
+                        
+                        new_w = max(1, int(original_img_w * fit_scale))
+                        new_h = max(1, int(original_img_h * fit_scale))
+                        
+                        img = img.resize((new_w, new_h), PILImage.Resampling.LANCZOS)
+                        
+                        # Center the image within the target bounding box (like xMidYMid)
+                        x = x + (target_w - new_w) // 2
+                        y = y + (target_h - new_h) // 2
+                        
+                        # Store dimensions for rotation handling
+                        w, h = new_w, new_h
                         
                         # Apply rotation if needed
                         if el_rotation and abs(el_rotation) > 0.5:

@@ -685,9 +685,21 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
         # Create output canvas with dynamic dimensions
         canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
         draw = ImageDraw.Draw(canvas)
-            
+        
+        # Use UNIFORM scaling to maintain aspect ratio and visual fidelity
+        # This ensures arrows, text, and shapes look identical to the app
         scale_x = output_width / original_canvas_width
         scale_y = output_height / original_canvas_height
+        # Use the same scale factor for both X and Y to prevent distortion
+        uniform_scale = min(scale_x, scale_y)
+        
+        # Calculate offset to center the sketch if scales differ
+        offset_x = (output_width - (original_canvas_width * uniform_scale)) / 2
+        offset_y = (output_height - (original_canvas_height * uniform_scale)) / 2
+        
+        # Override scale_x and scale_y with uniform scale for consistent rendering
+        scale_x = uniform_scale
+        scale_y = uniform_scale
         
         # Render old-style background image if present (for backwards compatibility)
         if background_image and not elements:

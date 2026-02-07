@@ -111,9 +111,11 @@ export default function AnnotatePhotoScreen() {
     try {
       setLoading(true);
       
-      // Create annotation data WITHOUT the original image (to avoid size limit)
+      // Create annotation data with canvas dimensions for proper scaling in PDF
       const annotationData = {
         paths: paths,
+        canvasWidth: width - 32, // Account for container padding
+        canvasHeight: 400, // Fixed canvas height from styles
       };
 
       // Update photo with annotations (using PUT to keep the same ID)

@@ -199,9 +199,9 @@ backend:
     implemented: true
     working: true
     file: "backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: true
           agent: "testing"
@@ -212,6 +212,12 @@ backend:
         - working: true
           agent: "testing"
           comment: "ENHANCED PDF EXPORT TESTING COMPLETED SUCCESSFULLY: ✅ CRITICAL FUNCTIONALITY VERIFIED: 1) Photo annotations processing - Created photos with complex JSON annotations (5 different SVG paths with various colors #FF0000, #00FF00, #0000FF, #FFFF00, #FF00FF and stroke widths 1-6). Annotations correctly parsed and drawn onto images using Pillow ImageDraw. 2) SVG sketch conversion - Created complex SVG sketches (house with multiple elements: roof, windows, door, chimney, sun, trees) and simple geometric SVGs (circle, rectangle, line). All SVG data successfully converted to PNG using cairosvg for PDF embedding. 3) PDF generation validation - Generated PDFs with sizes 22.3KB (basic test) and 51.2KB (comprehensive test), confirming successful image processing and embedding. All PDFs start with %PDF header and contain properly processed rasterized images. 4) Data integrity verified - All annotation paths and SVG elements correctly stored and retrieved from database. ✅ BACKEND LOGS CLEAN: No errors found in backend processing logs. Both draw_annotations_on_photo() and convert_svg_sketch_to_png() helper functions working flawlessly. Enhanced PDF export functionality is production-ready."
+        - working: false
+          agent: "user"
+          comment: "USER REPORTED 2 ISSUES: 1) Photo annotations are SHIFTED/MISPLACED in the generated PDF - the drawings made on photos appear at wrong positions. 2) Checklists are NOW MISSING from the PDF export - this is a regression that appeared after the annotation feature was added."
+        - working: "NA"
+          agent: "main"
+          comment: "FIX IMPLEMENTED: 1) Frontend change - Modified annotate.tsx to capture actual canvas dimensions using onLayout event. Now saves real canvasWidth and canvasHeight (measured dynamically) instead of hardcoded values. 2) Backend already has coordinate scaling logic in draw_annotations_on_photo() that calculates scale factors based on image aspect ratio and canvas dimensions. 3) Checklist logic verified - Code for rendering checklists in PDF exists at lines 631-639 in server.py. Need to verify why user reports it's missing. NEEDS TESTING to verify fixes work correctly."
 
 frontend:
   - task: "Home Screen Display"

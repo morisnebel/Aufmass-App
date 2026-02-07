@@ -1506,7 +1506,7 @@ export default function DrawSketchScreen() {
               width={width}
               height={height - 120}
               preserveAspectRatio="xMidYMid meet"
-              opacity={0.5}
+              opacity={1}
             />
           )}
 

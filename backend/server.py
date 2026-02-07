@@ -772,6 +772,36 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         for j in range(len(points) - 1):
                             draw.line([points[j], points[j + 1]], fill=(*rgb_color, 255), width=scaled_stroke)
                 
+                elif el_type == 'polygon':
+                    # Render closed freeform polygon with fill
+                    path_str = el_data if isinstance(el_data, str) else ''
+                    points = []
+                    # Remove the Z command for parsing
+                    path_str = path_str.replace(' Z', '').replace('Z', '')
+                    parts = path_str.replace('M', ' M ').replace('L', ' L ').split()
+                    
+                    i = 0
+                    while i < len(parts):
+                        if parts[i] in ['M', 'L']:
+                            if i + 2 < len(parts):
+                                try:
+                                    px = float(parts[i + 1]) * scale_x
+                                    py = float(parts[i + 2]) * scale_y
+                                    points.append((px, py))
+                                    i += 3
+                                except:
+                                    i += 1
+                            else:
+                                i += 1
+                        else:
+                            i += 1
+                    
+                    if len(points) >= 3:
+                        scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                        # Draw filled polygon with semi-transparent fill
+                        fill_color = (*rgb_color, 76)  # 30% opacity (76 = 255 * 0.3)
+                        draw.polygon(points, fill=fill_color, outline=(*rgb_color, 255), width=scaled_stroke)
+                
                 elif el_type == 'line':
                     # Render straight line
                     x1 = el_data.get('x1', 0) * scale_x

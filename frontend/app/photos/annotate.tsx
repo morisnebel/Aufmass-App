@@ -215,7 +215,14 @@ export default function AnnotatePhotoScreen() {
         ))}
       </View>
 
-      <View style={styles.canvasContainer} ref={canvasRef}>
+      <View 
+        style={styles.canvasContainer} 
+        ref={canvasRef}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setCanvasDimensions({ width, height });
+        }}
+      >
         <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
         <View
           style={styles.svgContainer}

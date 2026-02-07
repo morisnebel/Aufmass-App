@@ -148,6 +148,9 @@ interface DrawElement {
   width?: number;
   height?: number;
   rotation?: number;
+  fontSize?: number;
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
 }
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image' | 'polygon';

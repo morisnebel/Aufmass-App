@@ -666,7 +666,7 @@ export default function DrawSketchScreen() {
           heads: arrowHeads,
         },
         color: drawColor,
-        strokeWidth: 2,
+        strokeWidth: strokeWidth,
         rotation: 0,
       };
       addToHistory([...elements, newElement]);

@@ -1447,17 +1447,6 @@ export default function DrawSketchScreen() {
         }}>
           <Ionicons name="trash-bin" size={18} color="#f44336" />
         </TouchableOpacity>
-
-        <View style={styles.separator} />
-
-        {/* Background */}
-        <TouchableOpacity style={styles.toolButton} onPress={pickBackgroundImage}>
-          <Ionicons name="images" size={18} color="#333" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.toolButton} onPress={takeBackgroundPhoto}>
-          <Ionicons name="camera" size={18} color="#333" />
-        </TouchableOpacity>
       </View>
 
       {/* Color picker expandable */}

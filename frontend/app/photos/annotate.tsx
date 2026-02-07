@@ -36,6 +36,7 @@ export default function AnnotatePhotoScreen() {
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(true);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     loadPhoto();

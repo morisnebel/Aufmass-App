@@ -883,9 +883,12 @@ async def export_project_pdf(project_id: str):
     ]))
     elements.append(sonstiges_title)
     
+    # Get remarks from project
+    project_remarks = safe_get(project, 'remarks')
+    
     # Empty box for notes
     sonstiges_box = Table(
-        [[Paragraph(project.get('description', '') or "—", value_style)]],
+        [[Paragraph(project_remarks if project_remarks else "—", value_style)]],
         colWidths=[180*mm]
     )
     sonstiges_box.setStyle(TableStyle([

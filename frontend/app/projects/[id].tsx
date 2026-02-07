@@ -728,6 +728,62 @@ export default function ProjectDetailScreen() {
             ))}
           </View>
         )}
+
+        {activeTab === 'remarks' && (
+          <View style={styles.remarksSection}>
+            <View style={styles.remarksCard}>
+              <View style={styles.remarksHeader}>
+                <Ionicons name="document-text-outline" size={24} color="#1976d2" />
+                <Text style={styles.remarksTitle}>Zusätzliche Bemerkungen</Text>
+              </View>
+              <Text style={styles.remarksSubtitle}>
+                Hier können Sie allgemeine Notizen und Bemerkungen zum Projekt erfassen.
+              </Text>
+              <TextInput
+                style={styles.remarksInput}
+                placeholder="Bemerkungen eingeben..."
+                value={remarks}
+                onChangeText={setRemarks}
+                multiline
+                numberOfLines={10}
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={[styles.saveRemarksButton, isSavingRemarks && styles.buttonDisabled]}
+                onPress={async () => {
+                  if (!project) return;
+                  setIsSavingRemarks(true);
+                  try {
+                    await axios.put(`${API_URL}/api/projects/${project.id}`, {
+                      ...project,
+                      remarks: remarks,
+                    });
+                    if (Platform.OS === 'web') {
+                      alert('Bemerkungen wurden gespeichert');
+                    } else {
+                      Alert.alert('Erfolg', 'Bemerkungen wurden gespeichert');
+                    }
+                  } catch (error) {
+                    console.error('Error saving remarks:', error);
+                    if (Platform.OS === 'web') {
+                      alert('Fehler beim Speichern');
+                    } else {
+                      Alert.alert('Fehler', 'Bemerkungen konnten nicht gespeichert werden');
+                    }
+                  } finally {
+                    setIsSavingRemarks(false);
+                  }
+                }}
+                disabled={isSavingRemarks}
+              >
+                <Ionicons name="save-outline" size={20} color="#fff" />
+                <Text style={styles.saveRemarksButtonText}>
+                  {isSavingRemarks ? 'Wird gespeichert...' : 'Bemerkungen speichern'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Delete Confirmation Modal */}

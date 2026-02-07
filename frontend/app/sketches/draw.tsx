@@ -1521,8 +1521,19 @@ export default function DrawSketchScreen() {
           <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.toolButton, drawMode === 'polygon' && styles.toolButtonActive]}
+          onPress={() => setDrawMode('polygon')}
+        >
+          <Ionicons name="shapes" size={18} color={drawMode === 'polygon' ? '#fff' : '#333'} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.toolButton} onPress={insertImage}>
           <Ionicons name="image" size={18} color="#333" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.toolButton} onPress={takePhotoAndInsert}>
+          <Ionicons name="camera" size={18} color="#4caf50" />
         </TouchableOpacity>
 
         <View style={styles.separator} />

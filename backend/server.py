@@ -760,12 +760,13 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                             img = img.convert('RGBA')
                         
                         # Get position and size, apply uniform scaling with offset
-                        x = int((element.get('x', 0)) * scale_x + offset_x)
-                        y = int((element.get('y', 0)) * scale_y + offset_y)
-                        w = int((element.get('width', 100)) * scale_x)
-                        h = int((element.get('height', 100)) * scale_y)
+                        # CRITICAL: Use uniform_scale for BOTH dimensions to prevent distortion
+                        x = int((element.get('x', 0)) * uniform_scale + offset_x)
+                        y = int((element.get('y', 0)) * uniform_scale + offset_y)
+                        w = int((element.get('width', 100)) * uniform_scale)
+                        h = int((element.get('height', 100)) * uniform_scale)
                         
-                        # Resize image
+                        # Resize image - both dimensions use same scale factor
                         img = img.resize((max(1, w), max(1, h)), PILImage.Resampling.LANCZOS)
                         
                         # Apply rotation if needed

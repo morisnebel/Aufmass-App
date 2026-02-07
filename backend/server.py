@@ -344,6 +344,34 @@ async def delete_checklist_template(template_id: str):
         raise HTTPException(status_code=404, detail="Template not found")
     return {"message": "Template deleted"}
 
+# Company Settings
+@api_router.get("/settings", response_model=CompanySettings)
+async def get_settings():
+    settings = await db.settings.find_one()
+    if not settings:
+        # Return default settings
+        return CompanySettings()
+    return CompanySettings(**serialize_doc(settings))
+
+@api_router.put("/settings", response_model=CompanySettings)
+async def update_settings(settings: CompanySettings):
+    settings_dict = settings.dict(exclude={'id'})
+    settings_dict['updated_at'] = datetime.utcnow()
+    
+    # Check if settings exist
+    existing = await db.settings.find_one()
+    if existing:
+        await db.settings.update_one(
+            {"_id": existing['_id']},
+            {"$set": settings_dict}
+        )
+        updated = await db.settings.find_one({"_id": existing['_id']})
+    else:
+        result = await db.settings.insert_one(settings_dict)
+        updated = await db.settings.find_one({"_id": result.inserted_id})
+    
+    return CompanySettings(**serialize_doc(updated))
+
 # Checklists
 @api_router.post("/checklists", response_model=ChecklistInstance)
 async def create_checklist(checklist: ChecklistInstance):

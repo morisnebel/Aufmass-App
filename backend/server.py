@@ -780,8 +780,8 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         if parts[i] in ['M', 'L']:
                             if i + 2 < len(parts):
                                 try:
-                                    px = float(parts[i + 1]) * scale_x
-                                    py = float(parts[i + 2]) * scale_y
+                                    px = float(parts[i + 1]) * scale_x + offset_x
+                                    py = float(parts[i + 2]) * scale_y + offset_y
                                     points.append((px, py))
                                     i += 3
                                 except:
@@ -792,7 +792,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                             i += 1
                     
                     if len(points) >= 2:
-                        scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                        scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                         for j in range(len(points) - 1):
                             draw.line([points[j], points[j + 1]], fill=(*rgb_color, 255), width=scaled_stroke)
                 
@@ -809,8 +809,8 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         if parts[i] in ['M', 'L']:
                             if i + 2 < len(parts):
                                 try:
-                                    px = float(parts[i + 1]) * scale_x
-                                    py = float(parts[i + 2]) * scale_y
+                                    px = float(parts[i + 1]) * scale_x + offset_x
+                                    py = float(parts[i + 2]) * scale_y + offset_y
                                     points.append((px, py))
                                     i += 3
                                 except:
@@ -821,43 +821,44 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                             i += 1
                     
                     if len(points) >= 3:
-                        scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                        scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                         # Draw filled polygon with semi-transparent fill
                         fill_color = (*rgb_color, 76)  # 30% opacity (76 = 255 * 0.3)
                         draw.polygon(points, fill=fill_color, outline=(*rgb_color, 255), width=scaled_stroke)
                 
                 elif el_type == 'line':
                     # Render straight line
-                    x1 = el_data.get('x1', 0) * scale_x
-                    y1 = el_data.get('y1', 0) * scale_y
-                    x2 = el_data.get('x2', 0) * scale_x
-                    y2 = el_data.get('y2', 0) * scale_y
-                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    x1 = el_data.get('x1', 0) * scale_x + offset_x
+                    y1 = el_data.get('y1', 0) * scale_y + offset_y
+                    x2 = el_data.get('x2', 0) * scale_x + offset_x
+                    y2 = el_data.get('y2', 0) * scale_y + offset_y
+                    scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                     draw.line([(x1, y1), (x2, y2)], fill=(*rgb_color, 255), width=scaled_stroke)
                 
                 elif el_type == 'circle':
                     # Render circle
-                    cx = el_data.get('cx', 0) * scale_x
-                    cy = el_data.get('cy', 0) * scale_y
-                    r = el_data.get('r', 10) * min(scale_x, scale_y)
-                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    cx = el_data.get('cx', 0) * scale_x + offset_x
+                    cy = el_data.get('cy', 0) * scale_y + offset_y
+                    r = el_data.get('r', 10) * uniform_scale
+                    scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                     draw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], outline=(*rgb_color, 255), width=scaled_stroke)
                 
                 elif el_type == 'rect':
                     # Render rectangle
-                    rx = el_data.get('x', 0) * scale_x
-                    ry = el_data.get('y', 0) * scale_y
+                    rx = el_data.get('x', 0) * scale_x + offset_x
+                    ry = el_data.get('y', 0) * scale_y + offset_y
                     rw = el_data.get('width', 50) * scale_x
                     rh = el_data.get('height', 50) * scale_y
-                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                     draw.rectangle([(rx, ry), (rx + rw, ry + rh)], outline=(*rgb_color, 255), width=scaled_stroke)
                 
                 elif el_type == 'arrow':
                     # Render arrow with arrowheads
                     # Match frontend SVG marker behavior: markerUnits="strokeWidth" with marker size 10x10
-                    x1 = el_data.get('x1', 0) * scale_x
-                    y1 = el_data.get('y1', 0) * scale_y
-                    x2 = el_data.get('x2', 0) * scale_x
+                    x1 = el_data.get('x1', 0) * scale_x + offset_x
+                    y1 = el_data.get('y1', 0) * scale_y + offset_y
+                    x2 = el_data.get('x2', 0) * scale_x + offset_x
+                    y2 = el_data.get('y2', 0) * scale_y + offset_y
                     y2 = el_data.get('y2', 0) * scale_y
                     text = el_data.get('text', '')
                     heads = el_data.get('heads', 'single')

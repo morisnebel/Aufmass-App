@@ -412,16 +412,29 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
                 scale_x = img_width / displayed_width
                 scale_y = img_height / displayed_height
             else:
-                # No canvas dimensions - use simple direct scaling
-                # Assume annotations cover the visible image area
-                # Map the coordinate range directly to image dimensions
-                coord_width = max_x - min_x
-                coord_height = max_y - min_y
+                # No canvas dimensions - estimate based on device type
+                # Guess canvas size based on coordinate ranges
+                if max_x > 1000:
+                    # Likely iPad Pro landscape
+                    estimated_canvas_width = 1366
+                    estimated_canvas_height = 1024
+                elif max_x > 700:
+                    # Likely iPad landscape or large tablet
+                    estimated_canvas_width = 1024
+                    estimated_canvas_height = 768
+                elif max_x > 400:
+                    # Likely iPhone landscape or small tablet
+                    estimated_canvas_width = 844
+                    estimated_canvas_height = 390
+                else:
+                    # Likely iPhone portrait
+                    estimated_canvas_width = 390
+                    estimated_canvas_height = 844
                 
-                # Use a simple proportional mapping
-                # The annotations should map to the full image
-                scale_x = img_width / max_x if max_x > 0 else 1
-                scale_y = img_height / max_y if max_y > 0 else 1
+                # Calculate scaling based on estimated canvas vs image
+                # Simple direct scaling - canvas coordinates to image coordinates
+                scale_x = img_width / estimated_canvas_width
+                scale_y = img_height / estimated_canvas_height
                 offset_x = 0
                 offset_y = 0
             

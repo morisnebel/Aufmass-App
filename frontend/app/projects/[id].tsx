@@ -409,6 +409,14 @@ export default function ProjectDetailScreen() {
             Listen ({checklists.length})
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'remarks' && styles.tabActive]}
+          onPress={() => setActiveTab('remarks')}
+        >
+          <Text style={[styles.tabText, activeTab === 'remarks' && styles.tabTextActive]}>
+            Sonstiges
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>

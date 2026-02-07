@@ -34,29 +34,6 @@ import Svg, {
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width, height } = Dimensions.get('window');
 
-// A4 aspect ratio: 210mm x 297mm = 1:1.414
-const A4_ASPECT_RATIO = 297 / 210; // ~1.414
-
-// Calculate canvas dimensions to fit A4 aspect ratio
-const calculateA4Dimensions = () => {
-  const availableHeight = height - 180; // Header + toolbar space
-  const availableWidth = width - 20; // Padding
-  
-  // Try fitting by width first
-  let canvasWidth = availableWidth;
-  let canvasHeight = canvasWidth * A4_ASPECT_RATIO;
-  
-  // If too tall, fit by height instead
-  if (canvasHeight > availableHeight) {
-    canvasHeight = availableHeight;
-    canvasWidth = canvasHeight / A4_ASPECT_RATIO;
-  }
-  
-  return { width: Math.floor(canvasWidth), height: Math.floor(canvasHeight) };
-};
-
-const { width: canvasWidth, height: canvasHeight } = calculateA4Dimensions();
-
 // Douglas-Peucker algorithm for line simplification
 const simplifyPath = (pathString: string, tolerance: number = 8): string => {
   // Parse path string to points

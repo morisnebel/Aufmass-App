@@ -631,7 +631,9 @@ async def export_project_pdf(project_id: str):
     logging.info(f"PDF Export Debug: Found {len(checklists)} checklists for project {project_id}")
     if checklists:
         logging.info(f"PDF Export Debug: Adding checklists to PDF")
-        elements.append(Spacer(1, 20))  # Add some space instead of PageBreak
+        elements.append(Spacer(1, 20))
+        # Add a test paragraph first
+        elements.append(Paragraph("TEST: This is a test paragraph before checklists", styles['Normal']))
         elements.append(Paragraph("=== CHECKLISTEN ===", styles['Heading2']))
         for i, checklist in enumerate(checklists):
             logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")
@@ -640,9 +642,10 @@ async def export_project_pdf(project_id: str):
                 status = '[X]' if item['checked'] else '[ ]'
                 item_text = f"{status} {item['text']}"
                 logging.info(f"PDF Export Debug: Adding item {j}: {item_text}")
-                # Try using a simple text approach
                 elements.append(Paragraph(item_text, styles['Normal']))
             elements.append(Spacer(1, 10))
+        # Add a test paragraph after
+        elements.append(Paragraph("TEST: This is a test paragraph after checklists", styles['Normal']))
     else:
         logging.warning(f"PDF Export Debug: No checklists found for project {project_id}")
     

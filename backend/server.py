@@ -631,7 +631,7 @@ async def export_project_pdf(project_id: str):
     logging.info(f"PDF Export Debug: Found {len(checklists)} checklists for project {project_id}")
     if checklists:
         logging.info(f"PDF Export Debug: Adding checklists to PDF")
-        elements.append(PageBreak())
+        # elements.append(PageBreak())  # Temporarily remove PageBreak
         elements.append(Paragraph("Checklisten", styles['Heading2']))
         for i, checklist in enumerate(checklists):
             logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")

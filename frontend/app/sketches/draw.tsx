@@ -1254,13 +1254,16 @@ export default function DrawSketchScreen() {
     try {
       setLoading(true);
       
-      // Create metadata with elements
+      // Create metadata with elements and canvas dimensions for proper scaling
       const metadata = {
         elements,
         backgroundImage,
+        canvasWidth: width,
+        canvasHeight: height - 120, // Subtract header/toolbar height
       };
 
       console.log('Saving sketch with', elements.length, 'elements');
+      console.log('Canvas dimensions:', width, 'x', (height - 120));
       console.log('Metadata:', metadata);
 
       // Generate preview image

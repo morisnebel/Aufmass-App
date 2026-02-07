@@ -698,10 +698,14 @@ async def export_project_pdf(project_id: str):
     elements.append(Spacer(1, 3*mm))
     
     # ============ BAUHERR & OBJEKT ============
-    customer_name = customer.get('name', '') if customer else ''
-    customer_address = customer.get('address', '') if customer else ''
-    customer_phone = customer.get('phone', '') if customer else ''
-    customer_email = customer.get('email', '') if customer else ''
+    # Helper to ensure no None values
+    def safe_str(val):
+        return str(val) if val is not None else ''
+    
+    customer_name = safe_str(customer.get('name', '')) if customer else ''
+    customer_address = safe_str(customer.get('address', '')) if customer else ''
+    customer_phone = safe_str(customer.get('phone', '')) if customer else ''
+    customer_email = safe_str(customer.get('email', '')) if customer else ''
     
     # Parse address if available
     address_parts = customer_address.split(',') if customer_address else ['', '']
@@ -709,6 +713,9 @@ async def export_project_pdf(project_id: str):
     city_parts = address_parts[1].strip().split(' ') if len(address_parts) > 1 else ['', '']
     plz = city_parts[0] if len(city_parts) > 0 else ''
     city = ' '.join(city_parts[1:]) if len(city_parts) > 1 else ''
+    
+    project_name = safe_str(project.get('name', ''))
+    project_desc = safe_str(project.get('description', ''))
     
     bauherr_objekt_data = [
         [Paragraph("<b>Bauherr</b>", section_title_style), Paragraph("<b>Objekt</b>", section_title_style)],
@@ -722,11 +729,11 @@ async def export_project_pdf(project_id: str):
                 [Paragraph("E-Mail:", label_style), Paragraph(customer_email, value_style)],
             ], colWidths=[20*mm, 65*mm]),
             Table([
-                [Paragraph("Projekt:", label_style), Paragraph(project.get('name', ''), value_style)],
+                [Paragraph("Projekt:", label_style), Paragraph(project_name, value_style)],
                 [Paragraph("Straße:", label_style), Paragraph(street, value_style)],
                 [Paragraph("PLZ:", label_style), Paragraph(plz, value_style)],
                 [Paragraph("Ort:", label_style), Paragraph(city, value_style)],
-                [Paragraph("Beschreibung:", label_style), Paragraph(project.get('description', '') or '', value_style)],
+                [Paragraph("Beschreibung:", label_style), Paragraph(project_desc, value_style)],
             ], colWidths=[25*mm, 60*mm]),
         ]
     ]

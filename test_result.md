@@ -201,11 +201,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: true
           agent: "testing"
           comment: "PDF Export working perfectly - GET /api/export/pdf/{project_id} generates complete project PDF with customer data, roof measurements, photos, sketches, and checklists. Returns valid base64 PDF data with proper filename."
+        - working: "NA"
+          agent: "main"
+          comment: "MAJOR UPDATE: Implemented comprehensive PDF generation with photo annotations and SVG sketch conversion. Added two helper functions: 1) draw_annotations_on_photo() - Uses Pillow to draw SVG path annotations on photos (parses M/L commands, converts hex colors, draws lines with proper stroke width). 2) convert_svg_sketch_to_png() - Uses cairosvg to convert SVG sketches to PNG for PDF embedding. Updated export_project_pdf() to use these functions. Photos now include user-drawn annotations, and SVG sketches are properly converted to raster images for PDF inclusion."
 
 frontend:
   - task: "Home Screen Display"

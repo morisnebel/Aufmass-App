@@ -731,6 +731,9 @@ class AufmassAPITester:
         # SPECIAL TEST: Arrow Rendering in PDF Export
         test_results.append(self.test_arrow_rendering_in_pdf())
         
+        # SPECIAL TEST: PDF Element Distortion Fix Verification
+        test_results.append(self.test_pdf_element_distortion_fix())
+        
         # Cleanup
         self.test_delete_operations()
         

@@ -31,6 +31,7 @@ interface Project {
   description?: string;
   customer_id: string;
   status: string;
+  remarks?: string;  // Zusätzliche Bemerkungen
 }
 
 interface Customer {

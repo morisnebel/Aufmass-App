@@ -655,7 +655,11 @@ async def export_project_pdf(project_id: str):
         logging.info("PDF Export Debug: PDF build completed successfully")
     except Exception as e:
         logging.error(f"PDF Export Debug: Error building PDF: {e}")
+        logging.error(f"PDF Export Debug: Exception type: {type(e)}")
+        import traceback
+        logging.error(f"PDF Export Debug: Full traceback: {traceback.format_exc()}")
         # Try to build without problematic elements
+        logging.info("PDF Export Debug: Attempting to build with first 10 elements only")
         doc.build(elements[:10])  # Build with first 10 elements only
     
     pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')

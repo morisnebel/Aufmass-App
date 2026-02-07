@@ -714,12 +714,40 @@ export default function DrawSketchScreen() {
     // Check if clicking on an element
     const clickedElement = findElementAtPoint(locationX, locationY);
     if (clickedElement) {
+      // Check for double tap
+      const now = Date.now();
+      const lastTap = lastTapRef.current;
+      
+      if (lastTap.elementId === clickedElement.id && now - lastTap.time < 300) {
+        // Double tap detected - open edit modal
+        if (clickedElement.type === 'text') {
+          setTextInput(clickedElement.data.text || '');
+          setEditFontSize(clickedElement.fontSize || 20);
+          setEditFontWeight(clickedElement.fontWeight || 'bold');
+          setEditFontStyle(clickedElement.fontStyle || 'normal');
+          setDrawColor(clickedElement.color);
+          setShowEditTextModal(true);
+        } else if (clickedElement.type === 'arrow') {
+          setArrowText(clickedElement.data.text || '');
+          setArrowHeads(clickedElement.data.heads || 'double');
+          setEditArrowFontSize(clickedElement.data.fontSize || 14);
+          setEditStrokeWidth(clickedElement.strokeWidth || 3);
+          setDrawColor(clickedElement.color);
+          setShowEditArrowModal(true);
+        }
+        lastTapRef.current = { time: 0, elementId: null };
+        return;
+      }
+      
+      lastTapRef.current = { time: now, elementId: clickedElement.id };
+      
       setSelectedElementId(clickedElement.id);
       setDragMode('move');
       setDragStart({ x: locationX, y: locationY });
       setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
     } else {
       setSelectedElementId(null);
+      lastTapRef.current = { time: 0, elementId: null };
     }
   };
 

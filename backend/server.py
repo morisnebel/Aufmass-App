@@ -1151,8 +1151,11 @@ async def export_project_pdf(project_id: str):
                     elements.append(Paragraph(f"<b>{sketch['title']}</b>", value_style))
                 
                 sketch_data = sketch.get('sketch_data', '')
+                metadata = sketch.get('metadata', '')
+                
                 if sketch_data:
-                    img_buffer = convert_svg_sketch_to_png(sketch_data)
+                    # Use the new function that handles background images
+                    img_buffer = render_sketch_with_background(sketch_data, metadata)
                     
                     if img_buffer:
                         img = RLImage(img_buffer, width=160*mm, height=110*mm)

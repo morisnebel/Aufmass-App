@@ -1168,7 +1168,7 @@ export default function DrawSketchScreen() {
                 x={midX}
                 y={midY - 10}
                 fill={element.color}
-                fontSize={14}
+                fontSize={element.data.fontSize || 14}
                 fontWeight="bold"
                 textAnchor="middle"
                 transform={`rotate(${angle} ${midX} ${midY})`}

@@ -749,9 +749,9 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         if img.mode != 'RGBA':
                             img = img.convert('RGBA')
                         
-                        # Get position and size, apply scaling
-                        x = int((element.get('x', 0)) * scale_x)
-                        y = int((element.get('y', 0)) * scale_y)
+                        # Get position and size, apply uniform scaling with offset
+                        x = int((element.get('x', 0)) * scale_x + offset_x)
+                        y = int((element.get('y', 0)) * scale_y + offset_y)
                         w = int((element.get('width', 100)) * scale_x)
                         h = int((element.get('height', 100)) * scale_y)
                         

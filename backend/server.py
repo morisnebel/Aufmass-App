@@ -639,25 +639,7 @@ async def export_project_pdf(project_id: str):
             elements.append(Spacer(1, 10))
     
     doc.build(elements)
-        logging.error(f"PDF Export Debug: Error building PDF: {e}")
-        logging.error(f"PDF Export Debug: Exception type: {type(e)}")
-        import traceback
-        logging.error(f"PDF Export Debug: Full traceback: {traceback.format_exc()}")
-        # Try to build without problematic elements
-        logging.info("PDF Export Debug: Attempting to build with first 10 elements only")
-        try:
-            fallback_doc.build(elements[:10])  # Build with first 10 elements only
-            buffer = fallback_buffer  # Use fallback buffer
-            logging.info("PDF Export Debug: Fallback PDF build successful")
-        except Exception as e2:
-            logging.error(f"PDF Export Debug: Fallback build also failed: {e2}")
-            # Create minimal PDF
-            minimal_elements = [Paragraph("PDF Generation Error", styles['Normal'])]
-            fallback_doc.build(minimal_elements)
-            buffer = fallback_buffer
-    
     pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    logging.info(f"PDF Export Debug: Final PDF size: {len(buffer.getvalue())} bytes")
     
     return {
         "pdf_data": pdf_data,

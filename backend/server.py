@@ -700,12 +700,18 @@ async def export_project_pdf(project_id: str):
     # ============ BAUHERR & OBJEKT ============
     # Helper to ensure no None values
     def safe_str(val):
-        return str(val) if val is not None else ''
+        if val is None:
+            return ''
+        return str(val)
     
-    customer_name = safe_str(customer.get('name', '')) if customer else ''
-    customer_address = safe_str(customer.get('address', '')) if customer else ''
-    customer_phone = safe_str(customer.get('phone', '')) if customer else ''
-    customer_email = safe_str(customer.get('email', '')) if customer else ''
+    def safe_get(obj, key, default=''):
+        val = obj.get(key, default) if obj else default
+        return safe_str(val)
+    
+    customer_name = safe_get(customer, 'name')
+    customer_address = safe_get(customer, 'address')
+    customer_phone = safe_get(customer, 'phone')
+    customer_email = safe_get(customer, 'email')
     
     # Parse address if available
     address_parts = customer_address.split(',') if customer_address else ['', '']
@@ -714,8 +720,8 @@ async def export_project_pdf(project_id: str):
     plz = city_parts[0] if len(city_parts) > 0 else ''
     city = ' '.join(city_parts[1:]) if len(city_parts) > 1 else ''
     
-    project_name = safe_str(project.get('name', ''))
-    project_desc = safe_str(project.get('description', ''))
+    project_name = safe_get(project, 'name')
+    project_desc = safe_get(project, 'description')
     
     bauherr_objekt_data = [
         [Paragraph("<b>Bauherr</b>", section_title_style), Paragraph("<b>Objekt</b>", section_title_style)],

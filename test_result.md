@@ -197,7 +197,7 @@ backend:
 
   - task: "PDF Export Functionality"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
     stuck_count: 2
     priority: "high"

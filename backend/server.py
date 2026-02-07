@@ -99,6 +99,21 @@ class ChecklistInstance(BaseModel):
     items: List[Dict[str, Any]]  # [{"text": str, "checked": bool, "note": str, "subItems": [...]}]
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class CompanySettings(BaseModel):
+    id: Optional[str] = None
+    company_name: str = "Nebel-Bedachung"
+    company_subtitle: str = "Dachdeckermeister"
+    owner_name: str = "Moris Nebel"
+    street: str = ""
+    zip_code: str = ""
+    city: str = ""
+    phone: str = ""
+    email: str = ""
+    services: str = "Dächer aller Art\nFassadenarbeiten\nZimmerer- und Spenglerarbeiten"
+    author_name: str = "Moris Nebel"  # Verfasser
+    logo_data: Optional[str] = None  # Base64 encoded logo image
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
 class Project(BaseModel):
     id: Optional[str] = None
     customer_id: str

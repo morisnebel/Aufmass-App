@@ -1707,32 +1707,52 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* Delete */}
+        {/* Edit Button - for text and arrows */}
         <TouchableOpacity
           style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
           onPress={() => {
             if (selectedElementId) {
               const selectedEl = elements.find(el => el.id === selectedElementId);
-              if (selectedEl?.type === 'arrow') {
-                // Open edit modal for arrow
+              if (selectedEl?.type === 'text') {
+                setTextInput(selectedEl.data.text || '');
+                setEditFontSize(selectedEl.fontSize || 20);
+                setEditFontWeight(selectedEl.fontWeight || 'bold');
+                setEditFontStyle(selectedEl.fontStyle || 'normal');
+                setDrawColor(selectedEl.color);
+                setShowEditTextModal(true);
+              } else if (selectedEl?.type === 'arrow') {
                 setArrowText(selectedEl.data.text || '');
                 setArrowHeads(selectedEl.data.heads || 'double');
+                setEditArrowFontSize(selectedEl.data.fontSize || 14);
+                setEditStrokeWidth(selectedEl.strokeWidth || 3);
                 setDrawColor(selectedEl.color);
                 setShowEditArrowModal(true);
-              } else {
-                setShowDeleteConfirm(true);
               }
+            }
+          }}
+          disabled={!selectedElementId || !['text', 'arrow'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
+        >
+          <Ionicons 
+            name="create" 
+            size={18} 
+            color={selectedElementId && ['text', 'arrow'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
+          />
+        </TouchableOpacity>
+
+        {/* Delete */}
+        <TouchableOpacity
+          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
+          onPress={() => {
+            if (selectedElementId) {
+              setShowDeleteConfirm(true);
             }
           }}
           disabled={!selectedElementId}
         >
           <Ionicons 
-            name={(() => {
-              const selectedEl = elements.find(el => el.id === selectedElementId);
-              return selectedEl?.type === 'arrow' ? 'create' : 'trash';
-            })()} 
+            name="trash" 
             size={18} 
-            color={selectedElementId ? (elements.find(el => el.id === selectedElementId)?.type === 'arrow' ? '#1976d2' : '#f44336') : '#ccc'} 
+            color={selectedElementId ? '#f44336' : '#ccc'} 
           />
         </TouchableOpacity>
 

@@ -173,6 +173,14 @@ export default function HomeScreen() {
           <Ionicons name="list" size={20} color="#1976d2" />
           <Text style={styles.secondaryButtonText}>Checklisten</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={() => router.push('/settings')}
+        >
+          <Ionicons name="settings-outline" size={20} color="#1976d2" />
+          <Text style={styles.secondaryButtonText}>Einstellungen</Text>
+        </TouchableOpacity>
       </View>
 
       {projects.length === 0 ? (

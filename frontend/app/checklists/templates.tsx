@@ -145,6 +145,12 @@ export default function ChecklistTemplatesScreen() {
       <View style={styles.templateHeader}>
         <Ionicons name="list" size={24} color="#1976d2" />
         <Text style={styles.templateName}>{item.name}</Text>
+        <TouchableOpacity 
+          onPress={() => router.push(`/checklists/edit-template?templateId=${item.id}`)}
+          style={styles.editButton}
+        >
+          <Ionicons name="create-outline" size={20} color="#1976d2" />
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => deleteTemplate(item.id)}>
           <Ionicons name="trash-outline" size={20} color="#f44336" />
         </TouchableOpacity>
@@ -153,7 +159,7 @@ export default function ChecklistTemplatesScreen() {
       <View style={styles.itemsList}>
         {item.items.slice(0, 3).map((itm, index) => (
           <Text key={index} style={styles.itemPreview}>
-            • {itm}
+            • {typeof itm === 'string' ? itm : itm.text}
           </Text>
         ))}
         {item.items.length > 3 && (

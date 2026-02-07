@@ -197,11 +197,11 @@ backend:
 
   - task: "PDF Export Functionality"
     implemented: true
-    working: true
+    working: false
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "testing"
@@ -218,6 +218,9 @@ backend:
         - working: "NA"
           agent: "main"
           comment: "FIX IMPLEMENTED: 1) Frontend change - Modified annotate.tsx to capture actual canvas dimensions using onLayout event. Now saves real canvasWidth and canvasHeight (measured dynamically) instead of hardcoded values. 2) Backend already has coordinate scaling logic in draw_annotations_on_photo() that calculates scale factors based on image aspect ratio and canvas dimensions. 3) Checklist logic verified - Code for rendering checklists in PDF exists at lines 631-639 in server.py. Need to verify why user reports it's missing. NEEDS TESTING to verify fixes work correctly."
+        - working: false
+          agent: "testing"
+          comment: "CRITICAL REGRESSION CONFIRMED: Comprehensive testing reveals checklists are completely missing from PDF export. ROOT CAUSE ANALYSIS: 1) ✅ CHECKLISTS EXIST IN DATABASE: Verified checklists are properly created and stored in MongoDB with correct project_id, template_name, and items. 2) ✅ BACKEND FETCHES CHECKLISTS: Code at line 527 correctly fetches checklists from database using project_id. 3) ✅ CHECKLIST PROCESSING LOGIC EXECUTES: Debug logs confirm checklist elements are being added to PDF elements array (lines 631-639 execute successfully). 4) ❌ CRITICAL ISSUE: Despite elements being added to ReportLab elements array, checklists do not appear in final PDF. 5) ❌ FUNDAMENTAL PDF GENERATION PROBLEM: Testing reveals NO custom content appears in PDF - not even project title or customer data. PDF contains only ReportLab metadata. 6) ❌ SILENT FAILURE: ReportLab doc.build() reports success but produces empty PDF with only metadata. IMPACT: Complete loss of checklist functionality in PDF export. This is a critical regression affecting core business functionality. ANNOTATION SCALING: ✅ Photo annotation scaling appears to work correctly - no errors in coordinate transformation logic."
 
 frontend:
   - task: "Home Screen Display"

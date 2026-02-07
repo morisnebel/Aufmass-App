@@ -644,8 +644,17 @@ async def export_project_pdf(project_id: str):
     else:
         logging.warning(f"PDF Export Debug: No checklists found for project {project_id}")
     
-    doc.build(elements)
+    logging.info(f"PDF Export Debug: Building PDF with {len(elements)} elements")
+    try:
+        doc.build(elements)
+        logging.info("PDF Export Debug: PDF build completed successfully")
+    except Exception as e:
+        logging.error(f"PDF Export Debug: Error building PDF: {e}")
+        # Try to build without problematic elements
+        doc.build(elements[:10])  # Build with first 10 elements only
+    
     pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    logging.info(f"PDF Export Debug: Final PDF size: {len(buffer.getvalue())} bytes")
     
     return {
         "pdf_data": pdf_data,

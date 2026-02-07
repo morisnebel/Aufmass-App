@@ -1371,7 +1371,34 @@ async def export_project_pdf(project_id: str):
                     img_buffer = render_sketch_with_background(sketch_data, metadata)
                     
                     if img_buffer:
-                        img = RLImage(img_buffer, width=160*mm, height=110*mm)
+                        # Get actual image dimensions to preserve aspect ratio
+                        img_buffer.seek(0)
+                        pil_img = PILImage.open(img_buffer)
+                        img_width, img_height = pil_img.size
+                        img_buffer.seek(0)
+                        
+                        # Calculate display size while preserving aspect ratio
+                        max_display_width = 160 * mm
+                        max_display_height = 200 * mm  # Allow more height for portrait sketches
+                        
+                        img_aspect = img_width / img_height
+                        
+                        if img_aspect >= 1:
+                            # Landscape - fit to width
+                            display_width = max_display_width
+                            display_height = display_width / img_aspect
+                            if display_height > max_display_height:
+                                display_height = max_display_height
+                                display_width = display_height * img_aspect
+                        else:
+                            # Portrait - fit to height
+                            display_height = max_display_height
+                            display_width = display_height * img_aspect
+                            if display_width > max_display_width:
+                                display_width = max_display_width
+                                display_height = display_width / img_aspect
+                        
+                        img = RLImage(img_buffer, width=display_width, height=display_height)
                         elements.append(img)
                         elements.append(Spacer(1, 10*mm))
             except Exception as e:

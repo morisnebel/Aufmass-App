@@ -65,10 +65,26 @@ export default function NewChecklistScreen() {
   const selectTemplate = (template: ChecklistTemplate) => {
     setSelectedTemplate(template);
     setChecklistItems(
-      template.items.map((item) => ({
-        text: item,
-        checked: false,
-      }))
+      template.items.map((item) => {
+        // Handle both legacy string items and new object format
+        if (typeof item === 'string') {
+          return {
+            text: item,
+            checked: false,
+            note: '',
+            subItems: [],
+          };
+        }
+        return {
+          text: item.text,
+          checked: false,
+          note: '',
+          subItems: (item.subItems || []).map(subText => ({
+            text: subText,
+            checked: false,
+          })),
+        };
+      })
     );
   };
 

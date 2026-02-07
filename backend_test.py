@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Get backend URL from environment
-BACKEND_URL = "https://contact-sync-18.preview.emergentagent.com/api"
+BACKEND_URL = "https://roofpro-pdffix.preview.emergentagent.com/api"
 
 class AufmassAPITester:
     def __init__(self):

@@ -619,7 +619,7 @@ export default function DrawSketchScreen() {
           type: 'arrow',
           data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: '', heads: arrowHeads },
           color: drawColor,
-          strokeWidth: 2,
+          strokeWidth: strokeWidth,
           rotation: 0,
         };
         break;

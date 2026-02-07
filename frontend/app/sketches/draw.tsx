@@ -36,7 +36,7 @@ const { width, height } = Dimensions.get('window');
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'polygon';
   data: any;
   color: string;
   strokeWidth: number;

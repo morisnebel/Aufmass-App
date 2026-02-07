@@ -79,13 +79,17 @@ export default function ProjectDetailScreen() {
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks'>('overview');
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSketchModalVisible, setDeleteSketchModalVisible] = useState(false);
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
+  
+  // Remarks state
+  const [remarks, setRemarks] = useState('');
+  const [isSavingRemarks, setIsSavingRemarks] = useState(false);
   
   // Project edit modal state
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);

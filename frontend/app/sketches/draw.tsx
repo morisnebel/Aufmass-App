@@ -1088,8 +1088,9 @@ export default function DrawSketchScreen() {
               x={element.x}
               y={element.y}
               fill={element.color}
-              fontSize={20}
-              fontWeight="bold"
+              fontSize={element.fontSize || 20}
+              fontWeight={element.fontWeight || 'bold'}
+              fontStyle={element.fontStyle || 'normal'}
               transform={element.rotation ? `rotate(${element.rotation} ${element.x} ${element.y})` : undefined}
             >
               {element.data.text}

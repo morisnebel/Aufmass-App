@@ -47,7 +47,7 @@ interface DrawElement {
   rotation?: number;
 }
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image' | 'polygon';
 
 export default function DrawSketchScreen() {
   const router = useRouter();

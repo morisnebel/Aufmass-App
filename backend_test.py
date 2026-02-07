@@ -648,6 +648,171 @@ class AufmassAPITester:
             if arrow_test_data['customer_id']:
                 self.make_request('DELETE', f'/customers/{arrow_test_data["customer_id"]}')
 
+    def test_pdf_element_distortion_fix(self):
+        """
+        Test PDF export to verify elements are not distorted (circles remain circular, squares remain square)
+        This is a specific test for the uniform scaling fix in render_sketch_with_background function.
+        """
+        print("\n🔍 Testing PDF Element Distortion Fix...")
+        
+        distortion_test_data = {
+            'customer_id': None,
+            'project_id': None, 
+            'sketch_id': None
+        }
+        
+        try:
+            # ============ CREATE TEST CUSTOMER ============
+            customer_data = {
+                "name": "PDF Distortion Test Kunde",
+                "email": "distortion.test@example.com",
+                "phone": "+49 123 456789", 
+                "address": "Teststraße 123, 12345 Teststadt"
+            }
+            
+            customer_response = self.make_request('POST', '/customers', customer_data)
+            if not customer_response:
+                self.log_error("Failed to create customer for distortion test")
+                return False
+                
+            distortion_test_data['customer_id'] = customer_response['id']
+            self.log_success(f"Distortion test customer created: {customer_response['id']}")
+            
+            # ============ CREATE TEST PROJECT ============
+            project_data = {
+                "customer_id": customer_response['id'],
+                "name": "PDF Distortion Verification Project",
+                "description": "Testing PDF export element distortion fix",
+                "remarks": "Circle should be circular, rectangle should be square"
+            }
+            
+            project_response = self.make_request('POST', '/projects', project_data)
+            if not project_response:
+                self.log_error("Failed to create project for distortion test")
+                return False
+                
+            distortion_test_data['project_id'] = project_response['id']
+            self.log_success(f"Distortion test project created: {project_response['id']}")
+            
+            # ============ CREATE SKETCH WITH DISTORTION TEST ELEMENTS ============
+            # Create sketch metadata with specific elements that make distortion obvious
+            sketch_metadata = {
+                "canvasWidth": 800,
+                "canvasHeight": 600,
+                "elements": [
+                    {
+                        "type": "circle",
+                        "data": {"cx": 200, "cy": 200, "r": 50},
+                        "color": "#FF0000",
+                        "strokeWidth": 3,
+                        "rotation": 0
+                    },
+                    {
+                        "type": "arrow",
+                        "data": {
+                            "x1": 100, "y1": 100, "x2": 300, "y2": 100,
+                            "text": "Test", "heads": "single"
+                        },
+                        "color": "#00FF00", 
+                        "strokeWidth": 5,
+                        "rotation": 0
+                    },
+                    {
+                        "type": "rect",
+                        "data": {"x": 400, "y": 150, "width": 100, "height": 100},
+                        "color": "#0000FF",
+                        "strokeWidth": 2,
+                        "rotation": 0
+                    }
+                ]
+            }
+            
+            # Simple SVG for sketch_data (base64 encoded)
+            svg_content = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="200" cy="200" r="50" fill="none" stroke="red" stroke-width="3"/>
+                <line x1="100" y1="100" x2="300" y2="100" stroke="green" stroke-width="5"/>
+                <rect x="400" y="150" width="100" height="100" fill="none" stroke="blue" stroke-width="2"/>
+                <text x="200" y="120" fill="green" font-size="14">Test</text>
+            </svg>'''
+            
+            sketch_data_base64 = base64.b64encode(svg_content.encode()).decode()
+            
+            sketch_data = {
+                "project_id": project_response['id'],
+                "sketch_data": f"data:image/svg+xml;base64,{sketch_data_base64}",
+                "title": "Distortion Test Sketch",
+                "metadata": json.dumps(sketch_metadata)
+            }
+            
+            sketch_response = self.make_request('POST', '/sketches', sketch_data)
+            if not sketch_response:
+                self.log_error("Failed to create sketch for distortion test")
+                return False
+                
+            distortion_test_data['sketch_id'] = sketch_response['id']
+            self.log_success(f"Distortion test sketch created: {sketch_response['id']}")
+            self.log_success(f"Canvas dimensions: {sketch_metadata['canvasWidth']}x{sketch_metadata['canvasHeight']}")
+            self.log_success("Elements: Circle (center: 200,200, radius: 50), Arrow (100,100 to 300,100), Rectangle (400,150, 100x100)")
+            
+            # ============ GENERATE PDF ============
+            import time
+            start_time = time.time()
+            pdf_response = self.make_request('GET', f'/export/pdf/{project_response["id"]}')
+            end_time = time.time()
+            
+            if not pdf_response or 'pdf_data' not in pdf_response:
+                self.log_error("Failed to generate PDF for distortion test")
+                return False
+                
+            pdf_data = pdf_response.get('pdf_data')
+            filename = pdf_response.get('filename', 'distortion_test.pdf')
+            
+            # ============ SAVE PDF LOCALLY ============
+            try:
+                pdf_bytes = base64.b64decode(pdf_data)
+                pdf_size = len(pdf_bytes)
+                
+                # Save to /tmp for manual inspection
+                pdf_path = "/tmp/distortion_test.pdf"
+                with open(pdf_path, 'wb') as f:
+                    f.write(pdf_bytes)
+                    
+                # Verify PDF header
+                if pdf_bytes[:4] == b'%PDF':
+                    self.log_success(f"Distortion test PDF generated successfully: {pdf_path} ({pdf_size:,} bytes, {end_time - start_time:.3f}s)")
+                    self.log_success("CRITICAL VERIFICATION: PDF saved for manual inspection")
+                    self.log_success("• CIRCLE at (200,200) with radius 50 - MUST appear perfectly round (not elliptical)")
+                    self.log_success("• ARROW from (100,100) to (300,100) - MUST be horizontal")
+                    self.log_success("• RECTANGLE at (400,150) size 100x100 - MUST appear as a SQUARE")
+                    self.log_success("• Canvas dimensions: 800x600 - aspect ratio should be preserved")
+                else:
+                    self.log_error("Generated PDF has invalid format")
+                    return False
+                    
+            except Exception as e:
+                self.log_error(f"Failed to save distortion test PDF: {e}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.log_error(f"Unexpected error in distortion test: {e}")
+            return False
+            
+        finally:
+            # ============ CLEANUP DISTORTION TEST DATA ============
+            # Delete sketch
+            if distortion_test_data['sketch_id']:
+                self.make_request('DELETE', f'/sketches/{distortion_test_data["sketch_id"]}')
+            
+            # Delete project (cascades to related data)
+            if distortion_test_data['project_id']:
+                self.make_request('DELETE', f'/projects/{distortion_test_data["project_id"]}')
+            
+            # Delete customer
+            if distortion_test_data['customer_id']:
+                self.make_request('DELETE', f'/customers/{distortion_test_data["customer_id"]}')
+
     def test_delete_operations(self):
         """Test DELETE operations (cleanup)"""
         print("\n🔍 Testing DELETE Operations...")

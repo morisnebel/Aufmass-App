@@ -307,6 +307,8 @@ test_plan:
   test_priority: "completed"
 
 agent_communication:
+    - agent: "main"
+      message: "PDF EXPORT ENHANCEMENT IMPLEMENTED: Updated backend PDF export endpoint to include photo annotations and SVG sketch conversion. Two new helper functions added: 1) draw_annotations_on_photo() - Uses Pillow to parse JSON annotation paths (SVG M/L commands), convert hex colors to RGB, and draw lines on the photo with proper stroke width and alpha compositing. 2) convert_svg_sketch_to_png() - Uses cairosvg to convert SVG sketch data to PNG format for ReportLab compatibility. The export_project_pdf() function now: a) Draws all user-made annotations onto photos before adding to PDF, b) Converts SVG sketches to PNG raster images before embedding. Libraries verified working: Pillow ImageDraw and cairosvg svg2png both tested successfully. Needs testing to verify PDF contains annotations and sketches correctly."
     - agent: "testing"
       message: "Comprehensive backend API testing completed successfully. All 8 major API endpoint groups tested with complete CRUD operations. Total 28 successful operations, 0 failures. Complete workflow tested: Customer → Project → Roof → Photo → Sketch → Checklist Template → Checklist → PDF Export → Cleanup. All APIs working perfectly with proper error handling, data validation, and relationships between entities."
     - agent: "testing"

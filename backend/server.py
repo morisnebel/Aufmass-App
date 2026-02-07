@@ -836,9 +836,27 @@ async def export_project_pdf(project_id: str):
             checklist_data = []
             for item in checklist.get('items', []):
                 status = "☑" if item.get('checked') else "☐"
+                item_text = safe_str(item.get('text', ''))
                 checklist_data.append([
-                    Paragraph(f"{status} {item.get('text', '')}", value_style),
+                    Paragraph(f"<b>{status} {item_text}</b>", value_style),
                 ])
+                
+                # Add sub-items if present and main item is checked
+                sub_items = item.get('subItems', [])
+                if sub_items and item.get('checked'):
+                    for sub_item in sub_items:
+                        sub_status = "☑" if sub_item.get('checked') else "☐"
+                        sub_text = safe_str(sub_item.get('text', ''))
+                        checklist_data.append([
+                            Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;└ {sub_status} {sub_text}", value_style),
+                        ])
+                
+                # Add note if present
+                note = item.get('note', '')
+                if note and note.strip():
+                    checklist_data.append([
+                        Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;<i>📝 {safe_str(note)}</i>", value_style),
+                    ])
             
             if checklist_data:
                 checklist_table = Table(checklist_data, colWidths=[180*mm])

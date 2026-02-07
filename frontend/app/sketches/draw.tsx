@@ -32,7 +32,133 @@ import Svg, {
 } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
-const { width, height } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// A4 aspect ratio: 210mm x 297mm = 1:1.414
+const A4_ASPECT_RATIO = 297 / 210; // ~1.414
+
+// Calculate canvas dimensions to fit A4 aspect ratio
+const calculateA4Dimensions = () => {
+  const availableHeight = screenHeight - 180; // Header + toolbar space
+  const availableWidth = screenWidth - 20; // Padding
+  
+  // Try fitting by width first
+  let canvasWidth = availableWidth;
+  let canvasHeight = canvasWidth * A4_ASPECT_RATIO;
+  
+  // If too tall, fit by height instead
+  if (canvasHeight > availableHeight) {
+    canvasHeight = availableHeight;
+    canvasWidth = canvasHeight / A4_ASPECT_RATIO;
+  }
+  
+  return { width: Math.floor(canvasWidth), height: Math.floor(canvasHeight) };
+};
+
+const { width: canvasWidth, height: canvasHeight } = calculateA4Dimensions();
+
+// Douglas-Peucker algorithm for line simplification
+const simplifyPath = (pathString: string, tolerance: number = 8): string => {
+  // Parse path string to points
+  const points: { x: number; y: number }[] = [];
+  const parts = pathString.replace(/M/g, ' M ').replace(/L/g, ' L ').split(/\s+/).filter(p => p);
+  
+  let i = 0;
+  while (i < parts.length) {
+    if (parts[i] === 'M' || parts[i] === 'L') {
+      if (i + 2 < parts.length) {
+        const x = parseFloat(parts[i + 1]);
+        const y = parseFloat(parts[i + 2]);
+        if (!isNaN(x) && !isNaN(y)) {
+          points.push({ x, y });
+        }
+        i += 3;
+      } else {
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+  
+  if (points.length < 3) {
+    return pathString;
+  }
+  
+  // Douglas-Peucker simplification
+  const simplifiedPoints = douglasPeucker(points, tolerance);
+  
+  // Convert back to path string
+  if (simplifiedPoints.length === 0) return pathString;
+  
+  let result = `M ${simplifiedPoints[0].x.toFixed(1)} ${simplifiedPoints[0].y.toFixed(1)}`;
+  for (let j = 1; j < simplifiedPoints.length; j++) {
+    result += ` L ${simplifiedPoints[j].x.toFixed(1)} ${simplifiedPoints[j].y.toFixed(1)}`;
+  }
+  
+  return result;
+};
+
+// Douglas-Peucker recursive algorithm
+const douglasPeucker = (points: { x: number; y: number }[], tolerance: number): { x: number; y: number }[] => {
+  if (points.length <= 2) return points;
+  
+  // Find the point with maximum distance from the line between first and last
+  let maxDistance = 0;
+  let maxIndex = 0;
+  
+  const start = points[0];
+  const end = points[points.length - 1];
+  
+  for (let i = 1; i < points.length - 1; i++) {
+    const distance = perpendicularDistance(points[i], start, end);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      maxIndex = i;
+    }
+  }
+  
+  // If max distance is greater than tolerance, recursively simplify
+  if (maxDistance > tolerance) {
+    const left = douglasPeucker(points.slice(0, maxIndex + 1), tolerance);
+    const right = douglasPeucker(points.slice(maxIndex), tolerance);
+    return [...left.slice(0, -1), ...right];
+  } else {
+    // Return just the endpoints
+    return [start, end];
+  }
+};
+
+// Calculate perpendicular distance from point to line
+const perpendicularDistance = (
+  point: { x: number; y: number },
+  lineStart: { x: number; y: number },
+  lineEnd: { x: number; y: number }
+): number => {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+  
+  if (dx === 0 && dy === 0) {
+    // Line is a point
+    return Math.sqrt(Math.pow(point.x - lineStart.x, 2) + Math.pow(point.y - lineStart.y, 2));
+  }
+  
+  const t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / (dx * dx + dy * dy);
+  
+  let nearestX, nearestY;
+  if (t < 0) {
+    nearestX = lineStart.x;
+    nearestY = lineStart.y;
+  } else if (t > 1) {
+    nearestX = lineEnd.x;
+    nearestY = lineEnd.y;
+  } else {
+    nearestX = lineStart.x + t * dx;
+    nearestY = lineStart.y + t * dy;
+  }
+  
+  return Math.sqrt(Math.pow(point.x - nearestX, 2) + Math.pow(point.y - nearestY, 2));
+};
 
 interface DrawElement {
   id: string;

@@ -935,7 +935,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         start_p2_y = start_base_y + arrow_half_width * math.sin(angle - math.pi / 2)
                         draw.polygon([(x1, y1), (start_p1_x, start_p1_y), (start_p2_x, start_p2_y)], fill=(*rgb_color, 255))
                     
-                    # Draw text label (measurement) with larger font
+                    # Draw text label (measurement) with dynamic font size
                     if text:
                         mid_x = (x1 + x2) / 2
                         mid_y = (y1 + y2) / 2
@@ -946,8 +946,9 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         text_x = mid_x + text_offset * math.cos(perp_angle)
                         text_y = mid_y + text_offset * math.sin(perp_angle)
                         
-                        # Draw text background for better readability
-                        font_size = max(12, int(14 * uniform_scale))
+                        # Get dynamic font size from element data
+                        arrow_font_size = el_data.get('fontSize', 14)
+                        font_size = max(10, int(arrow_font_size * uniform_scale))
                         try:
                             from PIL import ImageFont
                             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)

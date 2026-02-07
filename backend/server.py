@@ -634,6 +634,115 @@ def convert_svg_sketch_to_png(sketch_data_base64: str) -> BytesIO:
             return None
 
 
+# Helper function to render sketch with background image
+def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -> BytesIO:
+    """
+    Renders a sketch with its background image (if present) from metadata.
+    The SVG drawing is overlaid on top of the background image.
+    Returns a BytesIO object with the final PNG data.
+    """
+    try:
+        # Parse metadata to get background image
+        background_image = None
+        if metadata_json:
+            try:
+                metadata = json.loads(metadata_json)
+                background_image = metadata.get('backgroundImage')
+            except:
+                pass
+        
+        # If no background image, just convert the SVG sketch
+        if not background_image:
+            return convert_svg_sketch_to_png(sketch_data_base64)
+        
+        # Decode background image
+        if ',' in background_image:
+            bg_data = base64.b64decode(background_image.split(',')[1])
+        else:
+            bg_data = base64.b64decode(background_image)
+        
+        # Open background image with Pillow
+        bg_image = PILImage.open(BytesIO(bg_data))
+        
+        # Convert to RGBA for compositing
+        if bg_image.mode != 'RGBA':
+            bg_image = bg_image.convert('RGBA')
+        
+        # Resize background to a standard size for PDF
+        output_width = 800
+        output_height = 600
+        
+        # Calculate aspect-preserving resize
+        bg_aspect = bg_image.width / bg_image.height
+        target_aspect = output_width / output_height
+        
+        if bg_aspect > target_aspect:
+            # Image is wider, fit to width
+            new_width = output_width
+            new_height = int(output_width / bg_aspect)
+        else:
+            # Image is taller, fit to height
+            new_height = output_height
+            new_width = int(output_height * bg_aspect)
+        
+        bg_image = bg_image.resize((new_width, new_height), PILImage.Resampling.LANCZOS)
+        
+        # Create output canvas
+        canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
+        
+        # Center the background image on the canvas
+        offset_x = (output_width - new_width) // 2
+        offset_y = (output_height - new_height) // 2
+        canvas.paste(bg_image, (offset_x, offset_y))
+        
+        # Now process the SVG sketch and overlay it
+        if sketch_data_base64:
+            try:
+                # Decode SVG
+                if ',' in sketch_data_base64:
+                    header, data = sketch_data_base64.split(',', 1)
+                    svg_bytes = base64.b64decode(data)
+                else:
+                    svg_bytes = base64.b64decode(sketch_data_base64)
+                
+                svg_str = svg_bytes.decode('utf-8', errors='ignore')
+                
+                if '<svg' in svg_str.lower():
+                    # Convert SVG to PNG with transparency
+                    svg_png_data = cairosvg.svg2png(
+                        bytestring=svg_bytes, 
+                        output_width=output_width, 
+                        output_height=output_height
+                    )
+                    svg_image = PILImage.open(BytesIO(svg_png_data))
+                    
+                    # Ensure SVG image has alpha channel
+                    if svg_image.mode != 'RGBA':
+                        svg_image = svg_image.convert('RGBA')
+                    
+                    # Composite SVG drawing on top of background
+                    canvas = PILImage.alpha_composite(canvas, svg_image)
+            except Exception as e:
+                logging.error(f"Error overlaying SVG on background: {e}")
+        
+        # Convert to RGB for PDF compatibility
+        if canvas.mode == 'RGBA':
+            rgb_canvas = PILImage.new('RGB', canvas.size, (255, 255, 255))
+            rgb_canvas.paste(canvas, mask=canvas.split()[3])
+            canvas = rgb_canvas
+        
+        # Save to BytesIO
+        output = BytesIO()
+        canvas.save(output, format='PNG')
+        output.seek(0)
+        return output
+        
+    except Exception as e:
+        logging.error(f"Error rendering sketch with background: {e}")
+        # Fallback to simple SVG conversion
+        return convert_svg_sketch_to_png(sketch_data_base64)
+
+
 # PDF Export
 @api_router.get("/export/pdf/{project_id}")
 async def export_project_pdf(project_id: str):

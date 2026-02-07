@@ -61,6 +61,7 @@ export default function DrawSketchScreen() {
   
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
+  const initialImageAdded = useRef(false);
   
   // State
   const [title, setTitle] = useState('Neue Skizze');
@@ -68,7 +69,7 @@ export default function DrawSketchScreen() {
   const [history, setHistory] = useState<DrawElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [drawMode, setDrawMode] = useState<DrawMode>('pen');
+  const [drawMode, setDrawMode] = useState<DrawMode>('select');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(false);
@@ -98,10 +99,38 @@ export default function DrawSketchScreen() {
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
   
-  // Background - initialize from route params if provided
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(
-    backgroundImageUri ? decodeURIComponent(backgroundImageUri) : null
-  );
+  // No longer using background image - images are now elements
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+
+  // Generate unique ID
+  const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Add initial image from route params as an element
+  useEffect(() => {
+    if (backgroundImageUri && !initialImageAdded.current && !sketchId) {
+      initialImageAdded.current = true;
+      const decodedUri = decodeURIComponent(backgroundImageUri);
+      
+      // Add the image as an element that can be moved and resized
+      const imageElement: DrawElement = {
+        id: generateId(),
+        type: 'image',
+        data: { uri: decodedUri },
+        color: '#000000',
+        strokeWidth: 0,
+        x: 20,
+        y: 20,
+        width: width - 40,  // Almost full width with some margin
+        height: (height - 160) * 0.8,  // Good height
+        rotation: 0,
+      };
+      
+      setElements([imageElement]);
+      setHistory([[imageElement]]);
+      setHistoryIndex(0);
+      setSelectedElementId(imageElement.id);  // Select it so user can resize immediately
+    }
+  }, [backgroundImageUri, sketchId]);
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
@@ -109,11 +138,8 @@ export default function DrawSketchScreen() {
       if (sketchId) {
         console.log('useFocusEffect: Loading sketch', sketchId);
         loadSketch();
-      } else if (backgroundImageUri) {
-        // Set background from route params for new sketch with image
-        setBackgroundImage(decodeURIComponent(backgroundImageUri));
       }
-    }, [sketchId, backgroundImageUri])
+    }, [sketchId])
   );
 
   const loadSketch = async () => {

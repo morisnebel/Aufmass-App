@@ -628,37 +628,17 @@ async def export_project_pdf(project_id: str):
                 pass
     
     # Checklists
-    logging.info(f"PDF Export Debug: Found {len(checklists)} checklists for project {project_id}")
     if checklists:
-        logging.info(f"PDF Export Debug: Adding checklists to PDF")
-        elements.append(Spacer(1, 20))
-        # Add a test paragraph first
-        elements.append(Paragraph("TEST: This is a test paragraph before checklists", styles['Normal']))
-        elements.append(Paragraph("=== CHECKLISTEN ===", styles['Heading2']))
-        for i, checklist in enumerate(checklists):
-            logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")
-            elements.append(Paragraph(f"Checklist: {checklist['template_name']}", styles['Heading3']))
-            for j, item in enumerate(checklist['items']):
-                status = '[X]' if item['checked'] else '[ ]'
-                item_text = f"{status} {item['text']}"
-                logging.info(f"PDF Export Debug: Adding item {j}: {item_text}")
-                elements.append(Paragraph(item_text, styles['Normal']))
+        elements.append(PageBreak())
+        elements.append(Paragraph("Checklisten", styles['Heading2']))
+        for checklist in checklists:
+            elements.append(Paragraph(checklist['template_name'], styles['Heading3']))
+            for item in checklist['items']:
+                status = '✓' if item['checked'] else '○'
+                elements.append(Paragraph(f"{status} {item['text']}", styles['Normal']))
             elements.append(Spacer(1, 10))
-        # Add a test paragraph after
-        elements.append(Paragraph("TEST: This is a test paragraph after checklists", styles['Normal']))
-    else:
-        logging.warning(f"PDF Export Debug: No checklists found for project {project_id}")
     
-    logging.info(f"PDF Export Debug: Building PDF with {len(elements)} elements")
-    
-    # Create a new buffer for the fallback case
-    fallback_buffer = BytesIO()
-    fallback_doc = SimpleDocTemplate(fallback_buffer, pagesize=A4)
-    
-    try:
-        doc.build(elements)
-        logging.info("PDF Export Debug: PDF build completed successfully")
-    except Exception as e:
+    doc.build(elements)
         logging.error(f"PDF Export Debug: Error building PDF: {e}")
         logging.error(f"PDF Export Debug: Exception type: {type(e)}")
         import traceback

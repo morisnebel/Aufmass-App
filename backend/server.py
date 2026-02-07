@@ -75,18 +75,28 @@ class Sketch(BaseModel):
     metadata: Optional[str] = None  # JSON string of sketch elements and settings
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class ChecklistTemplateItem(BaseModel):
+    text: str
+    subItems: List[str] = []  # Unter-Positionen
+
 class ChecklistTemplate(BaseModel):
     id: Optional[str] = None
     name: str
-    items: List[str]
+    items: List[Any]  # Can be string (legacy) or ChecklistTemplateItem
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ChecklistItemInstance(BaseModel):
+    text: str
+    checked: bool = False
+    note: Optional[str] = None  # Notiz-Feld
+    subItems: List[Dict[str, Any]] = []  # [{"text": str, "checked": bool}]
 
 class ChecklistInstance(BaseModel):
     id: Optional[str] = None
     project_id: str
     template_id: str
     template_name: str
-    items: List[Dict[str, Any]]  # [{"text": str, "checked": bool}]
+    items: List[Dict[str, Any]]  # [{"text": str, "checked": bool, "note": str, "subItems": [...]}]
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Project(BaseModel):

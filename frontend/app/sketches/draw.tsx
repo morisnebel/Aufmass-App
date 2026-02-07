@@ -234,6 +234,30 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Move selected element to front (top of the stack)
+  const bringToFront = () => {
+    if (selectedElementId) {
+      const element = elements.find(el => el.id === selectedElementId);
+      if (element) {
+        const newElements = elements.filter(el => el.id !== selectedElementId);
+        newElements.push(element);
+        addToHistory(newElements);
+      }
+    }
+  };
+
+  // Move selected element to back (bottom of the stack)
+  const sendToBack = () => {
+    if (selectedElementId) {
+      const element = elements.find(el => el.id === selectedElementId);
+      if (element) {
+        const newElements = elements.filter(el => el.id !== selectedElementId);
+        newElements.unshift(element);
+        addToHistory(newElements);
+      }
+    }
+  };
+
   // Clear all
   const clearAll = () => {
     addToHistory([]);

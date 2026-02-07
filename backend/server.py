@@ -416,20 +416,20 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
                 # Guess canvas size based on coordinate ranges
                 if max_x > 1000:
                     # Likely iPad Pro landscape
-                    estimated_canvas_width = 1366
-                    estimated_canvas_height = 1024
+                    estimated_canvas_width = 1400
+                    estimated_canvas_height = 1050
                 elif max_x > 700:
                     # Likely iPad landscape or large tablet
-                    estimated_canvas_width = 1024
-                    estimated_canvas_height = 768
+                    estimated_canvas_width = 1200
+                    estimated_canvas_height = 900
                 elif max_x > 400:
                     # Likely iPhone landscape or small tablet
-                    estimated_canvas_width = 844
-                    estimated_canvas_height = 390
+                    estimated_canvas_width = 900
+                    estimated_canvas_height = 420
                 else:
                     # Likely iPhone portrait
-                    estimated_canvas_width = 390
-                    estimated_canvas_height = 844
+                    estimated_canvas_width = 420
+                    estimated_canvas_height = 900
                 
                 # Calculate scaling based on estimated canvas vs image
                 # Simple direct scaling - canvas coordinates to image coordinates

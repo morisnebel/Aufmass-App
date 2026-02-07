@@ -648,6 +648,23 @@ async def export_project_pdf(project_id: str):
     sketches = await db.sketches.find({"project_id": project_id}).to_list(1000)
     checklists = await db.checklists.find({"project_id": project_id}).to_list(1000)
     
+    # Fetch company settings
+    settings = await db.settings.find_one()
+    if not settings:
+        settings = {
+            'company_name': 'Nebel-Bedachung',
+            'company_subtitle': 'Dachdeckermeister',
+            'owner_name': 'Moris Nebel',
+            'street': '',
+            'zip_code': '37339',
+            'city': 'Hundeshagen',
+            'phone': '',
+            'email': '',
+            'services': 'Dächer aller Art\nFassadenarbeiten\nZimmerer- und Spenglerarbeiten',
+            'author_name': 'Moris Nebel',
+            'logo_data': None,
+        }
+    
     # Create PDF with margins
     buffer = BytesIO()
     doc = SimpleDocTemplate(

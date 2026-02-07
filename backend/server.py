@@ -842,6 +842,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                 
                 elif el_type == 'arrow':
                     # Render arrow with arrowheads
+                    # Match frontend SVG marker behavior: markerUnits="strokeWidth" with marker size 10x10
                     x1 = el_data.get('x1', 0) * scale_x
                     y1 = el_data.get('y1', 0) * scale_y
                     x2 = el_data.get('x2', 0) * scale_x
@@ -850,36 +851,56 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     heads = el_data.get('heads', 'single')
                     scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
                     
-                    # Draw main line
-                    draw.line([(x1, y1), (x2, y2)], fill=(*rgb_color, 255), width=scaled_stroke)
-                    
-                    # Arrow size proportional to stroke width
-                    arrow_size = max(8, scaled_stroke * 4) * max(scale_x, scale_y)
-                    
-                    # Draw arrowhead at end
+                    # Calculate angle of the arrow
                     angle = math.atan2(y2 - y1, x2 - x1)
-                    end_x1 = x2 - arrow_size * math.cos(angle - math.pi / 6)
-                    end_y1 = y2 - arrow_size * math.sin(angle - math.pi / 6)
-                    end_x2 = x2 - arrow_size * math.cos(angle + math.pi / 6)
-                    end_y2 = y2 - arrow_size * math.sin(angle + math.pi / 6)
-                    draw.polygon([(x2, y2), (end_x1, end_y1), (end_x2, end_y2)], fill=(*rgb_color, 255))
                     
-                    # Draw arrowhead at start if double
+                    # Arrow marker size matches frontend: markerWidth=10, markerHeight=10, scaled by strokeWidth
+                    # In frontend SVG: refX=9 means arrowhead tip is 9 units from start, points="0,0 0,6 9,3" creates triangle
+                    marker_scale = scaled_stroke  # markerUnits="strokeWidth" in frontend
+                    arrow_length = 9 * marker_scale  # refX=9 in frontend marker
+                    arrow_half_width = 3 * marker_scale  # Points go from 0 to 6, center at 3
+                    
+                    # Shorten the line slightly so arrowhead doesn't overlap
+                    line_end_x = x2 - (arrow_length * 0.5) * math.cos(angle)
+                    line_end_y = y2 - (arrow_length * 0.5) * math.sin(angle)
+                    line_start_x = x1
+                    line_start_y = y1
+                    
                     if heads == 'double':
-                        start_x1 = x1 + arrow_size * math.cos(angle - math.pi / 6)
-                        start_y1 = y1 + arrow_size * math.sin(angle - math.pi / 6)
-                        start_x2 = x1 + arrow_size * math.cos(angle + math.pi / 6)
-                        start_y2 = y1 + arrow_size * math.sin(angle + math.pi / 6)
-                        draw.polygon([(x1, y1), (start_x1, start_y1), (start_x2, start_y2)], fill=(*rgb_color, 255))
+                        line_start_x = x1 + (arrow_length * 0.5) * math.cos(angle)
+                        line_start_y = y1 + (arrow_length * 0.5) * math.sin(angle)
+                    
+                    # Draw main line
+                    draw.line([(line_start_x, line_start_y), (line_end_x, line_end_y)], fill=(*rgb_color, 255), width=scaled_stroke)
+                    
+                    # Draw end arrowhead (always)
+                    # Triangle points: tip at (x2, y2), base perpendicular to line
+                    end_base_x = x2 - arrow_length * math.cos(angle)
+                    end_base_y = y2 - arrow_length * math.sin(angle)
+                    end_p1_x = end_base_x + arrow_half_width * math.cos(angle + math.pi / 2)
+                    end_p1_y = end_base_y + arrow_half_width * math.sin(angle + math.pi / 2)
+                    end_p2_x = end_base_x + arrow_half_width * math.cos(angle - math.pi / 2)
+                    end_p2_y = end_base_y + arrow_half_width * math.sin(angle - math.pi / 2)
+                    draw.polygon([(x2, y2), (end_p1_x, end_p1_y), (end_p2_x, end_p2_y)], fill=(*rgb_color, 255))
+                    
+                    # Draw start arrowhead if double
+                    if heads == 'double':
+                        start_base_x = x1 + arrow_length * math.cos(angle)
+                        start_base_y = y1 + arrow_length * math.sin(angle)
+                        start_p1_x = start_base_x + arrow_half_width * math.cos(angle + math.pi / 2)
+                        start_p1_y = start_base_y + arrow_half_width * math.sin(angle + math.pi / 2)
+                        start_p2_x = start_base_x + arrow_half_width * math.cos(angle - math.pi / 2)
+                        start_p2_y = start_base_y + arrow_half_width * math.sin(angle - math.pi / 2)
+                        draw.polygon([(x1, y1), (start_p1_x, start_p1_y), (start_p2_x, start_p2_y)], fill=(*rgb_color, 255))
                     
                     # Draw text label (measurement) with larger font
                     if text:
                         mid_x = (x1 + x2) / 2
                         mid_y = (y1 + y2) / 2
                         
-                        # Calculate text position perpendicular to line
-                        perp_angle = angle + math.pi / 2
-                        text_offset = 20 * max(scale_x, scale_y)
+                        # Calculate text position perpendicular to line (above the line)
+                        perp_angle = angle - math.pi / 2  # Perpendicular, above line
+                        text_offset = max(15, scaled_stroke * 3 + 10)
                         text_x = mid_x + text_offset * math.cos(perp_angle)
                         text_y = mid_y + text_offset * math.sin(perp_angle)
                         

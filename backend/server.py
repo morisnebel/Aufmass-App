@@ -598,8 +598,10 @@ async def export_project_pdf(project_id: str):
                 if img_buffer:
                     img = RLImage(img_buffer, width=150*mm, height=100*mm)
                     elements.append(img)
-                    if photo.get('description'):
-                        elements.append(Paragraph(photo['description'], styles['Normal']))
+                    # Only show description if it exists and is not "None"
+                    desc = photo.get('description', '')
+                    if desc and desc != 'None' and desc.strip():
+                        elements.append(Paragraph(desc, styles['Normal']))
                     elements.append(Spacer(1, 10))
             except Exception as e:
                 logging.error(f"Error processing photo {i}: {e}")

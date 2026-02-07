@@ -728,6 +728,9 @@ class AufmassAPITester:
         test_results.append(self.test_checklists_crud())
         test_results.append(self.test_pdf_export())
         
+        # SPECIAL TEST: Arrow Rendering in PDF Export
+        test_results.append(self.test_arrow_rendering_in_pdf())
+        
         # Cleanup
         self.test_delete_operations()
         

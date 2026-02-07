@@ -336,9 +336,6 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
     """
     Takes a base64 image and JSON annotations, draws the annotations on the image,
     and returns the result as a BytesIO object.
-    
-    The annotations are drawn in screen coordinates (based on mobile device canvas).
-    We need to scale them to match the actual image dimensions.
     """
     try:
         # Decode the base64 image
@@ -360,13 +357,12 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
         paths = annotations.get('paths', [])
         
         # Get canvas dimensions from annotations if available
-        # If not available, try to estimate from the path coordinates
         annotation_canvas_width = annotations.get('canvasWidth')
         annotation_canvas_height = annotations.get('canvasHeight')
         
-        # If canvas dimensions not provided, estimate from max coordinates in paths
-        if not annotation_canvas_width or not annotation_canvas_height:
-            max_x, max_y = 0, 0
+        if paths:
+            # First, find min/max coordinates to understand the drawing area
+            all_coords = []
             for path_obj in paths:
                 path_str = path_obj.get('path', '')
                 parts = path_str.replace('M', ' ').replace('L', ' ').split()
@@ -374,46 +370,60 @@ def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> 
                     try:
                         x = float(parts[i])
                         y = float(parts[i + 1])
-                        max_x = max(max_x, x)
-                        max_y = max(max_y, y)
+                        all_coords.append((x, y))
                     except (ValueError, IndexError):
                         pass
             
-            # Add some margin and use as canvas size
-            # If coordinates are large, assume tablet/large screen
-            if max_x > 0 and max_y > 0:
-                annotation_canvas_width = max_x + 100  # Add margin
-                annotation_canvas_height = max_y + 100
+            if not all_coords:
+                # No valid coordinates found, return original image
+                output = BytesIO()
+                if pil_image.mode == 'RGBA':
+                    background = PILImage.new('RGB', pil_image.size, (255, 255, 255))
+                    background.paste(pil_image, mask=pil_image.split()[3])
+                    pil_image = background
+                pil_image.save(output, format='PNG')
+                output.seek(0)
+                return output
+            
+            min_x = min(c[0] for c in all_coords)
+            max_x = max(c[0] for c in all_coords)
+            min_y = min(c[1] for c in all_coords)
+            max_y = max(c[1] for c in all_coords)
+            
+            # If we have explicit canvas dimensions, use proper scaling
+            if annotation_canvas_width and annotation_canvas_height:
+                # The image is displayed with "contain" mode in the canvas
+                canvas_aspect = annotation_canvas_width / annotation_canvas_height
+                img_aspect = img_width / img_height
+                
+                if img_aspect > canvas_aspect:
+                    # Image is wider - fits to width
+                    displayed_width = annotation_canvas_width
+                    displayed_height = annotation_canvas_width / img_aspect
+                    offset_x = 0
+                    offset_y = (annotation_canvas_height - displayed_height) / 2
+                else:
+                    # Image is taller - fits to height
+                    displayed_height = annotation_canvas_height
+                    displayed_width = annotation_canvas_height * img_aspect
+                    offset_x = (annotation_canvas_width - displayed_width) / 2
+                    offset_y = 0
+                
+                scale_x = img_width / displayed_width
+                scale_y = img_height / displayed_height
             else:
-                # Fallback to common mobile dimensions
-                annotation_canvas_width = 390
-                annotation_canvas_height = 600
-        
-        if paths:
-            # Calculate scale factors to map canvas coordinates to image coordinates
-            # The annotations are drawn on a canvas that shows the image with "contain" mode
-            # We need to figure out how the image was displayed and scale accordingly
-            
-            # Assume the canvas displays the image centered with aspect ratio preserved
-            canvas_aspect = annotation_canvas_width / annotation_canvas_height
-            img_aspect = img_width / img_height
-            
-            if img_aspect > canvas_aspect:
-                # Image is wider - constrained by width
-                displayed_width = annotation_canvas_width
-                displayed_height = annotation_canvas_width / img_aspect
+                # No canvas dimensions - use simple direct scaling
+                # Assume annotations cover the visible image area
+                # Map the coordinate range directly to image dimensions
+                coord_width = max_x - min_x
+                coord_height = max_y - min_y
+                
+                # Use a simple proportional mapping
+                # The annotations should map to the full image
+                scale_x = img_width / max_x if max_x > 0 else 1
+                scale_y = img_height / max_y if max_y > 0 else 1
                 offset_x = 0
-                offset_y = (annotation_canvas_height - displayed_height) / 2
-            else:
-                # Image is taller - constrained by height
-                displayed_height = annotation_canvas_height
-                displayed_width = annotation_canvas_height * img_aspect
-                offset_x = (annotation_canvas_width - displayed_width) / 2
                 offset_y = 0
-            
-            # Scale factors from displayed size to actual image size
-            scale_x = img_width / displayed_width if displayed_width > 0 else 1
-            scale_y = img_height / displayed_height if displayed_height > 0 else 1
             
             # Create a transparent overlay for drawing
             overlay = PILImage.new('RGBA', pil_image.size, (0, 0, 0, 0))

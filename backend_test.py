@@ -429,6 +429,225 @@ class AufmassAPITester:
             
         return False
     
+    def test_arrow_rendering_in_pdf(self):
+        """
+        Test arrow rendering in PDF export with different strokeWidth values.
+        Verifies that arrows are saved with correct strokeWidth and rendered proportionally in PDF.
+        """
+        print("\n🎯 Testing Arrow Rendering in PDF Export...")
+        
+        # Test data storage for cleanup
+        arrow_test_data = {
+            'customer_id': None,
+            'project_id': None,
+            'sketch_id': None
+        }
+        
+        try:
+            # ============ CREATE CUSTOMER FOR ARROW TEST ============
+            customer_data = {
+                "name": "Test Kunde Pfeil-Rendering",
+                "email": "pfeil.test@example.com",
+                "phone": "+49 151 98765432",
+                "address": "Pfeilstraße 123, 12345 Teststadt"
+            }
+            
+            customer_response = self.make_request('POST', '/customers', customer_data)
+            if not customer_response:
+                self.log_error("Failed to create customer for arrow test")
+                return False
+                
+            arrow_test_data['customer_id'] = customer_response['id']
+            self.log_success(f"Arrow test customer created: {customer_response['name']}")
+            
+            # ============ CREATE PROJECT FOR ARROW TEST ============
+            project_data = {
+                "customer_id": customer_response['id'],
+                "name": "Pfeil-Rendering Test Projekt",
+                "description": "Test für Pfeil-Darstellung in PDF mit verschiedenen Strichstärken",
+                "status": "active"
+            }
+            
+            project_response = self.make_request('POST', '/projects', project_data)
+            if not project_response:
+                self.log_error("Failed to create project for arrow test")
+                return False
+                
+            arrow_test_data['project_id'] = project_response['id']
+            self.log_success(f"Arrow test project created: {project_response['name']}")
+            
+            # ============ CREATE SKETCH WITH ARROWS ============
+            # Create metadata with 3 arrows of different strokeWidth values
+            sketch_metadata = {
+                "elements": [
+                    {
+                        "id": "arrow_1",
+                        "type": "arrow",
+                        "data": {
+                            "x1": 100,
+                            "y1": 100,
+                            "x2": 300,
+                            "y2": 100,
+                            "text": "2mm",
+                            "heads": "single"
+                        },
+                        "color": "#FF0000",
+                        "strokeWidth": 2,
+                        "rotation": 0
+                    },
+                    {
+                        "id": "arrow_2", 
+                        "type": "arrow",
+                        "data": {
+                            "x1": 100,
+                            "y1": 200,
+                            "x2": 300,
+                            "y2": 200,
+                            "text": "5mm",
+                            "heads": "double"
+                        },
+                        "color": "#00FF00",
+                        "strokeWidth": 5,
+                        "rotation": 0
+                    },
+                    {
+                        "id": "arrow_3",
+                        "type": "arrow", 
+                        "data": {
+                            "x1": 100,
+                            "y1": 300,
+                            "x2": 300,
+                            "y2": 300,
+                            "text": "8mm",
+                            "heads": "double"
+                        },
+                        "color": "#0000FF",
+                        "strokeWidth": 8,
+                        "rotation": 0
+                    }
+                ],
+                "canvasWidth": 800,
+                "canvasHeight": 600
+            }
+            
+            # Create simple SVG for sketch_data (base64 encoded)
+            svg_content = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                <rect width="800" height="600" fill="white"/>
+                <text x="400" y="50" text-anchor="middle" font-size="20" fill="black">Pfeil-Test Skizze</text>
+            </svg>'''
+            
+            svg_base64 = base64.b64encode(svg_content.encode('utf-8')).decode('utf-8')
+            sketch_data_uri = f"data:image/svg+xml;base64,{svg_base64}"
+            
+            sketch_data = {
+                "project_id": project_response['id'],
+                "sketch_data": sketch_data_uri,
+                "title": "Pfeil-Rendering Test Skizze",
+                "metadata": json.dumps(sketch_metadata)
+            }
+            
+            sketch_response = self.make_request('POST', '/sketches', sketch_data)
+            if not sketch_response:
+                self.log_error("Failed to create sketch for arrow test")
+                return False
+                
+            arrow_test_data['sketch_id'] = sketch_response['id']
+            self.log_success(f"Arrow test sketch created: {sketch_response['title']}")
+            
+            # ============ VERIFY SKETCH METADATA STORAGE ============
+            sketches_response = self.make_request('GET', f'/sketches/project/{project_response["id"]}')
+            if not sketches_response:
+                self.log_error("Failed to retrieve sketches for arrow test")
+                return False
+                
+            if not sketches_response:
+                self.log_error("No sketches found for arrow test")
+                return False
+                
+            saved_sketch = sketches_response[0]
+            saved_metadata = saved_sketch.get('metadata')
+            
+            if not saved_metadata:
+                self.log_error("CRITICAL: Sketch metadata is NULL - arrow elements not saved!")
+                return False
+                
+            try:
+                parsed_metadata = json.loads(saved_metadata)
+                elements = parsed_metadata.get('elements', [])
+                
+                # Verify strokeWidth values are preserved
+                arrow_strokes = []
+                for element in elements:
+                    if element.get('type') == 'arrow':
+                        stroke = element.get('strokeWidth')
+                        arrow_strokes.append(stroke)
+                
+                expected_strokes = [2, 5, 8]
+                if arrow_strokes != expected_strokes:
+                    self.log_error(f"Arrow strokeWidth mismatch: expected {expected_strokes}, got {arrow_strokes}")
+                    return False
+                    
+                self.log_success(f"Arrow metadata saved correctly with strokeWidth values: {arrow_strokes}")
+                
+            except json.JSONDecodeError as e:
+                self.log_error(f"Invalid JSON in sketch metadata: {e}")
+                return False
+            
+            # ============ GENERATE PDF ============
+            import time
+            start_time = time.time()
+            pdf_response = self.make_request('GET', f'/export/pdf/{project_response["id"]}')
+            end_time = time.time()
+            
+            if not pdf_response or 'pdf_data' not in pdf_response:
+                self.log_error("Failed to generate PDF for arrow test")
+                return False
+                
+            pdf_data = pdf_response.get('pdf_data')
+            filename = pdf_response.get('filename', 'arrow_test.pdf')
+            
+            # ============ SAVE PDF LOCALLY ============
+            try:
+                pdf_bytes = base64.b64decode(pdf_data)
+                pdf_size = len(pdf_bytes)
+                
+                # Save to /tmp for manual inspection
+                pdf_path = "/tmp/arrow_test.pdf"
+                with open(pdf_path, 'wb') as f:
+                    f.write(pdf_bytes)
+                    
+                # Verify PDF header
+                if pdf_bytes[:4] == b'%PDF':
+                    self.log_success(f"Arrow PDF generated successfully: {pdf_path} ({pdf_size:,} bytes, {end_time - start_time:.3f}s)")
+                    self.log_success("PDF saved for manual inspection - check 'Skizzen' section for proportional arrow rendering")
+                else:
+                    self.log_error("Generated PDF has invalid format")
+                    return False
+                    
+            except Exception as e:
+                self.log_error(f"Failed to save arrow test PDF: {e}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.log_error(f"Unexpected error in arrow rendering test: {e}")
+            return False
+            
+        finally:
+            # ============ CLEANUP ARROW TEST DATA ============
+            # Delete sketch
+            if arrow_test_data['sketch_id']:
+                self.make_request('DELETE', f'/sketches/{arrow_test_data["sketch_id"]}')
+            
+            # Delete project (cascades to related data)
+            if arrow_test_data['project_id']:
+                self.make_request('DELETE', f'/projects/{arrow_test_data["project_id"]}')
+            
+            # Delete customer
+            if arrow_test_data['customer_id']:
+                self.make_request('DELETE', f'/customers/{arrow_test_data["customer_id"]}')
+
     def test_delete_operations(self):
         """Test DELETE operations (cleanup)"""
         print("\n🔍 Testing DELETE Operations...")

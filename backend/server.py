@@ -964,15 +964,31 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         draw.text((text_x, text_y), text, fill=(*rgb_color, 255), font=font, anchor="mm")
                 
                 elif el_type == 'text':
-                    # Render text
+                    # Render text with dynamic font size and style
                     tx = element.get('x', 0) * scale_x + offset_x
                     ty = element.get('y', 0) * scale_y + offset_y
                     text = el_data.get('text', '')
                     if text:
-                        font_size = max(16, int(20 * uniform_scale))
+                        # Get font properties from element
+                        element_font_size = element.get('fontSize', 20)
+                        font_weight = element.get('fontWeight', 'bold')
+                        font_style = element.get('fontStyle', 'normal')
+                        
+                        # Scale font size
+                        font_size = max(12, int(element_font_size * uniform_scale))
+                        
                         try:
                             from PIL import ImageFont
-                            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                            # Select font file based on weight and style
+                            if font_weight == 'bold' and font_style == 'italic':
+                                font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
+                            elif font_weight == 'bold':
+                                font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+                            elif font_style == 'italic':
+                                font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"
+                            else:
+                                font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                            font = ImageFont.truetype(font_file, font_size)
                         except:
                             font = ImageFont.load_default()
                         draw.text((tx, ty), text, fill=(*rgb_color, 255), font=font)

@@ -537,11 +537,12 @@ export default function DrawSketchScreen() {
       addToHistory([...elements, newElement]);
       setCurrentPath('');
     } else if (drawMode === 'polygon' && currentPath && currentPath.length > 0) {
-      // Close the polygon path by adding 'Z'
+      // Close the polygon path by adding 'Z' and simplify lines
+      const simplifiedPath = simplifyPath(currentPath, 10);
       const newElement: DrawElement = {
         id: generateId(),
         type: 'polygon',
-        data: currentPath + ' Z',
+        data: simplifiedPath + ' Z',
         color: drawColor,
         strokeWidth,
         rotation: 0,

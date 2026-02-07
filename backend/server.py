@@ -859,10 +859,9 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     y1 = el_data.get('y1', 0) * scale_y + offset_y
                     x2 = el_data.get('x2', 0) * scale_x + offset_x
                     y2 = el_data.get('y2', 0) * scale_y + offset_y
-                    y2 = el_data.get('y2', 0) * scale_y
                     text = el_data.get('text', '')
                     heads = el_data.get('heads', 'single')
-                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
                     
                     # Calculate angle of the arrow
                     angle = math.atan2(y2 - y1, x2 - x1)
@@ -918,7 +917,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         text_y = mid_y + text_offset * math.sin(perp_angle)
                         
                         # Draw text background for better readability
-                        font_size = max(12, int(14 * max(scale_x, scale_y)))
+                        font_size = max(12, int(14 * uniform_scale))
                         try:
                             from PIL import ImageFont
                             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
@@ -936,11 +935,17 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                 
                 elif el_type == 'text':
                     # Render text
-                    tx = element.get('x', 0) * scale_x
-                    ty = element.get('y', 0) * scale_y
+                    tx = element.get('x', 0) * scale_x + offset_x
+                    ty = element.get('y', 0) * scale_y + offset_y
                     text = el_data.get('text', '')
                     if text:
-                        draw.text((tx, ty), text, fill=(*rgb_color, 255))
+                        font_size = max(16, int(20 * uniform_scale))
+                        try:
+                            from PIL import ImageFont
+                            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                        except:
+                            font = ImageFont.load_default()
+                        draw.text((tx, ty), text, fill=(*rgb_color, 255), font=font)
             
             except Exception as e:
                 logging.error(f"Error rendering element {el_type}: {e}")

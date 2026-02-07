@@ -2433,4 +2433,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  sliderContainer: {
+    marginBottom: 16,
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
+  sliderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1976d2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sliderButtonText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    height: '100%',
+    backgroundColor: '#1976d2',
+    borderRadius: 4,
+  },
+  fontStyleContainer: {
+    marginBottom: 16,
+  },
+  fontStyleButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  fontStyleButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  fontStyleButtonActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  fontStyleButtonText: {
+    fontSize: 20,
+    color: '#333',
+  },
 });

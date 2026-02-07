@@ -7,6 +7,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,9 +18,16 @@ import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
+interface SubItem {
+  text: string;
+  checked: boolean;
+}
+
 interface ChecklistItem {
   text: string;
   checked: boolean;
+  note?: string;
+  subItems?: SubItem[];
 }
 
 interface Checklist {
@@ -34,6 +44,7 @@ export default function EditChecklistScreen() {
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadChecklist();
@@ -41,7 +52,6 @@ export default function EditChecklistScreen() {
 
   const loadChecklist = async () => {
     try {
-      // First try to get all projects to find which project has this checklist
       const projectsRes = await axios.get(`${API_URL}/api/projects`);
       let foundChecklist = null;
       
@@ -55,7 +65,22 @@ export default function EditChecklistScreen() {
       }
       
       if (foundChecklist) {
-        setChecklist(foundChecklist);
+        // Initialize subItems and note if not present
+        const items = foundChecklist.items.map((item: ChecklistItem) => ({
+          ...item,
+          note: item.note || '',
+          subItems: item.subItems || [],
+        }));
+        setChecklist({ ...foundChecklist, items });
+        
+        // Expand items that are checked
+        const expanded = new Set<number>();
+        items.forEach((item: ChecklistItem, index: number) => {
+          if (item.checked) {
+            expanded.add(index);
+          }
+        });
+        setExpandedItems(expanded);
       } else {
         Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');
       }
@@ -73,6 +98,43 @@ export default function EditChecklistScreen() {
     const newItems = [...checklist.items];
     newItems[index].checked = !newItems[index].checked;
     setChecklist({ ...checklist, items: newItems });
+    
+    // Toggle expanded state
+    const newExpanded = new Set(expandedItems);
+    if (newItems[index].checked) {
+      newExpanded.add(index);
+    } else {
+      newExpanded.delete(index);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const toggleSubItem = (itemIndex: number, subIndex: number) => {
+    if (!checklist) return;
+    
+    const newItems = [...checklist.items];
+    if (newItems[itemIndex].subItems) {
+      newItems[itemIndex].subItems![subIndex].checked = !newItems[itemIndex].subItems![subIndex].checked;
+      setChecklist({ ...checklist, items: newItems });
+    }
+  };
+
+  const updateNote = (index: number, note: string) => {
+    if (!checklist) return;
+    
+    const newItems = [...checklist.items];
+    newItems[index].note = note;
+    setChecklist({ ...checklist, items: newItems });
+  };
+
+  const toggleExpand = (index: number) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedItems(newExpanded);
   };
 
   const handleSave = async () => {
@@ -113,7 +175,10 @@ export default function EditChecklistScreen() {
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{checklist.template_name}</Text>
         <View style={styles.progressBar}>
@@ -131,27 +196,100 @@ export default function EditChecklistScreen() {
 
       <ScrollView style={styles.checklistContainer}>
         <View style={styles.checklistContent}>
-          {checklist.items.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.checklistItem}
-              onPress={() => toggleItem(index)}
-            >
-              <Ionicons
-                name={item.checked ? 'checkbox' : 'square-outline'}
-                size={28}
-                color={item.checked ? '#4caf50' : '#666'}
-              />
-              <Text
-                style={[
-                  styles.checklistText,
-                  item.checked && styles.checklistTextChecked,
-                ]}
-              >
-                {item.text}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {checklist.items.map((item, index) => {
+            const isExpanded = expandedItems.has(index);
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            
+            return (
+              <View key={index} style={styles.itemWrapper}>
+                {/* Main Item */}
+                <TouchableOpacity
+                  style={[
+                    styles.checklistItem,
+                    item.checked && styles.checklistItemChecked,
+                  ]}
+                  onPress={() => toggleItem(index)}
+                >
+                  <Ionicons
+                    name={item.checked ? 'checkbox' : 'square-outline'}
+                    size={28}
+                    color={item.checked ? '#4caf50' : '#666'}
+                  />
+                  <Text
+                    style={[
+                      styles.checklistText,
+                      item.checked && styles.checklistTextChecked,
+                    ]}
+                  >
+                    {item.text}
+                  </Text>
+                  {(hasSubItems || item.checked) && (
+                    <TouchableOpacity
+                      onPress={() => toggleExpand(index)}
+                      style={styles.expandButton}
+                    >
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={24}
+                        color="#666"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+
+                {/* Expanded Content - Sub Items & Note */}
+                {isExpanded && (
+                  <View style={styles.expandedContent}>
+                    {/* Sub Items */}
+                    {hasSubItems && (
+                      <View style={styles.subItemsContainer}>
+                        {item.subItems!.map((subItem, subIndex) => (
+                          <TouchableOpacity
+                            key={subIndex}
+                            style={styles.subItem}
+                            onPress={() => toggleSubItem(index, subIndex)}
+                          >
+                            <View style={styles.subItemConnector}>
+                              <View style={styles.connectorLine} />
+                            </View>
+                            <Ionicons
+                              name={subItem.checked ? 'checkbox' : 'square-outline'}
+                              size={22}
+                              color={subItem.checked ? '#4caf50' : '#999'}
+                            />
+                            <Text
+                              style={[
+                                styles.subItemText,
+                                subItem.checked && styles.subItemTextChecked,
+                              ]}
+                            >
+                              {subItem.text}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Note Field */}
+                    <View style={styles.noteContainer}>
+                      <View style={styles.noteHeader}>
+                        <Ionicons name="create-outline" size={18} color="#666" />
+                        <Text style={styles.noteLabel}>Notiz</Text>
+                      </View>
+                      <TextInput
+                        style={styles.noteInput}
+                        placeholder="Notiz hinzufügen..."
+                        value={item.note || ''}
+                        onChangeText={(text) => updateNote(index, text)}
+                        multiline
+                        numberOfLines={3}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -167,7 +305,7 @@ export default function EditChecklistScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -216,13 +354,15 @@ const styles = StyleSheet.create({
   checklistContent: {
     padding: 16,
   },
+  itemWrapper: {
+    marginBottom: 12,
+  },
   checklistItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
     gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -230,14 +370,82 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  checklistItemChecked: {
+    backgroundColor: '#f8fff8',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
   checklistText: {
     flex: 1,
     fontSize: 16,
     color: '#333',
   },
   checklistTextChecked: {
+    color: '#4caf50',
+    fontWeight: '600',
+  },
+  expandButton: {
+    padding: 4,
+  },
+  expandedContent: {
+    marginTop: 8,
+    marginLeft: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1976d2',
+  },
+  subItemsContainer: {
+    marginBottom: 12,
+  },
+  subItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  subItemConnector: {
+    width: 16,
+    alignItems: 'center',
+  },
+  connectorLine: {
+    width: 12,
+    height: 2,
+    backgroundColor: '#ddd',
+  },
+  subItemText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#666',
+  },
+  subItemTextChecked: {
     textDecorationLine: 'line-through',
     color: '#999',
+  },
+  noteContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 12,
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  noteLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  noteInput: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   footer: {
     backgroundColor: '#fff',

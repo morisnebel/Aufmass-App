@@ -300,11 +300,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Comprehensive Aufmaß-App Testing Completed"
+    - "PDF Export with Annotations and Sketches"
   stuck_tasks:
     - "Add Customer Button Functionality"
-  test_all: true
-  test_priority: "completed"
+  test_all: false
+  test_priority: "high_first"
 
 agent_communication:
     - agent: "main"

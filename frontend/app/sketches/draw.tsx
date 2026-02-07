@@ -198,9 +198,20 @@ export default function DrawSketchScreen() {
   const [showArrowModal, setShowArrowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditArrowModal, setShowEditArrowModal] = useState(false);
+  const [showEditTextModal, setShowEditTextModal] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
+  
+  // Edit state for text and arrow
+  const [editFontSize, setEditFontSize] = useState(20);
+  const [editStrokeWidth, setEditStrokeWidth] = useState(3);
+  const [editFontWeight, setEditFontWeight] = useState<'normal' | 'bold'>('bold');
+  const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
+  const [editArrowFontSize, setEditArrowFontSize] = useState(14);
+  
+  // Double tap detection
+  const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });
   
   // No longer using background image - images are now elements
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);

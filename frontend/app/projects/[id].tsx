@@ -120,6 +120,7 @@ export default function ProjectDetailScreen() {
       setPhotos(photosRes.data);
       setSketches(sketchesRes.data);
       setChecklists(checklistsRes.data);
+      setRemarks(projectRes.data.remarks || '');
 
       if (projectRes.data.customer_id) {
         const customerRes = await axios.get(`${API_URL}/api/customers/${projectRes.data.customer_id}`);

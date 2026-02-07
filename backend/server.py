@@ -841,9 +841,11 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     # Draw main line
                     draw.line([(x1, y1), (x2, y2)], fill=(*rgb_color, 255), width=scaled_stroke)
                     
+                    # Arrow size proportional to stroke width
+                    arrow_size = max(8, scaled_stroke * 4) * max(scale_x, scale_y)
+                    
                     # Draw arrowhead at end
                     angle = math.atan2(y2 - y1, x2 - x1)
-                    arrow_size = 10 * max(scale_x, scale_y)
                     end_x1 = x2 - arrow_size * math.cos(angle - math.pi / 6)
                     end_y1 = y2 - arrow_size * math.sin(angle - math.pi / 6)
                     end_x2 = x2 - arrow_size * math.cos(angle + math.pi / 6)
@@ -858,12 +860,33 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         start_y2 = y1 + arrow_size * math.sin(angle + math.pi / 6)
                         draw.polygon([(x1, y1), (start_x1, start_y1), (start_x2, start_y2)], fill=(*rgb_color, 255))
                     
-                    # Draw text label
+                    # Draw text label (measurement) with larger font
                     if text:
                         mid_x = (x1 + x2) / 2
-                        mid_y = (y1 + y2) / 2 - 15
-                        # Use default font
-                        draw.text((mid_x, mid_y), text, fill=(*rgb_color, 255), anchor="mm")
+                        mid_y = (y1 + y2) / 2
+                        
+                        # Calculate text position perpendicular to line
+                        perp_angle = angle + math.pi / 2
+                        text_offset = 20 * max(scale_x, scale_y)
+                        text_x = mid_x + text_offset * math.cos(perp_angle)
+                        text_y = mid_y + text_offset * math.sin(perp_angle)
+                        
+                        # Draw text background for better readability
+                        font_size = max(12, int(14 * max(scale_x, scale_y)))
+                        try:
+                            from PIL import ImageFont
+                            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+                        except:
+                            font = ImageFont.load_default()
+                        
+                        # Get text bounding box
+                        bbox = draw.textbbox((text_x, text_y), text, font=font, anchor="mm")
+                        padding = 4
+                        draw.rectangle(
+                            [bbox[0] - padding, bbox[1] - padding, bbox[2] + padding, bbox[3] + padding],
+                            fill=(255, 255, 255, 220)
+                        )
+                        draw.text((text_x, text_y), text, fill=(*rgb_color, 255), font=font, anchor="mm")
                 
                 elif el_type == 'text':
                     # Render text

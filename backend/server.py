@@ -628,15 +628,21 @@ async def export_project_pdf(project_id: str):
                 pass
     
     # Checklists
+    logging.info(f"PDF Export Debug: Found {len(checklists)} checklists for project {project_id}")
     if checklists:
+        logging.info(f"PDF Export Debug: Adding checklists to PDF")
         elements.append(PageBreak())
         elements.append(Paragraph("Checklisten", styles['Heading2']))
-        for checklist in checklists:
+        for i, checklist in enumerate(checklists):
+            logging.info(f"PDF Export Debug: Processing checklist {i}: {checklist.get('template_name', 'Unknown')}")
             elements.append(Paragraph(checklist['template_name'], styles['Heading3']))
-            for item in checklist['items']:
+            for j, item in enumerate(checklist['items']):
                 status = '✓' if item['checked'] else '○'
+                logging.info(f"PDF Export Debug: Adding item {j}: {status} {item['text']}")
                 elements.append(Paragraph(f"{status} {item['text']}", styles['Normal']))
             elements.append(Spacer(1, 10))
+    else:
+        logging.warning(f"PDF Export Debug: No checklists found for project {project_id}")
     
     doc.build(elements)
     pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')

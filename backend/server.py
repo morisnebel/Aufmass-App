@@ -104,6 +104,7 @@ class Project(BaseModel):
     customer_id: str
     name: str
     description: Optional[str] = None
+    remarks: Optional[str] = None  # Zusätzliche Bemerkungen
     status: str = "active"  # active, completed, archived
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

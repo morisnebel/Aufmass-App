@@ -342,6 +342,45 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Take photo and insert on canvas
+  const takePhotoAndInsert = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          showAlert('Berechtigung erforderlich', 'Kamera-Zugriff wird benötigt');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        const newElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: base64Image },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 100,
+          y: 100,
+          width: 250,
+          height: 250,
+          rotation: 0,
+        };
+        addToHistory([...elements, newElement]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      showAlert('Fehler', 'Foto konnte nicht aufgenommen werden');
+    }
+  };
+
   // Touch handlers
   const onTouchStart = (event: any) => {
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
@@ -355,6 +394,9 @@ export default function DrawSketchScreen() {
       setPendingPosition({ x: locationX, y: locationY });
       setShowTextModal(true);
     } else if (drawMode === 'pen') {
+      setCurrentPath(`M ${locationX} ${locationY}`);
+    } else if (drawMode === 'polygon') {
+      // Start polygon drawing
       setCurrentPath(`M ${locationX} ${locationY}`);
     } else {
       // Other drawing modes
@@ -370,6 +412,8 @@ export default function DrawSketchScreen() {
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
     } else if (drawMode === 'pen' && currentPath) {
+      setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+    } else if (drawMode === 'polygon' && currentPath) {
       setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
     } else if (startPoint && drawMode !== 'text') {
       // Preview for other shapes

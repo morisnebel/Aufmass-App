@@ -65,7 +65,7 @@ export default function DrawSketchScreen() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<DrawMode>('pen');
-  const [drawColor, setDrawColor] = useState('#000000');
+  const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(false);
   
@@ -96,6 +96,9 @@ export default function DrawSketchScreen() {
   
   // Background
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  
+  // Start screen - show image selection for new sketches
+  const [showStartScreen, setShowStartScreen] = useState(!sketchId);
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
@@ -103,6 +106,7 @@ export default function DrawSketchScreen() {
       if (sketchId) {
         console.log('useFocusEffect: Loading sketch', sketchId);
         loadSketch();
+        setShowStartScreen(false);
       }
     }, [sketchId])
   );

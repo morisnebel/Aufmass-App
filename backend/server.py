@@ -634,71 +634,222 @@ def convert_svg_sketch_to_png(sketch_data_base64: str) -> BytesIO:
             return None
 
 
-# Helper function to render sketch with background image
+# Helper function to render sketch with multiple images and drawing elements
 def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -> BytesIO:
     """
-    Renders a sketch with its background image (if present) from metadata.
-    The SVG drawing is overlaid on top of the background image.
+    Renders a sketch with all its elements (images, shapes, text) from metadata.
+    Elements are rendered in order (first element at bottom, last at top).
     Returns a BytesIO object with the final PNG data.
     """
     try:
-        # Parse metadata to get background image
-        background_image = None
-        if metadata_json:
-            try:
-                metadata = json.loads(metadata_json)
-                background_image = metadata.get('backgroundImage')
-            except:
-                pass
-        
-        # If no background image, just convert the SVG sketch
-        if not background_image:
-            return convert_svg_sketch_to_png(sketch_data_base64)
-        
-        # Decode background image
-        if ',' in background_image:
-            bg_data = base64.b64decode(background_image.split(',')[1])
-        else:
-            bg_data = base64.b64decode(background_image)
-        
-        # Open background image with Pillow
-        bg_image = PILImage.open(BytesIO(bg_data))
-        
-        # Convert to RGBA for compositing
-        if bg_image.mode != 'RGBA':
-            bg_image = bg_image.convert('RGBA')
-        
-        # Resize background to a standard size for PDF
+        # Output dimensions for PDF
         output_width = 800
         output_height = 600
         
-        # Calculate aspect-preserving resize
-        bg_aspect = bg_image.width / bg_image.height
-        target_aspect = output_width / output_height
-        
-        if bg_aspect > target_aspect:
-            # Image is wider, fit to width
-            new_width = output_width
-            new_height = int(output_width / bg_aspect)
-        else:
-            # Image is taller, fit to height
-            new_height = output_height
-            new_width = int(output_height * bg_aspect)
-        
-        bg_image = bg_image.resize((new_width, new_height), PILImage.Resampling.LANCZOS)
-        
         # Create output canvas
         canvas = PILImage.new('RGBA', (output_width, output_height), (255, 255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
         
-        # Center the background image on the canvas
-        offset_x = (output_width - new_width) // 2
-        offset_y = (output_height - new_height) // 2
-        canvas.paste(bg_image, (offset_x, offset_y))
+        # Parse metadata to get elements
+        elements = []
+        background_image = None
+        original_canvas_width = None
+        original_canvas_height = None
         
-        # Now process the SVG sketch and overlay it
-        if sketch_data_base64:
+        if metadata_json:
             try:
-                # Decode SVG
+                metadata = json.loads(metadata_json)
+                elements = metadata.get('elements', [])
+                background_image = metadata.get('backgroundImage')
+                # Try to get original canvas dimensions for scaling
+                original_canvas_width = metadata.get('canvasWidth')
+                original_canvas_height = metadata.get('canvasHeight')
+            except:
+                pass
+        
+        # Calculate scale factors if we have original dimensions
+        # Default to common device dimensions if not provided
+        if not original_canvas_width:
+            original_canvas_width = 800
+        if not original_canvas_height:
+            original_canvas_height = 600
+            
+        scale_x = output_width / original_canvas_width
+        scale_y = output_height / original_canvas_height
+        
+        # Render old-style background image if present (for backwards compatibility)
+        if background_image and not elements:
+            try:
+                if ',' in background_image:
+                    bg_data = base64.b64decode(background_image.split(',')[1])
+                else:
+                    bg_data = base64.b64decode(background_image)
+                
+                bg_image = PILImage.open(BytesIO(bg_data))
+                if bg_image.mode != 'RGBA':
+                    bg_image = bg_image.convert('RGBA')
+                
+                # Resize to fit canvas
+                bg_image = bg_image.resize((output_width, output_height), PILImage.Resampling.LANCZOS)
+                canvas.paste(bg_image, (0, 0))
+            except Exception as e:
+                logging.error(f"Error rendering background image: {e}")
+        
+        # Render all elements in order
+        for element in elements:
+            el_type = element.get('type')
+            el_data = element.get('data', {})
+            el_color = element.get('color', '#000000')
+            el_stroke_width = element.get('strokeWidth', 2)
+            el_rotation = element.get('rotation', 0)
+            
+            # Convert hex color to RGB
+            try:
+                hex_color = el_color.lstrip('#')
+                rgb_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            except:
+                rgb_color = (0, 0, 0)
+            
+            try:
+                if el_type == 'image':
+                    # Render image element
+                    img_uri = el_data.get('uri', '')
+                    if img_uri:
+                        # Decode base64 image
+                        if ',' in img_uri:
+                            img_data = base64.b64decode(img_uri.split(',')[1])
+                        else:
+                            img_data = base64.b64decode(img_uri)
+                        
+                        img = PILImage.open(BytesIO(img_data))
+                        if img.mode != 'RGBA':
+                            img = img.convert('RGBA')
+                        
+                        # Get position and size, apply scaling
+                        x = int((element.get('x', 0)) * scale_x)
+                        y = int((element.get('y', 0)) * scale_y)
+                        w = int((element.get('width', 100)) * scale_x)
+                        h = int((element.get('height', 100)) * scale_y)
+                        
+                        # Resize image
+                        img = img.resize((max(1, w), max(1, h)), PILImage.Resampling.LANCZOS)
+                        
+                        # Apply rotation if needed
+                        if el_rotation and abs(el_rotation) > 0.5:
+                            img = img.rotate(-el_rotation, expand=True, resample=PILImage.Resampling.BICUBIC)
+                            # Recalculate position after rotation
+                            new_w, new_h = img.size
+                            x = x - (new_w - w) // 2
+                            y = y - (new_h - h) // 2
+                        
+                        # Paste onto canvas
+                        canvas.paste(img, (x, y), img if img.mode == 'RGBA' else None)
+                
+                elif el_type == 'path':
+                    # Render freehand path
+                    path_str = el_data if isinstance(el_data, str) else ''
+                    points = []
+                    parts = path_str.replace('M', ' M ').replace('L', ' L ').split()
+                    
+                    i = 0
+                    while i < len(parts):
+                        if parts[i] in ['M', 'L']:
+                            if i + 2 < len(parts):
+                                try:
+                                    px = float(parts[i + 1]) * scale_x
+                                    py = float(parts[i + 2]) * scale_y
+                                    points.append((px, py))
+                                    i += 3
+                                except:
+                                    i += 1
+                            else:
+                                i += 1
+                        else:
+                            i += 1
+                    
+                    if len(points) >= 2:
+                        scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                        for j in range(len(points) - 1):
+                            draw.line([points[j], points[j + 1]], fill=(*rgb_color, 255), width=scaled_stroke)
+                
+                elif el_type == 'line':
+                    # Render straight line
+                    x1 = el_data.get('x1', 0) * scale_x
+                    y1 = el_data.get('y1', 0) * scale_y
+                    x2 = el_data.get('x2', 0) * scale_x
+                    y2 = el_data.get('y2', 0) * scale_y
+                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    draw.line([(x1, y1), (x2, y2)], fill=(*rgb_color, 255), width=scaled_stroke)
+                
+                elif el_type == 'circle':
+                    # Render circle
+                    cx = el_data.get('cx', 0) * scale_x
+                    cy = el_data.get('cy', 0) * scale_y
+                    r = el_data.get('r', 10) * min(scale_x, scale_y)
+                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    draw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], outline=(*rgb_color, 255), width=scaled_stroke)
+                
+                elif el_type == 'rect':
+                    # Render rectangle
+                    rx = el_data.get('x', 0) * scale_x
+                    ry = el_data.get('y', 0) * scale_y
+                    rw = el_data.get('width', 50) * scale_x
+                    rh = el_data.get('height', 50) * scale_y
+                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    draw.rectangle([(rx, ry), (rx + rw, ry + rh)], outline=(*rgb_color, 255), width=scaled_stroke)
+                
+                elif el_type == 'arrow':
+                    # Render arrow with arrowheads
+                    x1 = el_data.get('x1', 0) * scale_x
+                    y1 = el_data.get('y1', 0) * scale_y
+                    x2 = el_data.get('x2', 0) * scale_x
+                    y2 = el_data.get('y2', 0) * scale_y
+                    text = el_data.get('text', '')
+                    heads = el_data.get('heads', 'single')
+                    scaled_stroke = max(1, int(el_stroke_width * max(scale_x, scale_y)))
+                    
+                    # Draw main line
+                    draw.line([(x1, y1), (x2, y2)], fill=(*rgb_color, 255), width=scaled_stroke)
+                    
+                    # Draw arrowhead at end
+                    angle = math.atan2(y2 - y1, x2 - x1)
+                    arrow_size = 10 * max(scale_x, scale_y)
+                    end_x1 = x2 - arrow_size * math.cos(angle - math.pi / 6)
+                    end_y1 = y2 - arrow_size * math.sin(angle - math.pi / 6)
+                    end_x2 = x2 - arrow_size * math.cos(angle + math.pi / 6)
+                    end_y2 = y2 - arrow_size * math.sin(angle + math.pi / 6)
+                    draw.polygon([(x2, y2), (end_x1, end_y1), (end_x2, end_y2)], fill=(*rgb_color, 255))
+                    
+                    # Draw arrowhead at start if double
+                    if heads == 'double':
+                        start_x1 = x1 + arrow_size * math.cos(angle - math.pi / 6)
+                        start_y1 = y1 + arrow_size * math.sin(angle - math.pi / 6)
+                        start_x2 = x1 + arrow_size * math.cos(angle + math.pi / 6)
+                        start_y2 = y1 + arrow_size * math.sin(angle + math.pi / 6)
+                        draw.polygon([(x1, y1), (start_x1, start_y1), (start_x2, start_y2)], fill=(*rgb_color, 255))
+                    
+                    # Draw text label
+                    if text:
+                        mid_x = (x1 + x2) / 2
+                        mid_y = (y1 + y2) / 2 - 15
+                        # Use default font
+                        draw.text((mid_x, mid_y), text, fill=(*rgb_color, 255), anchor="mm")
+                
+                elif el_type == 'text':
+                    # Render text
+                    tx = element.get('x', 0) * scale_x
+                    ty = element.get('y', 0) * scale_y
+                    text = el_data.get('text', '')
+                    if text:
+                        draw.text((tx, ty), text, fill=(*rgb_color, 255))
+            
+            except Exception as e:
+                logging.error(f"Error rendering element {el_type}: {e}")
+                continue
+        
+        # Overlay SVG preview data if present (for backwards compatibility)
+        if sketch_data_base64 and not elements:
+            try:
                 if ',' in sketch_data_base64:
                     header, data = sketch_data_base64.split(',', 1)
                     svg_bytes = base64.b64decode(data)
@@ -708,7 +859,6 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                 svg_str = svg_bytes.decode('utf-8', errors='ignore')
                 
                 if '<svg' in svg_str.lower():
-                    # Convert SVG to PNG with transparency
                     svg_png_data = cairosvg.svg2png(
                         bytestring=svg_bytes, 
                         output_width=output_width, 
@@ -716,14 +866,12 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     )
                     svg_image = PILImage.open(BytesIO(svg_png_data))
                     
-                    # Ensure SVG image has alpha channel
                     if svg_image.mode != 'RGBA':
                         svg_image = svg_image.convert('RGBA')
                     
-                    # Composite SVG drawing on top of background
                     canvas = PILImage.alpha_composite(canvas, svg_image)
             except Exception as e:
-                logging.error(f"Error overlaying SVG on background: {e}")
+                logging.error(f"Error overlaying SVG: {e}")
         
         # Convert to RGB for PDF compatibility
         if canvas.mode == 'RGBA':
@@ -738,7 +886,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
         return output
         
     except Exception as e:
-        logging.error(f"Error rendering sketch with background: {e}")
+        logging.error(f"Error rendering sketch: {e}")
         # Fallback to simple SVG conversion
         return convert_svg_sketch_to_png(sketch_data_base64)
 

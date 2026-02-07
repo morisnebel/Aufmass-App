@@ -331,6 +331,141 @@ async def delete_checklist(checklist_id: str):
         raise HTTPException(status_code=404, detail="Checklist not found")
     return {"message": "Checklist deleted"}
 
+# Helper function to draw annotations on a photo
+def draw_annotations_on_photo(image_data_base64: str, annotations_json: str) -> BytesIO:
+    """
+    Takes a base64 image and JSON annotations, draws the annotations on the image,
+    and returns the result as a BytesIO object.
+    """
+    try:
+        # Decode the base64 image
+        if ',' in image_data_base64:
+            img_data = base64.b64decode(image_data_base64.split(',')[1])
+        else:
+            img_data = base64.b64decode(image_data_base64)
+        
+        # Open with Pillow
+        pil_image = PILImage.open(BytesIO(img_data))
+        
+        # Convert to RGBA if needed for proper drawing
+        if pil_image.mode != 'RGBA':
+            pil_image = pil_image.convert('RGBA')
+        
+        # Parse annotations
+        annotations = json.loads(annotations_json)
+        paths = annotations.get('paths', [])
+        
+        if paths:
+            # Create a transparent overlay for drawing
+            overlay = PILImage.new('RGBA', pil_image.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(overlay)
+            
+            for path_obj in paths:
+                path_str = path_obj.get('path', '')
+                color = path_obj.get('color', '#FF0000')
+                stroke_width = path_obj.get('strokeWidth', 3)
+                
+                # Parse SVG path commands (M = moveto, L = lineto)
+                # Format: "M x y L x y L x y..."
+                points = []
+                parts = path_str.replace('M', ' M ').replace('L', ' L ').split()
+                
+                i = 0
+                while i < len(parts):
+                    if parts[i] in ['M', 'L']:
+                        if i + 2 < len(parts):
+                            try:
+                                x = float(parts[i + 1])
+                                y = float(parts[i + 2])
+                                points.append((x, y))
+                                i += 3
+                            except ValueError:
+                                i += 1
+                        else:
+                            i += 1
+                    else:
+                        i += 1
+                
+                # Convert hex color to RGB tuple
+                hex_color = color.lstrip('#')
+                try:
+                    rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                except:
+                    rgb = (255, 0, 0)  # Default to red
+                
+                # Draw lines between consecutive points
+                if len(points) >= 2:
+                    for j in range(len(points) - 1):
+                        draw.line(
+                            [points[j], points[j + 1]],
+                            fill=(*rgb, 255),
+                            width=max(1, int(stroke_width))
+                        )
+            
+            # Composite the overlay onto the original image
+            pil_image = PILImage.alpha_composite(pil_image, overlay)
+        
+        # Convert back to RGB for PDF compatibility
+        if pil_image.mode == 'RGBA':
+            background = PILImage.new('RGB', pil_image.size, (255, 255, 255))
+            background.paste(pil_image, mask=pil_image.split()[3])
+            pil_image = background
+        
+        # Save to BytesIO
+        output = BytesIO()
+        pil_image.save(output, format='PNG')
+        output.seek(0)
+        return output
+        
+    except Exception as e:
+        logging.error(f"Error drawing annotations: {e}")
+        # Return original image if annotation drawing fails
+        if ',' in image_data_base64:
+            img_data = base64.b64decode(image_data_base64.split(',')[1])
+        else:
+            img_data = base64.b64decode(image_data_base64)
+        return BytesIO(img_data)
+
+
+# Helper function to convert SVG sketch to PNG
+def convert_svg_sketch_to_png(sketch_data_base64: str) -> BytesIO:
+    """
+    Takes a base64 SVG sketch and converts it to PNG using cairosvg.
+    Returns a BytesIO object with the PNG data.
+    """
+    try:
+        # Decode base64 SVG
+        if ',' in sketch_data_base64:
+            # Handle data URI format: data:image/svg+xml;base64,....
+            header, data = sketch_data_base64.split(',', 1)
+            svg_bytes = base64.b64decode(data)
+        else:
+            svg_bytes = base64.b64decode(sketch_data_base64)
+        
+        # Check if it's actually SVG or already PNG/JPEG
+        svg_str = svg_bytes.decode('utf-8', errors='ignore')
+        
+        if '<svg' in svg_str.lower():
+            # It's SVG, convert to PNG
+            png_data = cairosvg.svg2png(bytestring=svg_bytes, output_width=800, output_height=600)
+            return BytesIO(png_data)
+        else:
+            # It might already be a raster image, return as is
+            return BytesIO(svg_bytes)
+            
+    except Exception as e:
+        logging.error(f"Error converting SVG to PNG: {e}")
+        # Try to return the original data as fallback
+        try:
+            if ',' in sketch_data_base64:
+                img_data = base64.b64decode(sketch_data_base64.split(',')[1])
+            else:
+                img_data = base64.b64decode(sketch_data_base64)
+            return BytesIO(img_data)
+        except:
+            return None
+
+
 # PDF Export
 @api_router.get("/export/pdf/{project_id}")
 async def export_project_pdf(project_id: str):
@@ -393,34 +528,57 @@ async def export_project_pdf(project_id: str):
                 elements.append(Paragraph(f"Notizen: {roof['notes']}", styles['Normal']))
             elements.append(Spacer(1, 10))
     
-    # Photos
+    # Photos with annotations
     if photos:
         elements.append(PageBreak())
         elements.append(Paragraph("Fotos", styles['Heading2']))
         for i, photo in enumerate(photos):
             try:
-                img_data = base64.b64decode(photo['image_data'].split(',')[1] if ',' in photo['image_data'] else photo['image_data'])
-                img = RLImage(BytesIO(img_data), width=150*mm, height=100*mm)
-                elements.append(img)
-                if photo.get('description'):
-                    elements.append(Paragraph(photo['description'], styles['Normal']))
-                elements.append(Spacer(1, 10))
-            except:
+                image_data = photo.get('image_data', '')
+                annotations = photo.get('annotations', '')
+                
+                # Check if there are annotations to draw
+                if annotations and annotations.strip():
+                    # Draw annotations on the photo
+                    img_buffer = draw_annotations_on_photo(image_data, annotations)
+                else:
+                    # No annotations, use original image
+                    if ',' in image_data:
+                        img_data = base64.b64decode(image_data.split(',')[1])
+                    else:
+                        img_data = base64.b64decode(image_data)
+                    img_buffer = BytesIO(img_data)
+                
+                if img_buffer:
+                    img = RLImage(img_buffer, width=150*mm, height=100*mm)
+                    elements.append(img)
+                    if photo.get('description'):
+                        elements.append(Paragraph(photo['description'], styles['Normal']))
+                    elements.append(Spacer(1, 10))
+            except Exception as e:
+                logging.error(f"Error processing photo {i}: {e}")
                 pass
     
-    # Sketches
+    # Sketches (convert SVG to PNG if needed)
     if sketches:
         elements.append(PageBreak())
         elements.append(Paragraph("Skizzen", styles['Heading2']))
-        for sketch in sketches:
+        for i, sketch in enumerate(sketches):
             try:
                 if sketch.get('title'):
                     elements.append(Paragraph(sketch['title'], styles['Heading3']))
-                img_data = base64.b64decode(sketch['sketch_data'].split(',')[1] if ',' in sketch['sketch_data'] else sketch['sketch_data'])
-                img = RLImage(BytesIO(img_data), width=150*mm, height=100*mm)
-                elements.append(img)
-                elements.append(Spacer(1, 10))
-            except:
+                
+                sketch_data = sketch.get('sketch_data', '')
+                if sketch_data:
+                    # Convert SVG to PNG (or use as-is if already raster)
+                    img_buffer = convert_svg_sketch_to_png(sketch_data)
+                    
+                    if img_buffer:
+                        img = RLImage(img_buffer, width=150*mm, height=100*mm)
+                        elements.append(img)
+                        elements.append(Spacer(1, 10))
+            except Exception as e:
+                logging.error(f"Error processing sketch {i}: {e}")
                 pass
     
     # Checklists

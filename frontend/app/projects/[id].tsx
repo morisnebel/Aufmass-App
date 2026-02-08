@@ -113,11 +113,13 @@ export default function ProjectDetailScreen() {
   // Bauherr edit fields (separate)
   const [editBauherrName, setEditBauherrName] = useState('');
   const [editBauherrPhone, setEditBauherrPhone] = useState('');
+  const [editBauherrMobile, setEditBauherrMobile] = useState('');
   const [editBauherrEmail, setEditBauherrEmail] = useState('');
   const [editBauherrStreet, setEditBauherrStreet] = useState('');
   const [editBauherrPlz, setEditBauherrPlz] = useState('');
   const [editBauherrCity, setEditBauherrCity] = useState('');
   // Objektadresse edit fields (separate)
+  const [editObjektName, setEditObjektName] = useState('');
   const [editObjektStreet, setEditObjektStreet] = useState('');
   const [editObjektPlz, setEditObjektPlz] = useState('');
   const [editObjektCity, setEditObjektCity] = useState('');

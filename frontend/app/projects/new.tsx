@@ -620,7 +620,10 @@ export default function NewProjectScreen() {
                   setNewCustomerName('');
                   setNewCustomerEmail('');
                   setNewCustomerPhone('');
-                  setNewCustomerAddress('');
+                  setNewCustomerMobile('');
+                  setNewCustomerStreet('');
+                  setNewCustomerPlz('');
+                  setNewCustomerCity('');
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>

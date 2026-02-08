@@ -120,6 +120,7 @@ class Project(BaseModel):
     name: str
     description: Optional[str] = None
     remarks: Optional[str] = None  # Zusätzliche Bemerkungen
+    address: Optional[str] = None  # Optionale Projekt-spezifische Adresse
     status: str = "active"  # active, completed, archived
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

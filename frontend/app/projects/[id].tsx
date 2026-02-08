@@ -32,7 +32,12 @@ interface Project {
   customer_id: string;
   status: string;
   remarks?: string;  // Zusätzliche Bemerkungen
-  address?: string;  // Optionale Projekt-spezifische Adresse
+  address?: string;  // Optionale Projekt-spezifische Adresse (Objektadresse)
+  // Projekt-spezifische Bauherr-Daten
+  bauherr_name?: string;
+  bauherr_phone?: string;
+  bauherr_email?: string;
+  bauherr_address?: string;
 }
 
 interface Customer {

@@ -1287,6 +1287,7 @@ async def export_project_pdf(project_id: str):
             ], colWidths=[20*mm, 65*mm]),
             Table([
                 [Paragraph("Projekt:", label_style), Paragraph(project_name, value_style)],
+                [Paragraph("Beschreibung:", label_style), Paragraph(project_desc, value_style)],
                 [Paragraph("Name:", label_style), Paragraph(objekt_name, value_style)],
                 [Paragraph("Straße:", label_style), Paragraph(objekt_street, value_style)],
                 [Paragraph("PLZ:", label_style), Paragraph(objekt_plz, value_style)],

@@ -1287,25 +1287,83 @@ async def export_project_pdf(project_id: str):
         ]))
         elements.append(roof_title)
         
-        roof_data = [[Paragraph("Dachtyp", label_style), Paragraph("Fläche (m²)", label_style), Paragraph("Notizen", label_style)]]
-        for roof in roofs:
-            roof_data.append([
-                Paragraph(roof.get('roof_type', ''), value_style),
-                Paragraph(f"{roof.get('area', 0):.2f}", value_style),
-                Paragraph(roof.get('notes', '') or '', value_style),
-            ])
+        # Iterate through each roof and show detailed measurements
+        for idx, roof in enumerate(roofs):
+            roof_type = roof.get('roof_type', '')
+            area = roof.get('area', 0)
+            notes = roof.get('notes', '') or ''
+            measurements = roof.get('measurements', {})
+            
+            # Extract individual measurements
+            length_val = measurements.get('length', 0)
+            width_val = measurements.get('width', 0)
+            height_val = measurements.get('height', 0)
+            angle_val = measurements.get('angle', 0)
+            
+            # Create header for this roof
+            roof_header = [[Paragraph(f"<b>Dachfläche {idx + 1}: {roof_type}</b>", value_style)]]
+            roof_header_table = Table(roof_header, colWidths=[180*mm])
+            roof_header_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e3f2fd')),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            elements.append(roof_header_table)
+            
+            # Create measurements table with all input values
+            measurements_data = [
+                [Paragraph("Eingabewerte", label_style), Paragraph("", label_style)],
+                [Paragraph("Länge:", value_style), Paragraph(f"{length_val:.2f} m", value_style)],
+                [Paragraph("Breite:", value_style), Paragraph(f"{width_val:.2f} m", value_style)],
+            ]
+            
+            # Add height if provided
+            if height_val > 0:
+                measurements_data.append([Paragraph("Firsthöhe:", value_style), Paragraph(f"{height_val:.2f} m", value_style)])
+            
+            # Add angle if provided
+            if angle_val > 0:
+                measurements_data.append([Paragraph("Neigungswinkel:", value_style), Paragraph(f"{angle_val:.1f}°", value_style)])
+            
+            # Add calculated result
+            measurements_data.append([Paragraph("<b>Berechnete Fläche:</b>", value_style), Paragraph(f"<b>{area:.2f} m²</b>", value_style)])
+            
+            # Add notes if present
+            if notes:
+                measurements_data.append([Paragraph("Notizen:", value_style), Paragraph(notes, value_style)])
+            
+            measurements_table = Table(measurements_data, colWidths=[50*mm, 130*mm])
+            measurements_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            elements.append(measurements_table)
+            elements.append(Spacer(1, 3*mm))
         
-        roof_table = Table(roof_data, colWidths=[50*mm, 30*mm, 100*mm])
-        roof_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f5')),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ]))
-        elements.append(roof_table)
+        # Add total area summary if multiple roofs
+        if len(roofs) > 1:
+            total_area = sum(roof.get('area', 0) for roof in roofs)
+            total_data = [[
+                Paragraph("<b>Gesamtfläche aller Dächer:</b>", value_style), 
+                Paragraph(f"<b>{total_area:.2f} m²</b>", value_style)
+            ]]
+            total_table = Table(total_data, colWidths=[80*mm, 100*mm])
+            total_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e8f5e9')),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            elements.append(total_table)
+        
         elements.append(Spacer(1, 5*mm))
     
     # ============ CHECKLISTEN ============

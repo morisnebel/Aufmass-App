@@ -949,6 +949,14 @@ const styles = StyleSheet.create({
   formInputGroup: {
     marginBottom: 16,
   },
+  formRowGroup: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  formInputGroupHalf: {
+    flex: 1,
+  },
   formLabel: {
     fontSize: 14,
     fontWeight: '600',

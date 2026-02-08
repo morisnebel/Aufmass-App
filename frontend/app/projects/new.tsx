@@ -12,9 +12,11 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Contacts from 'expo-contacts';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
@@ -26,6 +28,51 @@ interface Customer {
   address?: string;
   phone?: string;
   email?: string;
+}
+
+// Helper function to extract contact data
+function extractContactData(contact: Contacts.Contact) {
+  let extractedName = '';
+  let extractedEmail = '';
+  let extractedPhone = '';
+  let extractedAddress = '';
+
+  extractedName = contact.name || 
+    [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
+
+  if (contact.emails && contact.emails.length > 0) {
+    const emailObj = contact.emails[0] as any;
+    extractedEmail = typeof emailObj === 'string' ? emailObj : 
+      (emailObj?.email || emailObj?.value || '');
+  }
+
+  if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+    const phoneObj = contact.phoneNumbers[0] as any;
+    if (typeof phoneObj === 'string') {
+      extractedPhone = phoneObj;
+    } else {
+      extractedPhone = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
+    }
+  }
+
+  if (contact.addresses && contact.addresses.length > 0) {
+    const addr = contact.addresses[0] as any;
+    if (typeof addr === 'string') {
+      extractedAddress = addr;
+    } else if (addr?.formattedAddress) {
+      extractedAddress = addr.formattedAddress;
+    } else {
+      const parts = [
+        addr?.street,
+        [addr?.postalCode, addr?.city].filter(Boolean).join(' '),
+        addr?.region,
+        addr?.country
+      ].filter(Boolean);
+      extractedAddress = parts.join(', ');
+    }
+  }
+
+  return { extractedName, extractedEmail, extractedPhone, extractedAddress };
 }
 
 export default function NewProjectScreen() {
@@ -41,6 +88,20 @@ export default function NewProjectScreen() {
   // Customer picker modal
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // New customer modal state
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerEmail, setNewCustomerEmail] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+  
+  // Contact picker modal
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
 
   useEffect(() => {
     loadCustomers();
@@ -73,6 +134,139 @@ export default function NewProjectScreen() {
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (customer.address && customer.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  // Open contact picker from device
+  const openContactPicker = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar.');
+      return;
+    }
+
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        return;
+      }
+
+      setShowContactPicker(true);
+      setLoadingContacts(true);
+
+      const { data } = await Contacts.getContactsAsync({
+        fields: [
+          Contacts.Fields.Name,
+          Contacts.Fields.FirstName,
+          Contacts.Fields.LastName,
+          Contacts.Fields.Emails,
+          Contacts.Fields.PhoneNumbers,
+          Contacts.Fields.Addresses,
+        ],
+        pageSize: 10000,
+        pageOffset: 0,
+      });
+
+      const sortedContacts = data
+        .filter(c => c.name || c.firstName || c.lastName)
+        .sort((a, b) => {
+          const nameA = a.name || `${a.firstName} ${a.lastName}` || '';
+          const nameB = b.name || `${b.firstName} ${b.lastName}` || '';
+          return nameA.localeCompare(nameB);
+        });
+
+      setDeviceContacts(sortedContacts);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Select a contact and fill new customer form
+  const handleSelectContact = (contact: Contacts.Contact) => {
+    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+    
+    setNewCustomerName(extractedName);
+    setNewCustomerEmail(extractedEmail);
+    setNewCustomerPhone(extractedPhone);
+    setNewCustomerAddress(extractedAddress);
+    
+    setShowContactPicker(false);
+    setContactSearchQuery('');
+  };
+
+  const filteredContacts = deviceContacts.filter(contact => {
+    const contactName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+    return contactName.toLowerCase().includes(contactSearchQuery.toLowerCase());
+  });
+
+  // Create new customer
+  const handleCreateCustomer = async () => {
+    if (!newCustomerName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
+      return;
+    }
+
+    setCreatingCustomer(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/customers`, {
+        name: newCustomerName,
+        email: newCustomerEmail || undefined,
+        phone: newCustomerPhone || undefined,
+        address: newCustomerAddress || undefined,
+      });
+
+      const newCustomer = response.data;
+      
+      // Save to device contacts
+      if (Platform.OS !== 'web') {
+        try {
+          const { status } = await Contacts.requestPermissionsAsync();
+          if (status === 'granted') {
+            const nameParts = newCustomerName.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+
+            const contact: Contacts.Contact = {
+              contactType: Contacts.ContactTypes.Person,
+              name: newCustomerName,
+              firstName,
+              lastName,
+              ...(newCustomerEmail && {
+                emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
+              }),
+              ...(newCustomerPhone && {
+                phoneNumbers: [{ number: newCustomerPhone, label: 'Mobil' }],
+              }),
+            };
+            await Contacts.addContactAsync(contact);
+          }
+        } catch (e) {
+          console.log('Could not save to device contacts');
+        }
+      }
+
+      // Add to local list and select
+      setCustomers([...customers, newCustomer]);
+      setCustomerId(newCustomer.id);
+      setSelectedCustomer(newCustomer);
+      
+      // Reset and close modal
+      setNewCustomerName('');
+      setNewCustomerEmail('');
+      setNewCustomerPhone('');
+      setNewCustomerAddress('');
+      setShowNewCustomerModal(false);
+      setShowCustomerPicker(false);
+
+      Alert.alert('Erfolg', 'Kunde wurde erstellt');
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');
+    } finally {
+      setCreatingCustomer(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -108,21 +302,6 @@ export default function NewProjectScreen() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#1976d2" />
-      </View>
-    );
-  }
-
-  if (customers.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Keine Kunden vorhanden</Text>
-        <Text style={styles.emptySubtext}>Erstellen Sie zuerst einen Kunden</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push('/customers/new')}
-        >
-          <Text style={styles.buttonText}>Neuer Kunde</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -212,6 +391,17 @@ export default function NewProjectScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* New Customer Button */}
+            <TouchableOpacity
+              style={styles.newCustomerTopButton}
+              onPress={() => {
+                setShowNewCustomerModal(true);
+              }}
+            >
+              <Ionicons name="add-circle" size={24} color="#fff" />
+              <Text style={styles.newCustomerTopButtonText}>Neuen Kunden anlegen</Text>
+            </TouchableOpacity>
+
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
@@ -219,7 +409,6 @@ export default function NewProjectScreen() {
                 placeholder="Kunde suchen..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                autoFocus
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -272,21 +461,205 @@ export default function NewProjectScreen() {
               ListEmptyComponent={
                 <View style={styles.emptyListContainer}>
                   <Text style={styles.emptyListText}>Keine Kunden gefunden</Text>
+                  <Text style={styles.emptyListSubtext}>Erstellen Sie einen neuen Kunden</Text>
                 </View>
               }
               style={styles.customerList}
             />
+          </View>
+        </View>
+      </Modal>
 
-            <TouchableOpacity
-              style={styles.newCustomerButton}
-              onPress={() => {
-                setShowCustomerPicker(false);
-                router.push('/customers/new');
-              }}
-            >
-              <Ionicons name="add-circle" size={20} color="#1976d2" />
-              <Text style={styles.newCustomerButtonText}>Neuen Kunden anlegen</Text>
-            </TouchableOpacity>
+      {/* New Customer Modal */}
+      <Modal
+        visible={showNewCustomerModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNewCustomerModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.newCustomerModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Neuer Kunde</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowNewCustomerModal(false);
+                  setNewCustomerName('');
+                  setNewCustomerEmail('');
+                  setNewCustomerPhone('');
+                  setNewCustomerAddress('');
+                }}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.newCustomerForm}>
+              {/* Import from Contacts Button */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.importButton,
+                  pressed && { opacity: 0.7, backgroundColor: '#bbdefb' }
+                ]}
+                onPress={openContactPicker}
+              >
+                <Ionicons name="people" size={20} color="#1976d2" />
+                <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
+              </Pressable>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Kundenname"
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                />
+              </View>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>E-Mail</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="E-Mail-Adresse"
+                  value={newCustomerEmail}
+                  onChangeText={setNewCustomerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Telefon</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Telefonnummer"
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Adresse</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea]}
+                  placeholder="Straße, PLZ Ort"
+                  value={newCustomerAddress}
+                  onChangeText={setNewCustomerAddress}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.newCustomerButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowNewCustomerModal(false);
+                  setNewCustomerName('');
+                  setNewCustomerEmail('');
+                  setNewCustomerPhone('');
+                  setNewCustomerAddress('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton, creatingCustomer && styles.buttonDisabled]}
+                onPress={handleCreateCustomer}
+                disabled={creatingCustomer}
+              >
+                <Text style={styles.saveButtonText}>
+                  {creatingCustomer ? 'Wird erstellt...' : 'Kunde erstellen'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Contact Picker Modal */}
+      <Modal
+        visible={showContactPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowContactPicker(false);
+          setContactSearchQuery('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kontakt auswählen</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowContactPicker(false);
+                  setContactSearchQuery('');
+                }}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Kontakt suchen..."
+                value={contactSearchQuery}
+                onChangeText={setContactSearchQuery}
+                autoFocus
+              />
+              {contactSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setContactSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loadingContacts ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1976d2" />
+                <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredContacts}
+                keyExtractor={(item, index) => item.id || index.toString()}
+                renderItem={({ item }) => {
+                  const { extractedName, extractedPhone, extractedAddress } = extractContactData(item);
+                  return (
+                    <TouchableOpacity
+                      style={styles.contactItem}
+                      onPress={() => handleSelectContact(item)}
+                    >
+                      <Ionicons name="person-circle" size={40} color="#1976d2" />
+                      <View style={styles.contactItemInfo}>
+                        <Text style={styles.contactItemName}>{extractedName}</Text>
+                        {extractedPhone && (
+                          <Text style={styles.contactItemDetail}>{extractedPhone}</Text>
+                        )}
+                        {extractedAddress && (
+                          <Text style={styles.contactItemDetail} numberOfLines={1}>{extractedAddress}</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  <View style={styles.emptyListContainer}>
+                    <Text style={styles.emptyListText}>Keine Kontakte gefunden</Text>
+                  </View>
+                }
+                style={styles.contactList}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -376,17 +749,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
-  },
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -397,7 +759,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: '85%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   modalHeader: {
@@ -412,6 +774,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+  },
+  newCustomerTopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4caf50',
+    margin: 16,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  newCustomerTopButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -431,7 +809,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   customerList: {
-    maxHeight: 400,
+    maxHeight: 350,
   },
   customerItem: {
     flexDirection: 'row',
@@ -473,21 +851,125 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyListText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
+    fontWeight: '500',
   },
-  newCustomerButton: {
+  emptyListSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
+  },
+  // New Customer Modal
+  newCustomerModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  newCustomerForm: {
+    padding: 16,
+    maxHeight: 400,
+  },
+  importButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    backgroundColor: '#e3f2fd',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 16,
     gap: 8,
   },
-  newCustomerButtonText: {
-    fontSize: 16,
+  importButtonText: {
     color: '#1976d2',
+    fontSize: 16,
     fontWeight: '500',
+  },
+  formInputGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+  },
+  formInput: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  formTextArea: {
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  newCustomerButtons: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  saveButton: {
+    backgroundColor: '#1976d2',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Contact Picker
+  contactList: {
+    maxHeight: 450,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 12,
+  },
+  contactItemInfo: {
+    flex: 1,
+  },
+  contactItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  contactItemDetail: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
 });

@@ -515,50 +515,7 @@ export default function ProjectDetailScreen() {
               )}
             </View>
 
-            {customer && (
-              <View style={styles.infoCard}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Bauherr</Text>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={openEditProjectModal}
-                  >
-                    <Ionicons name="create-outline" size={20} color="#1976d2" />
-                    <Text style={styles.editButtonText}>Bearbeiten</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Name:</Text>
-                  <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
-                </View>
-                {(project?.bauherr_email || customer?.email) && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>E-Mail:</Text>
-                    <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
-                  </View>
-                )}
-                {(project?.bauherr_phone || customer?.phone) && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Telefon:</Text>
-                    <Text style={styles.infoValue}>{project?.bauherr_phone || customer?.phone}</Text>
-                  </View>
-                )}
-                {(project?.bauherr_address || customer?.address) && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Adresse:</Text>
-                    <Text style={styles.infoValue}>{project?.bauherr_address || customer?.address}</Text>
-                  </View>
-                )}
-                {project?.address && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Objektadresse:</Text>
-                    <Text style={styles.infoValue}>{project.address}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            <View style={styles.statsCard}>
+            {/* Statistik-Karte */}
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{roofs.length}</Text>
                 <Text style={styles.statLabel}>Dachflächen</Text>

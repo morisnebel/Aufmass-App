@@ -516,6 +516,7 @@ export default function ProjectDetailScreen() {
             </View>
 
             {/* Statistik-Karte */}
+            <View style={styles.statsCard}>
               <View style={styles.statItem}>
                 <Text style={styles.statValue}>{roofs.length}</Text>
                 <Text style={styles.statLabel}>Dachflächen</Text>

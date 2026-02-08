@@ -1277,7 +1277,7 @@ async def export_project_pdf(project_id: str):
     # ============ DACHMESSUNGEN ============
     if roofs:
         roof_title = Table(
-            [[Paragraph("Dachmessungen", section_title_style)]],
+            [[Paragraph("Aufmaße", section_title_style)]],
             colWidths=[180*mm]
         )
         roof_title.setStyle(TableStyle([

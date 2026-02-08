@@ -224,6 +224,7 @@ export default function ProjectDetailScreen() {
       setEditProjectName(project.name);
       setEditProjectDescription(project.description || '');
       setEditProjectStatus(project.status);
+      setEditProjectAddress(project.address || '');
       setShowEditProjectModal(true);
     }
   };
@@ -246,6 +247,7 @@ export default function ProjectDetailScreen() {
         description: editProjectDescription || undefined,
         status: editProjectStatus,
         customer_id: project?.customer_id,
+        address: editProjectAddress || undefined,
       });
 
       setShowEditProjectModal(false);

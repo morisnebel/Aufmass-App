@@ -129,17 +129,13 @@ export default function NewRoofScreen() {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dachtyp *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={roofType}
-                onValueChange={setRoofType}
-                style={styles.picker}
-              >
-                {ROOF_TYPES.map((type) => (
-                  <Picker.Item key={type} label={type} value={type} />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity
+              style={styles.roofTypeSelector}
+              onPress={() => setShowRoofTypePicker(true)}
+            >
+              <Text style={styles.roofTypeSelectorText}>{roofType}</Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.measurementsCard}>

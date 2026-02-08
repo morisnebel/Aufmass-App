@@ -1045,28 +1045,72 @@ export default function ProjectDetailScreen() {
                     />
                   </View>
 
+                  <Text style={styles.editSectionTitle}>Bauherr-Adresse</Text>
+                  
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Bauherr-Adresse</Text>
+                    <Text style={styles.compactLabel}>Straße</Text>
                     <TextInput
-                      style={[styles.compactInput, styles.compactTextArea]}
-                      value={editBauherrAddress}
-                      onChangeText={setEditBauherrAddress}
-                      placeholder="Straße, PLZ Ort"
-                      multiline
-                      numberOfLines={2}
+                      style={styles.compactInput}
+                      value={editBauherrStreet}
+                      onChangeText={setEditBauherrStreet}
+                      placeholder="Straße und Hausnummer"
                     />
                   </View>
 
+                  <View style={styles.addressRow}>
+                    <View style={styles.plzInput}>
+                      <Text style={styles.compactLabel}>PLZ</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrPlz}
+                        onChangeText={setEditBauherrPlz}
+                        placeholder="PLZ"
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Ort</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrCity}
+                        onChangeText={setEditBauherrCity}
+                        placeholder="Ort"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.editSectionTitle}>Objektadresse (optional)</Text>
+                  
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Objektadresse (optional)</Text>
+                    <Text style={styles.compactLabel}>Straße</Text>
                     <TextInput
-                      style={[styles.compactInput, styles.compactTextArea]}
-                      value={editProjectAddress}
-                      onChangeText={setEditProjectAddress}
+                      style={styles.compactInput}
+                      value={editObjektStreet}
+                      onChangeText={setEditObjektStreet}
                       placeholder="Falls abweichend"
-                      multiline
-                      numberOfLines={2}
                     />
+                  </View>
+
+                  <View style={styles.addressRow}>
+                    <View style={styles.plzInput}>
+                      <Text style={styles.compactLabel}>PLZ</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editObjektPlz}
+                        onChangeText={setEditObjektPlz}
+                        placeholder="PLZ"
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Ort</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editObjektCity}
+                        onChangeText={setEditObjektCity}
+                        placeholder="Ort"
+                      />
+                    </View>
                   </View>
                 </View>
               </View>

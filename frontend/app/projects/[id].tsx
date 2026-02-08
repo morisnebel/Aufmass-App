@@ -35,11 +35,13 @@ interface Project {
   // Bauherr-Daten (separate Felder)
   bauherr_name?: string;
   bauherr_phone?: string;
+  bauherr_mobile?: string;
   bauherr_email?: string;
   bauherr_street?: string;
   bauherr_plz?: string;
   bauherr_city?: string;
   // Objektadresse (separate Felder)
+  objekt_name?: string;
   objekt_street?: string;
   objekt_plz?: string;
   objekt_city?: string;
@@ -50,6 +52,7 @@ interface Customer {
   name: string;
   email?: string;
   phone?: string;
+  mobile?: string;
   address?: string;
 }
 

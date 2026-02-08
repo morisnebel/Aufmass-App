@@ -111,10 +111,7 @@ export default function NewProjectScreen() {
     try {
       const response = await axios.get(`${API_URL}/api/customers`);
       setCustomers(response.data);
-      if (response.data.length > 0) {
-        setCustomerId(response.data[0].id);
-        setSelectedCustomer(response.data[0]);
-      }
+      // Don't pre-select any customer - leave it empty
     } catch (error) {
       console.error('Error loading customers:', error);
       Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');

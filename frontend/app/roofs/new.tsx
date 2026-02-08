@@ -218,6 +218,58 @@ export default function NewRoofScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Roof Type Picker Modal */}
+      <Modal
+        visible={showRoofTypePicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRoofTypePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Dachtyp auswählen</Text>
+              <TouchableOpacity onPress={() => setShowRoofTypePicker(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={ROOF_TYPES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.roofTypeItem,
+                    item === roofType && styles.roofTypeItemSelected,
+                  ]}
+                  onPress={() => {
+                    setRoofType(item);
+                    setShowRoofTypePicker(false);
+                  }}
+                >
+                  <View style={styles.roofTypeItemContent}>
+                    <Ionicons 
+                      name="home" 
+                      size={24} 
+                      color={item === roofType ? '#1976d2' : '#666'} 
+                    />
+                    <Text style={[
+                      styles.roofTypeItemText,
+                      item === roofType && styles.roofTypeItemTextSelected,
+                    ]}>
+                      {item}
+                    </Text>
+                  </View>
+                  {item === roofType && (
+                    <Ionicons name="checkmark-circle" size={24} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

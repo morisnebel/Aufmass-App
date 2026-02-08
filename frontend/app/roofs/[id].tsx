@@ -10,9 +10,11 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
@@ -31,6 +33,7 @@ export default function EditRoofScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [roofType, setRoofType] = useState('Satteldach');
+  const [showRoofTypePicker, setShowRoofTypePicker] = useState(false);
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
@@ -165,17 +168,13 @@ export default function EditRoofScreen() {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dachtyp *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={roofType}
-                onValueChange={setRoofType}
-                style={styles.picker}
-              >
-                {ROOF_TYPES.map((type) => (
-                  <Picker.Item key={type} label={type} value={type} />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity
+              style={styles.roofTypeSelector}
+              onPress={() => setShowRoofTypePicker(true)}
+            >
+              <Text style={styles.roofTypeSelectorText}>{roofType}</Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.measurementsCard}>
@@ -258,6 +257,58 @@ export default function EditRoofScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Roof Type Picker Modal */}
+      <Modal
+        visible={showRoofTypePicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRoofTypePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Dachtyp auswählen</Text>
+              <TouchableOpacity onPress={() => setShowRoofTypePicker(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={ROOF_TYPES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.roofTypeItem,
+                    item === roofType && styles.roofTypeItemSelected,
+                  ]}
+                  onPress={() => {
+                    setRoofType(item);
+                    setShowRoofTypePicker(false);
+                  }}
+                >
+                  <View style={styles.roofTypeItemContent}>
+                    <Ionicons 
+                      name="home" 
+                      size={24} 
+                      color={item === roofType ? '#1976d2' : '#666'} 
+                    />
+                    <Text style={[
+                      styles.roofTypeItemText,
+                      item === roofType && styles.roofTypeItemTextSelected,
+                    ]}>
+                      {item}
+                    </Text>
+                  </View>
+                  {item === roofType && (
+                    <Ionicons name="checkmark-circle" size={24} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -298,16 +349,6 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
   },
   measurementsCard: {
     backgroundColor: '#e3f2fd',
@@ -351,6 +392,71 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Roof Type Selector
+  roofTypeSelector: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  roofTypeSelectorText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  roofTypeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  roofTypeItemSelected: {
+    backgroundColor: '#e3f2fd',
+  },
+  roofTypeItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roofTypeItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  roofTypeItemTextSelected: {
+    color: '#1976d2',
     fontWeight: '600',
   },
 });

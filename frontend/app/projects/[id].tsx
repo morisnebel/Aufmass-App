@@ -1046,15 +1046,27 @@ export default function ProjectDetailScreen() {
                     />
                   </View>
 
-                  <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Telefon</Text>
-                    <TextInput
-                      style={styles.compactInput}
-                      value={editBauherrPhone}
-                      onChangeText={setEditBauherrPhone}
-                      placeholder="Telefonnummer"
-                      keyboardType="phone-pad"
-                    />
+                  <View style={styles.addressRow}>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Telefon</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrPhone}
+                        onChangeText={setEditBauherrPhone}
+                        placeholder="Festnetz"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Mobil</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrMobile}
+                        onChangeText={setEditBauherrMobile}
+                        placeholder="Handynummer"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
                   </View>
 
                   <View style={styles.compactInputGroup}>

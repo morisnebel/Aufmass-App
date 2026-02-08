@@ -76,11 +76,6 @@ function extractContactData(contact: Contacts.Contact) {
   }
 
   return { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
-      extractedAddress = parts.join(', ');
-    }
-  }
-
-  return { extractedName, extractedEmail, extractedPhone, extractedAddress };
 }
 
 export default function NewProjectScreen() {
@@ -97,12 +92,15 @@ export default function NewProjectScreen() {
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // New customer modal state
+  // New customer modal state - separate fields
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
-  const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [newCustomerMobile, setNewCustomerMobile] = useState('');
+  const [newCustomerStreet, setNewCustomerStreet] = useState('');
+  const [newCustomerPlz, setNewCustomerPlz] = useState('');
+  const [newCustomerCity, setNewCustomerCity] = useState('');
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   
   // Contact picker modal

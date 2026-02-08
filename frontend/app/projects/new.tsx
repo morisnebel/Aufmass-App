@@ -10,9 +10,11 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
@@ -21,6 +23,9 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 interface Customer {
   id: string;
   name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
 }
 
 export default function NewProjectScreen() {
@@ -28,9 +33,14 @@ export default function NewProjectScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
+  
+  // Customer picker modal
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadCustomers();
@@ -42,6 +52,7 @@ export default function NewProjectScreen() {
       setCustomers(response.data);
       if (response.data.length > 0) {
         setCustomerId(response.data[0].id);
+        setSelectedCustomer(response.data[0]);
       }
     } catch (error) {
       console.error('Error loading customers:', error);
@@ -50,6 +61,18 @@ export default function NewProjectScreen() {
       setLoadingCustomers(false);
     }
   };
+
+  const handleSelectCustomer = (customer: Customer) => {
+    setCustomerId(customer.id);
+    setSelectedCustomer(customer);
+    setShowCustomerPicker(false);
+    setSearchQuery('');
+  };
+
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (customer.address && customer.address.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -123,21 +146,25 @@ export default function NewProjectScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Kunde *</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={customerId}
-                onValueChange={setCustomerId}
-                style={styles.picker}
-              >
-                {customers.map((customer) => (
-                  <Picker.Item
-                    key={customer.id}
-                    label={customer.name}
-                    value={customer.id}
-                  />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity
+              style={styles.customerSelector}
+              onPress={() => setShowCustomerPicker(true)}
+            >
+              <View style={styles.customerSelectorContent}>
+                <Ionicons name="person" size={20} color="#666" />
+                <View style={styles.customerInfo}>
+                  <Text style={styles.customerName}>
+                    {selectedCustomer?.name || 'Kunde auswählen...'}
+                  </Text>
+                  {selectedCustomer?.address && (
+                    <Text style={styles.customerAddress} numberOfLines={1}>
+                      {selectedCustomer.address}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -163,6 +190,106 @@ export default function NewProjectScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Customer Picker Modal */}
+      <Modal
+        visible={showCustomerPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCustomerPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kunde auswählen</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowCustomerPicker(false);
+                  setSearchQuery('');
+                }}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Kunde suchen..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <FlatList
+              data={filteredCustomers}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.customerItem,
+                    item.id === customerId && styles.customerItemSelected,
+                  ]}
+                  onPress={() => handleSelectCustomer(item)}
+                >
+                  <View style={styles.customerItemIcon}>
+                    <Ionicons 
+                      name="person-circle" 
+                      size={40} 
+                      color={item.id === customerId ? '#1976d2' : '#ccc'} 
+                    />
+                  </View>
+                  <View style={styles.customerItemInfo}>
+                    <Text style={[
+                      styles.customerItemName,
+                      item.id === customerId && styles.customerItemNameSelected,
+                    ]}>
+                      {item.name}
+                    </Text>
+                    {item.address && (
+                      <Text style={styles.customerItemAddress} numberOfLines={1}>
+                        {item.address}
+                      </Text>
+                    )}
+                    {item.phone && (
+                      <Text style={styles.customerItemPhone}>
+                        <Ionicons name="call-outline" size={12} color="#888" /> {item.phone}
+                      </Text>
+                    )}
+                  </View>
+                  {item.id === customerId && (
+                    <Ionicons name="checkmark-circle" size={24} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyListContainer}>
+                  <Text style={styles.emptyListText}>Keine Kunden gefunden</Text>
+                </View>
+              }
+              style={styles.customerList}
+            />
+
+            <TouchableOpacity
+              style={styles.newCustomerButton}
+              onPress={() => {
+                setShowCustomerPicker(false);
+                router.push('/customers/new');
+              }}
+            >
+              <Ionicons name="add-circle" size={20} color="#1976d2" />
+              <Text style={styles.newCustomerButtonText}>Neuen Kunden anlegen</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -205,25 +332,44 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
-  pickerContainer: {
+  customerSelector: {
     backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
-    overflow: 'hidden',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  picker: {
-    height: 50,
+  customerSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  customerInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  customerAddress: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   button: {
     backgroundColor: '#1976d2',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 16,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
@@ -233,12 +379,115 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
+    color: '#333',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#666',
     marginBottom: 24,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    margin: 16,
+    marginTop: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  customerList: {
+    maxHeight: 400,
+  },
+  customerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  customerItemSelected: {
+    backgroundColor: '#e3f2fd',
+  },
+  customerItemIcon: {
+    marginRight: 12,
+  },
+  customerItemInfo: {
+    flex: 1,
+  },
+  customerItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  customerItemNameSelected: {
+    color: '#1976d2',
+  },
+  customerItemAddress: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  customerItemPhone: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  emptyListContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyListText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  newCustomerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 8,
+  },
+  newCustomerButtonText: {
+    fontSize: 16,
+    color: '#1976d2',
+    fontWeight: '500',
   },
 });

@@ -107,13 +107,29 @@ export default function ProjectDetailScreen() {
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState('');
-  const [editProjectAddress, setEditProjectAddress] = useState('');
-  // Bauherr edit fields
+  // Bauherr edit fields (separate)
   const [editBauherrName, setEditBauherrName] = useState('');
   const [editBauherrPhone, setEditBauherrPhone] = useState('');
   const [editBauherrEmail, setEditBauherrEmail] = useState('');
-  const [editBauherrAddress, setEditBauherrAddress] = useState('');
+  const [editBauherrStreet, setEditBauherrStreet] = useState('');
+  const [editBauherrPlz, setEditBauherrPlz] = useState('');
+  const [editBauherrCity, setEditBauherrCity] = useState('');
+  // Objektadresse edit fields (separate)
+  const [editObjektStreet, setEditObjektStreet] = useState('');
+  const [editObjektPlz, setEditObjektPlz] = useState('');
+  const [editObjektCity, setEditObjektCity] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
+
+  // Helper to parse address from customer
+  const parseCustomerAddress = (address: string | undefined) => {
+    if (!address) return { street: '', plz: '', city: '' };
+    const parts = address.split(',');
+    const street = parts[0]?.trim() || '';
+    const cityParts = parts[1]?.trim().split(' ') || [];
+    const plz = cityParts[0] || '';
+    const city = cityParts.slice(1).join(' ') || '';
+    return { street, plz, city };
+  };
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(

@@ -125,11 +125,13 @@ class Project(BaseModel):
     # Projekt-spezifische Bauherr-Daten (separate Felder)
     bauherr_name: Optional[str] = None
     bauherr_phone: Optional[str] = None
+    bauherr_mobile: Optional[str] = None  # Handynummer
     bauherr_email: Optional[str] = None
     bauherr_street: Optional[str] = None
     bauherr_plz: Optional[str] = None
     bauherr_city: Optional[str] = None
     # Objektadresse (separate Felder)
+    objekt_name: Optional[str] = None  # Name für das Objekt
     objekt_street: Optional[str] = None
     objekt_plz: Optional[str] = None
     objekt_city: Optional[str] = None

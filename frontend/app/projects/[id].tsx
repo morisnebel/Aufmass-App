@@ -31,13 +31,18 @@ interface Project {
   description?: string;
   customer_id: string;
   status: string;
-  remarks?: string;  // Zusätzliche Bemerkungen
-  address?: string;  // Optionale Projekt-spezifische Adresse (Objektadresse)
-  // Projekt-spezifische Bauherr-Daten
+  remarks?: string;
+  // Bauherr-Daten (separate Felder)
   bauherr_name?: string;
   bauherr_phone?: string;
   bauherr_email?: string;
-  bauherr_address?: string;
+  bauherr_street?: string;
+  bauherr_plz?: string;
+  bauherr_city?: string;
+  // Objektadresse (separate Felder)
+  objekt_street?: string;
+  objekt_plz?: string;
+  objekt_city?: string;
 }
 
 interface Customer {

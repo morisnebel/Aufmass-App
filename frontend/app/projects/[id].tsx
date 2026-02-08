@@ -1118,6 +1118,16 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.editSectionTitle}>Objektadresse (optional)</Text>
                   
                   <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Name</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editObjektName}
+                      onChangeText={setEditObjektName}
+                      placeholder="z.B. Herr Müller"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Straße</Text>
                     <TextInput
                       style={styles.compactInput}

@@ -1511,8 +1511,10 @@ async def export_project_pdf(project_id: str):
         
         for i, sketch in enumerate(sketches):
             try:
+                sketch_elements = []  # Collect elements for this sketch
+                
                 if sketch.get('title'):
-                    elements.append(Paragraph(f"<b>{sketch['title']}</b>", value_style))
+                    sketch_elements.append(Paragraph(f"<b>{sketch['title']}</b>", value_style))
                 
                 sketch_data = sketch.get('sketch_data', '')
                 metadata = sketch.get('metadata', '')
@@ -1550,8 +1552,13 @@ async def export_project_pdf(project_id: str):
                                 display_height = display_width / img_aspect
                         
                         img = RLImage(img_buffer, width=display_width, height=display_height)
-                        elements.append(img)
-                        elements.append(Spacer(1, 10*mm))
+                        sketch_elements.append(img)
+                
+                # Keep title and image together on same page
+                if sketch_elements:
+                    sketch_elements.append(Spacer(1, 10*mm))
+                    elements.append(KeepTogether(sketch_elements))
+                    
             except Exception as e:
                 logging.error(f"Error processing sketch {i}: {e}")
     

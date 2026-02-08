@@ -1382,24 +1382,24 @@ async def export_project_pdf(project_id: str):
             
             checklist_data = []
             for item in checklist.get('items', []):
-                # Use green checkmark for checked items, empty circle for unchecked
-                if item.get('checked'):
-                    status = '<font color="#4CAF50">✓</font>'  # Green checkmark
-                else:
-                    status = '<font color="#9e9e9e">○</font>'  # Gray circle for unchecked
+                # Only show checked items
+                if not item.get('checked'):
+                    continue
+                    
+                # Use green checkmark for checked items
+                status = '<font color="#4CAF50">✓</font>'  # Green checkmark
                 item_text = safe_str(item.get('text', ''))
                 checklist_data.append([
                     Paragraph(f"<b>{status} {item_text}</b>", value_style),
                 ])
                 
-                # Add sub-items if present and main item is checked
+                # Add sub-items if present (only checked ones)
                 sub_items = item.get('subItems', [])
-                if sub_items and item.get('checked'):
+                if sub_items:
                     for sub_item in sub_items:
-                        if sub_item.get('checked'):
-                            sub_status = '<font color="#4CAF50">✓</font>'  # Green checkmark
-                        else:
-                            sub_status = '<font color="#9e9e9e">○</font>'  # Gray circle
+                        if not sub_item.get('checked'):
+                            continue
+                        sub_status = '<font color="#4CAF50">✓</font>'  # Green checkmark
                         sub_text = safe_str(sub_item.get('text', ''))
                         checklist_data.append([
                             Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;└ {sub_status} {sub_text}", value_style),

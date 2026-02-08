@@ -1,142 +1,145 @@
 <analysis>
-
 <original_problem_statement>
-The user's initial goal was to fix a bug where drawn elements (arrows, images, text, shapes) are distorted (stretched or squashed) in the exported PDF. The core requirement is to ensure the PDF export is a What You See Is What You Get (WYSIWYG) representation of the drawing from the app, preserving the aspect ratio of all elements. Despite several attempts, the issue persists.
+The user's initial request was to fix a PDF export bug where drawn elements were distorted. After fixing this, the user made a series of feature requests and bug reports throughout the session, which the agent worked on sequentially. The most recent set of requests revolves around fixing and improving the data model for Projects and Customers to ensure data independence and improve the user interface for data entry.
+
+**List of user requests addressed in this session:**
+1.  **[FIXED]** Fix PDF distortion for images and shapes.
+2.  **[DONE]** Implement editable text and arrows in the sketch tool (font size, stroke width).
+3.  **[DONE]** Add detailed roof measurement inputs to the PDF, not just the final area.
+4.  **[DONE]** Change PDF checklist style to use green checkmarks (✓) and rename Dachmessungen to Aufmaße.
+5.  **[DONE]** In the PDF, show only the checklist items that have been checked.
+6.  **[DONE]** Ensure a sketch's title and its image are not split across two pages in the PDF.
+7.  **[DONE]** When creating a new customer in the app, also save that customer to the iPad's native contacts.
+8.  **[FIXED]** Fix a major data integrity bug where changing a customer's address would change it for all of that customer's projects. This was fixed by denormalizing the data, giving each project its own copy of the client's (Bauherr) details.
+9.  **[DONE]** Improve the Project Details screen UI for iPad, including a more compact edit modal that works in landscape mode and avoids the keyboard.
+10. **[DONE]** Split single address fields into separate fields for Street, Postal Code, and City across the app.
+11. **[DONE]** Add a Mobile Number field for customers and a Name field for the project's specific object address.
+12. **[IN PROGRESS]** Fix the Create New Customer form (both standalone and within the New Project screen) to use the new separate address fields correctly.
 </original_problem_statement>
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-- A full-stack application with an Expo (React Native) frontend for drawing and a FastAPI backend for PDF generation.
-- The PDF generation logic is in  in the  function.
-- The agent has implemented a uniform scaling factor () to scale the entire drawing to fit the PDF page, which is a correct step.
-- The agent also added debug logging to  to inspect the incoming canvas dimensions and element data from the frontend.
-- Analysis of these logs and the code revealed that while the overall scaling is likely correct, the individual resizing of image elements within the backend logic is the source of the distortion.
+- A full-stack application with an Expo (React Native) frontend and a FastAPI backend.
+- The core data model has been significantly refactored. The  model in the database now stores its own copy of the client's information (, , , , , ). This was a critical change to ensure that editing a project's client data does not affect other projects or the original customer entry.
+- The UI for creating and editing projects () has been updated to reflect this new data model, including a compact, two-column edit modal optimized for iPads.
+- The form for creating a standalone new customer () has been refactored to use separate fields for the address and mobile number.
+- The agent was in the process of refactoring the New Customer modal inside the New Project screen () to match these changes.
 
 **Last working item**:
-    - Last item agent was working: Analyzing the root cause of the persistent image distortion. The agent correctly identified that the line  in  is the problem. It forces the image into the dimensions of its bounding box on the canvas, which may have a different aspect ratio than the image itself, causing stretching or squashing.
+    - Last item agent was working: The agent was refactoring the Create New Customer modal within the New Project page (). The goal was to replace the single Address text area with separate input fields for Street, PLZ, City, and Mobile Number, and ensure this data is correctly saved when a new customer is created from this screen.
     - Status: IN PROGRESS
-    - Agent Testing Done: Y (but the test was flawed; it passed while the bug still existed)
-    - Which testing method agent to use? backend testing agent. The test should generate a PDF with a non-square image and a circle to visually verify that aspect ratios are preserved. Manual inspection of the resulting PDF is mandatory.
-    - User Testing Done: Y (User confirmed the fix did not work).
+    - Agent Testing Done: N
+    - Which testing method agent to use? manual testing by screenshot tool. The test should involve navigating to the New Project screen, opening the customer picker, clicking Create New Customer, and verifying the modal has the correct separate input fields.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: All elements, especially images, in the generated PDF are distorted (P0)
-  - Issue 2: Clarify and implement roof measurement display in PDF (P1)
-  
+  - Issue 1: The Create New Customer modal on the New Project screen is incomplete and inconsistent with the rest of the app (P0)
+
   Issues Detail:
   - Issue 1: 
-     - **Description**: Images, shapes, and other elements are stretched or squashed in the final PDF. The aspect ratio is not being preserved during the conversion from the app's canvas to the PDF document. This is a critical, recurring bug.
-     - **Attempted fixes**: 
-        1. An initial fix using separate  and  was incorrect.
-        2. A subsequent fix implemented a single  for both axes. This was tested by the backend agent and reported as successful, but the user confirmed the issue still exists.
-        3. The agent then added logging and analyzed the data, correctly hypothesizing that the issue is not the  but the specific  call for image elements.
+     - **Description**: The user reported that when creating a new customer from within the New Project workflow, all address information is being lumped into a single field. The agent started a refactor to fix this by introducing separate fields (Street, PLZ, City, Mobile Number) but did not complete it. The code in  is in a partially-completed state.
+     - **Attempted fixes**: The agent used  multiple times on  to add new state variables (, , etc.), update the  and  functions, and modify the JSX of the .
      - **Next debug checklist**:
-       1. Open .
-       2. Navigate to the  function, specifically the loop that processes elements ().
-       3. Locate the image rendering block (), around line 765.
-       4. **The Problem:** The line  unconditionally resizes the image to the element's bounding box ( 21:19:05 up 6 days, 11:39,  0 user,  load average: 1.57, 0.75, 0.82
-USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT, ), which causes distortion if the aspect ratios don't match.
-       5. **The Solution:** Replace that logic. You must resize the image while preserving its original aspect ratio so that it fits *within* the target  box. Use Pillow's  method, which does this automatically.
-         
-       6. After applying the fix, restart the backend: backend: ERROR (not running)
-backend: ERROR (abnormal termination).
-       7. Run the backend testing agent to generate a new test PDF.
-       8. **Manually inspect the generated PDF** to confirm that non-square images and circles are no longer distorted.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a critical P0 bug that makes the core PDF export feature unusable. Fixing it will provide a reliable, WYSIWYG export.
+       1.  Thoroughly review the file .
+       2.  Focus on the  JSX component within the file.
+       3.  **Confirm** that the single  for  has been replaced with multiple  components for , , , and .
+       4.  **Verify** that the  and  props of these new inputs are correctly bound to their corresponding state variables (e.g., , ).
+       5.  **Check** the  function to ensure it is assembling the  string from the separate fields for the backend API call, and also passing the  correctly.
+       6.  **Confirm** that the  function correctly parses the address from a device contact and populates the separate state variables.
+       7.  After verifying the code, restart the frontend service (expo: ERROR (not running)
+expo: started) and test the user flow.
+     - **Why fix this issue and what will be achieved with the fix?**: This will resolve a direct user complaint and make the data entry process consistent across the entire application, preventing incorrect address data from being saved.
      - **Status**:  IN PROGRESS
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?**: Backend
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on other issue**: None
 
-  - Issue 2: 
-     - **Description**: A user request to display measurements from the roof measurement in the PDF remains ambiguous.
-     - **Next debug checklist**: Once the distortion bug (Issue 1) is confirmed fixed by the user, proactively ask for clarification.
-     - **Why fix this issue and what will be achieved with the fix?**: Implements a user-requested feature for their reports.
-     - **Status**:  NOT STARTED
-     - **Is recurring issue?** N
-     - **Should Test frontend/backend/both after fix?**: Backend (likely)
-     - **Blocked on other issue**: Issue 1 and user clarification.
-
 **In progress Task List**:
-- Task 1: Fix the PDF element distortion bug (P0)
-  - **Where to resume**: In , refactor the image resizing logic within the  function as described in the Next debug checklist for Issue 1.
-  - **What will be achieved with this?**: The PDF export will correctly render all elements without distortion.
-  - **Status**: IN PROGRESS
+  - Task 1: Complete the refactor of the Create New Customer modal (P0)
+     - **Where to resume**: In , finalizing the JSX for the  and verifying the associated state and handler functions.
+     - **What will be achieved with this?**: A fully functional and consistent UI for creating new customers from the New Project screen.
+     - **Status**:  IN PROGRESS
+     - **Should Test frontend/backend/both after fix?**: Frontend
+     - **Blocked on something**: No
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    - (P1) **Implement Roof Measurement Data Display**: Blocked on user clarification. Will become the next task after the distortion bug is fixed.
+- There are no other outstanding tasks mentioned by the user. The next step after fixing the current issue should be to ask the user for verification and any further requests.
 
 **Completed work in this session**
-- No tasks have been fully completed. The session was dedicated to debugging the PDF distortion issue.
-
-**Earlier issues found/mentioned but not fixed**
-   - **Issue 1**: TypeScript and ESLint errors in . This was noted in a previous handover but was not addressed in this session. It should be addressed to improve code quality.
-     - **Debug checklist**: Review ESLint/TypeScript configuration for the React Native project.
-     - **Why to solve this issue and what will be achieved with this?**: Improves code quality and long-term maintainability.
-     - **Should Test frontend/backend/both after fix**: Frontend.
-     - **Is recurring issue?**: Y
-
-**Known issue recurrence from previous fork**
-  - The PDF distortion issue has been the single, persistent problem throughout the entire job history, manifesting as a general scaling/aspect-ratio problem.
+- **PDF Generation**:
+  - Fixed aspect ratio distortion for all drawn elements, achieving a WYSIWYG export.
+  - Added detailed roof measurement inputs to reports.
+  - Improved checklist appearance (green checkmarks) and logic (only show checked items).
+  - Renamed a section title from Dachmessungen to Aufmaße.
+  - Ensured sketch titles and their images are kept together on the same page.
+- **Data Model & Business Logic**:
+  - **Decoupled Project and Customer Data**: Implemented a critical fix by denormalizing data. Projects now store their own copy of client (Bauherr) details, preventing edits in one project from affecting others. This was done by adding  fields to the  model in  and updating all related frontend and backend logic.
+  - **Split Address Fields**: Refactored the data model and UI across the app to use separate fields for street, PLZ, and city instead of a single address string.
+  - **Added New Fields**: Added a Mobile Number field for customers and a Name field for the project's object address.
+- **Frontend Features & UX**:
+  - Implemented editable text and arrows in the sketch component ().
+  - Implemented saving new customers to the device's native contacts using .
+  - Overhauled the New Project customer selection UI with a custom modal.
+  - Redesigned the Project Edit modal to be compact, two-column, and keyboard-friendly for landscape iPad use ().
+  - Fixed a UI bug where creating a new project would pre-select the first customer.
+  - Fixed a modal layering issue on the New Project screen.
 
 **Code Architecture**
-render_sketch_with_background
+
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, ReportLab (for PDF document structure), Pillow (for image manipulation).
-- **Frontend**: Expo (React Native),  for the drawing canvas.
-- **Core Problem**: Aspect-ratio-incorrect image transformation. The  library was being used in a way that stretched images () instead of scaling them to fit while preserving proportions ().
+- **Backend**: FastAPI, Pydantic (for data models), ReportLab (for PDF generation), Pillow (for image processing).
+- **Frontend**: Expo (React Native),  (for the drawing canvas), , .
+- **Architecture**: Full-stack with a REST API. A key architectural decision was made to **denormalize** customer data by copying it into each  document to ensure data independence.
 
 **key DB schema**
-  - Not applicable to the current task.
-
-**changes in tech stack**
-  - None.
+- **Customer**: 
+- **Project**: 
 
 **All files of reference**
-- ****: The only file that needs to be edited. The bug is in the  function.
-- ****: No changes needed, but it's the source of the data being sent to the backend.
-
-**Areas that need refactoring**:
-- The image rendering logic within  must be refactored to use  instead of .
-
-**key api endpoints**
-- : The endpoint that receives sketch data from the frontend and triggers the PDF generation.
+- : **(Currently being worked on)**. Contains the  that needs to be fixed.
+- : The project detail and edit screen. Was heavily modified.
+- : The standalone new customer form, which serves as a template for the fix.
+- : The backend file containing all data models and PDF logic. Was heavily modified.
 
 **Critical Info for New Agent**
-- **Your immediate and only priority is to fix the image distortion bug in .**
-- The problem is NOT the  calculation. The problem is the  call which distorts images.
-- The correct solution is to use  to preserve the image's aspect ratio, and then paste the resulting (smaller) image centered within the original  bounding box on the PDF canvas.
-- After fixing, you MUST manually verify the generated PDF. Do not rely solely on the testing agent's output, as it has been wrong before.
-- Once the fix is verified and confirmed by the user, you must ask for clarification on the roof measurement feature.
-- **Communicate exclusively in German.**
+- **Your immediate priority is to finish the refactor in .** The goal is to make the Create New Customer modal inside this page use separate input fields for Street, PLZ, City, and Mobile Number. Use  as a reference for the correct implementation.
+- The most significant architectural change in this session was the **denormalization of customer data**. Projects now hold a *snapshot* of the client's (Bauherr) details. Be mindful of this data flow: when a project is created, data is copied from a customer; when a project is edited, only its local copy is changed.
+- Always communicate with the user in **German**.
+- After fixing the current issue, restart the frontend and verify the fix before presenting it to the user.
 
-**Last 10 User Messages and any pending HUMAN messages** 
- - 1.  - User confirmed that the problem still exists after the agent's last attempt. (Status: IN PROGRESS)
- - 2.  - User agreed to the agent's initial plan. (Status: Acknowledged)
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **bei ,Kunde neu erstellen, muss auch noch die Straße, PLZ, Ort, Handynummer usw. einzeln einzutragen sein, sonst steht da auch alles bei Straße**: The user states that the Create New Customer form still has a single address field, which is the current P0 issue. (Status: IN PROGRESS)
+2.  **das sieht gut aus, jetzt möchte ich noch bei den Kundenadressen noch ein Feld für eine Handynummer haben und bei der Projektadresse noch ein zusätzliches Feld für einen Namen haben**: User requested a mobile number field and a name for the project address. (Status: Completed)
+3.  **das funktioniert auch schon ganz gut, jetzt müsst nur noch bei der Projektadresse die richtige Zuordnung zur Straße, PLZ, Ort, Name sein. jetzt steht die Adresse komplett bei der Straße**: User reported the project address was a single field and requested it be split. (Status: Completed)
+4.  **es kommt die Meldung SERVER Error**: User reported a server error after a UI refactor. (Status: Resolved, was a frontend bundling error)
+5.  **das scheint jetzt zu funktionieren, können wir jetzt noch bei den Projektdetails in Übersicht bei Projektinformationen alles anzeigen lassen und wenn man auf bearbeiten geht, dass dieses Fenster was sich dann öffnet etwas kleiner ist, so das man es wenn man das iPad quer hält alles angezeigt wird und das die Tastatur das geöffnete Fenster nicht überdeckt so das man sieht wenn mann etwas einträgt**: User requested UI improvements for the project details page on iPad. (Status: Completed)
+6.  **wenn ich die Kundendaten in einem Projekt öffne dann ändern sich immer noch die Kundendaten auch in dem anderen Projekt mit**: User reported the critical data integrity issue where project data was linked. (Status: Resolved)
+7.  **die Zeile ,Kunde, bei Projekt anlegen muss am Anfang leer sein und ich trage dann erst den Kunden ein, neuen Kunden anlegen funktioniert nicht mehr**: User reported two bugs on the new project screen. (Status: Resolved)
+8.  **bitte überprüfe noch mal alles es funktioniert noch nicht so richtig**: General feedback that things are still broken after the first attempt at fixing the data linking issue. (Status: Addressed)
+9.  **jetzt funktioniert ,neuen Kunden anlagen, bei Projekte nicht mehr und wenn man in einem Projekt die Kundendaten ändert dann ändern sich die Daten auch in den anderen Projekten das soll so nicht sein, denn jedes Projekt hat seinen eigenen Kunden und eine extra Projektadresse, außer die Projektadresse ist die gleiche wie die Kundenadresse**: The user's detailed report of the data linking problem and a broken new customer button. (Status: Addressed/Resolved)
+10. **beim Projekt anlegen kann man beim Kunden nicht auf Kundendateien zugreifen**: User reported the customer picker was not working on the new project screen. (Status: Resolved)
 
 **Project Health Check:**
-- **Broken**:
-    - **PDF Export Rendering**: The primary function of exporting a sketch to a PDF is critically broken. The output is visually distorted, making the feature unusable. This is a P0 bug.
+- **Mocked**: No mocked components.
+- **Broken**: The Create New Customer functionality within the New Project workflow is currently broken due to an incomplete refactor.
 
 **3rd Party Integrations**
-- : PDF generation.
-- : Image processing on the backend.
-- : Drawing canvas on the frontend.
-- : Image selection on the frontend.
+- : Used to read from and write to the device's native contacts.
+- : Used for selecting images to add to sketches.
+- : Used in the backend for generating PDF reports.
+- : Used in the backend for image manipulation for the PDFs.
 
 **Testing status**
-  - Testing agent used after significant changes: YES, but it gave a false positive.
-  - Troubleshoot agent used after agent stuck in loop: YES, it helped narrow down the problem space.
-  - Test files created: None.
-  - Known regressions: The distortion is a persistent bug, not a regression.
+  - Testing agent used after significant changes: NO
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: None, but the Create New Customer feature is in a broken, half-refactored state.
 
 **Credentials to test flow:**
 - None required.
 
 **What agent forgot to execute**
-- The previous agent correctly diagnosed the likely cause () but did not implement the correct fix using  and centering the result.
-
+- The agent did not fully complete the refactoring of the New Customer modal in . It started the work by adding states and editing handlers but left the JSX and overall functionality in an incomplete state.
 </analysis>

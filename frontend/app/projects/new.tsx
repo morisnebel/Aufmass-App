@@ -27,15 +27,19 @@ interface Customer {
   name: string;
   address?: string;
   phone?: string;
+  mobile?: string;
   email?: string;
 }
 
-// Helper function to extract contact data
+// Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {
   let extractedName = '';
   let extractedEmail = '';
   let extractedPhone = '';
-  let extractedAddress = '';
+  let extractedMobile = '';
+  let extractedStreet = '';
+  let extractedPlz = '';
+  let extractedCity = '';
 
   extractedName = contact.name || 
     [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
@@ -46,28 +50,32 @@ function extractContactData(contact: Contacts.Contact) {
       (emailObj?.email || emailObj?.value || '');
   }
 
+  // Try to get both phone and mobile
   if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-    const phoneObj = contact.phoneNumbers[0] as any;
-    if (typeof phoneObj === 'string') {
-      extractedPhone = phoneObj;
-    } else {
+    for (const phoneObj of contact.phoneNumbers as any[]) {
+      const label = (phoneObj?.label || '').toLowerCase();
+      const number = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
+      
+      if (label.includes('mobil') || label.includes('mobile') || label.includes('handy') || label.includes('cell')) {
+        if (!extractedMobile) extractedMobile = number;
+      } else {
+        if (!extractedPhone) extractedPhone = number;
+      }
+    }
+    if (!extractedPhone && !extractedMobile) {
+      const phoneObj = contact.phoneNumbers[0] as any;
       extractedPhone = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
     }
   }
 
   if (contact.addresses && contact.addresses.length > 0) {
     const addr = contact.addresses[0] as any;
-    if (typeof addr === 'string') {
-      extractedAddress = addr;
-    } else if (addr?.formattedAddress) {
-      extractedAddress = addr.formattedAddress;
-    } else {
-      const parts = [
-        addr?.street,
-        [addr?.postalCode, addr?.city].filter(Boolean).join(' '),
-        addr?.region,
-        addr?.country
-      ].filter(Boolean);
+    extractedStreet = addr?.street || '';
+    extractedPlz = addr?.postalCode || '';
+    extractedCity = addr?.city || '';
+  }
+
+  return { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
       extractedAddress = parts.join(', ');
     }
   }

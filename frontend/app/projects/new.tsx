@@ -563,15 +563,46 @@ export default function NewProjectScreen() {
               </View>
 
               <View style={styles.formInputGroup}>
-                <Text style={styles.formLabel}>Adresse</Text>
+                <Text style={styles.formLabel}>Handynummer</Text>
                 <TextInput
-                  style={[styles.formInput, styles.formTextArea]}
-                  placeholder="Straße, PLZ Ort"
-                  value={newCustomerAddress}
-                  onChangeText={setNewCustomerAddress}
-                  multiline
-                  numberOfLines={2}
+                  style={styles.formInput}
+                  placeholder="Handynummer"
+                  value={newCustomerMobile}
+                  onChangeText={setNewCustomerMobile}
+                  keyboardType="phone-pad"
                 />
+              </View>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Straße</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Straße und Hausnummer"
+                  value={newCustomerStreet}
+                  onChangeText={setNewCustomerStreet}
+                />
+              </View>
+
+              <View style={styles.formRowGroup}>
+                <View style={styles.formInputGroupHalf}>
+                  <Text style={styles.formLabel}>PLZ</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="PLZ"
+                    value={newCustomerPlz}
+                    onChangeText={setNewCustomerPlz}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.formInputGroupHalf}>
+                  <Text style={styles.formLabel}>Ort</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Ort"
+                    value={newCustomerCity}
+                    onChangeText={setNewCustomerCity}
+                  />
+                </View>
               </View>
             </ScrollView>
 

@@ -1355,6 +1355,12 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  inputHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   statusButtons: {
     flexDirection: 'row',
     gap: 8,

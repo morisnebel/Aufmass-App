@@ -1559,6 +1559,17 @@ const styles = StyleSheet.create({
     minHeight: 50,
     textAlignVertical: 'top',
   },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  plzInput: {
+    flex: 1,
+  },
+  cityInput: {
+    flex: 2,
+  },
   statusButtonsCompact: {
     flexDirection: 'row',
     gap: 6,

@@ -235,6 +235,11 @@ export default function ProjectDetailScreen() {
       setEditProjectDescription(project.description || '');
       setEditProjectStatus(project.status);
       setEditProjectAddress(project.address || '');
+      // Bauherr data - use project-specific or fall back to customer
+      setEditBauherrName(project.bauherr_name || customer?.name || '');
+      setEditBauherrPhone(project.bauherr_phone || customer?.phone || '');
+      setEditBauherrEmail(project.bauherr_email || customer?.email || '');
+      setEditBauherrAddress(project.bauherr_address || customer?.address || '');
       setShowEditProjectModal(true);
     }
   };
@@ -258,6 +263,11 @@ export default function ProjectDetailScreen() {
         status: editProjectStatus,
         customer_id: project?.customer_id,
         address: editProjectAddress || undefined,
+        // Bauherr data
+        bauherr_name: editBauherrName || undefined,
+        bauherr_phone: editBauherrPhone || undefined,
+        bauherr_email: editBauherrEmail || undefined,
+        bauherr_address: editBauherrAddress || undefined,
       });
 
       setShowEditProjectModal(false);

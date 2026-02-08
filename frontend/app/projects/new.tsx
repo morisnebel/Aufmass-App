@@ -265,7 +265,10 @@ export default function NewProjectScreen() {
       setNewCustomerName('');
       setNewCustomerEmail('');
       setNewCustomerPhone('');
-      setNewCustomerAddress('');
+      setNewCustomerMobile('');
+      setNewCustomerStreet('');
+      setNewCustomerPlz('');
+      setNewCustomerCity('');
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
 

@@ -948,18 +948,68 @@ export default function ProjectDetailScreen() {
               </View>
             </View>
 
+            {/* Bauherr Section */}
+            <Text style={styles.sectionTitle}>Bauherr-Daten (für dieses Projekt)</Text>
+            
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Objektadresse (optional)</Text>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editBauherrName}
+                onChangeText={setEditBauherrName}
+                placeholder="Bauherr Name"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Telefon</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editBauherrPhone}
+                onChangeText={setEditBauherrPhone}
+                placeholder="Telefonnummer"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>E-Mail</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editBauherrEmail}
+                onChangeText={setEditBauherrEmail}
+                placeholder="E-Mail-Adresse"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bauherr-Adresse</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={editBauherrAddress}
+                onChangeText={setEditBauherrAddress}
+                placeholder="Straße, PLZ Ort"
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+
+            {/* Objekt Section */}
+            <Text style={styles.sectionTitle}>Objektadresse (falls abweichend)</Text>
+
+            <View style={styles.inputGroup}>
               <TextInput
                 style={[styles.textInput, styles.textArea]}
                 value={editProjectAddress}
                 onChangeText={setEditProjectAddress}
-                placeholder={customer?.address || 'Straße, PLZ Ort'}
+                placeholder="Straße, PLZ Ort (leer = Bauherr-Adresse)"
                 multiline
                 numberOfLines={2}
               />
               <Text style={styles.inputHint}>
-                Leer lassen, um Kundenadresse zu verwenden
+                Leer lassen, um Bauherr-Adresse zu verwenden
               </Text>
             </View>
 

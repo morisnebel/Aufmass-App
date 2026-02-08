@@ -398,7 +398,10 @@ export default function NewProjectScreen() {
             <TouchableOpacity
               style={styles.newCustomerTopButton}
               onPress={() => {
-                setShowNewCustomerModal(true);
+                setShowCustomerPicker(false);  // Close this modal first
+                setTimeout(() => {
+                  setShowNewCustomerModal(true);  // Then open new customer modal
+                }, 300);
               }}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />

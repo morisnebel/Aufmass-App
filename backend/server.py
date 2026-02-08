@@ -1243,29 +1243,27 @@ async def export_project_pdf(project_id: str):
     customer_phone = safe_get(customer, 'phone')
     customer_email = safe_get(customer, 'email')
     
+    # Parse customer address for fallback
+    customer_address_parts = customer_address.split(',') if customer_address else ['', '']
+    customer_street = customer_address_parts[0].strip() if len(customer_address_parts) > 0 else ''
+    customer_city_parts = customer_address_parts[1].strip().split(' ') if len(customer_address_parts) > 1 else ['', '']
+    customer_plz = customer_city_parts[0] if len(customer_city_parts) > 0 else ''
+    customer_city = ' '.join(customer_city_parts[1:]) if len(customer_city_parts) > 1 else ''
+    
     # Use project-specific Bauherr data if available, otherwise use customer data
     bauherr_name = safe_get(project, 'bauherr_name') or customer_name
-    bauherr_address = safe_get(project, 'bauherr_address') or customer_address
     bauherr_phone = safe_get(project, 'bauherr_phone') or customer_phone
     bauherr_email = safe_get(project, 'bauherr_email') or customer_email
     
-    # Use project address (Objektadresse) if available, otherwise use bauherr address
-    project_address = safe_get(project, 'address')
-    effective_address = project_address if project_address else bauherr_address
+    # Use separate address fields if available
+    bauherr_street = safe_get(project, 'bauherr_street') or customer_street
+    bauherr_plz = safe_get(project, 'bauherr_plz') or customer_plz
+    bauherr_city = safe_get(project, 'bauherr_city') or customer_city
     
-    # Parse address for Bauherr
-    bauherr_address_parts = bauherr_address.split(',') if bauherr_address else ['', '']
-    bauherr_street = bauherr_address_parts[0].strip() if len(bauherr_address_parts) > 0 else ''
-    bauherr_city_parts = bauherr_address_parts[1].strip().split(' ') if len(bauherr_address_parts) > 1 else ['', '']
-    bauherr_plz = bauherr_city_parts[0] if len(bauherr_city_parts) > 0 else ''
-    bauherr_city = ' '.join(bauherr_city_parts[1:]) if len(bauherr_city_parts) > 1 else ''
-    
-    # Parse address for project/object (Objektadresse)
-    address_parts = effective_address.split(',') if effective_address else ['', '']
-    street = address_parts[0].strip() if len(address_parts) > 0 else ''
-    city_parts = address_parts[1].strip().split(' ') if len(address_parts) > 1 else ['', '']
-    plz = city_parts[0] if len(city_parts) > 0 else ''
-    city = ' '.join(city_parts[1:]) if len(city_parts) > 1 else ''
+    # Objektadresse - use separate fields if available
+    objekt_street = safe_get(project, 'objekt_street') or bauherr_street
+    objekt_plz = safe_get(project, 'objekt_plz') or bauherr_plz
+    objekt_city = safe_get(project, 'objekt_city') or bauherr_city
     
     project_name = safe_get(project, 'name')
     project_desc = safe_get(project, 'description')
@@ -1283,9 +1281,9 @@ async def export_project_pdf(project_id: str):
             ], colWidths=[20*mm, 65*mm]),
             Table([
                 [Paragraph("Projekt:", label_style), Paragraph(project_name, value_style)],
-                [Paragraph("Straße:", label_style), Paragraph(street, value_style)],
-                [Paragraph("PLZ:", label_style), Paragraph(plz, value_style)],
-                [Paragraph("Ort:", label_style), Paragraph(city, value_style)],
+                [Paragraph("Straße:", label_style), Paragraph(objekt_street, value_style)],
+                [Paragraph("PLZ:", label_style), Paragraph(objekt_plz, value_style)],
+                [Paragraph("Ort:", label_style), Paragraph(objekt_city, value_style)],
                 [Paragraph("Beschreibung:", label_style), Paragraph(project_desc, value_style)],
             ], colWidths=[25*mm, 60*mm]),
         ]

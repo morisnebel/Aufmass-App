@@ -203,6 +203,67 @@ export default function NewCustomerScreen() {
     return contactName.includes(query);
   });
 
+  // Function to save contact to device contacts
+  const saveToDeviceContacts = async (customerData: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  }) => {
+    if (Platform.OS === 'web') {
+      return; // Not available on web
+    }
+
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Contacts permission not granted');
+        return;
+      }
+
+      // Parse address into components if provided
+      let addressComponents: Contacts.Address | undefined;
+      if (customerData.address) {
+        // Try to parse address (format: "Street, PostalCode City, Country")
+        const parts = customerData.address.split(',').map(p => p.trim());
+        addressComponents = {
+          street: parts[0] || '',
+          city: parts[1]?.split(' ').slice(1).join(' ') || '',
+          postalCode: parts[1]?.split(' ')[0] || '',
+          country: parts[2] || '',
+          label: 'Arbeit',
+        };
+      }
+
+      // Parse name into first and last name
+      const nameParts = customerData.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const contact: Contacts.Contact = {
+        contactType: Contacts.ContactTypes.Person,
+        name: customerData.name,
+        firstName,
+        lastName,
+        ...(customerData.email && {
+          emails: [{ email: customerData.email, label: 'Arbeit' }],
+        }),
+        ...(customerData.phone && {
+          phoneNumbers: [{ number: customerData.phone, label: 'Mobil' }],
+        }),
+        ...(addressComponents && {
+          addresses: [addressComponents],
+        }),
+      };
+
+      await Contacts.addContactAsync(contact);
+      console.log('Contact saved to device contacts');
+    } catch (error) {
+      console.error('Error saving to device contacts:', error);
+      // Don't show error to user - this is a secondary feature
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
@@ -217,7 +278,16 @@ export default function NewCustomerScreen() {
         phone: phone || undefined,
         address: address || undefined,
       });
-      Alert.alert('Erfolg', 'Kunde wurde erstellt', [
+      
+      // Save to device contacts
+      await saveToDeviceContacts({
+        name,
+        email: email || undefined,
+        phone: phone || undefined,
+        address: address || undefined,
+      });
+      
+      Alert.alert('Erfolg', 'Kunde wurde erstellt und in Kontakten gespeichert', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {

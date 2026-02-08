@@ -928,6 +928,21 @@ export default function ProjectDetailScreen() {
               </View>
             </View>
 
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Objektadresse (optional)</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={editProjectAddress}
+                onChangeText={setEditProjectAddress}
+                placeholder={customer?.address || 'Straße, PLZ Ort'}
+                multiline
+                numberOfLines={2}
+              />
+              <Text style={styles.inputHint}>
+                Leer lassen, um Kundenadresse zu verwenden
+              </Text>
+            </View>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}

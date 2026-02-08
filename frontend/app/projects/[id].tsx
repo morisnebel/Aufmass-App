@@ -1413,6 +1413,16 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976d2',
+    marginTop: 16,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
   textInput: {
     borderWidth: 1,
     borderColor: '#ddd',

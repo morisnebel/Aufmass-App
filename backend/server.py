@@ -120,12 +120,18 @@ class Project(BaseModel):
     name: str
     description: Optional[str] = None
     remarks: Optional[str] = None  # Zusätzliche Bemerkungen
-    address: Optional[str] = None  # Optionale Projekt-spezifische Adresse (Objektadresse)
-    # Projekt-spezifische Bauherr-Daten (Kopie vom Kunden, kann pro Projekt angepasst werden)
+    address: Optional[str] = None  # Legacy - für Kompatibilität
+    # Projekt-spezifische Bauherr-Daten (separate Felder)
     bauherr_name: Optional[str] = None
     bauherr_phone: Optional[str] = None
     bauherr_email: Optional[str] = None
-    bauherr_address: Optional[str] = None  # Bauherr-Adresse (kann anders sein als Objektadresse)
+    bauherr_street: Optional[str] = None
+    bauherr_plz: Optional[str] = None
+    bauherr_city: Optional[str] = None
+    # Objektadresse (separate Felder)
+    objekt_street: Optional[str] = None
+    objekt_plz: Optional[str] = None
+    objekt_city: Optional[str] = None
     status: str = "active"  # active, completed, archived
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

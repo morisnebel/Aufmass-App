@@ -904,30 +904,159 @@ export default function ProjectDetailScreen() {
         <KeyboardAvoidingView 
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
         >
           <View style={styles.editModalContent}>
-            <Text style={styles.modalTitle}>Projekt bearbeiten</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Projektname *</Text>
-              <TextInput
-                style={styles.textInput}
-                value={editProjectName}
-                onChangeText={setEditProjectName}
-                placeholder="Projektname"
-              />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Projekt bearbeiten</Text>
+              <TouchableOpacity onPress={() => setShowEditProjectModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
+            
+            <ScrollView 
+              style={styles.editModalScroll}
+              contentContainerStyle={styles.editModalScrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.editFormRow}>
+                {/* Linke Spalte */}
+                <View style={styles.editFormColumn}>
+                  <Text style={styles.editSectionTitle}>Projekt</Text>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Name *</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editProjectName}
+                      onChangeText={setEditProjectName}
+                      placeholder="Projektname"
+                    />
+                  </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Beschreibung</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                value={editProjectDescription}
-                onChangeText={setEditProjectDescription}
-                placeholder="Beschreibung (optional)"
-                multiline
-                numberOfLines={3}
-              />
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Beschreibung</Text>
+                    <TextInput
+                      style={[styles.compactInput, styles.compactTextArea]}
+                      value={editProjectDescription}
+                      onChangeText={setEditProjectDescription}
+                      placeholder="Beschreibung"
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Status</Text>
+                    <View style={styles.statusButtonsCompact}>
+                      {['active', 'completed', 'cancelled'].map((status) => (
+                        <TouchableOpacity
+                          key={status}
+                          style={[
+                            styles.statusButtonCompact,
+                            editProjectStatus === status && styles.statusButtonActiveCompact,
+                          ]}
+                          onPress={() => setEditProjectStatus(status)}
+                        >
+                          <Text style={[
+                            styles.statusButtonTextCompact,
+                            editProjectStatus === status && styles.statusButtonTextActiveCompact,
+                          ]}>
+                            {status === 'active' ? 'Aktiv' : status === 'completed' ? 'Fertig' : 'Abgebr.'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                {/* Rechte Spalte */}
+                <View style={styles.editFormColumn}>
+                  <Text style={styles.editSectionTitle}>Bauherr</Text>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Name</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editBauherrName}
+                      onChangeText={setEditBauherrName}
+                      placeholder="Bauherr Name"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Telefon</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editBauherrPhone}
+                      onChangeText={setEditBauherrPhone}
+                      placeholder="Telefonnummer"
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>E-Mail</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editBauherrEmail}
+                      onChangeText={setEditBauherrEmail}
+                      placeholder="E-Mail"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Bauherr-Adresse</Text>
+                    <TextInput
+                      style={[styles.compactInput, styles.compactTextArea]}
+                      value={editBauherrAddress}
+                      onChangeText={setEditBauherrAddress}
+                      placeholder="Straße, PLZ Ort"
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Objektadresse (optional)</Text>
+                    <TextInput
+                      style={[styles.compactInput, styles.compactTextArea]}
+                      value={editProjectAddress}
+                      onChangeText={setEditProjectAddress}
+                      placeholder="Falls abweichend"
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={[styles.editModalButton, styles.cancelButton]}
+                onPress={() => setShowEditProjectModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editModalButton, styles.saveButton]}
+                onPress={handleSaveProject}
+                disabled={isSavingProject}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isSavingProject ? 'Speichern...' : 'Speichern'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
+  );
+}
             </View>
 
             <View style={styles.inputGroup}>

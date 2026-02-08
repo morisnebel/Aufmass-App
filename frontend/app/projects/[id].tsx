@@ -32,6 +32,7 @@ interface Project {
   customer_id: string;
   status: string;
   remarks?: string;  // Zusätzliche Bemerkungen
+  address?: string;  // Optionale Projekt-spezifische Adresse
 }
 
 interface Customer {

@@ -532,21 +532,36 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
                 </View>
               )}
-              {(project?.bauherr_address || customer?.address) && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Adresse:</Text>
-                  <Text style={styles.infoValue}>{project?.bauherr_address || customer?.address}</Text>
-                </View>
+              {/* Bauherr-Adresse (separate Felder) */}
+              {(project?.bauherr_street || customer?.address) && (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Straße:</Text>
+                    <Text style={styles.infoValue}>
+                      {project?.bauherr_street || parseCustomerAddress(customer?.address).street || '-'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>PLZ / Ort:</Text>
+                    <Text style={styles.infoValue}>
+                      {project?.bauherr_plz || parseCustomerAddress(customer?.address).plz || ''} {project?.bauherr_city || parseCustomerAddress(customer?.address).city || ''}
+                    </Text>
+                  </View>
+                </>
               )}
               
-              {/* Objektadresse */}
-              {project?.address && (
+              {/* Objektadresse (separate Felder) */}
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city) && (
                 <>
                   <View style={styles.sectionDivider} />
                   <Text style={styles.subSectionTitle}>Objektadresse</Text>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Adresse:</Text>
-                    <Text style={styles.infoValue}>{project.address}</Text>
+                    <Text style={styles.infoLabel}>Straße:</Text>
+                    <Text style={styles.infoValue}>{project.objekt_street || '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>PLZ / Ort:</Text>
+                    <Text style={styles.infoValue}>{project.objekt_plz || ''} {project.objekt_city || ''}</Text>
                   </View>
                 </>
               )}

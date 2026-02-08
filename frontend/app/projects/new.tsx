@@ -512,7 +512,10 @@ export default function NewProjectScreen() {
                   setNewCustomerName('');
                   setNewCustomerEmail('');
                   setNewCustomerPhone('');
-                  setNewCustomerAddress('');
+                  setNewCustomerMobile('');
+                  setNewCustomerStreet('');
+                  setNewCustomerPlz('');
+                  setNewCustomerCity('');
                 }}
               >
                 <Ionicons name="close" size={24} color="#666" />

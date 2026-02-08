@@ -255,12 +255,23 @@ export default function ProjectDetailScreen() {
       setEditProjectName(project.name);
       setEditProjectDescription(project.description || '');
       setEditProjectStatus(project.status);
-      setEditProjectAddress(project.address || '');
+      
+      // Parse customer address as fallback
+      const customerAddr = parseCustomerAddress(customer?.address);
+      
       // Bauherr data - use project-specific or fall back to customer
       setEditBauherrName(project.bauherr_name || customer?.name || '');
       setEditBauherrPhone(project.bauherr_phone || customer?.phone || '');
       setEditBauherrEmail(project.bauherr_email || customer?.email || '');
-      setEditBauherrAddress(project.bauherr_address || customer?.address || '');
+      setEditBauherrStreet(project.bauherr_street || customerAddr.street || '');
+      setEditBauherrPlz(project.bauherr_plz || customerAddr.plz || '');
+      setEditBauherrCity(project.bauherr_city || customerAddr.city || '');
+      
+      // Objektadresse - leave empty if not set (will use bauherr as default)
+      setEditObjektStreet(project.objekt_street || '');
+      setEditObjektPlz(project.objekt_plz || '');
+      setEditObjektCity(project.objekt_city || '');
+      
       setShowEditProjectModal(true);
     }
   };
@@ -283,12 +294,17 @@ export default function ProjectDetailScreen() {
         description: editProjectDescription || undefined,
         status: editProjectStatus,
         customer_id: project?.customer_id,
-        address: editProjectAddress || undefined,
-        // Bauherr data
+        // Bauherr data (separate fields)
         bauherr_name: editBauherrName || undefined,
         bauherr_phone: editBauherrPhone || undefined,
         bauherr_email: editBauherrEmail || undefined,
-        bauherr_address: editBauherrAddress || undefined,
+        bauherr_street: editBauherrStreet || undefined,
+        bauherr_plz: editBauherrPlz || undefined,
+        bauherr_city: editBauherrCity || undefined,
+        // Objektadresse (separate fields)
+        objekt_street: editObjektStreet || undefined,
+        objekt_plz: editObjektPlz || undefined,
+        objekt_city: editObjektCity || undefined,
       });
 
       setShowEditProjectModal(false);

@@ -47,6 +47,7 @@ class Customer(BaseModel):
     name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    mobile: Optional[str] = None  # Handynummer
     address: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

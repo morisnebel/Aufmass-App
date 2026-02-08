@@ -1232,8 +1232,19 @@ async def export_project_pdf(project_id: str):
     customer_phone = safe_get(customer, 'phone')
     customer_email = safe_get(customer, 'email')
     
-    # Parse address if available
-    address_parts = customer_address.split(',') if customer_address else ['', '']
+    # Use project address if available, otherwise use customer address
+    project_address = safe_get(project, 'address')
+    effective_address = project_address if project_address else customer_address
+    
+    # Parse address for customer (always use customer address)
+    customer_address_parts = customer_address.split(',') if customer_address else ['', '']
+    customer_street = customer_address_parts[0].strip() if len(customer_address_parts) > 0 else ''
+    customer_city_parts = customer_address_parts[1].strip().split(' ') if len(customer_address_parts) > 1 else ['', '']
+    customer_plz = customer_city_parts[0] if len(customer_city_parts) > 0 else ''
+    customer_city = ' '.join(customer_city_parts[1:]) if len(customer_city_parts) > 1 else ''
+    
+    # Parse address for project/object (use project address if available, otherwise customer address)
+    address_parts = effective_address.split(',') if effective_address else ['', '']
     street = address_parts[0].strip() if len(address_parts) > 0 else ''
     city_parts = address_parts[1].strip().split(' ') if len(address_parts) > 1 else ['', '']
     plz = city_parts[0] if len(city_parts) > 0 else ''
@@ -1247,9 +1258,9 @@ async def export_project_pdf(project_id: str):
         [
             Table([
                 [Paragraph("Name:", label_style), Paragraph(customer_name, value_style)],
-                [Paragraph("Straße:", label_style), Paragraph(street, value_style)],
-                [Paragraph("PLZ:", label_style), Paragraph(plz, value_style)],
-                [Paragraph("Ort:", label_style), Paragraph(city, value_style)],
+                [Paragraph("Straße:", label_style), Paragraph(customer_street, value_style)],
+                [Paragraph("PLZ:", label_style), Paragraph(customer_plz, value_style)],
+                [Paragraph("Ort:", label_style), Paragraph(customer_city, value_style)],
                 [Paragraph("Telefon:", label_style), Paragraph(customer_phone, value_style)],
                 [Paragraph("E-Mail:", label_style), Paragraph(customer_email, value_style)],
             ], colWidths=[20*mm, 65*mm]),

@@ -187,12 +187,15 @@ export default function NewProjectScreen() {
 
   // Select a contact and fill new customer form
   const handleSelectContact = (contact: Contacts.Contact) => {
-    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+    const { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
     
     setNewCustomerName(extractedName);
     setNewCustomerEmail(extractedEmail);
     setNewCustomerPhone(extractedPhone);
-    setNewCustomerAddress(extractedAddress);
+    setNewCustomerMobile(extractedMobile);
+    setNewCustomerStreet(extractedStreet);
+    setNewCustomerPlz(extractedPlz);
+    setNewCustomerCity(extractedCity);
     
     setShowContactPicker(false);
     setContactSearchQuery('');
@@ -212,11 +215,15 @@ export default function NewProjectScreen() {
 
     setCreatingCustomer(true);
     try {
+      // Combine address fields
+      const address = [newCustomerStreet, [newCustomerPlz, newCustomerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      
       const response = await axios.post(`${API_URL}/api/customers`, {
         name: newCustomerName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
-        address: newCustomerAddress || undefined,
+        mobile: newCustomerMobile || undefined,
+        address: address || undefined,
       });
 
       const newCustomer = response.data;

@@ -32,6 +32,7 @@ export default function NewRoofScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [roofType, setRoofType] = useState('Satteldach');
+  const [showRoofTypePicker, setShowRoofTypePicker] = useState(false);
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');

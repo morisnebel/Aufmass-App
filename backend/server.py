@@ -1256,6 +1256,7 @@ async def export_project_pdf(project_id: str):
     # Use project-specific Bauherr data if available, otherwise use customer data
     bauherr_name = safe_get(project, 'bauherr_name') or customer_name
     bauherr_phone = safe_get(project, 'bauherr_phone') or customer_phone
+    bauherr_mobile = safe_get(project, 'bauherr_mobile') or safe_get(customer, 'mobile') or ''
     bauherr_email = safe_get(project, 'bauherr_email') or customer_email
     
     # Use separate address fields if available
@@ -1264,6 +1265,7 @@ async def export_project_pdf(project_id: str):
     bauherr_city = safe_get(project, 'bauherr_city') or customer_city
     
     # Objektadresse - use separate fields if available
+    objekt_name = safe_get(project, 'objekt_name') or ''
     objekt_street = safe_get(project, 'objekt_street') or bauherr_street
     objekt_plz = safe_get(project, 'objekt_plz') or bauherr_plz
     objekt_city = safe_get(project, 'objekt_city') or bauherr_city
@@ -1280,14 +1282,15 @@ async def export_project_pdf(project_id: str):
                 [Paragraph("PLZ:", label_style), Paragraph(bauherr_plz, value_style)],
                 [Paragraph("Ort:", label_style), Paragraph(bauherr_city, value_style)],
                 [Paragraph("Telefon:", label_style), Paragraph(bauherr_phone, value_style)],
+                [Paragraph("Mobil:", label_style), Paragraph(bauherr_mobile, value_style)],
                 [Paragraph("E-Mail:", label_style), Paragraph(bauherr_email, value_style)],
             ], colWidths=[20*mm, 65*mm]),
             Table([
                 [Paragraph("Projekt:", label_style), Paragraph(project_name, value_style)],
+                [Paragraph("Name:", label_style), Paragraph(objekt_name, value_style)],
                 [Paragraph("Straße:", label_style), Paragraph(objekt_street, value_style)],
                 [Paragraph("PLZ:", label_style), Paragraph(objekt_plz, value_style)],
                 [Paragraph("Ort:", label_style), Paragraph(objekt_city, value_style)],
-                [Paragraph("Beschreibung:", label_style), Paragraph(project_desc, value_style)],
             ], colWidths=[25*mm, 60*mm]),
         ]
     ]

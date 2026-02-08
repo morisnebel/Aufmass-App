@@ -476,10 +476,10 @@ export default function ProjectDetailScreen() {
             {customer && (
               <View style={styles.infoCard}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Kundendaten</Text>
+                  <Text style={styles.cardTitle}>Bauherr</Text>
                   <TouchableOpacity
                     style={styles.editButton}
-                    onPress={() => router.push(`/customers/${customer.id}`)}
+                    onPress={openEditProjectModal}
                   >
                     <Ionicons name="create-outline" size={20} color="#1976d2" />
                     <Text style={styles.editButtonText}>Bearbeiten</Text>
@@ -487,24 +487,30 @@ export default function ProjectDetailScreen() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Name:</Text>
-                  <Text style={styles.infoValue}>{customer.name}</Text>
+                  <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
                 </View>
-                {customer.email && (
+                {(project?.bauherr_email || customer?.email) && (
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>E-Mail:</Text>
-                    <Text style={styles.infoValue}>{customer.email}</Text>
+                    <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
                   </View>
                 )}
-                {customer.phone && (
+                {(project?.bauherr_phone || customer?.phone) && (
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Telefon:</Text>
-                    <Text style={styles.infoValue}>{customer.phone}</Text>
+                    <Text style={styles.infoValue}>{project?.bauherr_phone || customer?.phone}</Text>
                   </View>
                 )}
-                {customer.address && (
+                {(project?.bauherr_address || customer?.address) && (
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Adresse:</Text>
-                    <Text style={styles.infoValue}>{customer.address}</Text>
+                    <Text style={styles.infoValue}>{project?.bauherr_address || customer?.address}</Text>
+                  </View>
+                )}
+                {project?.address && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Objektadresse:</Text>
+                    <Text style={styles.infoValue}>{project.address}</Text>
                   </View>
                 )}
               </View>

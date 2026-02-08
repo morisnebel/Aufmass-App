@@ -458,7 +458,7 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Name:</Text>
+                <Text style={styles.infoLabel}>Projekt:</Text>
                 <Text style={styles.infoValue}>{project.name}</Text>
               </View>
               {project.description && (
@@ -469,8 +469,50 @@ export default function ProjectDetailScreen() {
               )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Status:</Text>
-                <Text style={styles.infoValue}>{project.status}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: project.status === 'active' ? '#4caf50' : project.status === 'completed' ? '#2196f3' : '#ff9800' }]}>
+                  <Text style={styles.statusBadgeText}>
+                    {project.status === 'active' ? 'Aktiv' : project.status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}
+                  </Text>
+                </View>
               </View>
+              
+              {/* Bauherr-Daten */}
+              <View style={styles.sectionDivider} />
+              <Text style={styles.subSectionTitle}>Bauherr</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Name:</Text>
+                <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
+              </View>
+              {(project?.bauherr_phone || customer?.phone) && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Telefon:</Text>
+                  <Text style={styles.infoValue}>{project?.bauherr_phone || customer?.phone}</Text>
+                </View>
+              )}
+              {(project?.bauherr_email || customer?.email) && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>E-Mail:</Text>
+                  <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
+                </View>
+              )}
+              {(project?.bauherr_address || customer?.address) && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Adresse:</Text>
+                  <Text style={styles.infoValue}>{project?.bauherr_address || customer?.address}</Text>
+                </View>
+              )}
+              
+              {/* Objektadresse */}
+              {project?.address && (
+                <>
+                  <View style={styles.sectionDivider} />
+                  <Text style={styles.subSectionTitle}>Objektadresse</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Adresse:</Text>
+                    <Text style={styles.infoValue}>{project.address}</Text>
+                  </View>
+                </>
+              )}
             </View>
 
             {customer && (

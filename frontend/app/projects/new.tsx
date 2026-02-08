@@ -281,11 +281,17 @@ export default function NewProjectScreen() {
 
     setLoading(true);
     try {
+      // Copy customer data as initial bauherr data for this project
       const response = await axios.post(`${API_URL}/api/projects`, {
         name,
         description: description || undefined,
         customer_id: customerId,
         status: 'active',
+        // Copy customer data as project-specific bauherr data
+        bauherr_name: selectedCustomer?.name || undefined,
+        bauherr_phone: selectedCustomer?.phone || undefined,
+        bauherr_email: selectedCustomer?.email || undefined,
+        bauherr_address: selectedCustomer?.address || undefined,
       });
       Alert.alert('Erfolg', 'Projekt wurde erstellt', [
         { text: 'OK', onPress: () => router.replace(`/projects/${response.data.id}`) },

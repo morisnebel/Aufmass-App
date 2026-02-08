@@ -267,12 +267,14 @@ export default function ProjectDetailScreen() {
       // Bauherr data - use project-specific or fall back to customer
       setEditBauherrName(project.bauherr_name || customer?.name || '');
       setEditBauherrPhone(project.bauherr_phone || customer?.phone || '');
+      setEditBauherrMobile(project.bauherr_mobile || customer?.mobile || '');
       setEditBauherrEmail(project.bauherr_email || customer?.email || '');
       setEditBauherrStreet(project.bauherr_street || customerAddr.street || '');
       setEditBauherrPlz(project.bauherr_plz || customerAddr.plz || '');
       setEditBauherrCity(project.bauherr_city || customerAddr.city || '');
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
+      setEditObjektName(project.objekt_name || '');
       setEditObjektStreet(project.objekt_street || '');
       setEditObjektPlz(project.objekt_plz || '');
       setEditObjektCity(project.objekt_city || '');
@@ -302,11 +304,13 @@ export default function ProjectDetailScreen() {
         // Bauherr data (separate fields)
         bauherr_name: editBauherrName || undefined,
         bauherr_phone: editBauherrPhone || undefined,
+        bauherr_mobile: editBauherrMobile || undefined,
         bauherr_email: editBauherrEmail || undefined,
         bauherr_street: editBauherrStreet || undefined,
         bauherr_plz: editBauherrPlz || undefined,
         bauherr_city: editBauherrCity || undefined,
         // Objektadresse (separate fields)
+        objekt_name: editObjektName || undefined,
         objekt_street: editObjektStreet || undefined,
         objekt_plz: editObjektPlz || undefined,
         objekt_city: editObjektCity || undefined,

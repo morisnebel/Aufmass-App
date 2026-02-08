@@ -692,7 +692,8 @@ export default function NewProjectScreen() {
                 data={filteredContacts}
                 keyExtractor={(item, index) => item.id || index.toString()}
                 renderItem={({ item }) => {
-                  const { extractedName, extractedPhone, extractedAddress } = extractContactData(item);
+                  const { extractedName, extractedPhone, extractedStreet, extractedPlz, extractedCity } = extractContactData(item);
+                  const displayAddress = [extractedStreet, [extractedPlz, extractedCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
                   return (
                     <TouchableOpacity
                       style={styles.contactItem}
@@ -704,8 +705,8 @@ export default function NewProjectScreen() {
                         {extractedPhone && (
                           <Text style={styles.contactItemDetail}>{extractedPhone}</Text>
                         )}
-                        {extractedAddress && (
-                          <Text style={styles.contactItemDetail} numberOfLines={1}>{extractedAddress}</Text>
+                        {displayAddress && (
+                          <Text style={styles.contactItemDetail} numberOfLines={1}>{displayAddress}</Text>
                         )}
                       </View>
                     </TouchableOpacity>

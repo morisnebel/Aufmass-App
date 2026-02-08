@@ -103,6 +103,11 @@ export default function ProjectDetailScreen() {
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState('');
   const [editProjectAddress, setEditProjectAddress] = useState('');
+  // Bauherr edit fields
+  const [editBauherrName, setEditBauherrName] = useState('');
+  const [editBauherrPhone, setEditBauherrPhone] = useState('');
+  const [editBauherrEmail, setEditBauherrEmail] = useState('');
+  const [editBauherrAddress, setEditBauherrAddress] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
 
   // Use useFocusEffect to reload data when screen comes into focus

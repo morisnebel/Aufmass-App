@@ -247,45 +247,83 @@ export default function NewRoofScreen() {
       }
 
       case 'Mansarddach': {
-        // Mansarddach: 4 Dachflächen (lange + schmale Seiten), jeweils unten (steil) + oben (flach)
-        // Basierend auf DachCAD-Eingaben
+        // Mansarddach: 2 lange Seiten + 2 schmale Seiten (Giebel)
+        // Jede Seite hat einen unteren (steilen) und oberen (flachen) Teil
         if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
           // Umrechnung in Radiant
           const radLangUnten = (nLangUnten * Math.PI) / 180;
           const radLangOben = (nLangOben * Math.PI) / 180;
-          const radSchmalUnten = (nSchmalUnten || nLangUnten) * Math.PI / 180;
-          const radSchmalOben = (nSchmalOben || nLangOben) * Math.PI / 180;
+          const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
+          const radSchmalOben = ((nSchmalOben || nLangOben) * Math.PI) / 180;
           
+          // === LANGE SEITEN (2 Stück) ===
           // Sparrenlänge unten (steil) = Knickhöhe / sin(Neigung)
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
-          const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
-          
-          // Horizontale Ausdehnung des unteren Teils = Knickhöhe / tan(Neigung)
-          const breiteUntenLang = hKnick / Math.tan(radLangUnten);
-          const breiteUntenSchmal = hKnick / Math.tan(radSchmalUnten);
-          
-          // Verbleibende Breite für oberen Teil
-          // Für lange Seite: Gebäudebreite - 2 × breiteUntenLang
-          const restBreiteLang = Math.max(0, B - 2 * breiteUntenLang);
-          // Für schmale Seite: Gebäudelänge - 2 × breiteUntenSchmal
-          const restBreiteSchmal = Math.max(0, L - 2 * breiteUntenSchmal);
-          
+          // Horizontale Ausdehnung des unteren Teils
+          const horizontalUntenLang = hKnick / Math.tan(radLangUnten);
+          // Restbreite für oberen Teil = Gebäudebreite - 2 × horizontale Ausdehnung
+          const restBreiteLang = Math.max(0, B - 2 * horizontalUntenLang);
           // Sparrenlänge oben (flach) = (Restbreite/2) / cos(Neigung)
-          const sparrenLangOben = (restBreiteLang / 2) / Math.cos(radLangOben);
-          const sparrenSchmalOben = (restBreiteSchmal / 2) / Math.cos(radSchmalOben);
+          const sparrenLangOben = restBreiteLang > 0 ? (restBreiteLang / 2) / Math.cos(radLangOben) : 0;
           
-          // Untere Flächen (2 lange Seiten + 2 schmale Seiten)
-          const flaecheLangUnten = 2 * L * sparrenLangUnten;   // 2 lange Seiten
-          const flaecheSchmalUnten = 2 * B * sparrenSchmalUnten; // 2 schmale Seiten
+          // Fläche lange Seiten: 2 × Länge × (Sparren unten + Sparren oben)
+          const flaecheLangSeiten = 2 * L * (sparrenLangUnten + sparrenLangOben);
           
-          // Obere Flächen (2 lange Seiten + 2 schmale Seiten) 
-          // Wie Walmdach: Trapeze an langen Seiten, Dreiecke an schmalen
-          const flaecheLangOben = 2 * L * sparrenLangOben;
-          const flaecheSchmalOben = 2 * B * sparrenSchmalOben;
+          // === SCHMALE SEITEN / GIEBEL (2 Stück) ===
+          // Sparrenlänge unten (steil) = Knickhöhe / sin(Neigung)
+          const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
+          // Horizontale Ausdehnung des unteren Teils
+          const horizontalUntenSchmal = hKnick / Math.tan(radSchmalUnten);
+          // Restbreite für oberen Teil = Gebäudelänge - 2 × horizontale Ausdehnung
+          const restBreiteSchmal = Math.max(0, L - 2 * horizontalUntenSchmal);
+          // Sparrenlänge oben (flach)
+          const sparrenSchmalOben = restBreiteSchmal > 0 ? (restBreiteSchmal / 2) / Math.cos(radSchmalOben) : 0;
           
-          area = flaecheLangUnten + flaecheSchmalUnten + flaecheLangOben + flaecheSchmalOben;
+          // Fläche schmale Seiten: 2 × Breite × (Sparren unten + Sparren oben)
+          const flaecheSchmalSeiten = 2 * B * (sparrenSchmalUnten + sparrenSchmalOben);
+          
+          // Gesamtfläche: Lange + Schmale Seiten
+          // ABER: An den Ecken überlappen sich die Flächen!
+          // Bei einem Mansarddach mit 4 Seiten müssen wir die Eckbereiche berücksichtigen
+          
+          // Einfache Berechnung ohne Eckkorrektur:
+          // area = flaecheLangSeiten + flaecheSchmalSeiten;
+          
+          // Korrigierte Berechnung:
+          // Die Grate an den Ecken bedeuten, dass wir Trapezflächen haben
+          // Unterer Teil: 4 Trapeze
+          // Oberer Teil: 4 Trapeze (oder Walm-ähnlich)
+          
+          // Für ein Mansarddach Typ 1 (wie im DachCAD):
+          // Untere Fläche pro Seite = Seitenlänge × Sparrenlänge unten
+          // Obere Fläche = abhängig von Firstlänge und Dachform
+          
+          // Bei quadratischem Grundriss mit gleichen Neigungen auf allen Seiten:
+          // Untere Fläche = Umfang × Sparrenlänge unten = 2×(L+B) × sparrenUnten
+          // Obere Fläche = je nach First-Konfiguration
+          
+          // Vereinfachte korrekte Berechnung für Mansarddach:
+          const umfang = 2 * (L + B);
+          
+          // Unterer Teil (steil): Umfang × Sparrenlänge
+          const flaecheUnten = umfang * sparrenLangUnten;
+          
+          // Oberer Teil: Wie Walmdach/Zeltdach auf der verkleinerten Fläche
+          // Obere Grundfläche nach Abzug des unteren Teils
+          const obereLaenge = L - 2 * horizontalUntenLang;
+          const obereBreite = B - 2 * horizontalUntenSchmal;
+          
+          if (obereLaenge > 0 && obereBreite > 0) {
+            // Oberer Teil wie Walmdach berechnen
+            const obererUmfang = 2 * (obereLaenge + obereBreite);
+            const flaecheOben = obererUmfang * sparrenLangOben;
+            area = flaecheUnten + flaecheOben;
+          } else {
+            // Oberer Teil wie Zeltdach (spitzes Dach)
+            area = flaecheUnten;
+          }
         } else {
-          area = L * B * 1.4; // Fallback mit Aufschlag für Mansarddach
+          area = L * B * 1.4; // Fallback
         }
         break;
       }

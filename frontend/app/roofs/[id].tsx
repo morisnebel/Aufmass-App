@@ -247,30 +247,52 @@ export default function EditRoofScreen() {
       }
 
       case 'Mansarddach': {
-        if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
+        // Mansarddach: Berechnung basierend auf DachCAD V6
+        if (nLangUnten > 0 && hKnick > 0) {
           const radLangUnten = (nLangUnten * Math.PI) / 180;
-          const radLangOben = (nLangOben * Math.PI) / 180;
-          const radSchmalUnten = (nSchmalUnten || nLangUnten) * Math.PI / 180;
-          const radSchmalOben = (nSchmalOben || nLangOben) * Math.PI / 180;
+          const radLangOben = nLangOben > 0 ? (nLangOben * Math.PI) / 180 : 0;
+          const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
+          const radSchmalOben = nSchmalOben > 0 ? ((nSchmalOben || nLangOben) * Math.PI) / 180 : radLangOben;
           
+          // Dachüberstand
+          const ueberstand = parseFloat(dachueberstand) || 0;
+          const effL = L + 2 * ueberstand;
+          const effB = B + 2 * ueberstand;
+          
+          // UNTERER TEIL
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
           const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
+          const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
+          const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
           
-          const breiteUntenLang = hKnick / Math.tan(radLangUnten);
-          const breiteUntenSchmal = hKnick / Math.tan(radSchmalUnten);
+          let flaecheUnten = 0;
+          if (nSchmalUnten && nSchmalUnten !== nLangUnten) {
+            flaecheUnten = 2 * effL * sparrenLangUnten + 2 * effB * sparrenSchmalUnten;
+          } else {
+            const effUmfang = 2 * (effL + effB);
+            flaecheUnten = effUmfang * sparrenLangUnten;
+          }
           
-          const restBreiteLang = Math.max(0, B - 2 * breiteUntenLang);
-          const restBreiteSchmal = Math.max(0, L - 2 * breiteUntenSchmal);
+          // OBERER TEIL
+          let flaecheOben = 0;
+          if (nLangOben > 0) {
+            const obereLaenge = Math.max(0, effL - 2 * horizontalSchmalUnten);
+            const obereBreite = Math.max(0, effB - 2 * horizontalLangUnten);
+            
+            if (obereLaenge > 0 && obereBreite > 0) {
+              const sparrenLangOben = (obereBreite / 2) / Math.cos(radLangOben);
+              const sparrenSchmalOben = (obereLaenge / 2) / Math.cos(radSchmalOben);
+              
+              if (nSchmalOben && nSchmalOben !== nLangOben) {
+                flaecheOben = 2 * obereLaenge * sparrenLangOben + 2 * obereBreite * sparrenSchmalOben;
+              } else {
+                const obererUmfang = 2 * (obereLaenge + obereBreite);
+                flaecheOben = obererUmfang * sparrenLangOben;
+              }
+            }
+          }
           
-          const sparrenLangOben = (restBreiteLang / 2) / Math.cos(radLangOben);
-          const sparrenSchmalOben = (restBreiteSchmal / 2) / Math.cos(radSchmalOben);
-          
-          const flaecheLangUnten = 2 * L * sparrenLangUnten;
-          const flaecheSchmalUnten = 2 * B * sparrenSchmalUnten;
-          const flaecheLangOben = 2 * L * sparrenLangOben;
-          const flaecheSchmalOben = 2 * B * sparrenSchmalOben;
-          
-          area = flaecheLangUnten + flaecheSchmalUnten + flaecheLangOben + flaecheSchmalOben;
+          area = flaecheUnten + flaecheOben;
         } else {
           area = L * B * 1.4;
         }

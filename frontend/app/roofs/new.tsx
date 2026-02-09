@@ -442,7 +442,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 8.0"
                 value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -469,7 +469,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 8.0"
                 value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -512,7 +512,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 10.0"
                 value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -571,7 +571,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 10.0"
                 value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -704,7 +704,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 10.0"
                 value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>

@@ -399,18 +399,17 @@ export default function NewRoofScreen() {
       </View>
       <View style={styles.inputRow}>
         <View style={styles.inputHalf}>
-          <Text style={styles.label}>Längsseite (m)</Text>
+          <Text style={styles.label}>Traufe (m)</Text>
           <TextInput
             style={styles.input}
             placeholder="z.B. 0,5"
-            value={ueberstandLaengsseite}
-            onChangeText={(text) => setUeberstandLaengsseite(formatDecimal(text))}
+            value={ueberstandTraufe}
+            onChangeText={(text) => setUeberstandTraufe(formatDecimal(text))}
             keyboardType="decimal-pad"
           />
-          <Text style={styles.hint}>Traufseite</Text>
         </View>
         <View style={styles.inputHalf}>
-          <Text style={styles.label}>Giebelseite (m)</Text>
+          <Text style={styles.label}>Giebel (m)</Text>
           <TextInput
             style={styles.input}
             placeholder="z.B. 0,3"
@@ -418,8 +417,50 @@ export default function NewRoofScreen() {
             onChangeText={(text) => setUeberstandGiebelseite(formatDecimal(text))}
             keyboardType="decimal-pad"
           />
-          <Text style={styles.hint}>Giebelseite</Text>
         </View>
+      </View>
+    </>
+  );
+
+  // Spezielle Überstand-Felder für Pultdach (Traufe + Pult)
+  const renderPultdachUeberstandFields = () => (
+    <>
+      <View style={styles.sectionDivider}>
+        <Text style={styles.sectionText}>Dachüberstände (optional)</Text>
+      </View>
+      <View style={styles.inputRow}>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Traufe (m)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="z.B. 0,5"
+            value={ueberstandTraufe}
+            onChangeText={(text) => setUeberstandTraufe(formatDecimal(text))}
+            keyboardType="decimal-pad"
+          />
+          <Text style={styles.hint}>Untere Seite</Text>
+        </View>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Pult (m)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="z.B. 0,3"
+            value={ueberstandPult}
+            onChangeText={(text) => setUeberstandPult(formatDecimal(text))}
+            keyboardType="decimal-pad"
+          />
+          <Text style={styles.hint}>Obere Seite</Text>
+        </View>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Giebel (m)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="z.B. 0,3"
+          value={ueberstandGiebelseite}
+          onChangeText={(text) => setUeberstandGiebelseite(formatDecimal(text))}
+          keyboardType="decimal-pad"
+        />
       </View>
     </>
   );

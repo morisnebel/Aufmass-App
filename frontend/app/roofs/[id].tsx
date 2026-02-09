@@ -46,10 +46,12 @@ export default function EditRoofScreen() {
   const [dachneigung3, setDachneigung3] = useState('');
   const [dachneigung4, setDachneigung4] = useState('');
   
-  // Mansarddach spezifisch
-  const [neigungUnten, setNeigungUnten] = useState('');
-  const [stockwerkhoehe, setStockwerkhoehe] = useState('');
-  const [neigungOben, setNeigungOben] = useState('');
+  // Mansarddach spezifisch (wie in DachCAD)
+  const [neigungLangUnten, setNeigungLangUnten] = useState('');
+  const [neigungLangOben, setNeigungLangOben] = useState('');
+  const [neigungSchmalUnten, setNeigungSchmalUnten] = useState('');
+  const [neigungSchmalOben, setNeigungSchmalOben] = useState('');
+  const [knickhoehe, setKnickhoehe] = useState('');
   
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,6 @@ export default function EditRoofScreen() {
           setRoofType(roof.roof_type);
           
           const m = roof.measurements || {};
-          // Neue Felder
           setGebaeudelaenge(m.gebaeudelaenge?.toString() || m.length?.toString() || '');
           setGebaeudebreite(m.gebaeudebreite?.toString() || m.width?.toString() || '');
           setTraufhoehe(m.traufhoehe?.toString() || '');
@@ -85,9 +86,12 @@ export default function EditRoofScreen() {
           setDachneigung2(m.dachneigung2?.toString() || '');
           setDachneigung3(m.dachneigung3?.toString() || '');
           setDachneigung4(m.dachneigung4?.toString() || '');
-          setNeigungUnten(m.neigung_unten?.toString() || '');
-          setStockwerkhoehe(m.stockwerkhoehe?.toString() || '');
-          setNeigungOben(m.neigung_oben?.toString() || '');
+          // Mansarddach Felder
+          setNeigungLangUnten(m.neigung_lang_unten?.toString() || '');
+          setNeigungLangOben(m.neigung_lang_oben?.toString() || '');
+          setNeigungSchmalUnten(m.neigung_schmal_unten?.toString() || '');
+          setNeigungSchmalOben(m.neigung_schmal_oben?.toString() || '');
+          setKnickhoehe(m.knickhoehe?.toString() || '');
           setNotes(roof.notes || '');
           break;
         }
@@ -149,9 +153,13 @@ export default function EditRoofScreen() {
     const n2 = parseFloat(dachneigung2) || n1;
     const n3 = parseFloat(dachneigung3) || n1;
     const n4 = parseFloat(dachneigung4) || n2;
-    const nUnten = parseFloat(neigungUnten) || 0;
-    const hStock = parseFloat(stockwerkhoehe) || 0;
-    const nOben = parseFloat(neigungOben) || 0;
+    
+    // Mansarddach Variablen
+    const nLangUnten = parseFloat(neigungLangUnten) || 0;
+    const nLangOben = parseFloat(neigungLangOben) || 0;
+    const nSchmalUnten = parseFloat(neigungSchmalUnten) || 0;
+    const nSchmalOben = parseFloat(neigungSchmalOben) || 0;
+    const hKnick = parseFloat(knickhoehe) || 0;
 
     let area = 0;
 
@@ -237,21 +245,32 @@ export default function EditRoofScreen() {
       }
 
       case 'Mansarddach': {
-        if (nUnten > 0 && nOben > 0 && hStock > 0) {
-          const radUnten = (nUnten * Math.PI) / 180;
-          const radOben = (nOben * Math.PI) / 180;
+        if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
+          const radLangUnten = (nLangUnten * Math.PI) / 180;
+          const radLangOben = (nLangOben * Math.PI) / 180;
+          const radSchmalUnten = (nSchmalUnten || nLangUnten) * Math.PI / 180;
+          const radSchmalOben = (nSchmalOben || nLangOben) * Math.PI / 180;
           
-          const breiteUnten = hStock / Math.tan(radUnten);
-          const sparrenUnten = hStock / Math.sin(radUnten);
-          const restbreite = Math.max(0, B - 2 * breiteUnten);
-          const sparrenOben = (restbreite / 2) / Math.cos(radOben);
+          const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
+          const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
           
-          const flaecheUnten = 2 * L * sparrenUnten;
-          const flaecheOben = 2 * L * sparrenOben;
+          const breiteUntenLang = hKnick / Math.tan(radLangUnten);
+          const breiteUntenSchmal = hKnick / Math.tan(radSchmalUnten);
           
-          area = flaecheUnten + flaecheOben;
+          const restBreiteLang = Math.max(0, B - 2 * breiteUntenLang);
+          const restBreiteSchmal = Math.max(0, L - 2 * breiteUntenSchmal);
+          
+          const sparrenLangOben = (restBreiteLang / 2) / Math.cos(radLangOben);
+          const sparrenSchmalOben = (restBreiteSchmal / 2) / Math.cos(radSchmalOben);
+          
+          const flaecheLangUnten = 2 * L * sparrenLangUnten;
+          const flaecheSchmalUnten = 2 * B * sparrenSchmalUnten;
+          const flaecheLangOben = 2 * L * sparrenLangOben;
+          const flaecheSchmalOben = 2 * B * sparrenSchmalOben;
+          
+          area = flaecheLangUnten + flaecheSchmalUnten + flaecheLangOben + flaecheSchmalOben;
         } else {
-          area = L * B * 1.3;
+          area = L * B * 1.4;
         }
         break;
       }
@@ -284,9 +303,11 @@ export default function EditRoofScreen() {
           dachneigung2: parseFloat(dachneigung2) || 0,
           dachneigung3: parseFloat(dachneigung3) || 0,
           dachneigung4: parseFloat(dachneigung4) || 0,
-          neigung_unten: parseFloat(neigungUnten) || 0,
-          stockwerkhoehe: parseFloat(stockwerkhoehe) || 0,
-          neigung_oben: parseFloat(neigungOben) || 0,
+          neigung_lang_unten: parseFloat(neigungLangUnten) || 0,
+          neigung_lang_oben: parseFloat(neigungLangOben) || 0,
+          neigung_schmal_unten: parseFloat(neigungSchmalUnten) || 0,
+          neigung_schmal_oben: parseFloat(neigungSchmalOben) || 0,
+          knickhoehe: parseFloat(knickhoehe) || 0,
           firsthoehe: calculatedFirsthoehe,
           length: parseFloat(gebaeudelaenge),
           width: parseFloat(gebaeudebreite),
@@ -311,9 +332,11 @@ export default function EditRoofScreen() {
     setDachneigung2('');
     setDachneigung3('');
     setDachneigung4('');
-    setNeigungUnten('');
-    setStockwerkhoehe('');
-    setNeigungOben('');
+    setNeigungLangUnten('');
+    setNeigungLangOben('');
+    setNeigungSchmalUnten('');
+    setNeigungSchmalOben('');
+    setKnickhoehe('');
   };
 
   const renderMeasurementFields = () => {
@@ -323,23 +346,11 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 12.0"
-                value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 8.0"
-                value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
             </View>
           </>
         );
@@ -349,33 +360,15 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 12.0"
-                value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 8.0"
-                value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Dachneigung (°) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 15"
-                value={dachneigung1}
-                onChangeText={setDachneigung1}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 15" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
             </View>
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
@@ -391,50 +384,23 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 12.0"
-                value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 10.0"
-                value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
             </View>
-            <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Dachneigungen</Text>
-            </View>
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen</Text></View>
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>Dachfläche 1 (°) *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="z.B. 35"
-                  value={dachneigung1}
-                  onChangeText={setDachneigung1}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
               </View>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>Dachfläche 2 (°)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="gleich wie DF1"
-                  value={dachneigung2}
-                  onChangeText={setDachneigung2}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="gleich wie DF1" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" />
               </View>
             </View>
-            <Text style={styles.hint}>Bei unterschiedlichen Neigungen: asymmetrisches Satteldach</Text>
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
@@ -449,86 +415,36 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 14.0"
-                value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 14.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 10.0"
-                value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
             </View>
-            <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Dachneigungen (4 Flächen)</Text>
-            </View>
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen (4 Flächen)</Text></View>
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>DF 1 - Längsseite (°)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="z.B. 35"
-                  value={dachneigung1}
-                  onChangeText={(val) => {
-                    setDachneigung1(val);
-                    if (!dachneigung2) setDachneigung2(val);
-                  }}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={(val) => { setDachneigung1(val); if (!dachneigung2) setDachneigung2(val); }} keyboardType="decimal-pad" />
               </View>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>DF 2 - Längsseite (°)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="gleich wie DF1"
-                  value={dachneigung2}
-                  onChangeText={setDachneigung2}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="gleich wie DF1" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" />
               </View>
             </View>
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>DF 3 - Walmseite (°)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="z.B. 35"
-                  value={dachneigung3}
-                  onChangeText={(val) => {
-                    setDachneigung3(val);
-                    if (!dachneigung4) setDachneigung4(val);
-                  }}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung3} onChangeText={(val) => { setDachneigung3(val); if (!dachneigung4) setDachneigung4(val); }} keyboardType="decimal-pad" />
               </View>
               <View style={styles.inputHalf}>
                 <Text style={styles.label}>DF 4 - Walmseite (°)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="gleich wie DF3"
-                  value={dachneigung4}
-                  onChangeText={setDachneigung4}
-                  keyboardType="decimal-pad"
-                />
+                <TextInput style={styles.input} placeholder="gleich wie DF3" value={dachneigung4} onChangeText={setDachneigung4} keyboardType="decimal-pad" />
               </View>
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Traufhöhe (m)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 3.0"
-                value={traufhoehe}
-                onChangeText={setTraufhoehe}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 3.0" value={traufhoehe} onChangeText={setTraufhoehe} keyboardType="decimal-pad" />
             </View>
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
@@ -544,31 +460,15 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Seitenlänge (m) * - quadratisch</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 8.0"
-                value={gebaeudelaenge}
-                onChangeText={(val) => {
-                  setGebaeudelaenge(val);
-                  setGebaeudebreite(val);
-                }}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudelaenge} onChangeText={(val) => { setGebaeudelaenge(val); setGebaeudebreite(val); }} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Dachneigung (°) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 30"
-                value={dachneigung1}
-                onChangeText={setDachneigung1}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 30" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
             </View>
-            <Text style={styles.hint}>Zeltdach: Quadratischer Grundriss, 4 gleiche Dreiecksflächen</Text>
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe (Spitze):</Text>
+                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
                 <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
               </View>
             )}
@@ -580,65 +480,44 @@ export default function EditRoofScreen() {
           <>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 12.0"
-                value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 10.0"
-                value={gebaeudebreite}
-                onChangeText={setGebaeudebreite}
-                keyboardType="decimal-pad"
-              />
+              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
             </View>
             
-            <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Unterer Teil (Mansarde - steil)</Text>
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Trauf(Knick)höhe</Text></View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Knickhöhe (m) *</Text>
+              <TextInput style={styles.input} placeholder="z.B. 3.0" value={knickhoehe} onChangeText={setKnickhoehe} keyboardType="decimal-pad" />
+              <Text style={styles.hint}>Höhe von Traufe bis zum Knickpunkt</Text>
             </View>
+            
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigung lange Seite (°)</Text></View>
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
-                <Text style={styles.label}>Neigung unten (°) *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="z.B. 70"
-                  value={neigungUnten}
-                  onChangeText={setNeigungUnten}
-                  keyboardType="decimal-pad"
-                />
+                <Text style={styles.label}>Unten (steil) *</Text>
+                <TextInput style={styles.input} placeholder="z.B. 65" value={neigungLangUnten} onChangeText={(val) => { setNeigungLangUnten(val); if (!neigungSchmalUnten) setNeigungSchmalUnten(val); }} keyboardType="decimal-pad" />
               </View>
               <View style={styles.inputHalf}>
-                <Text style={styles.label}>Stockwerkhöhe (m) *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="z.B. 2.5"
-                  value={stockwerkhoehe}
-                  onChangeText={setStockwerkhoehe}
-                  keyboardType="decimal-pad"
-                />
+                <Text style={styles.label}>Oben (flach) *</Text>
+                <TextInput style={styles.input} placeholder="z.B. 20" value={neigungLangOben} onChangeText={(val) => { setNeigungLangOben(val); if (!neigungSchmalOben) setNeigungSchmalOben(val); }} keyboardType="decimal-pad" />
               </View>
             </View>
             
-            <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Oberer Teil (Walm - flacher)</Text>
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigung schmale Seite (°)</Text></View>
+            <View style={styles.inputRow}>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Unten (steil)</Text>
+                <TextInput style={styles.input} placeholder="wie lange Seite" value={neigungSchmalUnten} onChangeText={setNeigungSchmalUnten} keyboardType="decimal-pad" />
+              </View>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Oben (flach)</Text>
+                <TextInput style={styles.input} placeholder="wie lange Seite" value={neigungSchmalOben} onChangeText={setNeigungSchmalOben} keyboardType="decimal-pad" />
+              </View>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Neigung oben (°) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 25"
-                value={neigungOben}
-                onChangeText={setNeigungOben}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <Text style={styles.hint}>Mansarddach: Steiler unterer Teil für Wohnraum, flacherer oberer Teil</Text>
+            <Text style={styles.hint}>Mansarddach: 4 Dachflächen mit je 2 Neigungen</Text>
           </>
         );
 
@@ -649,53 +528,34 @@ export default function EditRoofScreen() {
 
   const getFormulaText = () => {
     switch (roofType) {
-      case 'Flachdach':
-        return 'Formel: Länge × Breite';
-      case 'Pultdach':
-        return 'Formel: Länge × (Breite / cos(Neigung))';
-      case 'Satteldach':
-        return 'Formel: L × Sparren1 + L × Sparren2';
-      case 'Walmdach':
-        return 'Formel: 2 Trapeze + 2 Walmdreiecke';
-      case 'Zeltdach':
-        return 'Formel: 4 × (Seite/2 × Sparrenlänge)';
-      case 'Mansarddach':
-        return 'Formel: Fläche unten + Fläche oben';
-      default:
-        return '';
+      case 'Flachdach': return 'Formel: Länge × Breite';
+      case 'Pultdach': return 'Formel: Länge × (Breite / cos(Neigung))';
+      case 'Satteldach': return 'Formel: L × Sparren1 + L × Sparren2';
+      case 'Walmdach': return 'Formel: 2 Trapeze + 2 Walmdreiecke';
+      case 'Zeltdach': return 'Formel: 4 × (Seite/2 × Sparrenlänge)';
+      case 'Mansarddach': return 'Formel: 4 Flächen × (unten + oben)';
+      default: return '';
     }
   };
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#1976d2" />
-      </View>
-    );
+    return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#1976d2" /></View>;
   }
 
   const calculatedArea = calculateArea();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dachtyp *</Text>
-            <TouchableOpacity
-              style={styles.roofTypeSelector}
-              onPress={() => setShowRoofTypePicker(true)}
-            >
+            <TouchableOpacity style={styles.roofTypeSelector} onPress={() => setShowRoofTypePicker(true)}>
               <View style={styles.roofTypeSelectorContent}>
                 <Ionicons name="home" size={24} color="#1976d2" />
                 <View style={styles.roofTypeSelectorText}>
                   <Text style={styles.roofTypeName}>{roofType}</Text>
-                  <Text style={styles.roofTypeDesc}>
-                    {ROOF_TYPES.find(r => r.id === roofType)?.description}
-                  </Text>
+                  <Text style={styles.roofTypeDesc}>{ROOF_TYPES.find(r => r.id === roofType)?.description}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-down" size={20} color="#666" />
@@ -715,75 +575,34 @@ export default function EditRoofScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Notizen</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Zusätzliche Hinweise..."
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={4}
-            />
+            <TextInput style={[styles.input, styles.textArea]} placeholder="Zusätzliche Hinweise..." value={notes} onChangeText={setNotes} multiline numberOfLines={4} />
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, saving && styles.buttonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <Text style={styles.buttonText}>
-              {saving ? 'Wird gespeichert...' : 'Änderungen speichern'}
-            </Text>
+          <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={handleSave} disabled={saving}>
+            <Text style={styles.buttonText}>{saving ? 'Wird gespeichert...' : 'Änderungen speichern'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <Modal
-        visible={showRoofTypePicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowRoofTypePicker(false)}
-      >
+      <Modal visible={showRoofTypePicker} animationType="slide" transparent={true} onRequestClose={() => setShowRoofTypePicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Dachtyp auswählen</Text>
-              <TouchableOpacity onPress={() => setShowRoofTypePicker(false)}>
-                <Ionicons name="close" size={24} color="#666" />
-              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowRoofTypePicker(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity>
             </View>
-            <FlatList
-              data={ROOF_TYPES}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.roofTypeItem,
-                    item.id === roofType && styles.roofTypeItemSelected,
-                  ]}
-                  onPress={() => handleRoofTypeChange(item.id)}
-                >
-                  <View style={styles.roofTypeItemContent}>
-                    <Ionicons 
-                      name="home" 
-                      size={28} 
-                      color={item.id === roofType ? '#1976d2' : '#666'} 
-                    />
-                    <View style={styles.roofTypeItemTextContainer}>
-                      <Text style={[
-                        styles.roofTypeItemText,
-                        item.id === roofType && styles.roofTypeItemTextSelected,
-                      ]}>
-                        {item.name}
-                      </Text>
-                      <Text style={styles.roofTypeItemDesc}>{item.description}</Text>
-                    </View>
+            <FlatList data={ROOF_TYPES} keyExtractor={(item) => item.id} renderItem={({ item }) => (
+              <TouchableOpacity style={[styles.roofTypeItem, item.id === roofType && styles.roofTypeItemSelected]} onPress={() => handleRoofTypeChange(item.id)}>
+                <View style={styles.roofTypeItemContent}>
+                  <Ionicons name="home" size={28} color={item.id === roofType ? '#1976d2' : '#666'} />
+                  <View style={styles.roofTypeItemTextContainer}>
+                    <Text style={[styles.roofTypeItemText, item.id === roofType && styles.roofTypeItemTextSelected]}>{item.name}</Text>
+                    <Text style={styles.roofTypeItemDesc}>{item.description}</Text>
                   </View>
-                  {item.id === roofType && (
-                    <Ionicons name="checkmark-circle" size={24} color="#1976d2" />
-                  )}
-                </TouchableOpacity>
-              )}
-            />
+                </View>
+                {item.id === roofType && <Ionicons name="checkmark-circle" size={24} color="#1976d2" />}
+              </TouchableOpacity>
+            )} />
           </View>
         </View>
       </Modal>
@@ -792,223 +611,45 @@ export default function EditRoofScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  form: {
-    padding: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  inputHalf: {
-    flex: 1,
-  },
-  hint: {
-    fontSize: 12,
-    color: '#888',
-    fontStyle: 'italic',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  sectionDivider: {
-    backgroundColor: '#e8e8e8',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  sectionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#555',
-  },
-  calculatedValue: {
-    backgroundColor: '#e8f5e9',
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  calculatedLabel: {
-    fontSize: 14,
-    color: '#2e7d32',
-  },
-  calculatedNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2e7d32',
-  },
-  measurementsCard: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 16,
-  },
-  resultCard: {
-    backgroundColor: '#4caf50',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  resultLabel: {
-    fontSize: 14,
-    color: '#fff',
-    marginBottom: 8,
-  },
-  resultValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  resultFormula: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 8,
-  },
-  button: {
-    backgroundColor: '#1976d2',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  roofTypeSelector: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  roofTypeSelectorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  roofTypeSelectorText: {
-    flex: 1,
-  },
-  roofTypeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  roofTypeDesc: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  roofTypeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  roofTypeItemSelected: {
-    backgroundColor: '#e3f2fd',
-  },
-  roofTypeItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  roofTypeItemTextContainer: {
-    flex: 1,
-  },
-  roofTypeItemText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  roofTypeItemTextSelected: {
-    color: '#1976d2',
-    fontWeight: '600',
-  },
-  roofTypeItemDesc: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollView: { flex: 1 },
+  form: { padding: 16 },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  input: { backgroundColor: '#fff', borderRadius: 8, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#ddd' },
+  textArea: { height: 100, textAlignVertical: 'top' },
+  inputRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  inputHalf: { flex: 1 },
+  hint: { fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4, marginBottom: 8 },
+  sectionDivider: { backgroundColor: '#e8e8e8', padding: 8, borderRadius: 6, marginBottom: 12, marginTop: 4 },
+  sectionText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  calculatedValue: { backgroundColor: '#e8f5e9', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 8 },
+  calculatedLabel: { fontSize: 14, color: '#2e7d32' },
+  calculatedNumber: { fontSize: 18, fontWeight: 'bold', color: '#2e7d32' },
+  measurementsCard: { backgroundColor: '#e3f2fd', borderRadius: 12, padding: 16, marginBottom: 16 },
+  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1976d2', marginBottom: 16 },
+  resultCard: { backgroundColor: '#4caf50', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 16 },
+  resultLabel: { fontSize: 14, color: '#fff', marginBottom: 8 },
+  resultValue: { fontSize: 36, fontWeight: 'bold', color: '#fff' },
+  resultFormula: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 8 },
+  button: { backgroundColor: '#1976d2', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 8 },
+  buttonDisabled: { backgroundColor: '#ccc' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  roofTypeSelector: { backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#ddd', padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  roofTypeSelectorContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  roofTypeSelectorText: { flex: 1 },
+  roofTypeName: { fontSize: 16, fontWeight: '600', color: '#333' },
+  roofTypeDesc: { fontSize: 12, color: '#666', marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingBottom: Platform.OS === 'ios' ? 34 : 16 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  roofTypeItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  roofTypeItemSelected: { backgroundColor: '#e3f2fd' },
+  roofTypeItemContent: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  roofTypeItemTextContainer: { flex: 1 },
+  roofTypeItemText: { fontSize: 16, color: '#333', fontWeight: '500' },
+  roofTypeItemTextSelected: { color: '#1976d2', fontWeight: '600' },
+  roofTypeItemDesc: { fontSize: 12, color: '#888', marginTop: 2 },
 });

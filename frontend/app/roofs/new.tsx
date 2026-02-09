@@ -247,32 +247,45 @@ export default function NewRoofScreen() {
       }
 
       case 'Mansarddach': {
-        // Mansarddach: Unterer steiler Teil + Oberer flacher Teil
-        if (nUnten > 0 && nOben > 0 && hStock > 0) {
-          const radUnten = (nUnten * Math.PI) / 180;
-          const radOben = (nOben * Math.PI) / 180;
+        // Mansarddach: 4 Dachflächen (lange + schmale Seiten), jeweils unten (steil) + oben (flach)
+        // Basierend auf DachCAD-Eingaben
+        if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
+          // Umrechnung in Radiant
+          const radLangUnten = (nLangUnten * Math.PI) / 180;
+          const radLangOben = (nLangOben * Math.PI) / 180;
+          const radSchmalUnten = (nSchmalUnten || nLangUnten) * Math.PI / 180;
+          const radSchmalOben = (nSchmalOben || nLangOben) * Math.PI / 180;
           
-          // Unterer Teil (Mansarde - steil)
-          // Breite des unteren Teils = Stockwerkhöhe / tan(Neigung unten)
-          const breiteUnten = hStock / Math.tan(radUnten);
-          const sparrenUnten = hStock / Math.sin(radUnten);
+          // Sparrenlänge unten (steil) = Knickhöhe / sin(Neigung)
+          const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
+          const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
           
-          // Oberer Teil beginnt bei Knickpunkt
-          // Restbreite = Gebäudebreite - 2 × breiteUnten
-          const restbreite = Math.max(0, B - 2 * breiteUnten);
+          // Horizontale Ausdehnung des unteren Teils = Knickhöhe / tan(Neigung)
+          const breiteUntenLang = hKnick / Math.tan(radLangUnten);
+          const breiteUntenSchmal = hKnick / Math.tan(radSchmalUnten);
           
-          // Oberer Teil wie Satteldach berechnen
-          const sparrenOben = (restbreite / 2) / Math.cos(radOben);
+          // Verbleibende Breite für oberen Teil
+          // Für lange Seite: Gebäudebreite - 2 × breiteUntenLang
+          const restBreiteLang = Math.max(0, B - 2 * breiteUntenLang);
+          // Für schmale Seite: Gebäudelänge - 2 × breiteUntenSchmal
+          const restBreiteSchmal = Math.max(0, L - 2 * breiteUntenSchmal);
           
-          // Untere Fläche: 2 Seiten × Länge × Sparrenlänge unten
-          const flaecheUnten = 2 * L * sparrenUnten;
+          // Sparrenlänge oben (flach) = (Restbreite/2) / cos(Neigung)
+          const sparrenLangOben = (restBreiteLang / 2) / Math.cos(radLangOben);
+          const sparrenSchmalOben = (restBreiteSchmal / 2) / Math.cos(radSchmalOben);
           
-          // Obere Fläche: 2 Seiten × Länge × Sparrenlänge oben
-          const flaecheOben = 2 * L * sparrenOben;
+          // Untere Flächen (2 lange Seiten + 2 schmale Seiten)
+          const flaecheLangUnten = 2 * L * sparrenLangUnten;   // 2 lange Seiten
+          const flaecheSchmalUnten = 2 * B * sparrenSchmalUnten; // 2 schmale Seiten
           
-          area = flaecheUnten + flaecheOben;
+          // Obere Flächen (2 lange Seiten + 2 schmale Seiten) 
+          // Wie Walmdach: Trapeze an langen Seiten, Dreiecke an schmalen
+          const flaecheLangOben = 2 * L * sparrenLangOben;
+          const flaecheSchmalOben = 2 * B * sparrenSchmalOben;
+          
+          area = flaecheLangUnten + flaecheSchmalUnten + flaecheLangOben + flaecheSchmalOben;
         } else {
-          area = L * B * 1.3; // Fallback mit Aufschlag
+          area = L * B * 1.4; // Fallback mit Aufschlag für Mansarddach
         }
         break;
       }

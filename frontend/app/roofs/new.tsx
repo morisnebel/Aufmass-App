@@ -440,7 +440,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
           </>
         );
 
@@ -477,7 +477,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
@@ -536,7 +536,7 @@ export default function NewRoofScreen() {
               </View>
             </View>
             <Text style={styles.hint}>Bei unterschiedlichen Neigungen: asymmetrisches Satteldach</Text>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
@@ -632,7 +632,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
@@ -669,7 +669,7 @@ export default function NewRoofScreen() {
               />
             </View>
             <Text style={styles.hint}>Zeltdach: Quadratischer Grundriss, 4 gleiche Dreiecksflächen</Text>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe (Spitze):</Text>
@@ -775,7 +775,7 @@ export default function NewRoofScreen() {
                 />
               </View>
             </View>
-            {renderUeberstandField()}
+            {renderUeberstandFields()}
             <Text style={styles.hint}>Mansarddach: 4 Trapeze unten + Walmdach oben</Text>
           </>
         );

@@ -182,49 +182,45 @@ export default function NewRoofScreen() {
           const sparren1 = b1 / Math.cos(rad1);
           const sparren2 = b2 / Math.cos(rad2);
           
-          area = L * sparren1 + L * sparren2;
+          area = effL * sparren1 + effL * sparren2;
         } else {
-          area = L * B;
+          area = effL * effB;
         }
         break;
       }
 
       case 'Walmdach': {
-        // 4 Dachflächen: 2 Trapeze (längs) + 2 Dreiecke (Giebel)
+        // 4 Dachflächen: 2 Trapeze (längs) + 2 Dreiecke (Giebel) - mit Überstand
         if (n1 > 0) {
-          const rad1 = (n1 * Math.PI) / 180;  // Lange Seiten
-          const rad2 = (n2 * Math.PI) / 180;  // Lange Seiten (andere)
-          const rad3 = (n3 * Math.PI) / 180;  // Walmseite 1
-          const rad4 = (n4 * Math.PI) / 180;  // Walmseite 2
+          const rad1 = (n1 * Math.PI) / 180;
+          const rad2 = (n2 * Math.PI) / 180;
+          const rad3 = (n3 * Math.PI) / 180;
+          const rad4 = (n4 * Math.PI) / 180;
           
-          // Sparrenlänge für die langen Seiten (Höhe der Trapeze)
-          const sparrenLang = (B / 2) / Math.cos(rad1);
+          // Sparrenlänge für die langen Seiten
+          const sparrenLang = (effB / 2) / Math.cos(rad1);
           
           // Firsthöhe
-          const firsthoehe = (B / 2) * Math.tan(rad1);
+          const firsthoehe = (effB / 2) * Math.tan(rad1);
           
-          // Gratlänge (vom First zur Ecke)
-          // Bei Walmdach liegt der First nicht über die gesamte Länge
-          // Firstlänge = Gebäudelänge - 2 × (Breite/2) / tan(Walmneigung) × tan(Hauptneigung)
+          // Walmtiefe und Firstlänge
           const walmTiefe = firsthoehe / Math.tan(rad3);
-          const firstlaenge = Math.max(0, L - 2 * walmTiefe);
+          const firstlaenge = Math.max(0, effL - 2 * walmTiefe);
           
           // Trapezflächen (lange Seiten)
-          // Fläche = ((Firstlänge + Trauflänge) / 2) × Sparrenlänge
-          const trapezFlaeche1 = ((firstlaenge + L) / 2) * sparrenLang;
-          const sparrenLang2 = (B / 2) / Math.cos(rad2);
-          const trapezFlaeche2 = ((firstlaenge + L) / 2) * sparrenLang2;
+          const trapezFlaeche1 = ((firstlaenge + effL) / 2) * sparrenLang;
+          const sparrenLang2 = (effB / 2) / Math.cos(rad2);
+          const trapezFlaeche2 = ((firstlaenge + effL) / 2) * sparrenLang2;
           
-          // Walmflächen (Dreiecksflächen an den Giebelseiten)
-          // Sparrenlänge Walm = Firsthöhe / sin(Walmneigung)
+          // Walmflächen (Dreiecksflächen)
           const sparrenWalm1 = firsthoehe / Math.sin(rad3);
           const sparrenWalm2 = firsthoehe / Math.sin(rad4);
-          const dreieckFlaeche1 = (B / 2) * sparrenWalm1;
-          const dreieckFlaeche2 = (B / 2) * sparrenWalm2;
+          const dreieckFlaeche1 = (effB / 2) * sparrenWalm1;
+          const dreieckFlaeche2 = (effB / 2) * sparrenWalm2;
           
           area = trapezFlaeche1 + trapezFlaeche2 + dreieckFlaeche1 + dreieckFlaeche2;
         } else {
-          area = L * B * 1.15;  // Fallback mit ~15% Aufschlag
+          area = effL * effB * 1.15;
         }
         break;
       }

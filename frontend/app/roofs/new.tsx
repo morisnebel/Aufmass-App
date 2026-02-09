@@ -645,45 +645,78 @@ export default function NewRoofScreen() {
             </View>
             
             <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Unterer Teil (Mansarde - steil)</Text>
+              <Text style={styles.sectionText}>Trauf(Knick)höhe</Text>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Knickhöhe (m) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 3.0"
+                value={knickhoehe}
+                onChangeText={setKnickhoehe}
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.hint}>Höhe von Traufe bis zum Knickpunkt</Text>
+            </View>
+            
+            <View style={styles.sectionDivider}>
+              <Text style={styles.sectionText}>Dachneigung lange Seite (°)</Text>
             </View>
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
-                <Text style={styles.label}>Neigung unten (°) *</Text>
+                <Text style={styles.label}>Unten (steil) *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="z.B. 70"
-                  value={neigungUnten}
-                  onChangeText={setNeigungUnten}
+                  placeholder="z.B. 65"
+                  value={neigungLangUnten}
+                  onChangeText={(val) => {
+                    setNeigungLangUnten(val);
+                    if (!neigungSchmalUnten) setNeigungSchmalUnten(val);
+                  }}
                   keyboardType="decimal-pad"
                 />
               </View>
               <View style={styles.inputHalf}>
-                <Text style={styles.label}>Stockwerkhöhe (m) *</Text>
+                <Text style={styles.label}>Oben (flach) *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="z.B. 2.5"
-                  value={stockwerkhoehe}
-                  onChangeText={setStockwerkhoehe}
+                  placeholder="z.B. 20"
+                  value={neigungLangOben}
+                  onChangeText={(val) => {
+                    setNeigungLangOben(val);
+                    if (!neigungSchmalOben) setNeigungSchmalOben(val);
+                  }}
                   keyboardType="decimal-pad"
                 />
               </View>
             </View>
             
             <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Oberer Teil (Walm - flacher)</Text>
+              <Text style={styles.sectionText}>Dachneigung schmale Seite (°)</Text>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Neigung oben (°) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 25"
-                value={neigungOben}
-                onChangeText={setNeigungOben}
-                keyboardType="decimal-pad"
-              />
+            <View style={styles.inputRow}>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Unten (steil)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="wie lange Seite"
+                  value={neigungSchmalUnten}
+                  onChangeText={setNeigungSchmalUnten}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Oben (flach)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="wie lange Seite"
+                  value={neigungSchmalOben}
+                  onChangeText={setNeigungSchmalOben}
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
-            <Text style={styles.hint}>Mansarddach: Steiler unterer Teil für Wohnraum, flacherer oberer Teil</Text>
+            <Text style={styles.hint}>Mansarddach: 4 Dachflächen mit je 2 Neigungen (unten steil, oben flach)</Text>
           </>
         );
 

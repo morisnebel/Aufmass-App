@@ -237,9 +237,11 @@ export default function NewRoofScreen() {
       }
 
       case 'Zeltdach': {
-        // 4 gleiche Dreiecksflächen - mit Überstand
+        // 4 gleiche Dreiecksflächen - mit Überstand (nur Traufe, an allen 4 Seiten)
+        const uTraufeZelt = parseFloat(ueberstandTraufe) || 0;
+        const seite = L + 2 * uTraufeZelt; // Quadratischer Grundriss mit Überstand an allen Seiten
+        
         if (n1 > 0) {
-          const seite = effL; // Quadratischer Grundriss mit Überstand
           const rad = (n1 * Math.PI) / 180;
           
           // Sparrenlänge = (Seitenlänge/2) / cos(Neigung)

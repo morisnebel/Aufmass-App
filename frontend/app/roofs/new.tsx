@@ -343,7 +343,6 @@ export default function NewRoofScreen() {
         measurements: {
           gebaeudelaenge: parseFloat(gebaeudelaenge),
           gebaeudebreite: parseFloat(gebaeudebreite),
-          traufhoehe: parseFloat(traufhoehe) || 0,
           dachneigung1: parseFloat(dachneigung1) || 0,
           dachneigung2: parseFloat(dachneigung2) || 0,
           dachneigung3: parseFloat(dachneigung3) || 0,

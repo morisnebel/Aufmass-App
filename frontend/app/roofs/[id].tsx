@@ -38,8 +38,9 @@ export default function EditRoofScreen() {
   const [gebaeudelaenge, setGebaeudelaenge] = useState('');
   const [gebaeudebreite, setGebaeudebreite] = useState('');
   const [traufhoehe, setTraufhoehe] = useState('');
-  const [ueberstandLaengsseite, setUeberstandLaengsseite] = useState('');
+  const [ueberstandTraufe, setUeberstandTraufe] = useState('');
   const [ueberstandGiebelseite, setUeberstandGiebelseite] = useState('');
+  const [ueberstandPult, setUeberstandPult] = useState('');
   
   const [dachneigung1, setDachneigung1] = useState('');
   const [dachneigung2, setDachneigung2] = useState('');
@@ -57,6 +58,7 @@ export default function EditRoofScreen() {
   const [saving, setSaving] = useState(false);
   const [projectId, setProjectId] = useState('');
   const [calculatedFirsthoehe, setCalculatedFirsthoehe] = useState(0);
+
 
   // Helper-Funktion: Komma durch Punkt ersetzen (für deutsche Dezimalzahlen)
   const formatDecimal = (text: string) => text.replace(',', '.');

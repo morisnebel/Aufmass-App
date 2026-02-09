@@ -775,10 +775,8 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 65"
                   value={neigungLangUnten}
-                  onChangeText={(val) => {
-                    setNeigungLangUnten(val);
-                    if (!neigungSchmalUnten) setNeigungSchmalUnten(val);
-                  }}
+                  onChangeText={(val) => setNeigungLangUnten(formatDecimal(val))}
+                  onBlur={() => { if (neigungLangUnten && !neigungSchmalUnten) setNeigungSchmalUnten(neigungLangUnten); }}
                   keyboardType="decimal-pad"
                 />
               </View>
@@ -788,10 +786,8 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 20"
                   value={neigungLangOben}
-                  onChangeText={(val) => {
-                    setNeigungLangOben(val);
-                    if (!neigungSchmalOben) setNeigungSchmalOben(val);
-                  }}
+                  onChangeText={(val) => setNeigungLangOben(formatDecimal(val))}
+                  onBlur={() => { if (neigungLangOben && !neigungSchmalOben) setNeigungSchmalOben(neigungLangOben); }}
                   keyboardType="decimal-pad"
                 />
               </View>

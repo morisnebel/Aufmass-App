@@ -210,15 +210,37 @@ export default function EditRoofScreen() {
       </View>
       <View style={styles.inputRow}>
         <View style={styles.inputHalf}>
-          <Text style={styles.label}>Längsseite (m)</Text>
-          <TextInput style={styles.input} placeholder="z.B. 0,5" value={ueberstandLaengsseite} onChangeText={(t) => setUeberstandLaengsseite(formatDecimal(t))} keyboardType="decimal-pad" />
-          <Text style={styles.hint}>Traufseite</Text>
+          <Text style={styles.label}>Traufe (m)</Text>
+          <TextInput style={styles.input} placeholder="z.B. 0,5" value={ueberstandTraufe} onChangeText={(t) => setUeberstandTraufe(formatDecimal(t))} keyboardType="decimal-pad" />
         </View>
         <View style={styles.inputHalf}>
-          <Text style={styles.label}>Giebelseite (m)</Text>
+          <Text style={styles.label}>Giebel (m)</Text>
           <TextInput style={styles.input} placeholder="z.B. 0,3" value={ueberstandGiebelseite} onChangeText={(t) => setUeberstandGiebelseite(formatDecimal(t))} keyboardType="decimal-pad" />
-          <Text style={styles.hint}>Giebelseite</Text>
         </View>
+      </View>
+    </>
+  );
+
+  const renderPultdachUeberstandFields = () => (
+    <>
+      <View style={styles.sectionDivider}>
+        <Text style={styles.sectionText}>Dachüberstände (optional)</Text>
+      </View>
+      <View style={styles.inputRow}>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Traufe (m)</Text>
+          <TextInput style={styles.input} placeholder="z.B. 0,5" value={ueberstandTraufe} onChangeText={(t) => setUeberstandTraufe(formatDecimal(t))} keyboardType="decimal-pad" />
+          <Text style={styles.hint}>Untere Seite</Text>
+        </View>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Pult (m)</Text>
+          <TextInput style={styles.input} placeholder="z.B. 0,3" value={ueberstandPult} onChangeText={(t) => setUeberstandPult(formatDecimal(t))} keyboardType="decimal-pad" />
+          <Text style={styles.hint}>Obere Seite</Text>
+        </View>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Giebel (m)</Text>
+        <TextInput style={styles.input} placeholder="z.B. 0,3" value={ueberstandGiebelseite} onChangeText={(t) => setUeberstandGiebelseite(formatDecimal(t))} keyboardType="decimal-pad" />
       </View>
     </>
   );
@@ -230,7 +252,7 @@ export default function EditRoofScreen() {
 
     switch (roofType) {
       case 'Flachdach': return <><LenField /><WidthField />{renderUeberstandFields()}</>;
-      case 'Pultdach': return <><LenField /><WidthField /><View style={styles.inputGroup}><Text style={styles.label}>Dachneigung (°) *</Text><TextInput style={styles.input} placeholder="z.B. 15" value={dachneigung1} onChangeText={(t) => setDachneigung1(formatDecimal(t))} keyboardType="decimal-pad" /></View>{renderUeberstandFields()}<FirstH /></>;
+      case 'Pultdach': return <><LenField /><WidthField /><View style={styles.inputGroup}><Text style={styles.label}>Dachneigung (°) *</Text><TextInput style={styles.input} placeholder="z.B. 15" value={dachneigung1} onChangeText={(t) => setDachneigung1(formatDecimal(t))} keyboardType="decimal-pad" /></View>{renderPultdachUeberstandFields()}<FirstH /></>;
       case 'Satteldach': return <><LenField /><WidthField /><View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 1 (°) *</Text><TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={(t) => setDachneigung1(formatDecimal(t))} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 2 (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung2} onChangeText={(t) => setDachneigung2(formatDecimal(t))} keyboardType="decimal-pad" /></View></View>{renderUeberstandFields()}<FirstH /></>;
       case 'Walmdach': return <><LenField /><WidthField /><View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen (4 Flächen)</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 1 Längs (°)</Text><TextInput style={styles.input} placeholder="35" value={dachneigung1} onChangeText={(t)=>{const v=formatDecimal(t);setDachneigung1(v);if(!dachneigung2)setDachneigung2(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 2 Längs (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung2} onChangeText={(t) => setDachneigung2(formatDecimal(t))} keyboardType="decimal-pad" /></View></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 3 Walm (°)</Text><TextInput style={styles.input} placeholder="35" value={dachneigung3} onChangeText={(t)=>{const v=formatDecimal(t);setDachneigung3(v);if(!dachneigung4)setDachneigung4(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 4 Walm (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung4} onChangeText={(t) => setDachneigung4(formatDecimal(t))} keyboardType="decimal-pad" /></View></View>{renderUeberstandFields()}<FirstH /></>;
       case 'Zeltdach': return <><View style={styles.inputGroup}><Text style={styles.label}>Seitenlänge (m) *</Text><TextInput style={styles.input} placeholder="z.B. 8" value={gebaeudelaenge} onChangeText={(t)=>{const v=formatDecimal(t);setGebaeudelaenge(v);setGebaeudebreite(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputGroup}><Text style={styles.label}>Dachneigung (°) *</Text><TextInput style={styles.input} placeholder="z.B. 30" value={dachneigung1} onChangeText={(t) => setDachneigung1(formatDecimal(t))} keyboardType="decimal-pad" /></View>{renderUeberstandFields()}<FirstH /></>;

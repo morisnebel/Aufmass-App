@@ -37,7 +37,6 @@ export default function NewRoofScreen() {
   // Gemeinsame Maße
   const [gebaeudelaenge, setGebaeudelaenge] = useState('');  // Gebäudelänge in m
   const [gebaeudebreite, setGebaeudebreite] = useState('');  // Gebäudebreite in m
-  const [traufhoehe, setTraufhoehe] = useState('');          // Traufhöhe in m
   const [ueberstandTraufe, setUeberstandTraufe] = useState('');      // Überstand Traufseite (beeinflusst Breite)
   const [ueberstandGiebelseite, setUeberstandGiebelseite] = useState('');  // Überstand Giebelseite (beeinflusst Länge)
   const [ueberstandPult, setUeberstandPult] = useState('');          // Überstand Pultseite (nur bei Pultdach)

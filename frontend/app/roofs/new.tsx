@@ -766,7 +766,7 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="wie lange Seite"
                   value={neigungSchmalUnten}
-                  onChangeText={setNeigungSchmalUnten}
+                  onChangeText={(text) => setNeigungSchmalUnten(formatDecimal(text))}
                   keyboardType="decimal-pad"
                 />
               </View>

@@ -136,11 +136,17 @@ export default function NewRoofScreen() {
     const n3 = parseFloat(dachneigung3) || n1;  // Dachneigung 3
     const n4 = parseFloat(dachneigung4) || n2;  // Dachneigung 4
     
-    // Dachüberstand separat für Länge und Breite
+    // Dachüberstände
     const ueberstandGiebel = parseFloat(ueberstandGiebelseite) || 0;  // Beeinflusst Länge
-    const ueberstandLaengs = parseFloat(ueberstandLaengsseite) || 0;  // Beeinflusst Breite
+    const uTraufe = parseFloat(ueberstandTraufe) || 0;  // Traufe-Überstand
+    const uPult = parseFloat(ueberstandPult) || 0;      // Pult-Überstand (nur bei Pultdach)
+    
+    // Effektive Maße berechnen
     const effL = L + 2 * ueberstandGiebel;  // Effektive Länge mit Giebelüberstand
-    const effB = B + 2 * ueberstandLaengs;  // Effektive Breite mit Traufüberstand
+    // Bei Pultdach: Traufe + Pult Überstand; sonst: 2x Traufe
+    const effB = roofType === 'Pultdach' 
+      ? B + uTraufe + uPult 
+      : B + 2 * uTraufe;
     
     // Mansarddach Variablen
     const nLangUnten = parseFloat(neigungLangUnten) || 0;
@@ -158,7 +164,7 @@ export default function NewRoofScreen() {
         break;
 
       case 'Pultdach': {
-        // Fläche = Länge × Sparrenlänge (mit Überstand)
+        // Fläche = Länge × Sparrenlänge (mit Traufe- und Pult-Überstand)
         if (n1 > 0) {
           const rad = (n1 * Math.PI) / 180;
           const sparrenlaenge = effB / Math.cos(rad);

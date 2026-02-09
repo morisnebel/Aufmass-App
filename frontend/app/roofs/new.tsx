@@ -755,22 +755,8 @@ export default function NewRoofScreen() {
                 />
               </View>
             </View>
-            
-            <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Dachüberstand (optional)</Text>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Überstand (m)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 0.125"
-                value={dachueberstand}
-                onChangeText={setDachueberstand}
-                keyboardType="decimal-pad"
-              />
-              <Text style={styles.hint}>Dachüberstand an allen Seiten (Traufüberstand)</Text>
-            </View>
-            <Text style={styles.hint}>Mansarddach: 4 Dachflächen mit je 2 Neigungen (unten steil, oben flach)</Text>
+            {renderUeberstandField()}
+            <Text style={styles.hint}>Mansarddach: 4 Trapeze unten + Walmdach oben</Text>
           </>
         );
 

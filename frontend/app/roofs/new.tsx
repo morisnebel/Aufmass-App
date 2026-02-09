@@ -398,9 +398,9 @@ export default function NewRoofScreen() {
           <Text style={styles.label}>Längsseite (m)</Text>
           <TextInput
             style={styles.input}
-            placeholder="z.B. 0.5"
+            placeholder="z.B. 0,5"
             value={ueberstandLaengsseite}
-            onChangeText={setUeberstandLaengsseite}
+            onChangeText={(text) => setUeberstandLaengsseite(formatDecimal(text))}
             keyboardType="decimal-pad"
           />
           <Text style={styles.hint}>Traufseite</Text>
@@ -409,9 +409,9 @@ export default function NewRoofScreen() {
           <Text style={styles.label}>Giebelseite (m)</Text>
           <TextInput
             style={styles.input}
-            placeholder="z.B. 0.3"
+            placeholder="z.B. 0,3"
             value={ueberstandGiebelseite}
-            onChangeText={setUeberstandGiebelseite}
+            onChangeText={(text) => setUeberstandGiebelseite(formatDecimal(text))}
             keyboardType="decimal-pad"
           />
           <Text style={styles.hint}>Giebelseite</Text>

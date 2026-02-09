@@ -185,7 +185,6 @@ export default function EditRoofScreen() {
         project_id: projectId, roof_type: roofType,
         measurements: {
           gebaeudelaenge: parseFloat(gebaeudelaenge), gebaeudebreite: parseFloat(gebaeudebreite),
-          traufhoehe: parseFloat(traufhoehe) || 0, dachueberstand: parseFloat(dachueberstand) || 0,
           dachneigung1: parseFloat(dachneigung1) || 0, dachneigung2: parseFloat(dachneigung2) || 0,
           dachneigung3: parseFloat(dachneigung3) || 0, dachneigung4: parseFloat(dachneigung4) || 0,
           neigung_lang_unten: parseFloat(neigungLangUnten) || 0, neigung_lang_oben: parseFloat(neigungLangOben) || 0,

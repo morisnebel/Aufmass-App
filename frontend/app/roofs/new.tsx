@@ -38,7 +38,8 @@ export default function NewRoofScreen() {
   const [gebaeudelaenge, setGebaeudelaenge] = useState('');  // Gebäudelänge in m
   const [gebaeudebreite, setGebaeudebreite] = useState('');  // Gebäudebreite in m
   const [traufhoehe, setTraufhoehe] = useState('');          // Traufhöhe in m
-  const [dachueberstand, setDachueberstand] = useState('');  // Dachüberstand in m
+  const [ueberstandLaengsseite, setUeberstandLaengsseite] = useState('');  // Überstand Traufseite (beeinflusst Breite)
+  const [ueberstandGiebelseite, setUeberstandGiebelseite] = useState('');  // Überstand Giebelseite (beeinflusst Länge)
   
   // Dachneigungen (für verschiedene Dachflächen)
   const [dachneigung1, setDachneigung1] = useState('');      // DF 1 in °

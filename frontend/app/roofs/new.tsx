@@ -432,7 +432,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 12.0"
                 value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -459,7 +459,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 12.0"
                 value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -502,7 +502,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 12.0"
                 value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -561,7 +561,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 14.0"
                 value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -694,7 +694,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 12.0"
                 value={gebaeudelaenge}
-                onChangeText={setGebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>

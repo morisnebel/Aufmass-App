@@ -58,6 +58,9 @@ export default function EditRoofScreen() {
   const [projectId, setProjectId] = useState('');
   const [calculatedFirsthoehe, setCalculatedFirsthoehe] = useState(0);
 
+  // Helper-Funktion: Komma durch Punkt ersetzen (für deutsche Dezimalzahlen)
+  const formatDecimal = (text: string) => text.replace(',', '.');
+
   useEffect(() => { loadRoof(); }, [id]);
   useEffect(() => { calculateFirsthoehe(); }, [gebaeudebreite, dachneigung1, dachneigung2, roofType]);
 

@@ -1,145 +1,123 @@
 <analysis>
 <original_problem_statement>
-The user's initial request was to fix a PDF export bug where drawn elements were distorted. After fixing this, the user made a series of feature requests and bug reports throughout the session, which the agent worked on sequentially. The most recent set of requests revolves around fixing and improving the data model for Projects and Customers to ensure data independence and improve the user interface for data entry.
+The user's initial request in this session was to add the project description field to the generated PDF. After that was completed, the user reported that the Dachtyp (roof type) picker was not working on the Neue Dachmessung (New Roof Measurement) screen. After fixing the picker, the user has now requested to implement correct, roof-type-specific area calculations, as the current calculation is a simple length * width which is only accurate for flat roofs.
 
-**List of user requests addressed in this session:**
-1.  **[FIXED]** Fix PDF distortion for images and shapes.
-2.  **[DONE]** Implement editable text and arrows in the sketch tool (font size, stroke width).
-3.  **[DONE]** Add detailed roof measurement inputs to the PDF, not just the final area.
-4.  **[DONE]** Change PDF checklist style to use green checkmarks (✓) and rename Dachmessungen to Aufmaße.
-5.  **[DONE]** In the PDF, show only the checklist items that have been checked.
-6.  **[DONE]** Ensure a sketch's title and its image are not split across two pages in the PDF.
-7.  **[DONE]** When creating a new customer in the app, also save that customer to the iPad's native contacts.
-8.  **[FIXED]** Fix a major data integrity bug where changing a customer's address would change it for all of that customer's projects. This was fixed by denormalizing the data, giving each project its own copy of the client's (Bauherr) details.
-9.  **[DONE]** Improve the Project Details screen UI for iPad, including a more compact edit modal that works in landscape mode and avoids the keyboard.
-10. **[DONE]** Split single address fields into separate fields for Street, Postal Code, and City across the app.
-11. **[DONE]** Add a Mobile Number field for customers and a Name field for the project's specific object address.
-12. **[IN PROGRESS]** Fix the Create New Customer form (both standalone and within the New Project screen) to use the new separate address fields correctly.
+**PRODUCT REQUIREMENTS:**
+1.  **[Done]** Add the project Beschreibung (description) to the Projektinformationen section of the PDF report.
+2.  **[Done]** Fix the Dachtyp (roof type) picker on the new and edit roof measurement screens.
+3.  **[In Progress]** Implement dynamic area calculations for different roof types. This includes:
+    *   Showing different input fields based on the selected roof type (e.g., a hip roof needs different measurements than a shed roof).
+    *   Using the correct geometric formula for each roof type to calculate the total area.
+    *   The agent must research and provide these formulas.
 </original_problem_statement>
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-- A full-stack application with an Expo (React Native) frontend and a FastAPI backend.
-- The core data model has been significantly refactored. The  model in the database now stores its own copy of the client's information (, , , , , ). This was a critical change to ensure that editing a project's client data does not affect other projects or the original customer entry.
-- The UI for creating and editing projects () has been updated to reflect this new data model, including a compact, two-column edit modal optimized for iPads.
-- The form for creating a standalone new customer () has been refactored to use separate fields for the address and mobile number.
-- The agent was in the process of refactoring the New Customer modal inside the New Project screen () to match these changes.
+- A full-stack Expo/FastAPI application.
+- The PDF generation in  has been updated to include the project description.
+- The Dachtyp (roof type) selection in  and  has been refactored from a native picker to a robust, custom modal-based solution that works cross-platform.
+- The roof area calculation is currently a placeholder () and is not accurate for most roof types.
 
 **Last working item**:
-    - Last item agent was working: The agent was refactoring the Create New Customer modal within the New Project page (). The goal was to replace the single Address text area with separate input fields for Street, PLZ, City, and Mobile Number, and ensure this data is correctly saved when a new customer is created from this screen.
+    - Last item agent was working: The agent was about to begin a major refactor of the roof measurement screens ( and ) to implement dynamic input fields and roof-type-specific area calculations.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? manual testing by screenshot tool. The test should involve navigating to the New Project screen, opening the customer picker, clicking Create New Customer, and verifying the modal has the correct separate input fields.
+    - Which testing method agent to use? manual testing by screenshot tool. The test should involve:
+        1. Selecting each roof type.
+        2. Verifying that the correct set of input fields appears for that type.
+        3. Entering sample values for each type and checking if the calculated area seems plausible.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: The Create New Customer modal on the New Project screen is incomplete and inconsistent with the rest of the app (P0)
+  - Issue 1: Roof area calculation is incorrect for most roof types (P0)
 
   Issues Detail:
   - Issue 1: 
-     - **Description**: The user reported that when creating a new customer from within the New Project workflow, all address information is being lumped into a single field. The agent started a refactor to fix this by introducing separate fields (Street, PLZ, City, Mobile Number) but did not complete it. The code in  is in a partially-completed state.
-     - **Attempted fixes**: The agent used  multiple times on  to add new state variables (, , etc.), update the  and  functions, and modify the JSX of the .
+     - **Description**: The app uses a single, simple formula () to calculate roof area, regardless of the selected  (roof type). The user requires specific calculations and corresponding input fields for each different roof shape (saddle, hip, shed, etc.). The user confirmed that new input fields are needed and that the agent must source the correct formulas.
+     - **Attempted fixes**: The previous agent fixed the UI for selecting the roof type but has not yet started implementing the calculation logic. The last action was to state the intent to rewrite the file .
      - **Next debug checklist**:
-       1.  Thoroughly review the file .
-       2.  Focus on the  JSX component within the file.
-       3.  **Confirm** that the single  for  has been replaced with multiple  components for , , , and .
-       4.  **Verify** that the  and  props of these new inputs are correctly bound to their corresponding state variables (e.g., , ).
-       5.  **Check** the  function to ensure it is assembling the  string from the separate fields for the backend API call, and also passing the  correctly.
-       6.  **Confirm** that the  function correctly parses the address from a device contact and populates the separate state variables.
-       7.  After verifying the code, restart the frontend service (expo: ERROR (not running)
-expo: started) and test the user flow.
-     - **Why fix this issue and what will be achieved with the fix?**: This will resolve a direct user complaint and make the data entry process consistent across the entire application, preventing incorrect address data from being saved.
+       1.  **Research:** Find the standard geometric formulas for calculating the surface area of the following roof types: Satteldach (saddle/gabled), Walmdach (hip), Flachdach (flat), Pultdach (shed/pent), Zeltdach (pyramid), Mansarddach (mansard).
+       2.  **Plan UI:** For each roof type, determine the necessary input fields (e.g., length, width, height, ridge length, eaves length, etc.).
+       3.  **Implement in  and **:
+           a.  Modify the component's state to hold all possible measurement variables.
+           b.  Use conditional rendering (e.g., ) to display the correct input fields based on the selected .
+           c.  Create a  function that uses a  statement on  to apply the correct formula.
+           d.  Ensure the  state is updated whenever a relevant input changes.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a core requirement for the roof measurement feature. Fixing it will make the feature accurate and useful.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?** N
      - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on other issue**: None
 
 **In progress Task List**:
-  - Task 1: Complete the refactor of the Create New Customer modal (P0)
-     - **Where to resume**: In , finalizing the JSX for the  and verifying the associated state and handler functions.
-     - **What will be achieved with this?**: A fully functional and consistent UI for creating new customers from the New Project screen.
+  - Task 1: Implement dynamic roof area calculations and input fields (P0)
+     - **Where to resume**: The agent was about to overwrite the file . The next step is to implement the new state management, conditional UI, and calculation logic as described in the Next debug checklist above. The same logic must then be applied to .
+     - **What will be achieved with this?**: A functional and accurate roof measurement tool.
      - **Status**:  IN PROGRESS
      - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on something**: No
 
 **Upcoming and Future Tasks**
-- There are no other outstanding tasks mentioned by the user. The next step after fixing the current issue should be to ask the user for verification and any further requests.
+- No other future tasks have been requested by the user. The focus is entirely on completing the roof calculation feature.
 
 **Completed work in this session**
 - **PDF Generation**:
-  - Fixed aspect ratio distortion for all drawn elements, achieving a WYSIWYG export.
-  - Added detailed roof measurement inputs to reports.
-  - Improved checklist appearance (green checkmarks) and logic (only show checked items).
-  - Renamed a section title from Dachmessungen to Aufmaße.
-  - Ensured sketch titles and their images are kept together on the same page.
-- **Data Model & Business Logic**:
-  - **Decoupled Project and Customer Data**: Implemented a critical fix by denormalizing data. Projects now store their own copy of client (Bauherr) details, preventing edits in one project from affecting others. This was done by adding  fields to the  model in  and updating all related frontend and backend logic.
-  - **Split Address Fields**: Refactored the data model and UI across the app to use separate fields for street, PLZ, and city instead of a single address string.
-  - **Added New Fields**: Added a Mobile Number field for customers and a Name field for the project's object address.
+  - Added the project Beschreibung (description) to the Projektinformationen table in the PDF report. ()
 - **Frontend Features & UX**:
-  - Implemented editable text and arrows in the sketch component ().
-  - Implemented saving new customers to the device's native contacts using .
-  - Overhauled the New Project customer selection UI with a custom modal.
-  - Redesigned the Project Edit modal to be compact, two-column, and keyboard-friendly for landscape iPad use ().
-  - Fixed a UI bug where creating a new project would pre-select the first customer.
-  - Fixed a modal layering issue on the New Project screen.
+  - Fixed a non-functional Dachtyp (roof type) picker by replacing the native  with a custom, modal-based selection component. This was implemented in both  and .
+  - **(From previous session)**: Fixed the Create New Customer modal to have separate address fields.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend**: FastAPI, Pydantic (for data models), ReportLab (for PDF generation), Pillow (for image processing).
-- **Frontend**: Expo (React Native),  (for the drawing canvas), , .
-- **Architecture**: Full-stack with a REST API. A key architectural decision was made to **denormalize** customer data by copying it into each  document to ensure data independence.
+- **Backend**: FastAPI, ReportLab (for PDF generation).
+- **Frontend**: Expo (React Native), Custom Modal Components, Conditional Rendering, State Management (),  is not currently used in this form but could be considered for the refactor.
 
 **key DB schema**
-- **Customer**: 
-- **Project**: 
+- **RoofMeasurement**:  - This model will likely need to be extended or the data stored in a flexible JSON field to accommodate the different measurements for each roof type. The agent should consider this when saving the data.
 
 **All files of reference**
-- : **(Currently being worked on)**. Contains the  that needs to be fixed.
-- : The project detail and edit screen. Was heavily modified.
-- : The standalone new customer form, which serves as a template for the fix.
-- : The backend file containing all data models and PDF logic. Was heavily modified.
+- : **(Currently being worked on)**. Needs to be refactored for dynamic inputs and calculations.
+- : **(Needs to be updated)**. Must receive the same refactoring as the  file to ensure consistency.
+- : Was recently modified to update the PDF. The endpoint for saving roof measurements might need changes to support the new dynamic fields.
 
 **Critical Info for New Agent**
-- **Your immediate priority is to finish the refactor in .** The goal is to make the Create New Customer modal inside this page use separate input fields for Street, PLZ, City, and Mobile Number. Use  as a reference for the correct implementation.
-- The most significant architectural change in this session was the **denormalization of customer data**. Projects now hold a *snapshot* of the client's (Bauherr) details. Be mindful of this data flow: when a project is created, data is copied from a customer; when a project is edited, only its local copy is changed.
-- Always communicate with the user in **German**.
-- After fixing the current issue, restart the frontend and verify the fix before presenting it to the user.
+- **Your immediate and only priority is to implement the roof-type-specific calculations.**
+- You must first **research the geometric formulas** for the area of each roof type. The user is not providing them.
+- The implementation requires **conditional rendering** of input fields based on the selected .
+- The calculation logic must be placed in a function that selects the correct formula based on .
+- **Both**  (create) and  (edit) must be updated.
+- Consider how the new, varied measurement fields will be saved to the backend. You may need to adjust the data structure sent to the API and potentially update the backend endpoint in  to accept it.
+- Continue to communicate in **German**.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **bei ,Kunde neu erstellen, muss auch noch die Straße, PLZ, Ort, Handynummer usw. einzeln einzutragen sein, sonst steht da auch alles bei Straße**: The user states that the Create New Customer form still has a single address field, which is the current P0 issue. (Status: IN PROGRESS)
-2.  **das sieht gut aus, jetzt möchte ich noch bei den Kundenadressen noch ein Feld für eine Handynummer haben und bei der Projektadresse noch ein zusätzliches Feld für einen Namen haben**: User requested a mobile number field and a name for the project address. (Status: Completed)
-3.  **das funktioniert auch schon ganz gut, jetzt müsst nur noch bei der Projektadresse die richtige Zuordnung zur Straße, PLZ, Ort, Name sein. jetzt steht die Adresse komplett bei der Straße**: User reported the project address was a single field and requested it be split. (Status: Completed)
-4.  **es kommt die Meldung SERVER Error**: User reported a server error after a UI refactor. (Status: Resolved, was a frontend bundling error)
-5.  **das scheint jetzt zu funktionieren, können wir jetzt noch bei den Projektdetails in Übersicht bei Projektinformationen alles anzeigen lassen und wenn man auf bearbeiten geht, dass dieses Fenster was sich dann öffnet etwas kleiner ist, so das man es wenn man das iPad quer hält alles angezeigt wird und das die Tastatur das geöffnete Fenster nicht überdeckt so das man sieht wenn mann etwas einträgt**: User requested UI improvements for the project details page on iPad. (Status: Completed)
-6.  **wenn ich die Kundendaten in einem Projekt öffne dann ändern sich immer noch die Kundendaten auch in dem anderen Projekt mit**: User reported the critical data integrity issue where project data was linked. (Status: Resolved)
-7.  **die Zeile ,Kunde, bei Projekt anlegen muss am Anfang leer sein und ich trage dann erst den Kunden ein, neuen Kunden anlegen funktioniert nicht mehr**: User reported two bugs on the new project screen. (Status: Resolved)
-8.  **bitte überprüfe noch mal alles es funktioniert noch nicht so richtig**: General feedback that things are still broken after the first attempt at fixing the data linking issue. (Status: Addressed)
-9.  **jetzt funktioniert ,neuen Kunden anlagen, bei Projekte nicht mehr und wenn man in einem Projekt die Kundendaten ändert dann ändern sich die Daten auch in den anderen Projekten das soll so nicht sein, denn jedes Projekt hat seinen eigenen Kunden und eine extra Projektadresse, außer die Projektadresse ist die gleiche wie die Kundenadresse**: The user's detailed report of the data linking problem and a broken new customer button. (Status: Addressed/Resolved)
-10. **beim Projekt anlegen kann man beim Kunden nicht auf Kundendateien zugreifen**: User reported the customer picker was not working on the new project screen. (Status: Resolved)
+1.  **1. ja 2. nein 3. nein**: User confirmed that (1) new fields are needed for calculations, but (2) Ortgang/Traufe lengths are not enough, and (3) they will not provide the formulas. (Status: Acknowledged, defines current task)
+2.  **können wir die Berechnungen noch anpassen, da ja jede Dachform anders berechnet wird**: User requested the current core task: implement roof-type-specific calculations. (Status: IN PROGRESS)
+3.  **Der Dachtyp-Picker funktioniert jetzt perfekt!...**: Agent confirmation that the picker fix is done. (Status: Completed)
+4.  **jetzt müsste noch bei neue Dachmessung der Punk ,Dachtyp, überarbeitet werde da dort nichts funktioniert**: User reported the broken roof type picker. (Status: Completed)
+5.  **Das PDF-Update ist fertig...**: Agent confirmation that the PDF description was added. (Status: Completed)
+6.  **jetzt fehlt noch in der PDF unter Projektinformationen der Punkt Beschreibung**: User requested the project description be added to the PDF. (Status: Completed)
+7.  **(Older messages relate to completed tasks from the previous session summary)**
 
 **Project Health Check:**
+- **Broken**: The core functionality of the roof measurement feature (area calculation) is functionally broken/incomplete.
 - **Mocked**: No mocked components.
-- **Broken**: The Create New Customer functionality within the New Project workflow is currently broken due to an incomplete refactor.
 
 **3rd Party Integrations**
-- : Used to read from and write to the device's native contacts.
-- : Used for selecting images to add to sketches.
 - : Used in the backend for generating PDF reports.
-- : Used in the backend for image manipulation for the PDFs.
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None, but the Create New Customer feature is in a broken, half-refactored state.
+  - Known regressions: None.
 
 **Credentials to test flow:**
 - None required.
 
 **What agent forgot to execute**
-- The agent did not fully complete the refactoring of the New Customer modal in . It started the work by adding states and editing handlers but left the JSX and overall functionality in an incomplete state.
+- The agent has not forgotten anything. It correctly identified the next steps after the user's request and was about to begin implementation. The task is complex and was correctly identified as the next major work item.
+
 </analysis>

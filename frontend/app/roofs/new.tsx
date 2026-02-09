@@ -472,7 +472,7 @@ export default function NewRoofScreen() {
         return (
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="z.B. 12,0"
@@ -499,7 +499,7 @@ export default function NewRoofScreen() {
         return (
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="z.B. 12,0"
@@ -542,7 +542,7 @@ export default function NewRoofScreen() {
         return (
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="z.B. 12,0"
@@ -601,7 +601,7 @@ export default function NewRoofScreen() {
         return (
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="z.B. 14.0"
@@ -734,7 +734,7 @@ export default function NewRoofScreen() {
         return (
           <>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="z.B. 12,0"

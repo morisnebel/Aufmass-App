@@ -116,9 +116,10 @@ export default function EditRoofScreen() {
     const n2 = parseFloat(dachneigung2) || n1;
     const n3 = parseFloat(dachneigung3) || n1;
     const n4 = parseFloat(dachneigung4) || n2;
-    const ueberstand = parseFloat(dachueberstand) || 0;
-    const effL = L + 2 * ueberstand;
-    const effB = B + 2 * ueberstand;
+    const ueberstandGiebel = parseFloat(ueberstandGiebelseite) || 0;
+    const ueberstandLaengs = parseFloat(ueberstandLaengsseite) || 0;
+    const effL = L + 2 * ueberstandGiebel;
+    const effB = B + 2 * ueberstandLaengs;
     const nLU = parseFloat(neigungLangUnten) || 0;
     const nLO = parseFloat(neigungLangOben) || 0;
     const nSU = parseFloat(neigungSchmalUnten) || 0;

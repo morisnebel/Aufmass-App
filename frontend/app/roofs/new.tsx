@@ -132,10 +132,11 @@ export default function NewRoofScreen() {
     const n3 = parseFloat(dachneigung3) || n1;  // Dachneigung 3
     const n4 = parseFloat(dachneigung4) || n2;  // Dachneigung 4
     
-    // Dachüberstand für alle Dachtypen
-    const ueberstand = parseFloat(dachueberstand) || 0;
-    const effL = L + 2 * ueberstand;  // Effektive Länge mit Überstand
-    const effB = B + 2 * ueberstand;  // Effektive Breite mit Überstand
+    // Dachüberstand separat für Länge und Breite
+    const ueberstandGiebel = parseFloat(ueberstandGiebelseite) || 0;  // Beeinflusst Länge
+    const ueberstandLaengs = parseFloat(ueberstandLaengsseite) || 0;  // Beeinflusst Breite
+    const effL = L + 2 * ueberstandGiebel;  // Effektive Länge mit Giebelüberstand
+    const effB = B + 2 * ueberstandLaengs;  // Effektive Breite mit Traufüberstand
     
     // Mansarddach Variablen
     const nLangUnten = parseFloat(neigungLangUnten) || 0;

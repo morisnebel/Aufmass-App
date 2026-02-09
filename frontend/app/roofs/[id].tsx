@@ -153,7 +153,12 @@ export default function EditRoofScreen() {
         } else area = effL * effB * 1.15;
         break;
       }
-      case 'Zeltdach': area = n1 > 0 ? 4 * (effL/2) * ((effL/2)/Math.cos(n1*Math.PI/180)) : effL * effL; break;
+      case 'Zeltdach': {
+        // Zeltdach: nur Traufe-Überstand an allen 4 Seiten
+        const seiteZelt = L + 2 * uTraufe;
+        area = n1 > 0 ? 4 * (seiteZelt/2) * ((seiteZelt/2)/Math.cos(n1*Math.PI/180)) : seiteZelt * seiteZelt;
+        break;
+      }
       case 'Mansarddach': {
         if (nLU > 0 && hK > 0) {
           const rLU = nLU*Math.PI/180, rSU = ((nSU||nLU)*Math.PI)/180;

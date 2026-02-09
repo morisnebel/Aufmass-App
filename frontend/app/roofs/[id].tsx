@@ -247,48 +247,48 @@ export default function EditRoofScreen() {
       }
 
       case 'Mansarddach': {
-        // Mansarddach: Berechnung basierend auf DachCAD V6
+        // Mansarddach: KORREKTE Geometrie
+        // UNTEN: 4 Trapeze (nicht Rechtecke!)
+        // OBEN: Walmdach auf der Restfläche
         if (nLangUnten > 0 && hKnick > 0) {
           const radLangUnten = (nLangUnten * Math.PI) / 180;
-          const radLangOben = nLangOben > 0 ? (nLangOben * Math.PI) / 180 : 0;
           const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
+          const radLangOben = nLangOben > 0 ? (nLangOben * Math.PI) / 180 : 0;
           const radSchmalOben = nSchmalOben > 0 ? ((nSchmalOben || nLangOben) * Math.PI) / 180 : radLangOben;
           
-          // Dachüberstand
-          const ueberstand = parseFloat(dachueberstand) || 0;
-          const effL = L + 2 * ueberstand;
-          const effB = B + 2 * ueberstand;
-          
-          // UNTERER TEIL
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
           const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
           const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
           const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
           
-          let flaecheUnten = 0;
-          if (nSchmalUnten && nSchmalUnten !== nLangUnten) {
-            flaecheUnten = 2 * effL * sparrenLangUnten + 2 * effB * sparrenSchmalUnten;
-          } else {
-            const effUmfang = 2 * (effL + effB);
-            flaecheUnten = effUmfang * sparrenLangUnten;
-          }
+          // UNTERER TEIL: 4 TRAPEZE
+          const untereBasisLang = L;
+          const obereBasisLang = Math.max(0, L - 2 * horizontalSchmalUnten);
+          const trapezLang = ((untereBasisLang + obereBasisLang) / 2) * sparrenLangUnten;
           
-          // OBERER TEIL
+          const untereBasisSchmal = B;
+          const obereBasisSchmal = Math.max(0, B - 2 * horizontalLangUnten);
+          const trapezSchmal = ((untereBasisSchmal + obereBasisSchmal) / 2) * sparrenSchmalUnten;
+          
+          const flaecheUnten = 2 * trapezLang + 2 * trapezSchmal;
+          
+          // OBERER TEIL: WALMDACH
           let flaecheOben = 0;
-          if (nLangOben > 0) {
-            const obereLaenge = Math.max(0, effL - 2 * horizontalSchmalUnten);
-            const obereBreite = Math.max(0, effB - 2 * horizontalLangUnten);
+          if (nLangOben > 0 && obereBasisLang > 0 && obereBasisSchmal > 0) {
+            const walmdachLaenge = obereBasisLang;
+            const walmdachBreite = obereBasisSchmal;
+            const sparrenLangOben = (walmdachBreite / 2) / Math.cos(radLangOben);
+            const sparrenSchmalOben = (walmdachLaenge / 2) / Math.cos(radSchmalOben);
             
-            if (obereLaenge > 0 && obereBreite > 0) {
-              const sparrenLangOben = (obereBreite / 2) / Math.cos(radLangOben);
-              const sparrenSchmalOben = (obereLaenge / 2) / Math.cos(radSchmalOben);
-              
-              if (nSchmalOben && nSchmalOben !== nLangOben) {
-                flaecheOben = 2 * obereLaenge * sparrenLangOben + 2 * obereBreite * sparrenSchmalOben;
-              } else {
-                const obererUmfang = 2 * (obereLaenge + obereBreite);
-                flaecheOben = obererUmfang * sparrenLangOben;
-              }
+            if (Math.abs(walmdachLaenge - walmdachBreite) < 0.01) {
+              flaecheOben = 4 * (walmdachLaenge / 2) * sparrenLangOben;
+            } else {
+              const firsthoeheOben = (walmdachBreite / 2) * Math.tan(radLangOben);
+              const walmtiefe = firsthoeheOben / Math.tan(radSchmalOben);
+              const firstlaenge = Math.max(0, walmdachLaenge - 2 * walmtiefe);
+              const trapezOben = ((firstlaenge + walmdachLaenge) / 2) * sparrenLangOben;
+              const dreieckOben = (walmdachBreite / 2) * sparrenSchmalOben;
+              flaecheOben = 2 * trapezOben + 2 * dreieckOben;
             }
           }
           

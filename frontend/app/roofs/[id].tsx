@@ -38,7 +38,8 @@ export default function EditRoofScreen() {
   const [gebaeudelaenge, setGebaeudelaenge] = useState('');
   const [gebaeudebreite, setGebaeudebreite] = useState('');
   const [traufhoehe, setTraufhoehe] = useState('');
-  const [dachueberstand, setDachueberstand] = useState('');
+  const [ueberstandLaengsseite, setUeberstandLaengsseite] = useState('');
+  const [ueberstandGiebelseite, setUeberstandGiebelseite] = useState('');
   
   const [dachneigung1, setDachneigung1] = useState('');
   const [dachneigung2, setDachneigung2] = useState('');

@@ -516,6 +516,7 @@ export default function NewRoofScreen() {
               </View>
             </View>
             <Text style={styles.hint}>Bei unterschiedlichen Neigungen: asymmetrisches Satteldach</Text>
+            {renderUeberstandField()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>

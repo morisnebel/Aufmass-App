@@ -248,42 +248,62 @@ export default function NewRoofScreen() {
       }
 
       case 'Mansarddach': {
-        // Mansarddach: 4 Dachflächen mit je 2 Abschnitten (unten steil, oben flach)
-        // Basierend auf DachCAD V6 Geometrie
-        if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
+        // Mansarddach: Berechnung basierend auf DachCAD V6
+        // Unterer Teil (steil) + Oberer Teil (flach)
+        // Mit optionalem Dachüberstand
+        if (nLangUnten > 0 && hKnick > 0) {
           const radLangUnten = (nLangUnten * Math.PI) / 180;
-          const radLangOben = (nLangOben * Math.PI) / 180;
+          const radLangOben = nLangOben > 0 ? (nLangOben * Math.PI) / 180 : 0;
           const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
-          const radSchmalOben = ((nSchmalOben || nLangOben) * Math.PI) / 180;
+          const radSchmalOben = nSchmalOben > 0 ? ((nSchmalOben || nLangOben) * Math.PI) / 180 : radLangOben;
+          
+          // Dachüberstand (Standard: 0)
+          const ueberstand = parseFloat(String(dachueberstand)) || 0;
+          
+          // Effektive Maße mit Überstand
+          const effL = L + 2 * ueberstand;
+          const effB = B + 2 * ueberstand;
           
           // === UNTERER TEIL (steil) ===
           // Sparrenlänge = Knickhöhe / sin(Neigung)
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
           const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
           
-          // Horizontale Ausdehnung des unteren Teils
+          // Horizontale Ausdehnung
           const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
           const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
           
-          // Untere Fläche = Umfang × Sparrenlänge (vereinfacht, gleiche Neigung)
-          // Bei unterschiedlichen Neigungen: 2 × L × sparrenLang + 2 × B × sparrenSchmal
-          const flaecheUnten = 2 * L * sparrenLangUnten + 2 * B * sparrenSchmalUnten;
+          // Unterer Teil: Umfang × Sparrenlänge (bei gleicher Neigung)
+          // oder getrennt für unterschiedliche Neigungen
+          let flaecheUnten = 0;
+          if (nSchmalUnten && nSchmalUnten !== nLangUnten) {
+            // Unterschiedliche Neigungen: getrennt berechnen
+            flaecheUnten = 2 * effL * sparrenLangUnten + 2 * effB * sparrenSchmalUnten;
+          } else {
+            // Gleiche Neigung: Umfang × Sparren
+            const effUmfang = 2 * (effL + effB);
+            flaecheUnten = effUmfang * sparrenLangUnten;
+          }
           
           // === OBERER TEIL (flach) ===
-          // Verbleibende Grundfläche nach dem unteren Teil
-          const obereLaenge = Math.max(0, L - 2 * horizontalSchmalUnten);
-          const obereBreite = Math.max(0, B - 2 * horizontalLangUnten);
-          
           let flaecheOben = 0;
-          
-          if (obereLaenge > 0 && obereBreite > 0) {
-            // Sparrenlängen für den oberen Teil
-            const sparrenLangOben = (obereBreite / 2) / Math.cos(radLangOben);
-            const sparrenSchmalOben = (obereLaenge / 2) / Math.cos(radSchmalOben);
+          if (nLangOben > 0) {
+            // Verbleibende Grundfläche nach dem unteren Teil
+            const obereLaenge = Math.max(0, effL - 2 * horizontalSchmalUnten);
+            const obereBreite = Math.max(0, effB - 2 * horizontalLangUnten);
             
-            // Obere Fläche wie Walmdach: 2 Trapeze + 2 Dreiecke
-            // Vereinfacht: 2 × obereLänge × sparrenLangOben + 2 × obereBreite × sparrenSchmalOben
-            flaecheOben = 2 * obereLaenge * sparrenLangOben + 2 * obereBreite * sparrenSchmalOben;
+            if (obereLaenge > 0 && obereBreite > 0) {
+              const sparrenLangOben = (obereBreite / 2) / Math.cos(radLangOben);
+              const sparrenSchmalOben = (obereLaenge / 2) / Math.cos(radSchmalOben);
+              
+              // Oberer Teil wie Walmdach
+              if (nSchmalOben && nSchmalOben !== nLangOben) {
+                flaecheOben = 2 * obereLaenge * sparrenLangOben + 2 * obereBreite * sparrenSchmalOben;
+              } else {
+                const obererUmfang = 2 * (obereLaenge + obereBreite);
+                flaecheOben = obererUmfang * sparrenLangOben;
+              }
+            }
           }
           
           area = flaecheUnten + flaecheOben;

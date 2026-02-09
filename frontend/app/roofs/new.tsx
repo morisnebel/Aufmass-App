@@ -131,51 +131,52 @@ export default function NewRoofScreen() {
     const n3 = parseFloat(dachneigung3) || n1;  // Dachneigung 3
     const n4 = parseFloat(dachneigung4) || n2;  // Dachneigung 4
     
+    // Dachüberstand für alle Dachtypen
+    const ueberstand = parseFloat(dachueberstand) || 0;
+    const effL = L + 2 * ueberstand;  // Effektive Länge mit Überstand
+    const effB = B + 2 * ueberstand;  // Effektive Breite mit Überstand
+    
     // Mansarddach Variablen
-    const nLangUnten = parseFloat(neigungLangUnten) || 0;   // Neigung lange Seite unten
-    const nLangOben = parseFloat(neigungLangOben) || 0;     // Neigung lange Seite oben
-    const nSchmalUnten = parseFloat(neigungSchmalUnten) || 0; // Neigung schmale Seite unten
-    const nSchmalOben = parseFloat(neigungSchmalOben) || 0;   // Neigung schmale Seite oben
-    const hKnick = parseFloat(knickhoehe) || 0;             // Trauf(Knick)höhe
+    const nLangUnten = parseFloat(neigungLangUnten) || 0;
+    const nLangOben = parseFloat(neigungLangOben) || 0;
+    const nSchmalUnten = parseFloat(neigungSchmalUnten) || 0;
+    const nSchmalOben = parseFloat(neigungSchmalOben) || 0;
+    const hKnick = parseFloat(knickhoehe) || 0;
 
     let area = 0;
 
     switch (roofType) {
       case 'Flachdach':
-        // Einfache Rechteckfläche
-        area = L * B;
+        // Einfache Rechteckfläche mit Überstand
+        area = effL * effB;
         break;
 
       case 'Pultdach': {
-        // Fläche = Länge × Sparrenlänge
-        // Sparrenlänge = Breite / cos(Neigung)
+        // Fläche = Länge × Sparrenlänge (mit Überstand)
         if (n1 > 0) {
           const rad = (n1 * Math.PI) / 180;
-          const sparrenlaenge = B / Math.cos(rad);
-          area = L * sparrenlaenge;
+          const sparrenlaenge = effB / Math.cos(rad);
+          area = effL * sparrenlaenge;
         } else {
-          area = L * B;
+          area = effL * effB;
         }
         break;
       }
 
       case 'Satteldach': {
-        // Zwei Dachflächen
-        // Sparrenlänge DF1 = (Breite × Anteil1) / cos(Neigung1)
-        // Sparrenlänge DF2 = (Breite × Anteil2) / cos(Neigung2)
+        // Zwei Dachflächen (mit Überstand)
         if (n1 > 0) {
           const rad1 = (n1 * Math.PI) / 180;
           const rad2 = (n2 * Math.PI) / 180;
           
           let b1, b2;
           if (n1 === n2) {
-            b1 = b2 = B / 2;
+            b1 = b2 = effB / 2;
           } else {
-            // Asymmetrisches Dach - First nicht in der Mitte
             const tan1 = Math.tan(rad1);
             const tan2 = Math.tan(rad2);
-            b1 = (B * tan2) / (tan1 + tan2);
-            b2 = B - b1;
+            b1 = (effB * tan2) / (tan1 + tan2);
+            b2 = effB - b1;
           }
           
           const sparren1 = b1 / Math.cos(rad1);

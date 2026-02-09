@@ -430,7 +430,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 12.0"
+                placeholder="z.B. 12,0"
                 value={gebaeudelaenge}
                 onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -440,7 +440,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 8.0"
+                placeholder="z.B. 8,0"
                 value={gebaeudebreite}
                 onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -457,7 +457,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 12.0"
+                placeholder="z.B. 12,0"
                 value={gebaeudelaenge}
                 onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -467,7 +467,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 8.0"
+                placeholder="z.B. 8,0"
                 value={gebaeudebreite}
                 onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -500,7 +500,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 12.0"
+                placeholder="z.B. 12,0"
                 value={gebaeudelaenge}
                 onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -510,7 +510,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 10.0"
+                placeholder="z.B. 10,0"
                 value={gebaeudebreite}
                 onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -569,7 +569,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 10.0"
+                placeholder="z.B. 10,0"
                 value={gebaeudebreite}
                 onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -655,7 +655,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Seitenlänge (m) * - quadratisch</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 8.0"
+                placeholder="z.B. 8,0"
                 value={gebaeudelaenge}
                 onChangeText={(val) => {
                   setGebaeudelaenge(val);
@@ -692,7 +692,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudelänge (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 12.0"
+                placeholder="z.B. 12,0"
                 value={gebaeudelaenge}
                 onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
                 keyboardType="decimal-pad"
@@ -702,7 +702,7 @@ export default function NewRoofScreen() {
               <Text style={styles.label}>Gebäudebreite (m) *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="z.B. 10.0"
+                placeholder="z.B. 10,0"
                 value={gebaeudebreite}
                 onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
                 keyboardType="decimal-pad"

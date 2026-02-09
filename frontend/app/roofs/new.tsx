@@ -479,7 +479,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 15"
                 value={dachneigung1}
-                onChangeText={setDachneigung1}
+                onChangeText={(text) => setDachneigung1(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>
@@ -526,7 +526,7 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 35"
                   value={dachneigung1}
-                  onChangeText={setDachneigung1}
+                  onChangeText={(text) => setDachneigung1(formatDecimal(text))}
                   keyboardType="decimal-pad"
                 />
               </View>
@@ -670,7 +670,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 30"
                 value={dachneigung1}
-                onChangeText={setDachneigung1}
+                onChangeText={(text) => setDachneigung1(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
             </View>

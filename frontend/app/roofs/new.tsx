@@ -528,7 +528,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            {renderUeberstandFields()}
+            {renderPultdachUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>

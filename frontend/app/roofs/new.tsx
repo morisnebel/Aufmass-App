@@ -60,6 +60,9 @@ export default function NewRoofScreen() {
   // Berechnete Werte
   const [calculatedFirsthoehe, setCalculatedFirsthoehe] = useState(0);
 
+  // Helper-Funktion: Komma durch Punkt ersetzen (für deutsche Dezimalzahlen)
+  const formatDecimal = (text: string) => text.replace(',', '.');
+
   // Automatisch Dachneigung 2 = Dachneigung 1 setzen wenn leer
   useEffect(() => {
     if (roofType === 'Satteldach' && dachneigung1 && !dachneigung2) {

@@ -669,16 +669,6 @@ export default function NewRoofScreen() {
                 />
               </View>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Traufhöhe (m)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 3.0"
-                value={traufhoehe}
-                onChangeText={setTraufhoehe}
-                keyboardType="decimal-pad"
-              />
-            </View>
             {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>

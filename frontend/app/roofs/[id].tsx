@@ -35,19 +35,16 @@ export default function EditRoofScreen() {
   const [roofType, setRoofType] = useState('Satteldach');
   const [showRoofTypePicker, setShowRoofTypePicker] = useState(false);
   
-  // Gemeinsame Maße
   const [gebaeudelaenge, setGebaeudelaenge] = useState('');
   const [gebaeudebreite, setGebaeudebreite] = useState('');
   const [traufhoehe, setTraufhoehe] = useState('');
   const [dachueberstand, setDachueberstand] = useState('');
   
-  // Dachneigungen
   const [dachneigung1, setDachneigung1] = useState('');
   const [dachneigung2, setDachneigung2] = useState('');
   const [dachneigung3, setDachneigung3] = useState('');
   const [dachneigung4, setDachneigung4] = useState('');
   
-  // Mansarddach spezifisch (wie in DachCAD)
   const [neigungLangUnten, setNeigungLangUnten] = useState('');
   const [neigungLangOben, setNeigungLangOben] = useState('');
   const [neigungSchmalUnten, setNeigungSchmalUnten] = useState('');
@@ -58,16 +55,10 @@ export default function EditRoofScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [projectId, setProjectId] = useState('');
-  
   const [calculatedFirsthoehe, setCalculatedFirsthoehe] = useState(0);
 
-  useEffect(() => {
-    loadRoof();
-  }, [id]);
-
-  useEffect(() => {
-    calculateFirsthoehe();
-  }, [gebaeudebreite, dachneigung1, dachneigung2, roofType]);
+  useEffect(() => { loadRoof(); }, [id]);
+  useEffect(() => { calculateFirsthoehe(); }, [gebaeudebreite, dachneigung1, dachneigung2, roofType]);
 
   const loadRoof = async () => {
     try {
@@ -78,17 +69,15 @@ export default function EditRoofScreen() {
         if (roof) {
           setProjectId(project.id);
           setRoofType(roof.roof_type);
-          
           const m = roof.measurements || {};
           setGebaeudelaenge(m.gebaeudelaenge?.toString() || m.length?.toString() || '');
           setGebaeudebreite(m.gebaeudebreite?.toString() || m.width?.toString() || '');
           setTraufhoehe(m.traufhoehe?.toString() || '');
           setDachueberstand(m.dachueberstand?.toString() || '');
-          setDachneigung1(m.dachneigung1?.toString() || m.angle?.toString() || '');
+          setDachneigung1(m.dachneigung1?.toString() || '');
           setDachneigung2(m.dachneigung2?.toString() || '');
           setDachneigung3(m.dachneigung3?.toString() || '');
           setDachneigung4(m.dachneigung4?.toString() || '');
-          // Mansarddach Felder
           setNeigungLangUnten(m.neigung_lang_unten?.toString() || '');
           setNeigungLangOben(m.neigung_lang_oben?.toString() || '');
           setNeigungSchmalUnten(m.neigung_schmal_unten?.toString() || '');
@@ -99,7 +88,6 @@ export default function EditRoofScreen() {
         }
       }
     } catch (error) {
-      console.error('Error loading roof:', error);
       Alert.alert('Fehler', 'Dachmessung konnte nicht geladen werden');
     } finally {
       setLoading(false);
@@ -108,44 +96,16 @@ export default function EditRoofScreen() {
 
   const calculateFirsthoehe = () => {
     const breite = parseFloat(gebaeudebreite) || 0;
-    const neigung1 = parseFloat(dachneigung1) || 0;
-    const neigung2 = parseFloat(dachneigung2) || neigung1;
-    
-    if (breite <= 0 || neigung1 <= 0) {
-      setCalculatedFirsthoehe(0);
-      return;
-    }
-
-    let firsthoehe = 0;
-    const rad1 = (neigung1 * Math.PI) / 180;
-    const rad2 = (neigung2 * Math.PI) / 180;
-
-    switch (roofType) {
-      case 'Pultdach':
-        firsthoehe = breite * Math.tan(rad1);
-        break;
-      case 'Satteldach':
-        if (neigung1 === neigung2) {
-          firsthoehe = (breite / 2) * Math.tan(rad1);
-        } else {
-          const tan1 = Math.tan(rad1);
-          const tan2 = Math.tan(rad2);
-          const x1 = (breite * tan2) / (tan1 + tan2);
-          firsthoehe = x1 * tan1;
-        }
-        break;
-      case 'Zeltdach':
-        const laenge = parseFloat(gebaeudelaenge) || breite;
-        firsthoehe = (Math.min(laenge, breite) / 2) * Math.tan(rad1);
-        break;
-      case 'Walmdach':
-        firsthoehe = (breite / 2) * Math.tan(rad1);
-        break;
-      default:
-        firsthoehe = 0;
-    }
-
-    setCalculatedFirsthoehe(Math.max(0, firsthoehe));
+    const n1 = parseFloat(dachneigung1) || 0;
+    const n2 = parseFloat(dachneigung2) || n1;
+    if (breite <= 0 || n1 <= 0) { setCalculatedFirsthoehe(0); return; }
+    const rad1 = (n1 * Math.PI) / 180;
+    const rad2 = (n2 * Math.PI) / 180;
+    let h = 0;
+    if (roofType === 'Pultdach') h = breite * Math.tan(rad1);
+    else if (roofType === 'Satteldach') h = n1 === n2 ? (breite/2) * Math.tan(rad1) : ((breite * Math.tan(rad2)) / (Math.tan(rad1) + Math.tan(rad2))) * Math.tan(rad1);
+    else if (roofType === 'Zeltdach' || roofType === 'Walmdach') h = (breite/2) * Math.tan(rad1);
+    setCalculatedFirsthoehe(Math.max(0, h));
   };
 
   const calculateArea = () => {
@@ -155,425 +115,116 @@ export default function EditRoofScreen() {
     const n2 = parseFloat(dachneigung2) || n1;
     const n3 = parseFloat(dachneigung3) || n1;
     const n4 = parseFloat(dachneigung4) || n2;
-    
-    // Mansarddach Variablen
-    const nLangUnten = parseFloat(neigungLangUnten) || 0;
-    const nLangOben = parseFloat(neigungLangOben) || 0;
-    const nSchmalUnten = parseFloat(neigungSchmalUnten) || 0;
-    const nSchmalOben = parseFloat(neigungSchmalOben) || 0;
-    const hKnick = parseFloat(knickhoehe) || 0;
+    const ueberstand = parseFloat(dachueberstand) || 0;
+    const effL = L + 2 * ueberstand;
+    const effB = B + 2 * ueberstand;
+    const nLU = parseFloat(neigungLangUnten) || 0;
+    const nLO = parseFloat(neigungLangOben) || 0;
+    const nSU = parseFloat(neigungSchmalUnten) || 0;
+    const nSO = parseFloat(neigungSchmalOben) || 0;
+    const hK = parseFloat(knickhoehe) || 0;
 
     let area = 0;
-
     switch (roofType) {
-      case 'Flachdach':
-        area = L * B;
-        break;
-
-      case 'Pultdach': {
-        if (n1 > 0) {
-          const rad = (n1 * Math.PI) / 180;
-          const sparrenlaenge = B / Math.cos(rad);
-          area = L * sparrenlaenge;
-        } else {
-          area = L * B;
-        }
-        break;
-      }
-
+      case 'Flachdach': area = effL * effB; break;
+      case 'Pultdach': area = n1 > 0 ? effL * (effB / Math.cos(n1 * Math.PI / 180)) : effL * effB; break;
       case 'Satteldach': {
         if (n1 > 0) {
-          const rad1 = (n1 * Math.PI) / 180;
-          const rad2 = (n2 * Math.PI) / 180;
-          
-          let b1, b2;
-          if (n1 === n2) {
-            b1 = b2 = B / 2;
-          } else {
-            const tan1 = Math.tan(rad1);
-            const tan2 = Math.tan(rad2);
-            b1 = (B * tan2) / (tan1 + tan2);
-            b2 = B - b1;
-          }
-          
-          const sparren1 = b1 / Math.cos(rad1);
-          const sparren2 = b2 / Math.cos(rad2);
-          
-          area = L * sparren1 + L * sparren2;
-        } else {
-          area = L * B;
-        }
+          const r1 = n1 * Math.PI / 180, r2 = n2 * Math.PI / 180;
+          let b1 = effB/2, b2 = effB/2;
+          if (n1 !== n2) { b1 = (effB * Math.tan(r2)) / (Math.tan(r1) + Math.tan(r2)); b2 = effB - b1; }
+          area = effL * (b1 / Math.cos(r1)) + effL * (b2 / Math.cos(r2));
+        } else area = effL * effB;
         break;
       }
-
       case 'Walmdach': {
         if (n1 > 0) {
-          const rad1 = (n1 * Math.PI) / 180;
-          const rad2 = (n2 * Math.PI) / 180;
-          const rad3 = (n3 * Math.PI) / 180;
-          const rad4 = (n4 * Math.PI) / 180;
-          
-          const sparrenLang = (B / 2) / Math.cos(rad1);
-          const firsthoehe = (B / 2) * Math.tan(rad1);
-          const walmTiefe = firsthoehe / Math.tan(rad3);
-          const firstlaenge = Math.max(0, L - 2 * walmTiefe);
-          
-          const trapezFlaeche1 = ((firstlaenge + L) / 2) * sparrenLang;
-          const sparrenLang2 = (B / 2) / Math.cos(rad2);
-          const trapezFlaeche2 = ((firstlaenge + L) / 2) * sparrenLang2;
-          
-          const sparrenWalm1 = firsthoehe / Math.sin(rad3);
-          const sparrenWalm2 = firsthoehe / Math.sin(rad4);
-          const dreieckFlaeche1 = (B / 2) * sparrenWalm1;
-          const dreieckFlaeche2 = (B / 2) * sparrenWalm2;
-          
-          area = trapezFlaeche1 + trapezFlaeche2 + dreieckFlaeche1 + dreieckFlaeche2;
-        } else {
-          area = L * B * 1.15;
-        }
+          const r1 = n1*Math.PI/180, r2 = n2*Math.PI/180, r3 = n3*Math.PI/180, r4 = n4*Math.PI/180;
+          const sL = (effB/2)/Math.cos(r1), fH = (effB/2)*Math.tan(r1);
+          const wT = fH/Math.tan(r3), fL = Math.max(0, effL - 2*wT);
+          const t1 = ((fL+effL)/2)*sL, t2 = ((fL+effL)/2)*((effB/2)/Math.cos(r2));
+          const d1 = (effB/2)*(fH/Math.sin(r3)), d2 = (effB/2)*(fH/Math.sin(r4));
+          area = t1 + t2 + d1 + d2;
+        } else area = effL * effB * 1.15;
         break;
       }
-
-      case 'Zeltdach': {
-        if (n1 > 0) {
-          const seite = L;
-          const rad = (n1 * Math.PI) / 180;
-          const sparrenlaenge = (seite / 2) / Math.cos(rad);
-          area = 4 * (seite / 2) * sparrenlaenge;
-        } else {
-          area = L * L;
-        }
-        break;
-      }
-
+      case 'Zeltdach': area = n1 > 0 ? 4 * (effL/2) * ((effL/2)/Math.cos(n1*Math.PI/180)) : effL * effL; break;
       case 'Mansarddach': {
-        // Mansarddach: KORREKTE Geometrie
-        // UNTEN: 4 Trapeze (nicht Rechtecke!)
-        // OBEN: Walmdach auf der Restfläche
-        if (nLangUnten > 0 && hKnick > 0) {
-          const radLangUnten = (nLangUnten * Math.PI) / 180;
-          const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
-          const radLangOben = nLangOben > 0 ? (nLangOben * Math.PI) / 180 : 0;
-          const radSchmalOben = nSchmalOben > 0 ? ((nSchmalOben || nLangOben) * Math.PI) / 180 : radLangOben;
-          
-          const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
-          const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
-          const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
-          const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
-          
-          // UNTERER TEIL: 4 TRAPEZE
-          const untereBasisLang = L;
-          const obereBasisLang = Math.max(0, L - 2 * horizontalSchmalUnten);
-          const trapezLang = ((untereBasisLang + obereBasisLang) / 2) * sparrenLangUnten;
-          
-          const untereBasisSchmal = B;
-          const obereBasisSchmal = Math.max(0, B - 2 * horizontalLangUnten);
-          const trapezSchmal = ((untereBasisSchmal + obereBasisSchmal) / 2) * sparrenSchmalUnten;
-          
-          const flaecheUnten = 2 * trapezLang + 2 * trapezSchmal;
-          
-          // OBERER TEIL: WALMDACH
-          let flaecheOben = 0;
-          if (nLangOben > 0 && obereBasisLang > 0 && obereBasisSchmal > 0) {
-            const walmdachLaenge = obereBasisLang;
-            const walmdachBreite = obereBasisSchmal;
-            const sparrenLangOben = (walmdachBreite / 2) / Math.cos(radLangOben);
-            const sparrenSchmalOben = (walmdachLaenge / 2) / Math.cos(radSchmalOben);
-            
-            if (Math.abs(walmdachLaenge - walmdachBreite) < 0.01) {
-              flaecheOben = 4 * (walmdachLaenge / 2) * sparrenLangOben;
-            } else {
-              const firsthoeheOben = (walmdachBreite / 2) * Math.tan(radLangOben);
-              const walmtiefe = firsthoeheOben / Math.tan(radSchmalOben);
-              const firstlaenge = Math.max(0, walmdachLaenge - 2 * walmtiefe);
-              const trapezOben = ((firstlaenge + walmdachLaenge) / 2) * sparrenLangOben;
-              const dreieckOben = (walmdachBreite / 2) * sparrenSchmalOben;
-              flaecheOben = 2 * trapezOben + 2 * dreieckOben;
-            }
+        if (nLU > 0 && hK > 0) {
+          const rLU = nLU*Math.PI/180, rSU = ((nSU||nLU)*Math.PI)/180;
+          const rLO = nLO > 0 ? nLO*Math.PI/180 : 0, rSO = nSO > 0 ? ((nSO||nLO)*Math.PI)/180 : rLO;
+          const sLU = hK/Math.sin(rLU), sSU = hK/Math.sin(rSU);
+          const hLU = hK/Math.tan(rLU), hSU = hK/Math.tan(rSU);
+          const uBL = effL, oBL = Math.max(0, effL - 2*hSU);
+          const uBS = effB, oBS = Math.max(0, effB - 2*hLU);
+          const fU = 2*((uBL+oBL)/2)*sLU + 2*((uBS+oBS)/2)*sSU;
+          let fO = 0;
+          if (nLO > 0 && oBL > 0 && oBS > 0) {
+            const sLO = (oBS/2)/Math.cos(rLO), sSO = (oBL/2)/Math.cos(rSO);
+            fO = Math.abs(oBL-oBS) < 0.01 ? 4*(oBL/2)*sLO : 2*oBL*sLO + 2*oBS*sSO;
           }
-          
-          area = flaecheUnten + flaecheOben;
-        } else {
-          area = L * B * 1.4;
-        }
+          area = fU + fO;
+        } else area = effL * effB * 1.4;
         break;
       }
-
-      default:
-        area = L * B;
+      default: area = effL * effB;
     }
-
     return Math.max(0, area);
   };
 
   const handleSave = async () => {
-    if (!gebaeudelaenge || !gebaeudebreite) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens Gebäudelänge und Gebäudebreite ein');
-      return;
-    }
-
-    const area = calculateArea();
-
+    if (!gebaeudelaenge || !gebaeudebreite) { Alert.alert('Fehler', 'Bitte Länge und Breite eingeben'); return; }
     setSaving(true);
     try {
       await axios.put(`${API_URL}/api/roofs/${id}`, {
-        project_id: projectId,
-        roof_type: roofType,
+        project_id: projectId, roof_type: roofType,
         measurements: {
-          gebaeudelaenge: parseFloat(gebaeudelaenge),
-          gebaeudebreite: parseFloat(gebaeudebreite),
-          traufhoehe: parseFloat(traufhoehe) || 0,
-          dachneigung1: parseFloat(dachneigung1) || 0,
-          dachneigung2: parseFloat(dachneigung2) || 0,
-          dachneigung3: parseFloat(dachneigung3) || 0,
-          dachneigung4: parseFloat(dachneigung4) || 0,
-          neigung_lang_unten: parseFloat(neigungLangUnten) || 0,
-          neigung_lang_oben: parseFloat(neigungLangOben) || 0,
-          neigung_schmal_unten: parseFloat(neigungSchmalUnten) || 0,
-          neigung_schmal_oben: parseFloat(neigungSchmalOben) || 0,
-          knickhoehe: parseFloat(knickhoehe) || 0,
-          firsthoehe: calculatedFirsthoehe,
-          length: parseFloat(gebaeudelaenge),
-          width: parseFloat(gebaeudebreite),
+          gebaeudelaenge: parseFloat(gebaeudelaenge), gebaeudebreite: parseFloat(gebaeudebreite),
+          traufhoehe: parseFloat(traufhoehe) || 0, dachueberstand: parseFloat(dachueberstand) || 0,
+          dachneigung1: parseFloat(dachneigung1) || 0, dachneigung2: parseFloat(dachneigung2) || 0,
+          dachneigung3: parseFloat(dachneigung3) || 0, dachneigung4: parseFloat(dachneigung4) || 0,
+          neigung_lang_unten: parseFloat(neigungLangUnten) || 0, neigung_lang_oben: parseFloat(neigungLangOben) || 0,
+          neigung_schmal_unten: parseFloat(neigungSchmalUnten) || 0, neigung_schmal_oben: parseFloat(neigungSchmalOben) || 0,
+          knickhoehe: parseFloat(knickhoehe) || 0, firsthoehe: calculatedFirsthoehe,
+          length: parseFloat(gebaeudelaenge), width: parseFloat(gebaeudebreite),
         },
-        area,
-        notes: notes || undefined,
+        area: calculateArea(), notes: notes || undefined,
       });
-      Alert.alert('Erfolg', 'Dachmessung wurde aktualisiert', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } catch (error) {
-      console.error('Error updating roof:', error);
-      Alert.alert('Fehler', 'Dachmessung konnte nicht gespeichert werden');
-    } finally {
-      setSaving(false);
-    }
+      Alert.alert('Erfolg', 'Gespeichert', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (error) { Alert.alert('Fehler', 'Speichern fehlgeschlagen'); }
+    finally { setSaving(false); }
   };
 
-  const handleRoofTypeChange = (newType: string) => {
-    setRoofType(newType);
-    setShowRoofTypePicker(false);
-    setDachneigung2('');
-    setDachneigung3('');
-    setDachneigung4('');
-    setNeigungLangUnten('');
-    setNeigungLangOben('');
-    setNeigungSchmalUnten('');
-    setNeigungSchmalOben('');
-    setKnickhoehe('');
-  };
+  const renderUeberstandField = () => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Dachüberstand (m)</Text>
+      <TextInput style={styles.input} placeholder="z.B. 0.3" value={dachueberstand} onChangeText={setDachueberstand} keyboardType="decimal-pad" />
+      <Text style={styles.hint}>Traufüberstand an allen Seiten</Text>
+    </View>
+  );
 
-  const renderMeasurementFields = () => {
+  const renderFields = () => {
+    const LenField = () => <View style={styles.inputGroup}><Text style={styles.label}>Gebäudelänge (m) *</Text><TextInput style={styles.input} placeholder="z.B. 12" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" /></View>;
+    const WidthField = () => <View style={styles.inputGroup}><Text style={styles.label}>Gebäudebreite (m) *</Text><TextInput style={styles.input} placeholder="z.B. 10" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" /></View>;
+    const FirstH = () => calculatedFirsthoehe > 0 ? <View style={styles.calculatedValue}><Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text><Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text></View> : null;
+
     switch (roofType) {
-      case 'Flachdach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
-            </View>
-          </>
-        );
-
-      case 'Pultdach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Dachneigung (°) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 15" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
-            </View>
-            {calculatedFirsthoehe > 0 && (
-              <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
-                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
-              </View>
-            )}
-          </>
-        );
-
-      case 'Satteldach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen</Text></View>
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Dachfläche 1 (°) *</Text>
-                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Dachfläche 2 (°)</Text>
-                <TextInput style={styles.input} placeholder="gleich wie DF1" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" />
-              </View>
-            </View>
-            {calculatedFirsthoehe > 0 && (
-              <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
-                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
-              </View>
-            )}
-          </>
-        );
-
-      case 'Walmdach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 14.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen (4 Flächen)</Text></View>
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>DF 1 - Längsseite (°)</Text>
-                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={(val) => { setDachneigung1(val); if (!dachneigung2) setDachneigung2(val); }} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>DF 2 - Längsseite (°)</Text>
-                <TextInput style={styles.input} placeholder="gleich wie DF1" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" />
-              </View>
-            </View>
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>DF 3 - Walmseite (°)</Text>
-                <TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung3} onChangeText={(val) => { setDachneigung3(val); if (!dachneigung4) setDachneigung4(val); }} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>DF 4 - Walmseite (°)</Text>
-                <TextInput style={styles.input} placeholder="gleich wie DF3" value={dachneigung4} onChangeText={setDachneigung4} keyboardType="decimal-pad" />
-              </View>
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Traufhöhe (m)</Text>
-              <TextInput style={styles.input} placeholder="z.B. 3.0" value={traufhoehe} onChangeText={setTraufhoehe} keyboardType="decimal-pad" />
-            </View>
-            {calculatedFirsthoehe > 0 && (
-              <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
-                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
-              </View>
-            )}
-          </>
-        );
-
-      case 'Zeltdach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Seitenlänge (m) * - quadratisch</Text>
-              <TextInput style={styles.input} placeholder="z.B. 8.0" value={gebaeudelaenge} onChangeText={(val) => { setGebaeudelaenge(val); setGebaeudebreite(val); }} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Dachneigung (°) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 30" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" />
-            </View>
-            {calculatedFirsthoehe > 0 && (
-              <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
-                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
-              </View>
-            )}
-          </>
-        );
-
-      case 'Mansarddach':
-        return (
-          <>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudelänge (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 12.0" value={gebaeudelaenge} onChangeText={setGebaeudelaenge} keyboardType="decimal-pad" />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Gebäudebreite (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 10.0" value={gebaeudebreite} onChangeText={setGebaeudebreite} keyboardType="decimal-pad" />
-            </View>
-            
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Trauf(Knick)höhe</Text></View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Knickhöhe (m) *</Text>
-              <TextInput style={styles.input} placeholder="z.B. 3.0" value={knickhoehe} onChangeText={setKnickhoehe} keyboardType="decimal-pad" />
-              <Text style={styles.hint}>Höhe von Traufe bis zum Knickpunkt</Text>
-            </View>
-            
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigung lange Seite (°)</Text></View>
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Unten (steil) *</Text>
-                <TextInput style={styles.input} placeholder="z.B. 65" value={neigungLangUnten} onChangeText={(val) => { setNeigungLangUnten(val); if (!neigungSchmalUnten) setNeigungSchmalUnten(val); }} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Oben (flach) *</Text>
-                <TextInput style={styles.input} placeholder="z.B. 20" value={neigungLangOben} onChangeText={(val) => { setNeigungLangOben(val); if (!neigungSchmalOben) setNeigungSchmalOben(val); }} keyboardType="decimal-pad" />
-              </View>
-            </View>
-            
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigung schmale Seite (°)</Text></View>
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Unten (steil)</Text>
-                <TextInput style={styles.input} placeholder="wie lange Seite" value={neigungSchmalUnten} onChangeText={setNeigungSchmalUnten} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.label}>Oben (flach)</Text>
-                <TextInput style={styles.input} placeholder="wie lange Seite" value={neigungSchmalOben} onChangeText={setNeigungSchmalOben} keyboardType="decimal-pad" />
-              </View>
-            </View>
-            
-            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachüberstand (optional)</Text></View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Überstand (m)</Text>
-              <TextInput style={styles.input} placeholder="z.B. 0.125" value={dachueberstand} onChangeText={setDachueberstand} keyboardType="decimal-pad" />
-              <Text style={styles.hint}>Dachüberstand an allen Seiten</Text>
-            </View>
-            <Text style={styles.hint}>Mansarddach: 4 Dachflächen mit je 2 Neigungen</Text>
-          </>
-        );
-
-      default:
-        return null;
+      case 'Flachdach': return <><LenField /><WidthField />{renderUeberstandField()}</>;
+      case 'Pultdach': return <><LenField /><WidthField /><View style={styles.inputGroup}><Text style={styles.label}>Dachneigung (°) *</Text><TextInput style={styles.input} placeholder="z.B. 15" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" /></View>{renderUeberstandField()}<FirstH /></>;
+      case 'Satteldach': return <><LenField /><WidthField /><View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 1 (°) *</Text><TextInput style={styles.input} placeholder="z.B. 35" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 2 (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" /></View></View>{renderUeberstandField()}<FirstH /></>;
+      case 'Walmdach': return <><LenField /><WidthField /><View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachneigungen (4 Flächen)</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 1 Längs (°)</Text><TextInput style={styles.input} placeholder="35" value={dachneigung1} onChangeText={v=>{setDachneigung1(v);if(!dachneigung2)setDachneigung2(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 2 Längs (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung2} onChangeText={setDachneigung2} keyboardType="decimal-pad" /></View></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>DF 3 Walm (°)</Text><TextInput style={styles.input} placeholder="35" value={dachneigung3} onChangeText={v=>{setDachneigung3(v);if(!dachneigung4)setDachneigung4(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>DF 4 Walm (°)</Text><TextInput style={styles.input} placeholder="gleich" value={dachneigung4} onChangeText={setDachneigung4} keyboardType="decimal-pad" /></View></View>{renderUeberstandField()}<FirstH /></>;
+      case 'Zeltdach': return <><View style={styles.inputGroup}><Text style={styles.label}>Seitenlänge (m) *</Text><TextInput style={styles.input} placeholder="z.B. 8" value={gebaeudelaenge} onChangeText={v=>{setGebaeudelaenge(v);setGebaeudebreite(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputGroup}><Text style={styles.label}>Dachneigung (°) *</Text><TextInput style={styles.input} placeholder="z.B. 30" value={dachneigung1} onChangeText={setDachneigung1} keyboardType="decimal-pad" /></View>{renderUeberstandField()}<FirstH /></>;
+      case 'Mansarddach': return <><LenField /><WidthField /><View style={styles.sectionDivider}><Text style={styles.sectionText}>Knickhöhe</Text></View><View style={styles.inputGroup}><Text style={styles.label}>Knickhöhe (m) *</Text><TextInput style={styles.input} placeholder="z.B. 2" value={knickhoehe} onChangeText={setKnickhoehe} keyboardType="decimal-pad" /></View><View style={styles.sectionDivider}><Text style={styles.sectionText}>Neigung lange Seite (°)</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>Unten *</Text><TextInput style={styles.input} placeholder="65" value={neigungLangUnten} onChangeText={v=>{setNeigungLangUnten(v);if(!neigungSchmalUnten)setNeigungSchmalUnten(v);}} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>Oben *</Text><TextInput style={styles.input} placeholder="20" value={neigungLangOben} onChangeText={v=>{setNeigungLangOben(v);if(!neigungSchmalOben)setNeigungSchmalOben(v);}} keyboardType="decimal-pad" /></View></View><View style={styles.sectionDivider}><Text style={styles.sectionText}>Neigung schmale Seite (°)</Text></View><View style={styles.inputRow}><View style={styles.inputHalf}><Text style={styles.label}>Unten</Text><TextInput style={styles.input} placeholder="gleich" value={neigungSchmalUnten} onChangeText={setNeigungSchmalUnten} keyboardType="decimal-pad" /></View><View style={styles.inputHalf}><Text style={styles.label}>Oben</Text><TextInput style={styles.input} placeholder="gleich" value={neigungSchmalOben} onChangeText={setNeigungSchmalOben} keyboardType="decimal-pad" /></View></View>{renderUeberstandField()}</>;
+      default: return null;
     }
   };
 
-  const getFormulaText = () => {
-    switch (roofType) {
-      case 'Flachdach': return 'Formel: Länge × Breite';
-      case 'Pultdach': return 'Formel: Länge × (Breite / cos(Neigung))';
-      case 'Satteldach': return 'Formel: L × Sparren1 + L × Sparren2';
-      case 'Walmdach': return 'Formel: 2 Trapeze + 2 Walmdreiecke';
-      case 'Zeltdach': return 'Formel: 4 × (Seite/2 × Sparrenlänge)';
-      case 'Mansarddach': return 'Formel: 4 Flächen × (unten + oben)';
-      default: return '';
-    }
+  const getFormula = () => {
+    const f: Record<string, string> = { Flachdach: 'L × B', Pultdach: 'L × B/cos(α)', Satteldach: '2 × L × Sparren', Walmdach: '2 Trapeze + 2 Dreiecke', Zeltdach: '4 × Dreieck', Mansarddach: '4 Trapeze + Walmdach' };
+    return f[roofType] || '';
   };
 
-  if (loading) {
-    return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#1976d2" /></View>;
-  }
-
-  const calculatedArea = calculateArea();
+  if (loading) return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#1976d2" /></View>;
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -582,60 +233,26 @@ export default function EditRoofScreen() {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Dachtyp *</Text>
             <TouchableOpacity style={styles.roofTypeSelector} onPress={() => setShowRoofTypePicker(true)}>
-              <View style={styles.roofTypeSelectorContent}>
-                <Ionicons name="home" size={24} color="#1976d2" />
-                <View style={styles.roofTypeSelectorText}>
-                  <Text style={styles.roofTypeName}>{roofType}</Text>
-                  <Text style={styles.roofTypeDesc}>{ROOF_TYPES.find(r => r.id === roofType)?.description}</Text>
-                </View>
-              </View>
+              <View style={styles.roofTypeSelectorContent}><Ionicons name="home" size={24} color="#1976d2" /><View style={styles.roofTypeSelectorText}><Text style={styles.roofTypeName}>{roofType}</Text><Text style={styles.roofTypeDesc}>{ROOF_TYPES.find(r => r.id === roofType)?.description}</Text></View></View>
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
-
-          <View style={styles.measurementsCard}>
-            <Text style={styles.cardTitle}>Eingabewerte {roofType}</Text>
-            {renderMeasurementFields()}
-          </View>
-
-          <View style={styles.resultCard}>
-            <Text style={styles.resultLabel}>Berechnete Dachfläche:</Text>
-            <Text style={styles.resultValue}>{calculatedArea.toFixed(2)} m²</Text>
-            <Text style={styles.resultFormula}>{getFormulaText()}</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notizen</Text>
-            <TextInput style={[styles.input, styles.textArea]} placeholder="Zusätzliche Hinweise..." value={notes} onChangeText={setNotes} multiline numberOfLines={4} />
-          </View>
-
-          <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={handleSave} disabled={saving}>
-            <Text style={styles.buttonText}>{saving ? 'Wird gespeichert...' : 'Änderungen speichern'}</Text>
-          </TouchableOpacity>
+          <View style={styles.measurementsCard}><Text style={styles.cardTitle}>Eingabewerte {roofType}</Text>{renderFields()}</View>
+          <View style={styles.resultCard}><Text style={styles.resultLabel}>Berechnete Dachfläche:</Text><Text style={styles.resultValue}>{calculateArea().toFixed(2)} m²</Text><Text style={styles.resultFormula}>Formel: {getFormula()}</Text></View>
+          <View style={styles.inputGroup}><Text style={styles.label}>Notizen</Text><TextInput style={[styles.input, styles.textArea]} placeholder="Hinweise..." value={notes} onChangeText={setNotes} multiline numberOfLines={3} /></View>
+          <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={handleSave} disabled={saving}><Text style={styles.buttonText}>{saving ? 'Speichert...' : 'Speichern'}</Text></TouchableOpacity>
         </View>
       </ScrollView>
-
-      <Modal visible={showRoofTypePicker} animationType="slide" transparent={true} onRequestClose={() => setShowRoofTypePicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Dachtyp auswählen</Text>
-              <TouchableOpacity onPress={() => setShowRoofTypePicker(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity>
-            </View>
-            <FlatList data={ROOF_TYPES} keyExtractor={(item) => item.id} renderItem={({ item }) => (
-              <TouchableOpacity style={[styles.roofTypeItem, item.id === roofType && styles.roofTypeItemSelected]} onPress={() => handleRoofTypeChange(item.id)}>
-                <View style={styles.roofTypeItemContent}>
-                  <Ionicons name="home" size={28} color={item.id === roofType ? '#1976d2' : '#666'} />
-                  <View style={styles.roofTypeItemTextContainer}>
-                    <Text style={[styles.roofTypeItemText, item.id === roofType && styles.roofTypeItemTextSelected]}>{item.name}</Text>
-                    <Text style={styles.roofTypeItemDesc}>{item.description}</Text>
-                  </View>
-                </View>
-                {item.id === roofType && <Ionicons name="checkmark-circle" size={24} color="#1976d2" />}
-              </TouchableOpacity>
-            )} />
-          </View>
-        </View>
+      <Modal visible={showRoofTypePicker} animationType="slide" transparent onRequestClose={() => setShowRoofTypePicker(false)}>
+        <View style={styles.modalOverlay}><View style={styles.modalContent}>
+          <View style={styles.modalHeader}><Text style={styles.modalTitle}>Dachtyp</Text><TouchableOpacity onPress={() => setShowRoofTypePicker(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity></View>
+          <FlatList data={ROOF_TYPES} keyExtractor={i => i.id} renderItem={({ item }) => (
+            <TouchableOpacity style={[styles.roofTypeItem, item.id === roofType && styles.roofTypeItemSelected]} onPress={() => { setRoofType(item.id); setShowRoofTypePicker(false); }}>
+              <View style={styles.roofTypeItemContent}><Ionicons name="home" size={28} color={item.id === roofType ? '#1976d2' : '#666'} /><View style={styles.roofTypeItemTextContainer}><Text style={[styles.roofTypeItemText, item.id === roofType && styles.roofTypeItemTextSelected]}>{item.name}</Text><Text style={styles.roofTypeItemDesc}>{item.description}</Text></View></View>
+              {item.id === roofType && <Ionicons name="checkmark-circle" size={24} color="#1976d2" />}
+            </TouchableOpacity>
+          )} />
+        </View></View>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -649,13 +266,13 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
   input: { backgroundColor: '#fff', borderRadius: 8, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#ddd' },
-  textArea: { height: 100, textAlignVertical: 'top' },
+  textArea: { height: 80, textAlignVertical: 'top' },
   inputRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
   inputHalf: { flex: 1 },
-  hint: { fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4, marginBottom: 8 },
+  hint: { fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 4 },
   sectionDivider: { backgroundColor: '#e8e8e8', padding: 8, borderRadius: 6, marginBottom: 12, marginTop: 4 },
   sectionText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  calculatedValue: { backgroundColor: '#e8f5e9', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 8 },
+  calculatedValue: { backgroundColor: '#e8f5e9', padding: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   calculatedLabel: { fontSize: 14, color: '#2e7d32' },
   calculatedNumber: { fontSize: 18, fontWeight: 'bold', color: '#2e7d32' },
   measurementsCard: { backgroundColor: '#e3f2fd', borderRadius: 12, padding: 16, marginBottom: 16 },
@@ -672,7 +289,7 @@ const styles = StyleSheet.create({
   roofTypeSelectorText: { flex: 1 },
   roofTypeName: { fontSize: 16, fontWeight: '600', color: '#333' },
   roofTypeDesc: { fontSize: 12, color: '#666', marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%', paddingBottom: Platform.OS === 'ios' ? 34 : 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },

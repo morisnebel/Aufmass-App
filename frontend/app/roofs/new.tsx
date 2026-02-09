@@ -318,9 +318,12 @@ export default function NewRoofScreen() {
           dachneigung2: parseFloat(dachneigung2) || 0,
           dachneigung3: parseFloat(dachneigung3) || 0,
           dachneigung4: parseFloat(dachneigung4) || 0,
-          neigung_unten: parseFloat(neigungUnten) || 0,
-          stockwerkhoehe: parseFloat(stockwerkhoehe) || 0,
-          neigung_oben: parseFloat(neigungOben) || 0,
+          // Mansarddach Felder
+          neigung_lang_unten: parseFloat(neigungLangUnten) || 0,
+          neigung_lang_oben: parseFloat(neigungLangOben) || 0,
+          neigung_schmal_unten: parseFloat(neigungSchmalUnten) || 0,
+          neigung_schmal_oben: parseFloat(neigungSchmalOben) || 0,
+          knickhoehe: parseFloat(knickhoehe) || 0,
           firsthoehe: calculatedFirsthoehe,
           // Legacy-Felder für Kompatibilität
           length: parseFloat(gebaeudelaenge),

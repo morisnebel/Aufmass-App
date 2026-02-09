@@ -384,12 +384,12 @@ export default function NewRoofScreen() {
   // Gemeinsame Dachüberstand-Felder für alle Dachtypen (separat für Länge und Breite)
   const renderUeberstandFields = () => (
     <>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Dachüberstände</Text>
+      <View style={styles.sectionDivider}>
+        <Text style={styles.sectionText}>Dachüberstände (optional)</Text>
       </View>
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>Überstand Längsseite (m)</Text>
+      <View style={styles.inputRow}>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Längsseite (m)</Text>
           <TextInput
             style={styles.input}
             placeholder="z.B. 0.5"
@@ -399,8 +399,8 @@ export default function NewRoofScreen() {
           />
           <Text style={styles.hint}>Traufseite</Text>
         </View>
-        <View style={[styles.inputGroup, styles.halfWidth]}>
-          <Text style={styles.label}>Überstand Giebelseite (m)</Text>
+        <View style={styles.inputHalf}>
+          <Text style={styles.label}>Giebelseite (m)</Text>
           <TextInput
             style={styles.input}
             placeholder="z.B. 0.3"

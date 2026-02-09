@@ -122,9 +122,10 @@ export default function EditRoofScreen() {
     const n3 = parseFloat(dachneigung3) || n1;
     const n4 = parseFloat(dachneigung4) || n2;
     const ueberstandGiebel = parseFloat(ueberstandGiebelseite) || 0;
-    const ueberstandLaengs = parseFloat(ueberstandLaengsseite) || 0;
+    const uTraufe = parseFloat(ueberstandTraufe) || 0;
+    const uPult = parseFloat(ueberstandPult) || 0;
     const effL = L + 2 * ueberstandGiebel;
-    const effB = B + 2 * ueberstandLaengs;
+    const effB = roofType === 'Pultdach' ? B + uTraufe + uPult : B + 2 * uTraufe;
     const nLU = parseFloat(neigungLangUnten) || 0;
     const nLO = parseFloat(neigungLangOben) || 0;
     const nSU = parseFloat(neigungSchmalUnten) || 0;

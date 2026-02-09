@@ -687,8 +687,9 @@ export default function NewRoofScreen() {
                 placeholder="z.B. 8,0"
                 value={gebaeudelaenge}
                 onChangeText={(val) => {
-                  setGebaeudelaenge(val);
-                  setGebaeudebreite(val);
+                  const v = formatDecimal(val);
+                  setGebaeudelaenge(v);
+                  setGebaeudebreite(v);
                 }}
                 keyboardType="decimal-pad"
               />
@@ -704,7 +705,20 @@ export default function NewRoofScreen() {
               />
             </View>
             <Text style={styles.hint}>Zeltdach: Quadratischer Grundriss, 4 gleiche Dreiecksflächen</Text>
-            {renderUeberstandFields()}
+            <View style={styles.sectionDivider}>
+              <Text style={styles.sectionText}>Dachüberstand (optional)</Text>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Traufe (m)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 0,5"
+                value={ueberstandTraufe}
+                onChangeText={(text) => setUeberstandTraufe(formatDecimal(text))}
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.hint}>Überstand an allen 4 Seiten</Text>
+            </View>
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe (Spitze):</Text>

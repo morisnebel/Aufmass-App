@@ -718,7 +718,7 @@ export default function NewRoofScreen() {
                 style={styles.input}
                 placeholder="z.B. 3.0"
                 value={knickhoehe}
-                onChangeText={setKnickhoehe}
+                onChangeText={(text) => setKnickhoehe(formatDecimal(text))}
                 keyboardType="decimal-pad"
               />
               <Text style={styles.hint}>Höhe von Traufe bis zum Knickpunkt</Text>

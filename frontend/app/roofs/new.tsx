@@ -612,6 +612,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
+            {renderUeberstandField()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
@@ -632,7 +633,7 @@ export default function NewRoofScreen() {
                 value={gebaeudelaenge}
                 onChangeText={(val) => {
                   setGebaeudelaenge(val);
-                  setGebaeudebreite(val); // Quadratisch
+                  setGebaeudebreite(val);
                 }}
                 keyboardType="decimal-pad"
               />
@@ -648,6 +649,7 @@ export default function NewRoofScreen() {
               />
             </View>
             <Text style={styles.hint}>Zeltdach: Quadratischer Grundriss, 4 gleiche Dreiecksflächen</Text>
+            {renderUeberstandField()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>
                 <Text style={styles.calculatedLabel}>Berechnete Firsthöhe (Spitze):</Text>

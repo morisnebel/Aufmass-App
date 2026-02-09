@@ -77,8 +77,6 @@ export default function EditRoofScreen() {
           const m = roof.measurements || {};
           setGebaeudelaenge(m.gebaeudelaenge?.toString() || m.length?.toString() || '');
           setGebaeudebreite(m.gebaeudebreite?.toString() || m.width?.toString() || '');
-          setTraufhoehe(m.traufhoehe?.toString() || '');
-          setDachueberstand(m.dachueberstand?.toString() || '');
           setDachneigung1(m.dachneigung1?.toString() || '');
           setDachneigung2(m.dachneigung2?.toString() || '');
           setDachneigung3(m.dachneigung3?.toString() || '');

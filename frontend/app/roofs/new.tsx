@@ -379,6 +379,21 @@ export default function NewRoofScreen() {
     setKnickhoehe('');
   };
 
+  // Gemeinsames Dachüberstand-Feld für alle Dachtypen
+  const renderUeberstandField = () => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Dachüberstand (m)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="z.B. 0.3"
+        value={dachueberstand}
+        onChangeText={setDachueberstand}
+        keyboardType="decimal-pad"
+      />
+      <Text style={styles.hint}>Traufüberstand an allen Seiten (optional)</Text>
+    </View>
+  );
+
   // Dynamische Eingabefelder je nach Dachtyp
   const renderMeasurementFields = () => {
     switch (roofType) {
@@ -405,6 +420,7 @@ export default function NewRoofScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
+            {renderUeberstandField()}
           </>
         );
 

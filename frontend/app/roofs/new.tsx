@@ -247,83 +247,47 @@ export default function NewRoofScreen() {
       }
 
       case 'Mansarddach': {
-        // Mansarddach: 2 lange Seiten + 2 schmale Seiten (Giebel)
-        // Jede Seite hat einen unteren (steilen) und oberen (flachen) Teil
+        // Mansarddach: 4 Dachflächen mit je 2 Abschnitten (unten steil, oben flach)
+        // Basierend auf DachCAD V6 Geometrie
         if (nLangUnten > 0 && nLangOben > 0 && hKnick > 0) {
-          // Umrechnung in Radiant
           const radLangUnten = (nLangUnten * Math.PI) / 180;
           const radLangOben = (nLangOben * Math.PI) / 180;
           const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
           const radSchmalOben = ((nSchmalOben || nLangOben) * Math.PI) / 180;
           
-          // === LANGE SEITEN (2 Stück) ===
-          // Sparrenlänge unten (steil) = Knickhöhe / sin(Neigung)
+          // === UNTERER TEIL (steil) ===
+          // Sparrenlänge = Knickhöhe / sin(Neigung)
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
-          // Horizontale Ausdehnung des unteren Teils
-          const horizontalUntenLang = hKnick / Math.tan(radLangUnten);
-          // Restbreite für oberen Teil = Gebäudebreite - 2 × horizontale Ausdehnung
-          const restBreiteLang = Math.max(0, B - 2 * horizontalUntenLang);
-          // Sparrenlänge oben (flach) = (Restbreite/2) / cos(Neigung)
-          const sparrenLangOben = restBreiteLang > 0 ? (restBreiteLang / 2) / Math.cos(radLangOben) : 0;
-          
-          // Fläche lange Seiten: 2 × Länge × (Sparren unten + Sparren oben)
-          const flaecheLangSeiten = 2 * L * (sparrenLangUnten + sparrenLangOben);
-          
-          // === SCHMALE SEITEN / GIEBEL (2 Stück) ===
-          // Sparrenlänge unten (steil) = Knickhöhe / sin(Neigung)
           const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
+          
           // Horizontale Ausdehnung des unteren Teils
-          const horizontalUntenSchmal = hKnick / Math.tan(radSchmalUnten);
-          // Restbreite für oberen Teil = Gebäudelänge - 2 × horizontale Ausdehnung
-          const restBreiteSchmal = Math.max(0, L - 2 * horizontalUntenSchmal);
-          // Sparrenlänge oben (flach)
-          const sparrenSchmalOben = restBreiteSchmal > 0 ? (restBreiteSchmal / 2) / Math.cos(radSchmalOben) : 0;
+          const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
+          const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
           
-          // Fläche schmale Seiten: 2 × Breite × (Sparren unten + Sparren oben)
-          const flaecheSchmalSeiten = 2 * B * (sparrenSchmalUnten + sparrenSchmalOben);
+          // Untere Fläche = Umfang × Sparrenlänge (vereinfacht, gleiche Neigung)
+          // Bei unterschiedlichen Neigungen: 2 × L × sparrenLang + 2 × B × sparrenSchmal
+          const flaecheUnten = 2 * L * sparrenLangUnten + 2 * B * sparrenSchmalUnten;
           
-          // Gesamtfläche: Lange + Schmale Seiten
-          // ABER: An den Ecken überlappen sich die Flächen!
-          // Bei einem Mansarddach mit 4 Seiten müssen wir die Eckbereiche berücksichtigen
+          // === OBERER TEIL (flach) ===
+          // Verbleibende Grundfläche nach dem unteren Teil
+          const obereLaenge = Math.max(0, L - 2 * horizontalSchmalUnten);
+          const obereBreite = Math.max(0, B - 2 * horizontalLangUnten);
           
-          // Einfache Berechnung ohne Eckkorrektur:
-          // area = flaecheLangSeiten + flaecheSchmalSeiten;
-          
-          // Korrigierte Berechnung:
-          // Die Grate an den Ecken bedeuten, dass wir Trapezflächen haben
-          // Unterer Teil: 4 Trapeze
-          // Oberer Teil: 4 Trapeze (oder Walm-ähnlich)
-          
-          // Für ein Mansarddach Typ 1 (wie im DachCAD):
-          // Untere Fläche pro Seite = Seitenlänge × Sparrenlänge unten
-          // Obere Fläche = abhängig von Firstlänge und Dachform
-          
-          // Bei quadratischem Grundriss mit gleichen Neigungen auf allen Seiten:
-          // Untere Fläche = Umfang × Sparrenlänge unten = 2×(L+B) × sparrenUnten
-          // Obere Fläche = je nach First-Konfiguration
-          
-          // Vereinfachte korrekte Berechnung für Mansarddach:
-          const umfang = 2 * (L + B);
-          
-          // Unterer Teil (steil): Umfang × Sparrenlänge
-          const flaecheUnten = umfang * sparrenLangUnten;
-          
-          // Oberer Teil: Wie Walmdach/Zeltdach auf der verkleinerten Fläche
-          // Obere Grundfläche nach Abzug des unteren Teils
-          const obereLaenge = L - 2 * horizontalUntenLang;
-          const obereBreite = B - 2 * horizontalUntenSchmal;
+          let flaecheOben = 0;
           
           if (obereLaenge > 0 && obereBreite > 0) {
-            // Oberer Teil wie Walmdach berechnen
-            const obererUmfang = 2 * (obereLaenge + obereBreite);
-            const flaecheOben = obererUmfang * sparrenLangOben;
-            area = flaecheUnten + flaecheOben;
-          } else {
-            // Oberer Teil wie Zeltdach (spitzes Dach)
-            area = flaecheUnten;
+            // Sparrenlängen für den oberen Teil
+            const sparrenLangOben = (obereBreite / 2) / Math.cos(radLangOben);
+            const sparrenSchmalOben = (obereLaenge / 2) / Math.cos(radSchmalOben);
+            
+            // Obere Fläche wie Walmdach: 2 Trapeze + 2 Dreiecke
+            // Vereinfacht: 2 × obereLänge × sparrenLangOben + 2 × obereBreite × sparrenSchmalOben
+            flaecheOben = 2 * obereLaenge * sparrenLangOben + 2 * obereBreite * sparrenSchmalOben;
           }
+          
+          area = flaecheUnten + flaecheOben;
         } else {
-          area = L * B * 1.4; // Fallback
+          area = L * B * 1.4;
         }
         break;
       }

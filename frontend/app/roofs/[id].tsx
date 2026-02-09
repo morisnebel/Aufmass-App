@@ -541,6 +541,13 @@ export default function EditRoofScreen() {
                 <TextInput style={styles.input} placeholder="wie lange Seite" value={neigungSchmalOben} onChangeText={setNeigungSchmalOben} keyboardType="decimal-pad" />
               </View>
             </View>
+            
+            <View style={styles.sectionDivider}><Text style={styles.sectionText}>Dachüberstand (optional)</Text></View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Überstand (m)</Text>
+              <TextInput style={styles.input} placeholder="z.B. 0.125" value={dachueberstand} onChangeText={setDachueberstand} keyboardType="decimal-pad" />
+              <Text style={styles.hint}>Dachüberstand an allen Seiten</Text>
+            </View>
             <Text style={styles.hint}>Mansarddach: 4 Dachflächen mit je 2 Neigungen</Text>
           </>
         );

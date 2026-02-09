@@ -129,9 +129,13 @@ export default function NewRoofScreen() {
     const n2 = parseFloat(dachneigung2) || n1;  // Dachneigung 2
     const n3 = parseFloat(dachneigung3) || n1;  // Dachneigung 3
     const n4 = parseFloat(dachneigung4) || n2;  // Dachneigung 4
-    const nUnten = parseFloat(neigungUnten) || 0;  // Mansard unten
-    const hStock = parseFloat(stockwerkhoehe) || 0; // Stockwerkhöhe
-    const nOben = parseFloat(neigungOben) || 0;    // Walm oben
+    
+    // Mansarddach Variablen
+    const nLangUnten = parseFloat(neigungLangUnten) || 0;   // Neigung lange Seite unten
+    const nLangOben = parseFloat(neigungLangOben) || 0;     // Neigung lange Seite oben
+    const nSchmalUnten = parseFloat(neigungSchmalUnten) || 0; // Neigung schmale Seite unten
+    const nSchmalOben = parseFloat(neigungSchmalOben) || 0;   // Neigung schmale Seite oben
+    const hKnick = parseFloat(knickhoehe) || 0;             // Trauf(Knick)höhe
 
     let area = 0;
 

@@ -250,7 +250,7 @@ export default function NewRoofScreen() {
           // 4 Dreiecke
           area = 4 * (seite / 2) * sparrenlaenge;
         } else {
-          area = effL * effL;
+          area = seite * seite;
         }
         break;
       }

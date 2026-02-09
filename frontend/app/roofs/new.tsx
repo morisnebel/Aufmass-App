@@ -141,9 +141,6 @@ export default function NewRoofScreen() {
     const effL = L + 2 * ueberstandGiebel;  // Effektive Länge mit Giebelüberstand
     const effB = B + 2 * ueberstandLaengs;  // Effektive Breite mit Traufüberstand
     
-    // Debug-Ausgabe
-    console.log('Berechnung:', { L, B, ueberstandGiebel, ueberstandLaengs, effL, effB, roofType });
-    
     // Mansarddach Variablen
     const nLangUnten = parseFloat(neigungLangUnten) || 0;
     const nLangOben = parseFloat(neigungLangOben) || 0;

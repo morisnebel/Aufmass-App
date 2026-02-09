@@ -630,10 +630,8 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 35"
                   value={dachneigung1}
-                  onChangeText={(val) => {
-                    setDachneigung1(val);
-                    if (!dachneigung2) setDachneigung2(val);
-                  }}
+                  onChangeText={(val) => setDachneigung1(formatDecimal(val))}
+                  onBlur={() => { if (dachneigung1 && !dachneigung2) setDachneigung2(dachneigung1); }}
                   keyboardType="decimal-pad"
                 />
               </View>
@@ -655,10 +653,8 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 35"
                   value={dachneigung3}
-                  onChangeText={(val) => {
-                    setDachneigung3(val);
-                    if (!dachneigung4) setDachneigung4(val);
-                  }}
+                  onChangeText={(val) => setDachneigung3(formatDecimal(val))}
+                  onBlur={() => { if (dachneigung3 && !dachneigung4) setDachneigung4(dachneigung3); }}
                   keyboardType="decimal-pad"
                 />
               </View>

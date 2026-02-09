@@ -226,28 +226,26 @@ export default function NewRoofScreen() {
       }
 
       case 'Zeltdach': {
-        // 4 gleiche Dreiecksflächen
-        // Bei quadratischem Grundriss: Länge = Breite
+        // 4 gleiche Dreiecksflächen - mit Überstand
         if (n1 > 0) {
-          const seite = L; // Quadratischer Grundriss angenommen
+          const seite = effL; // Quadratischer Grundriss mit Überstand
           const rad = (n1 * Math.PI) / 180;
           
           // Sparrenlänge = (Seitenlänge/2) / cos(Neigung)
           const sparrenlaenge = (seite / 2) / Math.cos(rad);
           
-          // Fläche eines Dreiecks = (Basis × Sparrenlänge) / 2
           // 4 Dreiecke
           area = 4 * (seite / 2) * sparrenlaenge;
         } else {
-          area = L * L;
+          area = effL * effL;
         }
         break;
       }
 
       case 'Mansarddach': {
-        // Mansarddach: KORREKTE Geometrie basierend auf DachCAD
-        // UNTEN: 4 Trapeze (nicht Rechtecke!)
-        // OBEN: Walmdach auf der Restfläche (obere Basen der Trapeze)
+        // Mansarddach: KORREKTE Geometrie mit Überstand
+        // UNTEN: 4 Trapeze
+        // OBEN: Walmdach auf der Restfläche
         if (nLangUnten > 0 && hKnick > 0) {
           const radLangUnten = (nLangUnten * Math.PI) / 180;
           const radSchmalUnten = ((nSchmalUnten || nLangUnten) * Math.PI) / 180;
@@ -258,21 +256,17 @@ export default function NewRoofScreen() {
           const sparrenLangUnten = hKnick / Math.sin(radLangUnten);
           const sparrenSchmalUnten = hKnick / Math.sin(radSchmalUnten);
           
-          // Horizontale Ausdehnung (für Grat-Einschnitt bei 45° Grat)
+          // Horizontale Ausdehnung
           const horizontalLangUnten = hKnick / Math.tan(radLangUnten);
           const horizontalSchmalUnten = hKnick / Math.tan(radSchmalUnten);
           
-          // === UNTERER TEIL: 4 TRAPEZE ===
-          // Jedes Trapez: ((untere Basis + obere Basis) / 2) × Sparrenlänge
-          
-          // Lange Trapeze (2 Stück)
-          const untereBasisLang = L;
-          const obereBasisLang = Math.max(0, L - 2 * horizontalSchmalUnten);
+          // === UNTERER TEIL: 4 TRAPEZE (mit Überstand) ===
+          const untereBasisLang = effL;
+          const obereBasisLang = Math.max(0, effL - 2 * horizontalSchmalUnten);
           const trapezLang = ((untereBasisLang + obereBasisLang) / 2) * sparrenLangUnten;
           
-          // Schmale Trapeze (2 Stück)
-          const untereBasisSchmal = B;
-          const obereBasisSchmal = Math.max(0, B - 2 * horizontalLangUnten);
+          const untereBasisSchmal = effB;
+          const obereBasisSchmal = Math.max(0, effB - 2 * horizontalLangUnten);
           const trapezSchmal = ((untereBasisSchmal + obereBasisSchmal) / 2) * sparrenSchmalUnten;
           
           const flaecheUnten = 2 * trapezLang + 2 * trapezSchmal;
@@ -280,11 +274,9 @@ export default function NewRoofScreen() {
           // === OBERER TEIL: WALMDACH auf Restfläche ===
           let flaecheOben = 0;
           if (nLangOben > 0 && obereBasisLang > 0 && obereBasisSchmal > 0) {
-            // Die Trauflängen des oberen Walmdachs sind die oberen Basen der Trapeze
             const walmdachLaenge = obereBasisLang;
             const walmdachBreite = obereBasisSchmal;
             
-            // Sparrenlängen oben
             const sparrenLangOben = (walmdachBreite / 2) / Math.cos(radLangOben);
             const sparrenSchmalOben = (walmdachLaenge / 2) / Math.cos(radSchmalOben);
             

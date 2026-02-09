@@ -45,10 +45,12 @@ export default function NewRoofScreen() {
   const [dachneigung3, setDachneigung3] = useState('');      // DF 3 in ° (für Walmdach)
   const [dachneigung4, setDachneigung4] = useState('');      // DF 4 in ° (für Walmdach)
   
-  // Mansarddach spezifisch
-  const [neigungUnten, setNeigungUnten] = useState('');      // Mansard-Neigung unten (steil)
-  const [stockwerkhoehe, setStockwerkhoehe] = useState('');  // Höhe des Mansard-Stockwerks
-  const [neigungOben, setNeigungOben] = useState('');        // Walm-Neigung oben (flacher)
+  // Mansarddach spezifisch (wie in DachCAD)
+  const [neigungLangUnten, setNeigungLangUnten] = useState('');    // Dachneig. lange Seite unten (steil)
+  const [neigungLangOben, setNeigungLangOben] = useState('');      // Dachneig. lange Seite oben (flach)
+  const [neigungSchmalUnten, setNeigungSchmalUnten] = useState(''); // Dachneig. schmale Seite unten
+  const [neigungSchmalOben, setNeigungSchmalOben] = useState('');   // Dachneig. schmale Seite oben
+  const [knickhoehe, setKnickhoehe] = useState('');                 // Trauf(Knick)höhe in m
   
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);

@@ -353,9 +353,11 @@ export default function NewRoofScreen() {
     setDachneigung2('');
     setDachneigung3('');
     setDachneigung4('');
-    setNeigungUnten('');
-    setStockwerkhoehe('');
-    setNeigungOben('');
+    setNeigungLangUnten('');
+    setNeigungLangOben('');
+    setNeigungSchmalUnten('');
+    setNeigungSchmalOben('');
+    setKnickhoehe('');
   };
 
   // Dynamische Eingabefelder je nach Dachtyp

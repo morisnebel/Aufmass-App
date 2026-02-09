@@ -246,7 +246,7 @@ export default function EditRoofScreen() {
   );
 
   const renderFields = () => {
-    const LenField = () => <View style={styles.inputGroup}><Text style={styles.label}>Gebäudelänge (m) *</Text><TextInput style={styles.input} placeholder="z.B. 12" value={gebaeudelaenge} onChangeText={(t) => setGebaeudelaenge(formatDecimal(t))} keyboardType="decimal-pad" /></View>;
+    const LenField = () => <View style={styles.inputGroup}><Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text><TextInput style={styles.input} placeholder="z.B. 12" value={gebaeudelaenge} onChangeText={(t) => setGebaeudelaenge(formatDecimal(t))} keyboardType="decimal-pad" /></View>;
     const WidthField = () => <View style={styles.inputGroup}><Text style={styles.label}>Gebäudebreite (m) *</Text><TextInput style={styles.input} placeholder="z.B. 10" value={gebaeudebreite} onChangeText={(t) => setGebaeudebreite(formatDecimal(t))} keyboardType="decimal-pad" /></View>;
     const FirstH = () => calculatedFirsthoehe > 0 ? <View style={styles.calculatedValue}><Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text><Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text></View> : null;
 

@@ -999,6 +999,8 @@ export default function NewRoofScreen() {
         return 'Formel: L × Sparren1 + L × Sparren2';
       case 'Walmdach':
         return 'Formel: 2 Trapeze + 2 Walmdreiecke';
+      case 'Krueppelwalmdach':
+        return 'Formel: 2 Trapeze + 2 Walm-Dreiecke';
       case 'Zeltdach':
         return 'Formel: 4 × (Seite/2 × Sparrenlänge)';
       case 'Mansarddach':

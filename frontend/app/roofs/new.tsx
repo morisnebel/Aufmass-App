@@ -55,6 +55,9 @@ export default function NewRoofScreen() {
   const [neigungSchmalOben, setNeigungSchmalOben] = useState('');   // Dachneig. schmale Seite oben
   const [knickhoehe, setKnickhoehe] = useState('');                 // Trauf(Knick)höhe in m
   
+  // Krüppelwalmdach spezifisch
+  const [traufhoeheWalm, setTraufhoeheWalm] = useState('');         // Traufhöhe der Walme (höher als Hauptdach)
+  
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 

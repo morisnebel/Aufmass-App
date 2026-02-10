@@ -167,10 +167,7 @@ export default function EditRoofScreen() {
         if (n1 > 0 && traufHaupt > 0 && traufWalm > traufHaupt) {
           const r1 = n1*Math.PI/180, r2 = (n2||n1)*Math.PI/180, r3 = n3*Math.PI/180, r4 = (n4||n3)*Math.PI/180;
           
-          // Höhendifferenz zwischen Walm-Traufe und Hauptdach-Traufe
           const rechteckHoehe = traufWalm - traufHaupt;
-          
-          // Firsthöhe über der Walm-Traufe
           const firstHoeheAbsolut = traufHaupt + (effB/2)*Math.tan(r1);
           const firstHoeheUeberWalm = firstHoeheAbsolut - traufWalm;
           
@@ -187,8 +184,9 @@ export default function EditRoofScreen() {
           // Hauptdachflächen = Rechteck + Trapez
           const hauptdach1 = rechteck1 + trapez1, hauptdach2 = rechteck2 + trapez2;
           
-          // WALMFLÄCHEN
-          const walmBasis = 2*rechteckHoehe/Math.tan(r1);
+          // WALMFLÄCHEN - Walm-Basis = Dach-Breite an der Walm-Traufhöhe
+          const horizontalerAbstand = rechteckHoehe/Math.tan(r1);
+          const walmBasis = effB - 2*horizontalerAbstand;
           const walmSparren3 = firstHoeheUeberWalm/Math.sin(r3), walmSparren4 = firstHoeheUeberWalm/Math.sin(r4);
           const walm1 = (walmBasis*walmSparren3)/2, walm2 = (walmBasis*walmSparren4)/2;
           

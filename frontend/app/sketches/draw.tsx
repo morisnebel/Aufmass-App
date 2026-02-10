@@ -1850,13 +1850,6 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'polygon' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('polygon')}
-        >
-          <Ionicons name="shapes" size={18} color={drawMode === 'polygon' ? '#fff' : '#333'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[styles.toolButton, drawMode === 'polyline' && styles.toolButtonActive]}
           onPress={() => {
             setDrawMode('polyline');

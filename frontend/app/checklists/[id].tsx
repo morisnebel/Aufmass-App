@@ -65,12 +65,25 @@ export default function EditChecklistScreen() {
       }
       
       if (foundChecklist) {
-        // Initialize subItems and note if not present
-        const items = foundChecklist.items.map((item: ChecklistItem) => ({
-          ...item,
-          note: item.note || '',
-          subItems: item.subItems || [],
-        }));
+        // Initialize subItems and note if not present, handle different formats
+        const items = foundChecklist.items.map((item: any) => {
+          // Convert subItems to correct format
+          let subItems: SubItem[] = [];
+          if (item.subItems && Array.isArray(item.subItems)) {
+            subItems = item.subItems.map((sub: string | SubItem) => {
+              if (typeof sub === 'string') {
+                return { text: sub, checked: false };
+              }
+              return { text: sub.text || '', checked: sub.checked || false };
+            });
+          }
+          return {
+            text: item.text || '',
+            checked: item.checked || false,
+            note: item.note || '',
+            subItems: subItems,
+          };
+        });
         setChecklist({ ...foundChecklist, items });
         
         // Expand items that are checked

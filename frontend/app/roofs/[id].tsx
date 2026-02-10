@@ -160,34 +160,36 @@ export default function EditRoofScreen() {
       }
       case 'Krueppelwalmdach': {
         // Krüppelwalmdach: Satteldach mit abgewalmten Giebeln
-        // Hauptdachflächen = Rechteck + Trapez - Überlappungskorrektur
+        // Berechnung basiert auf absoluten Traufhöhen wie in DachCAD
+        const traufHaupt = parseFloat(traufhoeheHaupt) || 0;
         const traufWalm = parseFloat(traufhoeheWalm) || 0;
         
-        if (n1 > 0 && traufWalm > 0) {
+        if (n1 > 0 && traufHaupt > 0 && traufWalm > traufHaupt) {
           const r1 = n1*Math.PI/180, r2 = (n2||n1)*Math.PI/180, r3 = n3*Math.PI/180, r4 = (n4||n3)*Math.PI/180;
           
-          const firsthoehe = (effB/2)*Math.tan(r1);
-          const walmHoehe = Math.max(0, firsthoehe - traufWalm);
-          const walmTiefe = r3 > 0 ? walmHoehe/Math.tan(r3) : 0;
+          // Höhendifferenz zwischen Walm-Traufe und Hauptdach-Traufe
+          const rechteckHoehe = traufWalm - traufHaupt;
+          
+          // Firsthöhe über der Walm-Traufe
+          const firstHoeheAbsolut = traufHaupt + (effB/2)*Math.tan(r1);
+          const firstHoeheUeberWalm = firstHoeheAbsolut - traufWalm;
+          
+          // RECHTECK (von Hauptdach-Traufe bis Walm-Traufe)
+          const rechteckSparren1 = rechteckHoehe/Math.sin(r1), rechteckSparren2 = rechteckHoehe/Math.sin(r2);
+          const rechteck1 = effL*rechteckSparren1, rechteck2 = effL*rechteckSparren2;
+          
+          // TRAPEZ (von Walm-Traufe bis First)
+          const walmTiefe = firstHoeheUeberWalm/Math.tan(r3);
           const firstLaenge = Math.max(0, effL - 2*walmTiefe);
+          const trapezSparren1 = firstHoeheUeberWalm/Math.sin(r1), trapezSparren2 = firstHoeheUeberWalm/Math.sin(r2);
+          const trapez1 = ((effL+firstLaenge)/2)*trapezSparren1, trapez2 = ((effL+firstLaenge)/2)*trapezSparren2;
           
-          // Hauptdachflächen (Rechteck + Trapez - Überlappung)
-          const sparrenBisWalm1 = traufWalm/Math.sin(r1), sparrenBisWalm2 = traufWalm/Math.sin(r2);
-          const rechteck1 = effL*sparrenBisWalm1, rechteck2 = effL*sparrenBisWalm2;
+          // Hauptdachflächen = Rechteck + Trapez
+          const hauptdach1 = rechteck1 + trapez1, hauptdach2 = rechteck2 + trapez2;
           
-          const sparrenWalmBisFirst1 = walmHoehe/Math.sin(r1), sparrenWalmBisFirst2 = walmHoehe/Math.sin(r2);
-          const trapez1 = ((effL+firstLaenge)/2)*sparrenWalmBisFirst1, trapez2 = ((effL+firstLaenge)/2)*sparrenWalmBisFirst2;
-          
-          const sparrenGesamt1 = (effB/2)/Math.cos(r1), sparrenGesamt2 = (effB/2)/Math.cos(r2);
-          const ueberlappung1 = walmTiefe*sparrenGesamt1*0.459, ueberlappung2 = walmTiefe*sparrenGesamt2*0.459;
-          
-          const hauptdach1 = rechteck1 + trapez1 - ueberlappung1;
-          const hauptdach2 = rechteck2 + trapez2 - ueberlappung2;
-          
-          // Walmflächen (Walmbasis = B²/effB)
-          const walmBasis = B*B/effB;
-          const walmSparren3 = r3 > 0 ? walmHoehe/Math.sin(r3) : 0;
-          const walmSparren4 = r4 > 0 ? walmHoehe/Math.sin(r4) : walmSparren3;
+          // WALMFLÄCHEN
+          const walmBasis = 2*rechteckHoehe/Math.tan(r1);
+          const walmSparren3 = firstHoeheUeberWalm/Math.sin(r3), walmSparren4 = firstHoeheUeberWalm/Math.sin(r4);
           const walm1 = (walmBasis*walmSparren3)/2, walm2 = (walmBasis*walmSparren4)/2;
           
           area = hauptdach1 + hauptdach2 + walm1 + walm2;

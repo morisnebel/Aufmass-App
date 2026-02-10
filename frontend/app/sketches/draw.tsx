@@ -2961,4 +2961,75 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  // Gitter Button und Einstellungen
+  gridButtonActive: {
+    backgroundColor: '#9c27b0',
+  },
+  gridSettingsPanel: {
+    position: 'absolute',
+    top: 70,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 100,
+  },
+  gridSettingsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gridSettingsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  gridSliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gridSliderLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  gridSliderContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 4,
+  },
+  gridSizeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  gridSizeButtonActive: {
+    backgroundColor: '#9c27b0',
+    borderColor: '#9c27b0',
+  },
+  gridSizeButtonText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  gridSizeButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  gridSizeInfo: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+  },
 });

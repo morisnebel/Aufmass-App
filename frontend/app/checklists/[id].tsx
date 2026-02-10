@@ -434,8 +434,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   subItemTextChecked: {
-    textDecorationLine: 'line-through',
-    color: '#999',
+    color: '#4caf50',
+    fontWeight: '500',
   },
   noteContainer: {
     borderTopWidth: 1,

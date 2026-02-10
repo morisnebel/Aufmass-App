@@ -2998,12 +2998,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   gridSettingsTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  gridSliderSection: {
+    marginBottom: 16,
+  },
+  gridSliderSectionLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
   },
   gridSliderRow: {
     flexDirection: 'row',
@@ -3011,8 +3020,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   gridSliderLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
+    width: 45,
+  },
+  gridSlider: {
+    flex: 1,
+    height: 40,
   },
   gridSliderContainer: {
     flex: 1,

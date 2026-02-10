@@ -104,10 +104,6 @@ export default function NewProjectScreen() {
   const [newCustomerCity, setNewCustomerCity] = useState('');
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   
-  // Anrede picker
-  const [showAnredePicker, setShowAnredePicker] = useState(false);
-  const anredeOptions = ['Herr', 'Frau', 'Bauherr', 'Bauherren', 'Firma', 'Familie'];
-  
   // Contact picker modal
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);

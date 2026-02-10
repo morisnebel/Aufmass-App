@@ -580,7 +580,9 @@ export default function DrawSketchScreen() {
       setStartPoint(null);
       setTempElement(null);
     } else if (startPoint && tempElement) {
-      addToHistory([...elements, tempElement]);
+      // Wichtig: Neue eindeutige ID vergeben beim Hinzufügen
+      const finalElement = { ...tempElement, id: Date.now().toString() };
+      addToHistory([...elements, finalElement]);
       setStartPoint(null);
       setTempElement(null);
     }

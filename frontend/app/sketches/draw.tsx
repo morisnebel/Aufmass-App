@@ -1822,6 +1822,20 @@ export default function DrawSketchScreen() {
           <Ionicons name="camera" size={18} color="#4caf50" />
         </TouchableOpacity>
 
+        {/* Foto-Bearbeitungsmodus Toggle */}
+        <TouchableOpacity 
+          style={[styles.toolButton, photoEditMode && styles.photoEditButtonActive]} 
+          onPress={() => {
+            setPhotoEditMode(!photoEditMode);
+            setSelectedElementId(null);
+            if (!photoEditMode) {
+              setDrawMode('select');
+            }
+          }}
+        >
+          <Ionicons name="image-outline" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
+        </TouchableOpacity>
+
         <View style={styles.separator} />
 
         {/* Color picker */}

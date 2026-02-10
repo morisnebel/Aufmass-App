@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   checklistTextChecked: {
-    textDecorationLine: 'line-through',
-    color: '#999',
+    color: '#4caf50',
+    fontWeight: '600',
   },
   footer: {
     backgroundColor: '#fff',

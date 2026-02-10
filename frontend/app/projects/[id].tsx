@@ -85,6 +85,7 @@ interface SubItem {
 interface ChecklistItem {
   text: string;
   checked: boolean;
+  note?: string;
   subItems?: SubItem[];
 }
 

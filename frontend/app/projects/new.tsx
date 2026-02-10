@@ -757,13 +757,7 @@ export default function NewProjectScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowNewCustomerModal(false);
-                  setNewCustomerName('');
-                  setNewCustomerEmail('');
-                  setNewCustomerPhone('');
-                  setNewCustomerMobile('');
-                  setNewCustomerStreet('');
-                  setNewCustomerPlz('');
-                  setNewCustomerCity('');
+                  resetNewCustomerForm();
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>

@@ -1964,6 +1964,47 @@ export default function DrawSketchScreen() {
               strokeLinejoin="round"
             />
           )}
+
+          {/* Render current polyline während des Zeichnens */}
+          {drawMode === 'polyline' && polylinePoints.length > 0 && (
+            <>
+              <Path
+                d={polylinePoints.map((pt, i) => 
+                  i === 0 ? `M ${pt.x} ${pt.y}` : `L ${pt.x} ${pt.y}`
+                ).join(' ')}
+                stroke={drawColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="5,5"
+              />
+              {/* Punkte anzeigen */}
+              {polylinePoints.map((pt, idx) => (
+                <Circle 
+                  key={`current-polyline-pt-${idx}`}
+                  cx={pt.x} 
+                  cy={pt.y} 
+                  r={8} 
+                  fill={idx === 0 ? '#4caf50' : '#2196f3'} 
+                  stroke="#fff" 
+                  strokeWidth={2} 
+                />
+              ))}
+              {/* Schließen-Indikator beim ersten Punkt */}
+              {polylinePoints.length >= 3 && (
+                <Circle 
+                  cx={polylinePoints[0].x} 
+                  cy={polylinePoints[0].y} 
+                  r={20} 
+                  fill="rgba(76, 175, 80, 0.3)" 
+                  stroke="#4caf50" 
+                  strokeWidth={2}
+                  strokeDasharray="3,3"
+                />
+              )}
+            </>
+          )}
         </Svg>
 
         {/* Info overlay */}
@@ -1971,6 +2012,47 @@ export default function DrawSketchScreen() {
           <Text style={styles.infoText}>Elemente: {elements.length}</Text>
           {selectedElementId && <Text style={styles.infoText}>Ausgewählt</Text>}
         </View>
+
+        {/* Polyline Steuerung */}
+        {drawMode === 'polyline' && polylinePoints.length > 0 && (
+          <View style={styles.polylineControls}>
+            <Text style={styles.polylineInfo}>
+              Grundriss: {polylinePoints.length} Punkte
+            </Text>
+            <View style={styles.polylineButtons}>
+              <TouchableOpacity 
+                style={[styles.polylineButton, styles.polylineButtonUndo]} 
+                onPress={undoLastPolylinePoint}
+              >
+                <Ionicons name="arrow-undo" size={18} color="#fff" />
+                <Text style={styles.polylineButtonText}>Zurück</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.polylineButton, styles.polylineButtonFinish]} 
+                onPress={() => finishPolyline(false)}
+              >
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.polylineButtonText}>Fertig</Text>
+              </TouchableOpacity>
+              {polylinePoints.length >= 3 && (
+                <TouchableOpacity 
+                  style={[styles.polylineButton, styles.polylineButtonClose]} 
+                  onPress={() => finishPolyline(true)}
+                >
+                  <Ionicons name="close-circle" size={18} color="#fff" />
+                  <Text style={styles.polylineButtonText}>Schließen</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={[styles.polylineButton, styles.polylineButtonCancel]} 
+                onPress={cancelPolyline}
+              >
+                <Ionicons name="trash" size={18} color="#fff" />
+                <Text style={styles.polylineButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Text Input Modal */}

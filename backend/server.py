@@ -66,6 +66,7 @@ class Photo(BaseModel):
     image_data: str  # base64
     annotations: Optional[str] = None  # JSON string of annotations
     description: Optional[str] = None
+    pdf_size: str = "medium"  # small, medium, large, full - Größe im PDF
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Sketch(BaseModel):

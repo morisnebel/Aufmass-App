@@ -1734,6 +1734,20 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
+  checklistCardWrapper: {
+    position: 'relative',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  checklistDeleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    borderRadius: 16,
+    padding: 6,
+    zIndex: 10,
+  },
   moreItemsText: {
     fontSize: 12,
     color: '#1976d2',

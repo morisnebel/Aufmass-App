@@ -1011,6 +1011,22 @@ export default function DrawSketchScreen() {
             if (dist < 15) return el;
           }
         }
+      } else if (el.type === 'path') {
+        // Extrahiere Punkte aus dem SVG-Path und prüfe Nähe
+        const pathPoints: { x: number; y: number }[] = [];
+        const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+        let match;
+        while ((match = pathRegex.exec(el.data)) !== null) {
+          pathPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
+        }
+        
+        // Prüfe ob Punkt nahe einer der Linien ist
+        if (pathPoints.length >= 2) {
+          for (let j = 0; j < pathPoints.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, pathPoints[j].x, pathPoints[j].y, pathPoints[j+1].x, pathPoints[j+1].y);
+            if (dist < 20) return el;
+          }
+        }
       }
     }
     return null;

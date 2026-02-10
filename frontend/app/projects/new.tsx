@@ -631,13 +631,7 @@ export default function NewProjectScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setShowNewCustomerModal(false);
-                  setNewCustomerName('');
-                  setNewCustomerEmail('');
-                  setNewCustomerPhone('');
-                  setNewCustomerMobile('');
-                  setNewCustomerStreet('');
-                  setNewCustomerPlz('');
-                  setNewCustomerCity('');
+                  resetNewCustomerForm();
                 }}
               >
                 <Ionicons name="close" size={24} color="#666" />

@@ -236,7 +236,8 @@ export default function EditChecklistScreen() {
                   >
                     {item.text}
                   </Text>
-                  {(hasSubItems || item.checked) && (
+                  {/* Show expand button if has subItems OR is checked (for note field) */}
+                  {hasSubItems && (
                     <TouchableOpacity
                       onPress={() => toggleExpand(index)}
                       style={styles.expandButton}
@@ -244,7 +245,7 @@ export default function EditChecklistScreen() {
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={24}
-                        color="#666"
+                        color="#1976d2"
                       />
                     </TouchableOpacity>
                   )}

@@ -211,6 +211,11 @@ export default function NewProjectScreen() {
     
     setShowContactPicker(false);
     setContactSearchQuery('');
+    
+    // Öffne das NewCustomer Modal wieder nach kurzer Verzögerung
+    setTimeout(() => {
+      setShowNewCustomerModal(true);
+    }, 350);
   };
 
   const filteredContacts = deviceContacts.filter(contact => {

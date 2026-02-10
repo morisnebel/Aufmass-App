@@ -79,6 +79,9 @@ export default function EditCustomerScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
+  // Contact sync state - speichert die Kontakt-ID wenn aus Kontakten importiert
+  const [importedContactId, setImportedContactId] = useState<string | null>(null);
+  
   // Import options modal
   const [showImportOptions, setShowImportOptions] = useState(false);
   

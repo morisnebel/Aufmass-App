@@ -1705,6 +1705,38 @@ export default function DrawSketchScreen() {
         const w = Math.max(10, (el.width || 100) * scale);
         const h = Math.max(10, (el.height || 100) * scale);
         svgElements += `<image href="${el.data.uri}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+      } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
+        // Render polyline from points array
+        const points = el.data.points as { x: number; y: number }[];
+        const isClosed = el.data.closed || false;
+        
+        // Build path from points
+        let pathData = points.map((pt, idx) => {
+          const x = ((pt.x - minX) * scale) + offsetX;
+          const y = ((pt.y - minY) * scale) + offsetY;
+          return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }).join(' ');
+        
+        if (isClosed) {
+          pathData += ' Z';
+        }
+        
+        svgElements += `<path d="${pathData}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+      } else if (el.type === 'polygon' && typeof el.data === 'string') {
+        // Render closed polygon (legacy format)
+        let pathIndex = 0;
+        const scaledPath = el.data.replace(/([MLZ])\s*(-?\d+\.?\d*)?\s*(-?\d+\.?\d*)?/g, 
+          (match: string, cmd: string, xStr?: string, yStr?: string) => {
+            if (cmd === 'Z') return 'Z';
+            if (xStr && yStr) {
+              const x = ((parseFloat(xStr) - minX) * scale) + offsetX;
+              const y = ((parseFloat(yStr) - minY) * scale) + offsetY;
+              return `${cmd} ${x.toFixed(1)} ${y.toFixed(1)}`;
+            }
+            return match;
+          });
+        // Polygon has fill with transparency
+        svgElements += `<path d="${scaledPath}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" fill="${el.color}" fill-opacity="0.3" stroke-linecap="round" stroke-linejoin="round"/>`;
       }
     });
     

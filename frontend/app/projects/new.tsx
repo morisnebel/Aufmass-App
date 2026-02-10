@@ -1092,6 +1092,10 @@ const styles = StyleSheet.create({
   formInputGroup: {
     marginBottom: 16,
   },
+  formInputGroupSmall: {
+    marginBottom: 8,
+    flex: 1,
+  },
   formRowGroup: {
     flexDirection: 'row',
     gap: 12,

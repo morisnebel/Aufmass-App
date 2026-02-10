@@ -210,12 +210,15 @@ export default function AnnotatePhotoScreen() {
         : imageUri;
       
       const filename = `aufmass_foto_${Date.now()}.jpg`;
-      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      const fileUri = FileSystem.cacheDirectory + filename;
       
-      // Verwende 'base64' als String statt EncodingType
-      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: 'base64',
-      });
+      // Schreibe Base64-Daten in eine Datei
+      // Verwende einfachen String 'base64' als Encoding
+      await FileSystem.writeAsStringAsync(
+        fileUri, 
+        base64Data, 
+        { encoding: FileSystem.EncodingType?.Base64 || 'base64' }
+      );
       
       const asset = await MediaLibrary.createAssetAsync(fileUri);
       await MediaLibrary.createAlbumAsync('Aufmaß App', asset, false);

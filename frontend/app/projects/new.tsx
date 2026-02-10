@@ -364,20 +364,24 @@ export default function NewProjectScreen() {
         }
       }
 
-      // Add to local list and select
-      setCustomers([...customers, newCustomer]);
-      setCustomerId(newCustomer.id);
-      setSelectedCustomer(newCustomer);
-      
-      // Reset and close modal
+      // WICHTIG: Zuerst alle Modals sicher schließen
       resetNewCustomerForm();
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
+      
+      // Kurze Verzögerung, um sicherzustellen, dass Modals vollständig geschlossen sind
+      // bevor UI-Updates und Alert angezeigt werden
+      setTimeout(() => {
+        // Add to local list and select
+        setCustomers(prevCustomers => [...prevCustomers, newCustomer]);
+        setCustomerId(newCustomer.id);
+        setSelectedCustomer(newCustomer);
 
-      const message = saveOrUpdateContact 
-        ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
-        : 'Kunde wurde erstellt';
-      Alert.alert('Erfolg', message, [{ text: 'OK' }]);
+        const message = saveOrUpdateContact 
+          ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
+          : 'Kunde wurde erstellt';
+        Alert.alert('Erfolg', message, [{ text: 'OK' }]);
+      }, 350);
     } catch (error) {
       console.error('Error creating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');

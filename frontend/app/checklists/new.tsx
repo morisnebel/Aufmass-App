@@ -79,8 +79,8 @@ export default function NewChecklistScreen() {
           text: item.text,
           checked: false,
           note: '',
-          subItems: (item.subItems || []).map(subText => ({
-            text: subText,
+          subItems: (item.subItems || []).map((subItem: string | {text: string}) => ({
+            text: typeof subItem === 'string' ? subItem : subItem.text,
             checked: false,
           })),
         };

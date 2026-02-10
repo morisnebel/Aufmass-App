@@ -1521,7 +1521,7 @@ async def export_project_pdf(project_id: str):
     ]))
     elements.append(sonstiges_box)
     
-    # ============ FOTOS (separate pages) ============
+    # ============ FOTOS (kompaktes Raster-Layout) ============
     if photos:
         elements.append(PageBreak())
         
@@ -1537,6 +1537,8 @@ async def export_project_pdf(project_id: str):
         elements.append(photos_title)
         elements.append(Spacer(1, 5*mm))
         
+        # Prepare photo cells for grid layout (2 photos per row)
+        photo_cells = []
         for i, photo in enumerate(photos):
             try:
                 image_data = photo.get('image_data', '')
@@ -1553,15 +1555,45 @@ async def export_project_pdf(project_id: str):
                     img_buffer = BytesIO(img_data)
                 
                 if img_buffer:
-                    img = RLImage(img_buffer, width=160*mm, height=110*mm)
-                    elements.append(img)
+                    # Kleinere Größe für Raster: 85mm x 60mm (passt 2 nebeneinander)
+                    img = RLImage(img_buffer, width=85*mm, height=60*mm)
                     
                     desc = photo.get('description', '')
                     if desc and desc != 'None' and desc.strip():
-                        elements.append(Paragraph(f"<i>{desc}</i>", value_style))
-                    elements.append(Spacer(1, 10*mm))
+                        # Foto mit Beschreibung in einer Zelle
+                        cell_content = [img, Spacer(1, 2*mm), Paragraph(f"<i><font size='8'>{desc}</font></i>", value_style)]
+                    else:
+                        cell_content = [img]
+                    
+                    photo_cells.append(cell_content)
             except Exception as e:
                 logging.error(f"Error processing photo {i}: {e}")
+        
+        # Create grid layout (2 columns)
+        if photo_cells:
+            rows = []
+            for i in range(0, len(photo_cells), 2):
+                row = []
+                # First photo
+                row.append(photo_cells[i])
+                # Second photo (if exists)
+                if i + 1 < len(photo_cells):
+                    row.append(photo_cells[i + 1])
+                else:
+                    row.append([])  # Empty cell
+                rows.append(row)
+            
+            # Create table with 2 columns
+            photo_table = Table(rows, colWidths=[90*mm, 90*mm])
+            photo_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+            ]))
+            elements.append(photo_table)
     
     # ============ SKIZZEN (separate pages) ============
     if sketches:

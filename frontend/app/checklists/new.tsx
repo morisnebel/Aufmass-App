@@ -94,6 +94,34 @@ export default function NewChecklistScreen() {
     setChecklistItems(newItems);
   };
 
+  const toggleSubItem = (itemIndex: number, subIndex: number) => {
+    const newItems = [...checklistItems];
+    if (newItems[itemIndex].subItems && newItems[itemIndex].subItems![subIndex]) {
+      newItems[itemIndex].subItems![subIndex].checked = !newItems[itemIndex].subItems![subIndex].checked;
+      setChecklistItems(newItems);
+    }
+  };
+
+  // Berechne Gesamtfortschritt inkl. Unterpositionen
+  const calculateProgress = () => {
+    let totalItems = 0;
+    let checkedItems = 0;
+    
+    checklistItems.forEach(item => {
+      if (item.subItems && item.subItems.length > 0) {
+        // Wenn es Unterpositionen gibt, zählen nur diese
+        totalItems += item.subItems.length;
+        checkedItems += item.subItems.filter(sub => sub.checked).length;
+      } else {
+        // Sonst zählt der Hauptpunkt
+        totalItems += 1;
+        if (item.checked) checkedItems += 1;
+      }
+    });
+    
+    return { totalItems, checkedItems };
+  };
+
   const saveChecklist = async () => {
     if (!selectedTemplate) {
       Alert.alert('Fehler', 'Bitte wählen Sie eine Vorlage aus');

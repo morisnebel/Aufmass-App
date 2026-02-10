@@ -17,7 +17,8 @@ import { captureRef } from 'react-native-view-shot';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system/next';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');

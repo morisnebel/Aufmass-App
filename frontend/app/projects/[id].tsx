@@ -271,6 +271,47 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleDeleteChecklist = async () => {
+    if (!checklistToDelete || isDeletingChecklist) return;
+    
+    setIsDeletingChecklist(true);
+    
+    try {
+      await axios.delete(`${API_URL}/api/checklists/${checklistToDelete}`);
+      
+      // Close modal and reset state
+      setDeleteChecklistModalVisible(false);
+      setChecklistToDelete(null);
+      
+      // Reload data
+      await loadProjectData();
+      
+      if (Platform.OS === 'web') {
+        alert('Checkliste wurde gelöscht');
+      } else {
+        Alert.alert('Erfolg', 'Checkliste wurde gelöscht');
+      }
+    } catch (error: any) {
+      console.error('Error deleting checklist:', error);
+      
+      // Only show error if it's not a 404 (checklist already deleted)
+      if (error?.response?.status !== 404) {
+        if (Platform.OS === 'web') {
+          alert('Fehler: Checkliste konnte nicht gelöscht werden');
+        } else {
+          Alert.alert('Fehler', 'Checkliste konnte nicht gelöscht werden');
+        }
+      } else {
+        // Checklist was already deleted, just close modal and reload
+        setDeleteChecklistModalVisible(false);
+        setChecklistToDelete(null);
+        await loadProjectData();
+      }
+    } finally {
+      setIsDeletingChecklist(false);
+    }
+  };
+
   // Open edit project modal with current values
   const openEditProjectModal = () => {
     if (project) {

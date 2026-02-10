@@ -155,6 +155,80 @@ export default function AnnotatePhotoScreen() {
     }
   };
 
+  // Foto in der Galerie speichern
+  const saveToGallery = async () => {
+    try {
+      // Berechtigungen abfragen
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Berechtigung erforderlich',
+          'Um Fotos in der Galerie zu speichern, benötigt die App Zugriff auf Ihre Fotos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      setLoading(true);
+
+      // Wenn Annotationen vorhanden sind, Screenshot des Canvas machen
+      if (paths.length > 0 && canvasRef.current) {
+        try {
+          const uri = await captureRef(canvasRef, {
+            format: 'png',
+            quality: 1,
+          });
+          
+          const asset = await MediaLibrary.createAssetAsync(uri);
+          await MediaLibrary.createAlbumAsync('Aufmaß App', asset, false);
+          
+          Alert.alert('Erfolg', 'Foto mit Markierungen wurde in der Galerie gespeichert');
+        } catch (captureError) {
+          console.error('Error capturing canvas:', captureError);
+          // Fallback: Originalbild speichern
+          await saveOriginalToGallery();
+        }
+      } else {
+        // Keine Annotationen, Originalbild speichern
+        await saveOriginalToGallery();
+      }
+    } catch (error) {
+      console.error('Error saving to gallery:', error);
+      Alert.alert('Fehler', 'Foto konnte nicht in der Galerie gespeichert werden');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveOriginalToGallery = async () => {
+    if (!imageUri) return;
+    
+    try {
+      // Base64 in temporäre Datei schreiben
+      const base64Data = imageUri.includes(',') 
+        ? imageUri.split(',')[1] 
+        : imageUri;
+      
+      const filename = `aufmass_foto_${Date.now()}.jpg`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      await MediaLibrary.createAlbumAsync('Aufmaß App', asset, false);
+      
+      // Temporäre Datei löschen
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      
+      Alert.alert('Erfolg', 'Foto wurde in der Galerie gespeichert');
+    } catch (error) {
+      console.error('Error saving original to gallery:', error);
+      throw error;
+    }
+  };
+
   const colors = [
     { color: '#FF0000', name: 'Rot' },
     { color: '#00FF00', name: 'Grün' },

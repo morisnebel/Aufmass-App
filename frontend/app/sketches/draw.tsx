@@ -2025,6 +2025,34 @@ export default function DrawSketchScreen() {
           height={height - 120}
           style={styles.svg}
         >
+          {/* Kästchenpapier Gitter - nur wenn kein Hintergrundbild und Gitter aktiviert */}
+          {showGrid && !backgroundImage && (
+            <>
+              <Defs>
+                <Pattern
+                  id="gridPattern"
+                  width={gridSize}
+                  height={gridSize}
+                  patternUnits="userSpaceOnUse"
+                >
+                  <Path
+                    d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`}
+                    fill="none"
+                    stroke="#ddd"
+                    strokeWidth={0.5}
+                  />
+                </Pattern>
+              </Defs>
+              <Rect
+                x={0}
+                y={0}
+                width={width}
+                height={height - 120}
+                fill="url(#gridPattern)"
+              />
+            </>
+          )}
+
           {/* Background image */}
           {backgroundImage && (
             <SvgImage

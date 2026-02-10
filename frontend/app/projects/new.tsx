@@ -1229,4 +1229,77 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  // Anrede und Name Layout
+  formInputGroupSmall: {
+    flex: 0.4,
+  },
+  formInputGroupLarge: {
+    flex: 0.6,
+  },
+  anredeSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  anredeSelectorText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  // Anrede Picker Modal
+  anredeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  anredeModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    maxWidth: 300,
+  },
+  anredeModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  anredeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  anredeOptionSelected: {
+    backgroundColor: '#e3f2fd',
+  },
+  anredeOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  anredeOptionTextSelected: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  anredeClearButton: {
+    marginTop: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  anredeClearButtonText: {
+    fontSize: 14,
+    color: '#999',
+  },
 });

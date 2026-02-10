@@ -829,19 +829,31 @@ export default function NewRoofScreen() {
             </View>
             <Text style={styles.hint}>Krüppelwalmdach: Satteldach mit abgewalmten Giebeln</Text>
             <View style={styles.sectionDivider}>
-              <Text style={styles.sectionText}>Traufhöhe Walm</Text>
+              <Text style={styles.sectionText}>Traufhöhen (absolut)</Text>
             </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Traufhöhe der Walme (m) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. 2,0"
-                value={traufhoeheWalm}
-                onChangeText={(text) => setTraufhoeheWalm(formatDecimal(text))}
-                keyboardType="decimal-pad"
-              />
-              <Text style={styles.hint}>Höhe ab der die Walme beginnen (über Haupttraufe)</Text>
+            <View style={styles.inputRow}>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Traufhöhe Hauptdach (m) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. 3"
+                  value={traufhoeheHaupt}
+                  onChangeText={(text) => setTraufhoeheHaupt(formatDecimal(text))}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>Traufhöhe Walm (m) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. 5"
+                  value={traufhoeheWalm}
+                  onChangeText={(text) => setTraufhoeheWalm(formatDecimal(text))}
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
+            <Text style={styles.hint}>Beide Höhen über dem Boden. Die Walm-Traufhöhe muss größer sein.</Text>
             {renderUeberstandFields()}
             {calculatedFirsthoehe > 0 && (
               <View style={styles.calculatedValue}>

@@ -77,10 +77,21 @@ interface Sketch {
   metadata?: string;
 }
 
+interface SubItem {
+  text: string;
+  checked: boolean;
+}
+
+interface ChecklistItem {
+  text: string;
+  checked: boolean;
+  subItems?: SubItem[];
+}
+
 interface Checklist {
   id: string;
   template_name: string;
-  items: Array<{ text: string; checked: boolean }>;
+  items: ChecklistItem[];
 }
 
 export default function ProjectDetailScreen() {

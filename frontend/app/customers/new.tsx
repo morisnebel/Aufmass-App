@@ -156,6 +156,29 @@ export default function NewCustomerScreen() {
       return;
     }
 
+    // Frage, ob der Kunde in Kontakten gespeichert werden soll
+    if (Platform.OS !== 'web') {
+      Alert.alert(
+        'In Kontakte speichern?',
+        'Soll dieser Kunde auch in Ihren iPad-Kontakten gespeichert werden?',
+        [
+          {
+            text: 'Nein',
+            style: 'cancel',
+            onPress: () => saveCustomer(false),
+          },
+          {
+            text: 'Ja',
+            onPress: () => saveCustomer(true),
+          },
+        ]
+      );
+    } else {
+      saveCustomer(false);
+    }
+  };
+
+  const saveCustomer = async (saveToContacts: boolean) => {
     setLoading(true);
     try {
       // Combine address fields for storage
@@ -169,20 +192,25 @@ export default function NewCustomerScreen() {
         address: address || undefined,
       });
       
-      // Save to device contacts
-      await saveToDeviceContacts({
-        name,
-        email: email || undefined,
-        phone: phone || undefined,
-        mobile: mobile || undefined,
-        street: street || undefined,
-        plz: plz || undefined,
-        city: city || undefined,
-      });
-      
-      Alert.alert('Erfolg', 'Kunde wurde erstellt und in Kontakten gespeichert', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      // Save to device contacts if requested
+      if (saveToContacts) {
+        await saveToDeviceContacts({
+          name,
+          email: email || undefined,
+          phone: phone || undefined,
+          mobile: mobile || undefined,
+          street: street || undefined,
+          plz: plz || undefined,
+          city: city || undefined,
+        });
+        Alert.alert('Erfolg', 'Kunde wurde erstellt und in Kontakten gespeichert', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert('Erfolg', 'Kunde wurde erstellt', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
       console.error('Error creating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');

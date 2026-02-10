@@ -12,6 +12,7 @@ import {
   Modal,
   KeyboardAvoidingView,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';

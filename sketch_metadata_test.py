@@ -12,7 +12,7 @@ import subprocess
 from datetime import datetime
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://measure-roof.preview.emergentagent.com/api"
+BACKEND_URL = "https://draw-tool-improve.preview.emergentagent.com/api"
 
 def test_sketch_metadata_issue():
     """Test the specific sketch metadata save/load issue reported by user"""

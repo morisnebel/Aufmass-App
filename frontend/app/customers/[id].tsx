@@ -255,12 +255,102 @@ export default function EditCustomerScreen() {
     return contactName.includes(query);
   });
 
+  // Funktion zum Aktualisieren des Gerätekontakts
+  const updateDeviceContact = async () => {
+    if (Platform.OS === 'web' || !importedContactId) {
+      return;
+    }
+
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Contacts permission not granted');
+        return;
+      }
+
+      // Parse den Namen für Vor- und Nachname
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Parse die Adresse für Straße, PLZ, Stadt
+      const addressParts = address.split(',').map(p => p.trim());
+      const street = addressParts[0] || '';
+      let postalCode = '';
+      let city = '';
+      
+      if (addressParts[1]) {
+        const plzCity = addressParts[1].trim().split(' ');
+        if (plzCity.length >= 1) {
+          // Prüfen ob erster Teil eine PLZ ist (nur Zahlen)
+          if (/^\d+$/.test(plzCity[0])) {
+            postalCode = plzCity[0];
+            city = plzCity.slice(1).join(' ');
+          } else {
+            city = addressParts[1];
+          }
+        }
+      }
+
+      const updatedContact: Contacts.Contact = {
+        id: importedContactId,
+        contactType: Contacts.ContactTypes.Person,
+        name,
+        firstName,
+        lastName,
+        ...(email && {
+          emails: [{ email, label: 'Arbeit' }],
+        }),
+        ...(phone && {
+          phoneNumbers: [{ number: phone, label: 'Arbeit' }],
+        }),
+        ...(street && {
+          addresses: [{
+            street,
+            postalCode,
+            city,
+            label: 'Arbeit',
+          }],
+        }),
+      };
+
+      await Contacts.updateContactAsync(updatedContact);
+      console.log('Contact updated in device contacts');
+    } catch (error) {
+      console.error('Error updating device contact:', error);
+      // Nicht blockieren wenn Update fehlschlägt
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
       return;
     }
 
+    // Wenn ein Kontakt importiert wurde, fragen ob Gerätekontakt aktualisiert werden soll
+    if (Platform.OS !== 'web' && importedContactId) {
+      Alert.alert(
+        'Kontakt aktualisieren?',
+        'Möchten Sie die Änderungen auch in Ihren Gerätekontakten aktualisieren?',
+        [
+          {
+            text: 'Nein',
+            style: 'cancel',
+            onPress: () => saveCustomer(false),
+          },
+          {
+            text: 'Ja',
+            onPress: () => saveCustomer(true),
+          },
+        ]
+      );
+    } else {
+      saveCustomer(false);
+    }
+  };
+
+  const saveCustomer = async (updateContact: boolean) => {
     setSaving(true);
     try {
       await axios.put(`${API_URL}/api/customers/${id}`, {
@@ -269,9 +359,18 @@ export default function EditCustomerScreen() {
         phone: phone || undefined,
         address: address || undefined,
       });
-      Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      
+      // Gerätekontakt aktualisieren wenn gewünscht
+      if (updateContact) {
+        await updateDeviceContact();
+        Alert.alert('Erfolg', 'Kunde und Gerätekontakt wurden aktualisiert', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
       console.error('Error updating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht aktualisiert werden');

@@ -855,8 +855,17 @@ export default function DrawSketchScreen() {
       const newEl = { ...el };
 
       if (dragMode === 'move') {
-        // Move element
-        if (el.type === 'path') {
+        // Check if we're editing a specific polyline point
+        if (el.type === 'polyline' && editingPolylinePoint !== null) {
+          // Move only the specific point
+          const newPoints = originalElement.data.points.map((pt: { x: number; y: number }, idx: number) => {
+            if (idx === editingPolylinePoint) {
+              return { x: pt.x + dx, y: pt.y + dy };
+            }
+            return pt;
+          });
+          newEl.data = { ...el.data, points: newPoints };
+        } else if (el.type === 'path') {
           // Move path by shifting all coordinates
           const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
           newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {

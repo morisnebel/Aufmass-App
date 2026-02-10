@@ -236,20 +236,65 @@ export default function NewProjectScreen() {
     return contactName.toLowerCase().includes(contactSearchQuery.toLowerCase());
   });
 
-  // Create new customer
+  // Create new customer - mit Bestätigungsdialog
   const handleCreateCustomer = async () => {
     if (!newCustomerName.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
       return;
     }
 
+    // Wenn aus Kontakten importiert wurde, frage nach Aktualisierung
+    if (Platform.OS !== 'web' && importedContactId) {
+      Alert.alert(
+        'Kontakt aktualisieren?',
+        'Möchten Sie die Änderungen auch in Ihren iPad-Kontakten aktualisieren?',
+        [
+          {
+            text: 'Nein',
+            style: 'cancel',
+            onPress: () => saveNewCustomer(false),
+          },
+          {
+            text: 'Ja',
+            onPress: () => saveNewCustomer(true),
+          },
+        ]
+      );
+    } else if (Platform.OS !== 'web') {
+      // Neuer Kunde - frage ob in Kontakte speichern
+      Alert.alert(
+        'In Kontakte speichern?',
+        'Soll dieser Kunde auch in Ihren iPad-Kontakten gespeichert werden?',
+        [
+          {
+            text: 'Nein',
+            style: 'cancel',
+            onPress: () => saveNewCustomer(false),
+          },
+          {
+            text: 'Ja',
+            onPress: () => saveNewCustomer(true),
+          },
+        ]
+      );
+    } else {
+      saveNewCustomer(false);
+    }
+  };
+
+  const saveNewCustomer = async (saveOrUpdateContact: boolean) => {
     setCreatingCustomer(true);
     try {
+      // Combine name with Anrede
+      const fullName = newCustomerAnrede 
+        ? `${newCustomerAnrede} ${newCustomerName}` 
+        : newCustomerName;
+      
       // Combine address fields
       const address = [newCustomerStreet, [newCustomerPlz, newCustomerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       
       const response = await axios.post(`${API_URL}/api/customers`, {
-        name: newCustomerName,
+        name: fullName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
         mobile: newCustomerMobile || undefined,
@@ -258,8 +303,8 @@ export default function NewProjectScreen() {
 
       const newCustomer = response.data;
       
-      // Save to device contacts
-      if (Platform.OS !== 'web') {
+      // Save or update device contacts
+      if (saveOrUpdateContact && Platform.OS !== 'web') {
         try {
           const { status } = await Contacts.requestPermissionsAsync();
           if (status === 'granted') {
@@ -267,22 +312,59 @@ export default function NewProjectScreen() {
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
 
-            const contact: Contacts.Contact = {
-              contactType: Contacts.ContactTypes.Person,
-              name: newCustomerName,
-              firstName,
-              lastName,
-              ...(newCustomerEmail && {
-                emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
-              }),
-              ...(newCustomerPhone && {
-                phoneNumbers: [{ number: newCustomerPhone, label: 'Mobil' }],
-              }),
-            };
-            await Contacts.addContactAsync(contact);
+            if (importedContactId) {
+              // Aktualisiere bestehenden Kontakt
+              const updatedContact = {
+                id: importedContactId,
+                contactType: Contacts.ContactTypes.Person,
+                name: fullName,
+                firstName: newCustomerAnrede ? newCustomerAnrede : firstName,
+                lastName: newCustomerAnrede ? newCustomerName : lastName,
+                ...(newCustomerEmail && {
+                  emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
+                }),
+                phoneNumbers: [
+                  ...(newCustomerPhone ? [{ number: newCustomerPhone, label: 'Arbeit' }] : []),
+                  ...(newCustomerMobile ? [{ number: newCustomerMobile, label: 'Mobil' }] : []),
+                ].filter(p => p.number),
+                ...(newCustomerStreet && {
+                  addresses: [{
+                    street: newCustomerStreet,
+                    postalCode: newCustomerPlz || '',
+                    city: newCustomerCity || '',
+                    label: 'Arbeit',
+                  }],
+                }),
+              };
+              await Contacts.updateContactAsync(updatedContact as any);
+            } else {
+              // Erstelle neuen Kontakt
+              const contact: Contacts.Contact = {
+                contactType: Contacts.ContactTypes.Person,
+                name: fullName,
+                firstName: newCustomerAnrede ? newCustomerAnrede : firstName,
+                lastName: newCustomerAnrede ? newCustomerName : lastName,
+                ...(newCustomerEmail && {
+                  emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
+                }),
+                phoneNumbers: [
+                  ...(newCustomerPhone ? [{ number: newCustomerPhone, label: 'Arbeit' }] : []),
+                  ...(newCustomerMobile ? [{ number: newCustomerMobile, label: 'Mobil' }] : []),
+                ].filter(p => p.number),
+                ...(newCustomerStreet && {
+                  addresses: [{
+                    street: newCustomerStreet,
+                    postalCode: newCustomerPlz || '',
+                    city: newCustomerCity || '',
+                    label: 'Arbeit',
+                  }],
+                }),
+              };
+              await Contacts.addContactAsync(contact);
+            }
           }
         } catch (e) {
-          console.log('Could not save to device contacts');
+          console.log('Could not save/update device contacts:', e);
         }
       }
 
@@ -292,17 +374,14 @@ export default function NewProjectScreen() {
       setSelectedCustomer(newCustomer);
       
       // Reset and close modal
-      setNewCustomerName('');
-      setNewCustomerEmail('');
-      setNewCustomerPhone('');
-      setNewCustomerMobile('');
-      setNewCustomerStreet('');
-      setNewCustomerPlz('');
-      setNewCustomerCity('');
+      resetNewCustomerForm();
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
 
-      Alert.alert('Erfolg', 'Kunde wurde erstellt');
+      const message = saveOrUpdateContact 
+        ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
+        : 'Kunde wurde erstellt';
+      Alert.alert('Erfolg', message);
     } catch (error) {
       console.error('Error creating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');

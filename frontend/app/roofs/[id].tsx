@@ -25,6 +25,7 @@ const ROOF_TYPES = [
   { id: 'Pultdach', name: 'Pultdach', description: 'Einseitig geneigte Dachfläche' },
   { id: 'Satteldach', name: 'Satteldach', description: 'Zwei gegenüberliegende Dachflächen' },
   { id: 'Walmdach', name: 'Walmdach', description: 'Vier geneigte Dachflächen' },
+  { id: 'Krueppelwalmdach', name: 'Krüppelwalmdach', description: 'Satteldach mit abgewalmten Giebeln' },
   { id: 'Zeltdach', name: 'Zeltdach', description: 'Vier gleiche Dreiecksflächen' },
   { id: 'Mansarddach', name: 'Mansarddach', description: 'Dach mit Knick (steiler unten)' },
 ];

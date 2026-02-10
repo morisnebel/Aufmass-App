@@ -855,12 +855,6 @@ export default function NewRoofScreen() {
             </View>
             <Text style={styles.hint}>Beide Höhen über dem Boden. Die Walm-Traufhöhe muss größer sein.</Text>
             {renderUeberstandFields()}
-            {calculatedFirsthoehe > 0 && (
-              <View style={styles.calculatedValue}>
-                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
-                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
-              </View>
-            )}
           </>
         );
 

@@ -1522,7 +1522,7 @@ async def export_project_pdf(project_id: str):
     ]))
     elements.append(sonstiges_box)
     
-    # ============ FOTOS (kompaktes Raster-Layout) ============
+    # ============ FOTOS (kompaktes Raster-Layout mit anpassbarer Größe) ============
     if photos:
         elements.append(PageBreak())
         
@@ -1538,12 +1538,30 @@ async def export_project_pdf(project_id: str):
         elements.append(photos_title)
         elements.append(Spacer(1, 5*mm))
         
-        # Prepare photo cells for grid layout (2 photos per row)
-        photo_cells = []
+        # Größen-Definitionen
+        size_configs = {
+            'small': {'width': 55*mm, 'height': 40*mm, 'cols': 3},    # 3 pro Zeile
+            'medium': {'width': 85*mm, 'height': 60*mm, 'cols': 2},   # 2 pro Zeile
+            'large': {'width': 120*mm, 'height': 85*mm, 'cols': 1},   # 1 pro Zeile
+            'full': {'width': 170*mm, 'height': 120*mm, 'cols': 1},   # 1 pro Zeile, volle Breite
+        }
+        
+        # Gruppiere Fotos nach Größe für optimales Layout
+        # Fotos mit gleicher Größe werden zusammen in Reihen gruppiert
+        current_size = None
+        current_row = []
+        
         for i, photo in enumerate(photos):
             try:
                 image_data = photo.get('image_data', '')
                 annotations = photo.get('annotations', '')
+                pdf_size = photo.get('pdf_size', 'medium')
+                
+                # Fallback für ungültige Größen
+                if pdf_size not in size_configs:
+                    pdf_size = 'medium'
+                
+                config = size_configs[pdf_size]
                 
                 # Check if there are annotations to draw
                 if annotations and annotations.strip() and annotations != 'null':
@@ -1556,45 +1574,66 @@ async def export_project_pdf(project_id: str):
                     img_buffer = BytesIO(img_data)
                 
                 if img_buffer:
-                    # Kleinere Größe für Raster: 85mm x 60mm (passt 2 nebeneinander)
-                    img = RLImage(img_buffer, width=85*mm, height=60*mm)
+                    img = RLImage(img_buffer, width=config['width'], height=config['height'])
                     
                     desc = photo.get('description', '')
                     if desc and desc != 'None' and desc.strip():
-                        # Foto mit Beschreibung in einer Zelle
                         cell_content = [img, Spacer(1, 2*mm), Paragraph(f"<i><font size='8'>{desc}</font></i>", value_style)]
                     else:
                         cell_content = [img]
                     
-                    photo_cells.append(cell_content)
+                    # Wenn sich die Größe ändert, beende aktuelle Zeile
+                    if current_size != pdf_size and current_row:
+                        # Fülle die Zeile auf und füge sie hinzu
+                        prev_config = size_configs[current_size]
+                        while len(current_row) < prev_config['cols']:
+                            current_row.append([])
+                        
+                        col_width = 180*mm / prev_config['cols']
+                        row_table = Table([current_row], colWidths=[col_width] * prev_config['cols'])
+                        row_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                            ('TOPPADDING', (0, 0), (-1, -1), 3),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                        ]))
+                        elements.append(row_table)
+                        current_row = []
+                    
+                    current_size = pdf_size
+                    current_row.append(cell_content)
+                    
+                    # Wenn Zeile voll ist, füge sie hinzu
+                    if len(current_row) >= config['cols']:
+                        col_width = 180*mm / config['cols']
+                        row_table = Table([current_row], colWidths=[col_width] * config['cols'])
+                        row_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                            ('TOPPADDING', (0, 0), (-1, -1), 3),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                        ]))
+                        elements.append(row_table)
+                        current_row = []
+                        
             except Exception as e:
                 logging.error(f"Error processing photo {i}: {e}")
         
-        # Create grid layout (2 columns)
-        if photo_cells:
-            rows = []
-            for i in range(0, len(photo_cells), 2):
-                row = []
-                # First photo
-                row.append(photo_cells[i])
-                # Second photo (if exists)
-                if i + 1 < len(photo_cells):
-                    row.append(photo_cells[i + 1])
-                else:
-                    row.append([])  # Empty cell
-                rows.append(row)
+        # Letzte Zeile hinzufügen falls noch Fotos übrig sind
+        if current_row and current_size:
+            config = size_configs[current_size]
+            while len(current_row) < config['cols']:
+                current_row.append([])
             
-            # Create table with 2 columns
-            photo_table = Table(rows, colWidths=[90*mm, 90*mm])
-            photo_table.setStyle(TableStyle([
+            col_width = 180*mm / config['cols']
+            row_table = Table([current_row], colWidths=[col_width] * config['cols'])
+            row_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ]))
-            elements.append(photo_table)
+            elements.append(row_table)
     
     # ============ SKIZZEN (separate pages) ============
     if sketches:

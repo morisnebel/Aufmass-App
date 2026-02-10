@@ -279,23 +279,19 @@ export default function NewRoofScreen() {
           const rechteckHoehe = traufWalm - traufHaupt;  // z.B. 5 - 3 = 2m
           
           // Firsthöhe über der Walm-Traufe
-          // Firsthöhe absolut = traufHaupt + (effB/2) * tan(rad1)
           const firstHoeheAbsolut = traufHaupt + (effB / 2) * Math.tan(rad1);
-          const firstHoeheUeberWalm = firstHoeheAbsolut - traufWalm;  // z.B. 6.1 - 5 = 1.1m
+          const firstHoeheUeberWalm = firstHoeheAbsolut - traufWalm;
           
           // === RECHTECK (von Hauptdach-Traufe bis Walm-Traufe) ===
-          // Sparrenlänge = Höhendifferenz / sin(Neigung)
           const rechteckSparren1 = rechteckHoehe / Math.sin(rad1);
           const rechteckSparren2 = rechteckHoehe / Math.sin(rad2 || rad1);
           const rechteck1 = effL * rechteckSparren1;
           const rechteck2 = effL * rechteckSparren2;
           
           // === TRAPEZ (von Walm-Traufe bis First) ===
-          // Walmtiefe = Firsthöhe über Walm / tan(Walmneigung)
           const walmTiefe = firstHoeheUeberWalm / Math.tan(rad3);
           const firstLaenge = Math.max(0, effL - 2 * walmTiefe);
           
-          // Trapez-Sparren = Firsthöhe über Walm / sin(Neigung)
           const trapezSparren1 = firstHoeheUeberWalm / Math.sin(rad1);
           const trapezSparren2 = firstHoeheUeberWalm / Math.sin(rad2 || rad1);
           const trapez1 = ((effL + firstLaenge) / 2) * trapezSparren1;
@@ -306,11 +302,10 @@ export default function NewRoofScreen() {
           const hauptdach2 = rechteck2 + trapez2;
           
           // === WALMFLÄCHEN (Dreiecke) ===
-          // Walm-Basis = Abstand zwischen den Walm-Trauf-Ecken
-          // Bei quadratischem Gebäude: Basis = B - 2 * (rechteckHoehe / tan(rad1))
-          // Aber einfacher: Basis = 2 * rechteckHoehe (bei 45° Hauptdachneigung)
-          // Allgemein: Basis = 2 * rechteckHoehe / tan(rad1)
-          const walmBasis = 2 * rechteckHoehe / Math.tan(rad1);
+          // Walm-Basis = Dach-Breite an der Walm-Traufhöhe
+          // Das ist: effB - 2 × horizontaler Abstand von Traufe bis Walm-Traufe
+          const horizontalerAbstand = rechteckHoehe / Math.tan(rad1);
+          const walmBasis = effB - 2 * horizontalerAbstand;
           
           // Walm-Sparren = Firsthöhe über Walm / sin(Walmneigung)
           const walmSparren3 = firstHoeheUeberWalm / Math.sin(rad3);

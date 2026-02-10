@@ -487,8 +487,8 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   subChecklistTextChecked: {
-    textDecorationLine: 'line-through',
-    color: '#aaa',
+    color: '#4caf50',
+    fontWeight: '500',
   },
   subProgressContainer: {
     flexDirection: 'row',

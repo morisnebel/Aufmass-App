@@ -56,7 +56,8 @@ export default function NewRoofScreen() {
   const [knickhoehe, setKnickhoehe] = useState('');                 // Trauf(Knick)höhe in m
   
   // Krüppelwalmdach spezifisch
-  const [traufhoeheWalm, setTraufhoeheWalm] = useState('');         // Traufhöhe der Walme (höher als Hauptdach)
+  const [traufhoeheHaupt, setTraufhoeheHaupt] = useState('');       // Traufhöhe Hauptdachflächen (absolut)
+  const [traufhoeheWalm, setTraufhoeheWalm] = useState('');         // Traufhöhe Walmflächen (absolut, höher)
   
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);

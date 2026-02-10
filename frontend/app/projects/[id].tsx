@@ -865,7 +865,7 @@ export default function ProjectDetailScreen() {
               return (
                 <View key={checklist.id} style={styles.checklistCardWrapper}>
                   <TouchableOpacity
-                    style={styles.itemCard}
+                    style={[styles.itemCard, { marginHorizontal: 0 }]}
                     onPress={() => router.push(`/checklists/${checklist.id}`)}
                   >
                     <View style={styles.itemHeader}>

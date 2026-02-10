@@ -53,6 +53,9 @@ export default function EditRoofScreen() {
   const [neigungSchmalOben, setNeigungSchmalOben] = useState('');
   const [knickhoehe, setKnickhoehe] = useState('');
   
+  // Krüppelwalmdach spezifisch
+  const [traufhoeheWalm, setTraufhoeheWalm] = useState('');         // Traufhöhe der Walme (höher als Hauptdach)
+  
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -1570,6 +1570,31 @@ export default function DrawSketchScreen() {
         minY = Math.min(minY, y);
         maxY = Math.max(maxY, y + h);
         hasValidBounds = true;
+      } else if (el.type === 'polyline' && el.data?.points) {
+        // Handle polyline bounds
+        el.data.points.forEach((pt: { x: number; y: number }) => {
+          minX = Math.min(minX, pt.x);
+          maxX = Math.max(maxX, pt.x);
+          minY = Math.min(minY, pt.y);
+          maxY = Math.max(maxY, pt.y);
+        });
+        hasValidBounds = true;
+      } else if (el.type === 'polygon') {
+        // Handle polygon bounds (same as path parsing)
+        const matches = el.data.match(/(-?\d+\.?\d*)/g);
+        if (matches) {
+          for (let i = 0; i < matches.length; i += 2) {
+            const x = parseFloat(matches[i]);
+            const y = parseFloat(matches[i + 1]);
+            if (!isNaN(x) && !isNaN(y)) {
+              minX = Math.min(minX, x);
+              maxX = Math.max(maxX, x);
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+              hasValidBounds = true;
+            }
+          }
+        }
       }
     });
     

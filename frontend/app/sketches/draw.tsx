@@ -139,7 +139,7 @@ const perpendicularDistance = (
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'polygon';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'polygon' | 'polyline';
   data: any;
   color: string;
   strokeWidth: number;
@@ -153,7 +153,7 @@ interface DrawElement {
   fontStyle?: 'normal' | 'italic';
 }
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image' | 'polygon';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image' | 'polygon' | 'polyline';
 
 export default function DrawSketchScreen() {
   const router = useRouter();

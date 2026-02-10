@@ -154,6 +154,21 @@ export default function EditRoofScreen() {
         } else area = effL * effB * 1.15;
         break;
       }
+      case 'Krueppelwalmdach': {
+        // Krüppelwalmdach: Satteldach mit abgewalmten Giebeln
+        if (n1 > 0) {
+          const r1 = n1*Math.PI/180, r2 = n2*Math.PI/180, r3 = n3*Math.PI/180;
+          const firsthoehe = (effB/2)*Math.tan(r1);
+          const walmTiefe = (effB/2)*0.3;
+          const firstLaenge = Math.max(0, effL - 2*walmTiefe);
+          const sparren1 = (effB/2)/Math.cos(r1), sparren2 = (effB/2)/Math.cos(r2);
+          const trapez1 = ((effL+firstLaenge)/2)*sparren1, trapez2 = ((effL+firstLaenge)/2)*sparren2;
+          const walmHoehe = firsthoehe*0.4, walmSparren = walmHoehe/Math.sin(r3);
+          const dreieck = (effB*walmSparren)/2;
+          area = trapez1 + trapez2 + 2*dreieck;
+        } else area = effL * effB * 1.1;
+        break;
+      }
       case 'Zeltdach': {
         // Zeltdach: nur Traufe-Überstand an allen 4 Seiten
         const seiteZelt = L + 2 * uTraufe;

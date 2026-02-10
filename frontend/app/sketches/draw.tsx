@@ -1970,6 +1970,30 @@ export default function DrawSketchScreen() {
           <Ionicons name="arrow-down" size={18} color={selectedElementId ? '#ff9800' : '#ccc'} />
         </TouchableOpacity>
 
+        <View style={styles.separator} />
+
+        {/* Gitter Toggle und Einstellungen */}
+        <TouchableOpacity 
+          style={[styles.toolButton, showGrid && !backgroundImage && styles.gridButtonActive]} 
+          onPress={() => {
+            if (!backgroundImage) {
+              setShowGrid(!showGrid);
+            }
+          }}
+          onLongPress={() => {
+            if (!backgroundImage) {
+              setShowGridSettings(!showGridSettings);
+            }
+          }}
+          disabled={!!backgroundImage}
+        >
+          <Ionicons 
+            name="grid" 
+            size={18} 
+            color={backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333')} 
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
             if (confirm('Möchten Sie alle Elemente löschen?')) {

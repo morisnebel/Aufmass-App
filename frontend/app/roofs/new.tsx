@@ -256,6 +256,55 @@ export default function NewRoofScreen() {
         break;
       }
 
+      case 'Krueppelwalmdach': {
+        // Krüppelwalmdach: Satteldach mit abgewalmten Giebeln
+        // - 2 trapezförmige Hauptdachflächen (Längsseiten)
+        // - 2 dreieckige Walmflächen (Giebelseiten, kleiner als beim Walmdach)
+        // Die Walmflächen beginnen erst ab einer bestimmten Höhe (Traufhöhe DF3/4 > DF1/2)
+        
+        if (n1 > 0) {
+          const rad1 = (n1 * Math.PI) / 180; // Dachneigung Längsseiten
+          const rad2 = (n2 * Math.PI) / 180;
+          const rad3 = (n3 * Math.PI) / 180; // Dachneigung Walmseiten
+          const rad4 = (n4 * Math.PI) / 180;
+          
+          // Firsthöhe über Traufe
+          const firsthoehe = (effB / 2) * Math.tan(rad1);
+          
+          // Walmtiefe (wie weit der Walm in die Länge hineinragt)
+          // Beim Krüppelwalmdach beginnt der Walm erst ab einer höheren Traufe
+          // Vereinfachte Berechnung: Walmtiefe = 30% der halben Breite
+          const walmTiefe = (effB / 2) * 0.3; // Typisch ca. 30% beim Krüppelwalm
+          
+          // Firstlänge (kürzer als Gebäudelänge wegen Walm)
+          const firstLaenge = Math.max(0, effL - 2 * walmTiefe);
+          
+          // Sparrenlänge der Hauptdachflächen
+          const sparrenLaenge1 = (effB / 2) / Math.cos(rad1);
+          const sparrenLaenge2 = (effB / 2) / Math.cos(rad2);
+          
+          // Hauptdachflächen (Trapeze) - Längsseiten
+          // Trapez: ((a + b) / 2) * h, wobei a=effL, b=firstLaenge, h=sparrenLaenge
+          const trapez1 = ((effL + firstLaenge) / 2) * sparrenLaenge1;
+          const trapez2 = ((effL + firstLaenge) / 2) * sparrenLaenge2;
+          
+          // Walmflächen (Dreiecke) - Giebelseiten
+          // Die Walmhöhe ist kleiner als beim Vollwalm
+          const walmHoehe = firsthoehe * 0.4; // Ca. 40% der Firsthöhe
+          const walmSparren = walmHoehe / Math.sin(rad3);
+          const walmBreite = effB;
+          
+          // Dreieck: (Basis * Höhe) / 2
+          const dreieck1 = (walmBreite * walmSparren) / 2;
+          const dreieck2 = (walmBreite * walmSparren) / 2;
+          
+          area = trapez1 + trapez2 + dreieck1 + dreieck2;
+        } else {
+          area = effL * effB * 1.1; // Näherung
+        }
+        break;
+      }
+
       case 'Mansarddach': {
         // Mansarddach: KORREKTE Geometrie mit Überstand
         // UNTEN: 4 Trapeze

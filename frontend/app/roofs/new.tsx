@@ -729,6 +729,89 @@ export default function NewRoofScreen() {
           </>
         );
 
+      case 'Krueppelwalmdach':
+        return (
+          <>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Gebäudelänge (Traufseite) (m) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 12,0"
+                value={gebaeudelaenge}
+                onChangeText={(text) => setGebaeudelaenge(formatDecimal(text))}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Gebäudebreite (m) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B. 10,0"
+                value={gebaeudebreite}
+                onChangeText={(text) => setGebaeudebreite(formatDecimal(text))}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={styles.sectionDivider}>
+              <Text style={styles.sectionText}>Dachneigungen</Text>
+            </View>
+            <View style={styles.inputRow}>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>DF 1 Längs (°) *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. 45"
+                  value={dachneigung1}
+                  onChangeText={(val) => setDachneigung1(formatDecimal(val))}
+                  onBlur={() => { if (dachneigung1 && !dachneigung2) setDachneigung2(dachneigung1); }}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>DF 2 Längs (°)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="gleich"
+                  value={dachneigung2}
+                  onChangeText={(text) => setDachneigung2(formatDecimal(text))}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+            <View style={styles.inputRow}>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>DF 3 Walm (°)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="z.B. 60"
+                  value={dachneigung3}
+                  onChangeText={(val) => setDachneigung3(formatDecimal(val))}
+                  onBlur={() => { if (dachneigung3 && !dachneigung4) setDachneigung4(dachneigung3); }}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.inputHalf}>
+                <Text style={styles.label}>DF 4 Walm (°)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="gleich"
+                  value={dachneigung4}
+                  onChangeText={(text) => setDachneigung4(formatDecimal(text))}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+            <Text style={styles.hint}>Krüppelwalmdach: Satteldach mit abgewalmten Giebeln</Text>
+            {renderUeberstandFields()}
+            {calculatedFirsthoehe > 0 && (
+              <View style={styles.calculatedValue}>
+                <Text style={styles.calculatedLabel}>Berechnete Firsthöhe:</Text>
+                <Text style={styles.calculatedNumber}>{calculatedFirsthoehe.toFixed(2)} m</Text>
+              </View>
+            )}
+          </>
+        );
+
       case 'Zeltdach':
         return (
           <>

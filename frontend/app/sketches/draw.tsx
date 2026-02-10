@@ -1135,15 +1135,27 @@ export default function DrawSketchScreen() {
     switch (element.type) {
       case 'path':
         return (
-          <Path
-            key={element.id}
-            d={element.data}
-            stroke={element.color}
-            strokeWidth={element.strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          <G key={element.id}>
+            <Path
+              d={element.data}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {isSelected && (
+              <Path
+                d={element.data}
+                stroke="#2196f3"
+                strokeWidth={element.strokeWidth + 4}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.4}
+              />
+            )}
+          </G>
         );
       
       case 'polygon':

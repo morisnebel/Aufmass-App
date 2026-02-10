@@ -273,22 +273,19 @@ export default function NewRoofScreen() {
           const rad3 = (n3 * Math.PI) / 180; // Dachneigung Walmseiten
           const rad4 = (n4 * Math.PI) / 180;
           
-          // Firsthöhe über Traufe (Hauptdach)
+          // Firsthöhe über Traufe (Hauptdach) - basiert auf effektiver Breite
           const firsthoehe = (effB / 2) * Math.tan(rad1);
           
           // Walmhöhe = Firsthöhe - Traufhöhe der Walme
-          // Wenn die Walm-Traufhöhe z.B. 2m ist und Firsthöhe 4m, ist die Walmhöhe 2m
           const walmHoehe = Math.max(0, firsthoehe - traufWalm);
           
           // Walmtiefe (horizontale Tiefe des Walms in Längsrichtung)
-          // Bei gegebener Walmhöhe und Walmneigung
           const walmTiefe = n3 > 0 ? walmHoehe / Math.tan(rad3) : 0;
           
-          // Firstlänge (kürzer als Gebäudelänge wegen der beiden Walme)
+          // Firstlänge (kürzer als effektive Länge wegen der beiden Walme)
           const firstLaenge = Math.max(0, effL - 2 * walmTiefe);
           
           // === HAUPTDACHFLÄCHEN (Trapeze) - Längsseiten ===
-          // Diese gehen von der Traufe (0m) bis zum First
           const sparrenLaenge1 = (effB / 2) / Math.cos(rad1);
           const sparrenLaenge2 = (effB / 2) / Math.cos(rad2);
           
@@ -297,15 +294,15 @@ export default function NewRoofScreen() {
           const trapez2 = ((effL + firstLaenge) / 2) * sparrenLaenge2;
           
           // === WALMFLÄCHEN (Dreiecke) - Giebelseiten ===
-          // Die Walme beginnen ab der Walm-Traufhöhe
-          // Sparrenlänge des Walms = Walmhöhe / sin(Walmneigung)
+          // Die Walmbasis ist die GEBÄUDEBREITE (ohne Traufe-Überstand)
+          // da die Walme über dem Gebäude liegen, nicht über dem Dach-Überstand
           const walmSparren3 = n3 > 0 ? walmHoehe / Math.sin(rad3) : 0;
           const walmSparren4 = n4 > 0 ? walmHoehe / Math.sin(rad4) : walmSparren3;
           
-          // Die Basis der Walmfläche ist die Gebäudebreite
           // Dreieck: (Basis * Sparrenlänge) / 2
-          const dreieck1 = (effB * walmSparren3) / 2;
-          const dreieck2 = (effB * walmSparren4) / 2;
+          // Walmbasis = Gebäudebreite B (nicht effB)
+          const dreieck1 = (B * walmSparren3) / 2;
+          const dreieck2 = (B * walmSparren4) / 2;
           
           area = trapez1 + trapez2 + dreieck1 + dreieck2;
         } else {

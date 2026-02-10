@@ -657,14 +657,32 @@ export default function NewProjectScreen() {
                 <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
               </Pressable>
 
-              <View style={styles.formInputGroup}>
-                <Text style={styles.formLabel}>Name *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Kundenname"
-                  value={newCustomerName}
-                  onChangeText={setNewCustomerName}
-                />
+              {/* Anrede und Name in einer Zeile */}
+              <View style={styles.formRowGroup}>
+                <View style={styles.formInputGroupSmall}>
+                  <Text style={styles.formLabel}>Anrede</Text>
+                  <TouchableOpacity
+                    style={styles.anredeSelector}
+                    onPress={() => setShowAnredePicker(true)}
+                  >
+                    <Text style={[
+                      styles.anredeSelectorText,
+                      !newCustomerAnrede && { color: '#999' }
+                    ]}>
+                      {newCustomerAnrede || 'Wählen...'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.formInputGroupLarge}>
+                  <Text style={styles.formLabel}>Name *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Kundenname"
+                    value={newCustomerName}
+                    onChangeText={setNewCustomerName}
+                  />
+                </View>
               </View>
 
               <View style={styles.formInputGroup}>

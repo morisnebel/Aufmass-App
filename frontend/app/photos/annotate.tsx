@@ -8,6 +8,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,8 @@ import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 const { width } = Dimensions.get('window');

@@ -257,6 +257,10 @@ export default function AnnotatePhotoScreen() {
           <Ionicons name="trash-outline" size={24} color="#f44336" />
           <Text style={styles.toolText}>Löschen</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.toolButton} onPress={saveToGallery}>
+          <Ionicons name="download-outline" size={24} color="#9c27b0" />
+          <Text style={styles.toolText}>In Galerie</Text>
+        </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.toolButton, styles.deletePhotoButton]} 
           onPress={() => {

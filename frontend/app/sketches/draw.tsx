@@ -1264,6 +1264,45 @@ export default function DrawSketchScreen() {
           </G>
         );
       
+      case 'polyline':
+        const { points, closed } = element.data;
+        if (!points || points.length < 2) return null;
+        
+        // Erstelle Path-String aus Punkten
+        let polylinePath = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+          polylinePath += ` L ${points[i].x} ${points[i].y}`;
+        }
+        if (closed) {
+          polylinePath += ' Z';
+        }
+        
+        return (
+          <G key={element.id}>
+            <Path
+              d={polylinePath}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              fill={closed ? 'rgba(33, 150, 243, 0.1)' : 'none'}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Punkte anzeigen wenn ausgewählt */}
+            {isSelected && points.map((pt: { x: number; y: number }, idx: number) => (
+              <Circle 
+                key={`polyline-pt-${idx}`}
+                cx={pt.x} 
+                cy={pt.y} 
+                r={6} 
+                fill={idx === 0 ? '#4caf50' : '#2196f3'} 
+                stroke="#fff" 
+                strokeWidth={2} 
+              />
+            ))}
+            {isSelected && renderTransformHandles(element)}
+          </G>
+        );
+      
       default:
         return null;
     }

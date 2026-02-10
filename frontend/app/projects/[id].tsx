@@ -113,6 +113,11 @@ export default function ProjectDetailScreen() {
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
   
+  // Checklist delete state
+  const [deleteChecklistModalVisible, setDeleteChecklistModalVisible] = useState(false);
+  const [checklistToDelete, setChecklistToDelete] = useState<string | null>(null);
+  const [isDeletingChecklist, setIsDeletingChecklist] = useState(false);
+  
   // Remarks state
   const [remarks, setRemarks] = useState('');
   const [isSavingRemarks, setIsSavingRemarks] = useState(false);

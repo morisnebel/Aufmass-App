@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,14 @@ interface DrawPath {
   strokeWidth: number;
 }
 
+// PDF-Größen Optionen
+const PDF_SIZES = [
+  { value: 'small', label: 'Klein', icon: 'grid-outline', description: '3 pro Zeile' },
+  { value: 'medium', label: 'Mittel', icon: 'apps-outline', description: '2 pro Zeile' },
+  { value: 'large', label: 'Groß', icon: 'square-outline', description: '1 pro Zeile' },
+  { value: 'full', label: 'Voll', icon: 'expand-outline', description: 'Volle Breite' },
+];
+
 export default function AnnotatePhotoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -37,6 +46,8 @@ export default function AnnotatePhotoScreen() {
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(true);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const [pdfSize, setPdfSize] = useState<string>('medium');
+  const [description, setDescription] = useState<string>('');
 
   useEffect(() => {
     loadPhoto();
@@ -48,6 +59,8 @@ export default function AnnotatePhotoScreen() {
       const photo = response.data.find((p: any) => p.id === photoId);
       if (photo) {
         setImageUri(photo.image_data);
+        setPdfSize(photo.pdf_size || 'medium');
+        setDescription(photo.description || '');
         
         // Load existing annotations if available
         if (photo.annotations) {

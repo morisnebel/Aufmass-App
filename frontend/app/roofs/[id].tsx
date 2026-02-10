@@ -303,7 +303,7 @@ export default function EditRoofScreen() {
   };
 
   const getFormula = () => {
-    const f: Record<string, string> = { Flachdach: 'L × B', Pultdach: 'L × B/cos(α)', Satteldach: '2 × L × Sparren', Walmdach: '2 Trapeze + 2 Dreiecke', Zeltdach: '4 × Dreieck', Mansarddach: '4 Trapeze + Walmdach' };
+    const f: Record<string, string> = { Flachdach: 'L × B', Pultdach: 'L × B/cos(α)', Satteldach: '2 × L × Sparren', Walmdach: '2 Trapeze + 2 Dreiecke', Krueppelwalmdach: '2 Trapeze + 2 Walm-Dreiecke', Zeltdach: '4 × Dreieck', Mansarddach: '4 Trapeze + Walmdach' };
     return f[roofType] || '';
   };
 

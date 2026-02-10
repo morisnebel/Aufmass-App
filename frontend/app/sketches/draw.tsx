@@ -2811,4 +2811,19 @@ const styles = StyleSheet.create({
   photoEditButtonActive: {
     backgroundColor: '#FF9800',
   },
+  photoEditBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    marginTop: 4,
+  },
+  photoEditBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });

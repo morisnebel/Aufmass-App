@@ -1426,6 +1426,9 @@ async def export_project_pdf(project_id: str):
     # ============ CHECKLISTEN ============
     if checklists:
         for checklist in checklists:
+            # Sammle alle Elemente der Checkliste in einer Liste für KeepTogether
+            checklist_elements = []
+            
             checklist_title = Table(
                 [[Paragraph(f"Checkliste: {checklist.get('template_name', '')}", section_title_style)]],
                 colWidths=[180*mm]
@@ -1435,7 +1438,7 @@ async def export_project_pdf(project_id: str):
                 ('TOPPADDING', (0, 0), (-1, -1), 5),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
             ]))
-            elements.append(checklist_title)
+            checklist_elements.append(checklist_title)
             
             checklist_data = []
             for item in checklist.get('items', []):
@@ -1478,8 +1481,12 @@ async def export_project_pdf(project_id: str):
                     ('TOPPADDING', (0, 0), (-1, -1), 4),
                     ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
                 ]))
-                elements.append(checklist_table)
-            elements.append(Spacer(1, 5*mm))
+                checklist_elements.append(checklist_table)
+            
+            checklist_elements.append(Spacer(1, 5*mm))
+            
+            # Verwende KeepTogether damit die Checkliste zusammenbleibt
+            elements.append(KeepTogether(checklist_elements))
     
     # ============ SONSTIGES ============
     sonstiges_title = Table(

@@ -155,87 +155,66 @@ export default function AnnotatePhotoScreen() {
     }
   };
 
-  // Foto in der Galerie speichern
+  // Foto in der Galerie speichern über Share
   const saveToGallery = async () => {
     try {
-      // Berechtigungen abfragen
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Berechtigung erforderlich',
-          'Um Fotos in der Galerie zu speichern, benötigt die App Zugriff auf Ihre Fotos.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
       setLoading(true);
 
       // Wenn Annotationen vorhanden sind, Screenshot des Canvas machen
+      let fileUri: string;
+      
       if (paths.length > 0 && canvasRef.current) {
         try {
-          const uri = await captureRef(canvasRef, {
+          fileUri = await captureRef(canvasRef, {
             format: 'png',
             quality: 1,
           });
-          
-          const asset = await MediaLibrary.createAssetAsync(uri);
-          await MediaLibrary.createAlbumAsync('Aufmaß App', asset, false);
-          
-          Alert.alert('Erfolg', 'Foto mit Markierungen wurde in der Galerie gespeichert');
         } catch (captureError) {
           console.error('Error capturing canvas:', captureError);
-          // Fallback: Originalbild speichern
-          await saveOriginalToGallery();
+          // Fallback: Originalbild verwenden
+          fileUri = await saveBase64ToFile();
         }
       } else {
-        // Keine Annotationen, Originalbild speichern
-        await saveOriginalToGallery();
+        // Keine Annotationen, Originalbild verwenden
+        fileUri = await saveBase64ToFile();
+      }
+
+      // Nutze die native Share-Funktion - dort kann man "Bild sichern" wählen
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare && fileUri) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Foto speichern oder teilen',
+          UTI: 'public.jpeg',
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
       }
     } catch (error) {
       console.error('Error saving to gallery:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht in der Galerie gespeichert werden');
+      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveOriginalToGallery = async () => {
-    if (!imageUri) return;
+  // Hilfsfunktion: Base64 in temporäre Datei speichern
+  const saveBase64ToFile = async (): Promise<string> => {
+    if (!imageUri) throw new Error('Kein Bild vorhanden');
     
-    try {
-      // Base64 in temporäre Datei schreiben
-      const base64Data = imageUri.includes(',') 
-        ? imageUri.split(',')[1] 
-        : imageUri;
-      
-      const filename = `aufmass_foto_${Date.now()}.jpg`;
-      const fileUri = FileSystem.cacheDirectory + filename;
-      
-      // Direkt base64 schreiben mit downloadToFile als Alternative
-      try {
-        // Erste Methode: writeAsStringAsync mit explizitem encoding string
-        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: 'base64' as any,
-        });
-      } catch (writeError) {
-        // Fallback: Erstelle Data-URI und lade herunter
-        console.log('Trying alternative method for saving...');
-        const dataUri = `data:image/jpeg;base64,${base64Data}`;
-        await FileSystem.downloadAsync(dataUri, fileUri);
-      }
-      
-      const asset = await MediaLibrary.createAssetAsync(fileUri);
-      await MediaLibrary.createAlbumAsync('Aufmaß App', asset, false);
-      
-      // Temporäre Datei löschen
-      await FileSystem.deleteAsync(fileUri, { idempotent: true });
-      
-      Alert.alert('Erfolg', 'Foto wurde in der Galerie gespeichert');
-    } catch (error) {
-      console.error('Error saving original to gallery:', error);
-      throw error;
-    }
+    const base64Data = imageUri.includes(',') 
+      ? imageUri.split(',')[1] 
+      : imageUri;
+    
+    const filename = `aufmass_foto_${Date.now()}.jpg`;
+    const fileUri = FileSystem.cacheDirectory + filename;
+    
+    // Nutze StorageAccessFramework für neuere Versionen oder einfaches writeAsStringAsync
+    await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+      encoding: 'base64' as any,
+    });
+    
+    return fileUri;
   };
 
   const colors = [

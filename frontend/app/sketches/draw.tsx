@@ -770,6 +770,25 @@ export default function DrawSketchScreen() {
     if (selectedElementId) {
       const selectedEl = elements.find(el => el.id === selectedElementId);
       if (selectedEl) {
+        // Check for polyline point editing first
+        if (selectedEl.type === 'polyline' && selectedEl.data?.points) {
+          const pointRadius = 20; // Klick-Toleranz für Eckpunkte
+          for (let i = 0; i < selectedEl.data.points.length; i++) {
+            const pt = selectedEl.data.points[i];
+            const distance = Math.sqrt(
+              Math.pow(locationX - pt.x, 2) + Math.pow(locationY - pt.y, 2)
+            );
+            if (distance <= pointRadius) {
+              // Eckpunkt gefunden - Bearbeitungsmodus starten
+              setEditingPolylinePoint(i);
+              setDragMode('move');
+              setDragStart({ x: locationX, y: locationY });
+              setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+              return;
+            }
+          }
+        }
+        
         const handle = checkTransformHandles(selectedEl, locationX, locationY);
         if (handle) {
           setDragMode(handle.type === 'rotate' ? 'rotate' : 'resize');
@@ -780,6 +799,9 @@ export default function DrawSketchScreen() {
         }
       }
     }
+
+    // Reset polyline point editing when clicking elsewhere
+    setEditingPolylinePoint(null);
 
     // Check if clicking on an element - im Foto-Modus nur Bilder, sonst nur andere Elemente
     const clickedElement = findElementAtPoint(locationX, locationY, photoEditMode);

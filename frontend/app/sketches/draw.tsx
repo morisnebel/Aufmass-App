@@ -946,10 +946,14 @@ export default function DrawSketchScreen() {
   };
 
   // Find element at point
-  const findElementAtPoint = (x: number, y: number): DrawElement | null => {
+  const findElementAtPoint = (x: number, y: number, onlyImages: boolean = false): DrawElement | null => {
     // Check in reverse order (top elements first)
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
+      
+      // Im Foto-Modus nur Bilder auswählen, im normalen Modus Bilder ignorieren
+      if (onlyImages && el.type !== 'image') continue;
+      if (!onlyImages && el.type === 'image') continue;
       
       if (el.type === 'circle') {
         const dist = Math.sqrt(Math.pow(x - el.data.cx, 2) + Math.pow(y - el.data.cy, 2));
@@ -962,7 +966,7 @@ export default function DrawSketchScreen() {
       } else if (el.type === 'line' || el.type === 'arrow') {
         const dist = distanceToLineSegment(x, y, el.data.x1, el.data.y1, el.data.x2, el.data.y2);
         if (dist < 15) return el;
-      } else if (el.type === 'text' || el.type === 'image') {
+      } else if (el.type === 'text') {
         const elX = el.x || 0;
         const elY = el.y || 0;
         const elW = el.width || 100;
@@ -970,6 +974,29 @@ export default function DrawSketchScreen() {
         if (x >= elX - 10 && x <= elX + elW + 10 &&
             y >= elY - 10 && y <= elY + elH + 10) {
           return el;
+        }
+      } else if (el.type === 'image') {
+        const elX = el.x || 0;
+        const elY = el.y || 0;
+        const elW = el.width || 100;
+        const elH = el.height || 100;
+        if (x >= elX - 10 && x <= elX + elW + 10 &&
+            y >= elY - 10 && y <= elY + elH + 10) {
+          return el;
+        }
+      } else if (el.type === 'polyline') {
+        // Prüfe ob Punkt nahe einer Polyline-Linie ist
+        const points = el.data.points;
+        if (points && points.length >= 2) {
+          for (let j = 0; j < points.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
+            if (dist < 15) return el;
+          }
+          // Prüfe auch die schließende Linie wenn geschlossen
+          if (el.data.closed && points.length >= 3) {
+            const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
+            if (dist < 15) return el;
+          }
         }
       }
     }

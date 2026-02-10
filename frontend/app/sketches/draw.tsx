@@ -2705,4 +2705,56 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#333',
   },
+  // Polyline Steuerung
+  polylineControls: {
+    position: 'absolute',
+    bottom: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  polylineInfo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  polylineButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+  },
+  polylineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  polylineButtonUndo: {
+    backgroundColor: '#FF9800',
+  },
+  polylineButtonFinish: {
+    backgroundColor: '#4caf50',
+  },
+  polylineButtonClose: {
+    backgroundColor: '#2196f3',
+  },
+  polylineButtonCancel: {
+    backgroundColor: '#f44336',
+  },
+  polylineButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
 });

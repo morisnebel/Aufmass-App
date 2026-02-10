@@ -1179,27 +1179,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  // Anrede und Name Layout
-  formInputGroupSmall: {
-    flex: 0.4,
-  },
-  formInputGroupLarge: {
-    flex: 0.6,
-  },
-  anredeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  anredeSelectorText: {
-    fontSize: 16,
-    color: '#333',
-  },
   // Anrede Chips (horizontal scrollbar)
   anredeContainer: {
     flexDirection: 'row',

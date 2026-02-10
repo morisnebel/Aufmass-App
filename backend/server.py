@@ -871,6 +871,29 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         fill_color = (*rgb_color, 76)  # 30% opacity (76 = 255 * 0.3)
                         draw.polygon(points, fill=fill_color, outline=(*rgb_color, 255), width=scaled_stroke)
                 
+                elif el_type == 'polyline':
+                    # Render polyline from points array
+                    polyline_points = el_data.get('points', [])
+                    is_closed = el_data.get('closed', False)
+                    
+                    if len(polyline_points) >= 2:
+                        scaled_stroke = max(1, int(el_stroke_width * uniform_scale))
+                        
+                        # Scale all points
+                        scaled_points = []
+                        for pt in polyline_points:
+                            px = pt.get('x', 0) * uniform_scale + offset_x
+                            py = pt.get('y', 0) * uniform_scale + offset_y
+                            scaled_points.append((px, py))
+                        
+                        # Draw the polyline segments
+                        for j in range(len(scaled_points) - 1):
+                            draw.line([scaled_points[j], scaled_points[j + 1]], fill=(*rgb_color, 255), width=scaled_stroke)
+                        
+                        # If closed, connect last point to first
+                        if is_closed and len(scaled_points) >= 3:
+                            draw.line([scaled_points[-1], scaled_points[0]], fill=(*rgb_color, 255), width=scaled_stroke)
+                
                 elif el_type == 'line':
                     # Render straight line
                     x1 = el_data.get('x1', 0) * scale_x + offset_x

@@ -182,11 +182,12 @@ export default function EditRoofScreen() {
           const trapez1 = ((effL+firstLaenge)/2)*sparren1;
           const trapez2 = ((effL+firstLaenge)/2)*sparren2;
           
-          // Walmflächen (Dreiecke) - Walmbasis = B (Gebäudebreite ohne Überstand)
+          // Walmflächen (Dreiecke) - Walmbasis geometrisch korrigiert
+          const walmBasis = effB - 2 * 0.2 * walmTiefe;
           const walmSparren3 = r3 > 0 ? walmHoehe/Math.sin(r3) : 0;
           const walmSparren4 = r4 > 0 ? walmHoehe/Math.sin(r4) : walmSparren3;
-          const dreieck1 = (B*walmSparren3)/2;
-          const dreieck2 = (B*walmSparren4)/2;
+          const dreieck1 = (walmBasis*walmSparren3)/2;
+          const dreieck2 = (walmBasis*walmSparren4)/2;
           
           area = trapez1 + trapez2 + dreieck1 + dreieck2;
         } else area = effL * effB * 1.1;

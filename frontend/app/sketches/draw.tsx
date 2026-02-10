@@ -852,6 +852,19 @@ export default function DrawSketchScreen() {
         } else if (el.type === 'text' || el.type === 'image') {
           newEl.x = (originalElement.x || 0) + dx;
           newEl.y = (originalElement.y || 0) + dy;
+        } else if (el.type === 'polyline') {
+          // Move polyline by shifting all points
+          const newPoints = originalElement.data.points.map((pt: { x: number; y: number }) => ({
+            x: pt.x + dx,
+            y: pt.y + dy,
+          }));
+          newEl.data = { ...el.data, points: newPoints };
+        } else if (el.type === 'path') {
+          // Move path by shifting all coordinates in the SVG path string
+          const pathRegex = /([MLQ])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+          newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
+            return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
+          });
         }
       } else if (dragMode === 'rotate' && resizeHandle === 'rotate') {
         // Rotate element

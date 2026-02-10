@@ -2112,8 +2112,8 @@ export default function DrawSketchScreen() {
                   <Path
                     d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`}
                     fill="none"
-                    stroke="#ddd"
-                    strokeWidth={0.5}
+                    stroke={`rgba(100, 100, 100, ${gridOpacity})`}
+                    strokeWidth={0.8}
                   />
                 </Pattern>
               </Defs>

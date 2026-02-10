@@ -1774,6 +1774,16 @@ export default function DrawSketchScreen() {
           <Ionicons name="shapes" size={18} color={drawMode === 'polygon' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.toolButton, drawMode === 'polyline' && styles.toolButtonActive]}
+          onPress={() => {
+            setDrawMode('polyline');
+            setPolylinePoints([]);
+          }}
+        >
+          <Ionicons name="git-network-outline" size={18} color={drawMode === 'polyline' ? '#fff' : '#333'} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.toolButton} onPress={insertImage}>
           <Ionicons name="image" size={18} color="#333" />
         </TouchableOpacity>

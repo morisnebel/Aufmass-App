@@ -201,6 +201,11 @@ export default function DrawSketchScreen() {
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
   
+  // Kästchenpapier Hintergrund
+  const [showGrid, setShowGrid] = useState(true);
+  const [gridSize, setGridSize] = useState(30); // Größe der Kästchen in Pixel
+  const [showGridSettings, setShowGridSettings] = useState(false);
+  
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);

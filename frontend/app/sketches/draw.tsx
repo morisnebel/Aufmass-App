@@ -770,8 +770,8 @@ export default function DrawSketchScreen() {
       }
     }
 
-    // Check if clicking on an element
-    const clickedElement = findElementAtPoint(locationX, locationY);
+    // Check if clicking on an element - im Foto-Modus nur Bilder, sonst nur andere Elemente
+    const clickedElement = findElementAtPoint(locationX, locationY, photoEditMode);
     if (clickedElement) {
       // Check for double tap
       const now = Date.now();

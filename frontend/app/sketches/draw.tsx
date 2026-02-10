@@ -667,6 +667,37 @@ export default function DrawSketchScreen() {
     setTempElement(element);
   };
 
+  // Polyline beenden (offen oder geschlossen)
+  const finishPolyline = (closed: boolean = false) => {
+    if (polylinePoints.length >= 2) {
+      const newElement: DrawElement = {
+        id: generateId(),
+        type: 'polyline',
+        data: { 
+          points: [...polylinePoints],
+          closed: closed 
+        },
+        color: drawColor,
+        strokeWidth,
+        rotation: 0,
+      };
+      addToHistory([...elements, newElement]);
+    }
+    setPolylinePoints([]);
+  };
+
+  // Polyline abbrechen
+  const cancelPolyline = () => {
+    setPolylinePoints([]);
+  };
+
+  // Letzten Punkt der Polyline entfernen (Undo)
+  const undoLastPolylinePoint = () => {
+    if (polylinePoints.length > 0) {
+      setPolylinePoints(polylinePoints.slice(0, -1));
+    }
+  };
+
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [pendingArrow, setPendingArrow] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
 

@@ -207,25 +207,74 @@ export default function NewChecklistScreen() {
       <ScrollView style={styles.checklistContainer}>
         <View style={styles.checklistContent}>
           {checklistItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.checklistItem}
-              onPress={() => toggleItem(index)}
-            >
-              <Ionicons
-                name={item.checked ? 'checkbox' : 'square-outline'}
-                size={28}
-                color={item.checked ? '#4caf50' : '#666'}
-              />
-              <Text
+            <View key={index} style={styles.checklistItemContainer}>
+              {/* Hauptpunkt */}
+              <TouchableOpacity
                 style={[
-                  styles.checklistText,
-                  item.checked && styles.checklistTextChecked,
+                  styles.checklistItem,
+                  item.subItems && item.subItems.length > 0 && styles.checklistItemWithSubs
                 ]}
+                onPress={() => toggleItem(index)}
               >
-                {item.text}
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name={item.checked ? 'checkbox' : 'square-outline'}
+                  size={28}
+                  color={item.checked ? '#4caf50' : '#666'}
+                />
+                <Text
+                  style={[
+                    styles.checklistText,
+                    item.checked && styles.checklistTextChecked,
+                  ]}
+                >
+                  {item.text}
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Unterpositionen anzeigen */}
+              {item.subItems && item.subItems.length > 0 && (
+                <View style={styles.subItemsContainer}>
+                  {item.subItems.map((subItem, subIndex) => (
+                    <TouchableOpacity
+                      key={subIndex}
+                      style={styles.subChecklistItem}
+                      onPress={() => toggleSubItem(index, subIndex)}
+                    >
+                      <Ionicons
+                        name={subItem.checked ? 'checkbox' : 'square-outline'}
+                        size={22}
+                        color={subItem.checked ? '#4caf50' : '#999'}
+                      />
+                      <Text
+                        style={[
+                          styles.subChecklistText,
+                          subItem.checked && styles.subChecklistTextChecked,
+                        ]}
+                      >
+                        {subItem.text}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                  
+                  {/* Fortschrittsanzeige für Unterpositionen */}
+                  <View style={styles.subProgressContainer}>
+                    <View style={styles.subProgressBar}>
+                      <View
+                        style={[
+                          styles.subProgressFill,
+                          {
+                            width: `${(item.subItems.filter(s => s.checked).length / item.subItems.length) * 100}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.subProgressText}>
+                      {item.subItems.filter(s => s.checked).length}/{item.subItems.length}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
           ))}
         </View>
       </ScrollView>

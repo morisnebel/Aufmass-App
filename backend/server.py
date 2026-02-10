@@ -1346,6 +1346,9 @@ async def export_project_pdf(project_id: str):
         
         # Iterate through each roof and show detailed measurements
         for idx, roof in enumerate(roofs):
+            # Sammle alle Elemente der Dachfläche in einer Liste für KeepTogether
+            roof_elements = []
+            
             roof_type = roof.get('roof_type', '')
             area = roof.get('area', 0)
             notes = roof.get('notes', '') or ''
@@ -1366,7 +1369,7 @@ async def export_project_pdf(project_id: str):
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
                 ('LEFTPADDING', (0, 0), (-1, -1), 8),
             ]))
-            elements.append(roof_header_table)
+            roof_elements.append(roof_header_table)
             
             # Create measurements table with all input values
             measurements_data = [
@@ -1401,8 +1404,11 @@ async def export_project_pdf(project_id: str):
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
                 ('LEFTPADDING', (0, 0), (-1, -1), 8),
             ]))
-            elements.append(measurements_table)
-            elements.append(Spacer(1, 3*mm))
+            roof_elements.append(measurements_table)
+            roof_elements.append(Spacer(1, 3*mm))
+            
+            # Verwende KeepTogether damit die Dachfläche zusammenbleibt
+            elements.append(KeepTogether(roof_elements))
         
         # Add total area summary if multiple roofs
         if len(roofs) > 1:

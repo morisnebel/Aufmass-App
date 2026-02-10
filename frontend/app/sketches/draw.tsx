@@ -2055,6 +2055,12 @@ export default function DrawSketchScreen() {
         <View style={styles.infoOverlay}>
           <Text style={styles.infoText}>Elemente: {elements.length}</Text>
           {selectedElementId && <Text style={styles.infoText}>Ausgewählt</Text>}
+          {photoEditMode && (
+            <View style={styles.photoEditBadge}>
+              <Ionicons name="image-outline" size={14} color="#fff" />
+              <Text style={styles.photoEditBadgeText}>Foto-Modus</Text>
+            </View>
+          )}
         </View>
 
         {/* Polyline Steuerung */}

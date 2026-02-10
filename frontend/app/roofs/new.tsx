@@ -262,8 +262,10 @@ export default function NewRoofScreen() {
       case 'Krueppelwalmdach': {
         // Krüppelwalmdach: Satteldach mit abgewalmten Giebeln
         // - 2 trapezförmige Hauptdachflächen (Längsseiten)
-        // - 2 dreieckige Walmflächen (Giebelseiten, kleiner als beim Walmdach)
-        // Die Walmflächen beginnen erst ab einer bestimmten Höhe (Traufhöhe DF3/4 > DF1/2)
+        // - 2 dreieckige/trapezförmige Walmflächen (Giebelseiten)
+        // Die Walmflächen beginnen ab der Traufhöhe der Walme (höher als Haupttraufe)
+        
+        const traufWalm = parseFloat(traufhoeheWalm) || 0; // Traufhöhe der Walme in m
         
         if (n1 > 0) {
           const rad1 = (n1 * Math.PI) / 180; // Dachneigung Längsseiten
@@ -271,35 +273,39 @@ export default function NewRoofScreen() {
           const rad3 = (n3 * Math.PI) / 180; // Dachneigung Walmseiten
           const rad4 = (n4 * Math.PI) / 180;
           
-          // Firsthöhe über Traufe
+          // Firsthöhe über Traufe (Hauptdach)
           const firsthoehe = (effB / 2) * Math.tan(rad1);
           
-          // Walmtiefe (wie weit der Walm in die Länge hineinragt)
-          // Beim Krüppelwalmdach beginnt der Walm erst ab einer höheren Traufe
-          // Vereinfachte Berechnung: Walmtiefe = 30% der halben Breite
-          const walmTiefe = (effB / 2) * 0.3; // Typisch ca. 30% beim Krüppelwalm
+          // Walmhöhe = Firsthöhe - Traufhöhe der Walme
+          // Wenn die Walm-Traufhöhe z.B. 2m ist und Firsthöhe 4m, ist die Walmhöhe 2m
+          const walmHoehe = Math.max(0, firsthoehe - traufWalm);
           
-          // Firstlänge (kürzer als Gebäudelänge wegen Walm)
+          // Walmtiefe (horizontale Tiefe des Walms in Längsrichtung)
+          // Bei gegebener Walmhöhe und Walmneigung
+          const walmTiefe = n3 > 0 ? walmHoehe / Math.tan(rad3) : 0;
+          
+          // Firstlänge (kürzer als Gebäudelänge wegen der beiden Walme)
           const firstLaenge = Math.max(0, effL - 2 * walmTiefe);
           
-          // Sparrenlänge der Hauptdachflächen
+          // === HAUPTDACHFLÄCHEN (Trapeze) - Längsseiten ===
+          // Diese gehen von der Traufe (0m) bis zum First
           const sparrenLaenge1 = (effB / 2) / Math.cos(rad1);
           const sparrenLaenge2 = (effB / 2) / Math.cos(rad2);
           
-          // Hauptdachflächen (Trapeze) - Längsseiten
-          // Trapez: ((a + b) / 2) * h, wobei a=effL, b=firstLaenge, h=sparrenLaenge
+          // Trapez: ((Trauflänge + Firstlänge) / 2) * Sparrenlänge
           const trapez1 = ((effL + firstLaenge) / 2) * sparrenLaenge1;
           const trapez2 = ((effL + firstLaenge) / 2) * sparrenLaenge2;
           
-          // Walmflächen (Dreiecke) - Giebelseiten
-          // Die Walmhöhe ist kleiner als beim Vollwalm
-          const walmHoehe = firsthoehe * 0.4; // Ca. 40% der Firsthöhe
-          const walmSparren = walmHoehe / Math.sin(rad3);
-          const walmBreite = effB;
+          // === WALMFLÄCHEN (Dreiecke) - Giebelseiten ===
+          // Die Walme beginnen ab der Walm-Traufhöhe
+          // Sparrenlänge des Walms = Walmhöhe / sin(Walmneigung)
+          const walmSparren3 = n3 > 0 ? walmHoehe / Math.sin(rad3) : 0;
+          const walmSparren4 = n4 > 0 ? walmHoehe / Math.sin(rad4) : walmSparren3;
           
-          // Dreieck: (Basis * Höhe) / 2
-          const dreieck1 = (walmBreite * walmSparren) / 2;
-          const dreieck2 = (walmBreite * walmSparren) / 2;
+          // Die Basis der Walmfläche ist die Gebäudebreite
+          // Dreieck: (Basis * Sparrenlänge) / 2
+          const dreieck1 = (effB * walmSparren3) / 2;
+          const dreieck2 = (effB * walmSparren4) / 2;
           
           area = trapez1 + trapez2 + dreieck1 + dreieck2;
         } else {

@@ -377,11 +377,12 @@ export default function NewProjectScreen() {
       resetNewCustomerForm();
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
+      setShowAnredePicker(false);
 
       const message = saveOrUpdateContact 
         ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
         : 'Kunde wurde erstellt';
-      Alert.alert('Erfolg', message);
+      Alert.alert('Erfolg', message, [{ text: 'OK' }]);
     } catch (error) {
       console.error('Error creating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');

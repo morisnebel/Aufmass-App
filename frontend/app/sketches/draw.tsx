@@ -198,6 +198,9 @@ export default function DrawSketchScreen() {
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   
+  // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
+  const [photoEditMode, setPhotoEditMode] = useState(false);
+  
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);

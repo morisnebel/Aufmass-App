@@ -174,7 +174,7 @@ export default function EditRoofScreen() {
           // Walmtiefe (horizontale Tiefe des Walms in Längsrichtung)
           const walmTiefe = r3 > 0 ? walmHoehe / Math.tan(r3) : 0;
           
-          // Firstlänge (kürzer als Gebäudelänge wegen der beiden Walme)
+          // Firstlänge (kürzer als effektive Länge wegen der beiden Walme)
           const firstLaenge = Math.max(0, effL - 2*walmTiefe);
           
           // Hauptdachflächen (Trapeze)
@@ -182,11 +182,11 @@ export default function EditRoofScreen() {
           const trapez1 = ((effL+firstLaenge)/2)*sparren1;
           const trapez2 = ((effL+firstLaenge)/2)*sparren2;
           
-          // Walmflächen (Dreiecke)
+          // Walmflächen (Dreiecke) - Walmbasis = B (Gebäudebreite ohne Überstand)
           const walmSparren3 = r3 > 0 ? walmHoehe/Math.sin(r3) : 0;
           const walmSparren4 = r4 > 0 ? walmHoehe/Math.sin(r4) : walmSparren3;
-          const dreieck1 = (effB*walmSparren3)/2;
-          const dreieck2 = (effB*walmSparren4)/2;
+          const dreieck1 = (B*walmSparren3)/2;
+          const dreieck2 = (B*walmSparren4)/2;
           
           area = trapez1 + trapez2 + dreieck1 + dreieck2;
         } else area = effL * effB * 1.1;

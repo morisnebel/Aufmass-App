@@ -94,6 +94,7 @@ export default function NewProjectScreen() {
   
   // New customer modal state - separate fields
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerAnrede, setNewCustomerAnrede] = useState('');
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
@@ -103,11 +104,18 @@ export default function NewProjectScreen() {
   const [newCustomerCity, setNewCustomerCity] = useState('');
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   
+  // Anrede picker
+  const [showAnredePicker, setShowAnredePicker] = useState(false);
+  const anredeOptions = ['Herr', 'Frau', 'Bauherr', 'Bauherren', 'Firma', 'Familie'];
+  
   // Contact picker modal
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [deviceContacts, setDeviceContacts] = useState<Contacts.Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactSearchQuery, setContactSearchQuery] = useState('');
+  
+  // Importierte Kontakt-ID für Sync
+  const [importedContactId, setImportedContactId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCustomers();

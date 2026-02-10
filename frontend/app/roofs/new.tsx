@@ -294,15 +294,16 @@ export default function NewRoofScreen() {
           const trapez2 = ((effL + firstLaenge) / 2) * sparrenLaenge2;
           
           // === WALMFLÄCHEN (Dreiecke) - Giebelseiten ===
-          // Die Walmbasis ist die GEBÄUDEBREITE (ohne Traufe-Überstand)
-          // da die Walme über dem Gebäude liegen, nicht über dem Dach-Überstand
+          // Die Walmbasis wird geometrisch korrigiert:
+          // Basis = effB - (Korrektur für die Überlappung mit den Hauptdachflächen)
+          const walmBasis = effB - 2 * 0.2 * walmTiefe;
+          
           const walmSparren3 = n3 > 0 ? walmHoehe / Math.sin(rad3) : 0;
           const walmSparren4 = n4 > 0 ? walmHoehe / Math.sin(rad4) : walmSparren3;
           
           // Dreieck: (Basis * Sparrenlänge) / 2
-          // Walmbasis = Gebäudebreite B (nicht effB)
-          const dreieck1 = (B * walmSparren3) / 2;
-          const dreieck2 = (B * walmSparren4) / 2;
+          const dreieck1 = (walmBasis * walmSparren3) / 2;
+          const dreieck2 = (walmBasis * walmSparren4) / 2;
           
           area = trapez1 + trapez2 + dreieck1 + dreieck2;
         } else {

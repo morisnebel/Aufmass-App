@@ -58,13 +58,20 @@ export default function EditTemplateScreen() {
       setTemplateName(data.name);
       
       // Convert items to new format
-      const convertedItems: TemplateItem[] = data.items.map((item: string | TemplateItem) => {
+      const convertedItems: TemplateItem[] = data.items.map((item: string | TemplateItem | any) => {
         if (typeof item === 'string') {
           return { text: item, subItems: [] };
         }
+        // Convert subItems to correct format (array of objects with text property)
+        const convertedSubItems: SubItem[] = (item.subItems || []).map((subItem: string | SubItem) => {
+          if (typeof subItem === 'string') {
+            return { text: subItem };
+          }
+          return { text: subItem.text || '' };
+        });
         return {
           text: item.text || '',
-          subItems: item.subItems || [],
+          subItems: convertedSubItems,
         };
       });
       setItems(convertedItems);

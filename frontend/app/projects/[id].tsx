@@ -869,7 +869,154 @@ export default function ProjectDetailScreen() {
                 return null;
               };
 
-              const svgXml = getSvgXml(sketch.sketch_data);
+              // Generate SVG from metadata elements (includes polylines)
+              const generateSvgFromMetadata = (metadataStr: string): string | null => {
+                try {
+                  const metadata = JSON.parse(metadataStr);
+                  const elements = metadata.elements || [];
+                  if (elements.length === 0) return null;
+
+                  // Calculate bounds
+                  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                  let hasValidBounds = false;
+
+                  elements.forEach((el: any) => {
+                    if (el.type === 'path' && typeof el.data === 'string') {
+                      const matches = el.data.match(/(-?\d+\.?\d*)/g);
+                      if (matches) {
+                        for (let i = 0; i < matches.length; i += 2) {
+                          const x = parseFloat(matches[i]);
+                          const y = parseFloat(matches[i + 1]);
+                          if (!isNaN(x) && !isNaN(y)) {
+                            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                            minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                            hasValidBounds = true;
+                          }
+                        }
+                      }
+                    } else if (el.type === 'line' || el.type === 'arrow') {
+                      minX = Math.min(minX, el.data.x1, el.data.x2);
+                      maxX = Math.max(maxX, el.data.x1, el.data.x2);
+                      minY = Math.min(minY, el.data.y1, el.data.y2);
+                      maxY = Math.max(maxY, el.data.y1, el.data.y2);
+                      hasValidBounds = true;
+                    } else if (el.type === 'circle') {
+                      minX = Math.min(minX, el.data.cx - el.data.r);
+                      maxX = Math.max(maxX, el.data.cx + el.data.r);
+                      minY = Math.min(minY, el.data.cy - el.data.r);
+                      maxY = Math.max(maxY, el.data.cy + el.data.r);
+                      hasValidBounds = true;
+                    } else if (el.type === 'rect') {
+                      minX = Math.min(minX, el.data.x);
+                      maxX = Math.max(maxX, el.data.x + el.data.width);
+                      minY = Math.min(minY, el.data.y);
+                      maxY = Math.max(maxY, el.data.y + el.data.height);
+                      hasValidBounds = true;
+                    } else if (el.type === 'polyline' && el.data?.points) {
+                      el.data.points.forEach((pt: { x: number; y: number }) => {
+                        minX = Math.min(minX, pt.x); maxX = Math.max(maxX, pt.x);
+                        minY = Math.min(minY, pt.y); maxY = Math.max(maxY, pt.y);
+                      });
+                      hasValidBounds = true;
+                    } else if (el.type === 'image' || el.type === 'text') {
+                      const x = el.x || 0; const y = el.y || 0;
+                      const w = el.width || 50; const h = el.height || 50;
+                      minX = Math.min(minX, x); maxX = Math.max(maxX, x + w);
+                      minY = Math.min(minY, y); maxY = Math.max(maxY, y + h);
+                      hasValidBounds = true;
+                    }
+                  });
+
+                  if (!hasValidBounds) return null;
+
+                  // Add padding and calculate scale
+                  const padding = 20;
+                  minX -= padding; minY -= padding; maxX += padding; maxY += padding;
+                  const drawWidth = maxX - minX || 200;
+                  const drawHeight = maxY - minY || 200;
+                  const previewSize = 300;
+                  const scale = Math.min(previewSize / drawWidth, previewSize / drawHeight, 1);
+                  const scaledWidth = drawWidth * scale;
+                  const scaledHeight = drawHeight * scale;
+                  const offsetX = (previewSize - scaledWidth) / 2;
+                  const offsetY = (previewSize - scaledHeight) / 2;
+
+                  // Generate SVG elements
+                  let svgElements = '';
+                  elements.forEach((el: any) => {
+                    const strokeWidth = Math.max(1, (el.strokeWidth || 2) * scale);
+                    const color = el.color || '#000000';
+
+                    if (el.type === 'path' && typeof el.data === 'string') {
+                      const scaledPath = el.data.replace(/([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g,
+                        (_: string, cmd: string, xStr: string, yStr: string) => {
+                          const x = ((parseFloat(xStr) - minX) * scale) + offsetX;
+                          const y = ((parseFloat(yStr) - minY) * scale) + offsetY;
+                          return `${cmd} ${x.toFixed(1)} ${y.toFixed(1)}`;
+                        });
+                      svgElements += `<path d="${scaledPath}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round"/>`;
+                    } else if (el.type === 'line') {
+                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
+                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
+                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
+                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+                    } else if (el.type === 'circle') {
+                      const cx = ((el.data.cx - minX) * scale) + offsetX;
+                      const cy = ((el.data.cy - minY) * scale) + offsetY;
+                      const r = Math.max(2, el.data.r * scale);
+                      svgElements += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
+                    } else if (el.type === 'rect') {
+                      const x = ((el.data.x - minX) * scale) + offsetX;
+                      const y = ((el.data.y - minY) * scale) + offsetY;
+                      const w = Math.max(2, el.data.width * scale);
+                      const h = Math.max(2, el.data.height * scale);
+                      svgElements += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
+                    } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
+                      const points = el.data.points as { x: number; y: number }[];
+                      const isClosed = el.data.closed || false;
+                      let pathData = points.map((pt, idx) => {
+                        const x = ((pt.x - minX) * scale) + offsetX;
+                        const y = ((pt.y - minY) * scale) + offsetY;
+                        return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+                      }).join(' ');
+                      if (isClosed) pathData += ' Z';
+                      svgElements += `<path d="${pathData}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+                    } else if (el.type === 'arrow') {
+                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
+                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
+                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
+                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+                      const angle = Math.atan2(y2 - y1, x2 - x1);
+                      const arrowSize = 8;
+                      const endX1 = x2 - arrowSize * Math.cos(angle - Math.PI / 6);
+                      const endY1 = y2 - arrowSize * Math.sin(angle - Math.PI / 6);
+                      const endX2 = x2 - arrowSize * Math.cos(angle + Math.PI / 6);
+                      const endY2 = y2 - arrowSize * Math.sin(angle + Math.PI / 6);
+                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+                      svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${endX1.toFixed(1)},${endY1.toFixed(1)} ${endX2.toFixed(1)},${endY2.toFixed(1)}" fill="${color}"/>`;
+                      if (el.data.text) {
+                        const midX = (x1 + x2) / 2;
+                        const midY = (y1 + y2) / 2 - 8;
+                        svgElements += `<text x="${midX.toFixed(1)}" y="${midY.toFixed(1)}" text-anchor="middle" font-size="10" fill="${color}">${el.data.text}</text>`;
+                      }
+                    } else if (el.type === 'text' && el.data?.text) {
+                      const x = ((el.x || 0) - minX) * scale + offsetX;
+                      const y = ((el.y || 0) - minY) * scale + offsetY;
+                      svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="12" fill="${color}" font-weight="bold">${el.data.text}</text>`;
+                    }
+                  });
+
+                  return `<svg width="${previewSize}" height="${previewSize}" viewBox="0 0 ${previewSize} ${previewSize}" xmlns="http://www.w3.org/2000/svg"><rect width="${previewSize}" height="${previewSize}" fill="#ffffff"/>${svgElements}</svg>`;
+                } catch (e) {
+                  console.log('Error generating SVG from metadata:', e);
+                  return null;
+                }
+              };
+
+              // Try metadata first (more accurate), then fall back to saved preview
+              const metadataSvg = sketch.metadata ? generateSvgFromMetadata(sketch.metadata) : null;
+              const svgXml = metadataSvg || getSvgXml(sketch.sketch_data);
               const isRegularImage = sketch.sketch_data && !sketch.sketch_data.startsWith('data:image/svg+xml');
 
               return (

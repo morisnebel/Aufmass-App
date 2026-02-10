@@ -451,4 +451,67 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
   },
+  // Styles für Unterpositionen
+  checklistItemContainer: {
+    marginBottom: 12,
+  },
+  checklistItemWithSubs: {
+    marginBottom: 4,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  subItemsContainer: {
+    backgroundColor: '#f9f9f9',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    marginTop: -4,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#e8e8e8',
+  },
+  subChecklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingLeft: 28,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  subChecklistText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#555',
+  },
+  subChecklistTextChecked: {
+    textDecorationLine: 'line-through',
+    color: '#aaa',
+  },
+  subProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingLeft: 28,
+    gap: 10,
+  },
+  subProgressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  subProgressFill: {
+    height: '100%',
+    backgroundColor: '#66bb6a',
+  },
+  subProgressText: {
+    fontSize: 12,
+    color: '#888',
+    minWidth: 35,
+    textAlign: 'right',
+  },
 });

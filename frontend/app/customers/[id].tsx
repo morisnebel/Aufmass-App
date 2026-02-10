@@ -292,7 +292,7 @@ export default function EditCustomerScreen() {
         }
       }
 
-      const updatedContact: Contacts.Contact = {
+      const updatedContact = {
         id: importedContactId,
         contactType: Contacts.ContactTypes.Person,
         name,
@@ -314,7 +314,7 @@ export default function EditCustomerScreen() {
         }),
       };
 
-      await Contacts.updateContactAsync(updatedContact);
+      await Contacts.updateContactAsync(updatedContact as any);
       console.log('Contact updated in device contacts');
     } catch (error) {
       console.error('Error updating device contact:', error);

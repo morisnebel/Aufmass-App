@@ -217,7 +217,7 @@ export default function EditCustomerScreen() {
     }
   };
 
-  const selectContact = (contact: Contacts.Contact) => {
+  const selectContact = (contact: Contacts.Contact & { id?: string }) => {
     // Prevent loadCustomer from overwriting
     isImportingRef.current = true;
     

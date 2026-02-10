@@ -435,13 +435,65 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  const sendEmail = () => {
-    if (customer?.email) {
-      const subject = `Aufmaß: ${project?.name}`;
-      const body = `Sehr geehrte/r ${customer.name},\n\nanbei das Aufmaß für das Projekt "${project?.name}".`;
-      Linking.openURL(`mailto:${customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-    } else {
-      Alert.alert('Fehler', 'Keine E-Mail-Adresse für diesen Kunden vorhanden');
+  const sendEmail = async () => {
+    // Generate PDF first, then share via native share dialog
+    try {
+      Alert.alert(
+        'PDF erstellen und teilen',
+        'Möchten Sie das Aufmaß-PDF erstellen und per E-Mail teilen?',
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: 'PDF erstellen',
+            onPress: async () => {
+              try {
+                // Generate PDF
+                const response = await axios.get(`${API_URL}/api/export/pdf/${id}`, {
+                  responseType: 'json',
+                });
+
+                const filename = `Aufmass_${project?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                const file = new File(Paths.cache, filename);
+                
+                // Decode base64 and write to file
+                const binaryString = atob(response.data.pdf_data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                await file.write(bytes);
+
+                // Check if sharing is available
+                const canShare = await Sharing.isAvailableAsync();
+                if (canShare) {
+                  await Sharing.shareAsync(file.uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Aufmaß-PDF per E-Mail senden',
+                    UTI: 'com.adobe.pdf',
+                  });
+                } else {
+                  // Fallback: Open basic email without attachment
+                  if (customer?.email) {
+                    const subject = `Aufmaß: ${project?.name}`;
+                    const body = `Sehr geehrte/r ${customer.name},\n\nanbei das Aufmaß für das Projekt "${project?.name}".\n\nMit freundlichen Grüßen`;
+                    Linking.openURL(`mailto:${customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+                    Alert.alert('Hinweis', 'PDF wurde erstellt, aber kann auf diesem Gerät nicht direkt angehängt werden. Bitte teilen Sie das PDF manuell.');
+                  } else {
+                    Alert.alert('Erfolg', `PDF wurde erstellt: ${filename}`);
+                  }
+                }
+              } catch (error) {
+                console.error('Error generating PDF for email:', error);
+                Alert.alert('Fehler', 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error in sendEmail:', error);
+      Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 

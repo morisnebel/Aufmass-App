@@ -152,36 +152,48 @@ export default function NewProjectScreen() {
         return;
       }
 
-      setShowContactPicker(true);
-      setLoadingContacts(true);
+      // Schließe zuerst das NewCustomer Modal, dann öffne Contact Picker
+      setShowNewCustomerModal(false);
+      
+      // Kurze Verzögerung damit das erste Modal schließt bevor das zweite öffnet
+      setTimeout(async () => {
+        setShowContactPicker(true);
+        setLoadingContacts(true);
 
-      const { data } = await Contacts.getContactsAsync({
-        fields: [
-          Contacts.Fields.Name,
-          Contacts.Fields.FirstName,
-          Contacts.Fields.LastName,
-          Contacts.Fields.Emails,
-          Contacts.Fields.PhoneNumbers,
-          Contacts.Fields.Addresses,
-        ],
-        pageSize: 10000,
-        pageOffset: 0,
-      });
+        try {
+          const { data } = await Contacts.getContactsAsync({
+            fields: [
+              Contacts.Fields.Name,
+              Contacts.Fields.FirstName,
+              Contacts.Fields.LastName,
+              Contacts.Fields.Emails,
+              Contacts.Fields.PhoneNumbers,
+              Contacts.Fields.Addresses,
+            ],
+            pageSize: 10000,
+            pageOffset: 0,
+          });
 
-      const sortedContacts = data
-        .filter(c => c.name || c.firstName || c.lastName)
-        .sort((a, b) => {
-          const nameA = a.name || `${a.firstName} ${a.lastName}` || '';
-          const nameB = b.name || `${b.firstName} ${b.lastName}` || '';
-          return nameA.localeCompare(nameB);
-        });
+          const sortedContacts = data
+            .filter(c => c.name || c.firstName || c.lastName)
+            .sort((a, b) => {
+              const nameA = a.name || `${a.firstName} ${a.lastName}` || '';
+              const nameB = b.name || `${b.firstName} ${b.lastName}` || '';
+              return nameA.localeCompare(nameB);
+            });
 
-      setDeviceContacts(sortedContacts);
+          setDeviceContacts(sortedContacts);
+        } catch (error) {
+          console.error('Error loading contacts:', error);
+          Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+          setShowContactPicker(false);
+        } finally {
+          setLoadingContacts(false);
+        }
+      }, 350);
     } catch (error) {
-      console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
-    } finally {
-      setLoadingContacts(false);
+      console.error('Error requesting contacts permission:', error);
+      Alert.alert('Fehler', 'Kontakt-Berechtigung konnte nicht angefordert werden');
     }
   };
 

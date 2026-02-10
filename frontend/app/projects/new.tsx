@@ -1204,56 +1204,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  // Anrede Picker Modal
-  anredeModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  anredeModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    width: '100%',
-    maxWidth: 300,
-  },
-  anredeModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  anredeOption: {
+  // Anrede Chips (horizontal scrollbar)
+  anredeContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 4,
   },
-  anredeOptionSelected: {
+  anredeScrollView: {
+    flexGrow: 0,
+  },
+  anredeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  anredeChipSelected: {
     backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
   },
-  anredeOptionText: {
-    fontSize: 16,
-    color: '#333',
+  anredeChipText: {
+    fontSize: 14,
+    color: '#666',
   },
-  anredeOptionTextSelected: {
+  anredeChipTextSelected: {
     color: '#1976d2',
     fontWeight: '600',
-  },
-  anredeClearButton: {
-    marginTop: 8,
-    padding: 12,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  anredeClearButtonText: {
-    fontSize: 14,
-    color: '#999',
   },
 });

@@ -373,7 +373,6 @@ export default function NewProjectScreen() {
       resetNewCustomerForm();
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
-      setShowAnredePicker(false);
 
       const message = saveOrUpdateContact 
         ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')

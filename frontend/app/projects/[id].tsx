@@ -1622,6 +1622,22 @@ const styles = StyleSheet.create({
     color: '#4caf50',
     fontWeight: '600',
   },
+  noteDisplay: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#fff8e1',
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 6,
+    marginLeft: 28,
+    gap: 6,
+  },
+  noteDisplayText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+  },
   moreItemsText: {
     fontSize: 12,
     color: '#1976d2',

@@ -1576,10 +1576,43 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 8,
   },
+  checklistItemContainer: {
+    marginBottom: 4,
+  },
   checklistText: {
     fontSize: 14,
     color: '#333',
     flex: 1,
+  },
+  subItemsList: {
+    marginLeft: 28,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: '#e0e0e0',
+  },
+  subItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 6,
+  },
+  subItemText: {
+    fontSize: 13,
+    color: '#555',
+    flex: 1,
+  },
+  checkedBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 'auto',
+    marginRight: 8,
+  },
+  checkedBadgeText: {
+    fontSize: 12,
+    color: '#4caf50',
+    fontWeight: '600',
   },
   moreItemsText: {
     fontSize: 12,

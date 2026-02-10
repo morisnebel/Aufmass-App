@@ -94,7 +94,7 @@ export default function EditCustomerScreen() {
   
   // Contact picker state
   const [showContactPicker, setShowContactPicker] = useState(false);
-  const [contacts, setContacts] = useState<Contacts.Contact[]>([]);
+  const [contacts, setContacts] = useState<(Contacts.Contact & { id?: string })[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   

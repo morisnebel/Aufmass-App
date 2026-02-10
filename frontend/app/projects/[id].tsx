@@ -1070,6 +1070,43 @@ export default function ProjectDetailScreen() {
         </View>
       </Modal>
 
+      {/* Delete Checklist Confirmation Modal */}
+      <Modal
+        visible={deleteChecklistModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteChecklistModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Checkliste löschen</Text>
+            <Text style={styles.modalMessage}>
+              Möchten Sie diese Checkliste wirklich löschen?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setDeleteChecklistModalVisible(false);
+                  setChecklistToDelete(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleDeleteChecklist}
+                disabled={isDeletingChecklist}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isDeletingChecklist ? 'Wird gelöscht...' : 'Löschen'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Edit Project Modal */}
       <Modal
         visible={showEditProjectModal}

@@ -866,60 +866,6 @@ export default function NewProjectScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Anrede Picker Modal */}
-      <Modal
-        visible={showAnredePicker}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowAnredePicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.anredeModalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowAnredePicker(false)}
-        >
-          <TouchableOpacity 
-            activeOpacity={1} 
-            style={styles.anredeModalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text style={styles.anredeModalTitle}>Anrede auswählen</Text>
-            {anredeOptions.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.anredeOption,
-                  newCustomerAnrede === option && styles.anredeOptionSelected
-                ]}
-                onPress={() => {
-                  setNewCustomerAnrede(option);
-                  setShowAnredePicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.anredeOptionText,
-                  newCustomerAnrede === option && styles.anredeOptionTextSelected
-                ]}>
-                  {option}
-                </Text>
-                {newCustomerAnrede === option && (
-                  <Ionicons name="checkmark" size={20} color="#1976d2" />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.anredeClearButton}
-              onPress={() => {
-                setNewCustomerAnrede('');
-                setShowAnredePicker(false);
-              }}
-            >
-              <Text style={styles.anredeClearButtonText}>Keine Anrede</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }

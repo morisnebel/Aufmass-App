@@ -16,10 +16,19 @@ import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
+interface SubItem {
+  text: string;
+}
+
+interface TemplateItem {
+  text: string;
+  subItems?: SubItem[];
+}
+
 interface ChecklistTemplate {
   id: string;
   name: string;
-  items: string[];
+  items: (string | TemplateItem)[];
 }
 
 const DEFAULT_TEMPLATES = [

@@ -1405,16 +1405,16 @@ export default function DrawSketchScreen() {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {/* Punkte anzeigen wenn ausgewählt */}
+            {/* Punkte anzeigen wenn ausgewählt - größer und interaktiv */}
             {isSelected && points.map((pt: { x: number; y: number }, idx: number) => (
               <Circle 
                 key={`polyline-pt-${idx}`}
                 cx={pt.x} 
                 cy={pt.y} 
-                r={6} 
-                fill={idx === 0 ? '#4caf50' : '#2196f3'} 
+                r={editingPolylinePoint === idx ? 12 : 8} 
+                fill={editingPolylinePoint === idx ? '#ff5722' : (idx === 0 ? '#4caf50' : '#2196f3')} 
                 stroke="#fff" 
-                strokeWidth={2} 
+                strokeWidth={editingPolylinePoint === idx ? 3 : 2} 
               />
             ))}
             {isSelected && renderTransformHandles(element)}

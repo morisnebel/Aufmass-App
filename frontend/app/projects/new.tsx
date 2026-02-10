@@ -206,7 +206,7 @@ export default function NewProjectScreen() {
   };
 
   // Select a contact and fill new customer form
-  const handleSelectContact = (contact: Contacts.Contact) => {
+  const handleSelectContact = (contact: Contacts.Contact & { id?: string }) => {
     const { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
     
     setNewCustomerName(extractedName);
@@ -216,6 +216,11 @@ export default function NewProjectScreen() {
     setNewCustomerStreet(extractedStreet);
     setNewCustomerPlz(extractedPlz);
     setNewCustomerCity(extractedCity);
+    
+    // Speichere die Kontakt-ID für spätere Synchronisation
+    if (contact.id) {
+      setImportedContactId(contact.id);
+    }
     
     setShowContactPicker(false);
     setContactSearchQuery('');

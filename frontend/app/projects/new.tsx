@@ -859,12 +859,16 @@ export default function NewProjectScreen() {
         transparent={true}
         onRequestClose={() => setShowAnredePicker(false)}
       >
-        <View style={styles.anredeModalOverlay}>
-          <Pressable 
-            style={styles.anredeModalOverlay}
-            onPress={() => setShowAnredePicker(false)}
-          />
-          <View style={styles.anredeModalContent}>
+        <TouchableOpacity 
+          style={styles.anredeModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAnredePicker(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={styles.anredeModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.anredeModalTitle}>Anrede auswählen</Text>
             {anredeOptions.map((option) => (
               <TouchableOpacity
@@ -898,8 +902,8 @@ export default function NewProjectScreen() {
             >
               <Text style={styles.anredeClearButtonText}>Keine Anrede</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </KeyboardAvoidingView>
   );

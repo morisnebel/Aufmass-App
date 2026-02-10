@@ -859,6 +859,14 @@ export default function ProjectDetailScreen() {
                           ))}
                         </View>
                       )}
+                      
+                      {/* Notiz anzeigen, falls vorhanden */}
+                      {item.note && item.note.trim() !== '' && (
+                        <View style={styles.noteDisplay}>
+                          <Ionicons name="document-text-outline" size={14} color="#888" />
+                          <Text style={styles.noteDisplayText}>{item.note}</Text>
+                        </View>
+                      )}
                     </View>
                   ))}
                 </TouchableOpacity>

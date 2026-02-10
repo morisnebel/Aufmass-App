@@ -132,11 +132,13 @@ export default function AnnotatePhotoScreen() {
         canvasHeight: canvasDimensions.height || 400, // Fallback to reasonable default
       };
 
-      // Update photo with annotations (using PUT to keep the same ID)
+      // Update photo with annotations and PDF size
       await axios.put(`${API_URL}/api/photos/${photoId}`, {
         project_id: projectId,
         image_data: imageUri, // Keep original image
         annotations: JSON.stringify(annotationData),
+        description: description,
+        pdf_size: pdfSize,
       });
 
       Alert.alert('Erfolg', 'Foto wurde gespeichert', [

@@ -656,28 +656,42 @@ export default function NewProjectScreen() {
               <View style={styles.formRowGroup}>
                 <View style={styles.formInputGroupSmall}>
                   <Text style={styles.formLabel}>Anrede</Text>
-                  <TouchableOpacity
-                    style={styles.anredeSelector}
-                    onPress={() => setShowAnredePicker(true)}
-                  >
-                    <Text style={[
-                      styles.anredeSelectorText,
-                      !newCustomerAnrede && { color: '#999' }
-                    ]}>
-                      {newCustomerAnrede || 'Wählen...'}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
+                  <View style={styles.anredeContainer}>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.anredeScrollView}
+                    >
+                      {['', 'Herr', 'Frau', 'Bauherr', 'Bauherren', 'Firma', 'Familie'].map((option) => (
+                        <TouchableOpacity
+                          key={option || 'none'}
+                          style={[
+                            styles.anredeChip,
+                            newCustomerAnrede === option && styles.anredeChipSelected
+                          ]}
+                          onPress={() => setNewCustomerAnrede(option)}
+                        >
+                          <Text style={[
+                            styles.anredeChipText,
+                            newCustomerAnrede === option && styles.anredeChipTextSelected
+                          ]}>
+                            {option || '-'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </View>
-                <View style={styles.formInputGroupLarge}>
-                  <Text style={styles.formLabel}>Name *</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="Kundenname"
-                    value={newCustomerName}
-                    onChangeText={setNewCustomerName}
-                  />
-                </View>
+              </View>
+              
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Kundenname"
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                />
               </View>
 
               <View style={styles.formInputGroup}>

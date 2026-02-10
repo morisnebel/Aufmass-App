@@ -28,7 +28,8 @@ import Svg, {
   G, 
   Defs, 
   Marker,
-  Polygon 
+  Polygon,
+  Pattern
 } from 'react-native-svg';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;

@@ -360,6 +360,55 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#1976d2',
   },
+  // PDF-Größen Auswahl Styles
+  pdfSizeContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  pdfSizeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+  },
+  pdfSizeScroll: {
+    flexGrow: 0,
+  },
+  pdfSizeButton: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    marginRight: 8,
+    minWidth: 80,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  pdfSizeButtonActive: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1565c0',
+  },
+  pdfSizeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1976d2',
+    marginTop: 4,
+  },
+  pdfSizeTextActive: {
+    color: '#fff',
+  },
+  pdfSizeDesc: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 2,
+  },
+  pdfSizeDescActive: {
+    color: '#e3f2fd',
+  },
   canvasContainer: {
     flex: 1,
     position: 'relative',

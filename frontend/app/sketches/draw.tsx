@@ -2033,6 +2033,42 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
+      {/* Gitter-Einstellungen Panel */}
+      {showGridSettings && !backgroundImage && (
+        <View style={styles.gridSettingsPanel}>
+          <View style={styles.gridSettingsHeader}>
+            <Text style={styles.gridSettingsTitle}>Kästchengröße</Text>
+            <TouchableOpacity onPress={() => setShowGridSettings(false)}>
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.gridSliderRow}>
+            <Text style={styles.gridSliderLabel}>Klein</Text>
+            <View style={styles.gridSliderContainer}>
+              {[10, 20, 30, 40, 50, 60, 80].map(size => (
+                <TouchableOpacity
+                  key={size}
+                  style={[
+                    styles.gridSizeButton,
+                    gridSize === size && styles.gridSizeButtonActive
+                  ]}
+                  onPress={() => setGridSize(size)}
+                >
+                  <Text style={[
+                    styles.gridSizeButtonText,
+                    gridSize === size && styles.gridSizeButtonTextActive
+                  ]}>
+                    {size}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.gridSliderLabel}>Groß</Text>
+          </View>
+          <Text style={styles.gridSizeInfo}>Aktuelle Größe: {gridSize}px</Text>
+        </View>
+      )}
+
       {/* Canvas */}
       <View
         ref={canvasRef}

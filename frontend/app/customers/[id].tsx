@@ -224,6 +224,7 @@ export default function EditCustomerScreen() {
     const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
     console.log('=== CONTACT IMPORT DEBUG ===');
+    console.log('Contact ID:', contact.id);
     console.log('Extracted name:', extractedName);
     console.log('Extracted email:', extractedEmail);
     console.log('Extracted phone:', extractedPhone);
@@ -234,6 +235,11 @@ export default function EditCustomerScreen() {
     setEmail(extractedEmail || '');
     setPhone(extractedPhone || '');
     setAddress(extractedAddress || '');
+    
+    // Speichere die Kontakt-ID für spätere Synchronisation
+    if (contact.id) {
+      setImportedContactId(contact.id);
+    }
     
     // Close modal
     setSearchQuery('');

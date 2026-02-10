@@ -801,33 +801,69 @@ export default function ProjectDetailScreen() {
               <Text style={styles.addButtonText}>Neue Checkliste</Text>
             </TouchableOpacity>
 
-            {checklists.map((checklist) => (
-              <TouchableOpacity
-                key={checklist.id}
-                style={styles.itemCard}
-                onPress={() => router.push(`/checklists/${checklist.id}`)}
-              >
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemTitle}>{checklist.template_name}</Text>
-                  <Ionicons name="create-outline" size={20} color="#1976d2" />
-                </View>
-                {checklist.items.slice(0, 3).map((item, index) => (
-                  <View key={index} style={styles.checklistItem}>
-                    <Ionicons
-                      name={item.checked ? 'checkbox' : 'square-outline'}
-                      size={20}
-                      color={item.checked ? '#4caf50' : '#666'}
-                    />
-                    <Text style={styles.checklistText}>{item.text}</Text>
+            {checklists.map((checklist) => {
+              // Zähle nur abgehakte Punkte (benötigte Positionen)
+              const countCheckedItems = () => {
+                let total = 0;
+                checklist.items.forEach(item => {
+                  if (item.subItems && item.subItems.length > 0) {
+                    total += item.subItems.filter(s => s.checked).length;
+                  } else if (item.checked) {
+                    total += 1;
+                  }
+                });
+                return total;
+              };
+              
+              return (
+                <TouchableOpacity
+                  key={checklist.id}
+                  style={styles.itemCard}
+                  onPress={() => router.push(`/checklists/${checklist.id}`)}
+                >
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemTitle}>{checklist.template_name}</Text>
+                    <View style={styles.checkedBadge}>
+                      <Text style={styles.checkedBadgeText}>
+                        {countCheckedItems()} benötigt
+                      </Text>
+                    </View>
+                    <Ionicons name="create-outline" size={20} color="#1976d2" />
                   </View>
-                ))}
-                {checklist.items.length > 3 && (
-                  <Text style={styles.moreItemsText}>
-                    + {checklist.items.length - 3} weitere Punkte
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ))}
+                  
+                  {/* Zeige alle Items mit ihren Unterpositionen */}
+                  {checklist.items.map((item, index) => (
+                    <View key={index} style={styles.checklistItemContainer}>
+                      {/* Hauptpunkt */}
+                      <View style={styles.checklistItem}>
+                        <Ionicons
+                          name={item.checked ? 'checkbox' : 'square-outline'}
+                          size={20}
+                          color={item.checked ? '#4caf50' : '#666'}
+                        />
+                        <Text style={styles.checklistText}>{item.text}</Text>
+                      </View>
+                      
+                      {/* Abgehakte Unterpositionen anzeigen */}
+                      {item.subItems && item.subItems.length > 0 && (
+                        <View style={styles.subItemsList}>
+                          {item.subItems.filter(sub => sub.checked).map((subItem, subIndex) => (
+                            <View key={subIndex} style={styles.subItemRow}>
+                              <Ionicons
+                                name="checkbox"
+                                size={16}
+                                color="#4caf50"
+                              />
+                              <Text style={styles.subItemText}>{subItem.text}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 

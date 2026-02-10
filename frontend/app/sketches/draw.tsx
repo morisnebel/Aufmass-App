@@ -205,7 +205,11 @@ export default function DrawSketchScreen() {
   // Kästchenpapier Hintergrund
   const [showGrid, setShowGrid] = useState(true);
   const [gridSize, setGridSize] = useState(30); // Größe der Kästchen in Pixel
+  const [gridOpacity, setGridOpacity] = useState(0.4); // Sichtbarkeit der Linien
   const [showGridSettings, setShowGridSettings] = useState(false);
+  
+  // Polyline Punkt-Bearbeitung
+  const [editingPolylinePoint, setEditingPolylinePoint] = useState<number | null>(null);
   
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);

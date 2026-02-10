@@ -518,6 +518,26 @@ export default function DrawSketchScreen() {
     } else if (drawMode === 'polygon') {
       // Start polygon drawing
       setCurrentPath(`M ${locationX} ${locationY}`);
+    } else if (drawMode === 'polyline') {
+      // Polyline: Füge Punkt hinzu
+      const newPoint = { x: locationX, y: locationY };
+      
+      // Prüfe ob wir nahe am ersten Punkt sind (schließen)
+      if (polylinePoints.length >= 3) {
+        const firstPoint = polylinePoints[0];
+        const distance = Math.sqrt(
+          Math.pow(locationX - firstPoint.x, 2) + 
+          Math.pow(locationY - firstPoint.y, 2)
+        );
+        
+        if (distance < 30) {
+          // Schließe die Polyline als geschlossenen Grundriss
+          finishPolyline(true);
+          return;
+        }
+      }
+      
+      setPolylinePoints([...polylinePoints, newPoint]);
     } else {
       // Other drawing modes
       setStartPoint({ x: locationX, y: locationY });

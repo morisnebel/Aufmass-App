@@ -11,7 +11,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSContactsUsageDescription": "Kunden als Kontakte speichern"
+        "NSContactsUsageDescription": "Kunden als Kontakte speichern",
+        "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
+        "NSPhotoLibraryAddUsageDescription": "Aufmaß-Fotos in der Galerie speichern"
       }
     },
     "android": {
@@ -22,7 +24,9 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "READ_CONTACTS",
-        "WRITE_CONTACTS"
+        "WRITE_CONTACTS",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -45,6 +49,13 @@
         "expo-contacts",
         {
           "contactsPermission": "Erlauben Sie den Zugriff auf Ihre Kontakte, um Kunden zu importieren und zu speichern."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Erlauben Sie den Zugriff auf Ihre Fotos, um Aufmaß-Fotos zu speichern.",
+          "savePhotosPermission": "Erlauben Sie das Speichern von Fotos in Ihrer Galerie."
         }
       ]
     ],

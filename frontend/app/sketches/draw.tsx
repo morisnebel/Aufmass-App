@@ -185,6 +185,9 @@ export default function DrawSketchScreen() {
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [tempElement, setTempElement] = useState<DrawElement | null>(null);
   
+  // Polyline state - für zusammenhängende Linien (Grundrisse)
+  const [polylinePoints, setPolylinePoints] = useState<{ x: number; y: number }[]>([]);
+  
   // Transform state
   const [dragMode, setDragMode] = useState<'move' | 'resize' | 'rotate' | null>(null);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);

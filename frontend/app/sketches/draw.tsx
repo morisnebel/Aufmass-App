@@ -2035,35 +2035,51 @@ export default function DrawSketchScreen() {
       {showGridSettings && !backgroundImage && (
         <View style={styles.gridSettingsPanel}>
           <View style={styles.gridSettingsHeader}>
-            <Text style={styles.gridSettingsTitle}>Kästchengröße</Text>
+            <Text style={styles.gridSettingsTitle}>Raster-Einstellungen</Text>
             <TouchableOpacity onPress={() => setShowGridSettings(false)}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           </View>
-          <View style={styles.gridSliderRow}>
-            <Text style={styles.gridSliderLabel}>Klein</Text>
-            <View style={styles.gridSliderContainer}>
-              {[10, 20, 30, 40, 50, 60, 80].map(size => (
-                <TouchableOpacity
-                  key={size}
-                  style={[
-                    styles.gridSizeButton,
-                    gridSize === size && styles.gridSizeButtonActive
-                  ]}
-                  onPress={() => setGridSize(size)}
-                >
-                  <Text style={[
-                    styles.gridSizeButtonText,
-                    gridSize === size && styles.gridSizeButtonTextActive
-                  ]}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          
+          {/* Größen-Slider */}
+          <View style={styles.gridSliderSection}>
+            <Text style={styles.gridSliderSectionLabel}>Kästchengröße: {gridSize}px</Text>
+            <View style={styles.gridSliderRow}>
+              <Text style={styles.gridSliderLabel}>Klein</Text>
+              <Slider
+                style={styles.gridSlider}
+                minimumValue={10}
+                maximumValue={100}
+                step={5}
+                value={gridSize}
+                onValueChange={(value) => setGridSize(value)}
+                minimumTrackTintColor="#1976d2"
+                maximumTrackTintColor="#ddd"
+                thumbTintColor="#1976d2"
+              />
+              <Text style={styles.gridSliderLabel}>Groß</Text>
             </View>
-            <Text style={styles.gridSliderLabel}>Groß</Text>
           </View>
-          <Text style={styles.gridSizeInfo}>Aktuelle Größe: {gridSize}px</Text>
+          
+          {/* Transparenz-Slider */}
+          <View style={styles.gridSliderSection}>
+            <Text style={styles.gridSliderSectionLabel}>Sichtbarkeit: {Math.round(gridOpacity * 100)}%</Text>
+            <View style={styles.gridSliderRow}>
+              <Text style={styles.gridSliderLabel}>Schwach</Text>
+              <Slider
+                style={styles.gridSlider}
+                minimumValue={0.1}
+                maximumValue={1}
+                step={0.1}
+                value={gridOpacity}
+                onValueChange={(value) => setGridOpacity(value)}
+                minimumTrackTintColor="#1976d2"
+                maximumTrackTintColor="#ddd"
+                thumbTintColor="#1976d2"
+              />
+              <Text style={styles.gridSliderLabel}>Stark</Text>
+            </View>
+          </View>
         </View>
       )}
 

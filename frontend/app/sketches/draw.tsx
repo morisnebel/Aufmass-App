@@ -601,7 +601,12 @@ export default function DrawSketchScreen() {
       addToHistory([...elements, newElement]);
       setCurrentPath('');
     } else if (drawMode === 'select' && dragMode) {
-      // Finish transform
+      // Finish transform - add to history if elements changed
+      if (editingPolylinePoint !== null) {
+        // Save polyline point edit to history
+        addToHistory(elements);
+      }
+      setEditingPolylinePoint(null);
       setDragMode(null);
       setResizeHandle(null);
       setDragStart(null);

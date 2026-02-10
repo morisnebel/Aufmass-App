@@ -208,14 +208,19 @@ export default function AnnotatePhotoScreen() {
       : imageUri;
     
     const filename = `aufmass_foto_${Date.now()}.jpg`;
-    const fileUri = FileSystem.cacheDirectory + filename;
+    const file = new File(Paths.cache, filename);
     
-    // Nutze StorageAccessFramework für neuere Versionen oder einfaches writeAsStringAsync
-    await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-      encoding: 'base64' as any,
-    });
+    // Konvertiere Base64 zu Uint8Array
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
     
-    return fileUri;
+    // Schreibe die Datei mit der neuen API
+    await file.write(bytes);
+    
+    return file.uri;
   };
 
   const colors = [

@@ -2801,4 +2801,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  // Foto-Bearbeitungsmodus Button
+  photoEditButtonActive: {
+    backgroundColor: '#FF9800',
+  },
 });

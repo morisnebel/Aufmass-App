@@ -230,6 +230,41 @@ export default function AnnotatePhotoScreen() {
         ))}
       </View>
 
+      {/* PDF-Größen Auswahl */}
+      <View style={styles.pdfSizeContainer}>
+        <Text style={styles.pdfSizeLabel}>PDF-Größe:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pdfSizeScroll}>
+          {PDF_SIZES.map((size) => (
+            <TouchableOpacity
+              key={size.value}
+              style={[
+                styles.pdfSizeButton,
+                pdfSize === size.value && styles.pdfSizeButtonActive,
+              ]}
+              onPress={() => setPdfSize(size.value)}
+            >
+              <Ionicons 
+                name={size.icon as any} 
+                size={20} 
+                color={pdfSize === size.value ? '#fff' : '#1976d2'} 
+              />
+              <Text style={[
+                styles.pdfSizeText,
+                pdfSize === size.value && styles.pdfSizeTextActive,
+              ]}>
+                {size.label}
+              </Text>
+              <Text style={[
+                styles.pdfSizeDesc,
+                pdfSize === size.value && styles.pdfSizeDescActive,
+              ]}>
+                {size.description}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <View 
         style={styles.canvasContainer} 
         ref={canvasRef}

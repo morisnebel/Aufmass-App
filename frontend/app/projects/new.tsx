@@ -390,6 +390,19 @@ export default function NewProjectScreen() {
     }
   };
 
+  // Helper zum Zurücksetzen des Formulars
+  const resetNewCustomerForm = () => {
+    setNewCustomerAnrede('');
+    setNewCustomerName('');
+    setNewCustomerEmail('');
+    setNewCustomerPhone('');
+    setNewCustomerMobile('');
+    setNewCustomerStreet('');
+    setNewCustomerPlz('');
+    setNewCustomerCity('');
+    setImportedContactId(null);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');

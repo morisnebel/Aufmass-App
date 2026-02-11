@@ -1166,7 +1166,7 @@ export default function DrawSketchScreen() {
       if (Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - (cy - r - 30), 2)) < handleRadius) {
         return { type: 'rotate', handle: 'rotate' };
       }
-    } else if (element.type === 'line' || element.type === 'arrow') {
+    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer') {
       const { x1, y1, x2, y2 } = element.data;
       if (Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2)) < handleRadius) {
         return { type: 'resize', handle: 'start' };

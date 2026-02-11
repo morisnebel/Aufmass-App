@@ -500,6 +500,33 @@ const styles = StyleSheet.create({
   pdfSizeDescActive: {
     color: '#e3f2fd',
   },
+  // Beschreibung Styles
+  descriptionContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  descriptionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  descriptionInput: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
   canvasContainer: {
     flex: 1,
     position: 'relative',

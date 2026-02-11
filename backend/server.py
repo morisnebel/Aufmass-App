@@ -1003,6 +1003,41 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         )
                         draw.text((text_x, text_y), text, fill=(*rgb_color, 255), font=font, anchor="mm")
                 
+                elif el_type == 'pointer':
+                    # Render pointer arrow - thick line with large arrowhead (single head at end)
+                    x1 = el_data.get('x1', 0) * scale_x + offset_x
+                    y1 = el_data.get('y1', 0) * scale_y + offset_y
+                    x2 = el_data.get('x2', 0) * scale_x + offset_x
+                    y2 = el_data.get('y2', 0) * scale_y + offset_y
+                    
+                    # Calculate angle of the pointer
+                    angle = math.atan2(y2 - y1, x2 - x1)
+                    
+                    # Large arrowhead dimensions (proportional to stroke width)
+                    pointer_stroke = max(stroke_width * 2, 6 * uniform_scale)
+                    arrow_head_size = max(20 * uniform_scale, pointer_stroke * 3)
+                    arrow_head_angle = math.pi / 6  # 30 degrees
+                    
+                    # Line end point (shortened so arrowhead doesn't overlap)
+                    line_end_x = x2 - arrow_head_size * 0.6 * math.cos(angle)
+                    line_end_y = y2 - arrow_head_size * 0.6 * math.sin(angle)
+                    
+                    # Draw thick line
+                    draw.line([(x1, y1), (line_end_x, line_end_y)], 
+                              fill=(*rgb_color, 255), 
+                              width=max(2, int(pointer_stroke)))
+                    
+                    # Calculate arrowhead vertices
+                    tip_x, tip_y = x2, y2
+                    left_x = x2 - arrow_head_size * math.cos(angle - arrow_head_angle)
+                    left_y = y2 - arrow_head_size * math.sin(angle - arrow_head_angle)
+                    right_x = x2 - arrow_head_size * math.cos(angle + arrow_head_angle)
+                    right_y = y2 - arrow_head_size * math.sin(angle + arrow_head_angle)
+                    
+                    # Draw filled arrowhead
+                    draw.polygon([(tip_x, tip_y), (left_x, left_y), (right_x, right_y)], 
+                                 fill=(*rgb_color, 255))
+                
                 elif el_type == 'text':
                     # Render text with dynamic font size and style
                     tx = element.get('x', 0) * scale_x + offset_x

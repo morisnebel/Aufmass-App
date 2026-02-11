@@ -1465,14 +1465,17 @@ export default function DrawSketchScreen() {
         );
       
       case 'pointer':
-        // Großer Zeigepfeil mit nur einer prominenten Pfeilspitze am Ende
+        // Großer Zeigepfeil mit nur einer prominenten Pfeilspitze am Ende (Memo-Pfeil)
         const ptrX1 = element.data.x1;
         const ptrY1 = element.data.y1;
         const ptrX2 = element.data.x2;
         const ptrY2 = element.data.y2;
+        const ptrText = element.data.text || '';
+        const ptrFontSize = element.data.fontSize || 16;
         const ptrMidX = (ptrX1 + ptrX2) / 2;
         const ptrMidY = (ptrY1 + ptrY2) / 2;
         const ptrAngle = Math.atan2(ptrY2 - ptrY1, ptrX2 - ptrX1);
+        const ptrAngleDeg = ptrAngle * 180 / Math.PI;
         
         // Große Pfeilspitze berechnen (proportional zur Strichdicke)
         const arrowHeadSize = Math.max(20, element.strokeWidth * 4);
@@ -1489,6 +1492,10 @@ export default function DrawSketchScreen() {
         // Linie bis kurz vor der Pfeilspitze
         const lineEndX = ptrX2 - arrowHeadSize * 0.6 * Math.cos(ptrAngle);
         const lineEndY = ptrY2 - arrowHeadSize * 0.6 * Math.sin(ptrAngle);
+        
+        // Position für den Text (etwas oberhalb der Linie, am Startpunkt)
+        const textOffsetX = ptrX1 + 15 * Math.cos(ptrAngle - Math.PI / 2);
+        const textOffsetY = ptrY1 + 15 * Math.sin(ptrAngle - Math.PI / 2);
         
         return (
           <G key={element.id}>
@@ -1511,6 +1518,32 @@ export default function DrawSketchScreen() {
               strokeWidth={2}
               transform={element.rotation ? `rotate(${element.rotation} ${ptrMidX} ${ptrMidY})` : undefined}
             />
+            {/* Notiz-Text am Startpunkt (wenn vorhanden) */}
+            {ptrText && (
+              <G>
+                {/* Hintergrund für bessere Lesbarkeit */}
+                <Rect
+                  x={textOffsetX - 5}
+                  y={textOffsetY - ptrFontSize}
+                  width={ptrText.length * ptrFontSize * 0.6 + 10}
+                  height={ptrFontSize + 8}
+                  fill="rgba(255, 255, 255, 0.85)"
+                  rx={4}
+                  ry={4}
+                  stroke={element.color}
+                  strokeWidth={1}
+                />
+                <SvgText
+                  x={textOffsetX}
+                  y={textOffsetY}
+                  fill={element.color}
+                  fontSize={ptrFontSize}
+                  fontWeight="bold"
+                >
+                  {ptrText}
+                </SvgText>
+              </G>
+            )}
             {isSelected && renderTransformHandles(element)}
           </G>
         );

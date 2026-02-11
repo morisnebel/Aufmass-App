@@ -1552,7 +1552,7 @@ export default function DrawSketchScreen() {
           <SvgText x={cx - 5} y={cy - r - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
         </G>
       );
-    } else if (element.type === 'line' || element.type === 'arrow') {
+    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer') {
       const { x1, y1, x2, y2 } = element.data;
       handles.push(
         <Circle key="start" cx={x1} cy={y1} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />

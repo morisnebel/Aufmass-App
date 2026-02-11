@@ -2135,7 +2135,7 @@ export default function DrawSketchScreen() {
           onPress={() => setDrawMode('arrow')}
         >
           {/* Benutzerdefiniertes Maßlinie-Icon: Linie mit zwei Pfeilen und M in der Mitte */}
-          <Svg width={36} height={28} viewBox="0 0 24 24">
+          <Svg width={48} height={36} viewBox="0 0 24 24">
             {/* Linker Pfeil */}
             <Polygon 
               points="2,12 7,8 7,16" 

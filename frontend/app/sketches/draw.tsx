@@ -1936,6 +1936,13 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.toolButton, drawMode === 'pointer' && styles.toolButtonActive]}
+          onPress={() => setDrawMode('pointer')}
+        >
+          <Ionicons name="locate" size={18} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.toolButton, drawMode === 'text' && styles.toolButtonActive]}
           onPress={() => setDrawMode('text')}
         >

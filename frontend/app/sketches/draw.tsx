@@ -948,7 +948,7 @@ export default function DrawSketchScreen() {
         if (el.type === 'circle') {
           centerX = originalElement.data.cx;
           centerY = originalElement.data.cy;
-        } else if (el.type === 'line' || el.type === 'arrow') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
           centerX = (originalElement.data.x1 + originalElement.data.x2) / 2;
           centerY = (originalElement.data.y1 + originalElement.data.y2) / 2;
         } else if (el.type === 'rect') {

@@ -11,9 +11,10 @@ import {
   ScrollView,
   Modal,
   KeyboardAvoidingView,
+  BackHandler,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';

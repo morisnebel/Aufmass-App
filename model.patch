@@ -170,7 +170,7 @@ index 4d8fbae..e69de29 100644
 -----+from datetime import datetime
 -----+
 -----+# Backend URL from environment
------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+-----+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 -----+
 -----+def log_test(message):
 -----+    """Log test messages with timestamp"""
@@ -556,10 +556,10 @@ index 4d8fbae..e69de29 100644
 ----- from datetime import datetime
 ----- 
 ------# Get backend URL from environment
-------BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sketch-markup.preview.emergentagent.com')
+------BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://textpointer.preview.emergentagent.com')
 ------API_BASE = f"{BACKEND_URL}/api"
 -----+# Backend URL from environment
------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+-----+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 ----- 
 ------def test_comprehensive_pdf_scenarios():
 ------    """Test various scenarios for PDF export with different annotation and SVG types"""
@@ -1398,7 +1398,7 @@ index 4d8fbae..e69de29 100644
 --------+import base64
 --------+from datetime import datetime
 --------+
---------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+--------+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 --------+
 --------+def log_test(message):
 --------+    print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
@@ -1606,7 +1606,7 @@ index 4d8fbae..e69de29 100644
 --------+import base64
 --------+from datetime import datetime
 --------+
---------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+--------+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 --------+
 --------+def debug_pdf_export():
 --------+    """Debug PDF export with detailed logging"""
@@ -1752,7 +1752,7 @@ index 4d8fbae..e69de29 100644
 ---------+from datetime import datetime
 ---------+
 ---------+# Get backend URL from environment
----------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sketch-markup.preview.emergentagent.com')
+---------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://textpointer.preview.emergentagent.com')
 ---------+API_BASE = f"{BACKEND_URL}/api"
 ---------+
 ---------+def test_comprehensive_pdf_scenarios():
@@ -2115,7 +2115,7 @@ index 4d8fbae..e69de29 100644
 ---------+from datetime import datetime
 ---------+
 ---------+# Get backend URL from environment
----------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sketch-markup.preview.emergentagent.com')
+---------+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://textpointer.preview.emergentagent.com')
 ---------+API_BASE = f"{BACKEND_URL}/api"
 ---------+
 ---------+def test_enhanced_pdf_export():
@@ -2517,7 +2517,7 @@ index 4d8fbae..e69de29 100644
 --------------+import sys
 --------------+from datetime import datetime
 --------------+
---------------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+--------------+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 --------------+
 --------------+def comprehensive_sketch_test():
 --------------+    """Test all scenarios from the review request"""
@@ -3416,7 +3416,7 @@ index 4d8fbae..e69de29 100644
 ----------------+from datetime import datetime
 ----------------+
 ----------------+# Configuration
-----------------+BASE_URL = "https://sketch-markup.preview.emergentagent.com/api"
+----------------+BASE_URL = "https://textpointer.preview.emergentagent.com/api"
 ----------------+
 ----------------+def create_test_image_data():
 ----------------+    """Create a simple base64 encoded test image"""
@@ -3725,7 +3725,7 @@ index 4d8fbae..e69de29 100644
 --------------+from datetime import datetime
 --------------+
 --------------+# Backend URL from frontend .env
---------------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+--------------+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 --------------+
 --------------+def test_sketch_metadata_issue():
 --------------+    """Test the specific sketch metadata save/load issue reported by user"""
@@ -4103,7 +4103,7 @@ index 4d8fbae..e69de29 100644
 --------+from datetime import datetime
 --------+
 --------+# Backend URL from frontend/.env
---------+BACKEND_URL = "https://sketch-markup.preview.emergentagent.com/api"
+--------+BACKEND_URL = "https://textpointer.preview.emergentagent.com/api"
 --------+
 --------+def log_test(message):
 --------+    """Log test messages with timestamp"""

@@ -2226,7 +2226,7 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* Edit Button - for text and arrows */}
+        {/* Edit Button - for text, arrows and pointers */}
         <TouchableOpacity
           style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
           onPress={() => {
@@ -2246,15 +2246,21 @@ export default function DrawSketchScreen() {
                 setEditStrokeWidth(selectedEl.strokeWidth || 3);
                 setDrawColor(selectedEl.color);
                 setShowEditArrowModal(true);
+              } else if (selectedEl?.type === 'pointer') {
+                // Memo-Pfeil bearbeiten
+                setPointerText(selectedEl.data.text || '');
+                setEditPointerFontSize(selectedEl.data.fontSize || 16);
+                setDrawColor(selectedEl.color);
+                setShowEditPointerModal(true);
               }
             }
           }}
-          disabled={!selectedElementId || !['text', 'arrow'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
+          disabled={!selectedElementId || !['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
         >
           <Ionicons 
             name="create" 
             size={18} 
-            color={selectedElementId && ['text', 'arrow'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
+            color={selectedElementId && ['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
           />
         </TouchableOpacity>
 

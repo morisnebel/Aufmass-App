@@ -1932,7 +1932,7 @@ export default function DrawSketchScreen() {
           style={[styles.toolButton, drawMode === 'arrow' && styles.toolButtonActive]}
           onPress={() => setDrawMode('arrow')}
         >
-          <Ionicons name="arrow-forward" size={18} color={drawMode === 'arrow' ? '#fff' : '#333'} />
+          <Ionicons name="return-up-forward" size={18} color={drawMode === 'arrow' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity

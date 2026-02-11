@@ -2135,35 +2135,35 @@ export default function DrawSketchScreen() {
           onPress={() => setDrawMode('arrow')}
         >
           {/* Benutzerdefiniertes Maßlinie-Icon: Linie mit zwei Pfeilen und M in der Mitte */}
-          <Svg width={48} height={36} viewBox="0 0 24 24">
-            {/* Linker Pfeil */}
+          <Svg width={56} height={28} viewBox="0 0 56 28">
+            {/* Linker Pfeil - größer */}
             <Polygon 
-              points="2,12 7,8 7,16" 
+              points="2,14 12,6 12,22" 
               fill={drawMode === 'arrow' ? '#fff' : '#333'} 
             />
-            {/* Rechter Pfeil */}
+            {/* Rechter Pfeil - größer */}
             <Polygon 
-              points="22,12 17,8 17,16" 
+              points="54,14 44,6 44,22" 
               fill={drawMode === 'arrow' ? '#fff' : '#333'} 
             />
-            {/* Linie */}
+            {/* Linie - dicker */}
             <Line 
-              x1="7" y1="12" x2="17" y2="12" 
+              x1="12" y1="14" x2="44" y2="14" 
               stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
-              strokeWidth={2.5} 
+              strokeWidth={3} 
             />
-            {/* Box mit M */}
+            {/* Box mit M - größer */}
             <Rect 
-              x="8" y="6" width="8" height="12" 
+              x="18" y="4" width="20" height="20" 
               fill={drawMode === 'arrow' ? '#2196f3' : '#f5f5f5'} 
               stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
-              strokeWidth={1.5}
-              rx={2}
+              strokeWidth={2}
+              rx={3}
             />
             <SvgText 
-              x="12" y="16" 
+              x="28" y="19" 
               fill={drawMode === 'arrow' ? '#fff' : '#333'} 
-              fontSize={10} 
+              fontSize={16} 
               fontWeight="bold" 
               textAnchor="middle"
             >

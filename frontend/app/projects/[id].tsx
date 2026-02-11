@@ -894,7 +894,7 @@ export default function ProjectDetailScreen() {
                           }
                         }
                       }
-                    } else if (el.type === 'line' || el.type === 'arrow') {
+                    } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
                       minX = Math.min(minX, el.data.x1, el.data.x2);
                       maxX = Math.max(maxX, el.data.x1, el.data.x2);
                       minY = Math.min(minY, el.data.y1, el.data.y2);

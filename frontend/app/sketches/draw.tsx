@@ -1410,6 +1410,57 @@ export default function DrawSketchScreen() {
           </G>
         );
       
+      case 'pointer':
+        // Großer Zeigepfeil mit nur einer prominenten Pfeilspitze am Ende
+        const ptrX1 = element.data.x1;
+        const ptrY1 = element.data.y1;
+        const ptrX2 = element.data.x2;
+        const ptrY2 = element.data.y2;
+        const ptrMidX = (ptrX1 + ptrX2) / 2;
+        const ptrMidY = (ptrY1 + ptrY2) / 2;
+        const ptrAngle = Math.atan2(ptrY2 - ptrY1, ptrX2 - ptrX1);
+        
+        // Große Pfeilspitze berechnen (proportional zur Strichdicke)
+        const arrowHeadSize = Math.max(20, element.strokeWidth * 4);
+        const arrowHeadAngle = Math.PI / 6; // 30 Grad
+        
+        // Pfeilspitzen-Koordinaten
+        const tipX = ptrX2;
+        const tipY = ptrY2;
+        const leftX = ptrX2 - arrowHeadSize * Math.cos(ptrAngle - arrowHeadAngle);
+        const leftY = ptrY2 - arrowHeadSize * Math.sin(ptrAngle - arrowHeadAngle);
+        const rightX = ptrX2 - arrowHeadSize * Math.cos(ptrAngle + arrowHeadAngle);
+        const rightY = ptrY2 - arrowHeadSize * Math.sin(ptrAngle + arrowHeadAngle);
+        
+        // Linie bis kurz vor der Pfeilspitze
+        const lineEndX = ptrX2 - arrowHeadSize * 0.6 * Math.cos(ptrAngle);
+        const lineEndY = ptrY2 - arrowHeadSize * 0.6 * Math.sin(ptrAngle);
+        
+        return (
+          <G key={element.id}>
+            {/* Dicke Linie */}
+            <Line
+              x1={ptrX1}
+              y1={ptrY1}
+              x2={lineEndX}
+              y2={lineEndY}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+              strokeLinecap="round"
+              transform={element.rotation ? `rotate(${element.rotation} ${ptrMidX} ${ptrMidY})` : undefined}
+            />
+            {/* Große gefüllte Pfeilspitze */}
+            <Polygon
+              points={`${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`}
+              fill={element.color}
+              stroke={element.color}
+              strokeWidth={2}
+              transform={element.rotation ? `rotate(${element.rotation} ${ptrMidX} ${ptrMidY})` : undefined}
+            />
+            {isSelected && renderTransformHandles(element)}
+          </G>
+        );
+      
       case 'polyline':
         const { points, closed } = element.data;
         if (!points || points.length < 2) return null;

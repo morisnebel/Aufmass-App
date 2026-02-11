@@ -904,7 +904,7 @@ export default function DrawSketchScreen() {
           newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
             return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
           });
-        } else if (el.type === 'line' || el.type === 'arrow') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
           newEl.data = {
             ...el.data,
             x1: originalElement.data.x1 + dx,

@@ -141,7 +141,7 @@ const perpendicularDistance = (
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'polygon' | 'polyline';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline';
   data: any;
   color: string;
   strokeWidth: number;

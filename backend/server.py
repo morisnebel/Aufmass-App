@@ -1004,11 +1004,13 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                         draw.text((text_x, text_y), text, fill=(*rgb_color, 255), font=font, anchor="mm")
                 
                 elif el_type == 'pointer':
-                    # Render pointer arrow - thick line with large arrowhead (single head at end)
+                    # Render pointer arrow (Memo-Pfeil) - thick line with large arrowhead and optional text
                     x1 = el_data.get('x1', 0) * scale_x + offset_x
                     y1 = el_data.get('y1', 0) * scale_y + offset_y
                     x2 = el_data.get('x2', 0) * scale_x + offset_x
                     y2 = el_data.get('y2', 0) * scale_y + offset_y
+                    pointer_text = el_data.get('text', '')
+                    pointer_font_size = el_data.get('fontSize', 16)
                     
                     # Calculate angle of the pointer
                     angle = math.atan2(y2 - y1, x2 - x1)
@@ -1037,6 +1039,46 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     # Draw filled arrowhead
                     draw.polygon([(tip_x, tip_y), (left_x, left_y), (right_x, right_y)], 
                                  fill=(*rgb_color, 255))
+                    
+                    # Render memo text near start point (if available)
+                    if pointer_text:
+                        try:
+                            from PIL import ImageFont
+                            # Scale font size
+                            scaled_font_size = max(10, int(pointer_font_size * uniform_scale * 0.8))
+                            try:
+                                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", scaled_font_size)
+                            except:
+                                font = ImageFont.load_default()
+                            
+                            # Position text near the start of the arrow (offset perpendicular to arrow direction)
+                            text_offset_x = x1 + 15 * uniform_scale * math.cos(angle - math.pi / 2)
+                            text_offset_y = y1 + 15 * uniform_scale * math.sin(angle - math.pi / 2)
+                            
+                            # Draw background rectangle for better readability
+                            bbox = font.getbbox(pointer_text)
+                            text_width = bbox[2] - bbox[0]
+                            text_height = bbox[3] - bbox[1]
+                            padding = 4
+                            
+                            # Background box
+                            bg_x1 = text_offset_x - padding
+                            bg_y1 = text_offset_y - text_height - padding
+                            bg_x2 = text_offset_x + text_width + padding
+                            bg_y2 = text_offset_y + padding
+                            
+                            draw.rectangle([bg_x1, bg_y1, bg_x2, bg_y2], 
+                                         fill=(255, 255, 255, 220),
+                                         outline=(*rgb_color, 255),
+                                         width=1)
+                            
+                            # Draw text
+                            draw.text((text_offset_x, text_offset_y - text_height), 
+                                     pointer_text, 
+                                     fill=(*rgb_color, 255), 
+                                     font=font)
+                        except Exception as e:
+                            print(f"Error rendering pointer text: {e}")
                 
                 elif el_type == 'text':
                     # Render text with dynamic font size and style

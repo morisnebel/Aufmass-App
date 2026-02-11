@@ -681,6 +681,17 @@ export default function DrawSketchScreen() {
           rotation: 0,
         };
         break;
+      case 'pointer':
+        // Pointer-Pfeil: Dicke Linie mit großer Pfeilspitze (nur eine Spitze am Ende)
+        element = {
+          id: 'temp',
+          type: 'pointer',
+          data: { x1: start.x, y1: start.y, x2: endX, y2: endY },
+          color: drawColor,
+          strokeWidth: Math.max(strokeWidth * 2, 6), // Mindestens doppelt so dick
+          rotation: 0,
+        };
+        break;
     }
 
     setTempElement(element);

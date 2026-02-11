@@ -138,9 +138,13 @@ class MemoPointerTester:
                 data = response.json()
                 pdf_data = data.get('pdf_data', '')
                 
-                if pdf_data and pdf_data.startswith('data:application/pdf;base64,'):
-                    # Decode and save PDF
-                    pdf_bytes = base64.b64decode(pdf_data.split(',')[1])
+                if pdf_data:
+                    # Handle both data URI format and plain base64
+                    if pdf_data.startswith('data:application/pdf;base64,'):
+                        pdf_bytes = base64.b64decode(pdf_data.split(',')[1])
+                    else:
+                        # Plain base64 format
+                        pdf_bytes = base64.b64decode(pdf_data)
                     
                     # Verify PDF format
                     if pdf_bytes.startswith(b'%PDF'):

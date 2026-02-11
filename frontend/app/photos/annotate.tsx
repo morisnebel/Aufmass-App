@@ -9,6 +9,8 @@ import {
   Dimensions,
   ScrollView,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

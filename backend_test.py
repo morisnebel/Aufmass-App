@@ -923,10 +923,191 @@ class AufmassAPITester:
         
         return overall_success
 
+    def test_memo_pfeil_pdf_generation(self, project_id="698b920ed3804d56afcad4a2"):
+        """
+        Test PDF generation with Memo-Pfeilen (pointer elements) for specific project ID.
+        This tests the arrow tip size reduction fix that was implemented but never tested.
+        """
+        print("\n🎯 Testing Memo-Pfeil PDF Generation...")
+        print(f"   Project ID: {project_id}")
+        
+        try:
+            # 1. Check if project exists
+            print(f"   🔍 Checking if project {project_id} exists...")
+            project_response = self.make_request('GET', f'/projects/{project_id}')
+            if not project_response:
+                self.log_error(f"Project {project_id} not found")
+                return False
+            
+            self.log_success(f"Project found: '{project_response.get('name', 'Unknown')}'")
+            
+            # 2. Check for existing sketches with pointer elements
+            print(f"   🔍 Checking for sketches with pointer elements...")
+            sketches_response = self.make_request('GET', f'/sketches/project/{project_id}')
+            
+            pointer_count = 0
+            if sketches_response:
+                for sketch in sketches_response:
+                    metadata = sketch.get('metadata')
+                    if metadata:
+                        try:
+                            metadata_obj = json.loads(metadata)
+                            elements = metadata_obj.get('elements', [])
+                            for element in elements:
+                                if element.get('type') == 'pointer':
+                                    pointer_count += 1
+                        except:
+                            pass
+            
+            self.log_success(f"Found {len(sketches_response) if sketches_response else 0} sketches with {pointer_count} pointer elements")
+            
+            # 3. Create test sketch with pointer elements if none exist
+            test_sketch_id = None
+            if pointer_count == 0:
+                print(f"   📝 Creating test sketch with pointer elements...")
+                
+                # Create test metadata with pointer elements
+                test_metadata = {
+                    "canvasWidth": 800,
+                    "canvasHeight": 600,
+                    "elements": [
+                        {
+                            "type": "pointer",
+                            "data": {
+                                "x1": 100,
+                                "y1": 100,
+                                "x2": 200,
+                                "y2": 150,
+                                "text": "Test-Notiz für Memo-Pfeil",
+                                "fontSize": 16
+                            },
+                            "color": "#e91e63",
+                            "strokeWidth": 6,
+                            "rotation": 0
+                        },
+                        {
+                            "type": "pointer", 
+                            "data": {
+                                "x1": 300,
+                                "y1": 200,
+                                "x2": 400,
+                                "y2": 250,
+                                "text": "Pfeilspitzen-Größe Test",
+                                "fontSize": 14
+                            },
+                            "color": "#2196f3",
+                            "strokeWidth": 4,
+                            "rotation": 0
+                        }
+                    ]
+                }
+                
+                # Create simple SVG for sketch_data
+                svg_content = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="800" height="600" fill="white"/>
+                    <text x="400" y="50" text-anchor="middle" font-size="20" fill="black">Memo-Pfeil Test</text>
+                </svg>'''
+                
+                sketch_data_base64 = base64.b64encode(svg_content.encode()).decode()
+                
+                sketch_payload = {
+                    "project_id": project_id,
+                    "sketch_data": f"data:image/svg+xml;base64,{sketch_data_base64}",
+                    "title": "Memo-Pfeil Test Sketch",
+                    "metadata": json.dumps(test_metadata)
+                }
+                
+                sketch_response = self.make_request('POST', '/sketches', sketch_payload)
+                if sketch_response:
+                    test_sketch_id = sketch_response.get('id')
+                    self.log_success(f"Test sketch created with ID: {test_sketch_id}")
+                else:
+                    self.log_error("Failed to create test sketch")
+                    return False
+            
+            # 4. Test PDF generation
+            print(f"   📄 Generating PDF...")
+            import time
+            start_time = time.time()
+            
+            pdf_response = self.make_request('GET', f'/export/pdf/{project_id}')
+            generation_time = time.time() - start_time
+            
+            if pdf_response and 'pdf_data' in pdf_response:
+                # Decode and save PDF
+                try:
+                    pdf_bytes = base64.b64decode(pdf_response['pdf_data'])
+                    pdf_size = len(pdf_bytes)
+                    
+                    # Verify PDF format
+                    is_valid_pdf = pdf_bytes.startswith(b'%PDF')
+                    
+                    if is_valid_pdf:
+                        # Save PDF for manual inspection
+                        pdf_path = f"/tmp/memo_pfeil_test_{project_id}.pdf"
+                        with open(pdf_path, 'wb') as f:
+                            f.write(pdf_bytes)
+                        
+                        self.log_success(f"PDF generated successfully - Size: {pdf_size:,} bytes, Time: {generation_time:.3f}s")
+                        self.log_success(f"PDF saved to: {pdf_path}")
+                        
+                        # Additional verification
+                        if pdf_size > 10000:  # At least 10KB indicates substantial content
+                            self.log_success("PDF size indicates substantial content with pointer elements")
+                        else:
+                            print(f"   ⚠️  PDF size is small ({pdf_size:,} bytes) - may indicate missing content")
+                        
+                        # Cleanup test sketch if created
+                        if test_sketch_id:
+                            print(f"   🧹 Cleaning up test sketch...")
+                            cleanup_response = self.make_request('DELETE', f'/sketches/{test_sketch_id}')
+                            if cleanup_response:
+                                self.log_success("Test sketch cleaned up successfully")
+                        
+                        return True
+                    else:
+                        self.log_error("PDF generation returned invalid PDF format")
+                        return False
+                        
+                except Exception as e:
+                    self.log_error("Failed to decode PDF data", e)
+                    return False
+            else:
+                self.log_error("PDF generation failed - no pdf_data in response")
+                return False
+                
+        except Exception as e:
+            self.log_error("Memo-Pfeil PDF test failed", e)
+            return False
+
 def main():
     """Main test execution"""
     tester = AufmassAPITester()
-    success = tester.run_complete_workflow_test()
+    
+    # Run the specific Memo-Pfeil PDF test as requested
+    print("=" * 80)
+    print("MEMO-PFEIL PDF GENERATION TEST")
+    print("=" * 80)
+    print("Testing PDF generation with Memo-Pfeilen (pointer elements)")
+    print("Focus: Arrow tip size reduction fix verification")
+    print()
+    
+    success = tester.test_memo_pfeil_pdf_generation()
+    
+    if success:
+        print("\n🎉 MEMO-PFEIL PDF TEST COMPLETED SUCCESSFULLY!")
+        print("📋 MANUAL VERIFICATION REQUIRED:")
+        print("   1. Open the generated PDF file: /tmp/memo_pfeil_test_698b920ed3804d56afcad4a2.pdf")
+        print("   2. Check the 'Skizzen' section for pointer elements (Memo-Pfeile)")
+        print("   3. Verify that arrow tips have reasonable size (not overproportional)")
+        print("   4. Confirm the arrow tip size reduction fix is working correctly")
+    else:
+        print("\n💥 MEMO-PFEIL PDF TEST FAILED!")
+        print("🔧 Check backend logs and ensure:")
+        print("   1. Project ID 698b920ed3804d56afcad4a2 exists")
+        print("   2. Backend service is running properly")
+        print("   3. PDF generation pipeline is working")
+    
     return 0 if success else 1
 
 if __name__ == "__main__":

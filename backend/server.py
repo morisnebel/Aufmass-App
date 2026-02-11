@@ -1017,7 +1017,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                     angle = math.atan2(y2 - y1, x2 - x1)
                     
                     # Large arrowhead dimensions (proportional to stroke width)
-                    pointer_stroke = max(stroke_width * 2, 6 * uniform_scale)
+                    pointer_stroke = max(el_stroke_width * 2, 6 * uniform_scale)
                     arrow_head_size = max(20 * uniform_scale, pointer_stroke * 3)
                     arrow_head_angle = math.pi / 6  # 30 degrees
                     

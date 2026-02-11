@@ -1051,7 +1051,7 @@ export default function DrawSketchScreen() {
             y >= el.data.y - 10 && y <= el.data.y + el.data.height + 10) {
           return el;
         }
-      } else if (el.type === 'line' || el.type === 'arrow') {
+      } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
         const dist = distanceToLineSegment(x, y, el.data.x1, el.data.y1, el.data.x2, el.data.y2);
         if (dist < 15) return el;
       } else if (el.type === 'text') {

@@ -185,54 +185,58 @@ class MemoPointerTester:
     def check_backend_logs(self):
         """Check backend logs for pointer processing and errors"""
         try:
-            # Check recent backend logs
-            result = subprocess.run(
-                ['tail', '-n', '100', '/var/log/supervisor/backend.out.log'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            # Check both output and error logs for pointer processing
+            logs_to_check = [
+                '/var/log/supervisor/backend.out.log',
+                '/var/log/supervisor/backend.err.log'
+            ]
             
-            if result.returncode == 0:
-                log_content = result.stdout
-                
-                # Look for pointer processing messages
-                pointer_logs = []
-                error_logs = []
-                
-                for line in log_content.split('\n'):
-                    if 'PDF RENDER: Processing POINTER element' in line:
-                        pointer_logs.append(line.strip())
-                    elif 'Error rendering element pointer' in line or 'NameError' in line:
-                        error_logs.append(line.strip())
-                
-                # Check for successful pointer processing
-                if pointer_logs:
-                    success_msg = f"Found {len(pointer_logs)} pointer processing log entries"
-                    for log in pointer_logs:
-                        success_msg += f"\n   LOG: {log}"
-                    self.log_test("Backend Log - Pointer Processing", True, success_msg)
-                else:
-                    self.log_test(
-                        "Backend Log - Pointer Processing",
-                        False,
-                        "No 'PDF RENDER: Processing POINTER element' messages found"
+            pointer_logs = []
+            error_logs = []
+            
+            for log_file in logs_to_check:
+                try:
+                    result = subprocess.run(
+                        ['tail', '-n', '100', log_file],
+                        capture_output=True,
+                        text=True,
+                        timeout=10
                     )
-                
-                # Check for errors
-                if error_logs:
-                    error_msg = f"Found {len(error_logs)} pointer-related errors"
-                    for log in error_logs:
-                        error_msg += f"\n   ERROR: {log}"
-                    return self.log_test("Backend Log - Error Check", False, error_msg)
-                else:
-                    return self.log_test(
-                        "Backend Log - Error Check",
-                        True,
-                        "No pointer-related errors found in backend logs"
-                    )
+                    
+                    if result.returncode == 0:
+                        for line in result.stdout.split('\n'):
+                            if 'PDF RENDER: Processing POINTER element' in line:
+                                pointer_logs.append(line.strip())
+                            elif 'Error rendering element pointer' in line or 'NameError' in line:
+                                error_logs.append(line.strip())
+                except:
+                    continue
+            
+            # Check for successful pointer processing
+            if pointer_logs:
+                success_msg = f"Found {len(pointer_logs)} pointer processing log entries"
+                for log in pointer_logs[-3:]:  # Show last 3 entries
+                    success_msg += f"\n   LOG: {log}"
+                self.log_test("Backend Log - Pointer Processing", True, success_msg)
             else:
-                return self.log_test("Backend Log Check", False, f"Failed to read logs: {result.stderr}")
+                self.log_test(
+                    "Backend Log - Pointer Processing",
+                    False,
+                    "No 'PDF RENDER: Processing POINTER element' messages found"
+                )
+            
+            # Check for errors
+            if error_logs:
+                error_msg = f"Found {len(error_logs)} pointer-related errors"
+                for log in error_logs:
+                    error_msg += f"\n   ERROR: {log}"
+                return self.log_test("Backend Log - Error Check", False, error_msg)
+            else:
+                return self.log_test(
+                    "Backend Log - Error Check",
+                    True,
+                    "No pointer-related errors found in backend logs"
+                )
                 
         except Exception as e:
             return self.log_test("Backend Log Check", False, f"Log check failed: {str(e)}")

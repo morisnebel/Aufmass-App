@@ -3138,8 +3138,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976d2',
   },
   toolButtonWide: {
-    paddingHorizontal: 12,
-    minWidth: 52,
+    paddingHorizontal: 6,
+    minWidth: 68,
   },
   toolButtonDisabled: {
     opacity: 0.4,

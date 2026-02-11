@@ -2645,47 +2645,52 @@ export default function DrawSketchScreen() {
           )}
         </View>
 
-        {/* Polyline Steuerung */}
-        {drawMode === 'polyline' && polylinePoints.length > 0 && (
-          <View style={styles.polylineControls}>
-            <Text style={styles.polylineInfo}>
-              Grundriss: {polylinePoints.length} Punkte
-            </Text>
-            <View style={styles.polylineButtons}>
-              <TouchableOpacity 
-                style={[styles.polylineButton, styles.polylineButtonUndo]} 
-                onPress={undoLastPolylinePoint}
-              >
-                <Ionicons name="arrow-undo" size={18} color="#fff" />
-                <Text style={styles.polylineButtonText}>Zurück</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.polylineButton, styles.polylineButtonFinish]} 
-                onPress={() => finishPolyline(false)}
-              >
-                <Ionicons name="checkmark" size={18} color="#fff" />
-                <Text style={styles.polylineButtonText}>Fertig</Text>
-              </TouchableOpacity>
-              {polylinePoints.length >= 3 && (
-                <TouchableOpacity 
-                  style={[styles.polylineButton, styles.polylineButtonClose]} 
-                  onPress={() => finishPolyline(true)}
-                >
-                  <Ionicons name="close-circle" size={18} color="#fff" />
-                  <Text style={styles.polylineButtonText}>Schließen</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity 
-                style={[styles.polylineButton, styles.polylineButtonCancel]} 
-                onPress={cancelPolyline}
-              >
-                <Ionicons name="trash" size={18} color="#fff" />
-                <Text style={styles.polylineButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       </View>
+
+      {/* Polyline Steuerung - AUSSERHALB des Canvas für Touch-Events */}
+      {drawMode === 'polyline' && polylinePoints.length > 0 && (
+        <View style={styles.polylineControls} pointerEvents="box-none">
+          <Text style={styles.polylineInfo}>
+            Grundriss: {polylinePoints.length} Punkte
+          </Text>
+          <View style={styles.polylineButtons}>
+            <TouchableOpacity 
+              style={[styles.polylineButton, styles.polylineButtonUndo]} 
+              onPress={undoLastPolylinePoint}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-undo" size={18} color="#fff" />
+              <Text style={styles.polylineButtonText}>Zurück</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.polylineButton, styles.polylineButtonFinish]} 
+              onPress={() => finishPolyline(false)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark" size={18} color="#fff" />
+              <Text style={styles.polylineButtonText}>Fertig</Text>
+            </TouchableOpacity>
+            {polylinePoints.length >= 3 && (
+              <TouchableOpacity 
+                style={[styles.polylineButton, styles.polylineButtonClose]} 
+                onPress={() => finishPolyline(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={18} color="#fff" />
+                <Text style={styles.polylineButtonText}>Schließen</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={[styles.polylineButton, styles.polylineButtonCancel]} 
+              onPress={cancelPolyline}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash" size={18} color="#fff" />
+              <Text style={styles.polylineButtonText}>Abbrechen</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">

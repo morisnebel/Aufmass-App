@@ -442,7 +442,12 @@ export default function DrawSketchScreen() {
       }
     }
     
-    router.back();
+    // Navigate back to project details with sketches tab
+    if (projectId) {
+      router.replace(`/projects/${projectId}?tab=sketches`);
+    } else {
+      router.replace('/');
+    }
   };
 
   // Delete selected element

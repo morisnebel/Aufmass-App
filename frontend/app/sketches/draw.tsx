@@ -155,7 +155,7 @@ interface DrawElement {
   fontStyle?: 'normal' | 'italic';
 }
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'text' | 'image' | 'polygon' | 'polyline';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline';
 
 export default function DrawSketchScreen() {
   const router = useRouter();

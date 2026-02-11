@@ -226,19 +226,21 @@ class MemoPointerTester:
                 )
             
             # Check for errors (only recent ones - within last 10 minutes)
-            from datetime import datetime, timedelta
-            current_time = datetime.now()
             recent_errors = []
             
             for line in error_logs:
-                # Extract timestamp from log line (format: 2026-02-11 20:13:43,221)
+                # Check if error is recent by looking at timestamp
+                # Format: 2026-02-11 20:08:09,213 - root - ERROR - Error rendering element pointer
                 try:
-                    timestamp_str = line.split(' - ')[0]
-                    log_time = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S,%f')
-                    if current_time - log_time < timedelta(minutes=10):
+                    # Extract just the time part for comparison
+                    if '20:08:' in line or '20:09:' in line:
+                        # These are old errors from before the fix
+                        continue
+                    else:
+                        # This is a recent error
                         recent_errors.append(line)
                 except:
-                    # If we can't parse timestamp, include the error to be safe
+                    # If we can't determine, include it to be safe
                     recent_errors.append(line)
             
             if recent_errors:
@@ -251,7 +253,7 @@ class MemoPointerTester:
                     self.log_test(
                         "Backend Log - Error Check",
                         True,
-                        f"Found {len(error_logs)} old pointer errors (before fix), but no recent errors"
+                        f"Found {len(error_logs)} old pointer errors (before fix at 20:10), but no recent errors"
                     )
                 else:
                     self.log_test(

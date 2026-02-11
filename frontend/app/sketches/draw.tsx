@@ -1890,10 +1890,11 @@ export default function DrawSketchScreen() {
         
         // Notiz-Text in der Vorschau anzeigen (wenn vorhanden)
         if (pointerText) {
-          const fontSize = Math.max(8, 12 * scale);
-          const textX = x1 + 10 * scale * Math.cos(angle - Math.PI / 2);
-          const textY = y1 + 10 * scale * Math.sin(angle - Math.PI / 2);
-          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
+          const fontSize = Math.max(10, 14 * scale);
+          // Text am Startpunkt des Pfeils positionieren, leicht versetzt
+          const textX = x1;
+          const textY = y1 - 8; // 8px oberhalb des Startpunkts
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold" dominant-baseline="auto">${pointerText}</text>`;
         }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;

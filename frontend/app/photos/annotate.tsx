@@ -342,6 +342,20 @@ export default function AnnotatePhotoScreen() {
         </ScrollView>
       </View>
 
+      {/* Beschreibung Eingabefeld */}
+      <View style={styles.descriptionContainer}>
+        <Text style={styles.descriptionLabel}>Beschreibung:</Text>
+        <TextInput
+          style={styles.descriptionInput}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Beschreibung zum Foto eingeben..."
+          placeholderTextColor="#999"
+          multiline={false}
+          returnKeyType="done"
+        />
+      </View>
+
       <View 
         style={styles.canvasContainer} 
         ref={canvasRef}

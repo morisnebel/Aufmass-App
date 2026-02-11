@@ -324,10 +324,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PDF Export Fundamental Generation Failure"
     - "Sketch Metadata Save/Load Issue"
   stuck_tasks:
-    - "PDF Export Functionality"
     - "Sketches CRUD Operations"
   test_all: false
   test_priority: "high_first"

@@ -626,20 +626,15 @@ export default function DrawSketchScreen() {
       setStartPoint(null);
       setTempElement(null);
     } else if (startPoint && drawMode === 'pointer') {
-      // Pointer-Pfeil direkt erstellen (ohne Modal)
+      // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
       const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
       const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
       
-      const newElement: DrawElement = {
-        id: generateId(),
-        type: 'pointer',
-        data: { x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY },
-        color: drawColor,
-        strokeWidth: Math.max(strokeWidth * 2, 6),
-        rotation: 0,
-      };
-      addToHistory([...elements, newElement]);
+      // Speichere die Pointer-Koordinaten und öffne Modal
+      setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+      setPointerText(''); // Text zurücksetzen
+      setShowPointerModal(true);
       setStartPoint(null);
       setTempElement(null);
     } else if (startPoint && tempElement) {

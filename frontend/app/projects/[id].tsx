@@ -156,6 +156,13 @@ export default function ProjectDetailScreen() {
     return { street, plz, city };
   };
 
+  // Update active tab when URL parameter changes (e.g., when navigating back from sketch editor)
+  useEffect(() => {
+    if (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks') {
+      setActiveTab(tab);
+    }
+  }, [tab]);
+
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {

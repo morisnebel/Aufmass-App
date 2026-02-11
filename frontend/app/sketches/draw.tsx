@@ -216,12 +216,15 @@ export default function DrawSketchScreen() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
   const [showArrowModal, setShowArrowModal] = useState(false);
+  const [showPointerModal, setShowPointerModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditArrowModal, setShowEditArrowModal] = useState(false);
   const [showEditTextModal, setShowEditTextModal] = useState(false);
+  const [showEditPointerModal, setShowEditPointerModal] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
+  const [pointerText, setPointerText] = useState('');
   
   // Edit state for text and arrow
   const [editFontSize, setEditFontSize] = useState(20);
@@ -229,6 +232,7 @@ export default function DrawSketchScreen() {
   const [editFontWeight, setEditFontWeight] = useState<'normal' | 'bold'>('bold');
   const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
   const [editArrowFontSize, setEditArrowFontSize] = useState(14);
+  const [editPointerFontSize, setEditPointerFontSize] = useState(16);
   
   // Double tap detection
   const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });

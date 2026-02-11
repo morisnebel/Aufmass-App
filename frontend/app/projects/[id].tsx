@@ -97,7 +97,7 @@ interface Checklist {
 
 export default function ProjectDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, tab } = useLocalSearchParams();
   const [project, setProject] = useState<Project | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [roofs, setRoofs] = useState<Roof[]>([]);
@@ -105,7 +105,10 @@ export default function ProjectDetailScreen() {
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks'>('overview');
+  
+  // Determine initial tab from URL parameter
+  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks') ? tab : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks'>(initialTab);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);

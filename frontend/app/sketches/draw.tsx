@@ -836,6 +836,7 @@ export default function DrawSketchScreen() {
               fontSize: editPointerFontSize,
             },
             color: drawColor,
+            strokeWidth: editPointerStrokeWidth,
           };
         }
         return el;

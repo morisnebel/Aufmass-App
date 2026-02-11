@@ -2788,6 +2788,116 @@ export default function DrawSketchScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Pointer (Memo Arrow) Modal - New */}
+      <Modal visible={showPointerModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Memo-Pfeil</Text>
+            <Text style={styles.modalSubtitle}>Optional: Notiz hinzufügen</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={pointerText}
+              onChangeText={setPointerText}
+              placeholder="Notiz eingeben (optional)"
+              autoFocus
+              multiline
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowPointerModal(false);
+                  setPointerText('');
+                  setPendingPointer(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addPointerElement}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Pointer Modal */}
+      <Modal visible={showEditPointerModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Memo-Pfeil bearbeiten</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={pointerText}
+                onChangeText={setPointerText}
+                placeholder="Notiz eingeben (optional)"
+                multiline
+              />
+              
+              {/* Font Size Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Schriftgröße: {editPointerFontSize}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditPointerFontSize(Math.max(10, editPointerFontSize - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((editPointerFontSize - 10) / 30) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditPointerFontSize(Math.min(40, editPointerFontSize + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.colorPickerContainer}>
+                <Text style={styles.modalLabel}>Farbe:</Text>
+                <View style={styles.colorGrid}>
+                  {colors.map(color => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        drawColor === color && styles.colorOptionSelected,
+                      ]}
+                      onPress={() => setDrawColor(color)}
+                    />
+                  ))}
+                </View>
+              </View>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowEditPointerModal(false);
+                    setPointerText('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={updatePointerElement}
+                >
+                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Edit Text Modal */}
       <Modal visible={showEditTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

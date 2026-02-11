@@ -1890,11 +1890,16 @@ export default function DrawSketchScreen() {
         
         // Notiz-Text in der Vorschau anzeigen (wenn vorhanden)
         if (pointerText) {
-          const fontSize = Math.max(10, 14 * scale);
-          // Text am Startpunkt des Pfeils positionieren, leicht versetzt
-          const textX = x1;
-          const textY = y1 - 8; // 8px oberhalb des Startpunkts
-          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold" dominant-baseline="auto">${pointerText}</text>`;
+          // Größere Schriftgröße für bessere Lesbarkeit in der Vorschau
+          const fontSize = Math.max(12, 18 * scale);
+          // Text am Startpunkt des Pfeils positionieren mit Hintergrund-Box
+          const textX = x1 + 2;
+          const textY = y1 - 4;
+          // Hintergrund-Rechteck für bessere Lesbarkeit
+          const textWidth = pointerText.length * fontSize * 0.6;
+          const textHeight = fontSize + 4;
+          svgElements += `<rect x="${(textX - 2).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.85" rx="2"/>`;
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
         }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;

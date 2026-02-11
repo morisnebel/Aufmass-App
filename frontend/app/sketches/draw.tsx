@@ -2262,6 +2262,7 @@ export default function DrawSketchScreen() {
                 // Memo-Pfeil bearbeiten
                 setPointerText(selectedEl.data.text || '');
                 setEditPointerFontSize(selectedEl.data.fontSize || 16);
+                setEditPointerStrokeWidth(selectedEl.strokeWidth || 6);
                 setDrawColor(selectedEl.color);
                 setShowEditPointerModal(true);
               }

@@ -2131,11 +2131,11 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'arrow' && styles.toolButtonActive]}
+          style={[styles.toolButton, styles.toolButtonWide, drawMode === 'arrow' && styles.toolButtonActive]}
           onPress={() => setDrawMode('arrow')}
         >
           {/* Benutzerdefiniertes Maßlinie-Icon: Linie mit zwei Pfeilen und M in der Mitte */}
-          <Svg width={30} height={30} viewBox="0 0 24 24">
+          <Svg width={36} height={28} viewBox="0 0 24 24">
             {/* Linker Pfeil */}
             <Polygon 
               points="2,12 7,8 7,16" 

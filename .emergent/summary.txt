@@ -4,86 +4,69 @@
 1.  The auto-save feature is not working as expected. Sketches should be saved automatically when the user clicks the back button to return to the sketch list.
 2.  The control buttons for the Polyline tool (Undo, Finish, Cancel) are not responding to taps, making the tool unusable.
 
-These are in addition to older, unverified tasks, such as a fix for a Memo-Pfeil preview note and a critical UI freeze bug.
+Additionally, the user has a new navigation requirement:
+3. After saving a sketch via the back button, the app should navigate to the project's Sketches tab to show the list of sketches.
 
 PRODUCT REQUIREMENTS:
 1.  Sketches must be saved automatically when navigating away from the editor via the back button to prevent data loss.
 2.  All sketch tools, including the Polyline tool and its controls, must be fully functional and responsive.
-3.  The Memo-Pfeil tool's visual representation must be correct in all contexts.
+3.  The navigation flow from the sketch editor back to the project view must land the user on the Sketches tab.
 4.  The app must be stable and free of critical bugs like UI freezes.
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-The agent has been actively debugging two user-reported issues within the  file.
+The agent successfully fixed two user-reported issues. The Polyline tool controls are now working, and the auto-save feature correctly saves the sketch when the user navigates back. Both fixes have been confirmed by the user.
 
-1.  **Auto-Save:** The agent implemented a new  function intended to save the sketch before navigating back. This function was then attached to the header's back button. This code has been written but is completely untested.
-2.  **Polyline Controls:** The agent diagnosed that the polyline control buttons are likely being obscured by the main canvas view, which is intercepting touch events. The agent was in the process of fixing this, with the intention of increasing the  of the button container.
-
-The agent has a clear understanding of the problems but has not yet completed or tested the fixes.
+However, the navigation part of the auto-save fix introduced a new, minor issue. While the app navigates back to the correct project details page, it does not automatically select the Sketches tab as requested by the user. The agent has correctly diagnosed that the project details page () does not read the  parameter from the URL. The agent was in the process of adding this logic.
 
 **Last working item**:
-    - Last item agent was working: Fixing the non-functional Polyline tool control buttons (Undo, Finish, Cancel) in . The agent's diagnosis is that the canvas is capturing touch events, and the planned fix is to increase the  of the controls' container.
+    - Last item agent was working: Making the project details page () aware of the  URL query parameter to correctly display the Sketches tab upon navigation from the sketch editor.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent. The test must verify both recent changes:
-        1.  **Auto-Save Test**: Navigate to a sketch, make a change, click the header's back button. Re-open the sketch and confirm the change was saved.
-        2.  **Polyline Test**: Select the polyline tool. Draw several points. Verify that the Undo, Cancel, and Finish buttons all appear and function correctly.
+    - Which testing method agent to use? Frontend testing agent. The test must verify that navigating back from the sketch editor () successfully lands the user on the project details page () with the Sketches tab active.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Polyline control buttons are not working (P0)
-  - Issue 2: The new auto-save-on-back-press feature is untested (P0)
-  - Issue 3: Memo-Pfeil note visibility fix needs user confirmation (P1)
-  - Issue 4: Verify PDF arrowhead size is correct after backend fix (P2)
-  - Issue 5: Dimension Line tool's custom icon is distorted (P2, Carry-over)
-  - Issue 6: Verify critical UI freeze bug in New Project workflow (P2, Carry-over)
+  - Issue 1: Navigation from sketch editor does not activate the Sketches tab on the project page (P0)
+  - Issue 2: Memo-Pfeil note visibility fix needs user confirmation (P1)
+  - Issue 3: Verify PDF arrowhead size is correct after backend fix (P2)
+  - Issue 4: Dimension Line tool's custom icon is distorted (P2, Carry-over)
+  - Issue 5: Verify critical UI freeze bug in New Project workflow (P2, Carry-over, CRITICAL)
   
   Issues Detail:
   - **Issue 1**: 
-     - **Description**: User reported that the control buttons for the polyline tool (Undo, Finish, Cancel) in  do not respond to taps.
-     - **Attempted fixes**: The agent has diagnosed the problem as a likely  issue where the canvas view captures touch events. A code fix has not been fully implemented yet.
+     - **Description**: The user wants to be taken to the sketch list (Skizzen-Vorschau) after leaving the sketch editor. The agent implemented navigation to , but the destination page ignores the  parameter and defaults to the first tab.
+     - **Attempted fixes**: The agent identified the missing logic in .
      - **Next debug checklist**:
         1. Open .
-        2. Locate the style definition for  (around line 3444).
-        3. Add  to the style to ensure it renders above the canvas.
-        4. Test the functionality using the frontend testing agent or manually.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a core feature of the sketch tool. Fixing it will make the polyline tool usable again.
-     - **Status**:  IN PROGRESS
-     - **Is recurring issue?** N
-     - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: None
-
-  - **Issue 2**:
-     - **Description**: The user specified that saving should occur when clicking the header's back button. The agent implemented a  function to replace the simple  call.
-     - **Attempted fixes**: A code change was made in  to implement this logic. It is completely untested.
-     - **Next debug checklist**:
-        1. After fixing Issue 1, run a test to verify the auto-save logic.
-        2. Modify a sketch, press the back button, and re-enter to ensure the change persisted.
-        3. Check for edge cases: Does it attempt to save if no changes were made?
-     - **Why fix this issue and what will be achieved with the fix?**: This is a direct user request to improve the workflow and prevent data loss.
+        2. Import  and  from  and  respectively.
+        3. Read the  parameter from the URL using .
+        4. Use a  hook to set the  state to the value of the  parameter if it exists.
+        5. Test the complete flow: open a sketch, press back, and verify the Sketches tab is active.
+     - **Why fix this issue and what will be achieved with the fix?**: This fulfills a direct user request and improves the application's navigation flow, making it more intuitive.
      - **Status**:  IN PROGRESS
      - **Is recurring issue?** N
      - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on other issue**: None
 
 **In progress Task List**:
-  - Task 1: Complete the fix for the Polyline control buttons (P0)
-     - **Where to resume**: In , add  to the  style object.
-     - **What will be achieved with this?**: It will make the Polyline tool's controls functional.
+  - Task 1:  Implement URL parameter handling for active tab (P0)
+     - **Where to resume**: In , add the logic to read the  query parameter and update the  state.
+     - **What will be achieved with this?**: The app will navigate to the correct tab as per the user's request, completing the auto-save feature workflow.
      - **Status**:  IN PROGRESS
      - **Should Test frontend/backend/both after fix?**: Frontend
      - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
- - **Upcoming (P1)**: **TEST THE AUTO-SAVE FEATURE.** After fixing the polyline buttons, the new auto-save-on-back-press functionality in  must be tested.
- - **Upcoming (P2)**: **VERIFY THE UI FREEZE BUG FIX.** Manually test the New Project -> Create New Customer workflow in  to confirm if the freeze still occurs. This is a critical stability issue that has been ignored for multiple sessions.
+ - **Upcoming (P1)**: **VERIFY THE UI FREEZE BUG FIX.** Manually test the New Project -> Create New Customer workflow in  to confirm if the freeze still occurs. This is a critical stability issue that has been ignored for multiple sessions.
  - **Upcoming (P2)**: Fix the distorted rendering of the custom SVG icon for the Dimension Line tool in .
  - **Future (P3)**: Fix the PDF page break issue where roof measurement calculations are split across pages in .
 
 **Completed work in this session**
-- Diagnosed two new user-reported bugs: non-functional polyline controls and incorrect auto-save trigger.
-- Implemented a new  function in  to trigger save before navigating back (This is written but remains untested).
+- **Polyline Tool Fixed**: The control buttons (Undo, Finish, Cancel) for the Polyline tool are now functional. The agent correctly diagnosed an event capturing issue in  and resolved it by moving the controls outside the problematic . User has confirmed the fix.
+- **Auto-Save on Back Press Implemented**: Sketches are now automatically saved when the user presses the back button in the editor. User has confirmed the save functionality works well.
+- **Navigation Crash Fixed**: The agent fixed a crash (GO_BACK was not handled) by replacing  with  to navigate to a specific URL.
 
 **Earlier issues found/mentioned but not fixed**
    - **Issue 1**: Critical UI freeze bug in .
@@ -103,29 +86,43 @@ The agent has a clear understanding of the problems but has not yet completed or
 
 
 **Key Technical Concepts**
-- **React Native Styling ()**: The primary concept for fixing the polyline button issue is to use  to control the stacking order of absolutely positioned elements.
-- **React Native Event Bubbling**: The root cause of the polyline issue is that the parent  (the canvas) is capturing touch events before they can bubble up to the child buttons.  is the proposed solution.
-- **Expo Router ()**: The auto-save fix involves replacing a direct call to  with a custom function that performs an action () before navigation.
+- **React Native Event Handling**: The polyline fix involved understanding that  on a parent  was capturing all touch events, preventing child buttons from being pressed. The solution was to move the child elements outside the parent.
+- **Expo Router Navigation**: The agent used  to perform a direct navigation and pass parameters. The next step involves using  on the destination page to read those parameters.
+
+**key DB schema**
+  - No changes made to the database schema in this session.
+
+**changes in tech stack**
+  - None.
 
 **All files of reference**
-- : This is the only file that has been worked on. It contains the bugs and the attempted fixes.
+- : File was modified to fix the Polyline tool and to implement the auto-save and back-navigation logic.
+- : This is the next file to be modified. It needs to be updated to handle the  parameter in the URL to set the active tab.
+
+**Areas that need refactoring**:
+- None identified.
+
+**key api endpoints**
+- None created or modified.
 
 **Critical Info for New Agent**
 - You must continue all user communication in **German**.
-- **Your immediate priority (P0) is to fix the polyline buttons.** The diagnosis is a  issue. Open , find the  style (around line 3444), and add .
-- **Your second priority (P0) is to test both of the recent changes.** After applying the  fix, use the frontend testing agent to verify that both the polyline buttons AND the new auto-save-on-back-press feature work correctly.
-- The user is actively providing feedback. Resolving these two issues should be your entire focus before moving on to older tasks.
-- Once the active issues are resolved and confirmed with the user, **DO NOT FORGET** to finally verify the longstanding UI freeze bug in the New Project workflow.
+- **Your immediate priority (P0) is to fix the navigation tab issue.** The user wants to land on the Sketches tab after leaving the editor. You need to edit . The previous agent correctly identified the plan: use  to get the  parameter from the URL and use a  hook to set the  state.
+- The Polyline tool and Auto-Save functionality are **FIXED and VERIFIED** by the user. Do not revisit them unless the user reports a new problem.
+- After fixing the navigation tab issue and getting user confirmation, you **MUST** address the long-pending critical UI freeze bug in the New Project workflow. It has been carried over for too long.
 
 **documents created in this job**
 - None.
 
-**Last 10 User Messages and any pending HUMAN messages**
- - 1. (Latest)  - User reports that saving isn't working on back-click and that the polyline controls are broken. (Status: In Progress).
+**Last 10 User Messages and any pending HUMAN messages** 
+ - 1. (LATEST)  - User confirms saving works well but clarifies the back button should lead to the sketch preview list (the Sketches tab). (Status: In Progress)
+ - 2. (USER UPLOADED IMAGE)  - User reported a navigation crash (GO_BACK not handled) but also confirmed the polyline fix works perfectly and saving seems to work. (Status: Resolved)
+ - 3.  - User confirmed the initial plan to start work. (Status: Completed)
 
 **Project Health Check:**
-- **Broken**: The Polyline drawing tool is currently unusable because its control buttons do not work.
-- **Potentially Broken**: The newly implemented auto-save-on-back-press feature is completely untested and may not work as intended.
+- **Broken**: Navigation from the sketch editor to the project details page does not land on the correct Sketches tab.
+- **Fixed**: The Polyline drawing tool is now fully usable.
+- **Fixed**: The auto-save feature on back-press is working correctly.
 
 **3rd Party Integrations**
 - 
@@ -140,12 +137,12 @@ The agent has a clear understanding of the problems but has not yet completed or
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None.
-  - Known regressions: None.
+  - Known regressions: A navigation crash was introduced and subsequently fixed within the session.
 
 **Credentials to test flow:**
 - None required.
 
 **What agent forgot to execute**
-- The agent has correctly prioritized the user's most recent feedback. However, the critical UI freeze bug in  remains unverified for another session. This task should be addressed once the current user-reported issues are resolved.
+- The agent has correctly prioritized the user's active feedback. However, the critical UI freeze bug in  remains unverified for another session. This task must be addressed once the current navigation issue is resolved.
 
 </analysis>

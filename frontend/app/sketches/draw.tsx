@@ -2042,7 +2042,7 @@ export default function DrawSketchScreen() {
           style={[styles.toolButton, drawMode === 'pointer' && styles.toolButtonActive]}
           onPress={() => setDrawMode('pointer')}
         >
-          <Ionicons name="locate" size={18} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
+          <Ionicons name="arrow-forward" size={22} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
         </TouchableOpacity>
 
         <TouchableOpacity

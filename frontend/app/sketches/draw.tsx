@@ -1860,13 +1860,14 @@ export default function DrawSketchScreen() {
           svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 5).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" fill="${el.color}">${el.data.text}</text>`;
         }
       } else if (el.type === 'pointer') {
-        // Großer Zeigepfeil für die Vorschau
+        // Großer Zeigepfeil für die Vorschau (mit Notiz-Text)
         const x1 = ((el.data.x1 - minX) * scale) + offsetX;
         const y1 = ((el.data.y1 - minY) * scale) + offsetY;
         const x2 = ((el.data.x2 - minX) * scale) + offsetX;
         const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+        const pointerText = el.data.text || '';
         
-        // Große Pfeilspitze
+        // Pfeilspitze proportional zur Strichstärke
         const angle = Math.atan2(y2 - y1, x2 - x1);
         const arrowHeadSize = Math.max(12, scaledStrokeWidth * 3);
         const arrowHeadAngle = Math.PI / 6;
@@ -1883,6 +1884,14 @@ export default function DrawSketchScreen() {
         
         svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lineEndX.toFixed(1)}" y2="${lineEndY.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" stroke-linecap="round"/>`;
         svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${el.color}"/>`;
+        
+        // Notiz-Text in der Vorschau anzeigen (wenn vorhanden)
+        if (pointerText) {
+          const fontSize = Math.max(8, 12 * scale);
+          const textX = x1 + 10 * scale * Math.cos(angle - Math.PI / 2);
+          const textY = y1 + 10 * scale * Math.sin(angle - Math.PI / 2);
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
+        }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;
         const y = (((el.y || 0) - minY) * scale) + offsetY;

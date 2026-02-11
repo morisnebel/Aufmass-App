@@ -1890,16 +1890,17 @@ export default function DrawSketchScreen() {
         
         // Notiz-Text in der Vorschau anzeigen (wenn vorhanden)
         if (pointerText) {
-          // Größere Schriftgröße für bessere Lesbarkeit in der Vorschau
-          const fontSize = Math.max(12, 18 * scale);
+          // Große Schriftgröße für gute Lesbarkeit in der Thumbnail-Vorschau
+          // Mindestens 16px, damit der Text im kleinen Thumbnail sichtbar bleibt
+          const fontSize = Math.max(16, 24 * scale);
           // Text am Startpunkt des Pfeils positionieren mit Hintergrund-Box
-          const textX = x1 + 2;
-          const textY = y1 - 4;
+          const textX = x1;
+          const textY = y1 - 8;
           // Hintergrund-Rechteck für bessere Lesbarkeit
-          const textWidth = pointerText.length * fontSize * 0.6;
-          const textHeight = fontSize + 4;
-          svgElements += `<rect x="${(textX - 2).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.85" rx="2"/>`;
-          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
+          const textWidth = Math.max(fontSize * 2, pointerText.length * fontSize * 0.65);
+          const textHeight = fontSize + 8;
+          svgElements += `<rect x="${(textX - 4).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.95" rx="3"/>`;
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold" font-family="Arial, sans-serif">${pointerText}</text>`;
         }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;

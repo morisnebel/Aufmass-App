@@ -3137,6 +3137,10 @@ const styles = StyleSheet.create({
   toolButtonActive: {
     backgroundColor: '#1976d2',
   },
+  toolButtonWide: {
+    paddingHorizontal: 12,
+    minWidth: 52,
+  },
   toolButtonDisabled: {
     opacity: 0.4,
   },

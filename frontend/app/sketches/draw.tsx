@@ -802,6 +802,54 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Add pointer (memo arrow) element
+  const addPointerElement = () => {
+    if (pendingPointer) {
+      const newElement: DrawElement = {
+        id: generateId(),
+        type: 'pointer',
+        data: {
+          x1: pendingPointer.x1,
+          y1: pendingPointer.y1,
+          x2: pendingPointer.x2,
+          y2: pendingPointer.y2,
+          text: pointerText, // Optional: Notiz-Text
+          fontSize: editPointerFontSize,
+        },
+        color: drawColor,
+        strokeWidth: Math.max(strokeWidth * 2, 6),
+        rotation: 0,
+      };
+      addToHistory([...elements, newElement]);
+      setPointerText('');
+      setPendingPointer(null);
+      setShowPointerModal(false);
+    }
+  };
+
+  // Update existing pointer element (edit mode)
+  const updatePointerElement = () => {
+    if (selectedElementId) {
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId && el.type === 'pointer') {
+          return {
+            ...el,
+            data: {
+              ...el.data,
+              text: pointerText,
+              fontSize: editPointerFontSize,
+            },
+            color: drawColor,
+          };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+      setPointerText('');
+      setShowEditPointerModal(false);
+    }
+  };
+
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
     // Check if clicking on transformation handles first

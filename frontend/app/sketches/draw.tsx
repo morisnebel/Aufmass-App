@@ -973,7 +973,7 @@ export default function DrawSketchScreen() {
             Math.pow(locationY - originalElement.data.cy, 2)
           );
           newEl.data = { ...el.data, r: Math.max(10, newRadius) };
-        } else if (el.type === 'line' || el.type === 'arrow') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
           if (resizeHandle === 'start') {
             newEl.data = { ...el.data, x1: locationX, y1: locationY };
           } else if (resizeHandle === 'end') {

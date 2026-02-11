@@ -2892,6 +2892,28 @@ export default function DrawSketchScreen() {
                 multiline
               />
               
+              {/* Stroke Width Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Linienstärke: {editPointerStrokeWidth}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditPointerStrokeWidth(Math.max(2, editPointerStrokeWidth - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((editPointerStrokeWidth - 2) / 18) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => setEditPointerStrokeWidth(Math.min(20, editPointerStrokeWidth + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
                 <Text style={styles.modalLabel}>Schriftgröße: {editPointerFontSize}px</Text>

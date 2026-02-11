@@ -233,6 +233,7 @@ export default function DrawSketchScreen() {
   const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
   const [editArrowFontSize, setEditArrowFontSize] = useState(14);
   const [editPointerFontSize, setEditPointerFontSize] = useState(16);
+  const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(6);
   
   // Double tap detection
   const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });

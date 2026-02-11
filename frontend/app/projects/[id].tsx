@@ -1004,6 +1004,35 @@ export default function ProjectDetailScreen() {
                       const x = ((el.x || 0) - minX) * scale + offsetX;
                       const y = ((el.y || 0) - minY) * scale + offsetY;
                       svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="12" fill="${color}" font-weight="bold">${el.data.text}</text>`;
+                    } else if (el.type === 'image' && el.data?.uri) {
+                      // Bilder in der Vorschau anzeigen
+                      const x = (((el.x || 0) - minX) * scale) + offsetX;
+                      const y = (((el.y || 0) - minY) * scale) + offsetY;
+                      const w = Math.max(10, (el.width || 100) * scale);
+                      const h = Math.max(10, (el.height || 100) * scale);
+                      svgElements += `<image href="${el.data.uri}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+                    } else if (el.type === 'pointer') {
+                      // Memo-Pfeil / Zeigepfeil in der Vorschau
+                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
+                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
+                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
+                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+                      const angle = Math.atan2(y2 - y1, x2 - x1);
+                      const arrowHeadSize = Math.max(12, strokeWidth * 3);
+                      const arrowHeadAngle = Math.PI / 6;
+                      
+                      // Pfeilspitzen-Koordinaten
+                      const leftX = x2 - arrowHeadSize * Math.cos(angle - arrowHeadAngle);
+                      const leftY = y2 - arrowHeadSize * Math.sin(angle - arrowHeadAngle);
+                      const rightX = x2 - arrowHeadSize * Math.cos(angle + arrowHeadAngle);
+                      const rightY = y2 - arrowHeadSize * Math.sin(angle + arrowHeadAngle);
+                      
+                      // Linie bis kurz vor der Pfeilspitze
+                      const lineEndX = x2 - arrowHeadSize * 0.6 * Math.cos(angle);
+                      const lineEndY = y2 - arrowHeadSize * 0.6 * Math.sin(angle);
+                      
+                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lineEndX.toFixed(1)}" y2="${lineEndY.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`;
+                      svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${color}"/>`;
                     }
                   });
 

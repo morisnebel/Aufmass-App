@@ -3162,6 +3162,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#333',
   },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
   modalMessage: {
     fontSize: 16,
     color: '#666',

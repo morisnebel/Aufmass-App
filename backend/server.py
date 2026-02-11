@@ -1005,6 +1005,7 @@ def render_sketch_with_background(sketch_data_base64: str, metadata_json: str) -
                 
                 elif el_type == 'pointer':
                     # Render pointer arrow (Memo-Pfeil) - thick line with large arrowhead and optional text
+                    logging.info(f"PDF RENDER: Processing POINTER element with text: '{el_data.get('text', '')}'")
                     x1 = el_data.get('x1', 0) * scale_x + offset_x
                     y1 = el_data.get('y1', 0) * scale_y + offset_y
                     x2 = el_data.get('x2', 0) * scale_x + offset_x

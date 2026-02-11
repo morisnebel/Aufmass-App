@@ -907,6 +907,12 @@ export default function DrawSketchScreen() {
           setEditStrokeWidth(clickedElement.strokeWidth || 3);
           setDrawColor(clickedElement.color);
           setShowEditArrowModal(true);
+        } else if (clickedElement.type === 'pointer') {
+          // Memo-Pfeil bearbeiten
+          setPointerText(clickedElement.data.text || '');
+          setEditPointerFontSize(clickedElement.data.fontSize || 16);
+          setDrawColor(clickedElement.color);
+          setShowEditPointerModal(true);
         }
         lastTapRef.current = { time: 0, elementId: null };
         return;

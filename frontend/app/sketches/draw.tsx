@@ -364,6 +364,87 @@ export default function DrawSketchScreen() {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  // Handle back button - auto save before navigating back
+  const handleBackPress = async () => {
+    // Only auto-save if there are elements to save
+    if (elements.length > 0) {
+      try {
+        setLoading(true);
+        
+        // Create metadata with elements and canvas dimensions for proper scaling
+        const metadata = {
+          elements,
+          backgroundImage,
+          canvasWidth: width,
+          canvasHeight: height - 120,
+        };
+
+        console.log('Auto-saving sketch with', elements.length, 'elements');
+
+        // Generate preview image
+        let sketchData = '';
+        
+        if (elements.length > 0) {
+          try {
+            sketchData = generatePreviewSvg();
+          } catch (previewError) {
+            console.error('Error generating preview:', previewError);
+          }
+        }
+        
+        if (!sketchData && backgroundImage) {
+          sketchData = backgroundImage;
+        }
+        
+        if (!sketchData) {
+          const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
+          const colorIndex = elements.length % colors.length;
+          const previewColor = colors[colorIndex];
+          
+          const previewSvg = `
+            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="200" height="200" fill="${previewColor}" opacity="0.3"/>
+              <text x="100" y="100" text-anchor="middle" font-size="24" fill="#333">
+                ${elements.length} Element${elements.length !== 1 ? 'e' : ''}
+              </text>
+              <text x="100" y="130" text-anchor="middle" font-size="14" fill="#666">
+                ${title || 'Skizze'}
+              </text>
+            </svg>
+          `;
+          
+          sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+        }
+
+        if (sketchId) {
+          // Update existing sketch
+          await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
+            project_id: projectId,
+            title,
+            sketch_data: sketchData,
+            metadata: JSON.stringify(metadata),
+          });
+          console.log('Auto-saved existing sketch');
+        } else if (title.trim()) {
+          // Create new sketch only if title is provided
+          await axios.post(`${API_URL}/api/sketches`, {
+            project_id: projectId,
+            title,
+            sketch_data: sketchData,
+            metadata: JSON.stringify(metadata),
+          });
+          console.log('Auto-saved new sketch');
+        }
+      } catch (error) {
+        console.error('Error auto-saving sketch:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    router.back();
+  };
+
   // Delete selected element
   const deleteSelectedElement = () => {
     if (selectedElementId) {

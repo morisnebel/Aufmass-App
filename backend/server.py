@@ -1707,9 +1707,17 @@ async def export_project_pdf(project_id: str):
     doc.build(elements)
     pdf_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
     
+    # Sichere Dateinamenerstellung - entferne alle Sonderzeichen
+    import re
+    safe_name = re.sub(r'[^a-zA-Z0-9äöüÄÖÜß]', '_', project['name'])
+    safe_name = re.sub(r'_+', '_', safe_name)  # Mehrfache Unterstriche zusammenfassen
+    safe_name = safe_name.strip('_')  # Führende/nachfolgende Unterstriche entfernen
+    if not safe_name:
+        safe_name = 'Projekt'
+    
     return {
         "pdf_data": pdf_data,
-        "filename": f"Aufmass_{project['name'].replace(' ', '_')}.pdf"
+        "filename": f"Aufmass_{safe_name}.pdf"
     }
 
 app.include_router(api_router)

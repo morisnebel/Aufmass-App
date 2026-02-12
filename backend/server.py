@@ -1512,6 +1512,44 @@ async def export_project_pdf(project_id: str):
     
     # ============ CHECKLISTEN ============
     if checklists:
+        # Rekursive Funktion zum Sammeln aller abgehakten Items
+        def collect_checked_items(items, depth=0):
+            result = []
+            for item in items:
+                if not item.get('checked'):
+                    continue
+                
+                # Einrückung basierend auf Tiefe
+                indent = "&nbsp;&nbsp;&nbsp;&nbsp;" * depth
+                tree_symbol = "└ " if depth > 0 else ""
+                
+                status = '<font color="#4CAF50">✓</font>'  # Green checkmark
+                item_text = safe_str(item.get('text', ''))
+                
+                if depth == 0:
+                    result.append([
+                        Paragraph(f"<b>{status} {item_text}</b>", value_style),
+                    ])
+                else:
+                    result.append([
+                        Paragraph(f"{indent}{tree_symbol}{status} {item_text}", value_style),
+                    ])
+                
+                # Rekursiv Unterpunkte sammeln
+                sub_items = item.get('subItems', [])
+                if sub_items:
+                    result.extend(collect_checked_items(sub_items, depth + 1))
+                
+                # Notiz nur für Hauptpunkte (depth == 0)
+                if depth == 0:
+                    note = item.get('note', '')
+                    if note and note.strip():
+                        result.append([
+                            Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;<i>📝 {safe_str(note)}</i>", value_style),
+                        ])
+            
+            return result
+        
         for checklist in checklists:
             # Sammle alle Elemente der Checkliste in einer Liste für KeepTogether
             checklist_elements = []
@@ -1527,37 +1565,8 @@ async def export_project_pdf(project_id: str):
             ]))
             checklist_elements.append(checklist_title)
             
-            checklist_data = []
-            for item in checklist.get('items', []):
-                # Only show checked items
-                if not item.get('checked'):
-                    continue
-                    
-                # Use green checkmark for checked items
-                status = '<font color="#4CAF50">✓</font>'  # Green checkmark
-                item_text = safe_str(item.get('text', ''))
-                checklist_data.append([
-                    Paragraph(f"<b>{status} {item_text}</b>", value_style),
-                ])
-                
-                # Add sub-items if present (only checked ones)
-                sub_items = item.get('subItems', [])
-                if sub_items:
-                    for sub_item in sub_items:
-                        if not sub_item.get('checked'):
-                            continue
-                        sub_status = '<font color="#4CAF50">✓</font>'  # Green checkmark
-                        sub_text = safe_str(sub_item.get('text', ''))
-                        checklist_data.append([
-                            Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;└ {sub_status} {sub_text}", value_style),
-                        ])
-                
-                # Add note if present
-                note = item.get('note', '')
-                if note and note.strip():
-                    checklist_data.append([
-                        Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;<i>📝 {safe_str(note)}</i>", value_style),
-                    ])
+            # Sammle alle abgehakten Items rekursiv
+            checklist_data = collect_checked_items(checklist.get('items', []))
             
             if checklist_data:
                 checklist_table = Table(checklist_data, colWidths=[180*mm])

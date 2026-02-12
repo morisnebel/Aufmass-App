@@ -62,30 +62,44 @@ export default function NewChecklistScreen() {
     }
   };
 
+  // Rekursive Funktion zum Konvertieren von Template-Items
+  const convertTemplateItem = (item: any): ChecklistItem => {
+    if (typeof item === 'string') {
+      return {
+        text: item,
+        checked: false,
+        note: '',
+        subItems: [],
+      };
+    }
+    
+    const subItems: SubItem[] = (item.subItems || []).map((subItem: any) => {
+      if (typeof subItem === 'string') {
+        return {
+          text: subItem,
+          checked: false,
+          subItems: [],
+        };
+      }
+      // Rekursiv konvertieren für tiefere Ebenen
+      return {
+        text: subItem.text || '',
+        checked: false,
+        subItems: (subItem.subItems || []).map((deepSub: any) => convertTemplateItem(deepSub)),
+      };
+    });
+    
+    return {
+      text: item.text,
+      checked: false,
+      note: '',
+      subItems: subItems,
+    };
+  };
+
   const selectTemplate = (template: ChecklistTemplate) => {
     setSelectedTemplate(template);
-    setChecklistItems(
-      template.items.map((item) => {
-        // Handle both legacy string items and new object format
-        if (typeof item === 'string') {
-          return {
-            text: item,
-            checked: false,
-            note: '',
-            subItems: [],
-          };
-        }
-        return {
-          text: item.text,
-          checked: false,
-          note: '',
-          subItems: (item.subItems || []).map((subItem: string | {text: string}) => ({
-            text: typeof subItem === 'string' ? subItem : subItem.text,
-            checked: false,
-          })),
-        };
-      })
-    );
+    setChecklistItems(template.items.map((item) => convertTemplateItem(item)));
   };
 
   const toggleItem = (index: number) => {

@@ -17,7 +17,7 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 
 interface TemplateItem {
   text: string;
-  subItems?: string[];
+  subItems?: any[];
 }
 
 interface ChecklistTemplate {
@@ -26,9 +26,11 @@ interface ChecklistTemplate {
   items: (string | TemplateItem)[];
 }
 
+// Rekursive SubItem Struktur
 interface SubItem {
   text: string;
   checked: boolean;
+  subItems?: SubItem[];
 }
 
 interface ChecklistItem {

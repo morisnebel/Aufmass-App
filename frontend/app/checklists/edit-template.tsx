@@ -18,19 +18,16 @@ import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
-interface SubItem {
+// Rekursive Struktur für verschachtelte Punkte
+interface RecursiveTemplateItem {
   text: string;
-}
-
-interface TemplateItem {
-  text: string;
-  subItems: SubItem[];
+  subItems: RecursiveTemplateItem[];
 }
 
 interface ChecklistTemplate {
   id: string;
   name: string;
-  items: (string | TemplateItem)[];
+  items: any[];
 }
 
 export default function EditTemplateScreen() {
@@ -38,7 +35,7 @@ export default function EditTemplateScreen() {
   const { templateId } = useLocalSearchParams();
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
-  const [items, setItems] = useState<TemplateItem[]>([]);
+  const [items, setItems] = useState<RecursiveTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -57,24 +54,34 @@ export default function EditTemplateScreen() {
       setTemplate(data);
       setTemplateName(data.name);
       
-      // Convert items to new format
-      const convertedItems: TemplateItem[] = data.items.map((item: string | TemplateItem | any) => {
-        if (typeof item === 'string') {
-          return { text: item, subItems: [] };
-        }
-        // Convert subItems to correct format (array of objects with text property)
-        const convertedSubItems: SubItem[] = (item.subItems || []).map((subItem: string | SubItem) => {
-          if (typeof subItem === 'string') {
-            return { text: subItem };
+      // Konvertiere Items zu rekursiver Struktur
+      const convertItems = (rawItems: any[]): RecursiveTemplateItem[] => {
+        return rawItems.map((item: any) => {
+          if (typeof item === 'string') {
+            return { text: item, subItems: [] };
           }
-          return { text: subItem.text || '' };
+          
+          let subItems: RecursiveTemplateItem[] = [];
+          if (item.subItems && Array.isArray(item.subItems)) {
+            subItems = item.subItems.map((sub: any) => {
+              if (typeof sub === 'string') {
+                return { text: sub, subItems: [] };
+              }
+              return {
+                text: sub.text || '',
+                subItems: sub.subItems ? convertItems(sub.subItems) : [],
+              };
+            });
+          }
+          
+          return {
+            text: item.text || '',
+            subItems: subItems,
+          };
         });
-        return {
-          text: item.text || '',
-          subItems: convertedSubItems,
-        };
-      });
-      setItems(convertedItems);
+      };
+      
+      setItems(convertItems(data.items));
     } catch (error) {
       console.error('Error loading template:', error);
       Alert.alert('Fehler', 'Vorlage konnte nicht geladen werden');
@@ -83,37 +90,77 @@ export default function EditTemplateScreen() {
     }
   };
 
+  // Hauptpunkt hinzufügen
   const addItem = () => {
     setItems([...items, { text: '', subItems: [] }]);
   };
 
-  const updateItemText = (index: number, text: string) => {
+  // Rekursiv Item an Pfad aktualisieren
+  const updateItemAtPath = (
+    items: RecursiveTemplateItem[],
+    path: number[],
+    updates: Partial<RecursiveTemplateItem>
+  ): RecursiveTemplateItem[] => {
     const newItems = [...items];
-    newItems[index].text = text;
-    setItems(newItems);
+    if (path.length === 1) {
+      newItems[path[0]] = { ...newItems[path[0]], ...updates };
+    } else {
+      const [first, ...rest] = path;
+      newItems[first] = {
+        ...newItems[first],
+        subItems: updateItemAtPath(newItems[first].subItems, rest, updates),
+      };
+    }
+    return newItems;
   };
 
-  const removeItem = (index: number) => {
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
+  // Text eines Items aktualisieren
+  const updateItemText = (path: number[], text: string) => {
+    setItems(updateItemAtPath(items, path, { text }));
   };
 
-  const addSubItem = (itemIndex: number) => {
+  // Item entfernen
+  const removeItemAtPath = (items: RecursiveTemplateItem[], path: number[]): RecursiveTemplateItem[] => {
+    if (path.length === 1) {
+      return items.filter((_, i) => i !== path[0]);
+    }
+    const [first, ...rest] = path;
     const newItems = [...items];
-    newItems[itemIndex].subItems.push({ text: '' });
-    setItems(newItems);
+    newItems[first] = {
+      ...newItems[first],
+      subItems: removeItemAtPath(newItems[first].subItems, rest),
+    };
+    return newItems;
   };
 
-  const updateSubItemText = (itemIndex: number, subIndex: number, text: string) => {
-    const newItems = [...items];
-    newItems[itemIndex].subItems[subIndex].text = text;
-    setItems(newItems);
+  const removeItem = (path: number[]) => {
+    setItems(removeItemAtPath(items, path));
   };
 
-  const removeSubItem = (itemIndex: number, subIndex: number) => {
-    const newItems = [...items];
-    newItems[itemIndex].subItems = newItems[itemIndex].subItems.filter((_, i) => i !== subIndex);
-    setItems(newItems);
+  // Unterpunkt hinzufügen
+  const addSubItem = (path: number[]) => {
+    const getItemAtPath = (items: RecursiveTemplateItem[], path: number[]): RecursiveTemplateItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems, rest);
+    };
+    
+    const item = getItemAtPath(items, path);
+    if (!item) return;
+    
+    const newSubItems = [...item.subItems, { text: '', subItems: [] }];
+    setItems(updateItemAtPath(items, path, { subItems: newSubItems }));
+  };
+
+  // Rekursive Konvertierung für API
+  const convertToApiFormat = (items: RecursiveTemplateItem[]): any[] => {
+    return items
+      .filter(item => item.text.trim())
+      .map(item => ({
+        text: item.text.trim(),
+        subItems: item.subItems.length > 0 ? convertToApiFormat(item.subItems) : [],
+      }));
   };
 
   const saveTemplate = async () => {
@@ -132,10 +179,7 @@ export default function EditTemplateScreen() {
     try {
       const payload = {
         name: templateName,
-        items: validItems.map(item => ({
-          text: item.text.trim(),
-          subItems: item.subItems.filter(sub => sub.text.trim()).map(sub => sub.text.trim()),
-        })),
+        items: convertToApiFormat(items),
       };
 
       if (templateId) {
@@ -157,6 +201,59 @@ export default function EditTemplateScreen() {
     }
   };
 
+  // Rekursive Render-Funktion
+  const renderItem = (item: RecursiveTemplateItem, path: number[], depth: number = 0) => {
+    const isMainItem = depth === 0;
+    
+    return (
+      <View key={path.join('-')} style={[styles.itemContainer, { marginLeft: depth * 20 }]}>
+        {/* Item Header mit Eingabefeld */}
+        <View style={styles.itemHeader}>
+          {depth > 0 && (
+            <View style={styles.depthIndicator}>
+              <View style={styles.depthLine} />
+            </View>
+          )}
+          <TextInput
+            style={[
+              styles.itemInput,
+              !isMainItem && styles.subItemInput,
+            ]}
+            placeholder={isMainItem ? `Hauptpunkt ${path[0] + 1}` : `Unterpunkt`}
+            value={item.text}
+            onChangeText={(text) => updateItemText(path, text)}
+          />
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => removeItem(path)}
+          >
+            <Ionicons name="trash-outline" size={20} color="#f44336" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Unterpunkte rekursiv rendern */}
+        {item.subItems.length > 0 && (
+          <View style={styles.subItemsSection}>
+            {item.subItems.map((subItem, subIndex) => 
+              renderItem(subItem, [...path, subIndex], depth + 1)
+            )}
+          </View>
+        )}
+
+        {/* Button zum Hinzufügen von Unterpunkten */}
+        <TouchableOpacity
+          style={[styles.addSubItemButton, { marginLeft: depth > 0 ? 24 : 0 }]}
+          onPress={() => addSubItem(path)}
+        >
+          <Ionicons name="add" size={16} color="#1976d2" />
+          <Text style={styles.addSubItemText}>
+            {depth === 0 ? 'Unterpunkt hinzufügen' : 'Weiteren Unterpunkt'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -170,7 +267,7 @@ export default function EditTemplateScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Vorlagen-Name</Text>
@@ -184,58 +281,15 @@ export default function EditTemplateScreen() {
 
           <View style={styles.itemsSection}>
             <Text style={styles.sectionTitle}>Checklisten-Punkte</Text>
+            <Text style={styles.sectionHint}>
+              Erstellen Sie Hauptpunkte und fügen Sie beliebig viele Unterpunkte hinzu
+            </Text>
             
-            {items.map((item, itemIndex) => (
-              <View key={itemIndex} style={styles.itemContainer}>
-                <View style={styles.itemHeader}>
-                  <TextInput
-                    style={styles.itemInput}
-                    placeholder={`Punkt ${itemIndex + 1}`}
-                    value={item.text}
-                    onChangeText={(text) => updateItemText(itemIndex, text)}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removeItem(itemIndex)}
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#f44336" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Sub-Items */}
-                <View style={styles.subItemsContainer}>
-                  {item.subItems.map((subItem, subIndex) => (
-                    <View key={subIndex} style={styles.subItemRow}>
-                      <View style={styles.subItemConnector} />
-                      <TextInput
-                        style={styles.subItemInput}
-                        placeholder={`Unter-Punkt ${subIndex + 1}`}
-                        value={subItem.text}
-                        onChangeText={(text) => updateSubItemText(itemIndex, subIndex, text)}
-                      />
-                      <TouchableOpacity
-                        style={styles.removeSubButton}
-                        onPress={() => removeSubItem(itemIndex, subIndex)}
-                      >
-                        <Ionicons name="close-circle" size={20} color="#999" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  
-                  <TouchableOpacity
-                    style={styles.addSubItemButton}
-                    onPress={() => addSubItem(itemIndex)}
-                  >
-                    <Ionicons name="add" size={18} color="#1976d2" />
-                    <Text style={styles.addSubItemText}>Unter-Punkt hinzufügen</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+            {items.map((item, index) => renderItem(item, [index], 0))}
 
             <TouchableOpacity style={styles.addItemButton} onPress={addItem}>
               <Ionicons name="add-circle" size={24} color="#1976d2" />
-              <Text style={styles.addItemText}>Neuen Punkt hinzufügen</Text>
+              <Text style={styles.addItemText}>Neuen Hauptpunkt hinzufügen</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -297,7 +351,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   itemContainer: {
     backgroundColor: '#fff',
@@ -315,6 +375,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  depthIndicator: {
+    width: 20,
+    alignItems: 'center',
+  },
+  depthLine: {
+    width: 12,
+    height: 2,
+    backgroundColor: '#1976d2',
+  },
   itemInput: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -322,44 +391,28 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
+  subItemInput: {
+    backgroundColor: '#e8f4fd',
+    fontSize: 14,
+    padding: 10,
+  },
   removeButton: {
     padding: 8,
   },
-  subItemsContainer: {
+  subItemsSection: {
     marginTop: 8,
-    marginLeft: 16,
-  },
-  subItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  subItemConnector: {
-    width: 16,
-    height: 2,
-    backgroundColor: '#ddd',
-    marginRight: 8,
-  },
-  subItemInput: {
-    flex: 1,
-    backgroundColor: '#f0f7ff',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-  },
-  removeSubButton: {
-    padding: 4,
-    marginLeft: 4,
   },
   addSubItemButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginTop: 4,
     gap: 4,
   },
   addSubItemText: {
     color: '#1976d2',
-    fontSize: 14,
+    fontSize: 13,
   },
   addItemButton: {
     flexDirection: 'row',

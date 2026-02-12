@@ -393,7 +393,8 @@ export default function EditChecklistScreen() {
               >
                 <Ionicons name="add" size={18} color="#1976d2" />
                 <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
 
             {/* Notiz-Feld nur für Hauptpunkte */}
             {isMainItem && (

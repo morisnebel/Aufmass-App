@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.aufmassprofi.dach",
       "infoPlist": {
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
         "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
@@ -17,6 +18,7 @@
       }
     },
     "android": {
+      "package": "com.aufmassprofi.dach",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"

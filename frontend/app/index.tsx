@@ -143,10 +143,11 @@ export default function HomeScreen() {
       {/* Company Logo */}
       <View style={styles.logoContainer}>
         <Image
-          source={{ uri: 'https://customer-assets.emergentagent.com/job_measure-master-31/artifacts/pf6s0rym_LOGO%202025.png' }}
+          source={require('../assets/images/icon.png')}
           style={styles.logo}
           resizeMode="contain"
         />
+        <Text style={styles.appTitle}>AUFMASSPROFI - Dach</Text>
       </View>
 
       <View style={styles.actionButtons}>

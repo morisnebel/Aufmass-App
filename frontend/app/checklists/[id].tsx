@@ -212,6 +212,8 @@ export default function EditChecklistScreen() {
           {checklist.items.map((item, index) => {
             const isExpanded = expandedItems.has(index);
             const hasSubItems = item.subItems && item.subItems.length > 0;
+            // Unterpunkte nur anzeigen wenn Hauptpunkt abgehakt ist
+            const showSubItems = item.checked && hasSubItems;
             
             return (
               <View key={index} style={styles.itemWrapper}>
@@ -228,16 +230,24 @@ export default function EditChecklistScreen() {
                     size={28}
                     color={item.checked ? '#4caf50' : '#666'}
                   />
-                  <Text
-                    style={[
-                      styles.checklistText,
-                      item.checked && styles.checklistTextChecked,
-                    ]}
-                  >
-                    {item.text}
-                  </Text>
-                  {/* Show expand button if has subItems OR is checked (for note field) */}
-                  {hasSubItems && (
+                  <View style={styles.itemTextContainer}>
+                    <Text
+                      style={[
+                        styles.checklistText,
+                        item.checked && styles.checklistTextChecked,
+                      ]}
+                    >
+                      {item.text}
+                    </Text>
+                    {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
+                    {hasSubItems && !item.checked && (
+                      <Text style={styles.subItemsHint}>
+                        {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''} verfügbar
+                      </Text>
+                    )}
+                  </View>
+                  {/* Show expand button only if checked and has subItems */}
+                  {showSubItems && (
                     <TouchableOpacity
                       onPress={() => toggleExpand(index)}
                       style={styles.expandButton}
@@ -251,8 +261,8 @@ export default function EditChecklistScreen() {
                   )}
                 </TouchableOpacity>
 
-                {/* Expanded Content - Sub Items & Note */}
-                {isExpanded && (
+                {/* Expanded Content - Sub Items & Note (nur wenn Hauptpunkt abgehakt) */}
+                {item.checked && isExpanded && (
                   <View style={styles.expandedContent}>
                     {/* Sub Items */}
                     {hasSubItems && (

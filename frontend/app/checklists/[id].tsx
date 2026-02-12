@@ -517,10 +517,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     elevation: 1,
   },
-  checkboxArea: {
-    padding: 4,
-    marginRight: 8,
-  },
   itemContent: {
     flex: 1,
   },

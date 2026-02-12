@@ -236,7 +236,74 @@ export default function EditChecklistScreen() {
     });
   };
 
-  // Unterpunkt-Text updaten
+  // Bearbeitungsmodus starten
+  const startEditing = (path: number[], currentText: string) => {
+    const pathKey = path.join('-');
+    setEditingItems(prev => ({ ...prev, [pathKey]: currentText }));
+  };
+
+  // Bearbeitung bestätigen
+  const confirmEditing = (path: number[]) => {
+    if (!checklist) return;
+    const pathKey = path.join('-');
+    const newText = editingItems[pathKey]?.trim();
+    
+    if (newText) {
+      const newItems = updateItemAtPath(checklist.items, path, { text: newText });
+      setChecklist({ ...checklist, items: newItems });
+      setHasChanges(true);
+    }
+    
+    // Bearbeitungsmodus beenden
+    setEditingItems(prev => {
+      const newEditing = { ...prev };
+      delete newEditing[pathKey];
+      return newEditing;
+    });
+  };
+
+  // Bearbeitung abbrechen
+  const cancelEditing = (path: number[]) => {
+    const pathKey = path.join('-');
+    setEditingItems(prev => {
+      const newEditing = { ...prev };
+      delete newEditing[pathKey];
+      return newEditing;
+    });
+  };
+
+  // Item löschen (Hauptpunkt oder Unterpunkt)
+  const deleteItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    if (path.length === 1) {
+      // Hauptpunkt löschen
+      const newItems = checklist.items.filter((_, i) => i !== path[0]);
+      setChecklist({ ...checklist, items: newItems });
+    } else {
+      // Unterpunkt löschen
+      const parentPath = path.slice(0, -1);
+      const subIndex = path[path.length - 1];
+      
+      const getItemAtPath = (items: RecursiveItem[], p: number[]): RecursiveItem | null => {
+        if (p.length === 0) return null;
+        if (p.length === 1) return items[p[0]];
+        const [first, ...rest] = p;
+        return getItemAtPath(items[first].subItems || [], rest);
+      };
+      
+      const parentItem = getItemAtPath(checklist.items, parentPath);
+      if (!parentItem || !parentItem.subItems) return;
+      
+      const newSubItems = parentItem.subItems.filter((_, i) => i !== subIndex);
+      const newItems = updateItemAtPath(checklist.items, parentPath, { subItems: newSubItems });
+      setChecklist({ ...checklist, items: newItems });
+    }
+    
+    setHasChanges(true);
+  };
+
+  // Unterpunkt-Text updaten (für legacy)
   const updateSubItemText = (path: number[], text: string) => {
     if (!checklist) return;
     const newItems = updateItemAtPath(checklist.items, path, { text });
@@ -244,7 +311,7 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
-  // Unterpunkt löschen
+  // Unterpunkt löschen (legacy - jetzt durch deleteItem ersetzt)
   const removeSubItem = (parentPath: number[], subIndex: number) => {
     if (!checklist) return;
     

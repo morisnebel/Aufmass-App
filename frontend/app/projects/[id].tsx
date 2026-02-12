@@ -1142,17 +1142,38 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {checklists.map((checklist) => {
-              // Zähle nur abgehakte Punkte (benötigte Positionen)
-              const countCheckedItems = () => {
+              // Rekursiv alle abgehakten Items zählen
+              const countCheckedItemsRecursive = (items: any[]): number => {
                 let total = 0;
-                checklist.items.forEach(item => {
+                items.forEach(item => {
+                  if (item.checked) total += 1;
                   if (item.subItems && item.subItems.length > 0) {
-                    total += item.subItems.filter(s => s.checked).length;
-                  } else if (item.checked) {
-                    total += 1;
+                    total += countCheckedItemsRecursive(item.subItems);
                   }
                 });
                 return total;
+              };
+              
+              // Rekursive Render-Funktion für abgehakte Unterpunkte in der Vorschau
+              const renderCheckedSubItems = (subItems: any[], depth: number = 0): React.ReactNode => {
+                return subItems
+                  .filter(sub => sub.checked)
+                  .map((subItem, subIndex) => (
+                    <View key={`${depth}-${subIndex}`}>
+                      <View style={[styles.subItemRow, { marginLeft: depth * 12 }]}>
+                        <Ionicons
+                          name="checkbox"
+                          size={16}
+                          color="#4caf50"
+                        />
+                        <Text style={styles.subItemText}>{subItem.text}</Text>
+                      </View>
+                      {/* Rekursiv tiefere abgehakte Unterpunkte anzeigen */}
+                      {subItem.subItems && subItem.subItems.length > 0 && (
+                        renderCheckedSubItems(subItem.subItems, depth + 1)
+                      )}
+                    </View>
+                  ));
               };
               
               return (
@@ -1165,7 +1186,7 @@ export default function ProjectDetailScreen() {
                       <Text style={styles.itemTitle}>{checklist.template_name}</Text>
                       <View style={styles.checkedBadge}>
                         <Text style={styles.checkedBadgeText}>
-                          {countCheckedItems()} benötigt
+                          {countCheckedItemsRecursive(checklist.items)} benötigt
                         </Text>
                       </View>
                       <Ionicons name="create-outline" size={20} color="#1976d2" />
@@ -1184,19 +1205,10 @@ export default function ProjectDetailScreen() {
                           <Text style={styles.checklistText}>{item.text}</Text>
                         </View>
                         
-                        {/* Abgehakte Unterpositionen anzeigen */}
+                        {/* Alle abgehakten Unterpositionen rekursiv anzeigen */}
                         {item.subItems && item.subItems.length > 0 && (
                           <View style={styles.subItemsList}>
-                            {item.subItems.filter(sub => sub.checked).map((subItem, subIndex) => (
-                              <View key={subIndex} style={styles.subItemRow}>
-                                <Ionicons
-                                  name="checkbox"
-                                  size={16}
-                                  color="#4caf50"
-                                />
-                                <Text style={styles.subItemText}>{subItem.text}</Text>
-                              </View>
-                            ))}
+                            {renderCheckedSubItems(item.subItems, 0)}
                           </View>
                         )}
                         

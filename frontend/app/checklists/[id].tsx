@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 12,
-    gap: 12,
+    gap: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -703,8 +703,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     elevation: 1,
   },
+  checkboxTouchable: {
+    padding: 4,
+  },
   itemContent: {
     flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButton: {
+    padding: 6,
+  },
+  editingContainer: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1976d2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  editingInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 50,
+    textAlignVertical: 'top',
+  },
+  editingButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 8,
+  },
+  editConfirmButton: {
+    padding: 4,
+  },
+  editCancelButton: {
+    padding: 4,
   },
   checklistText: {
     fontSize: 16,

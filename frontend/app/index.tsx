@@ -218,15 +218,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: '#0a1628',
+    padding: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   logo: {
-    width: 200,
-    height: 80,
+    width: 120,
+    height: 120,
+    borderRadius: 20,
+  },
+  appTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 12,
+    letterSpacing: 1,
   },
   actionButtons: {
     flexDirection: 'row',

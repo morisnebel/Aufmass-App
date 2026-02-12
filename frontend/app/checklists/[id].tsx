@@ -408,6 +408,15 @@ const styles = StyleSheet.create({
     color: '#4caf50',
     fontWeight: '600',
   },
+  itemTextContainer: {
+    flex: 1,
+  },
+  subItemsHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   expandButton: {
     padding: 4,
   },

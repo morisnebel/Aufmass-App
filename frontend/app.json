@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Dach-Aufmaß",
-    "slug": "dach-aufmass",
+    "name": "AUFMASSPROFI DACH",
+    "slug": "aufmassprofi-dach",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dachaufmass",
+    "scheme": "aufmassprofidach",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nebelbedachung.dachaufmass",
+      "bundleIdentifier": "com.aufmassprofi.dach",
       "infoPlist": {
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
         "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
@@ -18,10 +18,10 @@
       }
     },
     "android": {
-      "package": "com.nebelbedachung.dachaufmass",
+      "package": "com.aufmassprofi.dach",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#1976d2"
+        "backgroundColor": "#0a1628"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -42,9 +42,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 300,
           "resizeMode": "contain",
-          "backgroundColor": "#1976d2"
+          "backgroundColor": "#0a1628"
         }
       ],
       [

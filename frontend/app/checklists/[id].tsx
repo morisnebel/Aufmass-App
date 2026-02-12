@@ -45,6 +45,8 @@ export default function EditChecklistScreen() {
   const [newSubItemTexts, setNewSubItemTexts] = useState<{[key: string]: string}>({});
   // State um zu tracken welche Eingabefelder offen sind
   const [openInputs, setOpenInputs] = useState<Set<string>>(new Set());
+  // State für Bearbeitungsmodus (path -> text)
+  const [editingItems, setEditingItems] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     loadChecklist();

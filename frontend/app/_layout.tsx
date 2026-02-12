@@ -19,7 +19,7 @@ export default function RootLayout() {
         <Stack.Screen 
           name="index" 
           options={{ 
-            title: 'Aufmaß App',
+            title: 'AUFMASSPROFI - DACH',
             headerShown: true
           }} 
         />

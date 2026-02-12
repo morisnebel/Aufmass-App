@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
-interface SubItem {
-  text: string;
-  checked: boolean;
-}
-
-interface ChecklistItem {
+// Rekursive Struktur für verschachtelte Unterpunkte
+interface RecursiveItem {
   text: string;
   checked: boolean;
   note?: string;
-  subItems?: SubItem[];
+  subItems?: RecursiveItem[];
 }
 
 interface Checklist {
@@ -35,7 +31,7 @@ interface Checklist {
   project_id: string;
   template_id: string;
   template_name: string;
-  items: ChecklistItem[];
+  items: RecursiveItem[];
 }
 
 export default function EditChecklistScreen() {
@@ -44,11 +40,23 @@ export default function EditChecklistScreen() {
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     loadChecklist();
   }, [id]);
+
+  // Auto-Save wenn die Seite verlassen wird
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Wird aufgerufen wenn die Seite verlassen wird
+        if (hasChanges && checklist) {
+          saveChecklistSilent();
+        }
+      };
+    }, [hasChanges, checklist])
+  );
 
   const loadChecklist = async () => {
     try {
@@ -65,35 +73,36 @@ export default function EditChecklistScreen() {
       }
       
       if (foundChecklist) {
-        // Initialize subItems and note if not present, handle different formats
-        const items = foundChecklist.items.map((item: any) => {
-          // Convert subItems to correct format
-          let subItems: SubItem[] = [];
-          if (item.subItems && Array.isArray(item.subItems)) {
-            subItems = item.subItems.map((sub: string | SubItem) => {
-              if (typeof sub === 'string') {
-                return { text: sub, checked: false };
-              }
-              return { text: sub.text || '', checked: sub.checked || false };
-            });
-          }
-          return {
-            text: item.text || '',
-            checked: item.checked || false,
-            note: item.note || '',
-            subItems: subItems,
-          };
-        });
-        setChecklist({ ...foundChecklist, items });
+        // Konvertiere Items zu rekursiver Struktur
+        const convertItems = (items: any[]): RecursiveItem[] => {
+          return items.map((item: any) => {
+            let subItems: RecursiveItem[] = [];
+            if (item.subItems && Array.isArray(item.subItems)) {
+              subItems = item.subItems.map((sub: any) => {
+                if (typeof sub === 'string') {
+                  return { text: sub, checked: false, subItems: [] };
+                }
+                return {
+                  text: sub.text || '',
+                  checked: sub.checked || false,
+                  note: sub.note || '',
+                  subItems: sub.subItems ? convertItems(sub.subItems) : [],
+                };
+              });
+            }
+            return {
+              text: item.text || '',
+              checked: item.checked || false,
+              note: item.note || '',
+              subItems: subItems,
+            };
+          });
+        };
         
-        // Expand items that are checked
-        const expanded = new Set<number>();
-        items.forEach((item: ChecklistItem, index: number) => {
-          if (item.checked) {
-            expanded.add(index);
-          }
+        setChecklist({
+          ...foundChecklist,
+          items: convertItems(foundChecklist.items),
         });
-        setExpandedItems(expanded);
       } else {
         Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');
       }
@@ -105,58 +114,120 @@ export default function EditChecklistScreen() {
     }
   };
 
-  const toggleItem = (index: number) => {
-    if (!checklist) return;
-    
-    const newItems = [...checklist.items];
-    newItems[index].checked = !newItems[index].checked;
-    setChecklist({ ...checklist, items: newItems });
-    
-    // Toggle expanded state
-    const newExpanded = new Set(expandedItems);
-    if (newItems[index].checked) {
-      newExpanded.add(index);
+  // Rekursiv einen Item an einem Pfad updaten
+  const updateItemAtPath = (items: RecursiveItem[], path: number[], updates: Partial<RecursiveItem>): RecursiveItem[] => {
+    const newItems = [...items];
+    if (path.length === 1) {
+      newItems[path[0]] = { ...newItems[path[0]], ...updates };
     } else {
-      newExpanded.delete(index);
+      const [first, ...rest] = path;
+      newItems[first] = {
+        ...newItems[first],
+        subItems: updateItemAtPath(newItems[first].subItems || [], rest, updates),
+      };
     }
-    setExpandedItems(newExpanded);
+    return newItems;
   };
 
-  const toggleSubItem = (itemIndex: number, subIndex: number) => {
+  // Toggle checked status und automatisch aufklappen
+  const toggleItemChecked = (path: number[]) => {
     if (!checklist) return;
     
-    const newItems = [...checklist.items];
-    if (newItems[itemIndex].subItems) {
-      newItems[itemIndex].subItems![subIndex].checked = !newItems[itemIndex].subItems![subIndex].checked;
-      setChecklist({ ...checklist, items: newItems });
-    }
-  };
-
-  const updateNote = (index: number, note: string) => {
-    if (!checklist) return;
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
     
-    const newItems = [...checklist.items];
-    newItems[index].note = note;
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newChecked = !item.checked;
+    const newItems = updateItemAtPath(checklist.items, path, { checked: newChecked });
+    
     setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
   };
 
-  const toggleExpand = (index: number) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
+  // Notiz updaten
+  const updateNote = (path: number[], note: string) => {
+    if (!checklist) return;
+    const newItems = updateItemAtPath(checklist.items, path, { note });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Neuen Unterpunkt hinzufügen
+  const addSubItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newSubItems = [...(item.subItems || []), { text: '', checked: false, subItems: [] }];
+    const newItems = updateItemAtPath(checklist.items, path, { subItems: newSubItems });
+    
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Unterpunkt-Text updaten
+  const updateSubItemText = (path: number[], text: string) => {
+    if (!checklist) return;
+    const newItems = updateItemAtPath(checklist.items, path, { text });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Unterpunkt löschen
+  const removeSubItem = (parentPath: number[], subIndex: number) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const parentItem = getItemAtPath(checklist.items, parentPath);
+    if (!parentItem || !parentItem.subItems) return;
+    
+    const newSubItems = parentItem.subItems.filter((_, i) => i !== subIndex);
+    const newItems = updateItemAtPath(checklist.items, parentPath, { subItems: newSubItems });
+    
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Stilles Speichern (ohne Alert)
+  const saveChecklistSilent = async () => {
+    if (!checklist || saving) return;
+    try {
+      await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist);
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error auto-saving checklist:', error);
     }
-    setExpandedItems(newExpanded);
   };
 
+  // Manuelles Speichern mit Feedback
   const handleSave = async () => {
     if (!checklist) return;
 
     setSaving(true);
     try {
       await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist);
-      Alert.alert('Erfolg', 'Checkliste wurde aktualisiert', [
+      setHasChanges(false);
+      Alert.alert('Erfolg', 'Checkliste wurde gespeichert', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
@@ -165,6 +236,138 @@ export default function EditChecklistScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Rekursive Render-Funktion für Items
+  const renderItem = (item: RecursiveItem, path: number[], depth: number = 0) => {
+    const hasSubItems = item.subItems && item.subItems.length > 0;
+    const isMainItem = depth === 0;
+    
+    return (
+      <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * 16 }]}>
+        {/* Item Header */}
+        <View
+          style={[
+            styles.checklistItem,
+            item.checked && styles.checklistItemChecked,
+            !isMainItem && styles.subItemCard,
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.checkboxArea}
+            onPress={() => toggleItemChecked(path)}
+          >
+            <Ionicons
+              name={item.checked ? 'checkbox' : 'square-outline'}
+              size={isMainItem ? 28 : 22}
+              color={item.checked ? '#4caf50' : '#666'}
+            />
+          </TouchableOpacity>
+          
+          <View style={styles.itemContent}>
+            <Text
+              style={[
+                isMainItem ? styles.checklistText : styles.subItemText,
+                item.checked && (isMainItem ? styles.checklistTextChecked : styles.subItemTextChecked),
+              ]}
+            >
+              {item.text}
+            </Text>
+            
+            {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
+            {hasSubItems && !item.checked && (
+              <Text style={styles.subItemsHint}>
+                {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Expanded Content - nur wenn abgehakt */}
+        {item.checked && (
+          <View style={[styles.expandedContent, { marginLeft: 8 }]}>
+            {/* Vorhandene Unterpunkte rekursiv rendern */}
+            {hasSubItems && (
+              <View style={styles.subItemsContainer}>
+                {item.subItems!.map((subItem, subIndex) => (
+                  <View key={subIndex}>
+                    {subItem.text ? (
+                      // Vorhandener Unterpunkt
+                      renderItem(subItem, [...path, subIndex], depth + 1)
+                    ) : (
+                      // Neuer Unterpunkt (Eingabefeld)
+                      <View style={[styles.newSubItemRow, { marginLeft: (depth + 1) * 16 }]}>
+                        <View style={styles.subItemConnector}>
+                          <View style={styles.connectorLine} />
+                        </View>
+                        <TextInput
+                          style={styles.newSubItemInput}
+                          placeholder="Neuen Unterpunkt eingeben..."
+                          value={subItem.text}
+                          onChangeText={(text) => updateSubItemText([...path, subIndex], text)}
+                          autoFocus
+                        />
+                        <TouchableOpacity
+                          onPress={() => removeSubItem(path, subIndex)}
+                          style={styles.removeSubButton}
+                        >
+                          <Ionicons name="close-circle" size={20} color="#999" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Button zum Hinzufügen von Unterpunkten */}
+            <TouchableOpacity
+              style={styles.addSubItemButton}
+              onPress={() => addSubItem(path)}
+            >
+              <Ionicons name="add" size={18} color="#1976d2" />
+              <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
+            </TouchableOpacity>
+
+            {/* Notiz-Feld nur für Hauptpunkte */}
+            {isMainItem && (
+              <View style={styles.noteContainer}>
+                <View style={styles.noteHeader}>
+                  <Ionicons name="create-outline" size={18} color="#666" />
+                  <Text style={styles.noteLabel}>Notiz</Text>
+                </View>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Notiz hinzufügen..."
+                  value={item.note || ''}
+                  onChangeText={(text) => updateNote(path, text)}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Zähle alle abgehakten Items (rekursiv)
+  const countChecked = (items: RecursiveItem[]): { checked: number; total: number } => {
+    let checked = 0;
+    let total = 0;
+    
+    items.forEach(item => {
+      total++;
+      if (item.checked) checked++;
+      if (item.subItems && item.subItems.length > 0) {
+        const subCount = countChecked(item.subItems);
+        checked += subCount.checked;
+        total += subCount.total;
+      }
+    });
+    
+    return { checked, total };
   };
 
   if (loading) {
@@ -183,8 +386,7 @@ export default function EditChecklistScreen() {
     );
   }
 
-  const completedCount = checklist.items.filter(item => item.checked).length;
-  const totalCount = checklist.items.length;
+  const { checked: completedCount, total: totalCount } = countChecked(checklist.items);
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
@@ -194,6 +396,9 @@ export default function EditChecklistScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{checklist.template_name}</Text>
+        {hasChanges && (
+          <Text style={styles.unsavedHint}>Nicht gespeicherte Änderungen</Text>
+        )}
         <View style={styles.progressBar}>
           <View
             style={[
@@ -207,113 +412,9 @@ export default function EditChecklistScreen() {
         </Text>
       </View>
 
-      <ScrollView style={styles.checklistContainer}>
+      <ScrollView style={styles.checklistContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.checklistContent}>
-          {checklist.items.map((item, index) => {
-            const isExpanded = expandedItems.has(index);
-            const hasSubItems = item.subItems && item.subItems.length > 0;
-            // Unterpunkte nur anzeigen wenn Hauptpunkt abgehakt ist
-            const showSubItems = item.checked && hasSubItems;
-            
-            return (
-              <View key={index} style={styles.itemWrapper}>
-                {/* Main Item */}
-                <TouchableOpacity
-                  style={[
-                    styles.checklistItem,
-                    item.checked && styles.checklistItemChecked,
-                  ]}
-                  onPress={() => toggleItem(index)}
-                >
-                  <Ionicons
-                    name={item.checked ? 'checkbox' : 'square-outline'}
-                    size={28}
-                    color={item.checked ? '#4caf50' : '#666'}
-                  />
-                  <View style={styles.itemTextContainer}>
-                    <Text
-                      style={[
-                        styles.checklistText,
-                        item.checked && styles.checklistTextChecked,
-                      ]}
-                    >
-                      {item.text}
-                    </Text>
-                    {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
-                    {hasSubItems && !item.checked && (
-                      <Text style={styles.subItemsHint}>
-                        {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''} verfügbar
-                      </Text>
-                    )}
-                  </View>
-                  {/* Show expand button only if checked and has subItems */}
-                  {showSubItems && (
-                    <TouchableOpacity
-                      onPress={() => toggleExpand(index)}
-                      style={styles.expandButton}
-                    >
-                      <Ionicons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={24}
-                        color="#1976d2"
-                      />
-                    </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-
-                {/* Expanded Content - Sub Items & Note (nur wenn Hauptpunkt abgehakt) */}
-                {item.checked && isExpanded && (
-                  <View style={styles.expandedContent}>
-                    {/* Sub Items */}
-                    {hasSubItems && (
-                      <View style={styles.subItemsContainer}>
-                        {item.subItems!.map((subItem, subIndex) => (
-                          <TouchableOpacity
-                            key={subIndex}
-                            style={styles.subItem}
-                            onPress={() => toggleSubItem(index, subIndex)}
-                          >
-                            <View style={styles.subItemConnector}>
-                              <View style={styles.connectorLine} />
-                            </View>
-                            <Ionicons
-                              name={subItem.checked ? 'checkbox' : 'square-outline'}
-                              size={22}
-                              color={subItem.checked ? '#4caf50' : '#999'}
-                            />
-                            <Text
-                              style={[
-                                styles.subItemText,
-                                subItem.checked && styles.subItemTextChecked,
-                              ]}
-                            >
-                              {subItem.text}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Note Field */}
-                    <View style={styles.noteContainer}>
-                      <View style={styles.noteHeader}>
-                        <Ionicons name="create-outline" size={18} color="#666" />
-                        <Text style={styles.noteLabel}>Notiz</Text>
-                      </View>
-                      <TextInput
-                        style={styles.noteInput}
-                        placeholder="Notiz hinzufügen..."
-                        value={item.note || ''}
-                        onChangeText={(text) => updateNote(index, text)}
-                        multiline
-                        numberOfLines={3}
-                      />
-                    </View>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+          {checklist.items.map((item, index) => renderItem(item, [index], 0))}
         </View>
       </ScrollView>
 
@@ -325,7 +426,7 @@ export default function EditChecklistScreen() {
         >
           <Ionicons name="checkmark-circle" size={24} color="#fff" />
           <Text style={styles.saveButtonText}>
-            {saving ? 'Wird gespeichert...' : 'Änderungen speichern'}
+            {saving ? 'Wird gespeichert...' : 'Speichern & Zurück'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -354,7 +455,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  unsavedHint: {
+    fontSize: 12,
+    color: '#ff9800',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   progressBar: {
     height: 8,
@@ -385,9 +492,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -399,8 +505,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#4caf50',
   },
-  checklistText: {
+  subItemCard: {
+    backgroundColor: '#fafafa',
+    shadowOpacity: 0.05,
+    elevation: 1,
+  },
+  checkboxArea: {
+    padding: 4,
+    marginRight: 8,
+  },
+  itemContent: {
     flex: 1,
+  },
+  checklistText: {
     fontSize: 16,
     color: '#333',
   },
@@ -408,8 +525,13 @@ const styles = StyleSheet.create({
     color: '#4caf50',
     fontWeight: '600',
   },
-  itemTextContainer: {
-    flex: 1,
+  subItemText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  subItemTextChecked: {
+    color: '#4caf50',
+    fontWeight: '500',
   },
   subItemsHint: {
     fontSize: 12,
@@ -417,26 +539,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-  expandButton: {
-    padding: 4,
-  },
   expandedContent: {
     marginTop: 8,
-    marginLeft: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#1976d2',
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: '#4caf50',
   },
   subItemsContainer: {
-    marginBottom: 12,
-  },
-  subItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 8,
+    marginBottom: 8,
   },
   subItemConnector: {
     width: 16,
@@ -447,19 +557,45 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#ddd',
   },
-  subItemText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#666',
+  newSubItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 8,
   },
-  subItemTextChecked: {
-    color: '#4caf50',
+  newSubItemInput: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 14,
+  },
+  removeSubButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  addSubItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  addSubItemText: {
+    color: '#1976d2',
+    fontSize: 14,
     fontWeight: '500',
   },
   noteContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
   },
   noteHeader: {
     flexDirection: 'row',

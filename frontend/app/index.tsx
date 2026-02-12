@@ -228,13 +228,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 20,
   },
-  appTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 12,
-    letterSpacing: 1,
-  },
   actionButtons: {
     flexDirection: 'row',
     padding: 16,

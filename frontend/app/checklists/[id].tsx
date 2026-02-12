@@ -332,33 +332,61 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
-  // Stilles Speichern (ohne Alert)
-  const saveChecklistSilent = async () => {
+  // Stilles Speichern (ohne Alert) mit Retry
+  const saveChecklistSilent = async (retries = 3) => {
     if (!checklist || saving) return;
-    try {
-      await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist);
-      setHasChanges(false);
-    } catch (error) {
-      console.error('Error auto-saving checklist:', error);
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist, {
+          timeout: 10000, // 10 Sekunden Timeout
+        });
+        setHasChanges(false);
+        return; // Erfolgreich gespeichert
+      } catch (error) {
+        if (i === retries - 1) {
+          console.error('Error auto-saving checklist after retries:', error);
+        } else {
+          // Warte kurz vor dem nächsten Versuch
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
     }
   };
 
-  // Manuelles Speichern mit Feedback
+  // Manuelles Speichern mit Feedback und Retry
   const handleSave = async () => {
     if (!checklist) return;
 
     setSaving(true);
-    try {
-      await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist);
-      setHasChanges(false);
+    let success = false;
+    
+    for (let i = 0; i < 3; i++) {
+      try {
+        await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist, {
+          timeout: 15000, // 15 Sekunden Timeout
+        });
+        setHasChanges(false);
+        success = true;
+        break;
+      } catch (error) {
+        if (i < 2) {
+          // Warte kurz vor dem nächsten Versuch
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.error('Error saving checklist:', error);
+        }
+      }
+    }
+    
+    setSaving(false);
+    
+    if (success) {
       Alert.alert('Erfolg', 'Checkliste wurde gespeichert', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
-      console.error('Error saving checklist:', error);
-      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden');
-    } finally {
-      setSaving(false);
+    } else {
+      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden. Bitte prüfe deine Internetverbindung.');
     }
   };
 

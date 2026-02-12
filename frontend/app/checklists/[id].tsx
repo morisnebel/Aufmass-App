@@ -637,6 +637,10 @@ const styles = StyleSheet.create({
   },
   removeSubButton: {
     padding: 4,
+    marginLeft: 4,
+  },
+  confirmSubButton: {
+    padding: 4,
     marginLeft: 8,
   },
   addSubItemButton: {

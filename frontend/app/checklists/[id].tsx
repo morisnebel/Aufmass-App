@@ -176,11 +176,62 @@ export default function EditChecklistScreen() {
     const item = getItemAtPath(checklist.items, path);
     if (!item) return;
     
-    const newSubItems = [...(item.subItems || []), { text: '', checked: false, subItems: [] }];
+    // Öffne das Eingabefeld für diesen Pfad
+    const pathKey = path.join('-');
+    setOpenInputs(prev => new Set(prev).add(pathKey));
+    setNewSubItemTexts(prev => ({ ...prev, [pathKey]: '' }));
+  };
+
+  // Neuen Unterpunkt bestätigen und hinzufügen
+  const confirmNewSubItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    const pathKey = path.join('-');
+    const text = newSubItemTexts[pathKey]?.trim();
+    
+    if (!text) {
+      // Eingabefeld schließen wenn leer
+      setOpenInputs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pathKey);
+        return newSet;
+      });
+      return;
+    }
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newSubItems = [...(item.subItems || []), { text, checked: false, subItems: [] }];
     const newItems = updateItemAtPath(checklist.items, path, { subItems: newSubItems });
     
     setChecklist({ ...checklist, items: newItems });
     setHasChanges(true);
+    
+    // Eingabefeld leeren aber offen lassen für weitere Eingaben
+    setNewSubItemTexts(prev => ({ ...prev, [pathKey]: '' }));
+  };
+
+  // Eingabefeld schließen
+  const cancelNewSubItem = (path: number[]) => {
+    const pathKey = path.join('-');
+    setOpenInputs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(pathKey);
+      return newSet;
+    });
+    setNewSubItemTexts(prev => {
+      const newTexts = { ...prev };
+      delete newTexts[pathKey];
+      return newTexts;
+    });
   };
 
   // Unterpunkt-Text updaten

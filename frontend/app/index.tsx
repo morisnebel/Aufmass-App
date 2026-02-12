@@ -147,7 +147,6 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.appTitle}>AUFMASSPROFI - Dach</Text>
       </View>
 
       <View style={styles.actionButtons}>

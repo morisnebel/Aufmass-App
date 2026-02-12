@@ -366,52 +366,108 @@ export default function EditChecklistScreen() {
   const renderItem = (item: RecursiveItem, path: number[], depth: number = 0) => {
     const hasSubItems = item.subItems && item.subItems.length > 0;
     const isMainItem = depth === 0;
+    const pathKey = path.join('-');
+    const isEditing = editingItems.hasOwnProperty(pathKey);
     
     return (
       <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * 16 }]}>
-        {/* Item Header - ganze Zeile anklickbar */}
-        <TouchableOpacity
-          style={[
+        {/* Bearbeitungsmodus */}
+        {isEditing ? (
+          <View style={styles.editingContainer}>
+            <TextInput
+              style={styles.editingInput}
+              value={editingItems[pathKey]}
+              onChangeText={(text) => setEditingItems(prev => ({ ...prev, [pathKey]: text }))}
+              onSubmitEditing={() => confirmEditing(path)}
+              autoFocus
+              multiline
+            />
+            <View style={styles.editingButtons}>
+              <TouchableOpacity onPress={() => confirmEditing(path)} style={styles.editConfirmButton}>
+                <Ionicons name="checkmark-circle" size={28} color="#4caf50" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => cancelEditing(path)} style={styles.editCancelButton}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          /* Normaler Anzeigemodus */
+          <View style={[
             styles.checklistItem,
             item.checked && styles.checklistItemChecked,
             !isMainItem && styles.subItemCard,
-          ]}
-          onPress={() => toggleItemChecked(path)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={item.checked ? 'checkbox' : 'square-outline'}
-            size={isMainItem ? 28 : 22}
-            color={item.checked ? '#4caf50' : '#666'}
-          />
-          
-          <View style={styles.itemContent}>
-            <Text
-              style={[
-                isMainItem ? styles.checklistText : styles.subItemText,
-                item.checked && (isMainItem ? styles.checklistTextChecked : styles.subItemTextChecked),
-              ]}
-            >
-              {item.text}
-            </Text>
+          ]}>
+            {/* Checkbox */}
+            <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchable}>
+              <Ionicons
+                name={item.checked ? 'checkbox' : 'square-outline'}
+                size={isMainItem ? 28 : 22}
+                color={item.checked ? '#4caf50' : '#666'}
+              />
+            </TouchableOpacity>
             
-            {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
-            {hasSubItems && !item.checked && (
-              <Text style={styles.subItemsHint}>
-                {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+            {/* Text - Tippen zum Bearbeiten */}
+            <TouchableOpacity 
+              style={styles.itemContent}
+              onPress={() => startEditing(path, item.text)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  isMainItem ? styles.checklistText : styles.subItemText,
+                  item.checked && (isMainItem ? styles.checklistTextChecked : styles.subItemTextChecked),
+                ]}
+              >
+                {item.text}
               </Text>
-            )}
+              
+              {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
+              {hasSubItems && !item.checked && (
+                <Text style={styles.subItemsHint}>
+                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* Action Buttons */}
+            <View style={styles.itemActions}>
+              {/* Bearbeiten Button */}
+              <TouchableOpacity 
+                onPress={() => startEditing(path, item.text)}
+                style={styles.actionButton}
+              >
+                <Ionicons name="pencil" size={18} color="#1976d2" />
+              </TouchableOpacity>
+              
+              {/* Löschen Button */}
+              <TouchableOpacity 
+                onPress={() => {
+                  Alert.alert(
+                    'Löschen',
+                    `"${item.text}" wirklich löschen?`,
+                    [
+                      { text: 'Abbrechen', style: 'cancel' },
+                      { text: 'Löschen', style: 'destructive', onPress: () => deleteItem(path) }
+                    ]
+                  );
+                }}
+                style={styles.actionButton}
+              >
+                <Ionicons name="trash-outline" size={18} color="#f44336" />
+              </TouchableOpacity>
+              
+              {/* Pfeil-Icon zeigt an dass es aufklappbar ist */}
+              {hasSubItems && (
+                <Ionicons
+                  name={item.checked ? 'chevron-down' : 'chevron-forward'}
+                  size={20}
+                  color="#999"
+                />
+              )}
+            </View>
           </View>
-          
-          {/* Pfeil-Icon zeigt an dass es aufklappbar ist */}
-          {hasSubItems && (
-            <Ionicons
-              name={item.checked ? 'chevron-down' : 'chevron-forward'}
-              size={20}
-              color="#999"
-            />
-          )}
-        </TouchableOpacity>
+        )}
 
         {/* Expanded Content - nur wenn abgehakt */}
         {item.checked && (

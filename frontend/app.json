@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Dach-Aufmaß",
+    "slug": "dach-aufmass",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "dachaufmass",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.nebelbedachung.dachaufmass",
       "infoPlist": {
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
         "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
@@ -17,9 +18,10 @@
       }
     },
     "android": {
+      "package": "com.nebelbedachung.dachaufmass",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000"
+        "backgroundColor": "#1976d2"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -42,7 +44,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000"
+          "backgroundColor": "#1976d2"
         }
       ],
       [
@@ -61,6 +63,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
     }
   }
 }

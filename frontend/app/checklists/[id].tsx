@@ -352,42 +352,47 @@ export default function EditChecklistScreen() {
               <View style={styles.subItemsContainer}>
                 {item.subItems!.map((subItem, subIndex) => (
                   <View key={subIndex}>
-                    {subItem.text ? (
-                      // Vorhandener Unterpunkt
-                      renderItem(subItem, [...path, subIndex], depth + 1)
-                    ) : (
-                      // Neuer Unterpunkt (Eingabefeld)
-                      <View style={[styles.newSubItemRow, { marginLeft: (depth + 1) * 16 }]}>
-                        <View style={styles.subItemConnector}>
-                          <View style={styles.connectorLine} />
-                        </View>
-                        <TextInput
-                          style={styles.newSubItemInput}
-                          placeholder="Neuen Unterpunkt eingeben..."
-                          value={subItem.text}
-                          onChangeText={(text) => updateSubItemText([...path, subIndex], text)}
-                          autoFocus
-                        />
-                        <TouchableOpacity
-                          onPress={() => removeSubItem(path, subIndex)}
-                          style={styles.removeSubButton}
-                        >
-                          <Ionicons name="close-circle" size={20} color="#999" />
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                    {renderItem(subItem, [...path, subIndex], depth + 1)}
                   </View>
                 ))}
               </View>
             )}
 
+            {/* Eingabefeld für neuen Unterpunkt */}
+            {openInputs.has(path.join('-')) && (
+              <View style={styles.newSubItemRow}>
+                <TextInput
+                  style={styles.newSubItemInput}
+                  placeholder="Neuen Unterpunkt eingeben..."
+                  value={newSubItemTexts[path.join('-')] || ''}
+                  onChangeText={(text) => setNewSubItemTexts(prev => ({ ...prev, [path.join('-')]: text }))}
+                  onSubmitEditing={() => confirmNewSubItem(path)}
+                  returnKeyType="done"
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => confirmNewSubItem(path)}
+                  style={styles.confirmSubButton}
+                >
+                  <Ionicons name="checkmark-circle" size={28} color="#4caf50" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => cancelNewSubItem(path)}
+                  style={styles.removeSubButton}
+                >
+                  <Ionicons name="close-circle" size={28} color="#999" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Button zum Hinzufügen von Unterpunkten */}
-            <TouchableOpacity
-              style={styles.addSubItemButton}
-              onPress={() => addSubItem(path)}
-            >
-              <Ionicons name="add" size={18} color="#1976d2" />
-              <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
+            {!openInputs.has(path.join('-')) && (
+              <TouchableOpacity
+                style={styles.addSubItemButton}
+                onPress={() => addSubItem(path)}
+              >
+                <Ionicons name="add" size={18} color="#1976d2" />
+                <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
             </TouchableOpacity>
 
             {/* Notiz-Feld nur für Hauptpunkte */}

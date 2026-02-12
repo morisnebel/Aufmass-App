@@ -245,24 +245,21 @@ export default function EditChecklistScreen() {
     
     return (
       <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * 16 }]}>
-        {/* Item Header */}
-        <View
+        {/* Item Header - ganze Zeile anklickbar */}
+        <TouchableOpacity
           style={[
             styles.checklistItem,
             item.checked && styles.checklistItemChecked,
             !isMainItem && styles.subItemCard,
           ]}
+          onPress={() => toggleItemChecked(path)}
+          activeOpacity={0.7}
         >
-          <TouchableOpacity
-            style={styles.checkboxArea}
-            onPress={() => toggleItemChecked(path)}
-          >
-            <Ionicons
-              name={item.checked ? 'checkbox' : 'square-outline'}
-              size={isMainItem ? 28 : 22}
-              color={item.checked ? '#4caf50' : '#666'}
-            />
-          </TouchableOpacity>
+          <Ionicons
+            name={item.checked ? 'checkbox' : 'square-outline'}
+            size={isMainItem ? 28 : 22}
+            color={item.checked ? '#4caf50' : '#666'}
+          />
           
           <View style={styles.itemContent}>
             <Text
@@ -281,7 +278,16 @@ export default function EditChecklistScreen() {
               </Text>
             )}
           </View>
-        </View>
+          
+          {/* Pfeil-Icon zeigt an dass es aufklappbar ist */}
+          {hasSubItems && (
+            <Ionicons
+              name={item.checked ? 'chevron-down' : 'chevron-forward'}
+              size={20}
+              color="#999"
+            />
+          )}
+        </TouchableOpacity>
 
         {/* Expanded Content - nur wenn abgehakt */}
         {item.checked && (

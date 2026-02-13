@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
@@ -22,14 +22,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"
-      },
-      "edgeToEdgeEnabled": true,
-      "permissions": [
-        "READ_CONTACTS",
-        "WRITE_CONTACTS",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
+      }
     },
     "web": {
       "bundler": "metro",
@@ -47,19 +40,8 @@
           "backgroundColor": "#0a1628"
         }
       ],
-      [
-        "expo-contacts",
-        {
-          "contactsPermission": "Erlauben Sie den Zugriff auf Ihre Kontakte, um Kunden zu importieren und zu speichern."
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Erlauben Sie den Zugriff auf Ihre Fotos, um Aufmaß-Fotos zu speichern.",
-          "savePhotosPermission": "Erlauben Sie das Speichern von Fotos in Ihrer Galerie."
-        }
-      ]
+      "expo-contacts",
+      "expo-media-library"
     ],
     "experiments": {
       "typedRoutes": true

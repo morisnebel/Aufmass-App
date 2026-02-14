@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService } from '../../services/LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';

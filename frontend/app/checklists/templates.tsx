@@ -334,15 +334,20 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
-    width: '90%',
-    maxHeight: '80%',
+    maxHeight: '90%',
+  },
+  modalScrollView: {
+    flexGrow: 0,
+  },
+  keyboardSpacer: {
+    height: 40,
   },
   modalHeader: {
     flexDirection: 'row',

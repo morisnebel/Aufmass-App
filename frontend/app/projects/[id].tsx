@@ -1661,11 +1661,16 @@ export default function ProjectDetailScreen() {
                       svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lineEndX.toFixed(1)}" y2="${lineEndY.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`;
                       svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${color}"/>`;
                       
-                      // Text am Startpunkt des Memo-Pfeils anzeigen
+                      // Text am Startpunkt des Memo-Pfeils anzeigen (wie im Original)
                       if (el.data.text) {
-                        const textOffsetX = x1 + 15 * Math.cos(angle - Math.PI / 2);
-                        const textOffsetY = y1 + 15 * Math.sin(angle - Math.PI / 2);
-                        const fontSize = Math.max(8, 10 * scale);
+                        const textOffset = 15 * scale;
+                        const textOffsetX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
+                        const textOffsetY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
+                        const fontSize = Math.max(8, (el.data.fontSize || 16) * scale);
+                        const textWidth = el.data.text.length * fontSize * 0.6 + 10;
+                        const textHeight = fontSize + 8;
+                        // Hintergrund für bessere Lesbarkeit
+                        svgElements += `<rect x="${(textOffsetX - 5).toFixed(1)}" y="${(textOffsetY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="rgba(255,255,255,0.85)" rx="4" ry="4" stroke="${color}" stroke-width="1"/>`;
                         svgElements += `<text x="${textOffsetX.toFixed(1)}" y="${textOffsetY.toFixed(1)}" font-size="${fontSize}" fill="${color}" font-weight="bold">${el.data.text}</text>`;
                       }
                     }

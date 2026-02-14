@@ -483,7 +483,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
   },
-  // Neue Styles für Foto-Auswahl
+  // Lade-Overlay für Foto
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingOverlayText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
   selectHintText: {
     fontSize: 14,
     color: '#666',
@@ -493,54 +505,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-  },
-  photoGridItemSelected: {
-    borderWidth: 3,
-    borderColor: '#4caf50',
-  },
-  selectedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(76, 175, 80, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmarkCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4caf50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  confirmButtonContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  confirmButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#a5d6a7',
-  },
-  confirmButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
   },
 });

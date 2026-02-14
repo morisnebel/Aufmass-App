@@ -45,7 +45,7 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
 |---------|-------|--------|------------|
 | 1.0.0   | 1     | Initial | Erste Version |
 | 1.0.0   | 2     | TestFlight | Splash Screen Fix, UI Updates |
-| 1.0.0   | 3     | Pending | PDF-Export mit Vorschau & Speichern |
+| 1.0.0   | 3     | Pending | PDF-Export mit Vorschau & Speichern, verbessertes Layout |
 
 ## Pending Issues (P2)
 - [ ] UI-Freeze Bug beim "Neues Projekt" Workflow (nach Kundenanlage)

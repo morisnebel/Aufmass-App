@@ -301,18 +301,10 @@ export default function ProjectDetailScreen() {
     } catch (error: any) {
       console.error('Error deleting checklist:', error);
       
-      // Only show error if it's not a 404 (checklist already deleted)
-      if (error?.response?.status !== 404) {
-        if (Platform.OS === 'web') {
-          alert('Fehler: Checkliste konnte nicht gelöscht werden');
-        } else {
-          Alert.alert('Fehler', 'Checkliste konnte nicht gelöscht werden');
-        }
+      if (Platform.OS === 'web') {
+        alert('Fehler: Checkliste konnte nicht gelöscht werden');
       } else {
-        // Checklist was already deleted, just close modal and reload
-        setDeleteChecklistModalVisible(false);
-        setChecklistToDelete(null);
-        await loadProjectData();
+        Alert.alert('Fehler', 'Checkliste konnte nicht gelöscht werden');
       }
     } finally {
       setIsDeletingChecklist(false);

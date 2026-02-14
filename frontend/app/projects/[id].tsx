@@ -146,6 +146,12 @@ export default function ProjectDetailScreen() {
   const [editObjektPlz, setEditObjektPlz] = useState('');
   const [editObjektCity, setEditObjektCity] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
+  
+  // PDF Preview state
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
+  const [pdfHtmlContent, setPdfHtmlContent] = useState('');
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Helper to parse address from customer
   const parseCustomerAddress = (address: string | undefined) => {

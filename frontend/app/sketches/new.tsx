@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  loadingContainer: {
+  modalLoadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

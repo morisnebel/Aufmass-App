@@ -28,7 +28,6 @@ export default function NewSketchScreen() {
   const [projectPhotos, setProjectPhotos] = useState<Photo[]>([]);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [preparingSketch, setPreparingSketch] = useState(false);
 
   // Projektfotos beim Öffnen des Modals laden
   const loadProjectPhotos = async () => {

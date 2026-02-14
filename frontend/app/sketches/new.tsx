@@ -330,6 +330,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#999',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

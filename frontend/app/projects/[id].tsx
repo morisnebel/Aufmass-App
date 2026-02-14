@@ -767,14 +767,16 @@ export default function ProjectDetailScreen() {
             ${companyLogo ? `<img src="${companyLogo}" class="company-logo" alt="Logo" />` : ''}
             <div>
               <h1>AUFMASS-DOKUMENTATION</h1>
-              <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}</div>
+              <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}${authorName ? ` | Verfasser: ${authorName}` : ''}</div>
             </div>
           </div>
           ${companyName ? `
             <div class="company-info">
-              <strong>${companyName}</strong><br/>
-              ${companyAddress ? companyAddress.replace(/\n/g, '<br/>') : ''}<br/>
-              ${companyPhone ? `Tel: ${companyPhone}` : ''}
+              <strong>${companyName}</strong>
+              ${companySubtitle ? `<br/><em>${companySubtitle}</em>` : ''}
+              ${companyStreet ? `<br/>${companyStreet}` : ''}
+              ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
+              ${companyPhone ? `<br/>Tel: ${companyPhone}` : ''}
               ${companyEmail ? `<br/>E-Mail: ${companyEmail}` : ''}
             </div>
           ` : ''}

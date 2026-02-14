@@ -80,6 +80,7 @@ export default function EditTemplateScreen() {
       };
       
       setItems(convertItems(data.items));
+      }
     } catch (error) {
       console.error('Error loading template:', error);
       Alert.alert('Fehler', 'Vorlage konnte nicht geladen werden');

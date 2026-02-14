@@ -371,4 +371,83 @@ const styles = StyleSheet.create({
   optionArrow: {
     marginLeft: 8,
   },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  photosScrollView: {
+    flex: 1,
+  },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 8,
+  },
+  photoGridItem: {
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    margin: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#e0e0e0',
+  },
+  photoGridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoDescriptionOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  photoDescriptionText: {
+    color: '#fff',
+    fontSize: 11,
+  },
 });

@@ -1017,15 +1017,18 @@ export default function ProjectDetailScreen() {
       return;
     }
     
-    setShowPdfPreviewModal(false);
-    
     try {
+      // Keep modal open, show loading
       setIsGeneratingPdf(true);
       
       const { uri } = await Print.printToFileAsync({
         html: pdfHtmlContent,
         base64: false,
       });
+      
+      // Close modal before sharing
+      setShowPdfPreviewModal(false);
+      setIsGeneratingPdf(false);
       
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
@@ -1039,9 +1042,9 @@ export default function ProjectDetailScreen() {
       }
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
-    } finally {
+      setShowPdfPreviewModal(false);
       setIsGeneratingPdf(false);
+      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
     }
   };
 
@@ -1052,15 +1055,18 @@ export default function ProjectDetailScreen() {
       return;
     }
     
-    setShowPdfPreviewModal(false);
-    
     try {
+      // Keep modal open, show loading
       setIsGeneratingPdf(true);
       
       const { uri } = await Print.printToFileAsync({
         html: pdfHtmlContent,
         base64: false,
       });
+      
+      // Close modal before sharing
+      setShowPdfPreviewModal(false);
+      setIsGeneratingPdf(false);
       
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
@@ -1074,9 +1080,9 @@ export default function ProjectDetailScreen() {
       }
     } catch (error) {
       console.error('Error saving PDF from preview:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
-    } finally {
+      setShowPdfPreviewModal(false);
       setIsGeneratingPdf(false);
+      Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
     }
   };
 

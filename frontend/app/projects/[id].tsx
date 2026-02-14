@@ -538,7 +538,17 @@ export default function ProjectDetailScreen() {
     const sketchesHtml = sketches.length > 0 ? `
       <div class="sketches-container">
         ${sketches.map(sketch => {
-          const size = (sketch as any).pdf_size || 'large'; // Skizzen default groß
+          // Read pdf_size from sketch object or metadata
+          let size = (sketch as any).pdf_size || 'large';
+          if (!size || size === 'large') {
+            // Try to read from metadata
+            try {
+              const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
+              if (metadata.pdf_size) {
+                size = metadata.pdf_size;
+              }
+            } catch (e) {}
+          }
           let sizeClass = 'sketch-large';
           if (size === 'small') sizeClass = 'sketch-small';
           if (size === 'medium') sizeClass = 'sketch-medium';

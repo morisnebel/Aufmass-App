@@ -19,7 +19,7 @@ import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system/next';
+// File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
 const { width } = Dimensions.get('window');

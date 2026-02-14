@@ -408,6 +408,9 @@ export default function ProjectDetailScreen() {
     // Get company settings for header
     const settings = await SettingsService.get();
     
+    // Calculate total area for PDF
+    const pdfTotalArea = roofs.reduce((sum, roof) => sum + (roof.area || 0), 0);
+    
     // Parse customer address helper
     const parseAddr = (address: string | undefined) => {
       if (!address) return { street: '', plz: '', city: '' };

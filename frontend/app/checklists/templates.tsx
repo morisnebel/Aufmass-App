@@ -200,42 +200,55 @@ export default function ChecklistTemplatesScreen() {
         transparent={true}
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Neue Checklisten-Vorlage</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView 
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Neue Checklisten-Vorlage</Text>
+                <TouchableOpacity onPress={() => setShowModal(false)}>
+                  <Ionicons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Vorlagen-Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="z.B. Dachsanierung"
-                value={newTemplateName}
-                onChangeText={setNewTemplateName}
-              />
-            </View>
+              <ScrollView 
+                style={styles.modalScrollView}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+              >
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Vorlagen-Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="z.B. Dachsanierung"
+                    value={newTemplateName}
+                    onChangeText={setNewTemplateName}
+                  />
+                </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Punkte (ein Punkt pro Zeile)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Punkt 1\nPunkt 2\nPunkt 3"
-                value={newTemplateItems}
-                onChangeText={setNewTemplateItems}
-                multiline
-                numberOfLines={10}
-              />
-            </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Punkte (ein Punkt pro Zeile)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Punkt 1\nPunkt 2\nPunkt 3"
+                    value={newTemplateItems}
+                    onChangeText={setNewTemplateItems}
+                    multiline
+                    numberOfLines={10}
+                  />
+                </View>
 
-            <TouchableOpacity style={styles.createButton} onPress={createTemplate}>
-              <Text style={styles.createButtonText}>Vorlage erstellen</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <TouchableOpacity style={styles.createButton} onPress={createTemplate}>
+                  <Text style={styles.createButtonText}>Vorlage erstellen</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.keyboardSpacer} />
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );

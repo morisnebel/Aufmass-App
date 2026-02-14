@@ -312,6 +312,11 @@ export default function DrawSketchScreen() {
       if (sketch) {
         setTitle(sketch.title || 'Skizze');
         
+        // Load PDF size if available
+        if ((sketch as any).pdf_size) {
+          setPdfSize((sketch as any).pdf_size);
+        }
+        
         // Parse saved elements if available
         if (sketch.metadata) {
           try {

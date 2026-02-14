@@ -1010,22 +1010,74 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  // Share PDF from preview
+  // Share PDF from preview - use already generated HTML
   const sharePdfFromPreview = async () => {
+    if (!pdfHtmlContent) {
+      Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
+      return;
+    }
+    
     setShowPdfPreviewModal(false);
-    // Small delay to let modal close animation finish
-    setTimeout(() => {
-      generateAndSharePdf();
-    }, 300);
+    
+    try {
+      setIsGeneratingPdf(true);
+      
+      const { uri } = await Print.printToFileAsync({
+        html: pdfHtmlContent,
+        base64: false,
+      });
+      
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Aufmaß ${project?.name} teilen`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+      }
+    } catch (error) {
+      console.error('Error sharing PDF from preview:', error);
+      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
-  // Save PDF from preview
+  // Save PDF from preview - use already generated HTML
   const savePdfFromPreview = async () => {
+    if (!pdfHtmlContent) {
+      Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
+      return;
+    }
+    
     setShowPdfPreviewModal(false);
-    // Small delay to let modal close animation finish
-    setTimeout(() => {
-      generateAndSavePdf();
-    }, 300);
+    
+    try {
+      setIsGeneratingPdf(true);
+      
+      const { uri } = await Print.printToFileAsync({
+        html: pdfHtmlContent,
+        base64: false,
+      });
+      
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'PDF speichern',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+      }
+    } catch (error) {
+      console.error('Error saving PDF from preview:', error);
+      Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   // Share preview as image for WhatsApp/Messenger

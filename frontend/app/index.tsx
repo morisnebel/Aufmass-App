@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,25 +11,9 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  customer_id: string;
-  status: string;
-  created_at: string;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-}
+import { ProjectService, CustomerService, Project, Customer } from '../services/LocalStorage';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -40,15 +24,15 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     try {
-      const [projectsRes, customersRes] = await Promise.all([
-        axios.get(`${API_URL}/api/projects`),
-        axios.get(`${API_URL}/api/customers`),
+      const [projectsData, customersData] = await Promise.all([
+        ProjectService.getAll(),
+        CustomerService.getAll(),
       ]);
 
-      setProjects(projectsRes.data);
+      setProjects(projectsData);
       
       const customerMap: { [key: string]: Customer } = {};
-      customersRes.data.forEach((customer: Customer) => {
+      customersData.forEach((customer: Customer) => {
         customerMap[customer.id] = customer;
       });
       setCustomers(customerMap);
@@ -61,9 +45,11 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -81,7 +67,7 @@ export default function HomeScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${API_URL}/api/projects/${projectId}`);
+              await ProjectService.delete(projectId);
               loadData();
             } catch (error) {
               console.error('Error deleting project:', error);

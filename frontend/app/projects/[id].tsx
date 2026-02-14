@@ -439,12 +439,16 @@ export default function ProjectDetailScreen() {
     const objektPlz = project?.objekt_plz || '';
     const objektCity = project?.objekt_city || '';
     
-    // Company info für Header
+    // Company info für Header - verwende die Felder aus den Einstellungen
     const companyName = settings.company_name || '';
-    const companyAddress = settings.company_address || '';
-    const companyPhone = settings.company_phone || '';
-    const companyEmail = settings.company_email || '';
-    const companyLogo = settings.company_logo || '';
+    const companySubtitle = settings.company_subtitle || '';
+    const companyStreet = settings.street || '';
+    const companyZipCode = settings.zip_code || '';
+    const companyCity = settings.city || '';
+    const companyPhone = settings.phone || '';
+    const companyEmail = settings.email || '';
+    const companyLogo = settings.logo_data || '';
+    const authorName = settings.author_name || '';
     
     // Format date
     const formatDate = (dateStr: string) => {

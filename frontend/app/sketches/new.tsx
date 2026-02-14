@@ -52,14 +52,24 @@ export default function NewSketchScreen() {
   };
 
   const handleSelectProjectPhoto = (photo: Photo) => {
-    // Modal schließen
-    setShowPhotoModal(false);
+    // Zeige Ladeindikator auf dem ausgewählten Foto
+    setSelectedPhotoId(photo.id);
     
-    // Nur die Photo-ID übergeben - Bild wird in draw.tsx geladen
-    router.push(`/sketches/draw?projectId=${projectId}&photoId=${photo.id}`);
+    // Kurze Verzögerung damit der Ladeindikator sichtbar wird
+    setTimeout(() => {
+      // Navigation zur Skizze
+      router.push(`/sketches/draw?projectId=${projectId}&photoId=${photo.id}`);
+      
+      // Modal nach kurzer Zeit schließen
+      setTimeout(() => {
+        setShowPhotoModal(false);
+        setSelectedPhotoId(null);
+      }, 500);
+    }, 100);
   };
 
   const handleCloseModal = () => {
+    if (selectedPhotoId) return; // Nicht schließen während geladen wird
     setShowPhotoModal(false);
   };
 

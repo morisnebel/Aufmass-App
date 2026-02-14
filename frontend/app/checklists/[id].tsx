@@ -13,10 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { ChecklistService, ProjectService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface RecursiveItem {
@@ -66,14 +63,15 @@ export default function EditChecklistScreen() {
 
   const loadChecklist = async () => {
     try {
-      const projectsRes = await axios.get(`${API_URL}/api/projects`);
+      const projects = await ProjectService.getAll();
       let foundChecklist = null;
+      const checklistId = Array.isArray(id) ? id[0] : id;
       
-      for (const project of projectsRes.data) {
-        const checklistsRes = await axios.get(`${API_URL}/api/checklists/project/${project.id}`);
-        const checklist = checklistsRes.data.find((c: any) => c.id === id);
-        if (checklist) {
-          foundChecklist = checklist;
+      for (const project of projects) {
+        const checklists = await ChecklistService.getByProjectId(project.id);
+        const cl = checklists.find((c: any) => c.id === checklistId);
+        if (cl) {
+          foundChecklist = cl;
           break;
         }
       }

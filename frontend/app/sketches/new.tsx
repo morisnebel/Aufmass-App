@@ -25,13 +25,17 @@ export default function NewSketchScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Bild wird vorbereitet...');
   const [projectPhotos, setProjectPhotos] = useState<Photo[]>([]);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [preparingSketch, setPreparingSketch] = useState(false);
 
   // Projektfotos beim Öffnen des Modals laden
   const loadProjectPhotos = async () => {
     setLoadingPhotos(true);
+    setSelectedPhoto(null);
     try {
       const projId = Array.isArray(projectId) ? projectId[0] : projectId;
       if (projId) {
@@ -50,11 +54,34 @@ export default function NewSketchScreen() {
     setShowPhotoModal(true);
   };
 
-  const handleSelectProjectPhoto = (photo: Photo) => {
+  const handleSelectPhoto = (photo: Photo) => {
+    // Toggle Auswahl
+    if (selectedPhoto?.id === photo.id) {
+      setSelectedPhoto(null);
+    } else {
+      setSelectedPhoto(photo);
+    }
+  };
+
+  const handleConfirmProjectPhoto = async () => {
+    if (!selectedPhoto) return;
+    
+    setPreparingSketch(true);
+    
+    // Kurze Verzögerung für besseres UX-Feedback
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const imageUri = (selectedPhoto as any).image_data || selectedPhoto.uri;
     setShowPhotoModal(false);
-    // Verwende uri oder image_data (Kompatibilität)
-    const imageUri = (photo as any).image_data || photo.uri;
+    setPreparingSketch(false);
+    setSelectedPhoto(null);
+    
     router.push(`/sketches/draw?projectId=${projectId}&backgroundImageUri=${encodeURIComponent(imageUri)}`);
+  };
+
+  const handleCloseModal = () => {
+    setShowPhotoModal(false);
+    setSelectedPhoto(null);
   };
 
   const requestPermissions = async (forCamera: boolean) => {

@@ -1615,6 +1615,7 @@ export default function ProjectDetailScreen() {
                       const x2 = ((el.data.x2 - minX) * scale) + offsetX;
                       const y2 = ((el.data.y2 - minY) * scale) + offsetY;
                       const angle = Math.atan2(y2 - y1, x2 - x1);
+                      const angleDeg = angle * 180 / Math.PI;
                       const arrowSize = 8;
                       const endX1 = x2 - arrowSize * Math.cos(angle - Math.PI / 6);
                       const endY1 = y2 - arrowSize * Math.sin(angle - Math.PI / 6);
@@ -1622,10 +1623,21 @@ export default function ProjectDetailScreen() {
                       const endY2 = y2 - arrowSize * Math.sin(angle + Math.PI / 6);
                       svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
                       svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${endX1.toFixed(1)},${endY1.toFixed(1)} ${endX2.toFixed(1)},${endY2.toFixed(1)}" fill="${color}"/>`;
+                      // Doppelpfeil (Start-Pfeilspitze)
+                      if (el.data.heads === 'double') {
+                        const startX1 = x1 + arrowSize * Math.cos(angle - Math.PI / 6);
+                        const startY1 = y1 + arrowSize * Math.sin(angle - Math.PI / 6);
+                        const startX2 = x1 + arrowSize * Math.cos(angle + Math.PI / 6);
+                        const startY2 = y1 + arrowSize * Math.sin(angle + Math.PI / 6);
+                        svgElements += `<polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${startX1.toFixed(1)},${startY1.toFixed(1)} ${startX2.toFixed(1)},${startY2.toFixed(1)}" fill="${color}"/>`;
+                      }
+                      // Text wie im Original: mittig, rotiert entlang der Linie
                       if (el.data.text) {
                         const midX = (x1 + x2) / 2;
-                        const midY = (y1 + y2) / 2 - 8;
-                        svgElements += `<text x="${midX.toFixed(1)}" y="${midY.toFixed(1)}" text-anchor="middle" font-size="10" fill="${color}">${el.data.text}</text>`;
+                        const midY = (y1 + y2) / 2;
+                        const originalFontSize = el.data.fontSize || 14;
+                        const fontSize = Math.max(8, originalFontSize * scale);
+                        svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 10 * scale).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${color}" transform="rotate(${angleDeg.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)})">${el.data.text}</text>`;
                       }
                     } else if (el.type === 'text' && el.data?.text) {
                       const x = ((el.x || 0) - minX) * scale + offsetX;

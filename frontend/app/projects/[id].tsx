@@ -1042,6 +1042,44 @@ export default function ProjectDetailScreen() {
     await generateAndSavePdf();
   };
 
+  // Share preview as image for WhatsApp/Messenger
+  const sharePreviewAsImage = async () => {
+    if (!viewShotRef.current) return;
+    
+    setIsSharingImage(true);
+    try {
+      // Capture the WebView as an image
+      const uri = await viewShotRef.current.capture?.();
+      
+      if (uri) {
+        // Generate filename
+        const sanitizedName = (project?.name || 'Aufmass').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `Aufmass_${sanitizedName}_${date}.jpg`;
+        
+        // Move to documents directory
+        const newUri = `${FileSystem.documentDirectory}${filename}`;
+        await FileSystem.moveAsync({ from: uri, to: newUri });
+        
+        // Share the image
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(newUri, {
+            mimeType: 'image/jpeg',
+            dialogTitle: 'Aufmaß-Vorschau teilen',
+          });
+        } else {
+          Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+        }
+      }
+    } catch (error) {
+      console.error('Error sharing image:', error);
+      Alert.alert('Fehler', 'Bild konnte nicht erstellt werden.');
+    } finally {
+      setIsSharingImage(false);
+    }
+  };
+
   const sendEmail = async () => {
     // Generate PDF and share via native share dialog
     try {

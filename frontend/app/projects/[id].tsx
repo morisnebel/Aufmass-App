@@ -567,17 +567,24 @@ export default function ProjectDetailScreen() {
             padding: 15px 20px;
             margin: -15px -15px 20px -15px;
             display: flex;
+            flex-direction: column;
+            gap: 15px;
+          }
+          .header-top {
+            display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            width: 100%;
           }
           .header h1 {
             margin: 0;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 600;
           }
           .header .date {
-            font-size: 12px;
+            font-size: 11px;
             opacity: 0.9;
+            margin-top: 4px;
           }
           .company-info {
             text-align: right;

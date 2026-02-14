@@ -17,8 +17,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
-import Constants from 'expo-constants';
+import { SketchService } from '../../services/LocalStorage';
 import { captureRef } from 'react-native-view-shot';
 import Svg, { 
   Path, 
@@ -34,7 +33,7 @@ import Svg, {
   Pattern
 } from 'react-native-svg';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+// API_URL removed - using local storage now
 const { width, height } = Dimensions.get('window');
 
 // Douglas-Peucker algorithm for line simplification

@@ -827,16 +827,22 @@ export default function ProjectDetailScreen() {
           </div>
         </div>
         
-        ${(objektStreet !== bauherrStreet || objektPlz !== bauherrPlz || objektCity !== bauherrCity) ? `
+        ${(objektStreet || objektPlz || objektCity || objektName) ? `
           <div class="info-box" style="margin-bottom: 20px;">
             <h3>Objektadresse</h3>
+            ${objektName ? `
+              <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value">${objektName}</span>
+              </div>
+            ` : ''}
             <div class="info-row">
               <span class="info-label">Straße:</span>
-              <span class="info-value">${objektStreet}</span>
+              <span class="info-value">${objektStreet || bauherrStreet}</span>
             </div>
             <div class="info-row">
               <span class="info-label">Ort:</span>
-              <span class="info-value">${objektPlz} ${objektCity}</span>
+              <span class="info-value">${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</span>
             </div>
           </div>
         ` : ''}

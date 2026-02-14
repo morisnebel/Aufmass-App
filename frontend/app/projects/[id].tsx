@@ -515,27 +515,41 @@ export default function ProjectDetailScreen() {
       </div>
     `).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
-    // Generate photos HTML (embedded as base64)
+    // Generate photos HTML (embedded as base64) with individual sizes
     const photosHtml = photos.length > 0 ? `
-      <div class="photos-grid">
-        ${photos.map(photo => `
-          <div class="photo-item">
-            <img src="${photo.image_data}" alt="Foto" />
-            ${photo.description ? `<p>${photo.description}</p>` : ''}
-          </div>
-        `).join('')}
+      <div class="photos-container">
+        ${photos.map(photo => {
+          const size = (photo as any).pdf_size || 'medium';
+          let sizeClass = 'photo-medium'; // default: 2 pro Zeile
+          if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
+          if (size === 'large') sizeClass = 'photo-large'; // 1 pro Zeile
+          if (size === 'full') sizeClass = 'photo-full'; // volle Breite
+          return `
+            <div class="photo-item ${sizeClass}">
+              <img src="${photo.image_data}" alt="Foto" />
+              ${photo.description ? `<p>${photo.description}</p>` : ''}
+            </div>
+          `;
+        }).join('')}
       </div>
     ` : '<p class="empty">Keine Fotos erfasst</p>';
     
-    // Generate sketches HTML (embedded as base64/SVG)
+    // Generate sketches HTML (embedded as base64/SVG) with size options
     const sketchesHtml = sketches.length > 0 ? `
-      <div class="sketches-grid">
-        ${sketches.map(sketch => `
-          <div class="sketch-item">
-            ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-            ${sketch.title ? `<p>${sketch.title}</p>` : ''}
-          </div>
-        `).join('')}
+      <div class="sketches-container">
+        ${sketches.map(sketch => {
+          const size = (sketch as any).pdf_size || 'large'; // Skizzen default groß
+          let sizeClass = 'sketch-large';
+          if (size === 'small') sizeClass = 'sketch-small';
+          if (size === 'medium') sizeClass = 'sketch-medium';
+          if (size === 'full') sizeClass = 'sketch-full';
+          return `
+            <div class="sketch-item ${sizeClass}">
+              ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+              ${sketch.title ? `<p>${sketch.title}</p>` : ''}
+            </div>
+          `;
+        }).join('')}
       </div>
     ` : '<p class="empty">Keine Skizzen erfasst</p>';
     

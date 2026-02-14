@@ -32,6 +32,10 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
   - Direktes Teilen über iOS Share Sheet
   - **NEU: PDF-Vorschau im WebView** - Dokument vor dem Teilen ansehen
   - **NEU: Speichern in Dateien-App** - PDF lokal sichern
+- [x] **UI-Verbesserungen für Handy** (Build 3)
+  - Kompakteres Layout auf "Neue Skizze erstellen" Seite
+  - Horizontales Karten-Design (alle 3 Optionen auf einem Bildschirm)
+  - **Globaler Tastatur-Ausblend-Button** - erscheint automatisch wenn Tastatur sichtbar ist
 
 ## Build History
 | Version | Build | Status | Änderungen |

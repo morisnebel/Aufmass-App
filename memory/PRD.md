@@ -10,13 +10,13 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
 4. Foto-Dokumentation mit Annotationen
 5. Skizzen-Editor
 6. Checklisten-Management mit Vorlagen
-7. **PDF-Export aller Projektdaten (NEU)**
+7. **PDF-Export aller Projektdaten mit Vorschau und Speicher-Optionen**
 
 ## Tech Stack
 - **Framework**: React Native / Expo SDK 54
 - **Navigation**: Expo Router
 - **Storage**: AsyncStorage (@react-native-async-storage/async-storage)
-- **PDF Generation**: expo-print (NEU hinzugefügt)
+- **PDF Generation**: expo-print
 - **Build System**: EAS (Expo Application Services)
 
 ## Completed Features
@@ -30,13 +30,15 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
   - Alle Projektdaten enthalten (Projekt, Bauherr, Dachflächen, Checklisten, Fotos, Skizzen, Bemerkungen)
   - Professionelles Layout mit Firmenlogo-Unterstützung
   - Direktes Teilen über iOS Share Sheet
+  - **NEU: PDF-Vorschau im WebView** - Dokument vor dem Teilen ansehen
+  - **NEU: Speichern in Dateien-App** - PDF lokal sichern
 
 ## Build History
 | Version | Build | Status | Änderungen |
 |---------|-------|--------|------------|
 | 1.0.0   | 1     | Initial | Erste Version |
 | 1.0.0   | 2     | TestFlight | Splash Screen Fix, UI Updates |
-| 1.0.0   | 3     | Pending | PDF-Export Feature |
+| 1.0.0   | 3     | Pending | PDF-Export mit Vorschau & Speichern |
 
 ## Pending Issues (P2)
 - [ ] UI-Freeze Bug beim "Neues Projekt" Workflow (nach Kundenanlage)
@@ -45,13 +47,17 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
 
 ## Next Steps
 1. **Neuen Build erstellen und zu TestFlight submiten**
-   - `eas build --platform ios`
-   - `eas submit --platform ios`
-2. PDF-Export auf echtem Gerät testen
+   ```bash
+   cd /app/frontend
+   eas build --platform ios
+   eas submit --platform ios
+   ```
+   (Expo-Login: moris_nebel@hotmail.com / Miabalu1+)
+2. PDF-Export auf echtem Gerät testen (Vorschau, Teilen, Speichern)
 3. UI-Freeze Bug verifizieren
 
 ## Files of Reference
-- `/app/frontend/app/projects/[id].tsx` - PDF Export Implementierung
+- `/app/frontend/app/projects/[id].tsx` - PDF Export mit Vorschau-Modal
 - `/app/frontend/services/LocalStorage.ts` - Datenpersistenz
 - `/app/frontend/app.json` - App-Konfiguration (buildNumber: 3)
 - `/app/frontend/package.json` - Dependencies (expo-print hinzugefügt)

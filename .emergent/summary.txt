@@ -1,82 +1,80 @@
-<analysis>**original_problem_statement**: The user's TestFlight app was non-functional. An architectural refactor was done to make the application fully offline. After the refactor, the app failed to start in Expo Go. After fixing the startup issue and making some UI adjustments (button layout and keyboard handling), a new build was successfully deployed to TestFlight. The user has confirmed the new build works well and now requests the implementation of the PDF export feature, which was disabled during the offline refactor. Subsequent requests included UI adjustments for a sketch screen, a global keyboard dismiss button, and several enhancements to the generated PDF's content and layout.
+<analysis>**original_problem_statement**: The user's TestFlight app was non-functional. An architectural refactor was done to make the application fully offline. After the refactor, the app failed to start in Expo Go. After fixing the startup issue and making some UI adjustments (button layout and keyboard handling), a new build was successfully deployed to TestFlight. The user has confirmed the new build works well and now requests the implementation of the PDF export feature, which was disabled during the offline refactor. Subsequent requests included UI adjustments for a sketch screen, a global keyboard dismiss button, several enhancements to the generated PDF's content and layout, a multi-photo upload feature, and access to project photos from the sketch screen.
 
 **PRODUCT REQUIREMENTS:**
 1.  The application MUST store all data locally on the device.
 2.  The application MUST be completely usable offline.
 3.  All existing features must work with the local storage persistence layer.
 4.  Implement an offline PDF generation feature for projects, including a professional layout with company logo, addresses, and all project details.
-5.  Implement UI/UX improvements as requested (compact layouts, keyboard dismissal).
+5.  Implement UI/UX improvements as requested (compact layouts, keyboard dismissal, multi-photo selection).
 6.  After all features are implemented and tested, a new build must be created and submitted to the App Store.
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-The application is a fully offline React Native/Expo app using . The previously disabled PDF export feature has been successfully implemented using , including options for previewing, sharing, and saving the PDF to the device's file system. Additionally, UI improvements were made: a compact layout for the sketch selection screen and a global keyboard dismiss button. The user is testing directly via the Expo Go app and has requested further enhancements to the PDF layout to include more data. The agent has started implementing these layout changes.
+The application is a fully offline React Native/Expo app using . A new TestFlight build (Build 4) was successfully deployed, which includes a revamped PDF export feature with improved layout, data handling, and a share as image option. A new multi-photo selection feature has also been implemented and confirmed working by the user. The agent was about to start implementing the user's latest request: adding a button on the sketch creation page to access existing project photos.
 
 **Last working item**:
-    - Last item agent was working: Enhancing the PDF's HTML template to include the company logo, full company address, and complete project details (customer name, object address, etc.). The agent was in the middle of modifying the  function in .
-    - Status: IN PROGRESS
+    - Last item agent was working: The user requested a new feature: adding a button on the Sketches screen () that allows selecting from photos already added to the project, instead of only being able to select from the device's main gallery. The agent has just begun investigating the relevant file.
+    - Status: NOT STARTED
     - Agent Testing Done: N
-    - Which testing method agent to use? Manual testing by guiding the user. Since this is a React Native app tested via Expo Go, the agent cannot take screenshots or use automated testing agents for UI verification. The agent must complete the implementation and then provide clear instructions for the user to test on their device.
+    - Which testing method agent to use? Manual testing by guiding the user. This is a React Native app tested via Expo Go, so automated UI testing is not possible. The agent must implement the feature and then provide clear instructions for the user to test on their device.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: User cannot see recent UI changes in Expo Go (P1)
-  - Issue 2: Critical UI freeze in New Project workflow (P2)
+  - Issue 1:  Critical UI freeze in New Project workflow (P2)
   
   Issues Detail:
   - **Issue 1**: 
-     - **Description**: The user reported not seeing the new compact layout on the sketch screen or the global keyboard-dismiss button, even after the agent restarted the Expo server. The user then changed the topic to PDF enhancements before this was resolved.
-     - **Attempted fixes**: The agent restarted the Expo server and instructed the user to reload the app.
-     - **Next debug checklist**: 
-        1. After finishing the current PDF task, re-confirm with the user if the issue persists.
-        2. Guide the user to perform a hard reload in Expo Go (shake device -> Reload).
-        3. If it still fails, instruct the user to clear the cache for the project in Expo Go (long-press on the project in the Expo Go app list -> Clear cache).
-     - **Why fix this issue and what will be achieved with the fix?**: The user cannot verify any of the agent's UI work without resolving this synchronization issue.
+     - **Description**: A long-standing, recurring bug where the UI freezes on the New Project screen () after creating a new customer.
+     - **Attempted fixes**: None in this session. This issue has been carried over from previous sessions.
+     - **Next debug checklist**: This bug needs to be explicitly tested by the user once the current development tasks are completed. If it persists, the agent needs to analyze the code in  to understand the state management and navigation flow after a new customer is created and saved.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a critical stability bug that makes a core application workflow unusable.
      - **Status**:  NOT STARTED
-     - **Is recurring issue?** N
+     - **Is recurring issue?** Y
      - **Should Test frontend/backend/both after fix?**: Frontend (via user verification)
      - **Blocked on other issue**: None.
 
-  - **Issue 2**: 
-     - **Description**: A long-standing, recurring bug where the UI freezes on the New Project screen () after creating a new customer.
-     - **Attempted fixes**: None in this session.
-     - **Next debug checklist**: This bug needs to be explicitly tested by the user once the current development tasks are completed and a new stable build is available.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a critical stability bug that makes a core application workflow unusable.
-     - **Status**:  NOT STARTED (Verification Pending)
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: None.
-
 **In progress Task List**:
-  - Task 1:  Complete PDF Layout Enhancement (P0)
+  - Task 1:  Add Select from Project Photos button to Sketch Screen (P0)
 
  Task Detail:
   - **Task 1**: 
-     - **Where to resume**: The agent was modifying the  function inside . The next step is to complete the HTML structure to include all requested data points:  (as a base64 image), company address from settings, project's full address, and customer details. Ensure the CSS provides a clean, professional layout.
-     - **What will be achieved with this?**: The generated PDF will serve as a complete, professional-looking project summary, meeting the user's requirements.
-     - **Status**:  IN PROGRESS
+     - **Where to resume**: The agent has just viewed . The next step is to modify this file to:
+        1. Add a new button, e.g., Aus Projektfotos wählen (Select from Project Photos).
+        2. Implement the logic for this button to open a modal or new screen that displays thumbnails of photos already associated with the current project.
+        3. Allow the user to select one of these photos to use as the basis for a sketch.
+        4. This will require fetching the current project's data (including its  array) from .
+     - **What will be achieved with this?**: Users will be able to create sketches based on photos they've already taken for the project, improving workflow efficiency by not requiring them to search their entire device gallery.
+     - **Status**:  NOT STARTED
      - **Should Test frontend/backend/both after fix?**: Frontend (via user verification)
      - **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
     **Upcoming Tasks:**
-    - **P0: Finalize and Verify PDF Enhancements:** After completing the code, guide the user to test the newly generated PDF in Expo Go.
-    - **P1: Resolve Expo Go UI Sync Issue:** Address Issue 1 from the pending list.
-    - **P2: Verify New Project UI Freeze Bug:** Address Issue 2 from the pending list by having the user test the workflow.
+    - **P1: Verify New Project UI Freeze Bug:** After the sketch feature is done, guide the user to test the New Project workflow to confirm if the critical UI freeze bug still exists.
     
     **Future Tasks:**
-    - **P3: Create and Submit New Build:** Once all features and fixes are verified by the user, create a new production build ( or higher) and submit it to TestFlight for final approval before a potential App Store release.
+    - **P2: Final App Store Submission:** Once all features and fixes are verified by the user, and they are satisfied with the TestFlight version, the next step would be to prepare and submit the application for official App Store review.
 
 **Completed work in this session**
-- **Offline PDF Export Implemented:** The core feature was built using  in , replacing the old disabled functionality.
-- **PDF Enhancements Added:**
-  - An options dialog () was added to allow the user to choose between Previewing, Sharing, or Saving the PDF.
-  - A PDF preview modal was implemented using .
-  - Save to Files functionality was implemented using .
-- **UI/UX Improvements:**
-  - The sketch selection screen () was made more compact to fit on one screen.
-  - A global, reusable  component was created () and added to the root layout () to be available throughout the app.
+- **PDF Layout and Data Integration:**
+  - Completed the PDF's HTML template () to include company logo, full company address from settings, and complete project details.
+  - Fixed data mapping issues between the  page and the PDF generation function.
+  - Improved the PDF header layout for better readability, including a larger logo and text wrapping for addresses.
+  - Relocated the Object Address to be more logically placed within the project details section of the PDF.
+- **Settings Page Enhancements:**
+  - Set initial state for settings fields to be empty, as requested by the user.
+  - Added a Daten zurücksetzen (Reset Data) button to allow users to clear all saved settings data.
+- **PDF Functionality Enhancements & Bug Fixes:**
+  - Added a Als Bild teilen (Share as Image) feature to the PDF preview modal using .
+  - Debugged and fixed a critical bug where PDF teilen (Share PDF) and PDF speichern (Save PDF) would hang when triggered from the preview modal. The final resolution was to remove these two buttons from the preview modal, simplifying the UI and resolving the blocking issue.
+- **Multi-Photo Upload:**
+  - Overhauled the Add Photo screen () to allow selecting and uploading multiple photos from the gallery at once.
+- **Build & Deployment:**
+  - Successfully troubleshooted an EAS build limit issue by guiding the user to upgrade their plan.
+  - Successfully built and submitted a new version () to TestFlight.
+- **Expo Go Cache Issue Resolution:**
+  - Repeatedly and successfully guided the user to clear the Expo Go cache, which was the root cause of them not seeing new changes.
 
 **Earlier issues found/mentioned but not fixed**
    - The UI freeze bug in  is a known, carried-over issue and is listed in the Pending Issues section.
@@ -84,23 +82,25 @@ The application is a fully offline React Native/Expo app using . The previously 
 **Known issue recurrence from previous fork**
   - **Issue recurrence**: UI unresponsiveness in  after customer creation.
   - **Recurrence count**: 5+
-  - **Status**: NOT STARTED (Verification Pending).
-  - **Note**: This critical stability issue remains unaddressed.
+  - **Status**: NOT STARTED
+  - **Note**: This critical stability issue remains unaddressed and should be prioritized after the current feature request.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 - **Local Data Persistence**:  via .
-- **Offline PDF Generation**:  is used to create a PDF from an HTML string.
-- **File System Access**:  is used to save the generated PDF to the device.
-- **Web Content Display**:  is used to display the PDF preview within a modal.
-- **Expo Application Services (EAS)**: The established workflow for Input is required, but stdin is not readable. Failed to display prompt: Select platform and 
+- **Offline PDF Generation**: .
+- **File System Access**:  and .
+- **Web Content Display**:  for the PDF preview.
+- **UI Screenshot**:  for the Share as Image feature.
+- **Image/Media Library**: .
+- **Expo Application Services (EAS)**: Input is required, but stdin is not readable. Failed to display prompt: Select platform and 
 EAS Submit is experiencing a partial outage.
 Reason: Longer wait times for iOS submissions.
 All information on service status and incidents available at https://status.expo.dev/
 
-Input is required, but stdin is not readable. Failed to display prompt: Select platform.
+Input is required, but stdin is not readable. Failed to display prompt: Select platform for TestFlight deployment.
 
 **key DB schema**
   - Data is stored in  as JSON strings under keys like , , .
@@ -109,44 +109,53 @@ Input is required, but stdin is not readable. Failed to display prompt: Select p
   - Added dependency: .
 
 **All files of reference**
-- : **(Critical)** Contains all the logic for PDF generation, previewing, and saving. It is currently being edited to improve the PDF layout.
-- : UI layout was modified to be more compact.
-- : Modified to render the global .
-- : **(New File)** A reusable component created to provide a global keyboard dismissal button.
-- : Source of truth for all data interfaces (, , ) needed for the PDF.
+- : **(Critical)** Contains all logic for PDF generation and its associated actions. Was heavily modified and debugged.
+- : **(Critical)** Was completely rewritten to support multi-photo selection.
+- : Modified to add a reset button and change initial state.
+- : The next file to be modified for the new feature.
+- : Updated for the new build.
 
 **Areas that need refactoring**:
-- The project has numerous TypeScript warnings due to type inconsistencies. This does not block functionality but should be addressed in the future for better code health.
+- The project still has TypeScript warnings that should be addressed for better code health.
+- The dependency on manually clearing the Expo Go cache indicates a fragile development feedback loop. While not a code issue, it's a process smell.
 
 **key api endpoints**
 - Not applicable. The application is fully offline.
 
 **Critical Info for New Agent**
 - **You MUST continue all user communication in German.**
-- Your immediate task is to complete the PDF layout enhancement in .
-- The user is testing via Expo Go. You cannot see the UI yourself. You must rely on clear communication and guide the user through testing steps.
-- Be prepared to address the UI sync issue where the user isn't seeing your latest changes in Expo Go. This is a blocker for user verification.
-- The recurring UI freeze bug in the New Project flow is a high-severity, long-standing issue that must be verified and potentially fixed after the current feature work is complete.
+- Your immediate task is to implement the select from project photos feature on the sketch creation screen ().
+- **Expo Go Caching is a recurring problem.** If the user reports not seeing your changes, your first step should always be to instruct them to:
+    1.  Force quit the Expo Go app.
+    2.  Re-open Expo Go.
+    3.  In the project list, **long-press** the project name.
+    4.  Select **Clear cache**.
+    5.  Re-launch the project. This procedure has been necessary and successful multiple times.
+- All testing is performed manually by the user on their device via Expo Go. Provide clear, step-by-step instructions.
+- The high-severity UI freeze bug in the New Project flow is a long-standing issue that must be verified and fixed after the current feature work.
 
 **documents and test reports created in this job**
 -  was updated.
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10. (LATEST) User asks to modify the PDF to include all entered data, like company LOGO, address, and full object address with names. (Status: In Progress)
- - 9. User asks if they can adjust the mobile version and add a keyboard dismiss button.
- - 8. After the agent claims completion, the user states that they don't think anything has changed. (Status: Blocked, led to troubleshooting)
- - 7. User asks to implement the agent's improvement suggestions (PDF preview and save to files). (Status: Completed)
- - 6. User confirms the requested PDF data includes everything and that it should be shareable. (Status: Completed)
- - 5. Agent asks for clarification on what data should be in the PDF and if it should be shareable. (Status: Awaiting user response)
- - 4. User confirms the new TestFlight build is installed and asks for the PDF feature. (Status: Completed, this message is from the previous handoff but provides context for the start of the session).
+ - 10. (LATEST) User asks to add a button on the Sketches page to directly access project photos. (Status: In Progress)
+ - 9. User confirms the new multi-photo upload feature works perfectly. (Status: Completed)
+ - 8. User requests the ability to select multiple photos from the gallery at once. (Status: Completed)
+ - 7. User receives confirmation that Build 4 is successfully uploaded to TestFlight.
+ - 6. User upgrades their EAS plan after hitting the free tier build limit. (Status: Completed)
+ - 5. User asks the agent to create a new TestFlight build. (Status: Completed)
+ - 4. User confirms that the PDF object address layout is now correct. (Status: Completed)
+ - 3. User requests moving the object address in the PDF to be under the project details. (Status: Completed)
+ - 2. User reports that the Share PDF and Save PDF buttons are still visible in the preview, despite code changes. (Status: Blocked, led to removing the buttons)
+ - 1. User simplifies the requirement, suggesting it's easier to just remove the problematic buttons from the PDF preview. (Status: Completed)
 
 **Project Health Check:**
-- **Functional**: Yes, the last TestFlight build is confirmed functional. The current development version in Expo Go is functional but has a reported UI sync issue.
+- **Functional**: Yes. The latest TestFlight build (Build 4) is live and functional. The current development version in Expo Go is also functional.
 - **Disabled Features**: None.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- : For local data persistence.
+- : Local data persistence.
 - 
   Usage: expo [command] [options]
 
@@ -216,23 +225,26 @@ Input is required, but stdin is not readable. Failed to display prompt: Select p
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[16:45:41]   Run a command with --help for more info 💡
-[16:45:41]     $ expo start --help
-[16:45:41]: Core framework and tooling.
-- : Used for building and submitting the app.
-- : For offline PDF generation.
-- : For saving files locally.
-- : For displaying the PDF preview.
+[20:44:44]   Run a command with --help for more info 💡
+[20:44:44]     $ expo start --help
+[20:44:44]: Core framework and tooling.
+- : Building and submitting the app.
+- : Offline PDF generation.
+- : Saving files locally.
+- : Native share functionality.
+- : Accessing camera and media library.
+- : Displaying PDF preview.
+- : Capturing UI views as images.
 
 **Testing status**
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None.
-  - Known regressions: None from this session.
+  - Known regressions: The Share PDF and Save PDF features from within the preview modal were removed as a workaround for a persistent bug. The core functionality still exists outside the preview modal.
 
 **Credentials to test flow:**
 - Expo Account: 
 - Password: 
 
 **What agent forgot to execute**
-- The agent did not resolve the user's report that UI changes were not visible in Expo Go. When the user pivoted to a new request (PDF enhancements), the agent immediately switched tasks, leaving the critical UI verification issue unresolved. This must be addressed to ensure the user can test any future UI work.</analysis>
+- The agent has consistently deferred investigating the critical, long-standing UI freeze bug on the  screen. While responsive to the user's immediate feature requests, this core stability issue has been mentioned in multiple handoffs but has not been prioritized or addressed.</analysis>

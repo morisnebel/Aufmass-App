@@ -2005,9 +2005,9 @@ export default function DrawSketchScreen() {
         
         // Notiz-Text in der Vorschau anzeigen (wie im Original)
         if (pointerText) {
-          // Schriftgröße wie im Original (fontSize oder 16), skaliert, max 20px
+          // Schriftgröße wie im Original (fontSize oder 16), proportional skaliert
           const originalFontSize = el.data.fontSize || 16;
-          const fontSize = Math.min(20, Math.max(8, originalFontSize * scale));
+          const fontSize = originalFontSize * scale;
           
           // Text am Startpunkt des Pfeils, senkrecht zur Pfeilrichtung versetzt (wie im Original)
           const textOffset = 15 * scale;
@@ -2018,7 +2018,7 @@ export default function DrawSketchScreen() {
           const textWidth = pointerText.length * fontSize * 0.6 + 10;
           const textHeight = fontSize + 8;
           svgElements += `<rect x="${(textX - 5).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.85" rx="4" stroke="${el.color}" stroke-width="1"/>`;
-          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize.toFixed(1)}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
         }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;

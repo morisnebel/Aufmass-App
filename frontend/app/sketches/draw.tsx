@@ -417,7 +417,7 @@ export default function DrawSketchScreen() {
 
         if (sketchId) {
           // Update existing sketch
-          await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
+          await SketchService.update(sketchId, {
             project_id: projectId,
             title,
             sketch_data: sketchData,
@@ -426,7 +426,7 @@ export default function DrawSketchScreen() {
           console.log('Auto-saved existing sketch');
         } else if (title.trim()) {
           // Create new sketch only if title is provided
-          await axios.post(`${API_URL}/api/sketches`, {
+          await SketchService.create({
             project_id: projectId,
             title,
             sketch_data: sketchData,

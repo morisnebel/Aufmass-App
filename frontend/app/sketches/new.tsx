@@ -265,7 +265,7 @@ export default function NewSketchScreen() {
           ) : (
             <>
               <Text style={styles.selectHintText}>
-                Foto antippen um Skizze zu erstellen
+                ⚡ SCHNELLAUSWAHL - Foto antippen
               </Text>
               <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
                 {projectPhotos.map((photo) => (

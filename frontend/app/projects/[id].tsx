@@ -1010,7 +1010,7 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  // Share PDF from preview - use already generated HTML
+  // Share PDF from preview - use native print/share
   const sharePdfFromPreview = async () => {
     if (!pdfHtmlContent) {
       Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
@@ -1018,37 +1018,23 @@ export default function ProjectDetailScreen() {
     }
     
     try {
-      // Keep modal open, show loading
-      setIsGeneratingPdf(true);
-      
-      const { uri } = await Print.printToFileAsync({
-        html: pdfHtmlContent,
-        base64: false,
-      });
-      
-      // Close modal before sharing
+      // Close modal first
       setShowPdfPreviewModal(false);
-      setIsGeneratingPdf(false);
       
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `Aufmaß ${project?.name} teilen`,
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
-      }
+      // Small delay to let modal close
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use native print which allows sharing
+      await Print.printAsync({
+        html: pdfHtmlContent,
+      });
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
-      setShowPdfPreviewModal(false);
-      setIsGeneratingPdf(false);
       Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
     }
   };
 
-  // Save PDF from preview - use already generated HTML
+  // Save PDF from preview - same as share (iOS shows save option in print dialog)
   const savePdfFromPreview = async () => {
     if (!pdfHtmlContent) {
       Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
@@ -1056,32 +1042,18 @@ export default function ProjectDetailScreen() {
     }
     
     try {
-      // Keep modal open, show loading
-      setIsGeneratingPdf(true);
-      
-      const { uri } = await Print.printToFileAsync({
-        html: pdfHtmlContent,
-        base64: false,
-      });
-      
-      // Close modal before sharing
+      // Close modal first
       setShowPdfPreviewModal(false);
-      setIsGeneratingPdf(false);
       
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'PDF speichern',
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
-      }
+      // Small delay to let modal close
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use native print which allows saving
+      await Print.printAsync({
+        html: pdfHtmlContent,
+      });
     } catch (error) {
       console.error('Error saving PDF from preview:', error);
-      setShowPdfPreviewModal(false);
-      setIsGeneratingPdf(false);
       Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
     }
   };

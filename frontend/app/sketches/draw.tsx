@@ -1982,9 +1982,9 @@ export default function DrawSketchScreen() {
         const y2 = ((el.data.y2 - minY) * scale) + offsetY;
         const pointerText = el.data.text || '';
         
-        // Pfeilspitze proportional zur Strichstärke
+        // Pfeilspitze proportional zur Strichstärke (wie im Original: Math.max(20, strokeWidth * 4))
         const angle = Math.atan2(y2 - y1, x2 - x1);
-        const arrowHeadSize = Math.max(12, scaledStrokeWidth * 3);
+        const arrowHeadSize = Math.max(20 * scale, scaledStrokeWidth * 4);
         const arrowHeadAngle = Math.PI / 6;
         
         // Pfeilspitzen-Koordinaten

@@ -60,8 +60,8 @@ export default function AnnotatePhotoScreen() {
 
   const loadPhoto = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/photos/project/${projectId}`);
-      const photo = response.data.find((p: any) => p.id === photoId);
+      const photos = await PhotoService.getByProjectId(projectId || '');
+      const photo = photos.find((p: any) => p.id === photoId);
       if (photo) {
         setImageUri(photo.image_data);
         setPdfSize(photo.pdf_size || 'medium');

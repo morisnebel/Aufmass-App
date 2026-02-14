@@ -17,7 +17,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { SketchService } from '../../services/LocalStorage';
+import { SketchService, PhotoService } from '../../services/LocalStorage';
 import { captureRef } from 'react-native-view-shot';
 import Svg, { 
   Path, 

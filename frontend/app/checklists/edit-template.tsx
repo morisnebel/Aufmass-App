@@ -13,10 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { ChecklistTemplateService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {
@@ -49,20 +46,21 @@ export default function EditTemplateScreen() {
 
   const loadTemplate = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/checklist-templates/${templateId}`);
-      const data = response.data;
-      setTemplate(data);
-      setTemplateName(data.name);
-      
-      // Konvertiere Items zu rekursiver Struktur
-      const convertItems = (rawItems: any[]): RecursiveTemplateItem[] => {
-        return rawItems.map((item: any) => {
-          if (typeof item === 'string') {
-            return { text: item, subItems: [] };
-          }
-          
-          let subItems: RecursiveTemplateItem[] = [];
-          if (item.subItems && Array.isArray(item.subItems)) {
+      const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
+      const data = await ChecklistTemplateService.getById(tplId || '');
+      if (data) {
+        setTemplate(data);
+        setTemplateName(data.name);
+        
+        // Konvertiere Items zu rekursiver Struktur
+        const convertItems = (rawItems: any[]): RecursiveTemplateItem[] => {
+          return rawItems.map((item: any) => {
+            if (typeof item === 'string') {
+              return { text: item, subItems: [] };
+            }
+            
+            let subItems: RecursiveTemplateItem[] = [];
+            if (item.subItems && Array.isArray(item.subItems)) {
             subItems = item.subItems.map((sub: any) => {
               if (typeof sub === 'string') {
                 return { text: sub, subItems: [] };

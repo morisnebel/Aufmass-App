@@ -2137,6 +2137,7 @@ export default function DrawSketchScreen() {
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
+          pdf_size: pdfSize,
         });
         console.log('Sketch updated');
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
@@ -2148,6 +2149,7 @@ export default function DrawSketchScreen() {
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
+          pdf_size: pdfSize,
         });
         console.log('Sketch created');
         showAlert('Erfolg', 'Skizze wurde gespeichert');

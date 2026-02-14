@@ -2070,6 +2070,70 @@ export default function ProjectDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* PDF Preview Modal */}
+      <Modal
+        visible={showPdfPreviewModal}
+        animationType="slide"
+        onRequestClose={() => setShowPdfPreviewModal(false)}
+      >
+        <View style={styles.pdfPreviewContainer}>
+          <View style={styles.pdfPreviewHeader}>
+            <TouchableOpacity 
+              style={styles.pdfPreviewCloseButton}
+              onPress={() => setShowPdfPreviewModal(false)}
+            >
+              <Ionicons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.pdfPreviewTitle}>PDF Vorschau</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          
+          <View style={styles.pdfPreviewContent}>
+            {pdfHtmlContent ? (
+              <WebView
+                source={{ html: pdfHtmlContent }}
+                style={styles.pdfWebView}
+                scalesPageToFit={true}
+                showsVerticalScrollIndicator={true}
+              />
+            ) : (
+              <View style={styles.pdfPreviewLoading}>
+                <ActivityIndicator size="large" color="#1976d2" />
+                <Text style={styles.pdfPreviewLoadingText}>Vorschau wird geladen...</Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.pdfPreviewActions}>
+            <TouchableOpacity 
+              style={styles.pdfPreviewActionButton}
+              onPress={sharePdfFromPreview}
+            >
+              <Ionicons name="share-outline" size={22} color="#fff" />
+              <Text style={styles.pdfPreviewActionText}>Teilen</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.pdfPreviewActionButton, styles.pdfPreviewSaveButton]}
+              onPress={savePdfFromPreview}
+            >
+              <Ionicons name="download-outline" size={22} color="#fff" />
+              <Text style={styles.pdfPreviewActionText}>Speichern</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Loading Overlay for PDF Generation */}
+      {isGeneratingPdf && (
+        <View style={styles.pdfLoadingOverlay}>
+          <View style={styles.pdfLoadingCard}>
+            <ActivityIndicator size="large" color="#1976d2" />
+            <Text style={styles.pdfLoadingText}>PDF wird erstellt...</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

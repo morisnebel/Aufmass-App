@@ -279,26 +279,39 @@ export default function NewSketchScreen() {
                 ⚡ SCHNELLAUSWAHL - Foto antippen
               </Text>
               <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
-                {projectPhotos.map((photo) => (
-                  <TouchableOpacity
-                    key={photo.id}
-                    style={styles.photoGridItem}
-                    onPress={() => handleSelectProjectPhoto(photo)}
-                    activeOpacity={0.7}
-                  >
-                    <Image
-                      source={{ uri: (photo as any).image_data || photo.uri }}
-                      style={styles.photoGridImage}
-                    />
-                    {photo.description && (
-                      <View style={styles.photoDescriptionOverlay}>
-                        <Text style={styles.photoDescriptionText} numberOfLines={1}>
-                          {photo.description}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {projectPhotos.map((photo) => {
+                  const isSelected = selectedPhotoId === photo.id;
+                  return (
+                    <TouchableOpacity
+                      key={photo.id}
+                      style={[
+                        styles.photoGridItem,
+                        isSelected && styles.photoGridItemSelected
+                      ]}
+                      onPress={() => handleSelectProjectPhoto(photo)}
+                      activeOpacity={0.7}
+                      disabled={selectedPhotoId !== null}
+                    >
+                      <Image
+                        source={{ uri: (photo as any).image_data || photo.uri }}
+                        style={styles.photoGridImage}
+                      />
+                      {isSelected && (
+                        <View style={styles.loadingOverlay}>
+                          <ActivityIndicator size="large" color="#fff" />
+                          <Text style={styles.loadingOverlayText}>Wird geladen...</Text>
+                        </View>
+                      )}
+                      {photo.description && !isSelected && (
+                        <View style={styles.photoDescriptionOverlay}>
+                          <Text style={styles.photoDescriptionText} numberOfLines={1}>
+                            {photo.description}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </>
           )}

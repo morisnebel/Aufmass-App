@@ -1987,7 +1987,7 @@ export default function DrawSketchScreen() {
         
         // Pfeilspitze proportional zur Strichstärke (wie im Original: Math.max(20, strokeWidth * 4))
         const angle = Math.atan2(y2 - y1, x2 - x1);
-        const arrowHeadSize = Math.max(20 * scale, scaledStrokeWidth * 4);
+        const arrowHeadSize = Math.max(10 * scale, scaledStrokeWidth * 4);
         const arrowHeadAngle = Math.PI / 6;
         
         // Pfeilspitzen-Koordinaten
@@ -2003,19 +2003,22 @@ export default function DrawSketchScreen() {
         svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lineEndX.toFixed(1)}" y2="${lineEndY.toFixed(1)}" stroke="${el.color}" stroke-width="${scaledStrokeWidth}" stroke-linecap="round"/>`;
         svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${el.color}"/>`;
         
-        // Notiz-Text in der Vorschau anzeigen (wenn vorhanden)
+        // Notiz-Text in der Vorschau anzeigen (wie im Original)
         if (pointerText) {
-          // Große Schriftgröße für gute Lesbarkeit in der Thumbnail-Vorschau
-          // Mindestens 16px, damit der Text im kleinen Thumbnail sichtbar bleibt
-          const fontSize = Math.max(16, 24 * scale);
-          // Text am Startpunkt des Pfeils positionieren mit Hintergrund-Box
-          const textX = x1;
-          const textY = y1 - 8;
-          // Hintergrund-Rechteck für bessere Lesbarkeit
-          const textWidth = Math.max(fontSize * 2, pointerText.length * fontSize * 0.65);
+          // Schriftgröße wie im Original (fontSize oder 16), skaliert
+          const originalFontSize = el.data.fontSize || 16;
+          const fontSize = Math.max(8, originalFontSize * scale);
+          
+          // Text am Startpunkt des Pfeils, senkrecht zur Pfeilrichtung versetzt (wie im Original)
+          const textOffset = 15 * scale;
+          const textX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
+          const textY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
+          
+          // Hintergrund-Rechteck für bessere Lesbarkeit (wie im Original)
+          const textWidth = pointerText.length * fontSize * 0.6 + 10;
           const textHeight = fontSize + 8;
-          svgElements += `<rect x="${(textX - 4).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.95" rx="3"/>`;
-          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold" font-family="Arial, sans-serif">${pointerText}</text>`;
+          svgElements += `<rect x="${(textX - 5).toFixed(1)}" y="${(textY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="white" fill-opacity="0.85" rx="4" stroke="${el.color}" stroke-width="1"/>`;
+          svgElements += `<text x="${textX.toFixed(1)}" y="${textY.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${pointerText}</text>`;
         }
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;

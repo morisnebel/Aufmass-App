@@ -15,10 +15,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { RoofService, ProjectService } from '../../services/LocalStorage';
 
 const ROOF_TYPES = [
   { id: 'Flachdach', name: 'Flachdach', description: 'Ebene Dachfläche ohne Neigung' },
@@ -72,10 +69,11 @@ export default function EditRoofScreen() {
 
   const loadRoof = async () => {
     try {
-      const projectsRes = await axios.get(`${API_URL}/api/projects`);
-      for (const project of projectsRes.data) {
-        const roofsRes = await axios.get(`${API_URL}/api/roofs/project/${project.id}`);
-        const roof = roofsRes.data.find((r: any) => r.id === id);
+      const roofId = Array.isArray(id) ? id[0] : id;
+      const projects = await ProjectService.getAll();
+      for (const project of projects) {
+        const roofs = await RoofService.getByProjectId(project.id);
+        const roof = roofs.find((r: any) => r.id === roofId);
         if (roof) {
           setProjectId(project.id);
           setRoofType(roof.roof_type);

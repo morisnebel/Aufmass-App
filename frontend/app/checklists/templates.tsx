@@ -80,16 +80,8 @@ export default function ChecklistTemplatesScreen() {
 
   const loadTemplates = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/checklist-templates`);
-      setTemplates(response.data);
-      
-      // Add default templates if none exist
-      if (response.data.length === 0) {
-        for (const template of DEFAULT_TEMPLATES) {
-          await axios.post(`${API_URL}/api/checklist-templates`, template);
-        }
-        loadTemplates();
-      }
+      const data = await ChecklistTemplateService.getAll();
+      setTemplates(data);
     } catch (error) {
       console.error('Error loading templates:', error);
     }
@@ -107,7 +99,7 @@ export default function ChecklistTemplatesScreen() {
         .filter((item) => item.trim())
         .map((item) => item.trim());
 
-      await axios.post(`${API_URL}/api/checklist-templates`, {
+      await ChecklistTemplateService.create({
         name: newTemplateName,
         items,
       });
@@ -134,7 +126,7 @@ export default function ChecklistTemplatesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${API_URL}/api/checklist-templates/${templateId}`);
+              await ChecklistTemplateService.delete(templateId);
               loadTemplates();
             } catch (error) {
               console.error('Error deleting template:', error);

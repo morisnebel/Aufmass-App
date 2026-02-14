@@ -211,8 +211,78 @@ export default function NewSketchScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ccc" style={styles.optionArrow} />
           </TouchableOpacity>
+
+          {/* Option 4: Pick from Project Photos */}
+          <TouchableOpacity style={styles.optionButton} onPress={handleOpenPhotoModal}>
+            <View style={[styles.iconContainer, { backgroundColor: '#e1f5fe' }]}>
+              <Ionicons name="folder-open" size={26} color="#0288d1" />
+            </View>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Aus Projektfotos wählen</Text>
+              <Text style={styles.optionDescription}>
+                Bereits zum Projekt hinzugefügte Fotos
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" style={styles.optionArrow} />
+          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal für Projektfotos */}
+      <Modal
+        visible={showPhotoModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPhotoModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowPhotoModal(false)} style={styles.modalCloseButton}>
+              <Ionicons name="close" size={28} color="#333" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Projektfotos</Text>
+            <View style={{ width: 44 }} />
+          </View>
+
+          {loadingPhotos ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#1976d2" />
+              <Text style={styles.loadingText}>Fotos werden geladen...</Text>
+            </View>
+          ) : projectPhotos.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="images-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>Keine Fotos vorhanden</Text>
+              <Text style={styles.emptySubtext}>
+                Fügen Sie zuerst Fotos zum Projekt hinzu
+              </Text>
+            </View>
+          ) : (
+            <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
+              {projectPhotos.map((photo) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={styles.photoGridItem}
+                  onPress={() => handleSelectProjectPhoto(photo)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={{ uri: (photo as any).image_data || photo.uri }}
+                    style={styles.photoGridImage}
+                  />
+                  {photo.description && (
+                    <View style={styles.photoDescriptionOverlay}>
+                      <Text style={styles.photoDescriptionText} numberOfLines={1}>
+                        {photo.description}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

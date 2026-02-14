@@ -286,15 +286,12 @@ export default function NewProjectScreen() {
       // Combine address fields
       const address = [newCustomerStreet, [newCustomerPlz, newCustomerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       
-      const response = await axios.post(`${API_URL}/api/customers`, {
+      const newCustomer = await CustomerService.create({
         name: fullName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
-        mobile: newCustomerMobile || undefined,
         address: address || undefined,
       });
-
-      const newCustomer = response.data;
       
       // Save or update device contacts
       if (saveOrUpdateContact && Platform.OS !== 'web') {

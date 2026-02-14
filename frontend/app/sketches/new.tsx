@@ -482,19 +482,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
   },
-  // Lade-Overlay für Foto
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingOverlayText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 8,
-    fontWeight: '500',
-  },
   selectHintText: {
     fontSize: 14,
     color: '#666',

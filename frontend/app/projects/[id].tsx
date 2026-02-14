@@ -395,31 +395,454 @@ export default function ProjectDetailScreen() {
   };
 
   const exportToPDF = async () => {
-    // PDF Export is currently disabled in offline mode
-    Alert.alert(
-      'PDF Export',
-      'PDF Export ist in der Offline-Version derzeit nicht verfügbar. Diese Funktion wird in einem zukünftigen Update hinzugefügt.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  // Keep the old function signature for future implementation
-  const exportToPDFLegacy = async () => {
     try {
-      Alert.alert('PDF Export', 'PDF wird erstellt...');
+      // Show loading indicator
+      if (Platform.OS !== 'web') {
+        Alert.alert('PDF Export', 'PDF wird erstellt...');
+      }
+      
+      // Get company settings for header
+      const settings = await SettingsService.get();
+      
+      // Parse customer address helper
+      const parseAddr = (address: string | undefined) => {
+        if (!address) return { street: '', plz: '', city: '' };
+        const parts = address.split(',');
+        const street = parts[0]?.trim() || '';
+        const cityParts = parts[1]?.trim().split(' ') || [];
+        const plz = cityParts[0] || '';
+        const city = cityParts.slice(1).join(' ') || '';
+        return { street, plz, city };
+      };
+      
+      const customerAddr = parseAddr(customer?.address);
+      
+      // Build bauherr info
+      const bauherrName = project?.bauherr_name || customer?.name || '-';
+      const bauherrStreet = project?.bauherr_street || customerAddr.street || '-';
+      const bauherrPlz = project?.bauherr_plz || customerAddr.plz || '';
+      const bauherrCity = project?.bauherr_city || customerAddr.city || '';
+      const bauherrPhone = project?.bauherr_phone || customer?.phone || '';
+      const bauherrMobile = project?.bauherr_mobile || customer?.mobile || '';
+      const bauherrEmail = project?.bauherr_email || customer?.email || '';
+      
+      // Build objekt info
+      const objektStreet = project?.objekt_street || bauherrStreet;
+      const objektPlz = project?.objekt_plz || bauherrPlz;
+      const objektCity = project?.objekt_city || bauherrCity;
+      
+      // Format date
+      const formatDate = (dateStr: string) => {
+        try {
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch {
+          return dateStr;
+        }
+      };
+      
+      // Generate roofs HTML
+      const roofsHtml = roofs.length > 0 ? roofs.map((roof, idx) => `
+        <div class="roof-card">
+          <h4>Dachfläche ${idx + 1}: ${roof.roof_type || 'Unbenannt'}</h4>
+          <p><strong>Fläche:</strong> ${roof.area?.toFixed(2) || 0} m²</p>
+          ${roof.notes ? `<p><strong>Notizen:</strong> ${roof.notes}</p>` : ''}
+          ${roof.measurements ? `<p><strong>Maße:</strong> ${typeof roof.measurements === 'object' ? JSON.stringify(roof.measurements) : roof.measurements}</p>` : ''}
+        </div>
+      `).join('') : '<p class="empty">Keine Dachflächen erfasst</p>';
+      
+      // Generate checklists HTML with recursive sub-items
+      const renderChecklistItems = (items: any[], depth: number = 0): string => {
+        return items.map(item => {
+          const indent = depth * 20;
+          const icon = item.checked ? '☑' : '☐';
+          let html = `<div style="margin-left: ${indent}px; margin-bottom: 4px;">
+            <span style="color: ${item.checked ? '#4caf50' : '#666'};">${icon}</span> ${item.text}
+            ${item.note ? `<div style="font-size: 10px; color: #666; margin-left: 20px;">📝 ${item.note}</div>` : ''}
+          </div>`;
+          if (item.subItems && item.subItems.length > 0) {
+            html += renderChecklistItems(item.subItems, depth + 1);
+          }
+          return html;
+        }).join('');
+      };
+      
+      const checklistsHtml = checklists.length > 0 ? checklists.map(checklist => `
+        <div class="checklist-card">
+          <h4>${checklist.template_name}</h4>
+          ${renderChecklistItems(checklist.items)}
+        </div>
+      `).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
+      
+      // Generate photos HTML (embedded as base64)
+      const photosHtml = photos.length > 0 ? `
+        <div class="photos-grid">
+          ${photos.map(photo => `
+            <div class="photo-item">
+              <img src="${photo.image_data}" alt="Foto" />
+              ${photo.description ? `<p>${photo.description}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="empty">Keine Fotos erfasst</p>';
+      
+      // Generate sketches HTML (embedded as base64/SVG)
+      const sketchesHtml = sketches.length > 0 ? `
+        <div class="sketches-grid">
+          ${sketches.map(sketch => `
+            <div class="sketch-item">
+              ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+              ${sketch.title ? `<p>${sketch.title}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : '<p class="empty">Keine Skizzen erfasst</p>';
+      
+      // Build complete HTML
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            @page {
+              margin: 15mm;
+              size: A4;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
+              color: #333;
+              margin: 0;
+              padding: 0;
+            }
+            .header {
+              background: linear-gradient(135deg, #1976d2, #1565c0);
+              color: white;
+              padding: 15px 20px;
+              margin: -15mm -15mm 20px -15mm;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 22px;
+              font-weight: 600;
+            }
+            .header .date {
+              font-size: 12px;
+              opacity: 0.9;
+            }
+            .company-info {
+              text-align: right;
+              font-size: 10px;
+            }
+            h2 {
+              color: #1976d2;
+              border-bottom: 2px solid #1976d2;
+              padding-bottom: 5px;
+              margin-top: 25px;
+              margin-bottom: 15px;
+              font-size: 14px;
+              page-break-after: avoid;
+            }
+            h3 {
+              color: #333;
+              margin-top: 15px;
+              margin-bottom: 10px;
+              font-size: 13px;
+            }
+            h4 {
+              color: #1976d2;
+              margin: 10px 0 5px 0;
+              font-size: 12px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              margin-bottom: 20px;
+            }
+            .info-box {
+              background: #f8f9fa;
+              border: 1px solid #e0e0e0;
+              border-radius: 6px;
+              padding: 12px;
+            }
+            .info-box h3 {
+              margin-top: 0;
+              color: #1976d2;
+              font-size: 12px;
+              border-bottom: 1px solid #e0e0e0;
+              padding-bottom: 5px;
+              margin-bottom: 8px;
+            }
+            .info-row {
+              display: flex;
+              margin-bottom: 4px;
+            }
+            .info-label {
+              font-weight: 600;
+              width: 80px;
+              flex-shrink: 0;
+              color: #666;
+            }
+            .info-value {
+              flex: 1;
+            }
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 25px;
+            }
+            .stat-box {
+              background: #e3f2fd;
+              border-radius: 8px;
+              padding: 15px;
+              text-align: center;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: 700;
+              color: #1976d2;
+            }
+            .stat-label {
+              font-size: 10px;
+              color: #666;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .roof-card, .checklist-card {
+              background: #f8f9fa;
+              border: 1px solid #e0e0e0;
+              border-radius: 6px;
+              padding: 12px;
+              margin-bottom: 10px;
+              page-break-inside: avoid;
+            }
+            .roof-card h4, .checklist-card h4 {
+              margin-top: 0;
+            }
+            .photos-grid, .sketches-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .photo-item, .sketch-item {
+              border: 1px solid #e0e0e0;
+              border-radius: 6px;
+              overflow: hidden;
+              page-break-inside: avoid;
+            }
+            .photo-item img, .sketch-item img {
+              width: 100%;
+              max-height: 200px;
+              object-fit: contain;
+              background: #f5f5f5;
+            }
+            .photo-item p, .sketch-item p {
+              margin: 0;
+              padding: 8px;
+              font-size: 10px;
+              color: #666;
+              background: #f8f9fa;
+            }
+            .sketch-placeholder {
+              height: 150px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #f5f5f5;
+              color: #999;
+            }
+            .empty {
+              color: #999;
+              font-style: italic;
+              padding: 10px;
+              background: #f8f9fa;
+              border-radius: 4px;
+            }
+            .remarks-box {
+              background: #fff8e1;
+              border: 1px solid #ffe082;
+              border-radius: 6px;
+              padding: 12px;
+              margin-top: 10px;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 15px;
+              border-top: 1px solid #e0e0e0;
+              font-size: 9px;
+              color: #999;
+              text-align: center;
+            }
+            .page-break {
+              page-break-before: always;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>AUFMASS-DOKUMENTATION</h1>
+              <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}</div>
+            </div>
+            ${settings.company_name ? `
+              <div class="company-info">
+                <strong>${settings.company_name}</strong><br/>
+                ${settings.company_address || ''}<br/>
+                ${settings.company_phone ? `Tel: ${settings.company_phone}` : ''}
+              </div>
+            ` : ''}
+          </div>
+          
+          <h2>Projektübersicht</h2>
+          <div class="info-grid">
+            <div class="info-box">
+              <h3>Projekt</h3>
+              <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value">${project?.name || '-'}</span>
+              </div>
+              ${project?.description ? `
+                <div class="info-row">
+                  <span class="info-label">Beschreibung:</span>
+                  <span class="info-value">${project.description}</span>
+                </div>
+              ` : ''}
+              <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value">${project?.status === 'active' ? 'Aktiv' : project?.status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <h3>Bauherr</h3>
+              <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value">${bauherrName}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Adresse:</span>
+                <span class="info-value">${bauherrStreet}<br/>${bauherrPlz} ${bauherrCity}</span>
+              </div>
+              ${bauherrPhone ? `
+                <div class="info-row">
+                  <span class="info-label">Telefon:</span>
+                  <span class="info-value">${bauherrPhone}</span>
+                </div>
+              ` : ''}
+              ${bauherrMobile ? `
+                <div class="info-row">
+                  <span class="info-label">Mobil:</span>
+                  <span class="info-value">${bauherrMobile}</span>
+                </div>
+              ` : ''}
+              ${bauherrEmail ? `
+                <div class="info-row">
+                  <span class="info-label">E-Mail:</span>
+                  <span class="info-value">${bauherrEmail}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          ${(objektStreet !== bauherrStreet || objektPlz !== bauherrPlz || objektCity !== bauherrCity) ? `
+            <div class="info-box" style="margin-bottom: 20px;">
+              <h3>Objektadresse</h3>
+              <div class="info-row">
+                <span class="info-label">Straße:</span>
+                <span class="info-value">${objektStreet}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Ort:</span>
+                <span class="info-value">${objektPlz} ${objektCity}</span>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-value">${roofs.length}</div>
+              <div class="stat-label">Dachflächen</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">${totalArea.toFixed(2)} m²</div>
+              <div class="stat-label">Gesamtfläche</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">${photos.length}</div>
+              <div class="stat-label">Fotos</div>
+            </div>
+          </div>
+          
+          <h2>Dachflächen</h2>
+          ${roofsHtml}
+          
+          <h2>Checklisten</h2>
+          ${checklistsHtml}
+          
+          ${project?.remarks ? `
+            <h2>Bemerkungen</h2>
+            <div class="remarks-box">
+              ${project.remarks.replace(/\n/g, '<br/>')}
+            </div>
+          ` : ''}
+          
+          ${photos.length > 0 ? `
+            <div class="page-break"></div>
+            <h2>Fotos</h2>
+            ${photosHtml}
+          ` : ''}
+          
+          ${sketches.length > 0 ? `
+            <div class="page-break"></div>
+            <h2>Skizzen</h2>
+            ${sketchesHtml}
+          ` : ''}
+          
+          <div class="footer">
+            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Generate PDF using expo-print
+      const { uri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
+      
+      // Check if sharing is available and share the PDF
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(file.uri, {
+        await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: 'PDF teilen',
+          dialogTitle: `Aufmaß ${project?.name} teilen`,
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('Erfolg', `PDF wurde erstellt: ${filename}`);
+        if (Platform.OS === 'web') {
+          alert('PDF wurde erstellt, aber Teilen ist auf diesem Gerät nicht verfügbar.');
+        } else {
+          Alert.alert('Erfolg', 'PDF wurde erstellt. Teilen ist auf diesem Gerät nicht verfügbar.');
+        }
       }
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      if (Platform.OS === 'web') {
+        alert('Fehler: PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      } else {
+        Alert.alert('Fehler', 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      }
     }
   };
 

@@ -1642,7 +1642,10 @@ export default function ProjectDetailScreen() {
                     } else if (el.type === 'text' && el.data?.text) {
                       const x = ((el.x || 0) - minX) * scale + offsetX;
                       const y = ((el.y || 0) - minY) * scale + offsetY;
-                      svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="12" fill="${color}" font-weight="bold">${el.data.text}</text>`;
+                      // Schriftgröße wie im Original (fontSize oder 20), skaliert
+                      const originalFontSize = el.fontSize || el.data?.fontSize || 20;
+                      const fontSize = Math.max(8, originalFontSize * scale);
+                      svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fontSize}" fill="${color}" font-weight="bold">${el.data.text}</text>`;
                     } else if (el.type === 'image' && el.data?.uri) {
                       // Bilder in der Vorschau anzeigen
                       const x = (((el.x || 0) - minX) * scale) + offsetX;

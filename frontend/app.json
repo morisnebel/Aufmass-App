@@ -7,6 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a1628"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",

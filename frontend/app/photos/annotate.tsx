@@ -16,13 +16,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
-import axios from 'axios';
-import Constants from 'expo-constants';
+import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system/next';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+// API_URL removed - using local storage now
 const { width } = Dimensions.get('window');
 
 interface DrawPath {

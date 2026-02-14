@@ -272,6 +272,49 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
+
+          {/* Zurücksetzen Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Daten zurücksetzen</Text>
+            <Text style={styles.resetInfo}>
+              Alle Einstellungen leeren und auf Standardwerte zurücksetzen.
+            </Text>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={() => {
+                Alert.alert(
+                  'Einstellungen zurücksetzen',
+                  'Möchten Sie wirklich alle Einstellungen leeren?',
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Zurücksetzen',
+                      style: 'destructive',
+                      onPress: () => {
+                        setSettings({
+                          company_name: '',
+                          company_subtitle: '',
+                          owner_name: '',
+                          street: '',
+                          zip_code: '',
+                          city: '',
+                          phone: '',
+                          email: '',
+                          services: '',
+                          author_name: '',
+                          logo_data: null,
+                        });
+                        Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#f44336" />
+              <Text style={styles.resetButtonText}>Alle Felder leeren</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 

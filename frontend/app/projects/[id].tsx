@@ -171,25 +171,31 @@ export default function ProjectDetailScreen() {
 
   const loadProjectData = async () => {
     try {
-      const [projectRes, roofsRes, photosRes, sketchesRes, checklistsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/projects/${id}`),
-        axios.get(`${API_URL}/api/roofs/project/${id}`),
-        axios.get(`${API_URL}/api/photos/project/${id}`),
-        axios.get(`${API_URL}/api/sketches/project/${id}`),
-        axios.get(`${API_URL}/api/checklists/project/${id}`),
+      const projectId = Array.isArray(id) ? id[0] : id;
+      const [projectData, roofsData, photosData, sketchesData, checklistsData] = await Promise.all([
+        ProjectService.getById(projectId),
+        RoofService.getByProjectId(projectId),
+        PhotoService.getByProjectId(projectId),
+        SketchService.getByProjectId(projectId),
+        ChecklistService.getByProjectId(projectId),
       ]);
 
-      setProject(projectRes.data);
-      setRoofs(roofsRes.data);
-      setPhotos(photosRes.data);
-      setSketches(sketchesRes.data);
-      setChecklists(checklistsRes.data);
-      setRemarks(projectRes.data.remarks || '');
-
-      if (projectRes.data.customer_id) {
-        const customerRes = await axios.get(`${API_URL}/api/customers/${projectRes.data.customer_id}`);
-        setCustomer(customerRes.data);
+      if (projectData) {
+        setProject(projectData);
+        setRemarks(projectData.remarks || '');
+        
+        if (projectData.customer_id) {
+          const customerData = await CustomerService.getById(projectData.customer_id);
+          if (customerData) {
+            setCustomer(customerData);
+          }
+        }
       }
+      
+      setRoofs(roofsData);
+      setPhotos(photosData);
+      setSketches(sketchesData);
+      setChecklists(checklistsData);
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');

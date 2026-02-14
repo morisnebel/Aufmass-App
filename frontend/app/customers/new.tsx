@@ -17,10 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { CustomerService } from '../../services/LocalStorage';
 
 // Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {
@@ -53,14 +50,9 @@ function extractContactData(contact: Contacts.Contact) {
         if (!extractedPhone) extractedPhone = number;
       }
     }
-    // If no phone found, use first number as phone
     if (!extractedPhone && !extractedMobile) {
       const phoneObj = contact.phoneNumbers[0] as any;
       extractedPhone = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
-    }
-    // If only mobile found, keep it there
-    if (!extractedPhone && extractedMobile) {
-      // Leave as is - mobile only
     }
   }
 
@@ -184,11 +176,10 @@ export default function NewCustomerScreen() {
       // Combine address fields for storage
       const address = [street, [plz, city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       
-      await axios.post(`${API_URL}/api/customers`, {
+      await CustomerService.create({
         name,
         email: email || undefined,
         phone: phone || undefined,
-        mobile: mobile || undefined,
         address: address || undefined,
       });
       

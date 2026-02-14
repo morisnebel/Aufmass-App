@@ -15,12 +15,9 @@ import {
   Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import axios from 'axios';
-import Constants from 'expo-constants';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { CustomerService } from '../../services/LocalStorage';
 
 // Helper function to extract contact data
 function extractContactData(contact: Contacts.Contact) {
@@ -70,6 +67,7 @@ function extractContactData(contact: Contacts.Contact) {
 export default function EditCustomerScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const customerId = Array.isArray(id) ? id[0] : id;
   
   // Form state
   const [name, setName] = useState('');
@@ -79,7 +77,7 @@ export default function EditCustomerScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Contact sync state - speichert die Kontakt-ID wenn aus Kontakten importiert
+  // Contact sync state
   const [importedContactId, setImportedContactId] = useState<string | null>(null);
   
   // Import options modal
@@ -102,14 +100,13 @@ export default function EditCustomerScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Ref to prevent loadCustomer from overwriting imported data
   const isImportingRef = useRef(false);
 
   useEffect(() => {
     if (!isImportingRef.current) {
       loadCustomer();
     }
-  }, [id]);
+  }, [customerId]);
 
   const loadCustomer = async () => {
     if (isImportingRef.current) {
@@ -118,10 +115,9 @@ export default function EditCustomerScreen() {
     }
     
     try {
-      const response = await axios.get(`${API_URL}/api/customers/${id}`);
-      const customer = response.data;
+      const customer = await CustomerService.getById(customerId);
       
-      if (!isImportingRef.current) {
+      if (customer && !isImportingRef.current) {
         setName(customer.name || '');
         setEmail(customer.email || '');
         setPhone(customer.phone || '');
@@ -158,31 +154,24 @@ export default function EditCustomerScreen() {
   };
 
   const openContactPicker = async () => {
-    console.log('=== openContactPicker called ===');
-    console.log('Platform.OS:', Platform.OS);
-    
     setShowImportOptions(false);
     
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Import aus dem Adressbuch ist nur in der mobilen App verfügbar. Bitte nutzen Sie die manuelle Eingabe.');
+      Alert.alert('Hinweis', 'Kontakt-Import aus dem Adressbuch ist nur in der mobilen App verfügbar.');
       return;
     }
 
     try {
-      console.log('Requesting contacts permission...');
       const { status } = await Contacts.requestPermissionsAsync();
-      console.log('Permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte in den Einstellungen.');
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
         return;
       }
 
-      // Use modal-based contact picker
       setShowContactPicker(true);
       setLoadingContacts(true);
 
-      console.log('Fetching contacts...');
       const { data } = await Contacts.getContactsAsync({
         fields: [
           Contacts.Fields.Name,
@@ -192,25 +181,20 @@ export default function EditCustomerScreen() {
           Contacts.Fields.PhoneNumbers,
           Contacts.Fields.Addresses,
         ],
-        pageSize: 10000, // Load more contacts
+        pageSize: 10000,
         pageOffset: 0,
       });
 
-      console.log('Contacts fetched:', data.length);
-
-      // Sort contacts alphabetically
-      const sortedContacts = data
-        .sort((a, b) => {
-          const nameA = a.name || a.firstName || a.lastName || '';
-          const nameB = b.name || b.firstName || b.lastName || '';
-          return nameA.localeCompare(nameB);
-        });
+      const sortedContacts = data.sort((a, b) => {
+        const nameA = a.name || a.firstName || a.lastName || '';
+        const nameB = b.name || b.firstName || b.lastName || '';
+        return nameA.localeCompare(nameB);
+      });
       
       setContacts(sortedContacts);
-      console.log('Contacts set:', sortedContacts.length);
     } catch (error) {
       console.error('Error in openContactPicker:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden: ' + String(error));
+      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
       setShowContactPicker(false);
     } finally {
       setLoadingContacts(false);
@@ -218,34 +202,21 @@ export default function EditCustomerScreen() {
   };
 
   const selectContact = (contact: Contacts.Contact & { id?: string }) => {
-    // Prevent loadCustomer from overwriting
     isImportingRef.current = true;
     
     const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
     
-    console.log('=== CONTACT IMPORT DEBUG ===');
-    console.log('Contact ID:', contact.id);
-    console.log('Extracted name:', extractedName);
-    console.log('Extracted email:', extractedEmail);
-    console.log('Extracted phone:', extractedPhone);
-    console.log('Extracted address:', extractedAddress);
-    
-    // Apply all values
     setName(extractedName || '');
     setEmail(extractedEmail || '');
     setPhone(extractedPhone || '');
     setAddress(extractedAddress || '');
     
-    // Speichere die Kontakt-ID für spätere Synchronisation
     if (contact.id) {
       setImportedContactId(contact.id);
     }
     
-    // Close modal
     setSearchQuery('');
     setShowContactPicker(false);
-    
-    console.log('=== CONTACT DATA APPLIED ===');
   };
 
   const filteredContacts = contacts.filter(contact => {
@@ -255,122 +226,28 @@ export default function EditCustomerScreen() {
     return contactName.includes(query);
   });
 
-  // Funktion zum Aktualisieren des Gerätekontakts
-  const updateDeviceContact = async () => {
-    if (Platform.OS === 'web' || !importedContactId) {
-      return;
-    }
-
-    try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Contacts permission not granted');
-        return;
-      }
-
-      // Parse den Namen für Vor- und Nachname
-      const nameParts = name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      // Parse die Adresse für Straße, PLZ, Stadt
-      const addressParts = address.split(',').map(p => p.trim());
-      const street = addressParts[0] || '';
-      let postalCode = '';
-      let city = '';
-      
-      if (addressParts[1]) {
-        const plzCity = addressParts[1].trim().split(' ');
-        if (plzCity.length >= 1) {
-          // Prüfen ob erster Teil eine PLZ ist (nur Zahlen)
-          if (/^\d+$/.test(plzCity[0])) {
-            postalCode = plzCity[0];
-            city = plzCity.slice(1).join(' ');
-          } else {
-            city = addressParts[1];
-          }
-        }
-      }
-
-      const updatedContact = {
-        id: importedContactId,
-        contactType: Contacts.ContactTypes.Person,
-        name,
-        firstName,
-        lastName,
-        ...(email && {
-          emails: [{ email, label: 'Arbeit' }],
-        }),
-        ...(phone && {
-          phoneNumbers: [{ number: phone, label: 'Arbeit' }],
-        }),
-        ...(street && {
-          addresses: [{
-            street,
-            postalCode,
-            city,
-            label: 'Arbeit',
-          }],
-        }),
-      };
-
-      await Contacts.updateContactAsync(updatedContact as any);
-      console.log('Contact updated in device contacts');
-    } catch (error) {
-      console.error('Error updating device contact:', error);
-      // Nicht blockieren wenn Update fehlschlägt
-    }
-  };
-
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
       return;
     }
 
-    // Wenn ein Kontakt importiert wurde, fragen ob Gerätekontakt aktualisiert werden soll
-    if (Platform.OS !== 'web' && importedContactId) {
-      Alert.alert(
-        'Kontakt aktualisieren?',
-        'Möchten Sie die Änderungen auch in Ihren Gerätekontakten aktualisieren?',
-        [
-          {
-            text: 'Nein',
-            style: 'cancel',
-            onPress: () => saveCustomer(false),
-          },
-          {
-            text: 'Ja',
-            onPress: () => saveCustomer(true),
-          },
-        ]
-      );
-    } else {
-      saveCustomer(false);
-    }
+    saveCustomer();
   };
 
-  const saveCustomer = async (updateContact: boolean) => {
+  const saveCustomer = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API_URL}/api/customers/${id}`, {
+      await CustomerService.update(customerId, {
         name,
         email: email || undefined,
         phone: phone || undefined,
         address: address || undefined,
       });
       
-      // Gerätekontakt aktualisieren wenn gewünscht
-      if (updateContact) {
-        await updateDeviceContact();
-        Alert.alert('Erfolg', 'Kunde und Gerätekontakt wurden aktualisiert', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      }
+      Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (error) {
       console.error('Error updating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht aktualisiert werden');
@@ -386,7 +263,7 @@ export default function EditCustomerScreen() {
   const confirmDeleteCustomer = async () => {
     setIsDeleting(true);
     try {
-      await axios.delete(`${API_URL}/api/customers/${id}`);
+      await CustomerService.delete(customerId);
       setShowDeleteModal(false);
       Alert.alert('Erfolg', 'Kunde wurde gelöscht', [
         { text: 'OK', onPress: () => router.replace('/customers/') },
@@ -433,8 +310,6 @@ export default function EditCustomerScreen() {
               placeholder="Kundenname"
               value={name}
               onChangeText={setName}
-              textContentType="name"
-              autoComplete="name"
             />
           </View>
 
@@ -447,8 +322,6 @@ export default function EditCustomerScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              textContentType="emailAddress"
-              autoComplete="email"
             />
           </View>
 
@@ -460,8 +333,6 @@ export default function EditCustomerScreen() {
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-              autoComplete="tel"
             />
           </View>
 
@@ -474,8 +345,6 @@ export default function EditCustomerScreen() {
               onChangeText={setAddress}
               multiline
               numberOfLines={3}
-              textContentType="fullStreetAddress"
-              autoComplete="street-address"
             />
           </View>
 
@@ -654,7 +523,6 @@ export default function EditCustomerScreen() {
             placeholder="Kontakt suchen..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            autoCapitalize="none"
           />
 
           {loadingContacts ? (

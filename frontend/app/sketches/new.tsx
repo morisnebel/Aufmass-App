@@ -278,33 +278,30 @@ export default function NewSketchScreen() {
           ) : (
             <>
               <Text style={styles.selectHintText}>
-                Foto antippen zum Auswählen
+                Foto antippen um Skizze zu erstellen
               </Text>
               <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
                 {projectPhotos.map((photo) => {
-                  const isSelected = selectedPhoto?.id === photo.id;
+                  const isLoading = loadingPhotoId === photo.id;
                   return (
                     <TouchableOpacity
                       key={photo.id}
-                      style={[
-                        styles.photoGridItem,
-                        isSelected && styles.photoGridItemSelected
-                      ]}
-                      onPress={() => handleSelectPhoto(photo)}
+                      style={styles.photoGridItem}
+                      onPress={() => handleSelectProjectPhoto(photo)}
                       activeOpacity={0.7}
+                      disabled={loadingPhotoId !== null}
                     >
                       <Image
                         source={{ uri: (photo as any).image_data || photo.uri }}
                         style={styles.photoGridImage}
                       />
-                      {isSelected && (
-                        <View style={styles.selectedOverlay}>
-                          <View style={styles.checkmarkCircle}>
-                            <Ionicons name="checkmark" size={24} color="#fff" />
-                          </View>
+                      {isLoading && (
+                        <View style={styles.loadingOverlay}>
+                          <ActivityIndicator size="large" color="#fff" />
+                          <Text style={styles.loadingOverlayText}>Wird geladen...</Text>
                         </View>
                       )}
-                      {photo.description && !isSelected && (
+                      {photo.description && !isLoading && (
                         <View style={styles.photoDescriptionOverlay}>
                           <Text style={styles.photoDescriptionText} numberOfLines={1}>
                             {photo.description}
@@ -315,29 +312,6 @@ export default function NewSketchScreen() {
                   );
                 })}
               </ScrollView>
-              
-              {/* Bestätigen Button */}
-              {selectedPhoto && (
-                <View style={styles.confirmButtonContainer}>
-                  <TouchableOpacity
-                    style={[styles.confirmButton, preparingSketch && styles.confirmButtonDisabled]}
-                    onPress={handleConfirmProjectPhoto}
-                    disabled={preparingSketch}
-                  >
-                    {preparingSketch ? (
-                      <View style={styles.confirmButtonContent}>
-                        <ActivityIndicator size="small" color="#fff" />
-                        <Text style={styles.confirmButtonText}>Wird vorbereitet...</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.confirmButtonContent}>
-                        <Ionicons name="brush" size={20} color="#fff" />
-                        <Text style={styles.confirmButtonText}>Skizze erstellen</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
             </>
           )}
         </SafeAreaView>

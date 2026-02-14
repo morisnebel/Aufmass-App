@@ -51,23 +51,12 @@ export default function NewSketchScreen() {
     setShowPhotoModal(true);
   };
 
-  const handleSelectProjectPhoto = async (photo: Photo) => {
-    // Modal schließen und Vollbild-Ladescreen zeigen
+  const handleSelectProjectPhoto = (photo: Photo) => {
+    // Modal schließen
     setShowPhotoModal(false);
-    setPreparingSketch(true);
     
-    // Warte kurz damit der Ladescreen angezeigt wird
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    const imageUri = (photo as any).image_data || photo.uri;
-    
-    // Navigation zur Skizze
-    router.push(`/sketches/draw?projectId=${projectId}&backgroundImageUri=${encodeURIComponent(imageUri)}`);
-    
-    // Ladescreen nach Navigation ausblenden
-    setTimeout(() => {
-      setPreparingSketch(false);
-    }, 500);
+    // Nur die Photo-ID übergeben - Bild wird in draw.tsx geladen
+    router.push(`/sketches/draw?projectId=${projectId}&photoId=${photo.id}`);
   };
 
   const handleCloseModal = () => {

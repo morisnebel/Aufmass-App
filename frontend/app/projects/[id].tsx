@@ -210,7 +210,7 @@ export default function ProjectDetailScreen() {
     setIsDeleting(true);
     
     try {
-      await axios.delete(`${API_URL}/api/photos/${photoToDelete}`);
+      await PhotoService.delete(photoToDelete);
       
       // Close modal and reset state
       setDeleteModalVisible(false);

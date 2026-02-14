@@ -336,9 +336,7 @@ export default function EditChecklistScreen() {
     
     for (let i = 0; i < retries; i++) {
       try {
-        await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist, {
-          timeout: 10000, // 10 Sekunden Timeout
-        });
+        await ChecklistService.update(checklist.id, checklist);
         setHasChanges(false);
         return; // Erfolgreich gespeichert
       } catch (error) {
@@ -361,9 +359,7 @@ export default function EditChecklistScreen() {
     
     for (let i = 0; i < 3; i++) {
       try {
-        await axios.put(`${API_URL}/api/checklists/${checklist.id}`, checklist, {
-          timeout: 15000, // 15 Sekunden Timeout
-        });
+        await ChecklistService.update(checklist.id, checklist);
         setHasChanges(false);
         success = true;
         break;

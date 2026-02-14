@@ -460,4 +460,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  resetInfo: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f44336',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  resetButtonText: {
+    color: '#f44336',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

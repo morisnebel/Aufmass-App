@@ -32,6 +32,9 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
   - Direktes Teilen über iOS Share Sheet
   - **NEU: PDF-Vorschau im WebView** - Dokument vor dem Teilen ansehen
   - **NEU: Speichern in Dateien-App** - PDF lokal sichern
+  - **NEU: Vollständige Firmendaten im PDF-Header** (Logo, Name, Adresse, Telefon, E-Mail)
+  - **NEU: Vollständige Bauherr-Daten** (Name, Straße, PLZ/Ort, Telefon, Mobil, E-Mail)
+  - **NEU: Objektadresse** separat angezeigt (wenn vorhanden: Name, Straße, PLZ/Ort)
 - [x] **UI-Verbesserungen für Handy** (Build 3)
   - Kompakteres Layout auf "Neue Skizze erstellen" Seite
   - Horizontales Karten-Design (alle 3 Optionen auf einem Bildschirm)

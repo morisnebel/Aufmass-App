@@ -136,37 +136,41 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={() => router.push('/projects/new')}
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Neues Projekt</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={() => router.push('/projects/new')}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+            <Text style={styles.buttonText}>Neues Projekt</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => router.push('/customers')}
-        >
-          <Ionicons name="people" size={20} color="#1976d2" />
-          <Text style={styles.secondaryButtonText}>Kunden</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/customers')}
+          >
+            <Ionicons name="people" size={24} color="#1976d2" />
+            <Text style={styles.secondaryButtonText}>Kunden</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => router.push('/checklists/templates')}
-        >
-          <Ionicons name="list" size={20} color="#1976d2" />
-          <Text style={styles.secondaryButtonText}>Checklisten</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/checklists/templates')}
+          >
+            <Ionicons name="list" size={24} color="#1976d2" />
+            <Text style={styles.secondaryButtonText}>Checklisten</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => router.push('/settings')}
-        >
-          <Ionicons name="settings-outline" size={20} color="#1976d2" />
-          <Text style={styles.secondaryButtonText}>Einstellungen</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={24} color="#1976d2" />
+            <Text style={styles.secondaryButtonText}>Einstellungen</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {projects.length === 0 ? (
@@ -215,18 +219,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   actionButtons: {
-    flexDirection: 'row',
     padding: 16,
-    gap: 8,
+    gap: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    gap: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 8,
   },
   primaryButton: {
     backgroundColor: '#1976d2',

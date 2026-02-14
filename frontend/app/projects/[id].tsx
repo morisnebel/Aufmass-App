@@ -738,39 +738,32 @@ export default function ProjectDetailScreen() {
             overflow: hidden;
             page-break-inside: avoid;
           }
-          /* Default img styling */
+          /* Default img styling - display block removes inline gaps */
           .photo-item img, .sketch-item img {
+            display: block;
             width: 100%;
-            object-fit: contain;
+            height: auto;
             background: #f5f5f5;
           }
-          /* Photo size-specific img max-heights */
-          .photo-small img {
-            max-height: 150px;
+          /* Small: limit height to keep compact */
+          .photo-small img, .sketch-small img {
+            max-height: 180px;
+            object-fit: contain;
           }
-          .photo-medium img {
-            max-height: 250px;
+          /* Medium: moderate height */
+          .photo-medium img, .sketch-medium img {
+            max-height: 280px;
+            object-fit: contain;
           }
-          .photo-large img {
-            max-height: 450px;
+          /* Large: bigger but still contained */
+          .photo-large img, .sketch-large img {
+            max-height: 500px;
+            object-fit: contain;
           }
-          .photo-full img {
+          /* Full: no restrictions - show full image */
+          .photo-full img, .sketch-full img {
             max-height: none;
-            height: auto;
-          }
-          /* Sketch size-specific img max-heights */
-          .sketch-small img {
-            max-height: 150px;
-          }
-          .sketch-medium img {
-            max-height: 250px;
-          }
-          .sketch-large img {
-            max-height: 450px;
-          }
-          .sketch-full img {
-            max-height: none;
-            height: auto;
+            object-fit: none;
           }
           .photo-item p, .sketch-item p {
             margin: 0;

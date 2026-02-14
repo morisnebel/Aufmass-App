@@ -1,9 +1,11 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
+import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 
 export default function RootLayout() {
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
@@ -76,6 +78,7 @@ export default function RootLayout() {
           options={{ title: 'Dachmessung bearbeiten' }} 
         />
       </Stack>
-    </>
+      <KeyboardDismissButton />
+    </View>
   );
 }

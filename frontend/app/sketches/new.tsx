@@ -135,34 +135,43 @@ export default function NewSketchScreen() {
           {/* Option 1: Blank Sketch */}
           <TouchableOpacity style={styles.optionButton} onPress={handleBlankSketch}>
             <View style={[styles.iconContainer, { backgroundColor: '#e3f2fd' }]}>
-              <Ionicons name="document-outline" size={48} color="#1976d2" />
+              <Ionicons name="document-outline" size={26} color="#1976d2" />
             </View>
-            <Text style={styles.optionTitle}>Leere Skizze</Text>
-            <Text style={styles.optionDescription}>
-              Beginnen Sie mit einer leeren Zeichenfläche
-            </Text>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Leere Skizze</Text>
+              <Text style={styles.optionDescription}>
+                Mit leerer Zeichenfläche beginnen
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" style={styles.optionArrow} />
           </TouchableOpacity>
 
           {/* Option 2: Take Photo */}
           <TouchableOpacity style={styles.optionButton} onPress={handleTakePhoto}>
             <View style={[styles.iconContainer, { backgroundColor: '#e8f5e9' }]}>
-              <Ionicons name="camera" size={48} color="#4caf50" />
+              <Ionicons name="camera" size={26} color="#4caf50" />
             </View>
-            <Text style={styles.optionTitle}>Foto aufnehmen</Text>
-            <Text style={styles.optionDescription}>
-              Fotografieren Sie ein Objekt und zeichnen Sie darauf
-            </Text>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Foto aufnehmen</Text>
+              <Text style={styles.optionDescription}>
+                Objekt fotografieren und darauf zeichnen
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" style={styles.optionArrow} />
           </TouchableOpacity>
 
           {/* Option 3: Pick from Gallery */}
           <TouchableOpacity style={styles.optionButton} onPress={handlePickFromGallery}>
             <View style={[styles.iconContainer, { backgroundColor: '#fff3e0' }]}>
-              <Ionicons name="images" size={48} color="#ff9800" />
+              <Ionicons name="images" size={26} color="#ff9800" />
             </View>
-            <Text style={styles.optionTitle}>Aus Galerie wählen</Text>
-            <Text style={styles.optionDescription}>
-              Wählen Sie ein vorhandenes Bild als Hintergrund
-            </Text>
+            <View style={styles.optionTextContainer}>
+              <Text style={styles.optionTitle}>Aus Galerie wählen</Text>
+              <Text style={styles.optionDescription}>
+                Vorhandenes Bild als Hintergrund
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ccc" style={styles.optionArrow} />
           </TouchableOpacity>
         </View>
       </View>

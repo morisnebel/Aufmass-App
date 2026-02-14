@@ -260,11 +260,11 @@ export default function NewSketchScreen() {
         visible={showPhotoModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowPhotoModal(false)}
+        onRequestClose={handleCloseModal}
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowPhotoModal(false)} style={styles.modalCloseButton}>
+            <TouchableOpacity onPress={handleCloseModal} style={styles.modalCloseButton}>
               <Ionicons name="close" size={28} color="#333" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Projektfotos</Text>
@@ -285,28 +285,69 @@ export default function NewSketchScreen() {
               </Text>
             </View>
           ) : (
-            <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
-              {projectPhotos.map((photo) => (
-                <TouchableOpacity
-                  key={photo.id}
-                  style={styles.photoGridItem}
-                  onPress={() => handleSelectProjectPhoto(photo)}
-                  activeOpacity={0.7}
-                >
-                  <Image
-                    source={{ uri: (photo as any).image_data || photo.uri }}
-                    style={styles.photoGridImage}
-                  />
-                  {photo.description && (
-                    <View style={styles.photoDescriptionOverlay}>
-                      <Text style={styles.photoDescriptionText} numberOfLines={1}>
-                        {photo.description}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <>
+              <Text style={styles.selectHintText}>
+                Tippen Sie auf ein Foto um es auszuwählen
+              </Text>
+              <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
+                {projectPhotos.map((photo) => {
+                  const isSelected = selectedPhoto?.id === photo.id;
+                  return (
+                    <TouchableOpacity
+                      key={photo.id}
+                      style={[
+                        styles.photoGridItem,
+                        isSelected && styles.photoGridItemSelected
+                      ]}
+                      onPress={() => handleSelectPhoto(photo)}
+                      activeOpacity={0.7}
+                    >
+                      <Image
+                        source={{ uri: (photo as any).image_data || photo.uri }}
+                        style={styles.photoGridImage}
+                      />
+                      {isSelected && (
+                        <View style={styles.selectedOverlay}>
+                          <View style={styles.checkmarkCircle}>
+                            <Ionicons name="checkmark" size={24} color="#fff" />
+                          </View>
+                        </View>
+                      )}
+                      {photo.description && !isSelected && (
+                        <View style={styles.photoDescriptionOverlay}>
+                          <Text style={styles.photoDescriptionText} numberOfLines={1}>
+                            {photo.description}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              
+              {/* Bestätigen Button */}
+              {selectedPhoto && (
+                <View style={styles.confirmButtonContainer}>
+                  <TouchableOpacity
+                    style={[styles.confirmButton, preparingSketch && styles.confirmButtonDisabled]}
+                    onPress={handleConfirmProjectPhoto}
+                    disabled={preparingSketch}
+                  >
+                    {preparingSketch ? (
+                      <View style={styles.confirmButtonContent}>
+                        <ActivityIndicator size="small" color="#fff" />
+                        <Text style={styles.confirmButtonText}>Wird vorbereitet...</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.confirmButtonContent}>
+                        <Ionicons name="brush" size={20} color="#fff" />
+                        <Text style={styles.confirmButtonText}>Skizze erstellen</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
         </SafeAreaView>
       </Modal>

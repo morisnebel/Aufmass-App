@@ -36,16 +36,16 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettings>({
-    company_name: 'Nebel-Bedachung',
-    company_subtitle: 'Dachdeckermeister',
-    owner_name: 'Moris Nebel',
+    company_name: '',
+    company_subtitle: '',
+    owner_name: '',
     street: '',
     zip_code: '',
     city: '',
     phone: '',
     email: '',
-    services: 'Dächer aller Art\nFassadenarbeiten\nZimmerer- und Spenglerarbeiten',
-    author_name: 'Moris Nebel',
+    services: '',
+    author_name: '',
     logo_data: null,
   });
 

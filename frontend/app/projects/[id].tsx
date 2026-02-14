@@ -847,7 +847,7 @@ export default function ProjectDetailScreen() {
             <div class="stat-label">Dachflächen</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value">${totalArea.toFixed(2)} m²</div>
+            <div class="stat-value">${pdfTotalArea.toFixed(2)} m²</div>
             <div class="stat-label">Gesamtfläche</div>
           </div>
           <div class="stat-box">

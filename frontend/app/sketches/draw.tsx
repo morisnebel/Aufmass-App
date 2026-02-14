@@ -248,30 +248,44 @@ export default function DrawSketchScreen() {
 
   // Add initial image from route params as an element
   useEffect(() => {
-    if (backgroundImageUri && !initialImageAdded.current && !sketchId) {
+    const addImageElement = (imageUri: string) => {
+      if (initialImageAdded.current) return;
       initialImageAdded.current = true;
-      const decodedUri = decodeURIComponent(backgroundImageUri);
       
-      // Add the image as an element that can be moved and resized
       const imageElement: DrawElement = {
         id: generateId(),
         type: 'image',
-        data: { uri: decodedUri },
+        data: { uri: imageUri },
         color: '#000000',
         strokeWidth: 0,
         x: 20,
         y: 20,
-        width: width - 40,  // Almost full width with some margin
-        height: (height - 160) * 0.8,  // Good height
+        width: width - 40,
+        height: (height - 160) * 0.8,
         rotation: 0,
       };
       
       setElements([imageElement]);
       setHistory([[imageElement]]);
       setHistoryIndex(0);
-      setSelectedElementId(imageElement.id);  // Select it so user can resize immediately
+      setSelectedElementId(imageElement.id);
+    };
+
+    // Option 1: Load from photoId (fast - loads from LocalStorage)
+    if (photoId && !initialImageAdded.current && !sketchId) {
+      PhotoService.getById(photoId).then(photo => {
+        if (photo) {
+          const imageUri = (photo as any).image_data || photo.uri;
+          addImageElement(imageUri);
+        }
+      });
     }
-  }, [backgroundImageUri, sketchId]);
+    // Option 2: Load from backgroundImageUri (legacy - passed via URL)
+    else if (backgroundImageUri && !initialImageAdded.current && !sketchId) {
+      const decodedUri = decodeURIComponent(backgroundImageUri);
+      addImageElement(decodedUri);
+    }
+  }, [backgroundImageUri, photoId, sketchId]);
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(

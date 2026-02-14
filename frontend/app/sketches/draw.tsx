@@ -1894,10 +1894,10 @@ export default function DrawSketchScreen() {
     maxX += padding;
     maxY += padding;
     
-    // Calculate dimensions
-    const drawWidth = maxX - minX || 200;
-    const drawHeight = maxY - minY || 200;
-    const previewSize = 200;
+    // Calculate dimensions - use larger preview size for better quality in PDF
+    const drawWidth = maxX - minX || 800;
+    const drawHeight = maxY - minY || 800;
+    const previewSize = 800;  // Larger preview for better PDF quality
     const scale = Math.min(previewSize / drawWidth, previewSize / drawHeight, 1);
     
     // Calculate offset to center the drawing

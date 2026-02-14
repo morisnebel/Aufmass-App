@@ -955,9 +955,6 @@ export default function ProjectDetailScreen() {
   const generateAndSharePdf = async () => {
     try {
       setIsGeneratingPdf(true);
-      if (Platform.OS !== 'web') {
-        Alert.alert('PDF Export', 'PDF wird erstellt...');
-      }
       
       const html = await generatePdfHtml();
       const { uri } = await Print.printToFileAsync({

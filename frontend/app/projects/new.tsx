@@ -19,14 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import { CustomerService, ProjectService, Customer } from '../../services/LocalStorage';
 
-interface CustomerLocal {
-  id: string;
-  name: string;
-  address?: string;
-  phone?: string;
-  mobile?: string;
-  email?: string;
-}
+// Customer type is imported from LocalStorage service
 
 // Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {

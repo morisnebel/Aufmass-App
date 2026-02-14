@@ -38,6 +38,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "159413b4-c5be-4afa-9038-b6ba91a4ea1c"
+      }
+    },
+    "owner": "morisnebel"
   }
 }

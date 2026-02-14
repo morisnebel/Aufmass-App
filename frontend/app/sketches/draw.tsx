@@ -285,9 +285,9 @@ export default function DrawSketchScreen() {
     try {
       setLoading(true);
       console.log('Loading sketch with ID:', sketchId, 'for project:', projectId);
-      const response = await axios.get(`${API_URL}/api/sketches/project/${projectId}`);
-      console.log('All sketches:', response.data);
-      const sketch = response.data.find((s: any) => s.id === sketchId);
+      const sketches = await SketchService.getByProjectId(projectId);
+      console.log('All sketches:', sketches);
+      const sketch = sketches.find((s: any) => s.id === sketchId);
       console.log('Found sketch:', sketch);
       
       if (sketch) {

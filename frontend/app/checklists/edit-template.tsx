@@ -182,12 +182,13 @@ export default function EditTemplateScreen() {
       };
 
       if (templateId) {
-        await axios.put(`${API_URL}/api/checklist-templates/${templateId}`, payload);
+        const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
+        await ChecklistTemplateService.update(tplId || '', payload);
         Alert.alert('Erfolg', 'Vorlage wurde aktualisiert', [
           { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
-        await axios.post(`${API_URL}/api/checklist-templates`, payload);
+        await ChecklistTemplateService.create(payload);
         Alert.alert('Erfolg', 'Vorlage wurde erstellt', [
           { text: 'OK', onPress: () => router.back() },
         ]);

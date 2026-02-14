@@ -764,8 +764,8 @@ export default function ProjectDetailScreen() {
             gap: 15px;
           }
           .company-logo {
-            max-width: 80px;
-            max-height: 60px;
+            max-width: 120px;
+            max-height: 90px;
             object-fit: contain;
           }
         </style>

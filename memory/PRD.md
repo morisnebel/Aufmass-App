@@ -43,13 +43,23 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
 - [x] **Einstellungen verbessert**
   - Felder sind anfangs leer (individuell anpassbar)
   - "Alle Felder leeren" Button zum Zurücksetzen
+- [x] **Multi-Foto-Upload** (Build 4)
+  - Mehrere Fotos gleichzeitig aus Galerie auswählen
+  - Fortschrittsanzeige beim Speichern
+- [x] **Projektfotos in Skizzen-Editor** (Build 4 - Dezember 2024)
+  - Neue Option "Aus Projektfotos wählen" auf Skizzen-Seite
+  - Modal zeigt alle bereits zum Projekt hinzugefügten Fotos
+  - Foto auswählen und direkt als Skizzen-Hintergrund verwenden
+  - Verbesserter Workflow ohne Suche in Galerie
 
 ## Build History
 | Version | Build | Status | Änderungen |
 |---------|-------|--------|------------|
 | 1.0.0   | 1     | Initial | Erste Version |
 | 1.0.0   | 2     | TestFlight | Splash Screen Fix, UI Updates |
-| 1.0.0   | 3     | Pending | PDF-Export mit Vorschau & Speichern, verbessertes Layout |
+| 1.0.0   | 3     | TestFlight | PDF-Export mit Vorschau & Speichern, verbessertes Layout |
+| 1.0.0   | 4     | TestFlight | Multi-Foto-Upload, "Als Bild teilen" |
+| 1.0.0   | 5     | Pending | Projektfotos in Skizzen-Editor |
 
 ## Pending Issues (P2)
 - [ ] UI-Freeze Bug beim "Neues Projekt" Workflow (nach Kundenanlage)
@@ -57,21 +67,22 @@ Eine vollständig offline-fähige iOS-App für Dachdecker zur Erfassung von Aufm
   - Sollte im nächsten Test überprüft werden
 
 ## Next Steps
-1. **Neuen Build erstellen und zu TestFlight submiten**
+1. **Testen in Expo Go** - Neue "Aus Projektfotos" Funktion testen
+2. Wenn alles funktioniert: Neuen Build erstellen
    ```bash
    cd /app/frontend
    eas build --platform ios
    eas submit --platform ios
    ```
-   (Expo-Login: moris_nebel@hotmail.com / Miabalu1+)
-2. PDF-Export auf echtem Gerät testen (Vorschau, Teilen, Speichern)
-3. UI-Freeze Bug verifizieren
+3. UI-Freeze Bug in "Neues Projekt" verifizieren
 
 ## Files of Reference
 - `/app/frontend/app/projects/[id].tsx` - PDF Export mit Vorschau-Modal
+- `/app/frontend/app/sketches/new.tsx` - Skizzen-Erstellung mit Projektfotos-Auswahl
+- `/app/frontend/app/photos/new.tsx` - Multi-Foto-Upload
 - `/app/frontend/services/LocalStorage.ts` - Datenpersistenz
-- `/app/frontend/app.json` - App-Konfiguration (buildNumber: 3)
-- `/app/frontend/package.json` - Dependencies (expo-print hinzugefügt)
+- `/app/frontend/app.json` - App-Konfiguration (buildNumber: 4)
+- `/app/frontend/package.json` - Dependencies
 
 ## Expo Credentials
 - Account: moris_nebel@hotmail.com

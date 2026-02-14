@@ -162,11 +162,16 @@ export default function NewSketchScreen() {
     }
   };
 
-  if (loading) {
+  if (loading || preparingSketch) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1976d2" />
-        <Text style={styles.loadingText}>Bild wird vorbereitet...</Text>
+        <Text style={styles.loadingText}>
+          {preparingSketch ? 'Skizze wird vorbereitet...' : 'Bild wird vorbereitet...'}
+        </Text>
+        {preparingSketch && (
+          <Text style={styles.loadingSubtext}>Dies kann einen Moment dauern</Text>
+        )}
       </SafeAreaView>
     );
   }

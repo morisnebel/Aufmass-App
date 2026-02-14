@@ -24,6 +24,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
+import ViewShot from 'react-native-view-shot';
 
 // API_URL removed - using local storage now
 

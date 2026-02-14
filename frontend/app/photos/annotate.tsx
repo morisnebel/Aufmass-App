@@ -269,7 +269,7 @@ export default function AnnotatePhotoScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      await axios.delete(`${API_URL}/api/photos/${photoId}`);
+                      await PhotoService.delete(photoId || '');
                       Alert.alert('Erfolg', 'Foto wurde gelöscht', [
                         { text: 'OK', onPress: () => router.back() },
                       ]);

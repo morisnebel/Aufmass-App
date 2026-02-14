@@ -2189,6 +2189,24 @@ export default function DrawSketchScreen() {
           placeholder="Skizzen-Titel"
           placeholderTextColor="#ccc"
         />
+        {/* PDF-Größe Button */}
+        <TouchableOpacity 
+          onPress={() => {
+            const sizes = ['small', 'medium', 'large', 'full'];
+            const labels = ['Klein (3/Zeile)', 'Mittel (2/Zeile)', 'Groß (1/Zeile)', 'Voll'];
+            const currentIndex = sizes.indexOf(pdfSize);
+            const nextIndex = (currentIndex + 1) % sizes.length;
+            setPdfSize(sizes[nextIndex]);
+            showAlert('PDF-Größe', labels[nextIndex]);
+          }} 
+          style={styles.headerButton}
+        >
+          <Ionicons 
+            name={pdfSize === 'small' ? 'grid-outline' : pdfSize === 'medium' ? 'apps-outline' : pdfSize === 'large' ? 'square-outline' : 'expand-outline'} 
+            size={22} 
+            color="#fff" 
+          />
+        </TouchableOpacity>
         <TouchableOpacity onPress={saveSketch} style={styles.headerButton} disabled={loading}>
           <Ionicons name="checkmark" size={24} color={loading ? '#888' : '#fff'} />
         </TouchableOpacity>

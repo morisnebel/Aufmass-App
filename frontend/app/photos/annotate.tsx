@@ -138,7 +138,7 @@ export default function AnnotatePhotoScreen() {
       };
 
       // Update photo with annotations and PDF size
-      await axios.put(`${API_URL}/api/photos/${photoId}`, {
+      await PhotoService.update(photoId || '', {
         project_id: projectId,
         image_data: imageUri, // Keep original image
         annotations: JSON.stringify(annotationData),

@@ -589,6 +589,8 @@ export default function ProjectDetailScreen() {
           .company-info {
             text-align: right;
             font-size: 10px;
+            max-width: 200px;
+            word-wrap: break-word;
           }
           h2 {
             color: #1976d2;

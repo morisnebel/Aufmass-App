@@ -25,7 +25,6 @@ export default function NewSketchScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Bild wird vorbereitet...');
   const [projectPhotos, setProjectPhotos] = useState<Photo[]>([]);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(false);

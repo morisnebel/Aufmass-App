@@ -2005,9 +2005,9 @@ export default function DrawSketchScreen() {
         
         // Notiz-Text in der Vorschau anzeigen (wie im Original)
         if (pointerText) {
-          // Schriftgröße wie im Original (fontSize oder 16), skaliert
+          // Schriftgröße wie im Original (fontSize oder 16), skaliert, max 20px
           const originalFontSize = el.data.fontSize || 16;
-          const fontSize = Math.max(8, originalFontSize * scale);
+          const fontSize = Math.min(20, Math.max(8, originalFontSize * scale));
           
           // Text am Startpunkt des Pfeils, senkrecht zur Pfeilrichtung versetzt (wie im Original)
           const textOffset = 15 * scale;

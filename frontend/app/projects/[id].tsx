@@ -772,23 +772,25 @@ export default function ProjectDetailScreen() {
       </head>
       <body>
         <div class="header">
-          <div class="company-header">
-            ${companyLogo ? `<img src="${companyLogo}" class="company-logo" alt="Logo" />` : ''}
-            <div>
-              <h1>AUFMASS-DOKUMENTATION</h1>
-              <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}${authorName ? ` | Verfasser: ${authorName}` : ''}</div>
+          <div class="header-top">
+            <div class="company-header">
+              ${companyLogo ? `<img src="${companyLogo}" class="company-logo" alt="Logo" />` : ''}
+              <div>
+                <h1>AUFMASS-DOKUMENTATION</h1>
+                <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}${authorName ? ` | Verfasser: ${authorName}` : ''}</div>
+              </div>
             </div>
+            ${companyName ? `
+              <div class="company-info">
+                <strong>${companyName}</strong>
+                ${companySubtitle ? `<br/><em>${companySubtitle}</em>` : ''}
+                ${companyStreet ? `<br/>${companyStreet}` : ''}
+                ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
+                ${companyPhone ? `<br/>Tel: ${companyPhone}` : ''}
+                ${companyEmail ? `<br/>${companyEmail}` : ''}
+              </div>
+            ` : ''}
           </div>
-          ${companyName ? `
-            <div class="company-info">
-              <strong>${companyName}</strong>
-              ${companySubtitle ? `<br/><em>${companySubtitle}</em>` : ''}
-              ${companyStreet ? `<br/>${companyStreet}` : ''}
-              ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
-              ${companyPhone ? `<br/>Tel: ${companyPhone}` : ''}
-              ${companyEmail ? `<br/>E-Mail: ${companyEmail}` : ''}
-            </div>
-          ` : ''}
         </div>
         
         <h2>Projektübersicht</h2>

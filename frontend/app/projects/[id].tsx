@@ -813,6 +813,14 @@ export default function ProjectDetailScreen() {
               <span class="info-label">Status:</span>
               <span class="info-value">${project?.status === 'active' ? 'Aktiv' : project?.status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
+            ${(objektStreet || objektPlz || objektCity || objektName) ? `
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                <strong style="color: #1976d2;">Objektadresse</strong>
+                ${objektName ? `<div style="margin-top: 4px;">${objektName}</div>` : ''}
+                <div style="margin-top: 2px;">${objektStreet || bauherrStreet}</div>
+                <div>${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</div>
+              </div>
+            ` : ''}
           </div>
           
           <div class="info-box">
@@ -845,26 +853,6 @@ export default function ProjectDetailScreen() {
             ` : ''}
           </div>
         </div>
-        
-        ${(objektStreet || objektPlz || objektCity || objektName) ? `
-          <div class="info-box" style="margin-bottom: 20px;">
-            <h3>Objektadresse</h3>
-            ${objektName ? `
-              <div class="info-row">
-                <span class="info-label">Name:</span>
-                <span class="info-value">${objektName}</span>
-              </div>
-            ` : ''}
-            <div class="info-row">
-              <span class="info-label">Straße:</span>
-              <span class="info-value">${objektStreet || bauherrStreet}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Ort:</span>
-              <span class="info-value">${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</span>
-            </div>
-          </div>
-        ` : ''}
         
         <div class="stats-grid">
           <div class="stat-box">

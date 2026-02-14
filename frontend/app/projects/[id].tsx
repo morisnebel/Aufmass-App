@@ -353,7 +353,8 @@ export default function ProjectDetailScreen() {
 
     setIsSavingProject(true);
     try {
-      await axios.put(`${API_URL}/api/projects/${id}`, {
+      const projectId = Array.isArray(id) ? id[0] : id;
+      await ProjectService.update(projectId, {
         name: editProjectName,
         description: editProjectDescription || undefined,
         status: editProjectStatus,
@@ -394,30 +395,18 @@ export default function ProjectDetailScreen() {
   };
 
   const exportToPDF = async () => {
+    // PDF Export is currently disabled in offline mode
+    Alert.alert(
+      'PDF Export',
+      'PDF Export ist in der Offline-Version derzeit nicht verfügbar. Diese Funktion wird in einem zukünftigen Update hinzugefügt.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Keep the old function signature for future implementation
+  const exportToPDFLegacy = async () => {
     try {
       Alert.alert('PDF Export', 'PDF wird erstellt...');
-      
-      const response = await axios.get(`${API_URL}/api/export/pdf/${id}`);
-      
-      if (!response.data || !response.data.pdf_data) {
-        throw new Error('Keine PDF-Daten erhalten');
-      }
-      
-      const filename = response.data.filename || 'Aufmass.pdf';
-      
-      // Use new File API
-      const file = new File(Paths.cache, filename);
-      
-      // Decode base64 and write to file
-      const binaryString = atob(response.data.pdf_data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      await file.write(bytes);
-
-      // Check if sharing is available
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(file.uri, {

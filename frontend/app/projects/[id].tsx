@@ -1694,7 +1694,7 @@ export default function ProjectDetailScreen() {
                         <SvgXml
                           xml={svgXml}
                           width="100%"
-                          height={250}
+                          height="100%"
                           preserveAspectRatio="xMidYMid meet"
                         />
                       </View>
@@ -1705,7 +1705,7 @@ export default function ProjectDetailScreen() {
                       <Image
                         source={{ uri: sketch.sketch_data }}
                         style={styles.sketchImage}
-                        resizeMode="contain"
+                        resizeMode="cover"
                       />
                     )}
                     

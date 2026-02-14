@@ -22,7 +22,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { SvgXml } from 'react-native-svg';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+// API_URL removed - using local storage now
 
 interface Project {
   id: string;

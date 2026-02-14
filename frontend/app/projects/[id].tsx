@@ -1242,7 +1242,7 @@ export default function ProjectDetailScreen() {
                   if (!project) return;
                   setIsSavingRemarks(true);
                   try {
-                    await axios.put(`${API_URL}/api/projects/${project.id}`, {
+                    await ProjectService.update(project.id, {
                       customer_id: project.customer_id,
                       name: project.name,
                       description: project.description || '',

@@ -153,6 +153,8 @@ export default function ProjectDetailScreen() {
   const [pdfHtmlContent, setPdfHtmlContent] = useState('');
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSharingImage, setIsSharingImage] = useState(false);
+  const viewShotRef = useRef<ViewShot>(null);
 
   // Helper to parse address from customer
   const parseCustomerAddress = (address: string | undefined) => {

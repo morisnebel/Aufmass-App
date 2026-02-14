@@ -8,7 +8,7 @@ import json
 import base64
 from datetime import datetime
 
-BACKEND_URL = "https://async-persist-dach.preview.emergentagent.com/api"
+BACKEND_URL = "https://mobile-button-ui.preview.emergentagent.com/api"
 
 def log_test(message):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")

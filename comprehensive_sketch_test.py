@@ -10,7 +10,7 @@ import base64
 import sys
 from datetime import datetime
 
-BACKEND_URL = "https://async-persist-dach.preview.emergentagent.com/api"
+BACKEND_URL = "https://mobile-button-ui.preview.emergentagent.com/api"
 
 def comprehensive_sketch_test():
     """Test all scenarios from the review request"""

@@ -988,7 +988,6 @@ export default function ProjectDetailScreen() {
   const generateAndSavePdf = async () => {
     try {
       setIsGeneratingPdf(true);
-      Alert.alert('PDF Export', 'PDF wird erstellt...');
       
       const html = await generatePdfHtml();
       const { uri } = await Print.printToFileAsync({
@@ -996,31 +995,16 @@ export default function ProjectDetailScreen() {
         base64: false,
       });
       
-      // Generate filename
-      const sanitizedName = (project?.name || 'Aufmass').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
-      const date = new Date().toISOString().split('T')[0];
-      const filename = `Aufmass_${sanitizedName}_${date}.pdf`;
-      
-      // Move to documents directory with proper filename
-      const documentsDir = FileSystem.documentDirectory;
-      const newUri = `${documentsDir}${filename}`;
-      
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newUri,
-      });
-      
-      // Share the file - this will open the iOS share sheet where user can "Save to Files"
+      // Share the file directly - iOS will show "Save to Files" option
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(newUri, {
+        await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
           dialogTitle: 'PDF speichern',
           UTI: 'com.adobe.pdf',
         });
-        Alert.alert('Erfolg', `PDF "${filename}" wurde erstellt. Wählen Sie "In Dateien sichern" um es zu speichern.`);
       } else {
-        Alert.alert('Erfolg', `PDF wurde gespeichert unter:\n${newUri}`);
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
       }
     } catch (error) {
       console.error('Error saving PDF:', error);

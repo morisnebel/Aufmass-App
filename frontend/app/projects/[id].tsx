@@ -1666,7 +1666,9 @@ export default function ProjectDetailScreen() {
                         const textOffset = 15 * scale;
                         const textOffsetX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
                         const textOffsetY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
-                        const fontSize = Math.max(8, (el.data.fontSize || 16) * scale);
+                        // Schriftgröße wie im Original (fontSize oder 16), minimal skaliert für Lesbarkeit
+                        const originalFontSize = el.data.fontSize || 16;
+                        const fontSize = Math.max(10, originalFontSize * Math.max(scale, 0.5));
                         const textWidth = el.data.text.length * fontSize * 0.6 + 10;
                         const textHeight = fontSize + 8;
                         // Hintergrund für bessere Lesbarkeit

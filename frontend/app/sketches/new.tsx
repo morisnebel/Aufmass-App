@@ -494,4 +494,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  photoGridItemSelected: {
+    borderWidth: 3,
+    borderColor: '#4caf50',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingOverlayText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 10,
+    fontWeight: '600',
+  },
 });

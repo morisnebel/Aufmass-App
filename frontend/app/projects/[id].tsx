@@ -3034,6 +3034,9 @@ const styles = StyleSheet.create({
   pdfPreviewSaveButton: {
     backgroundColor: '#4caf50',
   },
+  pdfPreviewImageButton: {
+    backgroundColor: '#9c27b0',
+  },
   pdfPreviewActionText: {
     color: '#fff',
     fontSize: 16,

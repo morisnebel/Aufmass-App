@@ -214,6 +214,9 @@ export default function DrawSketchScreen() {
   // Polyline Punkt-Bearbeitung
   const [editingPolylinePoint, setEditingPolylinePoint] = useState<number | null>(null);
   
+  // PDF-Größe für Export
+  const [pdfSize, setPdfSize] = useState<string>('large');
+  
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);

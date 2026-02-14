@@ -738,32 +738,12 @@ export default function ProjectDetailScreen() {
             overflow: hidden;
             page-break-inside: avoid;
           }
-          /* Default img styling - display block removes inline gaps */
+          /* All images fill their container width */
           .photo-item img, .sketch-item img {
             display: block;
             width: 100%;
             height: auto;
             background: #f5f5f5;
-          }
-          /* Small: limit height to keep compact */
-          .photo-small img, .sketch-small img {
-            max-height: 180px;
-            object-fit: contain;
-          }
-          /* Medium: moderate height */
-          .photo-medium img, .sketch-medium img {
-            max-height: 280px;
-            object-fit: contain;
-          }
-          /* Large: bigger but still contained */
-          .photo-large img, .sketch-large img {
-            max-height: 500px;
-            object-fit: contain;
-          }
-          /* Full: no restrictions - show full image */
-          .photo-full img, .sketch-full img {
-            max-height: none;
-            object-fit: none;
           }
           .photo-item p, .sketch-item p {
             margin: 0;

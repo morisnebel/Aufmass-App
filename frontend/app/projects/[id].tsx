@@ -847,7 +847,7 @@ export default function ProjectDetailScreen() {
   };
 
   const sendEmail = async () => {
-    // Generate PDF first, then share via native share dialog
+    // Generate PDF and share via native share dialog
     try {
       Alert.alert(
         'PDF erstellen und teilen',
@@ -857,47 +857,8 @@ export default function ProjectDetailScreen() {
           {
             text: 'PDF erstellen',
             onPress: async () => {
-              try {
-                // Generate PDF
-                const response = await axios.get(`${API_URL}/api/export/pdf/${id}`, {
-                  responseType: 'json',
-                });
-
-                const filename = `Aufmass_${project?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-                const file = new File(Paths.cache, filename);
-                
-                // Decode base64 and write to file
-                const binaryString = atob(response.data.pdf_data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                  bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                await file.write(bytes);
-
-                // Check if sharing is available
-                const canShare = await Sharing.isAvailableAsync();
-                if (canShare) {
-                  await Sharing.shareAsync(file.uri, {
-                    mimeType: 'application/pdf',
-                    dialogTitle: 'Aufmaß-PDF per E-Mail senden',
-                    UTI: 'com.adobe.pdf',
-                  });
-                } else {
-                  // Fallback: Open basic email without attachment
-                  if (customer?.email) {
-                    const subject = `Aufmaß: ${project?.name}`;
-                    const body = `Sehr geehrte/r ${customer.name},\n\nanbei das Aufmaß für das Projekt "${project?.name}".\n\nMit freundlichen Grüßen`;
-                    Linking.openURL(`mailto:${customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-                    Alert.alert('Hinweis', 'PDF wurde erstellt, aber kann auf diesem Gerät nicht direkt angehängt werden. Bitte teilen Sie das PDF manuell.');
-                  } else {
-                    Alert.alert('Erfolg', `PDF wurde erstellt: ${filename}`);
-                  }
-                }
-              } catch (error) {
-                console.error('Error generating PDF for email:', error);
-                Alert.alert('Fehler', 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
-              }
+              // Use the same PDF generation as exportToPDF
+              await exportToPDF();
             },
           },
         ]
@@ -909,18 +870,17 @@ export default function ProjectDetailScreen() {
   };
 
   const shareProject = async () => {
-    // Share project with PDF attachment via native share dialog
+    // Share project with PDF or text
     try {
       Alert.alert(
         'Projekt teilen',
-        'Möchten Sie das Aufmaß-PDF erstellen und teilen?',
+        'Wie möchten Sie das Projekt teilen?',
         [
           { 
             text: 'Nur Text', 
             onPress: async () => {
               try {
-                const totalArea = roofs.reduce((sum, roof) => sum + roof.area, 0);
-                const message = `Projekt: ${project?.name}\nKunde: ${customer?.name}\nDachflächen: ${roofs.length}\nGesamtfläche: ${totalArea.toFixed(2)} m²`;
+                const message = `Projekt: ${project?.name}\nKunde: ${customer?.name || project?.bauherr_name || '-'}\nDachflächen: ${roofs.length}\nGesamtfläche: ${totalArea.toFixed(2)} m²`;
                 
                 await Share.share({
                   message,
@@ -934,39 +894,7 @@ export default function ProjectDetailScreen() {
           {
             text: 'Mit PDF',
             onPress: async () => {
-              try {
-                // Generate PDF
-                const response = await axios.get(`${API_URL}/api/export/pdf/${id}`, {
-                  responseType: 'json',
-                });
-
-                const filename = `Aufmass_${project?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-                const file = new File(Paths.cache, filename);
-                
-                // Decode base64 and write to file
-                const binaryString = atob(response.data.pdf_data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                  bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                await file.write(bytes);
-
-                // Check if sharing is available
-                const canShare = await Sharing.isAvailableAsync();
-                if (canShare) {
-                  await Sharing.shareAsync(file.uri, {
-                    mimeType: 'application/pdf',
-                    dialogTitle: 'Aufmaß-PDF teilen',
-                    UTI: 'com.adobe.pdf',
-                  });
-                } else {
-                  Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
-                }
-              } catch (error) {
-                console.error('Error sharing PDF:', error);
-                Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
-              }
+              await exportToPDF();
             },
           },
           { text: 'Abbrechen', style: 'cancel' },

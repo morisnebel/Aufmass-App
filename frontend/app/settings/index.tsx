@@ -14,11 +14,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
+import { SettingsService } from '../../services/LocalStorage';
 import * as ImagePicker from 'expo-image-picker';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface CompanySettings {
   company_name: string;
@@ -58,8 +55,10 @@ export default function SettingsScreen() {
 
   const loadSettings = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/settings`);
-      setSettings(response.data);
+      const data = await SettingsService.get();
+      if (data && Object.keys(data).length > 0) {
+        setSettings(prev => ({ ...prev, ...data }));
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -95,7 +94,7 @@ export default function SettingsScreen() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API_URL}/api/settings`, settings);
+      await SettingsService.update(settings);
       if (Platform.OS === 'web') {
         alert('Einstellungen wurden gespeichert');
       } else {

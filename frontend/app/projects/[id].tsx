@@ -421,19 +421,27 @@ export default function ProjectDetailScreen() {
     
     const customerAddr = parseAddr(customer?.address);
     
-    // Build bauherr info
-    const bauherrName = project?.bauherr_name || customer?.name || '-';
-    const bauherrStreet = project?.bauherr_street || customerAddr.street || '-';
+    // Build bauherr info - alle Felder
+    const bauherrName = project?.bauherr_name || customer?.name || '';
+    const bauherrStreet = project?.bauherr_street || customerAddr.street || '';
     const bauherrPlz = project?.bauherr_plz || customerAddr.plz || '';
     const bauherrCity = project?.bauherr_city || customerAddr.city || '';
     const bauherrPhone = project?.bauherr_phone || customer?.phone || '';
     const bauherrMobile = project?.bauherr_mobile || customer?.mobile || '';
     const bauherrEmail = project?.bauherr_email || customer?.email || '';
     
-    // Build objekt info
-    const objektStreet = project?.objekt_street || bauherrStreet;
-    const objektPlz = project?.objekt_plz || bauherrPlz;
-    const objektCity = project?.objekt_city || bauherrCity;
+    // Build objekt info - alle Felder
+    const objektName = project?.objekt_name || '';
+    const objektStreet = project?.objekt_street || '';
+    const objektPlz = project?.objekt_plz || '';
+    const objektCity = project?.objekt_city || '';
+    
+    // Company info für Header
+    const companyName = settings.company_name || '';
+    const companyAddress = settings.company_address || '';
+    const companyPhone = settings.company_phone || '';
+    const companyEmail = settings.company_email || '';
+    const companyLogo = settings.company_logo || '';
     
     // Format date
     const formatDate = (dateStr: string) => {
@@ -445,15 +453,35 @@ export default function ProjectDetailScreen() {
       }
     };
     
-    // Generate roofs HTML
-    const roofsHtml = roofs.length > 0 ? roofs.map((roof, idx) => `
-      <div class="roof-card">
-        <h4>Dachfläche ${idx + 1}: ${roof.roof_type || 'Unbenannt'}</h4>
-        <p><strong>Fläche:</strong> ${roof.area?.toFixed(2) || 0} m²</p>
-        ${roof.notes ? `<p><strong>Notizen:</strong> ${roof.notes}</p>` : ''}
-        ${roof.measurements ? `<p><strong>Maße:</strong> ${typeof roof.measurements === 'object' ? JSON.stringify(roof.measurements) : roof.measurements}</p>` : ''}
-      </div>
-    `).join('') : '<p class="empty">Keine Dachflächen erfasst</p>';
+    // Generate roofs HTML with more details
+    const roofsHtml = roofs.length > 0 ? roofs.map((roof, idx) => {
+      let measurementsHtml = '';
+      if (roof.measurements && typeof roof.measurements === 'object') {
+        const m = roof.measurements;
+        measurementsHtml = `
+          <div class="measurements-grid">
+            ${m.gebaeudelaenge ? `<div class="measure-item"><span class="measure-label">Gebäudelänge:</span> ${m.gebaeudelaenge} m</div>` : ''}
+            ${m.gebaeudebreite ? `<div class="measure-item"><span class="measure-label">Gebäudebreite:</span> ${m.gebaeudebreite} m</div>` : ''}
+            ${m.traufhoehe ? `<div class="measure-item"><span class="measure-label">Traufhöhe:</span> ${m.traufhoehe} m</div>` : ''}
+            ${m.firsthoehe ? `<div class="measure-item"><span class="measure-label">Firsthöhe:</span> ${m.firsthoehe} m</div>` : ''}
+            ${m.dachneigung1 ? `<div class="measure-item"><span class="measure-label">Dachneigung:</span> ${m.dachneigung1}°</div>` : ''}
+            ${m.dachueberstand ? `<div class="measure-item"><span class="measure-label">Dachüberstand:</span> ${m.dachueberstand} m</div>` : ''}
+            ${m.sparrenlaenge ? `<div class="measure-item"><span class="measure-label">Sparrenlänge:</span> ${m.sparrenlaenge} m</div>` : ''}
+            ${m.ortganglaenge ? `<div class="measure-item"><span class="measure-label">Ortganglänge:</span> ${m.ortganglaenge} m</div>` : ''}
+            ${m.firstlaenge ? `<div class="measure-item"><span class="measure-label">Firstlänge:</span> ${m.firstlaenge} m</div>` : ''}
+            ${m.trauflaenge ? `<div class="measure-item"><span class="measure-label">Trauflänge:</span> ${m.trauflaenge} m</div>` : ''}
+          </div>
+        `;
+      }
+      return `
+        <div class="roof-card">
+          <h4>Dachfläche ${idx + 1}: ${roof.roof_type || 'Unbenannt'}</h4>
+          <div class="roof-area"><strong>Gesamtfläche:</strong> ${roof.area?.toFixed(2) || 0} m²</div>
+          ${measurementsHtml}
+          ${roof.notes ? `<div class="roof-notes"><strong>Notizen:</strong> ${roof.notes}</div>` : ''}
+        </div>
+      `;
+    }).join('') : '<p class="empty">Keine Dachflächen erfasst</p>';
     
     // Generate checklists HTML with recursive sub-items
     const renderChecklistItems = (items: any[], depth: number = 0): string => {

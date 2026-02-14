@@ -710,52 +710,26 @@ export default function ProjectDetailScreen() {
           .photo-small {
             width: calc(33.33% - 10px);
           }
-          .photo-small img {
-            max-height: 150px;
-          }
           .photo-medium {
             width: calc(50% - 10px);
           }
-          .photo-medium img {
-            max-height: 200px;
-          }
           .photo-large {
-            width: calc(100% - 10px);
-          }
-          .photo-large img {
-            max-height: 350px;
-          }
-          .photo-full {
             width: 100%;
           }
-          .photo-full img {
-            max-height: 500px;
+          .photo-full {
             width: 100%;
           }
           /* Sketch sizes */
           .sketch-small {
             width: calc(33.33% - 10px);
           }
-          .sketch-small img {
-            max-height: 150px;
-          }
           .sketch-medium {
             width: calc(50% - 10px);
           }
-          .sketch-medium img {
-            max-height: 200px;
-          }
           .sketch-large {
-            width: calc(100% - 10px);
-          }
-          .sketch-large img {
-            max-height: 400px;
-          }
-          .sketch-full {
             width: 100%;
           }
-          .sketch-full img {
-            max-height: 600px;
+          .sketch-full {
             width: 100%;
           }
           .photo-item, .sketch-item {
@@ -764,11 +738,39 @@ export default function ProjectDetailScreen() {
             overflow: hidden;
             page-break-inside: avoid;
           }
+          /* Default img styling */
           .photo-item img, .sketch-item img {
             width: 100%;
-            max-height: 200px;
             object-fit: contain;
             background: #f5f5f5;
+          }
+          /* Photo size-specific img max-heights */
+          .photo-small img {
+            max-height: 150px;
+          }
+          .photo-medium img {
+            max-height: 250px;
+          }
+          .photo-large img {
+            max-height: 450px;
+          }
+          .photo-full img {
+            max-height: none;
+            height: auto;
+          }
+          /* Sketch size-specific img max-heights */
+          .sketch-small img {
+            max-height: 150px;
+          }
+          .sketch-medium img {
+            max-height: 250px;
+          }
+          .sketch-large img {
+            max-height: 450px;
+          }
+          .sketch-full img {
+            max-height: none;
+            height: auto;
           }
           .photo-item p, .sketch-item p {
             margin: 0;

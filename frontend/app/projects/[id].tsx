@@ -2220,7 +2220,11 @@ export default function ProjectDetailScreen() {
             <View style={{ width: 40 }} />
           </View>
           
-          <View style={styles.pdfPreviewContent}>
+          <ViewShot 
+            ref={viewShotRef} 
+            style={styles.pdfPreviewContent}
+            options={{ format: 'jpg', quality: 0.9 }}
+          >
             {pdfHtmlContent ? (
               <WebView
                 source={{ html: pdfHtmlContent }}
@@ -2234,15 +2238,30 @@ export default function ProjectDetailScreen() {
                 <Text style={styles.pdfPreviewLoadingText}>Vorschau wird geladen...</Text>
               </View>
             )}
-          </View>
+          </ViewShot>
           
           <View style={styles.pdfPreviewActions}>
+            <TouchableOpacity 
+              style={[styles.pdfPreviewActionButton, styles.pdfPreviewImageButton]}
+              onPress={sharePreviewAsImage}
+              disabled={isSharingImage}
+            >
+              {isSharingImage ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={22} color="#fff" />
+                  <Text style={styles.pdfPreviewActionText}>Als Bild</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
             <TouchableOpacity 
               style={styles.pdfPreviewActionButton}
               onPress={sharePdfFromPreview}
             >
               <Ionicons name="share-outline" size={22} color="#fff" />
-              <Text style={styles.pdfPreviewActionText}>Teilen</Text>
+              <Text style={styles.pdfPreviewActionText}>PDF</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 

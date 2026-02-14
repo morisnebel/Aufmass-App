@@ -8,7 +8,7 @@ import json
 import base64
 from datetime import datetime
 
-BACKEND_URL = "https://project-pdf-tool.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-pdf-gen.preview.emergentagent.com/api"
 
 def log_test(message):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")

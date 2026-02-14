@@ -13,7 +13,7 @@ import subprocess
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://project-pdf-tool.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-pdf-gen.preview.emergentagent.com/api"
 
 class MemoPointerTester:
     def __init__(self):

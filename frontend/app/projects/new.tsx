@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import { CustomerService, ProjectService, Customer } from '../../services/LocalStorage';
 
-interface Customer {
+interface CustomerLocal {
   id: string;
   name: string;
   address?: string;

@@ -700,6 +700,64 @@ export default function ProjectDetailScreen() {
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
           }
+          /* Flexible photo/sketch containers */
+          .photos-container, .sketches-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+          }
+          /* Photo sizes */
+          .photo-small {
+            width: calc(33.33% - 10px);
+          }
+          .photo-small img {
+            max-height: 150px;
+          }
+          .photo-medium {
+            width: calc(50% - 10px);
+          }
+          .photo-medium img {
+            max-height: 200px;
+          }
+          .photo-large {
+            width: calc(100% - 10px);
+          }
+          .photo-large img {
+            max-height: 350px;
+          }
+          .photo-full {
+            width: 100%;
+          }
+          .photo-full img {
+            max-height: 500px;
+            width: 100%;
+          }
+          /* Sketch sizes */
+          .sketch-small {
+            width: calc(33.33% - 10px);
+          }
+          .sketch-small img {
+            max-height: 150px;
+          }
+          .sketch-medium {
+            width: calc(50% - 10px);
+          }
+          .sketch-medium img {
+            max-height: 200px;
+          }
+          .sketch-large {
+            width: calc(100% - 10px);
+          }
+          .sketch-large img {
+            max-height: 400px;
+          }
+          .sketch-full {
+            width: 100%;
+          }
+          .sketch-full img {
+            max-height: 600px;
+            width: 100%;
+          }
           .photo-item, .sketch-item {
             border: 1px solid #e0e0e0;
             border-radius: 6px;

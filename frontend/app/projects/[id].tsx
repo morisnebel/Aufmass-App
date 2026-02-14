@@ -1033,13 +1033,19 @@ export default function ProjectDetailScreen() {
   // Share PDF from preview
   const sharePdfFromPreview = async () => {
     setShowPdfPreviewModal(false);
-    await generateAndSharePdf();
+    // Small delay to let modal close animation finish
+    setTimeout(() => {
+      generateAndSharePdf();
+    }, 300);
   };
 
   // Save PDF from preview
   const savePdfFromPreview = async () => {
     setShowPdfPreviewModal(false);
-    await generateAndSavePdf();
+    // Small delay to let modal close animation finish
+    setTimeout(() => {
+      generateAndSavePdf();
+    }, 300);
   };
 
   // Share preview as image for WhatsApp/Messenger

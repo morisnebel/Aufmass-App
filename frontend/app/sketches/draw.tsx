@@ -2108,24 +2108,24 @@ export default function DrawSketchScreen() {
       if (sketchId) {
         // Update existing sketch
         console.log('Updating sketch ID:', sketchId);
-        const response = await axios.put(`${API_URL}/api/sketches/${sketchId}`, {
+        await SketchService.update(sketchId, {
           project_id: projectId,
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
         });
-        console.log('Update response:', response.data);
+        console.log('Sketch updated');
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
       } else {
         // Create new sketch
         console.log('Creating new sketch');
-        const response = await axios.post(`${API_URL}/api/sketches`, {
+        await SketchService.create({
           project_id: projectId,
           title,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
         });
-        console.log('Create response:', response.data);
+        console.log('Sketch created');
         showAlert('Erfolg', 'Skizze wurde gespeichert');
       }
 

@@ -13,10 +13,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { PhotoService } from '../../services/LocalStorage';
 
 export default function NewPhotoScreen() {
   const router = useRouter();
@@ -82,8 +79,9 @@ export default function NewPhotoScreen() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/photos`, {
-        project_id: projectId,
+      const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+      await PhotoService.create({
+        project_id: projId || '',
         image_data: imageUri,
         description: description || undefined,
       });

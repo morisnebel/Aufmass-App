@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
         "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",

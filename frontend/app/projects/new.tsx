@@ -116,8 +116,8 @@ export default function NewProjectScreen() {
 
   const loadCustomers = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/customers`);
-      setCustomers(response.data);
+      const data = await CustomerService.getAll();
+      setCustomers(data);
       // Don't pre-select any customer - leave it empty
     } catch (error) {
       console.error('Error loading customers:', error);

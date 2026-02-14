@@ -1657,8 +1657,8 @@ export default function ProjectDetailScreen() {
                       const x2 = ((el.data.x2 - minX) * scale) + offsetX;
                       const y2 = ((el.data.y2 - minY) * scale) + offsetY;
                       const angle = Math.atan2(y2 - y1, x2 - x1);
-                      // Pfeilspitze wie im Original (Math.max(20, strokeWidth * 4))
-                      const arrowHeadSize = Math.max(20 * scale, strokeWidth * 4);
+                      // Pfeilspitze wie im Original
+                      const arrowHeadSize = Math.max(10 * scale, strokeWidth * 4);
                       const arrowHeadAngle = Math.PI / 6;
                       
                       // Pfeilspitzen-Koordinaten
@@ -1679,9 +1679,9 @@ export default function ProjectDetailScreen() {
                         const textOffset = 15 * scale;
                         const textOffsetX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
                         const textOffsetY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
-                        // Schriftgröße wie im Original (fontSize oder 16), minimal skaliert für Lesbarkeit
+                        // Schriftgröße wie im Original (fontSize oder 16), skaliert
                         const originalFontSize = el.data.fontSize || 16;
-                        const fontSize = Math.max(10, originalFontSize * Math.max(scale, 0.5));
+                        const fontSize = Math.max(8, originalFontSize * scale);
                         const textWidth = el.data.text.length * fontSize * 0.6 + 10;
                         const textHeight = fontSize + 8;
                         // Hintergrund für bessere Lesbarkeit

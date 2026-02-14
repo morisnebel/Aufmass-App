@@ -2562,14 +2562,14 @@ const styles = StyleSheet.create({
   },
   sketchImage: {
     width: '100%',
-    height: 220,
+    height: 350,
     marginTop: 8,
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
   },
   sketchPreviewContainer: {
     width: '100%',
-    height: 220,
+    height: 350,
     marginTop: 8,
     backgroundColor: '#fff',
     borderRadius: 8,

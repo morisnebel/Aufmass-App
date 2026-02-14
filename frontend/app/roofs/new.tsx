@@ -407,8 +407,9 @@ export default function NewRoofScreen() {
 
     setLoading(true);
     try {
-      await axios.post(`${API_URL}/api/roofs`, {
-        project_id: projectId,
+      const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+      await RoofService.create({
+        project_id: projId || '',
         roof_type: roofType,
         measurements: {
           gebaeudelaenge: parseFloat(gebaeudelaenge),

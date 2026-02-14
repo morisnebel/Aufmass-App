@@ -28,7 +28,7 @@ export default function NewSketchScreen() {
   const [projectPhotos, setProjectPhotos] = useState<Photo[]>([]);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
-  const [loadingPhotoId, setLoadingPhotoId] = useState<string | null>(null);
+  const [preparingSketch, setPreparingSketch] = useState(false);
 
   // Projektfotos beim Öffnen des Modals laden
   const loadProjectPhotos = async () => {
@@ -52,27 +52,26 @@ export default function NewSketchScreen() {
   };
 
   const handleSelectProjectPhoto = async (photo: Photo) => {
-    // Zeige Ladeindikator auf diesem Foto
-    setLoadingPhotoId(photo.id);
+    // Modal schließen und Vollbild-Ladescreen zeigen
+    setShowPhotoModal(false);
+    setPreparingSketch(true);
     
-    // Kurze Pause damit der Ladeindikator sichtbar wird
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Warte kurz damit der Ladescreen angezeigt wird
+    await new Promise(resolve => setTimeout(resolve, 50));
     
     const imageUri = (photo as any).image_data || photo.uri;
     
     // Navigation zur Skizze
     router.push(`/sketches/draw?projectId=${projectId}&backgroundImageUri=${encodeURIComponent(imageUri)}`);
     
-    // Modal schließen und zurücksetzen
+    // Ladescreen nach Navigation ausblenden
     setTimeout(() => {
-      setShowPhotoModal(false);
-      setLoadingPhotoId(null);
-    }, 300);
+      setPreparingSketch(false);
+    }, 500);
   };
 
   const handleCloseModal = () => {
     setShowPhotoModal(false);
-    setLoadingPhotoId(null);
   };
 
   const requestPermissions = async (forCamera: boolean) => {

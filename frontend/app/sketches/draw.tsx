@@ -1948,6 +1948,7 @@ export default function DrawSketchScreen() {
         
         // Draw arrow with simple arrowhead triangles
         const angle = Math.atan2(y2 - y1, x2 - x1);
+        const angleDeg = angle * 180 / Math.PI;
         const arrowSize = 8;
         
         // End arrowhead
@@ -1968,11 +1969,13 @@ export default function DrawSketchScreen() {
           svgElements += `<polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${startX1.toFixed(1)},${startY1.toFixed(1)} ${startX2.toFixed(1)},${startY2.toFixed(1)}" fill="${el.color}"/>`;
         }
         
+        // Text wie im Original: mittig, rotiert entlang der Linie
         if (el.data.text) {
           const midX = (x1 + x2) / 2;
           const midY = (y1 + y2) / 2;
-          const fontSize = Math.max(8, 10 * scale);
-          svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 5).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" fill="${el.color}">${el.data.text}</text>`;
+          const originalFontSize = el.data.fontSize || 14;
+          const fontSize = Math.max(8, originalFontSize * scale);
+          svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 10 * scale).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${el.color}" transform="rotate(${angleDeg.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)})">${el.data.text}</text>`;
         }
       } else if (el.type === 'pointer') {
         // Großer Zeigepfeil für die Vorschau (mit Notiz-Text)

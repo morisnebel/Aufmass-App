@@ -1,148 +1,148 @@
 <analysis>
 
-**original_problem_statement**: The user wants to fix two new issues they discovered:
-1.  The auto-save feature is not working as expected. Sketches should be saved automatically when the user clicks the back button to return to the sketch list.
-2.  The control buttons for the Polyline tool (Undo, Finish, Cancel) are not responding to taps, making the tool unusable.
+**original_problem_statement**: The user has successfully built and submitted the app to Apple's App Store Connect but discovered that the TestFlight version is non-functional because it cannot connect to the backend server, which only runs in the development environment.
 
-Additionally, the user has a new navigation requirement:
-3. After saving a sketch via the back button, the app should navigate to the project's Sketches tab to show the list of sketches.
+The user has made a clear decision to convert the application to be fully functional offline.
 
-PRODUCT REQUIREMENTS:
-1.  Sketches must be saved automatically when navigating away from the editor via the back button to prevent data loss.
-2.  All sketch tools, including the Polyline tool and its controls, must be fully functional and responsive.
-3.  The navigation flow from the sketch editor back to the project view must land the user on the Sketches tab.
-4.  The app must be stable and free of critical bugs like UI freezes.
+**PRODUCT REQUIREMENTS:**
+1.  The application MUST be refactored to store all data (Customers, Projects, Photos, Sketches, Checklists, etc.) locally on the device.
+2.  The application MUST NOT rely on a remote backend server for its core functionality. It should be completely usable offline.
+3.  All existing features, including creating/editing/deleting customers, projects, sketches, and the complex recursive checklists, must work with the new local storage persistence layer.
+4.  After the refactor is complete, a new build must be created and submitted to the App Store.
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-The agent successfully fixed two user-reported issues. The Polyline tool controls are now working, and the auto-save feature correctly saves the sketch when the user navigates back. Both fixes have been confirmed by the user.
+The application is feature-complete from a UI/UX perspective but is in the middle of a major architectural refactor. The previous agent began converting the app from a client-server model (using  for API calls) to a fully offline model.
 
-However, the navigation part of the auto-save fix introduced a new, minor issue. While the app navigates back to the correct project details page, it does not automatically select the Sketches tab as requested by the user. The agent has correctly diagnosed that the project details page () does not read the  parameter from the URL. The agent was in the process of adding this logic.
+A new service file, , has been created to abstract interactions with . The agent had started modifying the application's screens (like  and customer-related files) to replace  calls with calls to this new local storage service. The work was interrupted mid-refactor.
 
 **Last working item**:
-    - Last item agent was working: Making the project details page () aware of the  URL query parameter to correctly display the Sketches tab upon navigation from the sketch editor.
+    - Last item agent was working: Refactoring the entire application to use local storage for data persistence, enabling full offline functionality. The agent had just created  and was in the process of replacing API calls in all relevant  files.
     - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? Frontend testing agent. The test must verify that navigating back from the sketch editor () successfully lands the user on the project details page () with the Sketches tab active.
+    - Which testing method agent to use? Frontend testing agent. This is a large-scale refactor. Once the coding is complete, the testing agent must perform a full regression test of all CRUD (Create, Read, Update, Delete) operations for all data types (Customers, Projects, Sketches, Photos, Checklists) to ensure the local storage implementation works as expected.
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Navigation from sketch editor does not activate the Sketches tab on the project page (P0)
-  - Issue 2: Memo-Pfeil note visibility fix needs user confirmation (P1)
-  - Issue 3: Verify PDF arrowhead size is correct after backend fix (P2)
-  - Issue 4: Dimension Line tool's custom icon is distorted (P2, Carry-over)
-  - Issue 5: Verify critical UI freeze bug in New Project workflow (P2, Carry-over, CRITICAL)
+  - Issue 1: Critical UI freeze in New Project workflow (P1)
   
   Issues Detail:
   - **Issue 1**: 
-     - **Description**: The user wants to be taken to the sketch list (Skizzen-Vorschau) after leaving the sketch editor. The agent implemented navigation to , but the destination page ignores the  parameter and defaults to the first tab.
-     - **Attempted fixes**: The agent identified the missing logic in .
-     - **Next debug checklist**:
-        1. Open .
-        2. Import  and  from  and  respectively.
-        3. Read the  parameter from the URL using .
-        4. Use a  hook to set the  state to the value of the  parameter if it exists.
-        5. Test the complete flow: open a sketch, press back, and verify the Sketches tab is active.
-     - **Why fix this issue and what will be achieved with the fix?**: This fulfills a direct user request and improves the application's navigation flow, making it more intuitive.
-     - **Status**:  IN PROGRESS
-     - **Is recurring issue?** N
+     - **Description**: A long-standing, critical bug where the UI freezes on the New Project screen () after creating a new customer. This issue has been carried over through multiple sessions.
+     - **Attempted fixes**: None in this session.
+     - **Next debug checklist**: This issue MUST be verified after the local storage refactor is complete. The refactoring from an async API call to a local storage call might have incidentally fixed it. If the freeze persists, the logic in  around customer creation and navigation needs to be debugged.
+     - **Why fix this issue and what will be achieved with the fix?**: It's a critical stability bug that makes a core app workflow unusable.
+     - **Status**:  NOT STARTED (Verification pending post-refactor)
+     - **Is recurring issue?** Y
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on other issue**: None
+     - **Blocked on other issue**: Blocked on Complete the refactor to local storage.
 
 **In progress Task List**:
-  - Task 1:  Implement URL parameter handling for active tab (P0)
-     - **Where to resume**: In , add the logic to read the  query parameter and update the  state.
-     - **What will be achieved with this?**: The app will navigate to the correct tab as per the user's request, completing the auto-save feature workflow.
+  - Task 1:  Complete the refactor to local storage (P0 - HIGHEST PRIORITY)
+
+ Task Detail:
+  - **Task 1**: 
+     - **Where to resume**: The  service exists. The agent must now systematically go through every file that makes an API call using  and replace it with the equivalent function from the  service. The previous agent was attempting a bulk update after realizing a file-by-file approach was too slow. A systematic approach is still needed.
+       **Key files to modify:**
+       -  (Project list)
+       - , , 
+       - , , 
+       - 
+       - 
+       - All files under 
+     - **What will be achieved with this?**: The app will become fully functional offline, resolving the critical issue discovered in the TestFlight build.
      - **Status**:  IN PROGRESS
      - **Should Test frontend/backend/both after fix?**: Frontend
-     - **Blocked on something**: None
+     - **Blocked on something**: Nothing.
 
 **Upcoming and Future Tasks**
- - **Upcoming (P1)**: **VERIFY THE UI FREEZE BUG FIX.** Manually test the New Project -> Create New Customer workflow in  to confirm if the freeze still occurs. This is a critical stability issue that has been ignored for multiple sessions.
- - **Upcoming (P2)**: Fix the distorted rendering of the custom SVG icon for the Dimension Line tool in .
- - **Future (P3)**: Fix the PDF page break issue where roof measurement calculations are split across pages in .
+ - **Upcoming Task (P1)**: After the local storage refactor is complete and verified by the user, create a new production build (An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username) and submit it to App Store Connect (An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username).
+ - **Future Task (P2)**: Guide the user through the final information steps in App Store Connect (e.g., adding screenshots, descriptions, privacy policy URLs) to submit the app for review.
 
 **Completed work in this session**
-- **Polyline Tool Fixed**: The control buttons (Undo, Finish, Cancel) for the Polyline tool are now functional. The agent correctly diagnosed an event capturing issue in  and resolved it by moving the controls outside the problematic . User has confirmed the fix.
-- **Auto-Save on Back Press Implemented**: Sketches are now automatically saved when the user presses the back button in the editor. User has confirmed the save functionality works well.
-- **Navigation Crash Fixed**: The agent fixed a crash (GO_BACK was not handled) by replacing  with  to navigate to a specific URL.
+- **Feature-Complete Checklists**: A highly complex, recursive checklist feature was implemented from scratch, including creating, editing, deleting, and auto-saving nested items.
+- **PDF Export Enhancement**: The backend PDF export was updated to correctly display the new nested checklist structure.
+- **App Rebranding**: The app was renamed to AUFMASSPROFI DACH and a new logo was integrated into the home screen, app icon, and splash screen.
+- **Successful iOS Build**: After a very long and difficult debugging process involving numerous package dependency conflicts, the agent successfully guided the user to produce a valid  build file using EAS.
+- **Successful App Store Upload**: The final build was successfully submitted to the user's App Store Connect account.
+- **Problem Diagnosis**: Correctly diagnosed that the TestFlight app failed because it could not access the development-only backend.
 
 **Earlier issues found/mentioned but not fixed**
-   - **Issue 1**: Critical UI freeze bug in .
-     - **Debug checklist**: Manually go through the New Project -> Create New Customer flow and observe if the UI freezes.
-     - **Why to solve this issue and what will be achieved with this?**: This is a critical stability bug that makes a core feature of the app unusable.
-     - **Should Test frontend/backend/both after fix**: Frontend
-     - **Is recurring issue?** Y
-   - **Issue 2**: The Dimension Line tool's custom SVG icon is distorted in . This is a minor UI bug that has not been prioritized.
+   - The UI freeze bug in  is the only significant one carried over and is listed in the Pending Issues section.
 
 **Known issue recurrence from previous fork**
   - **Issue recurrence**: UI unresponsiveness in  after customer creation.
   - **Recurrence count**: 5+
-  - **Status**: NOT STARTED (Verification is pending)
-  - **Note**: This is a critical stability issue. The agent MUST prioritize verifying this fix after the current active user requests are completed and confirmed.
+  - **Status**: NOT STARTED
+  - **Note**: This critical stability issue remains unaddressed. It must be tested after the local storage refactor.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **React Native Event Handling**: The polyline fix involved understanding that  on a parent  was capturing all touch events, preventing child buttons from being pressed. The solution was to move the child elements outside the parent.
-- **Expo Router Navigation**: The agent used  to perform a direct navigation and pass parameters. The next step involves using  on the destination page to read those parameters.
-
-**key DB schema**
-  - No changes made to the database schema in this session.
-
-**changes in tech stack**
-  - None.
+- **Local Data Persistence**: The core task is to switch from a client-server architecture ( API calls) to a fully offline architecture using React Native's . A service wrapper () was created to manage all CRUD operations (e.g., , , , ) and handle JSON serialization/deserialization.
+- **Expo Application Services (EAS) Build System**: The session involved extensive debugging of the EAS build process for iOS. Key lessons learned include managing dependency conflicts (), fixing cache issues, and ensuring correct versions of Expo SDK, React Native, and other critical packages (, ).
+- **Data Modeling**: The app uses nested data structures (especially for checklists). This structure must be preserved when saving to and retrieving from the flat key-value store of .
 
 **All files of reference**
-- : File was modified to fix the Polyline tool and to implement the auto-save and back-navigation logic.
-- : This is the next file to be modified. It needs to be updated to handle the  parameter in the URL to set the active tab.
+- : **(New & Critical)**. This file will be the single source of truth for data persistence. It needs to be completed and used throughout the app.
+- All files in : **(All To Be Modified)**. Every file currently using  must be refactored to use the new  service.
+- : This file was the source of most build errors. The final working configuration for a successful build used **Expo SDK 52** and specific compatible package versions. Do not change dependencies without careful consideration.
 
 **Areas that need refactoring**:
-- None identified.
-
-**key api endpoints**
-- None created or modified.
+- The entire data access layer of the application is currently being refactored. This is the main task.
 
 **Critical Info for New Agent**
-- You must continue all user communication in **German**.
-- **Your immediate priority (P0) is to fix the navigation tab issue.** The user wants to land on the Sketches tab after leaving the editor. You need to edit . The previous agent correctly identified the plan: use  to get the  parameter from the URL and use a  hook to set the  state.
-- The Polyline tool and Auto-Save functionality are **FIXED and VERIFIED** by the user. Do not revisit them unless the user reports a new problem.
-- After fixing the navigation tab issue and getting user confirmation, you **MUST** address the long-pending critical UI freeze bug in the New Project workflow. It has been carried over for too long.
+- You MUST continue all user communication in **German**.
+- **Your immediate and only priority (P0) is to complete the refactor to local storage.** The user has explicitly chosen this path. Do not get distracted.
+- Systematically go through all screen files in , identify every  call, and replace it with an equivalent function call to the  service. You will need to implement the full suite of CRUD functions in  for all data models (projects, customers, checklists, etc.).
+- The previous agent struggled immensely with iOS build errors. The final successful build used **Expo SDK 52**. Be extremely cautious with any dependency changes. The user is on a Mac and has the environment set up to run An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username commands.
 
 **documents created in this job**
-- None.
+- : Configuration for Expo Application Services (EAS) builds.
+- : The new service for offline data storage.
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 1. (LATEST)  - User confirms saving works well but clarifies the back button should lead to the sketch preview list (the Sketches tab). (Status: In Progress)
- - 2. (USER UPLOADED IMAGE)  - User reported a navigation crash (GO_BACK not handled) but also confirmed the polyline fix works perfectly and saving seems to work. (Status: Resolved)
- - 3.  - User confirmed the initial plan to start work. (Status: Completed)
+- 1. (LATEST) : User explicitly confirms they want the full refactor to local storage now, rather than a temporary fix. (Status: In Progress)
+- 2. : User reports that the TestFlight app is not functional, as they cannot create a customer. (Status: Acknowledged, led to refactor decision)
+- 3. : User asking for QR code to test with Expo Go to take screenshots. (Status: Superseded by refactor decision)
+- 4. : User reporting that the Expo Go app is not opening correctly. (Status: Superseded by refactor decision)
+- 5. : User is blocked from taking screenshots for the App Store. (Status: Superseded by refactor decision)
+- 6. : User providing screenshots for App Store Connect guidance. (Status: Completed)
+- 7. : User providing screenshot of their local machine during the build process. (Status: Completed)
+- 8. : User confirming they have downloaded the code. (Status: Completed)
+- 9. : User providing terminal output for debugging. (Status: Completed)
+- 10. : User asking for help to verify their local code version. (Status: Completed)
 
 **Project Health Check:**
-- **Broken**: Navigation from the sketch editor to the project details page does not land on the correct Sketches tab.
-- **Fixed**: The Polyline drawing tool is now fully usable.
-- **Fixed**: The auto-save feature on back-press is working correctly.
+- **Broken**: The application is in a non-functional, half-refactored state. The data persistence layer is broken. It will not work until the local storage refactor is complete.
 
 **3rd Party Integrations**
-- 
-- 
-- 
--  (in backend)
-- 
-- 
-- 
+- No new integrations. The app uses several  libraries and . The key change is the *removal* of the  dependency for core functionality, to be replaced by local storage.
 
 **Testing status**
-  - Testing agent used after significant changes: NO
+  - Testing agent used after significant changes: NO (not since the refactor began)
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None.
-  - Known regressions: A navigation crash was introduced and subsequently fixed within the session.
+  - Known regressions: The entire app is non-functional due to the in-progress refactor.
 
 **Credentials to test flow:**
-- None required.
+- The user has an Apple Developer Account and an Expo account and has been using them to run An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username on their local Mac. No credentials are required by the agent.
 
 **What agent forgot to execute**
-- The agent has correctly prioritized the user's active feedback. However, the critical UI freeze bug in  remains unverified for another session. This task must be addressed once the current navigation issue is resolved.
+- The agent was in the middle of a large, user-requested task. It did not forget anything, but the work is incomplete. The long-standing critical UI freeze bug remains unresolved, but it is blocked by the current refactoring task.
 
 </analysis>

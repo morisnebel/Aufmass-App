@@ -245,7 +245,7 @@ export default function NewSketchScreen() {
           </View>
 
           {loadingPhotos ? (
-            <View style={styles.loadingContainer}>
+            <View style={styles.modalLoadingContainer}>
               <ActivityIndicator size="large" color="#1976d2" />
               <Text style={styles.loadingText}>Fotos werden geladen...</Text>
             </View>

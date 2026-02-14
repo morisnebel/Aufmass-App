@@ -2023,9 +2023,10 @@ export default function DrawSketchScreen() {
       } else if (el.type === 'text') {
         const x = (((el.x || 0) - minX) * scale) + offsetX;
         const y = (((el.y || 0) - minY) * scale) + offsetY;
-        // Schriftgröße wie im Original (fontSize oder 20), skaliert
+        // Schriftgröße proportional zur Zeichenfläche skalieren
+        // Max 24px für gute Lesbarkeit bei normaler Vorschaugröße
         const originalFontSize = el.fontSize || el.data?.fontSize || 20;
-        const fontSize = Math.max(8, originalFontSize * scale);
+        const fontSize = Math.min(24, Math.max(8, originalFontSize * scale));
         svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${el.data.text}</text>`;
       } else if (el.type === 'image' && el.data?.uri) {
         // Include images in preview

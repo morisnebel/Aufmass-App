@@ -720,19 +720,55 @@ export default function ProjectDetailScreen() {
           .page-break {
             page-break-before: always;
           }
+          .measurements-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            margin-top: 8px;
+          }
+          .measure-item {
+            font-size: 11px;
+          }
+          .measure-label {
+            color: #666;
+          }
+          .roof-area {
+            font-size: 14px;
+            color: #1976d2;
+            margin-bottom: 5px;
+          }
+          .roof-notes {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #e0e0e0;
+          }
+          .company-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .company-logo {
+            max-width: 80px;
+            max-height: 60px;
+            object-fit: contain;
+          }
         </style>
       </head>
       <body>
         <div class="header">
-          <div>
-            <h1>AUFMASS-DOKUMENTATION</h1>
-            <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}</div>
+          <div class="company-header">
+            ${companyLogo ? `<img src="${companyLogo}" class="company-logo" alt="Logo" />` : ''}
+            <div>
+              <h1>AUFMASS-DOKUMENTATION</h1>
+              <div class="date">Erstellt am: ${formatDate(new Date().toISOString())}</div>
+            </div>
           </div>
-          ${settings.company_name ? `
+          ${companyName ? `
             <div class="company-info">
-              <strong>${settings.company_name}</strong><br/>
-              ${settings.company_address || ''}<br/>
-              ${settings.company_phone ? `Tel: ${settings.company_phone}` : ''}
+              <strong>${companyName}</strong><br/>
+              ${companyAddress ? companyAddress.replace(/\n/g, '<br/>') : ''}<br/>
+              ${companyPhone ? `Tel: ${companyPhone}` : ''}
+              ${companyEmail ? `<br/>E-Mail: ${companyEmail}` : ''}
             </div>
           ` : ''}
         </div>

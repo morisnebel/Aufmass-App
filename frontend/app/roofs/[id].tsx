@@ -228,7 +228,8 @@ export default function EditRoofScreen() {
     if (!gebaeudelaenge || !gebaeudebreite) { Alert.alert('Fehler', 'Bitte Länge und Breite eingeben'); return; }
     setSaving(true);
     try {
-      await axios.put(`${API_URL}/api/roofs/${id}`, {
+      const roofId = Array.isArray(id) ? id[0] : id;
+      await RoofService.update(roofId || '', {
         project_id: projectId, roof_type: roofType,
         measurements: {
           gebaeudelaenge: parseFloat(gebaeudelaenge), gebaeudebreite: parseFloat(gebaeudebreite),

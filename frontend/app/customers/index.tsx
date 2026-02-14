@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,9 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
-
-interface Customer {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-}
+import { CustomerService, Customer } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -38,8 +28,8 @@ export default function CustomersScreen() {
 
   const loadCustomers = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/customers`);
-      setCustomers(response.data);
+      const data = await CustomerService.getAll();
+      setCustomers(data);
     } catch (error) {
       console.error('Error loading customers:', error);
       Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');
@@ -48,9 +38,11 @@ export default function CustomersScreen() {
     }
   };
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadCustomers();
+    }, [])
+  );
 
   const openDeleteModal = (customer: Customer) => {
     setCustomerToDelete(customer);
@@ -62,7 +54,7 @@ export default function CustomersScreen() {
     
     setIsDeleting(true);
     try {
-      await axios.delete(`${API_URL}/api/customers/${customerToDelete.id}`);
+      await CustomerService.delete(customerToDelete.id);
       setShowDeleteModal(false);
       setCustomerToDelete(null);
       loadCustomers();

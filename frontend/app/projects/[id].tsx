@@ -1645,7 +1645,8 @@ export default function ProjectDetailScreen() {
                       const x2 = ((el.data.x2 - minX) * scale) + offsetX;
                       const y2 = ((el.data.y2 - minY) * scale) + offsetY;
                       const angle = Math.atan2(y2 - y1, x2 - x1);
-                      const arrowHeadSize = Math.max(12, strokeWidth * 3);
+                      // Pfeilspitze wie im Original (Math.max(20, strokeWidth * 4))
+                      const arrowHeadSize = Math.max(20 * scale, strokeWidth * 4);
                       const arrowHeadAngle = Math.PI / 6;
                       
                       // Pfeilspitzen-Koordinaten

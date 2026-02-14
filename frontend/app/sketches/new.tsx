@@ -286,7 +286,7 @@ export default function NewSketchScreen() {
           ) : (
             <>
               <Text style={styles.selectHintText}>
-                Tippen Sie auf ein Foto um es auszuwählen
+                Foto antippen zum Auswählen
               </Text>
               <ScrollView style={styles.photosScrollView} contentContainerStyle={styles.photosGrid}>
                 {projectPhotos.map((photo) => {

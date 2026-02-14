@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,54 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Modal,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PhotoService, Photo } from '../../services/LocalStorage';
+
+const { width: screenWidth } = Dimensions.get('window');
+const PHOTO_SIZE = (screenWidth - 48) / 3; // 3 columns with padding
 
 export default function NewSketchScreen() {
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [projectPhotos, setProjectPhotos] = useState<Photo[]>([]);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
+
+  // Projektfotos beim Öffnen des Modals laden
+  const loadProjectPhotos = async () => {
+    setLoadingPhotos(true);
+    try {
+      const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+      if (projId) {
+        const photos = await PhotoService.getByProjectId(projId);
+        setProjectPhotos(photos);
+      }
+    } catch (error) {
+      console.error('Error loading project photos:', error);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const handleOpenPhotoModal = () => {
+    loadProjectPhotos();
+    setShowPhotoModal(true);
+  };
+
+  const handleSelectProjectPhoto = (photo: Photo) => {
+    setShowPhotoModal(false);
+    // Verwende uri oder image_data (Kompatibilität)
+    const imageUri = (photo as any).image_data || photo.uri;
+    router.push(`/sketches/draw?projectId=${projectId}&backgroundImageUri=${encodeURIComponent(imageUri)}`);
+  };
 
   const requestPermissions = async (forCamera: boolean) => {
     if (Platform.OS !== 'web') {

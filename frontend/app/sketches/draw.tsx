@@ -446,6 +446,7 @@ export default function DrawSketchScreen() {
             title,
             sketch_data: sketchData,
             metadata: JSON.stringify(metadata),
+            pdf_size: pdfSize,
           });
           console.log('Auto-saved existing sketch');
         } else if (title.trim()) {
@@ -455,6 +456,7 @@ export default function DrawSketchScreen() {
             title,
             sketch_data: sketchData,
             metadata: JSON.stringify(metadata),
+            pdf_size: pdfSize,
           });
           console.log('Auto-saved new sketch');
         }

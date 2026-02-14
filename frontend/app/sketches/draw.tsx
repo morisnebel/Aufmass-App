@@ -166,6 +166,8 @@ export default function DrawSketchScreen() {
   const backgroundImageUri = Array.isArray(params.backgroundImageUri) 
     ? params.backgroundImageUri[0] 
     : params.backgroundImageUri;
+  // Get photo ID for loading from LocalStorage (faster than passing base64 via URL)
+  const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
   
   const canvasRef = useRef(null);
   const svgRef = useRef(null);

@@ -1042,25 +1042,18 @@ export default function ProjectDetailScreen() {
       const uri = await viewShotRef.current.capture?.();
       
       if (uri) {
-        // Generate filename
-        const sanitizedName = (project?.name || 'Aufmass').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
-        const date = new Date().toISOString().split('T')[0];
-        const filename = `Aufmass_${sanitizedName}_${date}.jpg`;
-        
-        // Move to documents directory
-        const newUri = `${FileSystem.documentDirectory}${filename}`;
-        await FileSystem.moveAsync({ from: uri, to: newUri });
-        
-        // Share the image
+        // Share the image directly without moving
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(newUri, {
+          await Sharing.shareAsync(uri, {
             mimeType: 'image/jpeg',
             dialogTitle: 'Aufmaß-Vorschau teilen',
           });
         } else {
           Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
         }
+      } else {
+        Alert.alert('Fehler', 'Screenshot konnte nicht erstellt werden.');
       }
     } catch (error) {
       console.error('Error sharing image:', error);

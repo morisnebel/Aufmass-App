@@ -2251,7 +2251,7 @@ export default function ProjectDetailScreen() {
           
           <View style={styles.pdfPreviewActions}>
             <TouchableOpacity 
-              style={[styles.pdfPreviewActionButton, styles.pdfPreviewImageButton]}
+              style={[styles.pdfPreviewActionButton, styles.pdfPreviewImageButton, { flex: 1 }]}
               onPress={sharePreviewAsImage}
               disabled={isSharingImage}
             >
@@ -2260,25 +2260,9 @@ export default function ProjectDetailScreen() {
               ) : (
                 <>
                   <Ionicons name="image-outline" size={22} color="#fff" />
-                  <Text style={styles.pdfPreviewActionText}>Als Bild</Text>
+                  <Text style={styles.pdfPreviewActionText}>Als Bild teilen</Text>
                 </>
               )}
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.pdfPreviewActionButton}
-              onPress={sharePdfFromPreview}
-            >
-              <Ionicons name="share-outline" size={22} color="#fff" />
-              <Text style={styles.pdfPreviewActionText}>PDF</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.pdfPreviewActionButton, styles.pdfPreviewSaveButton]}
-              onPress={savePdfFromPreview}
-            >
-              <Ionicons name="download-outline" size={22} color="#fff" />
-              <Text style={styles.pdfPreviewActionText}>Speichern</Text>
             </TouchableOpacity>
           </View>
         </View>

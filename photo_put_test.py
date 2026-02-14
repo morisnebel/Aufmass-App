@@ -10,7 +10,7 @@ import base64
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://mobile-button-ui.preview.emergentagent.com/api"
+BASE_URL = "https://project-pdf-tool.preview.emergentagent.com/api"
 
 def create_test_image_data():
     """Create a simple base64 encoded test image"""

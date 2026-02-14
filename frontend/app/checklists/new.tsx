@@ -10,10 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL;
+import { ChecklistTemplateService, ChecklistService } from '../../services/LocalStorage';
 
 interface TemplateItem {
   text: string;
@@ -54,8 +51,8 @@ export default function NewChecklistScreen() {
 
   const loadTemplates = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/checklist-templates`);
-      setTemplates(response.data);
+      const data = await ChecklistTemplateService.getAll();
+      setTemplates(data);
     } catch (error) {
       console.error('Error loading templates:', error);
       Alert.alert('Fehler', 'Vorlagen konnten nicht geladen werden');

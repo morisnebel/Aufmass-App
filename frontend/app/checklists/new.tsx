@@ -142,8 +142,9 @@ export default function NewChecklistScreen() {
     }
 
     try {
-      await axios.post(`${API_URL}/api/checklists`, {
-        project_id: projectId,
+      const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+      await ChecklistService.create({
+        project_id: projId || '',
         template_id: selectedTemplate.id,
         template_name: selectedTemplate.name,
         items: checklistItems,

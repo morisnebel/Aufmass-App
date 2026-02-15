@@ -15,12 +15,22 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
         "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
         "NSPhotoLibraryAddUsageDescription": "Aufmaß-Fotos in der Galerie speichern"
-      }
+      },
+      "entitlements": {
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.aufmassprofi.dach"
+        ],
+        "com.apple.developer.icloud-services": [
+          "CloudKit"
+        ],
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.aufmassprofi.dach"
+      },
+      "usesIcloudStorage": true
     },
     "android": {
       "package": "com.aufmassprofi.dach",

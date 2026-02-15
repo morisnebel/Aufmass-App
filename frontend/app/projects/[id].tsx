@@ -1503,7 +1503,7 @@ export default function ProjectDetailScreen() {
                   const elements = metadata.elements || [];
                   if (elements.length === 0) return null;
 
-                  // Calculate bounds
+                  // Calculate bounds - use viewBox approach for proper scaling
                   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                   let hasValidBounds = false;
 
@@ -1526,6 +1526,16 @@ export default function ProjectDetailScreen() {
                       maxX = Math.max(maxX, el.data.x1, el.data.x2);
                       minY = Math.min(minY, el.data.y1, el.data.y2);
                       maxY = Math.max(maxY, el.data.y1, el.data.y2);
+                      // Account for text on arrows
+                      if (el.type === 'arrow' && el.data.text) {
+                        minY = Math.min(minY, el.data.y1 - 20, el.data.y2 - 20);
+                      }
+                      if (el.type === 'pointer' && el.data.text) {
+                        const fontSize = el.data.fontSize || 16;
+                        minX = Math.min(minX, el.data.x1 - 30);
+                        minY = Math.min(minY, el.data.y1 - fontSize - 20);
+                        maxX = Math.max(maxX, el.data.x1 + el.data.text.length * fontSize * 0.6);
+                      }
                       hasValidBounds = true;
                     } else if (el.type === 'circle') {
                       minX = Math.min(minX, el.data.cx - el.data.r);
@@ -1546,155 +1556,118 @@ export default function ProjectDetailScreen() {
                       });
                       hasValidBounds = true;
                     } else if (el.type === 'image' || el.type === 'text') {
-                      const x = el.x || 0; const y = el.y || 0;
-                      const w = el.width || 50; const h = el.height || 50;
+                      const x = el.x || 0;
+                      const y = el.y || 0;
+                      const w = el.width || (el.type === 'text' ? (el.data?.text?.length || 10) * ((el.fontSize || 20) * 0.6) : 50);
+                      const h = el.height || (el.type === 'text' ? (el.fontSize || 20) + 10 : 50);
                       minX = Math.min(minX, x); maxX = Math.max(maxX, x + w);
-                      minY = Math.min(minY, y); maxY = Math.max(maxY, y + h);
+                      // For text, y is baseline, so account for height above
+                      minY = Math.min(minY, y - (el.type === 'text' ? (el.fontSize || 20) : 0));
+                      maxY = Math.max(maxY, y + h);
                       hasValidBounds = true;
                     }
                   });
 
                   if (!hasValidBounds) return null;
 
-                  // Add padding and calculate scale
-                  const padding = 20;
+                  // Add padding
+                  const padding = 30;
                   minX -= padding; minY -= padding; maxX += padding; maxY += padding;
-                  const drawWidth = maxX - minX || 200;
-                  const drawHeight = maxY - minY || 200;
-                  const previewSize = 300;
-                  const scale = Math.min(previewSize / drawWidth, previewSize / drawHeight, 1);
-                  const scaledWidth = drawWidth * scale;
-                  const scaledHeight = drawHeight * scale;
-                  const offsetX = (previewSize - scaledWidth) / 2;
-                  const offsetY = (previewSize - scaledHeight) / 2;
+                  const drawWidth = Math.max(maxX - minX, 100);
+                  const drawHeight = Math.max(maxY - minY, 100);
 
-                  // Generate SVG elements
+                  // Generate SVG elements with ORIGINAL coordinates - viewBox handles scaling
                   let svgElements = '';
                   elements.forEach((el: any) => {
-                    const strokeWidth = Math.max(1, (el.strokeWidth || 2) * scale);
+                    const strokeWidth = el.strokeWidth || 2;
                     const color = el.color || '#000000';
 
                     if (el.type === 'path' && typeof el.data === 'string') {
-                      const scaledPath = el.data.replace(/([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g,
-                        (_: string, cmd: string, xStr: string, yStr: string) => {
-                          const x = ((parseFloat(xStr) - minX) * scale) + offsetX;
-                          const y = ((parseFloat(yStr) - minY) * scale) + offsetY;
-                          return `${cmd} ${x.toFixed(1)} ${y.toFixed(1)}`;
-                        });
-                      svgElements += `<path d="${scaledPath}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round"/>`;
+                      svgElements += `<path d="${el.data}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round"/>`;
                     } else if (el.type === 'line') {
-                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
-                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
-                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
-                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
-                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+                      svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
                     } else if (el.type === 'circle') {
-                      const cx = ((el.data.cx - minX) * scale) + offsetX;
-                      const cy = ((el.data.cy - minY) * scale) + offsetY;
-                      const r = Math.max(2, el.data.r * scale);
-                      svgElements += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
+                      svgElements += `<circle cx="${el.data.cx}" cy="${el.data.cy}" r="${el.data.r}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
                     } else if (el.type === 'rect') {
-                      const x = ((el.data.x - minX) * scale) + offsetX;
-                      const y = ((el.data.y - minY) * scale) + offsetY;
-                      const w = Math.max(2, el.data.width * scale);
-                      const h = Math.max(2, el.data.height * scale);
-                      svgElements += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
+                      svgElements += `<rect x="${el.data.x}" y="${el.data.y}" width="${el.data.width}" height="${el.data.height}" stroke="${color}" stroke-width="${strokeWidth}" fill="none"/>`;
                     } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
                       const points = el.data.points as { x: number; y: number }[];
                       const isClosed = el.data.closed || false;
-                      let pathData = points.map((pt, idx) => {
-                        const x = ((pt.x - minX) * scale) + offsetX;
-                        const y = ((pt.y - minY) * scale) + offsetY;
-                        return `${idx === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-                      }).join(' ');
+                      let pathData = points.map((pt: {x: number; y: number}, idx: number) => `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
                       if (isClosed) pathData += ' Z';
                       svgElements += `<path d="${pathData}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
                     } else if (el.type === 'arrow') {
-                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
-                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
-                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
-                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+                      const { x1, y1, x2, y2, text, heads } = el.data;
                       const angle = Math.atan2(y2 - y1, x2 - x1);
                       const angleDeg = angle * 180 / Math.PI;
-                      const arrowSize = 8;
+                      const arrowSize = Math.max(10, strokeWidth * 3);
+                      
                       const endX1 = x2 - arrowSize * Math.cos(angle - Math.PI / 6);
                       const endY1 = y2 - arrowSize * Math.sin(angle - Math.PI / 6);
                       const endX2 = x2 - arrowSize * Math.cos(angle + Math.PI / 6);
                       const endY2 = y2 - arrowSize * Math.sin(angle + Math.PI / 6);
-                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
-                      svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${endX1.toFixed(1)},${endY1.toFixed(1)} ${endX2.toFixed(1)},${endY2.toFixed(1)}" fill="${color}"/>`;
-                      // Doppelpfeil (Start-Pfeilspitze)
-                      if (el.data.heads === 'double') {
+                      
+                      svgElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+                      svgElements += `<polygon points="${x2},${y2} ${endX1},${endY1} ${endX2},${endY2}" fill="${color}"/>`;
+                      
+                      if (heads === 'double') {
                         const startX1 = x1 + arrowSize * Math.cos(angle - Math.PI / 6);
                         const startY1 = y1 + arrowSize * Math.sin(angle - Math.PI / 6);
                         const startX2 = x1 + arrowSize * Math.cos(angle + Math.PI / 6);
                         const startY2 = y1 + arrowSize * Math.sin(angle + Math.PI / 6);
-                        svgElements += `<polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${startX1.toFixed(1)},${startY1.toFixed(1)} ${startX2.toFixed(1)},${startY2.toFixed(1)}" fill="${color}"/>`;
+                        svgElements += `<polygon points="${x1},${y1} ${startX1},${startY1} ${startX2},${startY2}" fill="${color}"/>`;
                       }
-                      // Text wie im Original: mittig, rotiert entlang der Linie
-                      if (el.data.text) {
+                      
+                      if (text) {
                         const midX = (x1 + x2) / 2;
                         const midY = (y1 + y2) / 2;
-                        const originalFontSize = el.data.fontSize || 14;
-                        const fontSize = Math.max(8, originalFontSize * scale);
-                        svgElements += `<text x="${midX.toFixed(1)}" y="${(midY - 10 * scale).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${color}" transform="rotate(${angleDeg.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)})">${el.data.text}</text>`;
+                        const fontSize = el.data.fontSize || 14;
+                        svgElements += `<text x="${midX}" y="${midY - 10}" text-anchor="middle" font-size="${fontSize}" font-weight="bold" fill="${color}" transform="rotate(${angleDeg} ${midX} ${midY})">${text}</text>`;
                       }
                     } else if (el.type === 'text' && el.data?.text) {
-                      const x = ((el.x || 0) - minX) * scale + offsetX;
-                      const y = ((el.y || 0) - minY) * scale + offsetY;
-                      // Schriftgröße wie im Original (fontSize oder 20), skaliert
-                      const originalFontSize = el.fontSize || el.data?.fontSize || 20;
-                      const fontSize = Math.max(8, originalFontSize * scale);
-                      svgElements += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fontSize}" fill="${color}" font-weight="bold">${el.data.text}</text>`;
+                      const x = el.x || 0;
+                      const y = el.y || 0;
+                      const fontSize = el.fontSize || 20;
+                      svgElements += `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${color}" font-weight="${el.fontWeight || 'bold'}" font-style="${el.fontStyle || 'normal'}">${el.data.text}</text>`;
                     } else if (el.type === 'image' && el.data?.uri) {
-                      // Bilder in der Vorschau anzeigen
-                      const x = (((el.x || 0) - minX) * scale) + offsetX;
-                      const y = (((el.y || 0) - minY) * scale) + offsetY;
-                      const w = Math.max(10, (el.width || 100) * scale);
-                      const h = Math.max(10, (el.height || 100) * scale);
-                      svgElements += `<image href="${el.data.uri}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+                      const x = el.x || 0;
+                      const y = el.y || 0;
+                      const w = el.width || 100;
+                      const h = el.height || 100;
+                      svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
                     } else if (el.type === 'pointer') {
-                      // Memo-Pfeil / Zeigepfeil in der Vorschau
-                      const x1 = ((el.data.x1 - minX) * scale) + offsetX;
-                      const y1 = ((el.data.y1 - minY) * scale) + offsetY;
-                      const x2 = ((el.data.x2 - minX) * scale) + offsetX;
-                      const y2 = ((el.data.y2 - minY) * scale) + offsetY;
+                      const { x1, y1, x2, y2, text } = el.data;
                       const angle = Math.atan2(y2 - y1, x2 - x1);
-                      // Pfeilspitze wie im Original
-                      const arrowHeadSize = Math.max(10 * scale, strokeWidth * 4);
+                      const pointerStrokeWidth = el.strokeWidth || 6;
+                      const arrowHeadSize = Math.max(20, pointerStrokeWidth * 4);
                       const arrowHeadAngle = Math.PI / 6;
                       
-                      // Pfeilspitzen-Koordinaten
                       const leftX = x2 - arrowHeadSize * Math.cos(angle - arrowHeadAngle);
                       const leftY = y2 - arrowHeadSize * Math.sin(angle - arrowHeadAngle);
                       const rightX = x2 - arrowHeadSize * Math.cos(angle + arrowHeadAngle);
                       const rightY = y2 - arrowHeadSize * Math.sin(angle + arrowHeadAngle);
                       
-                      // Linie bis kurz vor der Pfeilspitze
                       const lineEndX = x2 - arrowHeadSize * 0.6 * Math.cos(angle);
                       const lineEndY = y2 - arrowHeadSize * 0.6 * Math.sin(angle);
                       
-                      svgElements += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${lineEndX.toFixed(1)}" y2="${lineEndY.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`;
-                      svgElements += `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${color}"/>`;
+                      svgElements += `<line x1="${x1}" y1="${y1}" x2="${lineEndX}" y2="${lineEndY}" stroke="${color}" stroke-width="${pointerStrokeWidth}" stroke-linecap="round"/>`;
+                      svgElements += `<polygon points="${x2},${y2} ${leftX},${leftY} ${rightX},${rightY}" fill="${color}"/>`;
                       
-                      // Text am Startpunkt des Memo-Pfeils anzeigen (wie im Original)
-                      if (el.data.text) {
-                        const textOffset = 15 * scale;
-                        const textOffsetX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
-                        const textOffsetY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
-                        // Schriftgröße wie im Original (fontSize oder 16), skaliert
-                        const originalFontSize = el.data.fontSize || 16;
-                        const fontSize = Math.max(8, originalFontSize * scale);
-                        const textWidth = el.data.text.length * fontSize * 0.6 + 10;
+                      if (text) {
+                        const fontSize = el.data.fontSize || 16;
+                        const textOffset = 15;
+                        const textX = x1 + textOffset * Math.cos(angle - Math.PI / 2);
+                        const textY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
+                        const textWidth = text.length * fontSize * 0.6 + 10;
                         const textHeight = fontSize + 8;
-                        // Hintergrund für bessere Lesbarkeit
-                        svgElements += `<rect x="${(textOffsetX - 5).toFixed(1)}" y="${(textOffsetY - fontSize).toFixed(1)}" width="${textWidth.toFixed(1)}" height="${textHeight.toFixed(1)}" fill="rgba(255,255,255,0.85)" rx="4" ry="4" stroke="${color}" stroke-width="1"/>`;
-                        svgElements += `<text x="${textOffsetX.toFixed(1)}" y="${textOffsetY.toFixed(1)}" font-size="${fontSize}" fill="${color}" font-weight="bold">${el.data.text}</text>`;
+                        svgElements += `<rect x="${textX - 5}" y="${textY - fontSize}" width="${textWidth}" height="${textHeight}" fill="white" fill-opacity="0.85" rx="4" ry="4" stroke="${color}" stroke-width="1"/>`;
+                        svgElements += `<text x="${textX}" y="${textY}" font-size="${fontSize}" fill="${color}" font-weight="bold">${text}</text>`;
                       }
                     }
                   });
 
-                  return `<svg width="${previewSize}" height="${previewSize}" viewBox="0 0 ${previewSize} ${previewSize}" xmlns="http://www.w3.org/2000/svg"><rect width="${previewSize}" height="${previewSize}" fill="#ffffff"/>${svgElements}</svg>`;
+                  // Use viewBox for proper scaling - browser handles the resize
+                  return `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
                 } catch (e) {
                   console.log('Error generating SVG from metadata:', e);
                   return null;

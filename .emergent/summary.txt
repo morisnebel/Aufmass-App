@@ -1,132 +1,137 @@
-<analysis>**original_problem_statement**: The user's TestFlight app was non-functional. An architectural refactor was done to make the application fully offline. After the refactor, the app failed to start in Expo Go. After fixing the startup issue and making some UI adjustments (button layout and keyboard handling), a new build was successfully deployed to TestFlight. The user has confirmed the new build works well and now requests the implementation of the PDF export feature, which was disabled during the offline refactor. Subsequent requests included UI adjustments for a sketch screen, a global keyboard dismiss button, several enhancements to the generated PDF's content and layout, a multi-photo upload feature, and access to project photos from the sketch screen. Most recently, the user requested that the sizing options (Small, Medium, Large, Full) for photos and sketches be correctly applied in the generated PDF, and for the sketch previews in the app to be larger. The current focus is on correcting the rendering of sketch elements (text, arrows, pointers) within the generated PDF, as they appear distorted or incorrectly scaled.
+<analysis>**original_problem_statement**: The user's initial problem was a non-functional TestFlight app, which was fixed through an architectural refactor for offline capability. After resolving subsequent issues with PDF sketch rendering and a critical UI freeze, the user requested a major new feature: automatic data synchronization between their iPhone and iPad using iCloud. While implementing this feature, the build process got blocked by a provisioning profile issue that requires manual user intervention. The user has asked the agent to pause the build issue and first implement several new UI/UX improvements for the generated PDF.
 
 **PRODUCT REQUIREMENTS:**
-1.  The application MUST store all data locally on the device and be completely usable offline.
+1.  The application MUST store all data locally on the device, but also synchronize it across the user's Apple devices using iCloud.
 2.  Implement an offline PDF generation feature for projects, including a professional layout with company logo, addresses, and all project details.
-3.  The size of photos and sketches in the generated PDF MUST be controllable via a Klein/Mittel/Groß/Voll (Small/Medium/Large/Full) setting.
-4.  The rendering of sketch elements (text, arrows, pointers) in the PDF must be identical to the original sketch drawn in the app.
-5.  Implement UI/UX improvements as requested (compact layouts, keyboard dismissal, multi-photo selection, larger sketch previews).
-6.  After all features are implemented and tested, a new build must be created and submitted to the App Store.
+3.  The size of photos and sketches in the generated PDF MUST be controllable.
+4.  The rendering of sketch elements (text, arrows, pointers) in the PDF must be identical to the original sketch.
+5.  Pencil annotations on photos must be visible in the generated PDF.
+6.  PDF layout must be professional (e.g., no orphaned headers).
+7.  The app must be stable, with no UI freezes in core workflows.
+8.  After all features are implemented and tested, a new build must be created and submitted to the App Store.
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-The application is a fully offline React Native/Expo app using . The agent has been working extensively on fixing how sketches are rendered in generated PDFs. The core problem is that text and other elements within the sketch are scaled incorrectly, appearing massive and often out of bounds in the final PDF. The agent's last attempt involved increasing the resolution of the saved sketch preview from 200x200 to 800x800 pixels in , hoping that scaling a higher-resolution image would solve the text size issue. The user has confirmed this did not fix the problem.
+The application is a fully offline-first React Native/Expo app that has been extended to support iCloud synchronization. The agent successfully implemented the core logic for iCloud sync using , a custom  service, and an Expo config plugin. However, creating a new build with this feature is currently blocked because EAS (Expo Application Services) cannot automatically generate the new required provisioning profile in a non-interactive session. The agent has paused troubleshooting this build issue at the user's request to work on four new PDF layout improvements.
 
 **Last working item**:
-    - Last item agent was working: Fixing incorrect scaling of text and elements in sketches when rendered in a PDF. The user reported that despite multiple attempts, the text remains far too large.
-    - Status: BLOCKED
+    - Last item agent was working: Addressing four new user requests for the PDF generation functionality: 1) Increase the company logo size, 2) Fix missing pencil annotations on photos, 3) Prevent the Skizzen (Sketches) header from being on a separate page from the actual sketches, 4) Make the Erstellt mit... (Created with...) footer text more visible. The agent had just started by viewing the relevant file, .
+    - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? Manual testing by user. The agent seems stuck in a loop and should consider a new debugging approach.
-    - User Testing Done: Y (User confirmed the latest fix of increasing the preview resolution to 800px did not solve the issue).
+    - Which testing method agent to use? The user will manually verify the generated PDF after the changes are made.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Incorrect text/element scaling in generated PDF sketches (P0)
-  - Issue 2: Critical UI freeze in New Project workflow (P1)
+  - Issue 1: iOS build fails due to provisioning profile issue (P0 - BLOCKED)
   
   Issues Detail:
-  - **Issue 1: Incorrect text/element scaling in generated PDF sketches**
-     - **Attempted fixes**: The agent made numerous attempts by adjusting font-size calculations and scaling formulas in  (for the saved PDF version) and  (for the live app preview). The last major attempt was to increase the base resolution of the generated SVG preview by changing  from 200 to 800 in . None of these fixes have worked, with the user repeatedly reporting nothing has changed.
+  - **Issue 1: iOS build fails due to provisioning profile issue**
+     - **Attempted fixes**: The agent correctly identified that the app's App ID needed the iCloud capability enabled. It guided the user to enable this in the Apple Developer Portal and then to delete the old, now invalid, provisioning profile. However, subsequent build attempts failed because EAS, running in a non-interactive environment, cannot create a new provisioning profile.
      - **Next debug checklist**:
-        1.  **Suspect Aggressive Caching**: The user's feedback (nothing has changed) and the history of Expo server restarts strongly suggest an Expo Go caching issue. Before any other code change, the agent MUST ask the user to **fully close the Expo Go app, clear the app's cache/data on their phone, reopen it, and re-scan the QR code**.
-        2.  **Verify Code Execution**: Confirm the changes are live. View  to ensure  is .
-        3.  **Verify Data Integrity**: Check if newly created sketches are actually being saved with the high-resolution data. It's possible old, low-resolution  is being re-used from AsyncStorage.
-        4.  **Architectural Re-evaluation**: If the issue persists, the current approach of embedding a static, pre-rendered image () is likely flawed. The agent should consider a refactor: generate the SVG for the PDF *dynamically* inside the  function in  using the raw sketch elements (). This would decouple the PDF from the problematic preview generation and give direct control over scaling in the PDF context.
-     - **Why fix this issue and what will be achieved with the fix?**: This is the last remaining blocker for the PDF generation feature, which is a core user requirement. The PDF must be professional and accurate.
-     - **Status**:  BLOCKED
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification of the generated PDF).
-     - **Blocked on other issue**: None.
+        1.  Once the current PDF tasks are complete, the agent must instruct the user to resolve this by running the build command on their own machine.
+        2.  Provide the user with the exact command: Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
 
-  - **Issue 2: Critical UI freeze in New Project workflow**
-     - **Attempted fixes**: None in this session.
-     - **Next debug checklist**: Once the PDF issue is resolved, guide the user to reproduce the bug. Analyze the state management and navigation flow in  that occurs after a new customer is saved.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a critical stability bug that hinders a core application workflow.
-     - **Status**:  NOT STARTED
-     - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification).
-     - **Blocked on other issue**: Blocked by Issue 1.
+Input is required, but stdin is not readable. Failed to display prompt: iOS app only uses standard/exempt encryption? Learn more: https://developer.apple.com/documentation/Security/complying-with-encryption-export-regulations.
+        3.  Explain that this interactive process will allow EAS to log in to their Apple Developer account and create the necessary provisioning profile.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a hard blocker for deploying the new iCloud synchronization feature. Fixing it will allow a new TestFlight build to be created and delivered to the user for testing.
+     - **Status**:  BLOCKED
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?**: This is a build process issue, not a code issue. The fix will be verified by a successful build.
+     - **Blocked on other issue**: User has requested to work on In progress Task 1 first.
 
 **In progress Task List**:
-  - None.
+  - Task 1: Implement PDF layout and content improvements (P1)
+
+ Task Detail:
+  - **Task 1: Implement PDF layout and content improvements**
+     - **Where to resume**: The agent has viewed . The next step is to implement the four requested changes by modifying the CSS and HTML structure within the  function in that file.
+     - **What will be achieved with this?**: The generated PDFs will be more professional and will correctly display all user-generated content, meeting the user's explicit requirements.
+     - **Status**:  IN PROGRESS
+     - **Should Test frontend/backend/both after fix?**: Frontend (user to verify the generated PDF).
+     - **Blocked on something**: Nothing.
 
 **Upcoming and Future Tasks**
     **Upcoming Tasks:**
-    - **P1: Verify New Project UI Freeze Bug:** After the PDF generation is fully fixed and verified, this long-standing stability issue must be addressed.
+    - **P0: Guide user to fix the blocked build:** Instruct the user to run the interactive EAS build command locally to generate the new provisioning profile.
     
     **Future Tasks:**
-    - **P2: Final App Store Submission:** Once all features and fixes are verified by the user, prepare and submit the application for official App Store review.
+    - **P2: Final App Store Submission:** Once the iCloud sync is tested and all PDF improvements are verified, prepare and submit the final application for App Store review.
 
 **Completed work in this session**
-- **UI: Sketch Preview Container Size**: Adjusted the sketch preview container in the project details screen to 350px as a visual compromise for the user.
-- **Feature: Memo-Pointer Text Rendering**: Implemented rendering for the text associated with memo-pointer sketch elements in both the in-app preview and the saved SVG for the PDF.
-- **Fix: Arrowhead and Measurement Line Rendering**: Corrected the rendering of arrowheads and the text on measurement lines (rotation, font size, style) to better match the original drawing canvas in both the app preview and the PDF.
-- **Attempted Fix: General Text Element Rendering**: Attempted to fix the scaling of general text elements in sketches by using their saved , but this is part of the larger, unresolved scaling issue.
+- **Feature: iCloud Data Synchronization**: Implemented the core logic using , a new  service, and an Expo config plugin ().
+- **Fix: Critical UI Freeze**: Resolved a recurring UI freeze in the New Project screen () by replacing all  calls with .
+- **Fix: PDF Sketch Rendering**: Completely resolved the long-standing issue of incorrect text and element scaling in PDF sketches. This was achieved via a major architectural refactor to a -based SVG generation method in  and .
+- **Deployment: TestFlight Build v5**: Successfully built and submitted a new version to TestFlight *before* the iCloud work began.
 
 **Earlier issues found/mentioned but not fixed**
-   - The UI freeze bug in  is a known, carried-over issue and is listed in the Pending Issues section.
+   - None. All previously known issues have been resolved.
 
 **Known issue recurrence from previous fork**
   - **Issue recurrence**: UI unresponsiveness in  after customer creation.
   - **Recurrence count**: 6+
-  - **Status**: NOT STARTED
-  - **Note**: This critical stability issue remains unaddressed and should be prioritized after the current PDF work.
+  - **Status**: RESOLVED (Fixed in this session by using ).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Local Data Persistence**: .
-- **Offline PDF Generation**:  with dynamically generated HTML containing a base64-encoded SVG.
-- **Expo Development Workflow**: The development cycle is severely impacted by client-side caching in Expo Go, requiring frequent server restarts and manual cache clearing by the user.
-- **Dynamic SVG Generation**: The core of the current problem lies in the  and  functions, which convert stored element data into an SVG string.
+- **Cloud Data Sync**: Using  to sync  data via Apple's iCloud (CloudKit).
+- **Expo Config Plugins**: Custom plugin  created to inject native iOS entitlements () during the EAS build process.
+- **Expo Application Services (EAS) Build**: The workflow for building and submitting the app. Currently blocked by a provisioning profile issue in the non-interactive agent environment.
+- **React Native InteractionManager**: Used to fix UI freezes by deferring tasks until after animations are complete.
+- **SVG ViewBox Scaling**: The architectural solution for rendering SVGs correctly at different sizes, which fixed the PDF sketch issue.
 
 **key DB schema**
-  - Data is stored in  as JSON strings.
-  - Project objects contain an array of .
-  - Sketch objects contain  (the base64 SVG preview for the PDF) and  (an array of raw drawing objects like ).
+  - Data is stored as JSON strings. With the new implementation, data is primarily stored in iCloud Key-Value Storage for iOS devices, with  as a fallback for other platforms or when iCloud is unavailable.
 
 **changes in tech stack**
-  - None.
+  - **Added**:  for iCloud synchronization.
 
 **All files of reference**
-- : **(Critical)** Contains the  function which embeds the sketch into the PDF. All in-app sketch previews are also rendered here.
-- : **(Critical)** Contains the  function that creates the  which is saved and used in the PDF. This is the source of the scaling problem.
+- : **(Critical)** Contains the  function that is currently being modified for the new PDF requests.
+- : **(Critical)** New file that implements the iCloud sync logic.
+- : **(Critical)** New Expo config plugin to manage iCloud setup during builds.
+- : Contains the configuration for the EAS build, entitlements, and the new config plugin.
+- : Defines the build profiles for EAS.
 
 **Areas that need refactoring**:
-- The entire process of saving a static, low-resolution  for a scalable document like a PDF is flawed. A robust solution would be to **refactor the PDF generation**. Instead of using the pre-rendered , the  function in  should dynamically generate the SVG from the raw  data at the time of PDF creation. This would solve the scaling issues permanently.
+- None at present. The agent has recently completed two major refactors (SVG generation and UI freeze fix).
 
 **key api endpoints**
-- Not applicable. The application is fully offline.
+- Not applicable. The application is fully offline/cloud-synced.
 
 **Critical Info for New Agent**
 - **You MUST continue all user communication in German.**
-- You are currently **BLOCKED** on fixing the PDF sketch rendering. The user confirms your last fix (increasing preview resolution to 800px) failed.
-- **DO NOT try another code fix immediately.** Your first action must be to address the likely cause: **aggressive caching in Expo Go**. Instruct the user to perform a hard refresh (close app, clear cache, reopen, rescan QR).
-- If a hard refresh fails, the architecture is the problem. Propose the refactor described in Areas that need refactoring to generate the SVG dynamically for the PDF. This will break the cycle of failed fixes.
-- Do not forget the P1 UI freeze bug in  is the next major task.
+- You are currently working on four specific PDF improvements requested by the user. Address these first.
+- The main **BLOCKER** is the iOS build process. Once the PDF tasks are done, you must guide the user to run Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
+
+Input is required, but stdin is not readable. Failed to display prompt: iOS app only uses standard/exempt encryption? Learn more: https://developer.apple.com/documentation/Security/complying-with-encryption-export-regulations on their own Mac. This is not optional; the build cannot proceed otherwise. Do not attempt to run the build command yourself again until the user confirms they have completed this step.
 
 **documents and test reports created in this job**
 - None.
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10. (LATEST) User states that after the last change and server restart, nothing has changed again. (Status: **BLOCKER**)
- - 9. User is asked to check the normal text rendering and provides an image showing it's still far too large. (Status: IN PROGRESS)
- - 8. User reports the server is hanging again. (Status: IN PROGRESS)
- - 7. User confirms the PDF is still not correct after a previous fix. (Status: IN PROGRESS)
- - 6. User is asked to test again after a server restart. (Status: PENDING)
- - 5. User reports the server seems to have hung, as no changes are visible. (Status: IN PROGRESS)
- - 4. User notes that the font on the measurement line (Maßlinie) is also incorrect in the PDF. (Status: IN PROGRESS)
- - 3. User notes that the arrowhead in the PDF doesn't match the original sketch. (Status: IN PROGRESS)
- - 2. User asks for the font size of the memo text to be adjusted to match the original. (Status: IN PROGRESS)
- - 1. User reports that the memo text is now visible in the preview, but it's offset from the original position. (Status: IN PROGRESS)
+ - 10. (LATEST) User lists several required changes for the PDF: pencil writing on photos not showing, Skizzen header on a separate page, and the footer text being too faint. (Status: **IN PROGRESS**)
+ - 9. User requests the company logo be made larger in the PDF. (Status: **IN PROGRESS**)
+ - 8. User asks if two more changes can be made before attempting the build again. (Status: **PENDING AGENT ACTION**)
+ - 7. User is informed of the two options to resolve the build failure. (Status: ADDRESSED)
+ - 6. User is told the build failed because EAS can't create a provisioning profile in non-interactive mode. (Status: ADDRESSED)
+ - 5. User confirms they have removed the provisioning profile from the Expo website. (Status: ADDRESSED)
+ - 4. User asks for confirmation on which item to delete on the Expo credentials page. (Status: ADDRESSED)
+ - 3. User is instructed to delete the invalid provisioning profile from the Expo website credentials page. (Status: ADDRESSED)
+ - 2. User confirms they have deleted the invalid profile from the Apple Developer portal. (Status: ADDRESSED)
+ - 1. User is told the Invalid status is expected and they should delete the provisioning profile. (Status: ADDRESSED)
 
 **Project Health Check:**
-- **Broken**: The PDF generation for sketches is fundamentally broken. Text and other elements are incorrectly scaled, making the feature unusable.
+- **Broken:** The iOS build process for deploying the new iCloud feature is broken and blocked.
 - **Mocked:** None.
 
 **3rd Party Integrations**
 - 
+-  (for iCloud sync)
 - 
   Usage: expo [command] [options]
 
@@ -196,15 +201,15 @@ The application is a fully offline React Native/Expo app using . The agent has b
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[00:02:22]   Run a command with --help for more info 💡
-[00:02:22]     $ expo start --help
-[00:02:22], 
+[13:33:46]   Run a command with --help for more info 💡
+[13:33:46]     $ expo start --help
+[13:33:46], 
 - , , , 
 - , 
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: YES (The agent has been manually restarting the Expo server repeatedly, which qualifies as a troubleshooting step, though an ineffective one).
+  - Troubleshoot agent used after agent stuck in loop: YES (Agent correctly diagnosed and is working around a build system limitation).
   - Test files created: None.
   - Known regressions: None.
 
@@ -213,5 +218,4 @@ The application is a fully offline React Native/Expo app using . The agent has b
 - Password: 
 
 **What agent forgot to execute**
-- The agent has failed to break the debugging loop. It continues to apply iterative code changes without addressing the probable root cause (aggressive client-side caching) or considering a necessary architectural refactor.
-- The agent has consistently deferred the critical UI freeze bug in .</analysis>
+- The agent has correctly identified all pending tasks and blockers. No work has been forgotten. The current work is proceeding according to a clear, user-approved plan.</analysis>

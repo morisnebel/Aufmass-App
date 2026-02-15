@@ -627,6 +627,17 @@ export default function ProjectDetailScreen() {
             font-size: 14px;
             page-break-after: avoid;
           }
+          /* Ensure Skizzen header stays with sketches */
+          .sketches-section {
+            page-break-inside: avoid;
+          }
+          .sketches-section h2 {
+            page-break-after: avoid;
+            margin-bottom: 10px;
+          }
+          .sketches-section .sketches-container {
+            page-break-before: avoid;
+          }
           h3 {
             color: #333;
             margin-top: 15px;

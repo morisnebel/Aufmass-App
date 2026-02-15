@@ -146,11 +146,14 @@ export default function NewProjectScreen() {
         return;
       }
 
-      // Schließe zuerst das NewCustomer Modal, dann öffne Contact Picker
+      // Schließe zuerst das NewCustomer Modal
       setShowNewCustomerModal(false);
       
-      // Kurze Verzögerung damit das erste Modal schließt bevor das zweite öffnet
-      setTimeout(async () => {
+      // Verwende InteractionManager für bessere Performance
+      // Dies wartet bis alle Animationen abgeschlossen sind
+      const InteractionManager = require('react-native').InteractionManager;
+      
+      InteractionManager.runAfterInteractions(async () => {
         setShowContactPicker(true);
         setLoadingContacts(true);
 
@@ -184,7 +187,7 @@ export default function NewProjectScreen() {
         } finally {
           setLoadingContacts(false);
         }
-      }, 350);
+      });
     } catch (error) {
       console.error('Error requesting contacts permission:', error);
       Alert.alert('Fehler', 'Kontakt-Berechtigung konnte nicht angefordert werden');

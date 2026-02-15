@@ -20,6 +20,12 @@ Mobile app for roof measurement professionals to document projects, take photos,
 ## What's Been Implemented
 
 ### December 2025 (Latest Session)
+- **[NEW] Project Export/Import Feature**
+  - Export projects as `.aufmass` files to iCloud Drive or Files app
+  - Import projects from `.aufmass` files on other devices
+  - Includes all project data: photos, sketches, roofs, checklists
+  - Files modified: `frontend/app/projects/[id].tsx`, `frontend/app/index.tsx`
+
 - **[NEW] PDF Layout Improvements**
   - Firmenlogo vergrößert (180x130px statt 120x90px)
   - Bleistift-Annotationen auf Fotos werden jetzt im PDF angezeigt (SVG-Overlay)

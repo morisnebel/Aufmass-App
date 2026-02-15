@@ -214,7 +214,6 @@ export default function NewProjectScreen() {
     setContactSearchQuery('');
     
     // Verwende InteractionManager für bessere Performance
-    const InteractionManager = require('react-native').InteractionManager;
     InteractionManager.runAfterInteractions(() => {
       setShowNewCustomerModal(true);
     });

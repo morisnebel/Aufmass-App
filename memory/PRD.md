@@ -24,6 +24,12 @@ Mobile app for roof measurement professionals to document projects, take photos,
   - Text, arrows, and pointers now render with correct proportions in PDFs
   - Files modified: `frontend/app/sketches/draw.tsx`, `frontend/app/projects/[id].tsx`
 
+- **[FIXED] UI Freeze in "New Project" Workflow**
+  - Replaced all `setTimeout` calls with `InteractionManager.runAfterInteractions()`
+  - State updates now happen immediately instead of delayed
+  - Alerts use `requestAnimationFrame` to prevent UI blocking
+  - Files modified: `frontend/app/projects/new.tsx`
+
 ### Previous Implementation
 - Full offline architecture with AsyncStorage
 - Project management (CRUD operations)
@@ -38,22 +44,18 @@ Mobile app for roof measurement professionals to document projects, take photos,
 
 ## Known Issues
 
-### P1: UI Freeze in "New Project" Workflow
-- **Location**: `frontend/app/projects/new.tsx`
-- **Symptom**: UI becomes unresponsive after saving a new customer during project creation
-- **Status**: NOT STARTED
-- **Recurrence**: 6+ reports
+*No critical issues currently*
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
-- None currently
+- None
 
 ### P1 (High Priority)
-- Fix UI freeze bug in `projects/new.tsx`
+- None
 
 ### P2 (Medium Priority)
-- Final App Store submission after all fixes verified
+- Final App Store submission - all fixes verified, ready for submission
 
 ### P3 (Future/Backlog)
 - Performance optimizations for large projects

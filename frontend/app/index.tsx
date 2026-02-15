@@ -391,6 +391,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  importButton: {
+    backgroundColor: '#e8f5e9',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  importButtonText: {
+    color: '#4caf50',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   projectList: {
     padding: 16,
     paddingTop: 0,

@@ -1272,11 +1272,7 @@ export default function ProjectDetailScreen() {
       // Convert to JSON string
       const jsonString = JSON.stringify(exportData, null, 2);
       
-      // Create a data URI for the file
-      const fileUri = `data:application/json;base64,${btoa(unescape(encodeURIComponent(jsonString)))}`;
-      
-      // Use FileSystem to write temporary file
-      const FileSystem = require('expo-file-system');
+      // Write to temporary file
       const fileName = `${project?.name?.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'projekt'}.aufmass`;
       const tempPath = `${FileSystem.cacheDirectory}${fileName}`;
       

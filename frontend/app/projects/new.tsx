@@ -214,10 +214,11 @@ export default function NewProjectScreen() {
     setShowContactPicker(false);
     setContactSearchQuery('');
     
-    // Öffne das NewCustomer Modal wieder nach kurzer Verzögerung
-    setTimeout(() => {
+    // Verwende InteractionManager für bessere Performance
+    const InteractionManager = require('react-native').InteractionManager;
+    InteractionManager.runAfterInteractions(() => {
       setShowNewCustomerModal(true);
-    }, 350);
+    });
   };
 
   const filteredContacts = deviceContacts.filter(contact => {

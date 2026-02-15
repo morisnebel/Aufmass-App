@@ -787,10 +787,11 @@ export default function ProjectDetailScreen() {
           .footer {
             margin-top: 30px;
             padding-top: 15px;
-            border-top: 1px solid #e0e0e0;
-            font-size: 9px;
-            color: #999;
+            border-top: 2px solid #1976d2;
+            font-size: 11px;
+            color: #666;
             text-align: center;
+            font-weight: 500;
           }
           .page-break {
             page-break-before: always;
@@ -823,8 +824,8 @@ export default function ProjectDetailScreen() {
             gap: 15px;
           }
           .company-logo {
-            max-width: 120px;
-            max-height: 90px;
+            max-width: 180px;
+            max-height: 130px;
             object-fit: contain;
           }
         </style>
@@ -947,8 +948,10 @@ export default function ProjectDetailScreen() {
         
         ${sketches.length > 0 ? `
           <div class="page-break"></div>
-          <h2>Skizzen</h2>
-          ${sketchesHtml}
+          <div class="sketches-section">
+            <h2>Skizzen</h2>
+            ${sketchesHtml}
+          </div>
         ` : ''}
         
         <div class="footer">

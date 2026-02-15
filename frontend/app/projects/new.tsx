@@ -270,6 +270,12 @@ export default function NewProjectScreen() {
 
   const saveNewCustomer = async (saveOrUpdateContact: boolean) => {
     setCreatingCustomer(true);
+    
+    // Referenz für den neuen Kunden speichern
+    let createdCustomer: Customer | null = null;
+    const wasImportedContact = !!importedContactId;
+    const savedImportedContactId = importedContactId;
+    
     try {
       // Combine name with Anrede
       const fullName = newCustomerAnrede 
@@ -279,14 +285,14 @@ export default function NewProjectScreen() {
       // Combine address fields
       const address = [newCustomerStreet, [newCustomerPlz, newCustomerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       
-      const newCustomer = await CustomerService.create({
+      createdCustomer = await CustomerService.create({
         name: fullName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
         address: address || undefined,
       });
       
-      // Save or update device contacts
+      // Save or update device contacts (nur wenn erforderlich)
       if (saveOrUpdateContact && Platform.OS !== 'web') {
         try {
           const { status } = await Contacts.requestPermissionsAsync();
@@ -295,10 +301,10 @@ export default function NewProjectScreen() {
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
 
-            if (importedContactId) {
+            if (savedImportedContactId) {
               // Aktualisiere bestehenden Kontakt
               const updatedContact = {
-                id: importedContactId,
+                id: savedImportedContactId,
                 contactType: Contacts.ContactTypes.Person,
                 name: fullName,
                 firstName: newCustomerAnrede ? newCustomerAnrede : firstName,
@@ -351,29 +357,36 @@ export default function NewProjectScreen() {
         }
       }
 
-      // WICHTIG: Zuerst alle Modals sicher schließen
+      // WICHTIG: State-Updates SOFORT durchführen (nicht in setTimeout)
+      // Dies verhindert Race Conditions und UI-Freeze
+      if (createdCustomer) {
+        setCustomers(prevCustomers => [...prevCustomers, createdCustomer!]);
+        setCustomerId(createdCustomer.id);
+        setSelectedCustomer(createdCustomer);
+      }
+      
+      // Formular zurücksetzen
       resetNewCustomerForm();
+      
+      // Modals schließen
       setShowNewCustomerModal(false);
       setShowCustomerPicker(false);
       
-      // Kurze Verzögerung, um sicherzustellen, dass Modals vollständig geschlossen sind
-      // bevor UI-Updates und Alert angezeigt werden
-      setTimeout(() => {
-        // Add to local list and select
-        setCustomers(prevCustomers => [...prevCustomers, newCustomer]);
-        setCustomerId(newCustomer.id);
-        setSelectedCustomer(newCustomer);
-
+      // Loading-State beenden BEVOR Alert angezeigt wird
+      setCreatingCustomer(false);
+      
+      // Alert mit requestAnimationFrame verzögern um UI-Thread nicht zu blockieren
+      requestAnimationFrame(() => {
         const message = saveOrUpdateContact 
-          ? (importedContactId ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
+          ? (wasImportedContact ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
           : 'Kunde wurde erstellt';
         Alert.alert('Erfolg', message, [{ text: 'OK' }]);
-      }, 350);
+      });
+      
     } catch (error) {
       console.error('Error creating customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');
-    } finally {
       setCreatingCustomer(false);
+      Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');
     }
   };
 

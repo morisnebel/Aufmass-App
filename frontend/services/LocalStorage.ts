@@ -1,26 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Dynamic import for CloudKit storage (only on iOS)
+// CloudKit storage disabled for now - using AsyncStorage only
+// The iCloud integration requires additional native configuration
 let CloudKitStorage: any = null;
-
-// Initialize CloudKit on iOS
-const initCloudKit = async () => {
-  if (Platform.OS === 'ios' && !CloudKitStorage) {
-    try {
-      CloudKitStorage = require('react-native-cloudkit-storage').default;
-      // Register for push updates to receive changes from other devices
-      await CloudKitStorage.registerForPushUpdates();
-      console.log('CloudKit initialized successfully');
-    } catch (error) {
-      console.log('CloudKit not available, using AsyncStorage:', error);
-      CloudKitStorage = null;
-    }
-  }
-};
-
-// Initialize on module load
-initCloudKit();
 
 // Storage Keys
 const KEYS = {

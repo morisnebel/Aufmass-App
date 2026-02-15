@@ -1,161 +1,132 @@
-<analysis>**original_problem_statement**: The user's TestFlight app was non-functional. An architectural refactor was done to make the application fully offline. After the refactor, the app failed to start in Expo Go. After fixing the startup issue and making some UI adjustments (button layout and keyboard handling), a new build was successfully deployed to TestFlight. The user has confirmed the new build works well and now requests the implementation of the PDF export feature, which was disabled during the offline refactor. Subsequent requests included UI adjustments for a sketch screen, a global keyboard dismiss button, several enhancements to the generated PDF's content and layout, a multi-photo upload feature, and access to project photos from the sketch screen.
+<analysis>**original_problem_statement**: The user's TestFlight app was non-functional. An architectural refactor was done to make the application fully offline. After the refactor, the app failed to start in Expo Go. After fixing the startup issue and making some UI adjustments (button layout and keyboard handling), a new build was successfully deployed to TestFlight. The user has confirmed the new build works well and now requests the implementation of the PDF export feature, which was disabled during the offline refactor. Subsequent requests included UI adjustments for a sketch screen, a global keyboard dismiss button, several enhancements to the generated PDF's content and layout, a multi-photo upload feature, and access to project photos from the sketch screen. Most recently, the user requested that the sizing options (Small, Medium, Large, Full) for photos and sketches be correctly applied in the generated PDF, and for the sketch previews in the app to be larger. The current focus is on correcting the rendering of sketch elements (text, arrows, pointers) within the generated PDF, as they appear distorted or incorrectly scaled.
 
 **PRODUCT REQUIREMENTS:**
-1.  The application MUST store all data locally on the device.
-2.  The application MUST be completely usable offline.
-3.  All existing features must work with the local storage persistence layer.
-4.  Implement an offline PDF generation feature for projects, including a professional layout with company logo, addresses, and all project details.
-5.  Implement UI/UX improvements as requested (compact layouts, keyboard dismissal, multi-photo selection).
+1.  The application MUST store all data locally on the device and be completely usable offline.
+2.  Implement an offline PDF generation feature for projects, including a professional layout with company logo, addresses, and all project details.
+3.  The size of photos and sketches in the generated PDF MUST be controllable via a Klein/Mittel/Groß/Voll (Small/Medium/Large/Full) setting.
+4.  The rendering of sketch elements (text, arrows, pointers) in the PDF must be identical to the original sketch drawn in the app.
+5.  Implement UI/UX improvements as requested (compact layouts, keyboard dismissal, multi-photo selection, larger sketch previews).
 6.  After all features are implemented and tested, a new build must be created and submitted to the App Store.
 
 **User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-The application is a fully offline React Native/Expo app using . A new TestFlight build (Build 4) was successfully deployed, which includes a revamped PDF export feature with improved layout, data handling, and a share as image option. A new multi-photo selection feature has also been implemented and confirmed working by the user. The agent was about to start implementing the user's latest request: adding a button on the sketch creation page to access existing project photos.
+The application is a fully offline React Native/Expo app using . The agent has been working extensively on fixing how sketches are rendered in generated PDFs. The core problem is that text and other elements within the sketch are scaled incorrectly, appearing massive and often out of bounds in the final PDF. The agent's last attempt involved increasing the resolution of the saved sketch preview from 200x200 to 800x800 pixels in , hoping that scaling a higher-resolution image would solve the text size issue. The user has confirmed this did not fix the problem.
 
 **Last working item**:
-    - Last item agent was working: The user requested a new feature: adding a button on the Sketches screen () that allows selecting from photos already added to the project, instead of only being able to select from the device's main gallery. The agent has just begun investigating the relevant file.
-    - Status: NOT STARTED
+    - Last item agent was working: Fixing incorrect scaling of text and elements in sketches when rendered in a PDF. The user reported that despite multiple attempts, the text remains far too large.
+    - Status: BLOCKED
     - Agent Testing Done: N
-    - Which testing method agent to use? Manual testing by guiding the user. This is a React Native app tested via Expo Go, so automated UI testing is not possible. The agent must implement the feature and then provide clear instructions for the user to test on their device.
-    - User Testing Done: N
+    - Which testing method agent to use? Manual testing by user. The agent seems stuck in a loop and should consider a new debugging approach.
+    - User Testing Done: Y (User confirmed the latest fix of increasing the preview resolution to 800px did not solve the issue).
 
 **All Pending/In progress Issue list**:
-  - Issue 1:  Critical UI freeze in New Project workflow (P2)
+  - Issue 1: Incorrect text/element scaling in generated PDF sketches (P0)
+  - Issue 2: Critical UI freeze in New Project workflow (P1)
   
   Issues Detail:
-  - **Issue 1**: 
-     - **Description**: A long-standing, recurring bug where the UI freezes on the New Project screen () after creating a new customer.
-     - **Attempted fixes**: None in this session. This issue has been carried over from previous sessions.
-     - **Next debug checklist**: This bug needs to be explicitly tested by the user once the current development tasks are completed. If it persists, the agent needs to analyze the code in  to understand the state management and navigation flow after a new customer is created and saved.
-     - **Why fix this issue and what will be achieved with the fix?**: This is a critical stability bug that makes a core application workflow unusable.
-     - **Status**:  NOT STARTED
+  - **Issue 1: Incorrect text/element scaling in generated PDF sketches**
+     - **Attempted fixes**: The agent made numerous attempts by adjusting font-size calculations and scaling formulas in  (for the saved PDF version) and  (for the live app preview). The last major attempt was to increase the base resolution of the generated SVG preview by changing  from 200 to 800 in . None of these fixes have worked, with the user repeatedly reporting nothing has changed.
+     - **Next debug checklist**:
+        1.  **Suspect Aggressive Caching**: The user's feedback (nothing has changed) and the history of Expo server restarts strongly suggest an Expo Go caching issue. Before any other code change, the agent MUST ask the user to **fully close the Expo Go app, clear the app's cache/data on their phone, reopen it, and re-scan the QR code**.
+        2.  **Verify Code Execution**: Confirm the changes are live. View  to ensure  is .
+        3.  **Verify Data Integrity**: Check if newly created sketches are actually being saved with the high-resolution data. It's possible old, low-resolution  is being re-used from AsyncStorage.
+        4.  **Architectural Re-evaluation**: If the issue persists, the current approach of embedding a static, pre-rendered image () is likely flawed. The agent should consider a refactor: generate the SVG for the PDF *dynamically* inside the  function in  using the raw sketch elements (). This would decouple the PDF from the problematic preview generation and give direct control over scaling in the PDF context.
+     - **Why fix this issue and what will be achieved with the fix?**: This is the last remaining blocker for the PDF generation feature, which is a core user requirement. The PDF must be professional and accurate.
+     - **Status**:  BLOCKED
      - **Is recurring issue?** Y
-     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification)
+     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification of the generated PDF).
      - **Blocked on other issue**: None.
 
-**In progress Task List**:
-  - Task 1:  Add Select from Project Photos button to Sketch Screen (P0)
-
- Task Detail:
-  - **Task 1**: 
-     - **Where to resume**: The agent has just viewed . The next step is to modify this file to:
-        1. Add a new button, e.g., Aus Projektfotos wählen (Select from Project Photos).
-        2. Implement the logic for this button to open a modal or new screen that displays thumbnails of photos already associated with the current project.
-        3. Allow the user to select one of these photos to use as the basis for a sketch.
-        4. This will require fetching the current project's data (including its  array) from .
-     - **What will be achieved with this?**: Users will be able to create sketches based on photos they've already taken for the project, improving workflow efficiency by not requiring them to search their entire device gallery.
+  - **Issue 2: Critical UI freeze in New Project workflow**
+     - **Attempted fixes**: None in this session.
+     - **Next debug checklist**: Once the PDF issue is resolved, guide the user to reproduce the bug. Analyze the state management and navigation flow in  that occurs after a new customer is saved.
+     - **Why fix this issue and what will be achieved with the fix?**: This is a critical stability bug that hinders a core application workflow.
      - **Status**:  NOT STARTED
-     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification)
-     - **Blocked on something**: None.
+     - **Is recurring issue?** Y
+     - **Should Test frontend/backend/both after fix?**: Frontend (via user verification).
+     - **Blocked on other issue**: Blocked by Issue 1.
+
+**In progress Task List**:
+  - None.
 
 **Upcoming and Future Tasks**
     **Upcoming Tasks:**
-    - **P1: Verify New Project UI Freeze Bug:** After the sketch feature is done, guide the user to test the New Project workflow to confirm if the critical UI freeze bug still exists.
+    - **P1: Verify New Project UI Freeze Bug:** After the PDF generation is fully fixed and verified, this long-standing stability issue must be addressed.
     
     **Future Tasks:**
-    - **P2: Final App Store Submission:** Once all features and fixes are verified by the user, and they are satisfied with the TestFlight version, the next step would be to prepare and submit the application for official App Store review.
+    - **P2: Final App Store Submission:** Once all features and fixes are verified by the user, prepare and submit the application for official App Store review.
 
 **Completed work in this session**
-- **PDF Layout and Data Integration:**
-  - Completed the PDF's HTML template () to include company logo, full company address from settings, and complete project details.
-  - Fixed data mapping issues between the  page and the PDF generation function.
-  - Improved the PDF header layout for better readability, including a larger logo and text wrapping for addresses.
-  - Relocated the Object Address to be more logically placed within the project details section of the PDF.
-- **Settings Page Enhancements:**
-  - Set initial state for settings fields to be empty, as requested by the user.
-  - Added a Daten zurücksetzen (Reset Data) button to allow users to clear all saved settings data.
-- **PDF Functionality Enhancements & Bug Fixes:**
-  - Added a Als Bild teilen (Share as Image) feature to the PDF preview modal using .
-  - Debugged and fixed a critical bug where PDF teilen (Share PDF) and PDF speichern (Save PDF) would hang when triggered from the preview modal. The final resolution was to remove these two buttons from the preview modal, simplifying the UI and resolving the blocking issue.
-- **Multi-Photo Upload:**
-  - Overhauled the Add Photo screen () to allow selecting and uploading multiple photos from the gallery at once.
-- **Build & Deployment:**
-  - Successfully troubleshooted an EAS build limit issue by guiding the user to upgrade their plan.
-  - Successfully built and submitted a new version () to TestFlight.
-- **Expo Go Cache Issue Resolution:**
-  - Repeatedly and successfully guided the user to clear the Expo Go cache, which was the root cause of them not seeing new changes.
+- **UI: Sketch Preview Container Size**: Adjusted the sketch preview container in the project details screen to 350px as a visual compromise for the user.
+- **Feature: Memo-Pointer Text Rendering**: Implemented rendering for the text associated with memo-pointer sketch elements in both the in-app preview and the saved SVG for the PDF.
+- **Fix: Arrowhead and Measurement Line Rendering**: Corrected the rendering of arrowheads and the text on measurement lines (rotation, font size, style) to better match the original drawing canvas in both the app preview and the PDF.
+- **Attempted Fix: General Text Element Rendering**: Attempted to fix the scaling of general text elements in sketches by using their saved , but this is part of the larger, unresolved scaling issue.
 
 **Earlier issues found/mentioned but not fixed**
    - The UI freeze bug in  is a known, carried-over issue and is listed in the Pending Issues section.
 
 **Known issue recurrence from previous fork**
   - **Issue recurrence**: UI unresponsiveness in  after customer creation.
-  - **Recurrence count**: 5+
+  - **Recurrence count**: 6+
   - **Status**: NOT STARTED
-  - **Note**: This critical stability issue remains unaddressed and should be prioritized after the current feature request.
+  - **Note**: This critical stability issue remains unaddressed and should be prioritized after the current PDF work.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Local Data Persistence**:  via .
-- **Offline PDF Generation**: .
-- **File System Access**:  and .
-- **Web Content Display**:  for the PDF preview.
-- **UI Screenshot**:  for the Share as Image feature.
-- **Image/Media Library**: .
-- **Expo Application Services (EAS)**: Input is required, but stdin is not readable. Failed to display prompt: Select platform and 
-EAS Submit is experiencing a partial outage.
-Reason: Longer wait times for iOS submissions.
-All information on service status and incidents available at https://status.expo.dev/
-
-Input is required, but stdin is not readable. Failed to display prompt: Select platform for TestFlight deployment.
+- **Local Data Persistence**: .
+- **Offline PDF Generation**:  with dynamically generated HTML containing a base64-encoded SVG.
+- **Expo Development Workflow**: The development cycle is severely impacted by client-side caching in Expo Go, requiring frequent server restarts and manual cache clearing by the user.
+- **Dynamic SVG Generation**: The core of the current problem lies in the  and  functions, which convert stored element data into an SVG string.
 
 **key DB schema**
-  - Data is stored in  as JSON strings under keys like , , .
+  - Data is stored in  as JSON strings.
+  - Project objects contain an array of .
+  - Sketch objects contain  (the base64 SVG preview for the PDF) and  (an array of raw drawing objects like ).
 
 **changes in tech stack**
-  - Added dependency: .
+  - None.
 
 **All files of reference**
-- : **(Critical)** Contains all logic for PDF generation and its associated actions. Was heavily modified and debugged.
-- : **(Critical)** Was completely rewritten to support multi-photo selection.
-- : Modified to add a reset button and change initial state.
-- : The next file to be modified for the new feature.
-- : Updated for the new build.
+- : **(Critical)** Contains the  function which embeds the sketch into the PDF. All in-app sketch previews are also rendered here.
+- : **(Critical)** Contains the  function that creates the  which is saved and used in the PDF. This is the source of the scaling problem.
 
 **Areas that need refactoring**:
-- The project still has TypeScript warnings that should be addressed for better code health.
-- The dependency on manually clearing the Expo Go cache indicates a fragile development feedback loop. While not a code issue, it's a process smell.
+- The entire process of saving a static, low-resolution  for a scalable document like a PDF is flawed. A robust solution would be to **refactor the PDF generation**. Instead of using the pre-rendered , the  function in  should dynamically generate the SVG from the raw  data at the time of PDF creation. This would solve the scaling issues permanently.
 
 **key api endpoints**
 - Not applicable. The application is fully offline.
 
 **Critical Info for New Agent**
 - **You MUST continue all user communication in German.**
-- Your immediate task is to implement the select from project photos feature on the sketch creation screen ().
-- **Expo Go Caching is a recurring problem.** If the user reports not seeing your changes, your first step should always be to instruct them to:
-    1.  Force quit the Expo Go app.
-    2.  Re-open Expo Go.
-    3.  In the project list, **long-press** the project name.
-    4.  Select **Clear cache**.
-    5.  Re-launch the project. This procedure has been necessary and successful multiple times.
-- All testing is performed manually by the user on their device via Expo Go. Provide clear, step-by-step instructions.
-- The high-severity UI freeze bug in the New Project flow is a long-standing issue that must be verified and fixed after the current feature work.
+- You are currently **BLOCKED** on fixing the PDF sketch rendering. The user confirms your last fix (increasing preview resolution to 800px) failed.
+- **DO NOT try another code fix immediately.** Your first action must be to address the likely cause: **aggressive caching in Expo Go**. Instruct the user to perform a hard refresh (close app, clear cache, reopen, rescan QR).
+- If a hard refresh fails, the architecture is the problem. Propose the refactor described in Areas that need refactoring to generate the SVG dynamically for the PDF. This will break the cycle of failed fixes.
+- Do not forget the P1 UI freeze bug in  is the next major task.
 
 **documents and test reports created in this job**
--  was updated.
+- None.
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - 10. (LATEST) User asks to add a button on the Sketches page to directly access project photos. (Status: In Progress)
- - 9. User confirms the new multi-photo upload feature works perfectly. (Status: Completed)
- - 8. User requests the ability to select multiple photos from the gallery at once. (Status: Completed)
- - 7. User receives confirmation that Build 4 is successfully uploaded to TestFlight.
- - 6. User upgrades their EAS plan after hitting the free tier build limit. (Status: Completed)
- - 5. User asks the agent to create a new TestFlight build. (Status: Completed)
- - 4. User confirms that the PDF object address layout is now correct. (Status: Completed)
- - 3. User requests moving the object address in the PDF to be under the project details. (Status: Completed)
- - 2. User reports that the Share PDF and Save PDF buttons are still visible in the preview, despite code changes. (Status: Blocked, led to removing the buttons)
- - 1. User simplifies the requirement, suggesting it's easier to just remove the problematic buttons from the PDF preview. (Status: Completed)
+ - 10. (LATEST) User states that after the last change and server restart, nothing has changed again. (Status: **BLOCKER**)
+ - 9. User is asked to check the normal text rendering and provides an image showing it's still far too large. (Status: IN PROGRESS)
+ - 8. User reports the server is hanging again. (Status: IN PROGRESS)
+ - 7. User confirms the PDF is still not correct after a previous fix. (Status: IN PROGRESS)
+ - 6. User is asked to test again after a server restart. (Status: PENDING)
+ - 5. User reports the server seems to have hung, as no changes are visible. (Status: IN PROGRESS)
+ - 4. User notes that the font on the measurement line (Maßlinie) is also incorrect in the PDF. (Status: IN PROGRESS)
+ - 3. User notes that the arrowhead in the PDF doesn't match the original sketch. (Status: IN PROGRESS)
+ - 2. User asks for the font size of the memo text to be adjusted to match the original. (Status: IN PROGRESS)
+ - 1. User reports that the memo text is now visible in the preview, but it's offset from the original position. (Status: IN PROGRESS)
 
 **Project Health Check:**
-- **Functional**: Yes. The latest TestFlight build (Build 4) is live and functional. The current development version in Expo Go is also functional.
-- **Disabled Features**: None.
+- **Broken**: The PDF generation for sketches is fundamentally broken. Text and other elements are incorrectly scaled, making the feature unusable.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- : Local data persistence.
+- 
 - 
   Usage: expo [command] [options]
 
@@ -225,26 +196,22 @@ Input is required, but stdin is not readable. Failed to display prompt: Select p
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[20:44:44]   Run a command with --help for more info 💡
-[20:44:44]     $ expo start --help
-[20:44:44]: Core framework and tooling.
-- : Building and submitting the app.
-- : Offline PDF generation.
-- : Saving files locally.
-- : Native share functionality.
-- : Accessing camera and media library.
-- : Displaying PDF preview.
-- : Capturing UI views as images.
+[00:02:22]   Run a command with --help for more info 💡
+[00:02:22]     $ expo start --help
+[00:02:22], 
+- , , , 
+- , 
 
 **Testing status**
   - Testing agent used after significant changes: NO
-  - Troubleshoot agent used after agent stuck in loop: NO
+  - Troubleshoot agent used after agent stuck in loop: YES (The agent has been manually restarting the Expo server repeatedly, which qualifies as a troubleshooting step, though an ineffective one).
   - Test files created: None.
-  - Known regressions: The Share PDF and Save PDF features from within the preview modal were removed as a workaround for a persistent bug. The core functionality still exists outside the preview modal.
+  - Known regressions: None.
 
 **Credentials to test flow:**
 - Expo Account: 
 - Password: 
 
 **What agent forgot to execute**
-- The agent has consistently deferred investigating the critical, long-standing UI freeze bug on the  screen. While responsive to the user's immediate feature requests, this core stability issue has been mentioned in multiple handoffs but has not been prioritized or addressed.</analysis>
+- The agent has failed to break the debugging loop. It continues to apply iterative code changes without addressing the probable root cause (aggressive client-side caching) or considering a necessary architectural refactor.
+- The agent has consistently deferred the critical UI freeze bug in .</analysis>

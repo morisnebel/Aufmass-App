@@ -1251,6 +1251,57 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  // Export project as .aufmass file to iCloud/Files
+  const exportProjectFile = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      
+      // Gather all project data
+      const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        project: project,
+        customer: customer,
+        roofs: roofs,
+        photos: photos,
+        sketches: sketches,
+        checklists: checklists,
+      };
+      
+      // Convert to JSON string
+      const jsonString = JSON.stringify(exportData, null, 2);
+      
+      // Create a data URI for the file
+      const fileUri = `data:application/json;base64,${btoa(unescape(encodeURIComponent(jsonString)))}`;
+      
+      // Use FileSystem to write temporary file
+      const FileSystem = require('expo-file-system');
+      const fileName = `${project?.name?.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'projekt'}.aufmass`;
+      const tempPath = `${FileSystem.cacheDirectory}${fileName}`;
+      
+      await FileSystem.writeAsStringAsync(tempPath, jsonString, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      // Share the file (allows saving to iCloud Drive)
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(tempPath, {
+          mimeType: 'application/json',
+          dialogTitle: 'Projekt exportieren',
+          UTI: 'public.json',
+        });
+      } else {
+        Alert.alert('Fehler', 'Export nicht verfügbar auf diesem Gerät');
+      }
+    } catch (error) {
+      console.error('Error exporting project:', error);
+      Alert.alert('Fehler', 'Projekt konnte nicht exportiert werden');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>

@@ -537,9 +537,9 @@ export default function NewProjectScreen() {
               style={styles.newCustomerTopButton}
               onPress={() => {
                 setShowCustomerPicker(false);  // Close this modal first
-                setTimeout(() => {
+                InteractionManager.runAfterInteractions(() => {
                   setShowNewCustomerModal(true);  // Then open new customer modal
-                }, 300);
+                });
               }}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />

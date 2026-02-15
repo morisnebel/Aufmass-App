@@ -1,4 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
+// Dynamic import for CloudKit storage (only on iOS)
+let CloudKitStorage: any = null;
+
+// Initialize CloudKit on iOS
+const initCloudKit = async () => {
+  if (Platform.OS === 'ios' && !CloudKitStorage) {
+    try {
+      CloudKitStorage = require('react-native-cloudkit-storage').default;
+      // Register for push updates to receive changes from other devices
+      await CloudKitStorage.registerForPushUpdates();
+      console.log('CloudKit initialized successfully');
+    } catch (error) {
+      console.log('CloudKit not available, using AsyncStorage:', error);
+      CloudKitStorage = null;
+    }
+  }
+};
+
+// Initialize on module load
+initCloudKit();
 
 // Storage Keys
 const KEYS = {
@@ -10,6 +32,7 @@ const KEYS = {
   CHECKLISTS: 'aufmassprofi_checklists',
   CHECKLIST_TEMPLATES: 'aufmassprofi_checklist_templates',
   SETTINGS: 'aufmassprofi_settings',
+  SYNC_TIMESTAMP: 'aufmassprofi_sync_timestamp',
 };
 
 // Helper to generate unique IDs
@@ -17,10 +40,150 @@ const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 };
 
-// Generic CRUD operations
+// ============ UNIFIED STORAGE LAYER ============
+// Uses CloudKit on iOS, AsyncStorage as fallback
+
+const storage = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      if (Platform.OS === 'ios' && CloudKitStorage) {
+        const value = await CloudKitStorage.getItem(key);
+        // Also sync to local AsyncStorage for offline access
+        if (value) {
+          await AsyncStorage.setItem(key, value);
+        }
+        return value;
+      }
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.log(`Error getting ${key} from CloudKit, falling back to AsyncStorage:`, error);
+      return await AsyncStorage.getItem(key);
+    }
+  },
+
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      // Always save to local AsyncStorage first (for offline access)
+      await AsyncStorage.setItem(key, value);
+      
+      // Then sync to CloudKit on iOS
+      if (Platform.OS === 'ios' && CloudKitStorage) {
+        await CloudKitStorage.setItem(key, value);
+      }
+    } catch (error) {
+      console.log(`Error saving ${key} to CloudKit:`, error);
+      // Data is already in AsyncStorage, so we're safe
+    }
+  },
+
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(key);
+      if (Platform.OS === 'ios' && CloudKitStorage) {
+        await CloudKitStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.log(`Error removing ${key}:`, error);
+    }
+  },
+};
+
+// ============ SYNC EVENT LISTENERS ============
+// These will be called when data changes on another device
+
+type SyncCallback = (key: string, value: any) => void;
+const syncListeners: SyncCallback[] = [];
+
+export const addSyncListener = (callback: SyncCallback) => {
+  syncListeners.push(callback);
+  
+  // Set up CloudKit listeners on iOS
+  if (Platform.OS === 'ios' && CloudKitStorage) {
+    CloudKitStorage.addListener('change', ({ key, value }: { key: string; value: string }) => {
+      console.log('CloudKit change received for:', key);
+      // Update local AsyncStorage
+      AsyncStorage.setItem(key, value);
+      // Notify listeners
+      try {
+        const parsed = JSON.parse(value);
+        syncListeners.forEach(cb => cb(key, parsed));
+      } catch (e) {
+        syncListeners.forEach(cb => cb(key, value));
+      }
+    });
+
+    CloudKitStorage.addListener('delete', ({ key }: { key: string }) => {
+      console.log('CloudKit delete received for:', key);
+      AsyncStorage.removeItem(key);
+      syncListeners.forEach(cb => cb(key, null));
+    });
+  }
+};
+
+export const removeSyncListener = (callback: SyncCallback) => {
+  const index = syncListeners.indexOf(callback);
+  if (index > -1) {
+    syncListeners.splice(index, 1);
+  }
+};
+
+// ============ SYNC STATUS ============
+export const SyncService = {
+  isCloudKitAvailable: (): boolean => {
+    return Platform.OS === 'ios' && CloudKitStorage !== null;
+  },
+
+  getLastSyncTime: async (): Promise<string | null> => {
+    return await AsyncStorage.getItem(KEYS.SYNC_TIMESTAMP);
+  },
+
+  updateSyncTime: async (): Promise<void> => {
+    await AsyncStorage.setItem(KEYS.SYNC_TIMESTAMP, new Date().toISOString());
+  },
+
+  // Force sync all data to CloudKit
+  forceSyncAll: async (): Promise<void> => {
+    if (!SyncService.isCloudKitAvailable()) return;
+
+    const allKeys = Object.values(KEYS);
+    for (const key of allKeys) {
+      try {
+        const localData = await AsyncStorage.getItem(key);
+        if (localData && CloudKitStorage) {
+          await CloudKitStorage.setItem(key, localData);
+        }
+      } catch (error) {
+        console.log(`Error syncing ${key}:`, error);
+      }
+    }
+    await SyncService.updateSyncTime();
+  },
+
+  // Pull all data from CloudKit
+  pullFromCloud: async (): Promise<void> => {
+    if (!SyncService.isCloudKitAvailable()) return;
+
+    const allKeys = Object.values(KEYS);
+    for (const key of allKeys) {
+      try {
+        if (CloudKitStorage) {
+          const cloudData = await CloudKitStorage.getItem(key);
+          if (cloudData) {
+            await AsyncStorage.setItem(key, cloudData);
+          }
+        }
+      } catch (error) {
+        console.log(`Error pulling ${key} from cloud:`, error);
+      }
+    }
+    await SyncService.updateSyncTime();
+  },
+};
+
+// Generic CRUD operations using unified storage
 const getItems = async <T>(key: string): Promise<T[]> => {
   try {
-    const data = await AsyncStorage.getItem(key);
+    const data = await storage.getItem(key);
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error(`Error getting ${key}:`, error);
@@ -30,7 +193,7 @@ const getItems = async <T>(key: string): Promise<T[]> => {
 
 const setItems = async <T>(key: string, items: T[]): Promise<void> => {
   try {
-    await AsyncStorage.setItem(key, JSON.stringify(items));
+    await storage.setItem(key, JSON.stringify(items));
   } catch (error) {
     console.error(`Error setting ${key}:`, error);
   }
@@ -482,7 +645,7 @@ export interface Settings {
 export const SettingsService = {
   get: async (): Promise<Settings> => {
     try {
-      const data = await AsyncStorage.getItem(KEYS.SETTINGS);
+      const data = await storage.getItem(KEYS.SETTINGS);
       return data ? JSON.parse(data) : {};
     } catch (error) {
       console.error('Error getting settings:', error);
@@ -494,7 +657,7 @@ export const SettingsService = {
     try {
       const current = await SettingsService.get();
       const updated = { ...current, ...data };
-      await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(updated));
+      await storage.setItem(KEYS.SETTINGS, JSON.stringify(updated));
       return updated;
     } catch (error) {
       console.error('Error updating settings:', error);
@@ -513,6 +676,7 @@ export const LocalStorage = {
   Checklists: ChecklistService,
   ChecklistTemplates: ChecklistTemplateService,
   Settings: SettingsService,
+  Sync: SyncService,
 };
 
 export default LocalStorage;

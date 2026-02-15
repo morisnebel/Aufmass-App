@@ -306,7 +306,7 @@ export default function HomeScreen() {
           onPress={importProjectFile}
         >
           <Ionicons name="cloud-download" size={24} color="#4caf50" />
-          <Text style={styles.importButtonText}>Projekt importieren</Text>
+          <Text style={styles.importButtonText}>Projekt aus Datei importieren</Text>
         </TouchableOpacity>
       </View>
 

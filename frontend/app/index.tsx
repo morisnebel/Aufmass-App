@@ -58,6 +58,132 @@ export default function HomeScreen() {
     loadData();
   };
 
+  // Import project from .aufmass file
+  const importProjectFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/json', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+      
+      const file = result.assets[0];
+      
+      // Check file extension
+      if (!file.name?.endsWith('.aufmass') && !file.name?.endsWith('.json')) {
+        Alert.alert('Fehler', 'Bitte wählen Sie eine .aufmass Datei aus');
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Read file content
+      const content = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      const importData = JSON.parse(content);
+      
+      // Validate import data
+      if (!importData.project || !importData.version) {
+        Alert.alert('Fehler', 'Ungültige Projektdatei');
+        setLoading(false);
+        return;
+      }
+      
+      // Generate new IDs for imported data
+      const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+      const newProjectId = generateId();
+      const now = new Date().toISOString();
+      
+      // Import customer if exists
+      let newCustomerId = importData.project.customer_id;
+      if (importData.customer) {
+        const existingCustomer = await CustomerService.getById(importData.customer.id);
+        if (!existingCustomer) {
+          newCustomerId = generateId();
+          await CustomerService.create({
+            ...importData.customer,
+            id: undefined,
+            created_at: undefined,
+            updated_at: undefined,
+          });
+        }
+      }
+      
+      // Import project with new ID
+      const projectData = {
+        ...importData.project,
+        name: `${importData.project.name} (Import)`,
+        customer_id: newCustomerId,
+      };
+      delete projectData.id;
+      delete projectData.created_at;
+      delete projectData.updated_at;
+      
+      const newProject = await ProjectService.create(projectData);
+      
+      // Import roofs
+      if (importData.roofs && importData.roofs.length > 0) {
+        for (const roof of importData.roofs) {
+          const roofData = { ...roof, project_id: newProject.id };
+          delete roofData.id;
+          delete roofData.created_at;
+          delete roofData.updated_at;
+          await RoofService.create(roofData);
+        }
+      }
+      
+      // Import photos
+      if (importData.photos && importData.photos.length > 0) {
+        for (const photo of importData.photos) {
+          const photoData = { ...photo, project_id: newProject.id };
+          delete photoData.id;
+          delete photoData.created_at;
+          delete photoData.updated_at;
+          await PhotoService.create(photoData);
+        }
+      }
+      
+      // Import sketches
+      if (importData.sketches && importData.sketches.length > 0) {
+        for (const sketch of importData.sketches) {
+          const sketchData = { ...sketch, project_id: newProject.id };
+          delete sketchData.id;
+          delete sketchData.created_at;
+          delete sketchData.updated_at;
+          await SketchService.create(sketchData);
+        }
+      }
+      
+      // Import checklists
+      if (importData.checklists && importData.checklists.length > 0) {
+        for (const checklist of importData.checklists) {
+          const checklistData = { ...checklist, project_id: newProject.id };
+          delete checklistData.id;
+          delete checklistData.created_at;
+          delete checklistData.updated_at;
+          await ChecklistService.create(checklistData);
+        }
+      }
+      
+      await loadData();
+      Alert.alert('Erfolg', `Projekt "${importData.project.name}" wurde importiert`);
+      
+      // Navigate to the imported project
+      router.push(`/projects/${newProject.id}`);
+      
+    } catch (error) {
+      console.error('Error importing project:', error);
+      Alert.alert('Fehler', 'Projekt konnte nicht importiert werden');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteProject = async (projectId: string) => {
     Alert.alert(
       'Projekt löschen',

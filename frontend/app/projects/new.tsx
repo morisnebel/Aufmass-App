@@ -152,8 +152,6 @@ export default function NewProjectScreen() {
       
       // Verwende InteractionManager für bessere Performance
       // Dies wartet bis alle Animationen abgeschlossen sind
-      const InteractionManager = require('react-native').InteractionManager;
-      
       InteractionManager.runAfterInteractions(async () => {
         setShowContactPicker(true);
         setLoadingContacts(true);

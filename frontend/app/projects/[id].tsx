@@ -765,6 +765,25 @@ export default function ProjectDetailScreen() {
           .photo-full {
             width: 100%;
           }
+          /* Photo wrapper for annotation overlay */
+          .photo-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+          }
+          .photo-wrapper img {
+            display: block;
+            width: 100%;
+            height: auto;
+          }
+          .photo-annotations {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+          }
           /* Sketch sizes */
           .sketch-small {
             width: calc(33.33% - 10px);

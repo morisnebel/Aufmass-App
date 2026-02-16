@@ -391,17 +391,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  importButton: {
+  importButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#e8f5e9',
     borderWidth: 2,
     borderColor: '#4caf50',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     marginTop: 8,
+    marginHorizontal: 16,
+    gap: 10,
   },
   importButtonText: {
     color: '#2e7d32',
     fontSize: 15,
     fontWeight: '700',
-    marginLeft: 8,
   },
   projectList: {
     padding: 16,

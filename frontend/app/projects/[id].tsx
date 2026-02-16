@@ -1313,21 +1313,6 @@ export default function ProjectDetailScreen() {
       setIsGeneratingPdf(false);
     }
   };
-      }
-      
-      // Share the file
-      await Sharing.shareAsync(filePath, {
-        mimeType: 'application/json',
-        dialogTitle: 'Projekt exportieren',
-      });
-      
-    } catch (error: any) {
-      console.error('Export error:', error);
-      Alert.alert('Export Fehler', error?.message || String(error));
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
 
   if (loading) {
     return (

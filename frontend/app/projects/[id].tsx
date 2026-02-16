@@ -1270,47 +1270,55 @@ export default function ProjectDetailScreen() {
       };
       
       // Convert to JSON string
-      let jsonString: string;
-      try {
-        jsonString = JSON.stringify(exportData);
-      } catch (e: any) {
-        Alert.alert('Fehler', 'Daten konnten nicht konvertiert werden: ' + e.message);
-        setIsGeneratingPdf(false);
-        return;
-      }
+      const jsonString = JSON.stringify(exportData, null, 2);
       
       // Get safe filename
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `${safeName}.aufmass`;
       
-      // Try documentDirectory first, then cacheDirectory
-      let baseDir = FileSystem.documentDirectory;
-      if (!baseDir) {
-        baseDir = FileSystem.cacheDirectory;
-      }
+      // Create HTML that will be "printed" to PDF, but we share as text file
+      const htmlContent = `<!DOCTYPE html><html><body><pre>${jsonString}</pre></body></html>`;
       
-      if (!baseDir) {
-        Alert.alert('Fehler', 'Kein Speicherort verfügbar');
-        setIsGeneratingPdf(false);
-        return;
-      }
+      // Use Print to create a file, then share it
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
       
-      const filePath = baseDir + fileName;
-      
-      // Write file
-      await FileSystem.writeAsStringAsync(filePath, jsonString, {
-        encoding: FileSystem.EncodingType.UTF8
+      // Rename the file to .aufmass extension
+      const newUri = uri.replace('.pdf', '.aufmass');
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newUri,
       });
       
       // Share the file
-      await Sharing.shareAsync(filePath, {
+      await Sharing.shareAsync(newUri, {
         mimeType: 'application/json',
         dialogTitle: 'Projekt speichern',
       });
       
     } catch (error: any) {
       console.error('Export error:', error);
-      Alert.alert('Export Fehler', error?.message || String(error));
+      // Fallback: Share as text
+      try {
+        const exportData = {
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          project: project || {},
+          customer: customer || {},
+          roofs: roofs || [],
+          photos: photos || [],
+          sketches: sketches || [],
+          checklists: checklists || [],
+        };
+        const jsonString = JSON.stringify(exportData);
+        await Share.share({
+          message: jsonString,
+          title: `${project?.name || 'Projekt'}.aufmass`,
+        });
+      } catch (shareError) {
+        Alert.alert('Export Fehler', 'Export nicht möglich');
+      }
     } finally {
       setIsGeneratingPdf(false);
     }

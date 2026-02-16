@@ -1283,12 +1283,14 @@ export default function ProjectDetailScreen() {
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${safeName}.aufmass`;
       
-      // Use documentDirectory (available in standalone builds)
-      const baseDir = FileSystem.documentDirectory;
+      // Try documentDirectory first, then cacheDirectory
+      let baseDir = FileSystem.documentDirectory;
+      if (!baseDir) {
+        baseDir = FileSystem.cacheDirectory;
+      }
       
       if (!baseDir) {
-        // This should not happen in a standalone build
-        Alert.alert('Fehler', 'Speicherort nicht verfügbar. Bitte App neu starten.');
+        Alert.alert('Fehler', 'Kein Speicherort verfügbar');
         setIsGeneratingPdf(false);
         return;
       }

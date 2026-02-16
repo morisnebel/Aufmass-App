@@ -1286,19 +1286,14 @@ export default function ProjectDetailScreen() {
       // Try different directories
       let baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
       
-      // If no directory available, create a data URI and share
+      // If no directory available, share as text
       if (!baseDir) {
-        // Fallback: Use base64 data URI approach
-        const base64Data = btoa(unescape(encodeURIComponent(jsonString)));
-        const dataUri = `data:application/json;base64,${base64Data}`;
-        
-        // Try to share directly
         try {
           await Share.share({
-            message: jsonString,
+            message: jsonString.substring(0, 5000) + '\n\n... (gekürzt)',
             title: fileName,
           });
-          Alert.alert('Info', 'Projekt-Daten wurden geteilt. Speichern Sie den Text in einer Datei mit der Endung .aufmass');
+          Alert.alert('Hinweis', 'Nur in TestFlight: Volle Export-Funktion mit Datei-Speicherung verfügbar.');
         } catch (shareError) {
           Alert.alert('Fehler', 'Export nicht möglich in Expo Go. Bitte TestFlight Build verwenden.');
         }

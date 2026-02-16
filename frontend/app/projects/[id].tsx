@@ -1283,20 +1283,12 @@ export default function ProjectDetailScreen() {
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${safeName}.aufmass`;
       
-      // Try different directories
-      let baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+      // Use documentDirectory (available in standalone builds)
+      const baseDir = FileSystem.documentDirectory;
       
-      // If no directory available, share as text
       if (!baseDir) {
-        try {
-          await Share.share({
-            message: jsonString.substring(0, 5000) + '\n\n... (gekürzt)',
-            title: fileName,
-          });
-          Alert.alert('Hinweis', 'Nur in TestFlight: Volle Export-Funktion mit Datei-Speicherung verfügbar.');
-        } catch (shareError) {
-          Alert.alert('Fehler', 'Export nicht möglich in Expo Go. Bitte TestFlight Build verwenden.');
-        }
+        // This should not happen in a standalone build
+        Alert.alert('Fehler', 'Speicherort nicht verfügbar. Bitte App neu starten.');
         setIsGeneratingPdf(false);
         return;
       }
@@ -1304,20 +1296,23 @@ export default function ProjectDetailScreen() {
       const filePath = baseDir + fileName;
       
       // Write file
-      try {
-        await FileSystem.writeAsStringAsync(filePath, jsonString);
-      } catch (e: any) {
-        Alert.alert('Fehler beim Schreiben', e.message);
-        setIsGeneratingPdf(false);
-        return;
-      }
+      await FileSystem.writeAsStringAsync(filePath, jsonString, {
+        encoding: FileSystem.EncodingType.UTF8
+      });
       
-      // Check if sharing is available
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('Fehler', 'Teilen nicht verfügbar');
-        setIsGeneratingPdf(false);
-        return;
+      // Share the file
+      await Sharing.shareAsync(filePath, {
+        mimeType: 'application/json',
+        dialogTitle: 'Projekt speichern',
+      });
+      
+    } catch (error: any) {
+      console.error('Export error:', error);
+      Alert.alert('Export Fehler', error?.message || String(error));
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
       }
       
       // Share the file

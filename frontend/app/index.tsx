@@ -393,13 +393,15 @@ const styles = StyleSheet.create({
   },
   importButton: {
     backgroundColor: '#e8f5e9',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#4caf50',
+    marginTop: 8,
   },
   importButtonText: {
-    color: '#4caf50',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#2e7d32',
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   projectList: {
     padding: 16,

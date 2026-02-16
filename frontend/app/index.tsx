@@ -72,9 +72,10 @@ export default function HomeScreen() {
       
       const file = result.assets[0];
       
-      // Check file extension
-      if (!file.name?.endsWith('.aufmass') && !file.name?.endsWith('.json')) {
-        Alert.alert('Fehler', 'Bitte wählen Sie eine .aufmass Datei aus');
+      // Accept .aufmass, .json and .txt files
+      const fileName = file.name?.toLowerCase() || '';
+      if (!fileName.endsWith('.aufmass') && !fileName.endsWith('.json') && !fileName.endsWith('.txt')) {
+        Alert.alert('Fehler', 'Bitte wählen Sie eine .aufmass, .json oder .txt Datei aus');
         return;
       }
       
@@ -85,7 +86,15 @@ export default function HomeScreen() {
         encoding: FileSystem.EncodingType.UTF8,
       });
       
-      const importData = JSON.parse(content);
+      // Clean up content - remove truncation markers if present
+      let cleanContent = content;
+      if (content.includes('... (gekürzt)')) {
+        Alert.alert('Fehler', 'Die Datei ist unvollständig. Bitte exportieren Sie das Projekt erneut.');
+        setLoading(false);
+        return;
+      }
+      
+      const importData = JSON.parse(cleanContent);
       
       // Validate import data
       if (!importData.project || !importData.version) {

@@ -1283,15 +1283,15 @@ export default function ProjectDetailScreen() {
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${safeName}.aufmass`;
       
-      // Get document directory
-      const docDir = FileSystem.documentDirectory;
-      if (!docDir) {
-        Alert.alert('Fehler', 'Dokumentverzeichnis nicht verfügbar');
+      // Get cache directory (works better in Expo Go)
+      const cacheDir = FileSystem.cacheDirectory;
+      if (!cacheDir) {
+        Alert.alert('Fehler', 'Cache-Verzeichnis nicht verfügbar');
         setIsGeneratingPdf(false);
         return;
       }
       
-      const filePath = docDir + fileName;
+      const filePath = cacheDir + fileName;
       
       // Write file
       try {

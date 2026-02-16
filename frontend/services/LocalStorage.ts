@@ -148,7 +148,9 @@ export const removeSyncListener = (callback: SyncCallback) => {
 // ============ SYNC STATUS ============
 export const SyncService = {
   isCloudKitAvailable: (): boolean => {
-    return Platform.OS === 'ios' && CloudKitStorage !== null;
+    // CloudKit is currently disabled - always return false
+    return false;
+    // Original: return Platform.OS === 'ios' && CloudKitStorage !== null && !cloudKitFailed;
   },
 
   getLastSyncTime: async (): Promise<string | null> => {

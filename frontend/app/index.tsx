@@ -302,10 +302,10 @@ export default function HomeScreen() {
 
         {/* Import Button */}
         <TouchableOpacity
-          style={[styles.button, styles.importButton]}
+          style={styles.importButtonContainer}
           onPress={importProjectFile}
         >
-          <Ionicons name="cloud-download" size={24} color="#4caf50" />
+          <Ionicons name="cloud-download" size={22} color="#2e7d32" />
           <Text style={styles.importButtonText}>Projekt aus Datei importieren</Text>
         </TouchableOpacity>
       </View>

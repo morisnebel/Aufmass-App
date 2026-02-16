@@ -1270,16 +1270,23 @@ export default function ProjectDetailScreen() {
       };
       
       // Convert to JSON string
-      const jsonString = JSON.stringify(exportData);
+      let jsonString: string;
+      try {
+        jsonString = JSON.stringify(exportData);
+      } catch (e: any) {
+        Alert.alert('Fehler', 'Daten konnten nicht konvertiert werden: ' + e.message);
+        setIsGeneratingPdf(false);
+        return;
+      }
       
       // Get safe filename
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${safeName}.aufmass`;
       
-      // Get document directory (more reliable than cache)
+      // Get document directory
       const docDir = FileSystem.documentDirectory;
       if (!docDir) {
-        Alert.alert('Fehler', 'Speicherort nicht verfügbar');
+        Alert.alert('Fehler', 'Dokumentverzeichnis nicht verfügbar');
         setIsGeneratingPdf(false);
         return;
       }
@@ -1287,7 +1294,21 @@ export default function ProjectDetailScreen() {
       const filePath = docDir + fileName;
       
       // Write file
-      await FileSystem.writeAsStringAsync(filePath, jsonString);
+      try {
+        await FileSystem.writeAsStringAsync(filePath, jsonString);
+      } catch (e: any) {
+        Alert.alert('Fehler beim Schreiben', e.message);
+        setIsGeneratingPdf(false);
+        return;
+      }
+      
+      // Check if sharing is available
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Fehler', 'Teilen nicht verfügbar');
+        setIsGeneratingPdf(false);
+        return;
+      }
       
       // Share the file
       await Sharing.shareAsync(filePath, {
@@ -1297,7 +1318,7 @@ export default function ProjectDetailScreen() {
       
     } catch (error: any) {
       console.error('Export error:', error);
-      Alert.alert('Export Fehler', error?.message || 'Unbekannter Fehler');
+      Alert.alert('Export Fehler', error?.message || String(error));
     } finally {
       setIsGeneratingPdf(false);
     }

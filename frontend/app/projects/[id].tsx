@@ -1261,39 +1261,43 @@ export default function ProjectDetailScreen() {
       const exportData = {
         version: '1.0',
         exportDate: new Date().toISOString(),
-        project: project,
-        customer: customer,
-        roofs: roofs,
-        photos: photos,
-        sketches: sketches,
-        checklists: checklists,
+        project: project || {},
+        customer: customer || {},
+        roofs: roofs || [],
+        photos: photos || [],
+        sketches: sketches || [],
+        checklists: checklists || [],
       };
       
       // Convert to JSON string
-      const jsonString = JSON.stringify(exportData, null, 2);
+      const jsonString = JSON.stringify(exportData);
       
-      // Write to temporary file
-      const fileName = `${project?.name?.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_') || 'projekt'}.aufmass`;
-      const tempPath = `${FileSystem.cacheDirectory}${fileName}`;
+      // Get safe filename
+      const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${safeName}.aufmass`;
       
-      await FileSystem.writeAsStringAsync(tempPath, jsonString, {
-        encoding: FileSystem.EncodingType.UTF8,
+      // Get document directory (more reliable than cache)
+      const docDir = FileSystem.documentDirectory;
+      if (!docDir) {
+        Alert.alert('Fehler', 'Speicherort nicht verfügbar');
+        setIsGeneratingPdf(false);
+        return;
+      }
+      
+      const filePath = docDir + fileName;
+      
+      // Write file
+      await FileSystem.writeAsStringAsync(filePath, jsonString);
+      
+      // Share the file
+      await Sharing.shareAsync(filePath, {
+        mimeType: 'application/json',
+        dialogTitle: 'Projekt exportieren',
       });
       
-      // Share the file (allows saving to iCloud Drive)
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(tempPath, {
-          mimeType: 'application/json',
-          dialogTitle: 'Projekt exportieren',
-          UTI: 'public.json',
-        });
-      } else {
-        Alert.alert('Fehler', 'Export nicht verfügbar auf diesem Gerät');
-      }
-    } catch (error) {
-      console.error('Error exporting project:', error);
-      Alert.alert('Fehler', 'Projekt konnte nicht exportiert werden');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      Alert.alert('Export Fehler', error?.message || 'Unbekannter Fehler');
     } finally {
       setIsGeneratingPdf(false);
     }

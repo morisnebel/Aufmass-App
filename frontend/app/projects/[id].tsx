@@ -1283,15 +1283,30 @@ export default function ProjectDetailScreen() {
       const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `${safeName}.aufmass`;
       
-      // Get cache directory (works better in Expo Go)
-      const cacheDir = FileSystem.cacheDirectory;
-      if (!cacheDir) {
-        Alert.alert('Fehler', 'Cache-Verzeichnis nicht verfügbar');
+      // Try different directories
+      let baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+      
+      // If no directory available, create a data URI and share
+      if (!baseDir) {
+        // Fallback: Use base64 data URI approach
+        const base64Data = btoa(unescape(encodeURIComponent(jsonString)));
+        const dataUri = `data:application/json;base64,${base64Data}`;
+        
+        // Try to share directly
+        try {
+          await Share.share({
+            message: jsonString,
+            title: fileName,
+          });
+          Alert.alert('Info', 'Projekt-Daten wurden geteilt. Speichern Sie den Text in einer Datei mit der Endung .aufmass');
+        } catch (shareError) {
+          Alert.alert('Fehler', 'Export nicht möglich in Expo Go. Bitte TestFlight Build verwenden.');
+        }
         setIsGeneratingPdf(false);
         return;
       }
       
-      const filePath = cacheDir + fileName;
+      const filePath = baseDir + fileName;
       
       // Write file
       try {

@@ -2822,6 +2822,13 @@ const styles = StyleSheet.create({
     color: '#555',
     flex: 1,
   },
+  emptyHint: {
+    fontSize: 13,
+    color: '#999',
+    fontStyle: 'italic',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
   checkedBadge: {
     backgroundColor: '#e8f5e9',
     paddingHorizontal: 8,

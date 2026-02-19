@@ -524,6 +524,20 @@ export default function EditChecklistScreen() {
             item.checked && styles.checklistItemChecked,
             !isMainItem && styles.subItemCard,
           ]}>
+            {/* Einklappen-Button (nur wenn Unterpunkte vorhanden) */}
+            {hasSubItems && (
+              <TouchableOpacity
+                style={styles.collapseButton}
+                onPress={() => toggleCollapse(path)}
+              >
+                <Ionicons 
+                  name={isCollapsed(path) ? "chevron-forward" : "chevron-down"} 
+                  size={20} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+            )}
+            
             {/* Checkbox */}
             <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchable}>
               <Ionicons
@@ -548,10 +562,10 @@ export default function EditChecklistScreen() {
                 {item.text}
               </Text>
               
-              {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
-              {hasSubItems && !item.checked && (
+              {/* Hinweis auf Unterpunkte wenn eingeklappt */}
+              {hasSubItems && isCollapsed(path) && (
                 <Text style={styles.subItemsHint}>
-                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''} ausgeblendet
                 </Text>
               )}
             </TouchableOpacity>

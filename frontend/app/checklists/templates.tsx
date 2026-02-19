@@ -83,6 +83,8 @@ export default function ChecklistTemplatesScreen() {
   const [showModal, setShowModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateItems, setNewTemplateItems] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -94,6 +96,108 @@ export default function ChecklistTemplatesScreen() {
       setTemplates(data);
     } catch (error) {
       console.error('Error loading templates:', error);
+    }
+  };
+
+  // Export a single template
+  const exportTemplate = async (template: ChecklistTemplate) => {
+    setIsExporting(true);
+    try {
+      const exportData = {
+        type: 'aufmass_checklist_template',
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        template: {
+          name: template.name,
+          items: template.items,
+        },
+      };
+
+      const fileName = `${template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_')}.checklistvorlage`;
+      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+
+      await writeAsStringAsync(filePath, JSON.stringify(exportData, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'application/json',
+          dialogTitle: `Checklisten-Vorlage "${template.name}" teilen`,
+          UTI: 'public.json',
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
+      }
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      Alert.alert('Fehler', 'Vorlage konnte nicht exportiert werden');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Import a template from file
+  const importTemplate = async () => {
+    setIsImporting(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        setIsImporting(false);
+        return;
+      }
+
+      const file = result.assets[0];
+      
+      // Check file extension
+      if (!file.name.endsWith('.checklistvorlage')) {
+        Alert.alert('Fehler', 'Bitte wählen Sie eine .checklistvorlage Datei aus');
+        setIsImporting(false);
+        return;
+      }
+
+      const fileContent = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const importData = JSON.parse(fileContent);
+
+      // Validate import data
+      if (importData.type !== 'aufmass_checklist_template' || !importData.template) {
+        Alert.alert('Fehler', 'Ungültiges Dateiformat');
+        setIsImporting(false);
+        return;
+      }
+
+      const { template } = importData;
+
+      // Check if template with same name exists
+      const existingTemplates = await ChecklistTemplateService.getAll();
+      const nameExists = existingTemplates.some(t => t.name === template.name);
+      
+      let finalName = template.name;
+      if (nameExists) {
+        finalName = `${template.name} (Import)`;
+      }
+
+      // Create the template
+      await ChecklistTemplateService.create({
+        name: finalName,
+        items: template.items,
+      });
+
+      await loadTemplates();
+      Alert.alert('Erfolg', `Vorlage "${finalName}" wurde importiert`);
+    } catch (error) {
+      console.error('Error importing template:', error);
+      Alert.alert('Fehler', 'Vorlage konnte nicht importiert werden');
+    } finally {
+      setIsImporting(false);
     }
   };
 

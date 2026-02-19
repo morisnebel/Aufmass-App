@@ -1922,14 +1922,14 @@ export default function ProjectDetailScreen() {
                 return items
                   .filter(item => item.checked)
                   .map((item, index) => (
-                    <View key={`sub-${depth}-${index}`} style={styles.compactSubItem}>
-                      <Ionicons name="checkmark" size={12} color="#4caf50" />
-                      <Text style={styles.compactSubItemText} numberOfLines={1}>{item.text}</Text>
+                    <View key={`sub-${depth}-${index}`}>
+                      <View style={[styles.compactSubItem, { marginLeft: depth * 8 }]}>
+                        <Ionicons name="checkmark" size={12} color="#4caf50" />
+                        <Text style={styles.compactSubItemText} numberOfLines={2}>{item.text}</Text>
+                      </View>
                       {/* Rekursiv tiefere Unterpunkte */}
                       {item.subItems && item.subItems.length > 0 && (
-                        <View style={styles.nestedSubItems}>
-                          {renderSubItems(item.subItems, depth + 1)}
-                        </View>
+                        renderSubItems(item.subItems, depth + 1)
                       )}
                     </View>
                   ));

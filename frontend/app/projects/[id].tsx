@@ -1906,27 +1906,41 @@ export default function ProjectDetailScreen() {
                 return total;
               };
               
-              // Rekursive Render-Funktion für abgehakte Unterpunkte in der Vorschau
-              const renderCheckedSubItems = (subItems: any[], depth: number = 0): React.ReactNode => {
-                return subItems
-                  .filter(sub => sub.checked)
-                  .map((subItem, subIndex) => (
-                    <View key={`${depth}-${subIndex}`}>
-                      <View style={[styles.subItemRow, { marginLeft: depth * 12 }]}>
+              // Rekursiv alle Items zählen
+              const countTotalItemsRecursive = (items: any[]): number => {
+                let total = items.length;
+                items.forEach(item => {
+                  if (item.subItems && item.subItems.length > 0) {
+                    total += countTotalItemsRecursive(item.subItems);
+                  }
+                });
+                return total;
+              };
+              
+              // Rekursive Render-Funktion für abgehakte Items
+              const renderCheckedItems = (items: any[], depth: number = 0): React.ReactNode => {
+                return items
+                  .filter(item => item.checked)
+                  .map((item, index) => (
+                    <View key={`${depth}-${index}`}>
+                      <View style={[styles.checklistItem, { marginLeft: depth * 16 }]}>
                         <Ionicons
                           name="checkbox"
-                          size={16}
+                          size={depth === 0 ? 20 : 16}
                           color="#4caf50"
                         />
-                        <Text style={styles.subItemText}>{subItem.text}</Text>
+                        <Text style={[styles.checklistText, depth > 0 && styles.subItemText]}>{item.text}</Text>
                       </View>
                       {/* Rekursiv tiefere abgehakte Unterpunkte anzeigen */}
-                      {subItem.subItems && subItem.subItems.length > 0 && (
-                        renderCheckedSubItems(subItem.subItems, depth + 1)
+                      {item.subItems && item.subItems.length > 0 && (
+                        renderCheckedItems(item.subItems, depth + 1)
                       )}
                     </View>
                   ));
               };
+              
+              const checkedCount = countCheckedItemsRecursive(checklist.items);
+              const totalCount = countTotalItemsRecursive(checklist.items);
               
               return (
                 <View key={checklist.id} style={styles.checklistCardWrapper}>
@@ -1938,36 +1952,20 @@ export default function ProjectDetailScreen() {
                       <Text style={styles.itemTitle}>{checklist.template_name}</Text>
                       <View style={styles.checkedBadge}>
                         <Text style={styles.checkedBadgeText}>
-                          {countCheckedItemsRecursive(checklist.items)} benötigt
+                          {checkedCount} von {totalCount}
                         </Text>
                       </View>
                       <Ionicons name="create-outline" size={20} color="#1976d2" />
                     </View>
                     
-                    {/* Zeige alle Items mit ihren Unterpositionen */}
-                    {checklist.items.map((item, index) => (
-                      <View key={index} style={styles.checklistItemContainer}>
-                        {/* Hauptpunkt */}
-                        <View style={styles.checklistItem}>
-                          <Ionicons
-                            name={item.checked ? 'checkbox' : 'square-outline'}
-                            size={20}
-                            color={item.checked ? '#4caf50' : '#666'}
-                          />
-                          <Text style={styles.checklistText}>{item.text}</Text>
-                        </View>
-                        
-                        {/* Alle abgehakten Unterpositionen rekursiv anzeigen */}
-                        {item.subItems && item.subItems.length > 0 && (
-                          <View style={styles.subItemsList}>
-                            {renderCheckedSubItems(item.subItems, 0)}
-                          </View>
-                        )}
-                        
-                        {/* Notiz anzeigen, falls vorhanden */}
-                        {item.note && item.note.trim() !== '' && (
-                          <View style={styles.noteDisplay}>
-                            <Ionicons name="document-text-outline" size={14} color="#888" />
+                    {/* Zeige NUR abgehakte Items */}
+                    {checkedCount > 0 ? (
+                      <View style={styles.checklistItemContainer}>
+                        {renderCheckedItems(checklist.items, 0)}
+                      </View>
+                    ) : (
+                      <Text style={styles.emptyHint}>Noch keine Positionen abgehakt</Text>
+                    )}
                             <Text style={styles.noteDisplayText}>{item.note}</Text>
                           </View>
                         )}

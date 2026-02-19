@@ -560,8 +560,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 10,
   },
+  itemInputWithCollapse: {
+    flex: 1,
+  },
   removeButton: {
     padding: 8,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 6,
+  },
+  collapseButton: {
+    padding: 4,
+  },
+  collapsedHint: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    marginTop: 8,
+    marginLeft: 24,
+  },
+  collapsedHintText: {
+    color: '#666',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  clipboardBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffcc80',
+    gap: 8,
+  },
+  clipboardBarText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#e65100',
   },
   subItemsSection: {
     marginTop: 8,

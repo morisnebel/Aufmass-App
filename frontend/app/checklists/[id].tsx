@@ -537,6 +537,24 @@ export default function EditChecklistScreen() {
             
             {/* Action Buttons */}
             <View style={styles.itemActions}>
+              {/* Kopieren Button */}
+              <TouchableOpacity 
+                onPress={() => copyItem(path)}
+                style={styles.actionButton}
+              >
+                <Ionicons name="copy-outline" size={18} color="#ff9800" />
+              </TouchableOpacity>
+              
+              {/* Einfügen Button (nur wenn etwas kopiert wurde) */}
+              {copiedItem && (
+                <TouchableOpacity 
+                  onPress={() => pasteItemAfter(path)}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="clipboard-outline" size={18} color="#4caf50" />
+                </TouchableOpacity>
+              )}
+              
               {/* Bearbeiten Button */}
               <TouchableOpacity 
                 onPress={() => startEditing(path, item.text)}

@@ -13,10 +13,15 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
+import * as FileSystem from 'expo-file-system';
+import { writeAsStringAsync } from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
 interface SubItem {
   text: string;

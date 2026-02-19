@@ -2188,6 +2188,14 @@ export default function ProjectDetailScreen() {
                             )}
                           </View>
                           
+                          {/* Notiz für Hauptkategorie */}
+                          {category.note && (
+                            <View style={styles.categoryNoteContainer}>
+                              <Ionicons name="document-text-outline" size={14} color="#ff9800" />
+                              <Text style={styles.categoryNoteText}>{category.note}</Text>
+                            </View>
+                          )}
+                          
                           {/* Grid mit Level 1 Containern */}
                           {checkedLevel1Items.length > 0 ? (
                             <View style={styles.level1Grid}>

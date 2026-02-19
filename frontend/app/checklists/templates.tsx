@@ -117,28 +117,13 @@ export default function ChecklistTemplatesScreen() {
       const jsonString = JSON.stringify(exportData, null, 2);
       const safeName = template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
       
-      // Use Print to create a temporary file with JSON content
-      const htmlContent = `<!DOCTYPE html><html><body><pre>${jsonString}</pre></body></html>`;
+      // Create file in cache directory
+      const fileUri = `${cacheDirectory}${safeName}.checklistvorlage`;
       
-      const { uri } = await Print.printToFileAsync({
-        html: htmlContent,
-        base64: false,
-      });
-      
-      // Copy to new location with correct extension
-      const directory = uri.substring(0, uri.lastIndexOf('/') + 1);
-      const newUri = `${directory}${safeName}.checklistvorlage`;
-      
-      await copyAsync({
-        from: uri,
-        to: newUri,
-      });
-      
-      // Delete the original PDF
-      await deleteAsync(uri, { idempotent: true });
+      await writeAsStringAsync(fileUri, jsonString);
 
       // Share the file
-      await Sharing.shareAsync(newUri, {
+      await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
         dialogTitle: `Vorlage "${template.name}" teilen`,
       });

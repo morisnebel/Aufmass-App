@@ -162,7 +162,7 @@ export default function ChecklistTemplatesScreen() {
       }
 
       const fileContent = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.UTF8,
+        encoding: EncodingType.UTF8,
       });
 
       const importData = JSON.parse(fileContent);

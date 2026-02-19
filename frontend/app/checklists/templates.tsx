@@ -114,26 +114,50 @@ export default function ChecklistTemplatesScreen() {
         },
       };
 
-      const fileName = `${template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_')}.checklistvorlage`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
-
-      await writeAsStringAsync(filePath, JSON.stringify(exportData, null, 2), {
-        encoding: EncodingType.UTF8,
+      const jsonString = JSON.stringify(exportData, null, 2);
+      
+      // Use Print to create a temporary file
+      const htmlContent = `<!DOCTYPE html><html><body><pre>${jsonString}</pre></body></html>`;
+      
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+      
+      // Rename to .checklistvorlage extension
+      const safeName = template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
+      const newUri = uri.replace('.pdf', `.checklistvorlage`);
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newUri,
       });
 
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(filePath, {
-          mimeType: 'application/json',
-          dialogTitle: `Checklisten-Vorlage "${template.name}" teilen`,
-          UTI: 'public.json',
-        });
-      } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
-      }
-    } catch (error) {
+      // Share the file
+      await Sharing.shareAsync(newUri, {
+        mimeType: 'application/json',
+        dialogTitle: `Vorlage "${template.name}" teilen`,
+      });
+    } catch (error: any) {
       console.error('Error exporting template:', error);
-      Alert.alert('Fehler', 'Vorlage konnte nicht exportiert werden');
+      // Fallback: Share as text
+      try {
+        const exportData = {
+          type: 'aufmass_checklist_template',
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          template: {
+            name: template.name,
+            items: template.items,
+          },
+        };
+        const jsonString = JSON.stringify(exportData);
+        await Share.share({
+          message: jsonString,
+          title: `${template.name}.checklistvorlage`,
+        });
+      } catch (shareError) {
+        Alert.alert('Fehler', 'Vorlage konnte nicht exportiert werden');
+      }
     } finally {
       setIsExporting(false);
     }

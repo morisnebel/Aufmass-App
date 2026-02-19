@@ -627,8 +627,8 @@ export default function EditChecklistScreen() {
           </View>
         )}
 
-        {/* Expanded Content - nur wenn abgehakt */}
-        {item.checked && (
+        {/* Expanded Content - nur wenn abgehakt und nicht eingeklappt */}
+        {item.checked && !isCollapsed(path) && (
           <View style={[styles.expandedContent, { marginLeft: 8 }]}>
             {/* Vorhandene Unterpunkte rekursiv rendern */}
             {hasSubItems && (

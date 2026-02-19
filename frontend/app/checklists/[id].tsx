@@ -714,6 +714,16 @@ export default function EditChecklistScreen() {
         {hasChanges && (
           <Text style={styles.unsavedHint}>Nicht gespeicherte Änderungen</Text>
         )}
+        {/* Zwischenablage-Anzeige */}
+        {copiedItem && (
+          <View style={styles.clipboardInfo}>
+            <Ionicons name="clipboard" size={14} color="#ff9800" />
+            <Text style={styles.clipboardText}>Kopiert: "{copiedItem.text.substring(0, 25)}{copiedItem.text.length > 25 ? '...' : ''}"</Text>
+            <TouchableOpacity onPress={() => setCopiedItem(null)}>
+              <Ionicons name="close-circle" size={18} color="#999" />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.progressBar}>
           <View
             style={[

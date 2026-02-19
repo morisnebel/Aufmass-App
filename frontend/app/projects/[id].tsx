@@ -2989,15 +2989,21 @@ const styles = StyleSheet.create({
   },
   compactSubItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 3,
-    paddingVertical: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
   },
   compactSubItemText: {
     fontSize: 11,
     color: '#555',
     flex: 1,
     lineHeight: 14,
+  },
+  subItemPrefix: {
+    fontSize: 9,
+    color: '#999',
+    fontWeight: '500',
+    minWidth: 28,
   },
   nestedSubItems: {
     marginLeft: 10,

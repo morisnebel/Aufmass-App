@@ -418,6 +418,19 @@ export default function EditTemplateScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Zwischenablage-Anzeige */}
+      {copiedItem && (
+        <View style={styles.clipboardBar}>
+          <Ionicons name="clipboard" size={16} color="#ff9800" />
+          <Text style={styles.clipboardBarText}>
+            Kopiert: "{copiedItem.text.substring(0, 30)}{copiedItem.text.length > 30 ? '...' : ''}"
+          </Text>
+          <TouchableOpacity onPress={() => setCopiedItem(null)}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+      )}
+      
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.inputGroup}>

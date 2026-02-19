@@ -1917,26 +1917,66 @@ export default function ProjectDetailScreen() {
                 return total;
               };
               
-              // Rekursive Render-Funktion für abgehakte Items
-              const renderCheckedItems = (items: any[], depth: number = 0): React.ReactNode => {
+              // Rekursive Render-Funktion für Unterpunkte (ab Level 2)
+              const renderSubItems = (items: any[], depth: number = 0): React.ReactNode => {
                 return items
                   .filter(item => item.checked)
                   .map((item, index) => (
-                    <View key={`${depth}-${index}`}>
-                      <View style={[styles.checklistItem, { marginLeft: depth * 16 }]}>
-                        <Ionicons
-                          name="checkbox"
-                          size={depth === 0 ? 20 : 16}
-                          color="#4caf50"
-                        />
-                        <Text style={[styles.checklistText, depth > 0 && styles.subItemText]}>{item.text}</Text>
-                      </View>
-                      {/* Rekursiv tiefere abgehakte Unterpunkte anzeigen */}
+                    <View key={`sub-${depth}-${index}`} style={styles.compactSubItem}>
+                      <Ionicons name="checkmark" size={12} color="#4caf50" />
+                      <Text style={styles.compactSubItemText} numberOfLines={1}>{item.text}</Text>
+                      {/* Rekursiv tiefere Unterpunkte */}
                       {item.subItems && item.subItems.length > 0 && (
-                        renderCheckedItems(item.subItems, depth + 1)
+                        <View style={styles.nestedSubItems}>
+                          {renderSubItems(item.subItems, depth + 1)}
+                        </View>
                       )}
                     </View>
                   ));
+              };
+              
+              // Hauptkategorien (Level 1) mit ihren Unterpunkten als Container
+              const renderCategoryContainers = (items: any[]): React.ReactNode => {
+                // Nur abgehakte Hauptkategorien filtern
+                const checkedCategories = items.filter(item => item.checked);
+                
+                if (checkedCategories.length === 0) {
+                  return <Text style={styles.emptyHint}>Noch keine Positionen abgehakt</Text>;
+                }
+                
+                return (
+                  <View style={styles.categoryGrid}>
+                    {checkedCategories.map((category, catIndex) => {
+                      // Zähle abgehakte Unterpunkte in dieser Kategorie
+                      const checkedSubCount = category.subItems 
+                        ? countCheckedItemsRecursive(category.subItems)
+                        : 0;
+                      const totalSubCount = category.subItems 
+                        ? countTotalItemsRecursive(category.subItems)
+                        : 0;
+                      
+                      return (
+                        <View key={`cat-${catIndex}`} style={styles.categoryContainer}>
+                          {/* Kategorie-Überschrift */}
+                          <View style={styles.categoryHeader}>
+                            <Ionicons name="checkbox" size={16} color="#4caf50" />
+                            <Text style={styles.categoryTitle} numberOfLines={1}>{category.text}</Text>
+                            {totalSubCount > 0 && (
+                              <Text style={styles.categoryCount}>{checkedSubCount}/{totalSubCount}</Text>
+                            )}
+                          </View>
+                          
+                          {/* Unterpunkte kompakt */}
+                          {category.subItems && category.subItems.length > 0 && (
+                            <View style={styles.categoryContent}>
+                              {renderSubItems(category.subItems, 0)}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
               };
               
               const checkedCount = countCheckedItemsRecursive(checklist.items);
@@ -1945,27 +1985,24 @@ export default function ProjectDetailScreen() {
               return (
                 <View key={checklist.id} style={styles.checklistCardWrapper}>
                   <TouchableOpacity
-                    style={[styles.itemCard, { marginHorizontal: 0 }]}
+                    style={styles.compactChecklistCard}
                     onPress={() => router.push(`/checklists/${checklist.id}`)}
                   >
-                    <View style={styles.itemHeader}>
-                      <Text style={styles.itemTitle}>{checklist.template_name}</Text>
-                      <View style={styles.checkedBadge}>
-                        <Text style={styles.checkedBadgeText}>
-                          {checkedCount} von {totalCount}
-                        </Text>
+                    {/* Hauptüberschrift - prominent hervorgehoben */}
+                    <View style={styles.checklistMainHeader}>
+                      <Text style={styles.checklistMainTitle}>{checklist.template_name}</Text>
+                      <View style={styles.headerRight}>
+                        <View style={styles.checkedBadge}>
+                          <Text style={styles.checkedBadgeText}>
+                            {checkedCount} von {totalCount}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#1976d2" />
                       </View>
-                      <Ionicons name="create-outline" size={20} color="#1976d2" />
                     </View>
                     
-                    {/* Zeige NUR abgehakte Items */}
-                    {checkedCount > 0 ? (
-                      <View style={styles.checklistItemContainer}>
-                        {renderCheckedItems(checklist.items, 0)}
-                      </View>
-                    ) : (
-                      <Text style={styles.emptyHint}>Noch keine Positionen abgehakt</Text>
-                    )}
+                    {/* Kategorie-Container Grid */}
+                    {renderCategoryContainers(checklist.items)}
                   </TouchableOpacity>
                   
                   {/* Delete Button */}

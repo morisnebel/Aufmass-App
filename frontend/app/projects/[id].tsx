@@ -879,6 +879,15 @@ export default function ProjectDetailScreen() {
             color: #4caf50;
             font-weight: 600;
           }
+          .pdf-category-note {
+            background: #fff8e1;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #f57c00;
+            font-style: italic;
+            margin-bottom: 8px;
+          }
           .pdf-level1-grid {
             display: flex;
             flex-wrap: wrap;

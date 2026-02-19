@@ -44,6 +44,8 @@ export default function EditChecklistScreen() {
   const [openInputs, setOpenInputs] = useState<Set<string>>(new Set());
   // State für Bearbeitungsmodus (path -> text)
   const [editingItems, setEditingItems] = useState<{[key: string]: string}>({});
+  // State für kopiertes Item (Zwischenablage)
+  const [copiedItem, setCopiedItem] = useState<RecursiveItem | null>(null);
 
   useEffect(() => {
     loadChecklist();

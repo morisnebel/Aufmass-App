@@ -258,8 +258,15 @@ export default function ChecklistTemplatesScreen() {
         <Ionicons name="list" size={24} color="#1976d2" />
         <Text style={styles.templateName}>{item.name}</Text>
         <TouchableOpacity 
+          onPress={() => exportTemplate(item)}
+          style={styles.actionButton}
+          disabled={isExporting}
+        >
+          <Ionicons name="share-outline" size={20} color="#4caf50" />
+        </TouchableOpacity>
+        <TouchableOpacity 
           onPress={() => router.push(`/checklists/edit-template?templateId=${item.id}`)}
-          style={styles.editButton}
+          style={styles.actionButton}
         >
           <Ionicons name="create-outline" size={20} color="#1976d2" />
         </TouchableOpacity>

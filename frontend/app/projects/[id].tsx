@@ -1917,22 +1917,23 @@ export default function ProjectDetailScreen() {
                 return total;
               };
               
-              // Rekursive Render-Funktion für Unterpunkte (ab Level 2)
-              const renderSubItems = (items: any[], depth: number = 0): React.ReactNode => {
-                return items
-                  .filter(item => item.checked)
-                  .map((item, index) => (
-                    <View key={`sub-${depth}-${index}`}>
-                      <View style={[styles.compactSubItem, { marginLeft: depth * 8 }]}>
-                        <Ionicons name="checkmark" size={12} color="#4caf50" />
-                        <Text style={styles.compactSubItemText} numberOfLines={2}>{item.text}</Text>
-                      </View>
-                      {/* Rekursiv tiefere Unterpunkte */}
-                      {item.subItems && item.subItems.length > 0 && (
-                        renderSubItems(item.subItems, depth + 1)
-                      )}
-                    </View>
-                  ));
+              // Flache Liste aller abgehakten Items mit Hierarchie-Präfix erstellen
+              const flattenCheckedItems = (items: any[], prefix: string = ''): { text: string; level: number; prefix: string }[] => {
+                const result: { text: string; level: number; prefix: string }[] = [];
+                items.forEach((item, index) => {
+                  const currentPrefix = prefix ? `${prefix}.${index + 1}` : `${index + 1}`;
+                  if (item.checked) {
+                    result.push({
+                      text: item.text,
+                      level: prefix.split('.').length,
+                      prefix: currentPrefix,
+                    });
+                  }
+                  if (item.subItems && item.subItems.length > 0) {
+                    result.push(...flattenCheckedItems(item.subItems, currentPrefix));
+                  }
+                });
+                return result;
               };
               
               // Hauptkategorien (Level 1) mit ihren Unterpunkten als Container
@@ -1947,7 +1948,11 @@ export default function ProjectDetailScreen() {
                 return (
                   <View style={styles.categoryGrid}>
                     {checkedCategories.map((category, catIndex) => {
-                      // Zähle abgehakte Unterpunkte in dieser Kategorie
+                      // Alle abgehakten Unterpunkte flach auflisten
+                      const allCheckedSubItems = category.subItems 
+                        ? flattenCheckedItems(category.subItems, `${catIndex + 1}`)
+                        : [];
+                      
                       const checkedSubCount = category.subItems 
                         ? countCheckedItemsRecursive(category.subItems)
                         : 0;
@@ -1966,10 +1971,22 @@ export default function ProjectDetailScreen() {
                             )}
                           </View>
                           
-                          {/* Unterpunkte kompakt */}
-                          {category.subItems && category.subItems.length > 0 && (
+                          {/* Alle Unterpunkte flach anzeigen */}
+                          {allCheckedSubItems.length > 0 && (
                             <View style={styles.categoryContent}>
-                              {renderSubItems(category.subItems, 0)}
+                              {allCheckedSubItems.map((subItem, subIndex) => (
+                                <View 
+                                  key={`sub-${catIndex}-${subIndex}`} 
+                                  style={[
+                                    styles.compactSubItem,
+                                    { paddingLeft: (subItem.level - 1) * 10 }
+                                  ]}
+                                >
+                                  <Text style={styles.subItemPrefix}>{subItem.prefix}</Text>
+                                  <Ionicons name="checkmark" size={11} color="#4caf50" />
+                                  <Text style={styles.compactSubItemText} numberOfLines={1}>{subItem.text}</Text>
+                                </View>
+                              ))}
                             </View>
                           )}
                         </View>

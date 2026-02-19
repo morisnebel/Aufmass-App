@@ -400,6 +400,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingBox: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 15,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
   header: {
     backgroundColor: '#fff',
     padding: 16,
@@ -411,7 +434,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 12,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   addButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -422,6 +450,21 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#1976d2',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  importButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 8,
+    gap: 8,
+  },
+  importButtonText: {
+    color: '#4caf50',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -445,7 +488,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 12,
   },
-  editButton: {
+  actionButton: {
     padding: 4,
   },
   templateName: {

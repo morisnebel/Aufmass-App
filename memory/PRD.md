@@ -20,13 +20,19 @@ Mobile app for roof measurement professionals to document projects, take photos,
 
 ## What's Been Implemented
 
-### December 2025 (Latest Session)
+### December 2025 (Latest Session - 19.02.2026)
 - **[NEW] Kompaktes Checklisten-Grid Layout**
   - Hauptüberschrift (z.B. "Aufmaß Standard") prominent hervorgehoben mit blauer Unterstreichung
-  - Kategorien (Vorarbeiten, Dacheindeckung, etc.) als eigenständige Container mit grünem Rand
-  - Container werden nebeneinander im Grid angeordnet (platzsparend)
-  - Kompakte Darstellung der Unterpunkte mit kleiner Schrift
+  - Kategorien (Vorarbeiten, Dacheindeckung, etc.) als separate Überschriften mit grüner Linie
+  - Container für 1.1, 1.2, 2.1 etc. mit blauem Badge - nebeneinander im Grid (platzsparend)
+  - Alle Unterpunkte hierarchisch mit Nummerierung (1.1.1, 1.1.1.1, etc.)
+  - **Notizen** werden auf allen Ebenen in gelben Boxen angezeigt
   - Files modified: `frontend/app/projects/[id].tsx`
+
+- **[NEW] PDF-Layout für Checklisten**
+  - Identisches Layout wie in der App-Vorschau
+  - Hauptüberschrift, Kategorien, Container mit Unterpunkten
+  - Notizen werden im PDF angezeigt
 
 - **[NEW] Checklist Copy/Paste Feature**
   - Copy and paste checklist items in both project checklists and templates

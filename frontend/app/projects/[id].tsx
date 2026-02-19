@@ -1918,19 +1918,26 @@ export default function ProjectDetailScreen() {
               };
               
               // Flache Liste aller abgehakten Items mit Hierarchie-Präfix erstellen
-              const flattenCheckedItems = (items: any[], prefix: string = ''): { text: string; level: number; prefix: string }[] => {
+              // Startet bei Level 1 mit X.1, X.2, etc. (X = Kategorie-Index)
+              const flattenCheckedItems = (items: any[], categoryIndex: number, prefix: string = ''): { text: string; level: number; prefix: string }[] => {
                 const result: { text: string; level: number; prefix: string }[] = [];
                 items.forEach((item, index) => {
-                  const currentPrefix = prefix ? `${prefix}.${index + 1}` : `${index + 1}`;
+                  // Erste Ebene: X.1, X.2, etc.
+                  // Tiefere Ebenen: X.1.1, X.1.2, etc.
+                  const currentPrefix = prefix 
+                    ? `${prefix}.${index + 1}` 
+                    : `${categoryIndex}.${index + 1}`;
+                  const currentLevel = prefix ? prefix.split('.').length : 0;
+                  
                   if (item.checked) {
                     result.push({
                       text: item.text,
-                      level: prefix.split('.').length,
+                      level: currentLevel,
                       prefix: currentPrefix,
                     });
                   }
                   if (item.subItems && item.subItems.length > 0) {
-                    result.push(...flattenCheckedItems(item.subItems, currentPrefix));
+                    result.push(...flattenCheckedItems(item.subItems, categoryIndex, currentPrefix));
                   }
                 });
                 return result;
@@ -1948,9 +1955,9 @@ export default function ProjectDetailScreen() {
                 return (
                   <View style={styles.categoryGrid}>
                     {checkedCategories.map((category, catIndex) => {
-                      // Alle abgehakten Unterpunkte flach auflisten
+                      // Alle abgehakten Unterpunkte flach auflisten (Kategorie-Index + 1)
                       const allCheckedSubItems = category.subItems 
-                        ? flattenCheckedItems(category.subItems, `${catIndex + 1}`)
+                        ? flattenCheckedItems(category.subItems, catIndex + 1, '')
                         : [];
                       
                       const checkedSubCount = category.subItems 
@@ -1979,7 +1986,7 @@ export default function ProjectDetailScreen() {
                                   key={`sub-${catIndex}-${subIndex}`} 
                                   style={[
                                     styles.compactSubItem,
-                                    { paddingLeft: (subItem.level - 1) * 10 }
+                                    { paddingLeft: subItem.level * 10 }
                                   ]}
                                 >
                                   <Text style={styles.subItemPrefix}>{subItem.prefix}</Text>

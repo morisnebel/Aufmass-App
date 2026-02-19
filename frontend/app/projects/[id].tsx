@@ -3245,6 +3245,21 @@ const styles = StyleSheet.create({
     color: '#4caf50',
     fontWeight: '600',
   },
+  categoryNoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#fff8e1',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  categoryNoteText: {
+    fontSize: 12,
+    color: '#f57c00',
+    flex: 1,
+    fontStyle: 'italic',
+  },
   level1Grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

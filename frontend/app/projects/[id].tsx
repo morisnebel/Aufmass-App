@@ -2195,20 +2195,36 @@ export default function ProjectDetailScreen() {
                                       <Text style={styles.level1Title} numberOfLines={2}>{level1Item.text}</Text>
                                     </View>
                                     
+                                    {/* Notiz für Level 1 Item */}
+                                    {level1Item.note && (
+                                      <View style={styles.noteContainer}>
+                                        <Ionicons name="document-text-outline" size={12} color="#ff9800" />
+                                        <Text style={styles.noteText}>{level1Item.note}</Text>
+                                      </View>
+                                    )}
+                                    
                                     {/* Tiefere Unterpunkte */}
                                     {deepSubItems.length > 0 && (
                                       <View style={styles.level1Content}>
                                         {deepSubItems.map((subItem, subIndex) => (
-                                          <View 
-                                            key={`deep-${subIndex}`} 
-                                            style={[
-                                              styles.deepSubItem,
-                                              { paddingLeft: subItem.level * 8 }
-                                            ]}
-                                          >
-                                            <Text style={styles.deepSubPrefix}>{subItem.prefix}</Text>
-                                            <Ionicons name="checkmark" size={10} color="#4caf50" />
-                                            <Text style={styles.deepSubText} numberOfLines={1}>{subItem.text}</Text>
+                                          <View key={`deep-${subIndex}`}>
+                                            <View 
+                                              style={[
+                                                styles.deepSubItem,
+                                                { paddingLeft: subItem.level * 8 }
+                                              ]}
+                                            >
+                                              <Text style={styles.deepSubPrefix}>{subItem.prefix}</Text>
+                                              <Ionicons name="checkmark" size={10} color="#4caf50" />
+                                              <Text style={styles.deepSubText} numberOfLines={1}>{subItem.text}</Text>
+                                            </View>
+                                            {/* Notiz für Unterposition */}
+                                            {subItem.note && (
+                                              <View style={[styles.deepNoteContainer, { marginLeft: subItem.level * 8 + 36 }]}>
+                                                <Ionicons name="document-text-outline" size={10} color="#ff9800" />
+                                                <Text style={styles.deepNoteText}>{subItem.note}</Text>
+                                              </View>
+                                            )}
                                           </View>
                                         ))}
                                       </View>

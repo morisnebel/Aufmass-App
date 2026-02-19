@@ -313,6 +313,25 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
+  // Ein-/Ausklappen eines Items
+  const toggleCollapse = (path: number[]) => {
+    const pathKey = path.join('-');
+    setCollapsedPaths(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pathKey)) {
+        newSet.delete(pathKey);
+      } else {
+        newSet.add(pathKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Prüfen ob ein Item eingeklappt ist
+  const isCollapsed = (path: number[]): boolean => {
+    return collapsedPaths.has(path.join('-'));
+  };
+
   // Unterpunkt löschen (legacy - jetzt durch deleteItem ersetzt)
   const removeSubItem = (parentPath: number[], subIndex: number) => {
     if (!checklist) return;

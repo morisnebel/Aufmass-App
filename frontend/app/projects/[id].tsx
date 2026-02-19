@@ -2117,8 +2117,8 @@ export default function ProjectDetailScreen() {
               };
               
               // Flache Liste aller tieferen Unterpunkte (ab Level 2) erstellen
-              const flattenDeepSubItems = (items: any[], basePrefix: string): { text: string; level: number; prefix: string }[] => {
-                const result: { text: string; level: number; prefix: string }[] = [];
+              const flattenDeepSubItems = (items: any[], basePrefix: string): { text: string; level: number; prefix: string; note?: string }[] => {
+                const result: { text: string; level: number; prefix: string; note?: string }[] = [];
                 items.forEach((item, index) => {
                   const currentPrefix = `${basePrefix}.${index + 1}`;
                   const currentLevel = currentPrefix.split('.').length - 2; // Level relativ zum Container
@@ -2128,6 +2128,7 @@ export default function ProjectDetailScreen() {
                       text: item.text,
                       level: currentLevel,
                       prefix: currentPrefix,
+                      note: item.note,
                     });
                   }
                   if (item.subItems && item.subItems.length > 0) {

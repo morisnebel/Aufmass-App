@@ -186,11 +186,21 @@ export default function ChecklistTemplatesScreen() {
         return;
       }
 
-      const fileContent = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: EncodingType.UTF8,
-      });
-
-      const importData = JSON.parse(fileContent);
+      const fileContent = await FileSystem.readAsStringAsync(file.uri);
+      
+      // Try to parse as JSON - the file might be a PDF with JSON content
+      let importData;
+      try {
+        importData = JSON.parse(fileContent);
+      } catch {
+        // If direct parsing fails, try to extract JSON from content
+        const jsonMatch = fileContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          importData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Keine gültigen Daten gefunden');
+        }
+      }
 
       // Validate import data
       if (importData.type !== 'aufmass_checklist_template' || !importData.template) {

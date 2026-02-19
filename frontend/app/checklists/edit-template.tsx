@@ -140,6 +140,97 @@ export default function EditTemplateScreen() {
     setItems(removeItemAtPath(items, path));
   };
 
+  // Ein-/Ausklappen eines Items
+  const toggleCollapse = (path: number[]) => {
+    const pathKey = path.join('-');
+    setCollapsedPaths(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pathKey)) {
+        newSet.delete(pathKey);
+      } else {
+        newSet.add(pathKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Prüfen ob ein Item eingeklappt ist
+  const isCollapsed = (path: number[]): boolean => {
+    return collapsedPaths.has(path.join('-'));
+  };
+
+  // Item kopieren (deep copy)
+  const copyItem = (path: number[]) => {
+    const getItemAtPath = (items: RecursiveTemplateItem[], p: number[]): RecursiveTemplateItem | null => {
+      if (p.length === 0) return null;
+      if (p.length === 1) return items[p[0]];
+      const [first, ...rest] = p;
+      return getItemAtPath(items[first].subItems, rest);
+    };
+    
+    const item = getItemAtPath(items, path);
+    if (!item) return;
+    
+    // Deep copy des Items
+    const deepCopy = (obj: RecursiveTemplateItem): RecursiveTemplateItem => ({
+      text: obj.text,
+      subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+    });
+    
+    setCopiedItem(deepCopy(item));
+    Alert.alert('Kopiert', `"${item.text}" wurde kopiert`);
+  };
+
+  // Item einfügen (nach einer Position)
+  const pasteItemAfter = (path: number[]) => {
+    if (!copiedItem) {
+      Alert.alert('Hinweis', 'Kein Element in der Zwischenablage');
+      return;
+    }
+    
+    // Deep copy des kopierten Items
+    const deepCopy = (obj: RecursiveTemplateItem): RecursiveTemplateItem => ({
+      text: obj.text,
+      subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+    });
+    
+    const itemToInsert = deepCopy(copiedItem);
+    
+    if (path.length === 1) {
+      // Einfügen auf Hauptebene
+      const insertIndex = path[0] + 1;
+      setItems([
+        ...items.slice(0, insertIndex),
+        itemToInsert,
+        ...items.slice(insertIndex),
+      ]);
+    } else {
+      // Einfügen als Unterpunkt
+      const parentPath = path.slice(0, -1);
+      const insertIndex = path[path.length - 1] + 1;
+      
+      const getItemAtPath = (items: RecursiveTemplateItem[], p: number[]): RecursiveTemplateItem | null => {
+        if (p.length === 0) return null;
+        if (p.length === 1) return items[p[0]];
+        const [first, ...rest] = p;
+        return getItemAtPath(items[first].subItems, rest);
+      };
+      
+      const parentItem = getItemAtPath(items, parentPath);
+      if (!parentItem) return;
+      
+      const newSubItems = [
+        ...parentItem.subItems.slice(0, insertIndex),
+        itemToInsert,
+        ...parentItem.subItems.slice(insertIndex),
+      ];
+      
+      setItems(updateItemAtPath(items, parentPath, { subItems: newSubItems }));
+    }
+    
+    Alert.alert('Eingefügt', `"${copiedItem.text}" wurde eingefügt`);
+  };
+
   // Unterpunkt hinzufügen
   const addSubItem = (path: number[]) => {
     const getItemAtPath = (items: RecursiveTemplateItem[], path: number[]): RecursiveTemplateItem | null => {

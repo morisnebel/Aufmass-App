@@ -943,6 +943,19 @@ export default function ProjectDetailScreen() {
             color: #444;
             flex: 1;
           }
+          .pdf-note {
+            background: #fff8e1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            color: #f57c00;
+            font-style: italic;
+            margin-top: 3px;
+            margin-bottom: 3px;
+          }
+          .pdf-note-icon {
+            margin-right: 4px;
+          }
           .photos-grid, .sketches-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);

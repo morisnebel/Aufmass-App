@@ -495,13 +495,13 @@ export default function ProjectDetailScreen() {
     
     // Generate checklists HTML with new hierarchical layout
     // Helper: Flatten deep sub-items for PDF
-    const flattenDeepSubItemsForPdf = (items: any[], basePrefix: string): { text: string; level: number; prefix: string }[] => {
-      const result: { text: string; level: number; prefix: string }[] = [];
+    const flattenDeepSubItemsForPdf = (items: any[], basePrefix: string): { text: string; level: number; prefix: string; note?: string }[] => {
+      const result: { text: string; level: number; prefix: string; note?: string }[] = [];
       items.forEach((item, index) => {
         const currentPrefix = `${basePrefix}.${index + 1}`;
         const currentLevel = currentPrefix.split('.').length - 2;
         if (item.checked) {
-          result.push({ text: item.text, level: currentLevel, prefix: currentPrefix });
+          result.push({ text: item.text, level: currentLevel, prefix: currentPrefix, note: item.note });
         }
         if (item.subItems && item.subItems.length > 0) {
           result.push(...flattenDeepSubItemsForPdf(item.subItems, currentPrefix));

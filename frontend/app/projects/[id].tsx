@@ -3064,18 +3064,18 @@ const styles = StyleSheet.create({
   deepSubItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingVertical: 1,
+    gap: 4,
+    paddingVertical: 2,
   },
   deepSubPrefix: {
-    fontSize: 9,
-    color: '#888',
-    fontWeight: '500',
-    minWidth: 32,
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '600',
+    minWidth: 36,
   },
   deepSubText: {
-    fontSize: 10,
-    color: '#555',
+    fontSize: 12,
+    color: '#444',
     flex: 1,
   },
   noSubItemsHint: {

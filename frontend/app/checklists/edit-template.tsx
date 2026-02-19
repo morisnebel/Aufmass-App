@@ -35,6 +35,10 @@ export default function EditTemplateScreen() {
   const [items, setItems] = useState<RecursiveTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // State für kopiertes Item (Zwischenablage)
+  const [copiedItem, setCopiedItem] = useState<RecursiveTemplateItem | null>(null);
+  // State für eingeklappte Items (Set von Pfaden als String)
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (templateId) {

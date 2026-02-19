@@ -192,7 +192,7 @@ export default function ChecklistTemplatesScreen() {
         return;
       }
 
-      const fileContent = await FileSystem.readAsStringAsync(file.uri);
+      const fileContent = await readAsStringAsync(file.uri);
       
       // Try to parse as JSON - the file might be a PDF with JSON content
       let importData;

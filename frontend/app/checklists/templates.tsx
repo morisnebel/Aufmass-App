@@ -117,7 +117,7 @@ export default function ChecklistTemplatesScreen() {
       const filePath = `${FileSystem.documentDirectory}${fileName}`;
 
       await writeAsStringAsync(filePath, JSON.stringify(exportData, null, 2), {
-        encoding: FileSystem.EncodingType.UTF8,
+        encoding: EncodingType.UTF8,
       });
 
       const canShare = await Sharing.isAvailableAsync();

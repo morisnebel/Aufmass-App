@@ -282,22 +282,6 @@ export default function ChecklistTemplatesScreen() {
       <View style={styles.templateHeader}>
         <Ionicons name="list" size={24} color="#1976d2" />
         <Text style={styles.templateName}>{item.name}</Text>
-        <TouchableOpacity 
-          onPress={() => exportTemplate(item)}
-          style={styles.actionButton}
-          disabled={isExporting}
-        >
-          <Ionicons name="share-outline" size={20} color="#4caf50" />
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={() => router.push(`/checklists/edit-template?templateId=${item.id}`)}
-          style={styles.actionButton}
-        >
-          <Ionicons name="create-outline" size={20} color="#1976d2" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => deleteTemplate(item.id)}>
-          <Ionicons name="trash-outline" size={20} color="#f44336" />
-        </TouchableOpacity>
       </View>
       <Text style={styles.itemCount}>{item.items.length} Punkte</Text>
       <View style={styles.itemsList}>
@@ -309,6 +293,33 @@ export default function ChecklistTemplatesScreen() {
         {item.items.length > 3 && (
           <Text style={styles.moreItems}>+ {item.items.length - 3} weitere</Text>
         )}
+      </View>
+      
+      {/* Button Row - separate line for better touch targets */}
+      <View style={styles.actionButtonRow}>
+        <TouchableOpacity 
+          onPress={() => exportTemplate(item)}
+          style={styles.actionButtonExport}
+          disabled={isExporting}
+        >
+          <Ionicons name="share-outline" size={20} color="#fff" />
+          <Text style={styles.actionButtonTextExport}>Exportieren</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          onPress={() => router.push(`/checklists/edit-template?templateId=${item.id}`)}
+          style={styles.actionButtonEdit}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Text style={styles.actionButtonTextEdit}>Bearbeiten</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          onPress={() => deleteTemplate(item.id)}
+          style={styles.actionButtonDelete}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
     </View>
   );

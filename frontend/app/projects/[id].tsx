@@ -1966,11 +1966,6 @@ export default function ProjectDetailScreen() {
                     ) : (
                       <Text style={styles.emptyHint}>Noch keine Positionen abgehakt</Text>
                     )}
-                            <Text style={styles.noteDisplayText}>{item.note}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ))}
                   </TouchableOpacity>
                   
                   {/* Delete Button */}

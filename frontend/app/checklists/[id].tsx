@@ -332,6 +332,87 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
+  // Item kopieren (deep copy)
+  const copyItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], p: number[]): RecursiveItem | null => {
+      if (p.length === 0) return null;
+      if (p.length === 1) return items[p[0]];
+      const [first, ...rest] = p;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    // Deep copy des Items
+    const deepCopy = (obj: RecursiveItem): RecursiveItem => ({
+      text: obj.text,
+      checked: false, // Beim Kopieren als unchecked setzen
+      note: obj.note || '',
+      subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+    });
+    
+    setCopiedItem(deepCopy(item));
+    Alert.alert('Kopiert', `"${item.text}" wurde kopiert`);
+  };
+
+  // Item einfügen (nach einer Position)
+  const pasteItemAfter = (path: number[]) => {
+    if (!checklist || !copiedItem) {
+      Alert.alert('Hinweis', 'Kein Element in der Zwischenablage');
+      return;
+    }
+    
+    // Deep copy des kopierten Items
+    const deepCopy = (obj: RecursiveItem): RecursiveItem => ({
+      text: obj.text,
+      checked: obj.checked,
+      note: obj.note || '',
+      subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+    });
+    
+    const itemToInsert = deepCopy(copiedItem);
+    
+    if (path.length === 1) {
+      // Einfügen auf Hauptebene
+      const insertIndex = path[0] + 1;
+      const newItems = [
+        ...checklist.items.slice(0, insertIndex),
+        itemToInsert,
+        ...checklist.items.slice(insertIndex),
+      ];
+      setChecklist({ ...checklist, items: newItems });
+    } else {
+      // Einfügen als Unterpunkt
+      const parentPath = path.slice(0, -1);
+      const insertIndex = path[path.length - 1] + 1;
+      
+      const getItemAtPath = (items: RecursiveItem[], p: number[]): RecursiveItem | null => {
+        if (p.length === 0) return null;
+        if (p.length === 1) return items[p[0]];
+        const [first, ...rest] = p;
+        return getItemAtPath(items[first].subItems || [], rest);
+      };
+      
+      const parentItem = getItemAtPath(checklist.items, parentPath);
+      if (!parentItem || !parentItem.subItems) return;
+      
+      const newSubItems = [
+        ...parentItem.subItems.slice(0, insertIndex),
+        itemToInsert,
+        ...parentItem.subItems.slice(insertIndex),
+      ];
+      
+      const newItems = updateItemAtPath(checklist.items, parentPath, { subItems: newSubItems });
+      setChecklist({ ...checklist, items: newItems });
+    }
+    
+    setHasChanges(true);
+    Alert.alert('Eingefügt', `"${copiedItem.text}" wurde eingefügt`);
+  };
+
   // Stilles Speichern (ohne Alert) mit Retry
   const saveChecklistSilent = async (retries = 3) => {
     if (!checklist || saving) return;

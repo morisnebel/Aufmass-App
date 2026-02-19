@@ -565,6 +565,7 @@ export default function ProjectDetailScreen() {
               <span class="pdf-checkmark">✓</span>
               <span class="pdf-deep-text">${sub.text}</span>
             </div>
+            ${sub.note ? `<div class="pdf-note" style="margin-left: ${sub.level * 10 + 36}px;"><span class="pdf-note-icon">📝</span> ${sub.note}</div>` : ''}
           `).join('');
           
           return `
@@ -574,6 +575,7 @@ export default function ProjectDetailScreen() {
                 <span class="pdf-checkmark-circle">✓</span>
                 <span class="pdf-level1-title">${l1Item.text}</span>
               </div>
+              ${l1Item.note ? `<div class="pdf-note"><span class="pdf-note-icon">📝</span> ${l1Item.note}</div>` : ''}
               ${deepSubs.length > 0 ? `<div class="pdf-level1-content">${deepSubsHtml}</div>` : ''}
             </div>
           `;

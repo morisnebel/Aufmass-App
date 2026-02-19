@@ -850,6 +850,21 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 6,
   },
+  clipboardInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 6,
+  },
+  clipboardText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#e65100',
+  },
   editingContainer: {
     backgroundColor: '#fff',
     padding: 12,

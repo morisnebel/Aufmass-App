@@ -831,6 +831,116 @@ export default function ProjectDetailScreen() {
           .roof-card h4, .checklist-card h4 {
             margin-top: 0;
           }
+          /* New checklist PDF styles */
+          .checklist-main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1976d2;
+            margin-bottom: 12px;
+          }
+          .checklist-main-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1976d2;
+          }
+          .checklist-main-count {
+            font-size: 12px;
+            color: #4caf50;
+            font-weight: 600;
+          }
+          .pdf-category-section {
+            margin-bottom: 14px;
+          }
+          .pdf-category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #4caf50;
+            margin-bottom: 8px;
+          }
+          .pdf-cat-check {
+            color: #4caf50;
+            font-weight: bold;
+          }
+          .pdf-category-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #333;
+            flex: 1;
+          }
+          .pdf-category-count {
+            font-size: 11px;
+            color: #4caf50;
+            font-weight: 600;
+          }
+          .pdf-level1-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+          .pdf-level1-container {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #1976d2;
+            border-radius: 6px;
+            padding: 8px;
+            min-width: 45%;
+            flex: 1;
+            box-sizing: border-box;
+          }
+          .pdf-level1-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 6px;
+          }
+          .pdf-level1-prefix {
+            background: #1976d2;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+          .pdf-checkmark-circle {
+            color: #4caf50;
+            font-size: 12px;
+          }
+          .pdf-level1-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+          }
+          .pdf-level1-content {
+            padding-left: 4px;
+          }
+          .pdf-deep-sub {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 0;
+          }
+          .pdf-deep-prefix {
+            font-size: 10px;
+            color: #666;
+            font-weight: 600;
+            min-width: 30px;
+          }
+          .pdf-checkmark {
+            color: #4caf50;
+            font-size: 10px;
+          }
+          .pdf-deep-text {
+            font-size: 10px;
+            color: #444;
+            flex: 1;
+          }
           .photos-grid, .sketches-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);

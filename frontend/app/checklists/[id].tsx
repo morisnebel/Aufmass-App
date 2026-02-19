@@ -107,9 +107,28 @@ export default function EditChecklistScreen() {
           });
         };
         
+        const convertedItems = convertItems(foundChecklist.items);
+        
+        // Alle Items mit Unterpunkten standardmäßig einklappen
+        const collectPathsWithSubItems = (items: RecursiveItem[], basePath: number[] = []): string[] => {
+          const paths: string[] = [];
+          items.forEach((item, index) => {
+            const currentPath = [...basePath, index];
+            if (item.subItems && item.subItems.length > 0) {
+              paths.push(currentPath.join('-'));
+              // Rekursiv auch Unterpunkte prüfen
+              paths.push(...collectPathsWithSubItems(item.subItems, currentPath));
+            }
+          });
+          return paths;
+        };
+        
+        const pathsToCollapse = collectPathsWithSubItems(convertedItems);
+        setCollapsedPaths(new Set(pathsToCollapse));
+        
         setChecklist({
           ...foundChecklist,
-          items: convertItems(foundChecklist.items),
+          items: convertedItems,
         });
       } else {
         Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');

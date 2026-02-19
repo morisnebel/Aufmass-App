@@ -130,13 +130,13 @@ export default function ChecklistTemplatesScreen() {
       const directory = uri.substring(0, uri.lastIndexOf('/') + 1);
       const newUri = `${directory}${safeName}.checklistvorlage`;
       
-      await FileSystem.copyAsync({
+      await copyAsync({
         from: uri,
         to: newUri,
       });
       
       // Delete the original PDF
-      await FileSystem.deleteAsync(uri, { idempotent: true });
+      await deleteAsync(uri, { idempotent: true });
 
       // Share the file
       await Sharing.shareAsync(newUri, {

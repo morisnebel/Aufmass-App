@@ -1917,17 +1917,12 @@ export default function ProjectDetailScreen() {
                 return total;
               };
               
-              // Flache Liste aller abgehakten Items mit Hierarchie-Präfix erstellen
-              // Startet bei Level 1 mit X.1, X.2, etc. (X = Kategorie-Index)
-              const flattenCheckedItems = (items: any[], categoryIndex: number, prefix: string = ''): { text: string; level: number; prefix: string }[] => {
+              // Flache Liste aller tieferen Unterpunkte (ab Level 2) erstellen
+              const flattenDeepSubItems = (items: any[], basePrefix: string): { text: string; level: number; prefix: string }[] => {
                 const result: { text: string; level: number; prefix: string }[] = [];
                 items.forEach((item, index) => {
-                  // Erste Ebene: X.1, X.2, etc.
-                  // Tiefere Ebenen: X.1.1, X.1.2, etc.
-                  const currentPrefix = prefix 
-                    ? `${prefix}.${index + 1}` 
-                    : `${categoryIndex}.${index + 1}`;
-                  const currentLevel = prefix ? prefix.split('.').length : 0;
+                  const currentPrefix = `${basePrefix}.${index + 1}`;
+                  const currentLevel = currentPrefix.split('.').length - 2; // Level relativ zum Container
                   
                   if (item.checked) {
                     result.push({
@@ -1937,13 +1932,13 @@ export default function ProjectDetailScreen() {
                     });
                   }
                   if (item.subItems && item.subItems.length > 0) {
-                    result.push(...flattenCheckedItems(item.subItems, categoryIndex, currentPrefix));
+                    result.push(...flattenDeepSubItems(item.subItems, currentPrefix));
                   }
                 });
                 return result;
               };
               
-              // Hauptkategorien (Level 1) mit ihren Unterpunkten als Container
+              // Hauptkategorien (Level 0) als Überschriften, Level 1 als Container
               const renderCategoryContainers = (items: any[]): React.ReactNode => {
                 // Nur abgehakte Hauptkategorien filtern
                 const checkedCategories = items.filter(item => item.checked);
@@ -1953,13 +1948,13 @@ export default function ProjectDetailScreen() {
                 }
                 
                 return (
-                  <View style={styles.categoryGrid}>
+                  <View>
                     {checkedCategories.map((category, catIndex) => {
-                      // Alle abgehakten Unterpunkte flach auflisten (Kategorie-Index + 1)
-                      const allCheckedSubItems = category.subItems 
-                        ? flattenCheckedItems(category.subItems, catIndex + 1, '')
-                        : [];
+                      // Level 1 Unterpunkte (die werden zu Containern)
+                      const level1Items = category.subItems || [];
+                      const checkedLevel1Items = level1Items.filter((item: any) => item.checked);
                       
+                      // Zähler für die Kategorie
                       const checkedSubCount = category.subItems 
                         ? countCheckedItemsRecursive(category.subItems)
                         : 0;
@@ -1968,33 +1963,62 @@ export default function ProjectDetailScreen() {
                         : 0;
                       
                       return (
-                        <View key={`cat-${catIndex}`} style={styles.categoryContainer}>
-                          {/* Kategorie-Überschrift */}
-                          <View style={styles.categoryHeader}>
-                            <Ionicons name="checkbox" size={16} color="#4caf50" />
-                            <Text style={styles.categoryTitle} numberOfLines={1}>{category.text}</Text>
+                        <View key={`cat-${catIndex}`} style={styles.categorySection}>
+                          {/* Kategorie-Überschrift (außerhalb der Container) */}
+                          <View style={styles.categorySectionHeader}>
+                            <Ionicons name="checkbox" size={18} color="#4caf50" />
+                            <Text style={styles.categorySectionTitle}>{category.text}</Text>
                             {totalSubCount > 0 && (
-                              <Text style={styles.categoryCount}>{checkedSubCount}/{totalSubCount}</Text>
+                              <Text style={styles.categorySectionCount}>{checkedSubCount}/{totalSubCount}</Text>
                             )}
                           </View>
                           
-                          {/* Alle Unterpunkte flach anzeigen */}
-                          {allCheckedSubItems.length > 0 && (
-                            <View style={styles.categoryContent}>
-                              {allCheckedSubItems.map((subItem, subIndex) => (
-                                <View 
-                                  key={`sub-${catIndex}-${subIndex}`} 
-                                  style={[
-                                    styles.compactSubItem,
-                                    { paddingLeft: subItem.level * 10 }
-                                  ]}
-                                >
-                                  <Text style={styles.subItemPrefix}>{subItem.prefix}</Text>
-                                  <Ionicons name="checkmark" size={11} color="#4caf50" />
-                                  <Text style={styles.compactSubItemText} numberOfLines={1}>{subItem.text}</Text>
-                                </View>
-                              ))}
+                          {/* Grid mit Level 1 Containern */}
+                          {checkedLevel1Items.length > 0 ? (
+                            <View style={styles.level1Grid}>
+                              {checkedLevel1Items.map((level1Item: any, l1Index: number) => {
+                                // Finde den Original-Index für korrekte Nummerierung
+                                const originalIndex = level1Items.indexOf(level1Item);
+                                const containerPrefix = `${catIndex + 1}.${originalIndex + 1}`;
+                                
+                                // Tiefere Unterpunkte für diesen Container
+                                const deepSubItems = level1Item.subItems 
+                                  ? flattenDeepSubItems(level1Item.subItems, containerPrefix)
+                                  : [];
+                                
+                                return (
+                                  <View key={`l1-${catIndex}-${l1Index}`} style={styles.level1Container}>
+                                    {/* Container-Überschrift (z.B. 1.1 Test 1.1) */}
+                                    <View style={styles.level1Header}>
+                                      <Text style={styles.level1Prefix}>{containerPrefix}</Text>
+                                      <Ionicons name="checkmark-circle" size={14} color="#4caf50" />
+                                      <Text style={styles.level1Title} numberOfLines={2}>{level1Item.text}</Text>
+                                    </View>
+                                    
+                                    {/* Tiefere Unterpunkte */}
+                                    {deepSubItems.length > 0 && (
+                                      <View style={styles.level1Content}>
+                                        {deepSubItems.map((subItem, subIndex) => (
+                                          <View 
+                                            key={`deep-${subIndex}`} 
+                                            style={[
+                                              styles.deepSubItem,
+                                              { paddingLeft: subItem.level * 8 }
+                                            ]}
+                                          >
+                                            <Text style={styles.deepSubPrefix}>{subItem.prefix}</Text>
+                                            <Ionicons name="checkmark" size={10} color="#4caf50" />
+                                            <Text style={styles.deepSubText} numberOfLines={1}>{subItem.text}</Text>
+                                          </View>
+                                        ))}
+                                      </View>
+                                    )}
+                                  </View>
+                                );
+                              })}
                             </View>
+                          ) : (
+                            <Text style={styles.noSubItemsHint}>Keine Unterpunkte abgehakt</Text>
                           )}
                         </View>
                       );

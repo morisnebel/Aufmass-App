@@ -588,6 +588,7 @@ export default function ProjectDetailScreen() {
               <span class="pdf-category-title">${category.text}</span>
               ${totalSubCount > 0 ? `<span class="pdf-category-count">${checkedSubCount}/${totalSubCount}</span>` : ''}
             </div>
+            ${category.note ? `<div class="pdf-category-note"><span class="pdf-note-icon">📝</span> ${category.note}</div>` : ''}
             <div class="pdf-level1-grid">${containersHtml}</div>
           </div>
         `;

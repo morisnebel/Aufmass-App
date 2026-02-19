@@ -20,7 +20,14 @@ Mobile app for roof measurement professionals to document projects, take photos,
 
 ## What's Been Implemented
 
-### December 2025 (Latest Session - 19.02.2026)
+### December 2025 (Session 19.02.2026)
+- **[NEW] Checklisten-Vorlagen Export/Import**
+  - Export als `.checklistvorlage` Datei (JSON)
+  - Import von anderen Geräten (iPhone/iPad)
+  - Teilen über iCloud, AirDrop, Dateien-App
+  - Besseres Button-Layout (größer, mehr Abstand)
+  - Files modified: `frontend/app/checklists/templates.tsx`
+
 - **[NEW] Kompaktes Checklisten-Grid Layout**
   - Hauptüberschrift (z.B. "Aufmaß Standard") prominent hervorgehoben mit blauer Unterstreichung
   - Kategorien (Vorarbeiten, Dacheindeckung, etc.) als separate Überschriften mit grüner Linie

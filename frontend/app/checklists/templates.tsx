@@ -290,17 +290,42 @@ export default function ChecklistTemplatesScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Loading Overlay */}
+      {(isExporting || isImporting) && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#1976d2" />
+            <Text style={styles.loadingText}>
+              {isExporting ? 'Exportiere...' : 'Importiere...'}
+            </Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.header}>
         <Text style={styles.headerText}>
           Wählen Sie eine Vorlage für Ihr Projekt aus
         </Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowModal(true)}
-        >
-          <Ionicons name="add-circle" size={24} color="#1976d2" />
-          <Text style={styles.addButtonText}>Neue Vorlage</Text>
-        </TouchableOpacity>
+        
+        {/* Button Row */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowModal(true)}
+          >
+            <Ionicons name="add-circle" size={24} color="#1976d2" />
+            <Text style={styles.addButtonText}>Neue Vorlage</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={importTemplate}
+            disabled={isImporting}
+          >
+            <Ionicons name="download-outline" size={24} color="#4caf50" />
+            <Text style={styles.importButtonText}>Importieren</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList

@@ -932,6 +932,10 @@ const styles = StyleSheet.create({
   editCancelButton: {
     padding: 4,
   },
+  collapseButton: {
+    padding: 4,
+    marginRight: 4,
+  },
   checklistText: {
     fontSize: 16,
     color: '#333',

@@ -299,9 +299,12 @@ export default function EditTemplateScreen() {
   // Rekursive Render-Funktion
   const renderItem = (item: RecursiveTemplateItem, path: number[], depth: number = 0) => {
     const isMainItem = depth === 0;
+    const hasSubItems = item.subItems.length > 0;
+    const collapsed = isCollapsed(path);
+    const pathKey = path.join('-');
     
     return (
-      <View key={path.join('-')} style={[styles.itemContainer, { marginLeft: depth * 20 }]}>
+      <View key={pathKey} style={[styles.itemContainer, { marginLeft: depth * 20 }]}>
         {/* Item Header mit Eingabefeld */}
         <View style={styles.itemHeader}>
           {depth > 0 && (
@@ -309,42 +312,95 @@ export default function EditTemplateScreen() {
               <View style={styles.depthLine} />
             </View>
           )}
+          
+          {/* Einklappen-Button (nur wenn Unterpunkte vorhanden) */}
+          {hasSubItems && (
+            <TouchableOpacity
+              style={styles.collapseButton}
+              onPress={() => toggleCollapse(path)}
+            >
+              <Ionicons 
+                name={collapsed ? "chevron-forward" : "chevron-down"} 
+                size={18} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+          )}
+          
           <TextInput
             style={[
               styles.itemInput,
               !isMainItem && styles.subItemInput,
+              hasSubItems && styles.itemInputWithCollapse,
             ]}
             placeholder={isMainItem ? `Hauptpunkt ${path[0] + 1}` : `Unterpunkt`}
             value={item.text}
             onChangeText={(text) => updateItemText(path, text)}
           />
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => removeItem(path)}
-          >
-            <Ionicons name="trash-outline" size={20} color="#f44336" />
-          </TouchableOpacity>
+          
+          {/* Action Buttons */}
+          <View style={styles.itemActions}>
+            {/* Kopieren Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => copyItem(path)}
+            >
+              <Ionicons name="copy-outline" size={18} color="#ff9800" />
+            </TouchableOpacity>
+            
+            {/* Einfügen Button (nur wenn etwas kopiert wurde) */}
+            {copiedItem && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => pasteItemAfter(path)}
+              >
+                <Ionicons name="clipboard-outline" size={18} color="#4caf50" />
+              </TouchableOpacity>
+            )}
+            
+            {/* Löschen Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => removeItem(path)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#f44336" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Unterpunkte rekursiv rendern */}
-        {item.subItems.length > 0 && (
+        {/* Unterpunkte rekursiv rendern (wenn nicht eingeklappt) */}
+        {hasSubItems && !collapsed && (
           <View style={styles.subItemsSection}>
             {item.subItems.map((subItem, subIndex) => 
               renderItem(subItem, [...path, subIndex], depth + 1)
             )}
           </View>
         )}
+        
+        {/* Anzeige wenn eingeklappt */}
+        {hasSubItems && collapsed && (
+          <TouchableOpacity 
+            style={styles.collapsedHint}
+            onPress={() => toggleCollapse(path)}
+          >
+            <Text style={styles.collapsedHintText}>
+              {item.subItems.length} Unterpunkt{item.subItems.length !== 1 ? 'e' : ''} ausgeblendet
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Button zum Hinzufügen von Unterpunkten */}
-        <TouchableOpacity
-          style={[styles.addSubItemButton, { marginLeft: depth > 0 ? 24 : 0 }]}
-          onPress={() => addSubItem(path)}
-        >
-          <Ionicons name="add" size={16} color="#1976d2" />
-          <Text style={styles.addSubItemText}>
-            {depth === 0 ? 'Unterpunkt hinzufügen' : 'Weiteren Unterpunkt'}
-          </Text>
-        </TouchableOpacity>
+        {/* Button zum Hinzufügen von Unterpunkten (nur wenn nicht eingeklappt) */}
+        {!collapsed && (
+          <TouchableOpacity
+            style={[styles.addSubItemButton, { marginLeft: depth > 0 ? 24 : 0 }]}
+            onPress={() => addSubItem(path)}
+          >
+            <Ionicons name="add" size={16} color="#1976d2" />
+            <Text style={styles.addSubItemText}>
+              {depth === 0 ? 'Unterpunkt hinzufügen' : 'Weiteren Unterpunkt'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };

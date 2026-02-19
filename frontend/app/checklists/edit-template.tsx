@@ -83,7 +83,24 @@ export default function EditTemplateScreen() {
         });
       };
       
-      setItems(convertItems(data.items));
+      const convertedItems = convertItems(data.items);
+        setItems(convertedItems);
+        
+        // Alle Items mit Unterpunkten standardmäßig einklappen
+        const collectPathsWithSubItems = (items: RecursiveTemplateItem[], basePath: number[] = []): string[] => {
+          const paths: string[] = [];
+          items.forEach((item, index) => {
+            const currentPath = [...basePath, index];
+            if (item.subItems && item.subItems.length > 0) {
+              paths.push(currentPath.join('-'));
+              paths.push(...collectPathsWithSubItems(item.subItems, currentPath));
+            }
+          });
+          return paths;
+        };
+        
+        const pathsToCollapse = collectPathsWithSubItems(convertedItems);
+        setCollapsedPaths(new Set(pathsToCollapse));
       }
     } catch (error) {
       console.error('Error loading template:', error);

@@ -115,8 +115,9 @@ export default function ChecklistTemplatesScreen() {
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
+      const safeName = template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
       
-      // Use Print to create a temporary file
+      // Use Print to create a temporary file with JSON content
       const htmlContent = `<!DOCTYPE html><html><body><pre>${jsonString}</pre></body></html>`;
       
       const { uri } = await Print.printToFileAsync({
@@ -124,13 +125,17 @@ export default function ChecklistTemplatesScreen() {
         base64: false,
       });
       
-      // Rename to .checklistvorlage extension
-      const safeName = template.name.replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
-      const newUri = uri.replace('.pdf', `.checklistvorlage`);
-      await FileSystem.moveAsync({
+      // Copy to new location with correct extension
+      const directory = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const newUri = `${directory}${safeName}.checklistvorlage`;
+      
+      await FileSystem.copyAsync({
         from: uri,
         to: newUri,
       });
+      
+      // Delete the original PDF
+      await FileSystem.deleteAsync(uri, { idempotent: true });
 
       // Share the file
       await Sharing.shareAsync(newUri, {

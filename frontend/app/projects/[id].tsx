@@ -493,28 +493,117 @@ export default function ProjectDetailScreen() {
       `;
     }).join('') : '<p class="empty">Keine Dachflächen erfasst</p>';
     
-    // Generate checklists HTML with recursive sub-items
-    const renderChecklistItems = (items: any[], depth: number = 0): string => {
-      return items.map(item => {
-        const indent = depth * 20;
-        const icon = item.checked ? '☑' : '☐';
-        let html = `<div style="margin-left: ${indent}px; margin-bottom: 4px;">
-          <span style="color: ${item.checked ? '#4caf50' : '#666'};">${icon}</span> ${item.text}
-          ${item.note ? `<div style="font-size: 10px; color: #666; margin-left: 20px;">📝 ${item.note}</div>` : ''}
-        </div>`;
-        if (item.subItems && item.subItems.length > 0) {
-          html += renderChecklistItems(item.subItems, depth + 1);
+    // Generate checklists HTML with new hierarchical layout
+    // Helper: Flatten deep sub-items for PDF
+    const flattenDeepSubItemsForPdf = (items: any[], basePrefix: string): { text: string; level: number; prefix: string }[] => {
+      const result: { text: string; level: number; prefix: string }[] = [];
+      items.forEach((item, index) => {
+        const currentPrefix = `${basePrefix}.${index + 1}`;
+        const currentLevel = currentPrefix.split('.').length - 2;
+        if (item.checked) {
+          result.push({ text: item.text, level: currentLevel, prefix: currentPrefix });
         }
-        return html;
-      }).join('');
+        if (item.subItems && item.subItems.length > 0) {
+          result.push(...flattenDeepSubItemsForPdf(item.subItems, currentPrefix));
+        }
+      });
+      return result;
     };
     
-    const checklistsHtml = checklists.length > 0 ? checklists.map(checklist => `
-      <div class="checklist-card">
-        <h4>${checklist.template_name}</h4>
-        ${renderChecklistItems(checklist.items)}
-      </div>
-    `).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
+    // Helper: Count checked items recursively
+    const countCheckedForPdf = (items: any[]): number => {
+      let total = 0;
+      items.forEach(item => {
+        if (item.checked) total++;
+        if (item.subItems && item.subItems.length > 0) {
+          total += countCheckedForPdf(item.subItems);
+        }
+      });
+      return total;
+    };
+    
+    // Helper: Count total items recursively
+    const countTotalForPdf = (items: any[]): number => {
+      let total = items.length;
+      items.forEach(item => {
+        if (item.subItems && item.subItems.length > 0) {
+          total += countTotalForPdf(item.subItems);
+        }
+      });
+      return total;
+    };
+    
+    const checklistsHtml = checklists.length > 0 ? checklists.map(checklist => {
+      // Filter checked main categories
+      const checkedCategories = checklist.items.filter((item: any) => item.checked);
+      
+      if (checkedCategories.length === 0) {
+        return `
+          <div class="checklist-card">
+            <div class="checklist-main-header">${checklist.template_name}</div>
+            <p class="empty">Keine Positionen abgehakt</p>
+          </div>
+        `;
+      }
+      
+      // Build categories HTML
+      const categoriesHtml = checkedCategories.map((category: any, catIndex: number) => {
+        const level1Items = category.subItems || [];
+        const checkedLevel1 = level1Items.filter((item: any) => item.checked);
+        const checkedSubCount = category.subItems ? countCheckedForPdf(category.subItems) : 0;
+        const totalSubCount = category.subItems ? countTotalForPdf(category.subItems) : 0;
+        
+        // Build level 1 containers
+        const containersHtml = checkedLevel1.map((l1Item: any) => {
+          const originalIndex = level1Items.indexOf(l1Item);
+          const containerPrefix = `${catIndex + 1}.${originalIndex + 1}`;
+          const deepSubs = l1Item.subItems ? flattenDeepSubItemsForPdf(l1Item.subItems, containerPrefix) : [];
+          
+          const deepSubsHtml = deepSubs.map(sub => `
+            <div class="pdf-deep-sub" style="padding-left: ${sub.level * 10}px;">
+              <span class="pdf-deep-prefix">${sub.prefix}</span>
+              <span class="pdf-checkmark">✓</span>
+              <span class="pdf-deep-text">${sub.text}</span>
+            </div>
+          `).join('');
+          
+          return `
+            <div class="pdf-level1-container">
+              <div class="pdf-level1-header">
+                <span class="pdf-level1-prefix">${containerPrefix}</span>
+                <span class="pdf-checkmark-circle">✓</span>
+                <span class="pdf-level1-title">${l1Item.text}</span>
+              </div>
+              ${deepSubs.length > 0 ? `<div class="pdf-level1-content">${deepSubsHtml}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+        
+        return `
+          <div class="pdf-category-section">
+            <div class="pdf-category-header">
+              <span class="pdf-cat-check">✓</span>
+              <span class="pdf-category-title">${category.text}</span>
+              ${totalSubCount > 0 ? `<span class="pdf-category-count">${checkedSubCount}/${totalSubCount}</span>` : ''}
+            </div>
+            <div class="pdf-level1-grid">${containersHtml}</div>
+          </div>
+        `;
+      }).join('');
+      
+      const totalChecked = countCheckedForPdf(checklist.items);
+      const totalItems = countTotalForPdf(checklist.items);
+      
+      return `
+        <div class="checklist-card">
+          <div class="checklist-main-header">
+            <span class="checklist-main-title">${checklist.template_name}</span>
+            <span class="checklist-main-count">${totalChecked} von ${totalItems}</span>
+          </div>
+          ${categoriesHtml}
+        </div>
+      `;
+    }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
     const photosHtml = photos.length > 0 ? `

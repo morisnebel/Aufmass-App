@@ -1498,26 +1498,15 @@ export default function ProjectDetailScreen() {
       const jsonString = JSON.stringify(exportData, null, 2);
       
       // Get safe filename
-      const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9]/g, '_');
+      const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
       
-      // Create HTML that will be "printed" to PDF, but we share as text file
-      const htmlContent = `<!DOCTYPE html><html><body><pre>${jsonString}</pre></body></html>`;
+      // Create file in cache directory directly as JSON
+      const fileUri = `${cacheDirectory}${safeName}.aufmass`;
       
-      // Use Print to create a file, then share it
-      const { uri } = await Print.printToFileAsync({
-        html: htmlContent,
-        base64: false,
-      });
-      
-      // Rename the file to .aufmass extension
-      const newUri = uri.replace('.pdf', '.aufmass');
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newUri,
-      });
+      await writeAsStringAsync(fileUri, jsonString);
       
       // Share the file
-      await Sharing.shareAsync(newUri, {
+      await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
         dialogTitle: 'Projekt speichern',
       });

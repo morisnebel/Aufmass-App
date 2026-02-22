@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, Project, Customer } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 
 export default function HomeScreen() {
   const router = useRouter();

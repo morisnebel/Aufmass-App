@@ -83,9 +83,7 @@ export default function HomeScreen() {
       setLoading(true);
       
       // Read file content
-      const content = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const content = await readAsStringAsync(file.uri);
       
       // Clean up content - remove truncation markers if present
       let cleanContent = content;

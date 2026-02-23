@@ -2250,6 +2250,20 @@ export default function ProjectDetailScreen() {
                                                 <Text style={styles.deepNoteText}>{subItem.note}</Text>
                                               </View>
                                             )}
+                                            {/* Messungen für Unterposition */}
+                                            {subItem.measurements && subItem.measurements.length > 0 && (
+                                              <View style={[styles.measurementDisplayContainer, { marginLeft: subItem.level * 8 + 36 }]}>
+                                                {subItem.measurements.map((m: any, mIdx: number) => {
+                                                  const expr = m.expression || m.value?.toString() || '0';
+                                                  const result = m.result ?? m.value ?? 0;
+                                                  return (
+                                                    <Text key={mIdx} style={styles.measurementDisplayText}>
+                                                      📐 {expr.replace(/\./g, ',').replace(/\*/g, '×')} = {result.toString().replace('.', ',')} {m.unit}
+                                                    </Text>
+                                                  );
+                                                })}
+                                              </View>
+                                            )}
                                           </View>
                                         ))}
                                       </View>

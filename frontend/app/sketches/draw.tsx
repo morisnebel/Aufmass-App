@@ -3617,17 +3617,10 @@ export default function DrawSketchScreen() {
               </View>
             </View>
           </ScrollView>
+          {/* Numpad als floating Element INNERHALB des Modals */}
+          {renderInModalNumpad()}
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* Global Floating Numpad Overlay - außerhalb aller Modals für freies Ziehen */}
-      {showModalNumpad && (
-        <Animated.View 
-          style={[
-            styles.globalFloatingNumpad,
-            { transform: modalNumpadPosition.getTranslateTransform() }
-          ]}
-        >
           {/* Drag-Handle zum Verschieben */}
           <View {...modalNumpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
             <Ionicons name="move" size={16} color="#999" />

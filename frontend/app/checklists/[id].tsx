@@ -778,6 +778,48 @@ export default function EditChecklistScreen() {
               </TouchableOpacity>
             )}
 
+            {/* Messungen anzeigen und hinzufügen */}
+            <View style={styles.measurementSection}>
+              <View style={styles.measurementHeader}>
+                <Ionicons name="calculator-outline" size={18} color="#2196f3" />
+                <Text style={styles.measurementLabel}>Messungen</Text>
+                <TouchableOpacity
+                  style={styles.addMeasurementButton}
+                  onPress={() => openMeasurementModal(path)}
+                >
+                  <Ionicons name="add-circle" size={24} color="#2196f3" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Vorhandene Messungen */}
+              {item.measurements && item.measurements.length > 0 && (
+                <View style={styles.measurementsList}>
+                  {item.measurements.map((m, mIndex) => (
+                    <View key={mIndex} style={styles.measurementChip}>
+                      <Text style={styles.measurementChipText}>
+                        {m.value.toString().replace('.', ',')} {m.unit}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => removeMeasurement(path, mIndex)}
+                        style={styles.removeMeasurementButton}
+                      >
+                        <Ionicons name="close-circle" size={18} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  
+                  {/* Summe anzeigen wenn mehrere Messungen */}
+                  {item.measurements.length > 1 && (
+                    <View style={styles.measurementSumContainer}>
+                      <Text style={styles.measurementSumText}>
+                        = {item.measurements.map(m => m.value.toString().replace('.', ',')).join(' + ')} = {item.measurements.reduce((sum, m) => sum + m.value, 0).toString().replace('.', ',')} {item.measurements[0].unit}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+
             {/* Notiz-Feld nur für Hauptpunkte */}
             {isMainItem && (
               <View style={styles.noteContainer}>

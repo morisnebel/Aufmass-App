@@ -54,6 +54,13 @@ export default function EditChecklistScreen() {
   const [copiedItem, setCopiedItem] = useState<RecursiveItem | null>(null);
   // State für eingeklappte Items
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
+  // State für Messungs-Eingabe Modal
+  const [measurementModalPath, setMeasurementModalPath] = useState<number[] | null>(null);
+  const [measurementValue, setMeasurementValue] = useState('');
+  const [measurementUnit, setMeasurementUnit] = useState('m²');
+  
+  // Verfügbare Einheiten
+  const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
 
   useEffect(() => {
     loadChecklist();

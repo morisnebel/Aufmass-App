@@ -276,7 +276,6 @@ export default function DrawSketchScreen() {
     };
     
     const newElements = [...elements, newElement];
-    setElements(newElements);
     addToHistory(newElements);
     setSelectedElementId(newElement.id);
     setDrawMode('select');

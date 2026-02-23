@@ -4142,7 +4142,7 @@ const styles = StyleSheet.create({
     borderColor: '#2196f3',
   },
   modalNumpadOpText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1976d2',
   },

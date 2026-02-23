@@ -257,6 +257,59 @@ export default function DrawSketchScreen() {
     setTimeout(() => measurementInputRef.current?.focus(), 10);
   };
   
+  // Numpad für Modals (Arrow/Text/Pointer)
+  const handleModalNumpadPress = (key: string, setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => {
+    if (key === '⌫') {
+      setter(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      setter('');
+    } else {
+      setter(prev => prev + key);
+    }
+    setTimeout(() => inputRef.current?.focus(), 10);
+  };
+  
+  // Kompaktes Numpad-Component für Modals
+  const renderModalNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => (
+    <View style={styles.modalNumpad}>
+      <View style={styles.modalNumpadRow}>
+        {['7','8','9','+'].map(k => (
+          <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+            <Text style={k==='+' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.modalNumpadRow}>
+        {['4','5','6','-'].map(k => (
+          <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+            <Text style={k==='-' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.modalNumpadRow}>
+        {['1','2','3','×'].map(k => (
+          <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='×' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '×' ? '*' : k, setter, inputRef)}>
+            <Text style={k==='×' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.modalNumpadRow}>
+        {[',','0','⌫','÷'].map(k => (
+          <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='⌫' && styles.modalNumpadDel, k==='÷' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '÷' ? '/' : k, setter, inputRef)}>
+            {k === '⌫' ? <Ionicons name="backspace-outline" size={18} color="#f44336" /> : <Text style={k==='÷' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>}
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.modalNumpadRow}>
+        {['m','m²','lfm','.'].map(k => (
+          <TouchableOpacity key={k} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+            <Text style={styles.modalNumpadUnitText}>{k}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+  
   const insertMeasurementAsText = () => {
     const result = calculateMeasurementExpression(measurementExpression);
     if (result === null) {

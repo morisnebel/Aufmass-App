@@ -67,7 +67,7 @@ export default function EditChecklistScreen() {
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
 
-  // Nummernblock-Taste drücken
+  // Nummernblock-Taste drücken - modifiziert State und behält Fokus
   const handleNumpadPress = (key: string) => {
     if (key === '⌫') {
       setMeasurementExpression(prev => prev.slice(0, -1));
@@ -76,6 +76,10 @@ export default function EditChecklistScreen() {
     } else {
       setMeasurementExpression(prev => prev + key);
     }
+    // Fokus auf Input zurücksetzen für Bluetooth-Eingabe
+    setTimeout(() => {
+      measurementInputRef.current?.focus();
+    }, 10);
   };
 
   // Funktion zum Berechnen eines Ausdrucks (mit Komma als Dezimaltrenner)

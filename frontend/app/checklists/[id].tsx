@@ -58,11 +58,41 @@ export default function EditChecklistScreen() {
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
   // State für Messungs-Eingabe Modal
   const [measurementModalPath, setMeasurementModalPath] = useState<number[] | null>(null);
-  const [measurementValue, setMeasurementValue] = useState('');
+  const [measurementExpression, setMeasurementExpression] = useState('');
   const [measurementUnit, setMeasurementUnit] = useState('m²');
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
+
+  // Funktion zum Berechnen eines Ausdrucks (mit Komma als Dezimaltrenner)
+  const calculateExpression = (expr: string): number | null => {
+    try {
+      // Leerzeichen entfernen und Komma durch Punkt ersetzen
+      let cleanExpr = expr.replace(/\s/g, '').replace(/,/g, '.');
+      
+      // Nur Zahlen und Operatoren erlauben
+      if (!/^[\d.+\-*/()]+$/.test(cleanExpr)) {
+        return null;
+      }
+      
+      // Berechnung durchführen (sichere eval-Alternative)
+      const result = Function('"use strict"; return (' + cleanExpr + ')')();
+      
+      if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) {
+        return null;
+      }
+      
+      // Auf 2 Dezimalstellen runden
+      return Math.round(result * 100) / 100;
+    } catch {
+      return null;
+    }
+  };
+
+  // Formatiere Ausdruck für Anzeige (Punkt zu Komma)
+  const formatExpression = (expr: string): string => {
+    return expr.replace(/\./g, ',').replace(/\*/g, ' × ').replace(/\//g, ' ÷ ').replace(/\+/g, ' + ').replace(/-/g, ' - ');
+  };
 
   useEffect(() => {
     loadChecklist();

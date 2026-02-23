@@ -229,6 +229,12 @@ export default function DrawSketchScreen() {
   const measurementInputRef = useRef<TextInput>(null);
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
   
+  // Numpad in Modals (für Arrow/Text/Pointer)
+  const [showModalNumpad, setShowModalNumpad] = useState(false);
+  const arrowInputRef = useRef<TextInput>(null);
+  const textInputRef = useRef<TextInput>(null);
+  const pointerInputRef = useRef<TextInput>(null);
+  
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {
     try {

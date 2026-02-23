@@ -915,6 +915,32 @@ export default function ProjectDetailScreen() {
             font-style: italic;
             margin-bottom: 8px;
           }
+          .pdf-category-measurements {
+            background: #e3f2fd;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+          }
+          .pdf-measurement-line {
+            font-size: 10px;
+            color: #1565c0;
+            font-weight: 500;
+            margin-bottom: 3px;
+          }
+          .pdf-measurement-sum {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #90caf9;
+            font-size: 10px;
+            color: #1565c0;
+          }
+          .pdf-sum-badge {
+            background: #bbdefb;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-left: 4px;
+          }
           .pdf-level1-grid {
             display: flex;
             flex-wrap: wrap;

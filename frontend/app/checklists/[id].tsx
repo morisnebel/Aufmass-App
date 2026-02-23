@@ -273,14 +273,44 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
-  // Messungs-Modal öffnen
+  // Messungs-Modal öffnen (für neue Messung)
   const openMeasurementModal = (path: number[]) => {
     setMeasurementModalPath(path);
     setMeasurementExpression('');
     setMeasurementUnit('m²');
+    setEditingMeasurementIndex(null);
   };
 
-  // Messung bestätigen
+  // Messungs-Modal zum Bearbeiten öffnen
+  const openEditMeasurementModal = (path: number[], index: number, expression: string, unit: string) => {
+    setMeasurementModalPath(path);
+    setMeasurementExpression(expression);
+    setMeasurementUnit(unit);
+    setEditingMeasurementIndex(index);
+  };
+
+  // Messung aktualisieren
+  const updateMeasurement = (path: number[], index: number, expression: string, result: number, unit: string) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item || !item.measurements) return;
+    
+    const newMeasurements = [...item.measurements];
+    newMeasurements[index] = { expression, result, unit };
+    const newItems = updateItemAtPath(checklist.items, path, { measurements: newMeasurements });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Messung bestätigen (neu oder bearbeiten)
   const confirmMeasurement = () => {
     if (!measurementModalPath || !measurementExpression.trim()) {
       setMeasurementModalPath(null);
@@ -293,9 +323,17 @@ export default function EditChecklistScreen() {
       return;
     }
     
-    addMeasurement(measurementModalPath, measurementExpression, result, measurementUnit);
+    if (editingMeasurementIndex !== null) {
+      // Bearbeiten
+      updateMeasurement(measurementModalPath, editingMeasurementIndex, measurementExpression, result, measurementUnit);
+    } else {
+      // Neu hinzufügen
+      addMeasurement(measurementModalPath, measurementExpression, result, measurementUnit);
+    }
+    
     setMeasurementModalPath(null);
     setMeasurementExpression('');
+    setEditingMeasurementIndex(null);
   };
 
   // Neuen Unterpunkt hinzufügen

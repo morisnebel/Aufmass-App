@@ -326,16 +326,19 @@ export default function DrawSketchScreen() {
           { transform: modalNumpadPosition.getTranslateTransform() }
         ]}
       >
+        {/* Schließen-Button außerhalb des Drag-Bereichs */}
+        <TouchableOpacity 
+          style={styles.numpadCloseBtn}
+          onPress={closeModalNumpad}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close-circle" size={22} color="#999" />
+        </TouchableOpacity>
+        
         {/* Drag-Handle zum Verschieben */}
         <View {...modalNumpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
-          <Ionicons name="move" size={16} color="#999" />
+          <Ionicons name="move" size={14} color="#999" />
           <Text style={styles.numpadDragText}>Verschieben</Text>
-          <TouchableOpacity 
-            style={styles.numpadCloseBtn}
-            onPress={closeModalNumpad}
-          >
-            <Ionicons name="close" size={18} color="#666" />
-          </TouchableOpacity>
         </View>
         
         {modalNumpadMode === 'numbers' ? (

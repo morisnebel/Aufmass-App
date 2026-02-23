@@ -1424,7 +1424,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   measurementInput: {
     borderWidth: 2,

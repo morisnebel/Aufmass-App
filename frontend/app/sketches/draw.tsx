@@ -2558,14 +2558,6 @@ export default function DrawSketchScreen() {
           />
         </TouchableOpacity>
 
-        {/* Aufmaß-Tool Button */}
-        <TouchableOpacity 
-          style={[styles.toolButton, showMeasurementTool && styles.measurementButtonActive]} 
-          onPress={() => setShowMeasurementTool(!showMeasurementTool)}
-        >
-          <Ionicons name="calculator" size={18} color={showMeasurementTool ? '#fff' : '#2196f3'} />
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
             if (confirm('Möchten Sie alle Elemente löschen?')) {

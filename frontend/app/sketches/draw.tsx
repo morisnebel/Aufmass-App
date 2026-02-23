@@ -3478,6 +3478,8 @@ export default function DrawSketchScreen() {
               </View>
             </View>
           </ScrollView>
+          {/* Numpad als floating Element INNERHALB des Modals */}
+          {renderInModalNumpad()}
         </KeyboardAvoidingView>
       </Modal>
 

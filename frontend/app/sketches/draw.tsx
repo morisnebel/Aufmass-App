@@ -4211,8 +4211,4 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: '500',
   },
-  modalScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
 });

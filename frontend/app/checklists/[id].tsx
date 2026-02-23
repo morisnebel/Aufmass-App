@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ChecklistService, ProjectService, SettingsService } from '../../services/LocalStorage';
+import { ChecklistService, ProjectService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {

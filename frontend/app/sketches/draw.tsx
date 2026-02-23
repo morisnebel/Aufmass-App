@@ -269,6 +269,7 @@ export default function DrawSketchScreen() {
       y: 100,
       data: { text: displayText },
       color: '#1976d2',
+      strokeWidth: 1,
       fontSize: 16,
       fontWeight: 'bold',
       fontStyle: 'normal',
@@ -276,7 +277,7 @@ export default function DrawSketchScreen() {
     
     const newElements = [...elements, newElement];
     setElements(newElements);
-    saveToHistory(newElements);
+    addToHistory(newElements);
     setSelectedElementId(newElement.id);
     setDrawMode('select');
     

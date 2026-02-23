@@ -932,6 +932,66 @@ export default function EditChecklistScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Messungs-Modal */}
+      <Modal
+        visible={measurementModalPath !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setMeasurementModalPath(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.measurementModal}>
+            <Text style={styles.modalTitle}>Messung hinzufügen</Text>
+            
+            <TextInput
+              style={styles.measurementInput}
+              placeholder="Wert eingeben (z.B. 12,5)"
+              value={measurementValue}
+              onChangeText={setMeasurementValue}
+              keyboardType="decimal-pad"
+              autoFocus
+            />
+            
+            <Text style={styles.unitLabel}>Einheit wählen:</Text>
+            <View style={styles.unitGrid}>
+              {availableUnits.map(unit => (
+                <TouchableOpacity
+                  key={unit}
+                  style={[
+                    styles.unitButton,
+                    measurementUnit === unit && styles.unitButtonActive
+                  ]}
+                  onPress={() => setMeasurementUnit(unit)}
+                >
+                  <Text style={[
+                    styles.unitButtonText,
+                    measurementUnit === unit && styles.unitButtonTextActive
+                  ]}>
+                    {unit}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setMeasurementModalPath(null)}
+              >
+                <Text style={styles.modalCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmButton}
+                onPress={confirmMeasurement}
+              >
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Text style={styles.modalConfirmText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ChecklistService, ProjectService } from '../../services/LocalStorage';
+import { ChecklistService, ProjectService, SettingsService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {

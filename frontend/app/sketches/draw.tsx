@@ -416,7 +416,7 @@ export default function DrawSketchScreen() {
           </View>
         </>
       )}
-    </View>
+    </Animated.View>
   );
   
   const insertMeasurementAsText = () => {

@@ -49,6 +49,7 @@ export default function SettingsScreen() {
     services: '',
     author_name: '',
     logo_data: null,
+    bluetooth_mode: false,
   });
 
   useEffect(() => {

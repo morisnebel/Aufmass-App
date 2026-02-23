@@ -1439,7 +1439,24 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 18,
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  resultPreview: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: 8,
+    padding: 10,
     marginBottom: 16,
+    alignItems: 'center',
+  },
+  resultPreviewText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2e7d32',
+  },
+  resultPreviewError: {
+    fontSize: 14,
+    color: '#f44336',
+    fontStyle: 'italic',
   },
   unitLabel: {
     fontSize: 14,

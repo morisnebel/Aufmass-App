@@ -1079,7 +1079,7 @@ export default function EditChecklistScreen() {
           <Animated.View 
             style={[
               styles.measurementModalCompact,
-              { transform: modalPosition.getTranslateTransform() }
+              { transform: numpadPosition.getTranslateTransform() }
             ]}
           >
             {/* Drag-Handle zum Verschieben */}

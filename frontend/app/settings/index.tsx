@@ -159,6 +159,36 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* Bluetooth-Modus Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Eingabe-Modus</Text>
+            <View style={styles.bluetoothModeContainer}>
+              <View style={styles.bluetoothModeInfo}>
+                <View style={styles.bluetoothModeIcon}>
+                  <Ionicons name="bluetooth" size={24} color={settings.bluetooth_mode ? '#2196f3' : '#999'} />
+                </View>
+                <View style={styles.bluetoothModeText}>
+                  <Text style={styles.bluetoothModeTitle}>Bluetooth-Laser Modus</Text>
+                  <Text style={styles.bluetoothModeDescription}>
+                    {settings.bluetooth_mode 
+                      ? 'Aktiviert: Numpad wird bei Maßeingaben angezeigt' 
+                      : 'Deaktiviert: Normale iPad-Tastatur wird verwendet'}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.bluetooth_mode}
+                onValueChange={(value) => setSettings({ ...settings, bluetooth_mode: value })}
+                trackColor={{ false: '#ddd', true: '#90caf9' }}
+                thumbColor={settings.bluetooth_mode ? '#2196f3' : '#f4f3f4'}
+              />
+            </View>
+            <Text style={styles.bluetoothModeHint}>
+              Aktivieren Sie diesen Modus, wenn Sie ein Bluetooth-Lasermessgerät verwenden. 
+              Das Numpad erscheint dann bei Maßeingaben und kann frei verschoben werden.
+            </Text>
+          </View>
+
           {/* Briefkopf Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Briefkopf / Firmendaten</Text>

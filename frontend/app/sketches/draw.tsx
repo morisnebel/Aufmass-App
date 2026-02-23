@@ -217,6 +217,15 @@ export default function DrawSketchScreen() {
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
   
+  // Aufmaß-Tool state
+  const [showMeasurementTool, setShowMeasurementTool] = useState(false);
+  const [measurementExpression, setMeasurementExpression] = useState('');
+  const [measurementUnit, setMeasurementUnit] = useState('m²');
+  const [showMeasurementNumpad, setShowMeasurementNumpad] = useState(true);
+  const [showMeasurementKeyboard, setShowMeasurementKeyboard] = useState(false);
+  const measurementInputRef = useRef<TextInput>(null);
+  const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
+  
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);

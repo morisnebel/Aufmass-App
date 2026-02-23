@@ -2228,6 +2228,21 @@ export default function ProjectDetailScreen() {
                                       </View>
                                     )}
                                     
+                                    {/* Messungen für Level 1 Item */}
+                                    {level1Item.measurements && level1Item.measurements.length > 0 && (
+                                      <View style={styles.measurementDisplayContainer}>
+                                        {level1Item.measurements.map((m: any, mIdx: number) => {
+                                          const expr = m.expression || m.value?.toString() || '0';
+                                          const result = m.result ?? m.value ?? 0;
+                                          return (
+                                            <Text key={mIdx} style={styles.measurementDisplayText}>
+                                              📐 {expr.replace(/\./g, ',').replace(/\*/g, '×')} = {result.toString().replace('.', ',')} {m.unit}
+                                            </Text>
+                                          );
+                                        })}
+                                      </View>
+                                    )}
+                                    
                                     {/* Tiefere Unterpunkte */}
                                     {deepSubItems.length > 0 && (
                                       <View style={styles.level1Content}>

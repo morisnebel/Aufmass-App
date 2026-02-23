@@ -2217,6 +2217,43 @@ export default function ProjectDetailScreen() {
                             </View>
                           )}
                           
+                          {/* Messungen für Hauptkategorie */}
+                          {category.measurements && category.measurements.length > 0 && (
+                            <View style={styles.categoryMeasurementContainer}>
+                              {category.measurements.map((m: any, mIdx: number) => {
+                                const expr = m.expression || m.value?.toString() || '0';
+                                const result = m.result ?? m.value ?? 0;
+                                return (
+                                  <Text key={mIdx} style={styles.categoryMeasurementText}>
+                                    📐 {expr.replace(/\./g, ',').replace(/\*/g, '×')} = {result.toString().replace('.', ',')} {m.unit}
+                                  </Text>
+                                );
+                              })}
+                              {/* Summen für Hauptkategorie */}
+                              {(() => {
+                                const sumsByUnit: { [unit: string]: number } = {};
+                                category.measurements.forEach((m: any) => {
+                                  const result = m.result ?? m.value ?? 0;
+                                  sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + result;
+                                });
+                                const units = Object.keys(sumsByUnit);
+                                if (units.length > 0) {
+                                  return (
+                                    <View style={styles.categorySumRow}>
+                                      <Text style={styles.categorySumLabel}>Summen:</Text>
+                                      {units.map(unit => (
+                                        <Text key={unit} style={styles.categorySumValue}>
+                                          {sumsByUnit[unit].toFixed(2).replace('.', ',')} {unit}
+                                        </Text>
+                                      ))}
+                                    </View>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </View>
+                          )}
+                          
                           {/* Grid mit Level 1 Containern */}
                           {checkedLevel1Items.length > 0 ? (
                             <View style={styles.level1Grid}>

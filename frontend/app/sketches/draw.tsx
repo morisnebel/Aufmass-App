@@ -290,7 +290,18 @@ export default function DrawSketchScreen() {
   const [modalNumpadCaps, setModalNumpadCaps] = useState(false); // Groß/Klein
   
   const renderModalNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => (
-    <View style={styles.modalNumpad}>
+    <Animated.View 
+      style={[
+        styles.floatingModalNumpad,
+        { transform: modalNumpadPosition.getTranslateTransform() }
+      ]}
+    >
+      {/* Drag-Handle zum Verschieben */}
+      <View {...modalNumpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
+        <Ionicons name="move" size={16} color="#999" />
+        <Text style={styles.numpadDragText}>Verschieben</Text>
+      </View>
+      
       {modalNumpadMode === 'numbers' ? (
         <>
           {/* Zahlen-Modus */}

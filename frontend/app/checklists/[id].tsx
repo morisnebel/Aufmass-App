@@ -18,8 +18,9 @@ import { ChecklistService, ProjectService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {
-  value: number;
-  unit: string;
+  expression: string;  // Der Rechenweg z.B. "5,00+6,00+9,20"
+  result: number;      // Das Ergebnis z.B. 20.2
+  unit: string;        // Die Einheit z.B. "m²"
 }
 
 interface RecursiveItem {

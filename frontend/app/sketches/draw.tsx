@@ -3233,9 +3233,11 @@ export default function DrawSketchScreen() {
               <TouchableOpacity 
                 style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
                 onPress={() => {
-                  setShowModalNumpad(!showModalNumpad);
-                  modalNumpadPosition.setValue({ x: 0, y: 0 });
-                  modalNumpadPosition.setOffset({ x: 0, y: 0 });
+                  if (showModalNumpad) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setPointerText, pointerInputRef);
+                  }
                 }}
               >
                 <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />

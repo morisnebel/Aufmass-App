@@ -12,6 +12,9 @@ import {
   Modal,
   KeyboardAvoidingView,
   BackHandler,
+  Keyboard,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';

@@ -1083,7 +1083,7 @@ export default function EditChecklistScreen() {
             ]}
           >
             {/* Drag-Handle zum Verschieben */}
-            <View {...panResponder.panHandlers} style={styles.dragHandle}>
+            <View {...numpadPanResponder.panHandlers} style={styles.dragHandle}>
               <View style={styles.dragIndicator} />
               <Text style={styles.modalTitleCompact}>
                 {editingMeasurementIndex !== null ? 'Bearbeiten' : 'Aufmaß'}

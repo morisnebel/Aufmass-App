@@ -1054,12 +1054,16 @@ export default function EditChecklistScreen() {
               {editingMeasurementIndex !== null ? 'Aufmaß bearbeiten' : 'Aufmaß hinzufügen'}
             </Text>
             
-            {/* Eingabefeld */}
-            <View style={styles.expressionDisplay}>
-              <Text style={styles.expressionText}>
-                {measurementExpression || '0'}
-              </Text>
-            </View>
+            {/* Eingabefeld - empfängt Bluetooth UND manuelle Eingaben */}
+            <TextInput
+              style={styles.expressionInput}
+              value={measurementExpression}
+              onChangeText={setMeasurementExpression}
+              placeholder="Bluetooth oder Nummernblock"
+              keyboardType="numbers-and-punctuation"
+              autoFocus={!showNumpad}
+              showSoftInputOnFocus={!showNumpad}
+            />
             
             {/* Live-Vorschau des Ergebnisses */}
             {measurementExpression.trim() !== '' && (
@@ -1074,26 +1078,19 @@ export default function EditChecklistScreen() {
               </View>
             )}
 
-            {/* Umschalter Nummernblock / Tastatur */}
-            <View style={styles.inputModeSwitch}>
-              <TouchableOpacity
-                style={[styles.switchButton, showNumpad && styles.switchButtonActive]}
-                onPress={() => setShowNumpad(true)}
-              >
-                <Ionicons name="calculator" size={18} color={showNumpad ? '#fff' : '#666'} />
-                <Text style={[styles.switchButtonText, showNumpad && styles.switchButtonTextActive]}>Nummernblock</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switchButton, !showNumpad && styles.switchButtonActive]}
-                onPress={() => setShowNumpad(false)}
-              >
-                <Ionicons name="keypad" size={18} color={!showNumpad ? '#fff' : '#666'} />
-                <Text style={[styles.switchButtonText, !showNumpad && styles.switchButtonTextActive]}>Tastatur</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Umschalter Nummernblock ein/aus */}
+            <TouchableOpacity
+              style={[styles.numpadToggle, showNumpad && styles.numpadToggleActive]}
+              onPress={() => setShowNumpad(!showNumpad)}
+            >
+              <Ionicons name="calculator" size={20} color={showNumpad ? '#fff' : '#2196f3'} />
+              <Text style={[styles.numpadToggleText, showNumpad && styles.numpadToggleTextActive]}>
+                {showNumpad ? 'Nummernblock ausblenden' : 'Nummernblock einblenden'}
+              </Text>
+            </TouchableOpacity>
 
-            {/* Nummernblock */}
-            {showNumpad ? (
+            {/* Nummernblock (optional einblendbar) */}
+            {showNumpad && (
               <View style={styles.numpad}>
                 <View style={styles.numpadRow}>
                   <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('7')}><Text style={styles.numpadKeyText}>7</Text></TouchableOpacity>
@@ -1126,15 +1123,6 @@ export default function EditChecklistScreen() {
                   <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('.')}><Text style={styles.numpadKeyText}>.</Text></TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              <TextInput
-                style={styles.measurementInput}
-                placeholder="z.B. 5,00+6,00+9,20"
-                value={measurementExpression}
-                onChangeText={setMeasurementExpression}
-                keyboardType="numbers-and-punctuation"
-                autoFocus
-              />
             )}
             
             <Text style={styles.unitLabel}>Einheit wählen:</Text>

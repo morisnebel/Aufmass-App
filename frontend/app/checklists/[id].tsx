@@ -1059,15 +1059,17 @@ export default function EditChecklistScreen() {
               {editingMeasurementIndex !== null ? 'Aufmaß bearbeiten' : 'Aufmaß hinzufügen'}
             </Text>
             
-            {/* Eingabefeld - empfängt Bluetooth UND manuelle Eingaben */}
+            {/* Eingabefeld - empfängt Bluetooth UND Numpad-Eingaben gleichzeitig */}
             <TextInput
+              ref={measurementInputRef}
               style={styles.expressionInput}
               value={measurementExpression}
               onChangeText={setMeasurementExpression}
               placeholder="Bluetooth oder Nummernblock"
               keyboardType="numbers-and-punctuation"
-              autoFocus={!showNumpad}
-              showSoftInputOnFocus={!showNumpad}
+              autoFocus={true}
+              autoCorrect={false}
+              spellCheck={false}
             />
             
             {/* Live-Vorschau des Ergebnisses */}

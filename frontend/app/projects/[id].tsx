@@ -599,6 +599,23 @@ export default function ProjectDetailScreen() {
               ${totalSubCount > 0 ? `<span class="pdf-category-count">${checkedSubCount}/${totalSubCount}</span>` : ''}
             </div>
             ${category.note ? `<div class="pdf-category-note"><span class="pdf-note-icon">📝</span> ${category.note}</div>` : ''}
+            ${category.measurements && category.measurements.length > 0 ? `
+              <div class="pdf-category-measurements">
+                ${category.measurements.map((m: any) => `<div class="pdf-measurement-line">📐 ${formatMeasurementForPdf(m)}</div>`).join('')}
+                ${(() => {
+                  const sumsByUnit: { [unit: string]: number } = {};
+                  category.measurements.forEach((m: any) => {
+                    const result = m.result ?? (m as any).value ?? 0;
+                    sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + result;
+                  });
+                  const units = Object.keys(sumsByUnit);
+                  if (units.length > 0) {
+                    return `<div class="pdf-measurement-sum">Summen: ${units.map(u => `<span class="pdf-sum-badge">${sumsByUnit[u].toFixed(2).replace('.', ',')} ${u}</span>`).join(' ')}</div>`;
+                  }
+                  return '';
+                })()}
+              </div>
+            ` : ''}
             <div class="pdf-level1-grid">${containersHtml}</div>
           </div>
         `;

@@ -61,9 +61,21 @@ export default function EditChecklistScreen() {
   const [measurementExpression, setMeasurementExpression] = useState('');
   const [measurementUnit, setMeasurementUnit] = useState('m²');
   const [editingMeasurementIndex, setEditingMeasurementIndex] = useState<number | null>(null);
+  const [showNumpad, setShowNumpad] = useState(true); // Nummernblock oder Tastatur
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
+
+  // Nummernblock-Taste drücken
+  const handleNumpadPress = (key: string) => {
+    if (key === '⌫') {
+      setMeasurementExpression(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      setMeasurementExpression('');
+    } else {
+      setMeasurementExpression(prev => prev + key);
+    }
+  };
 
   // Funktion zum Berechnen eines Ausdrucks (mit Komma als Dezimaltrenner)
   const calculateExpression = (expr: string): number | null => {

@@ -574,6 +574,7 @@ export default function ProjectDetailScreen() {
               <span class="pdf-deep-text">${sub.text}</span>
             </div>
             ${sub.note ? `<div class="pdf-note" style="margin-left: ${sub.level * 10 + 36}px;"><span class="pdf-note-icon">📝</span> ${sub.note}</div>` : ''}
+            ${sub.measurements && sub.measurements.length > 0 ? `<div class="pdf-measurement" style="margin-left: ${sub.level * 10 + 36}px;">${sub.measurements.map((m: any) => `📐 ${formatMeasurementForPdf(m)}`).join('<br>')}</div>` : ''}
           `).join('');
           
           return `
@@ -584,6 +585,7 @@ export default function ProjectDetailScreen() {
                 <span class="pdf-level1-title">${l1Item.text}</span>
               </div>
               ${l1Item.note ? `<div class="pdf-note"><span class="pdf-note-icon">📝</span> ${l1Item.note}</div>` : ''}
+              ${l1Item.measurements && l1Item.measurements.length > 0 ? `<div class="pdf-measurement">${l1Item.measurements.map((m: any) => `📐 ${formatMeasurementForPdf(m)}`).join('<br>')}</div>` : ''}
               ${deepSubs.length > 0 ? `<div class="pdf-level1-content">${deepSubsHtml}</div>` : ''}
             </div>
           `;

@@ -236,6 +236,10 @@ export default function DrawSketchScreen() {
   const textInputRef = useRef<TextInput>(null);
   const pointerInputRef = useRef<TextInput>(null);
   
+  // Aktiver Input für Numpad-Verbindung
+  const [activeNumpadSetter, setActiveNumpadSetter] = useState<React.Dispatch<React.SetStateAction<string>> | null>(null);
+  const [activeNumpadRef, setActiveNumpadRef] = useState<React.RefObject<TextInput> | null>(null);
+  
   // Verschiebbare Numpad-Position (für alle Modals)
   const modalNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const modalNumpadPanResponder = useRef(

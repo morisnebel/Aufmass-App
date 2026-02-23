@@ -68,7 +68,6 @@ export default function EditChecklistScreen() {
   const [showNumpad, setShowNumpad] = useState(true); // Nummernblock anzeigen
   const [numpadMode, setNumpadMode] = useState<'numbers' | 'letters'>('numbers'); // Zahlen oder Buchstaben
   const [numpadCaps, setNumpadCaps] = useState(false); // Groß/Kleinschreibung
-  const [bluetoothMode, setBluetoothMode] = useState(false); // Bluetooth-Modus aus Einstellungen
   const measurementInputRef = useRef<TextInput>(null); // Ref für Bluetooth-Input
   
   // Verschiebbare Numpad-Position (in alle Richtungen)
@@ -86,22 +85,6 @@ export default function EditChecklistScreen() {
       },
     })
   ).current;
-  
-  // Bluetooth-Modus aus Einstellungen laden
-  useEffect(() => {
-    const loadBluetoothMode = async () => {
-      try {
-        const settings = await SettingsService.get();
-        if (settings && settings.bluetooth_mode !== undefined) {
-          setBluetoothMode(settings.bluetooth_mode);
-          setShowNumpad(settings.bluetooth_mode);
-        }
-      } catch (error) {
-        console.error('Error loading bluetooth mode:', error);
-      }
-    };
-    loadBluetoothMode();
-  }, []);
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];

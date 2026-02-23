@@ -496,19 +496,26 @@ export default function ProjectDetailScreen() {
     
     // Generate checklists HTML with new hierarchical layout
     // Helper: Flatten deep sub-items for PDF
-    const flattenDeepSubItemsForPdf = (items: any[], basePrefix: string): { text: string; level: number; prefix: string; note?: string }[] => {
-      const result: { text: string; level: number; prefix: string; note?: string }[] = [];
+    const flattenDeepSubItemsForPdf = (items: any[], basePrefix: string): { text: string; level: number; prefix: string; note?: string; measurements?: any[] }[] => {
+      const result: { text: string; level: number; prefix: string; note?: string; measurements?: any[] }[] = [];
       items.forEach((item, index) => {
         const currentPrefix = `${basePrefix}.${index + 1}`;
         const currentLevel = currentPrefix.split('.').length - 2;
         if (item.checked) {
-          result.push({ text: item.text, level: currentLevel, prefix: currentPrefix, note: item.note });
+          result.push({ text: item.text, level: currentLevel, prefix: currentPrefix, note: item.note, measurements: item.measurements });
         }
         if (item.subItems && item.subItems.length > 0) {
           result.push(...flattenDeepSubItemsForPdf(item.subItems, currentPrefix));
         }
       });
       return result;
+    };
+    
+    // Helper: Format measurement for display
+    const formatMeasurementForPdf = (m: any): string => {
+      const expr = m.expression || m.value?.toString() || '0';
+      const result = m.result ?? m.value ?? 0;
+      return `${expr.replace(/\./g, ',').replace(/\*/g, '×')} = ${result.toString().replace('.', ',')} ${m.unit}`;
     };
     
     // Helper: Count checked items recursively

@@ -988,16 +988,33 @@ export default function EditChecklistScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.measurementModal}>
-            <Text style={styles.modalTitle}>Messung hinzufügen</Text>
+            <Text style={styles.modalTitle}>Aufmaß hinzufügen</Text>
+            
+            <Text style={styles.inputHint}>
+              Rechenausdruck eingeben (z.B. 5,00+6,00+9,20 oder 5*6*3)
+            </Text>
             
             <TextInput
               style={styles.measurementInput}
-              placeholder="Wert eingeben (z.B. 12,5)"
-              value={measurementValue}
-              onChangeText={setMeasurementValue}
-              keyboardType="decimal-pad"
+              placeholder="z.B. 5,00+6,00+9,20"
+              value={measurementExpression}
+              onChangeText={setMeasurementExpression}
+              keyboardType="numbers-and-punctuation"
               autoFocus
             />
+            
+            {/* Live-Vorschau des Ergebnisses */}
+            {measurementExpression.trim() !== '' && (
+              <View style={styles.resultPreview}>
+                {calculateExpression(measurementExpression) !== null ? (
+                  <Text style={styles.resultPreviewText}>
+                    = {calculateExpression(measurementExpression)?.toString().replace('.', ',')} {measurementUnit}
+                  </Text>
+                ) : (
+                  <Text style={styles.resultPreviewError}>Ungültiger Ausdruck</Text>
+                )}
+              </View>
+            )}
             
             <Text style={styles.unitLabel}>Einheit wählen:</Text>
             <View style={styles.unitGrid}>
@@ -1028,11 +1045,15 @@ export default function EditChecklistScreen() {
                 <Text style={styles.modalCancelText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalConfirmButton}
+                style={[
+                  styles.modalConfirmButton,
+                  calculateExpression(measurementExpression) === null && styles.buttonDisabled
+                ]}
                 onPress={confirmMeasurement}
+                disabled={calculateExpression(measurementExpression) === null}
               >
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.modalConfirmText}>Hinzufügen</Text>
+                <Ionicons name="calculator" size={20} color="#fff" />
+                <Text style={styles.modalConfirmText}>Berechnen</Text>
               </TouchableOpacity>
             </View>
           </View>

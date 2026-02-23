@@ -1107,7 +1107,7 @@ export default function EditChecklistScreen() {
               value={measurementExpression}
               onChangeText={setMeasurementExpression}
               placeholder="Wert eingeben..."
-              keyboardType="numbers-and-punctuation"
+              keyboardType="decimal-pad"
               autoFocus={true}
               autoCorrect={false}
               spellCheck={false}

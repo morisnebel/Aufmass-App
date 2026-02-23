@@ -3307,12 +3307,31 @@ export default function DrawSketchScreen() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Memo-Pfeil bearbeiten</Text>
               <TextInput
+                ref={pointerInputRef}
                 style={styles.modalInput}
                 value={pointerText}
                 onChangeText={setPointerText}
                 placeholder="Notiz eingeben (optional)"
                 multiline
+                showSoftInputOnFocus={!showModalNumpad}
               />
+              
+              {/* Numpad Toggle */}
+              <TouchableOpacity 
+                style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+                onPress={() => setShowModalNumpad(!showModalNumpad)}
+              >
+                <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                  {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+                </Text>
+                <View style={styles.bluetoothBadgeSmall}>
+                  <Ionicons name="bluetooth" size={12} color="#4caf50" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Numpad */}
+              {showModalNumpad && renderModalNumpad(setPointerText, pointerInputRef)}
               
               {/* Stroke Width Slider */}
               <View style={styles.sliderContainer}>

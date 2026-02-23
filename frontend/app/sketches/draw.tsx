@@ -4065,6 +4065,33 @@ const styles = StyleSheet.create({
   modalNumpadCapsActive: {
     backgroundColor: '#3949ab',
   },
+  floatingModalNumpad: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  numpadDragHandle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  numpadDragText: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+  },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',

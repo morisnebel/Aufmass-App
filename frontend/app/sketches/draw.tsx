@@ -236,6 +236,22 @@ export default function DrawSketchScreen() {
   const textInputRef = useRef<TextInput>(null);
   const pointerInputRef = useRef<TextInput>(null);
   
+  // Verschiebbare Numpad-Position (für alle Modals)
+  const modalNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const modalNumpadPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: Animated.event(
+        [null, { dx: modalNumpadPosition.x, dy: modalNumpadPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        modalNumpadPosition.extractOffset();
+      },
+    })
+  ).current;
+  
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {
     try {

@@ -1054,18 +1054,12 @@ export default function EditChecklistScreen() {
               {editingMeasurementIndex !== null ? 'Aufmaß bearbeiten' : 'Aufmaß hinzufügen'}
             </Text>
             
-            <Text style={styles.inputHint}>
-              Rechenausdruck eingeben (z.B. 5,00+6,00+9,20 oder 5*6*3)
-            </Text>
-            
-            <TextInput
-              style={styles.measurementInput}
-              placeholder="z.B. 5,00+6,00+9,20"
-              value={measurementExpression}
-              onChangeText={setMeasurementExpression}
-              keyboardType="numbers-and-punctuation"
-              autoFocus
-            />
+            {/* Eingabefeld */}
+            <View style={styles.expressionDisplay}>
+              <Text style={styles.expressionText}>
+                {measurementExpression || '0'}
+              </Text>
+            </View>
             
             {/* Live-Vorschau des Ergebnisses */}
             {measurementExpression.trim() !== '' && (
@@ -1078,6 +1072,69 @@ export default function EditChecklistScreen() {
                   <Text style={styles.resultPreviewError}>Ungültiger Ausdruck</Text>
                 )}
               </View>
+            )}
+
+            {/* Umschalter Nummernblock / Tastatur */}
+            <View style={styles.inputModeSwitch}>
+              <TouchableOpacity
+                style={[styles.switchButton, showNumpad && styles.switchButtonActive]}
+                onPress={() => setShowNumpad(true)}
+              >
+                <Ionicons name="calculator" size={18} color={showNumpad ? '#fff' : '#666'} />
+                <Text style={[styles.switchButtonText, showNumpad && styles.switchButtonTextActive]}>Nummernblock</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.switchButton, !showNumpad && styles.switchButtonActive]}
+                onPress={() => setShowNumpad(false)}
+              >
+                <Ionicons name="keypad" size={18} color={!showNumpad ? '#fff' : '#666'} />
+                <Text style={[styles.switchButtonText, !showNumpad && styles.switchButtonTextActive]}>Tastatur</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Nummernblock */}
+            {showNumpad ? (
+              <View style={styles.numpad}>
+                <View style={styles.numpadRow}>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('7')}><Text style={styles.numpadKeyText}>7</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('8')}><Text style={styles.numpadKeyText}>8</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('9')}><Text style={styles.numpadKeyText}>9</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('+')}><Text style={styles.numpadOperatorText}>+</Text></TouchableOpacity>
+                </View>
+                <View style={styles.numpadRow}>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('4')}><Text style={styles.numpadKeyText}>4</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('5')}><Text style={styles.numpadKeyText}>5</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('6')}><Text style={styles.numpadKeyText}>6</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('-')}><Text style={styles.numpadOperatorText}>−</Text></TouchableOpacity>
+                </View>
+                <View style={styles.numpadRow}>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('1')}><Text style={styles.numpadKeyText}>1</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('2')}><Text style={styles.numpadKeyText}>2</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('3')}><Text style={styles.numpadKeyText}>3</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('*')}><Text style={styles.numpadOperatorText}>×</Text></TouchableOpacity>
+                </View>
+                <View style={styles.numpadRow}>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress(',')}><Text style={styles.numpadKeyText}>,</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('0')}><Text style={styles.numpadKeyText}>0</Text></TouchableOpacity>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadDelete]} onPress={() => handleNumpadPress('⌫')}><Ionicons name="backspace-outline" size={24} color="#f44336" /></TouchableOpacity>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('/')}><Text style={styles.numpadOperatorText}>÷</Text></TouchableOpacity>
+                </View>
+                <View style={styles.numpadRow}>
+                  <TouchableOpacity style={[styles.numpadKey, styles.numpadClear]} onPress={() => handleNumpadPress('C')}><Text style={styles.numpadClearText}>C</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('(')}><Text style={styles.numpadKeyText}>(</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress(')')}><Text style={styles.numpadKeyText}>)</Text></TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('.')}><Text style={styles.numpadKeyText}>.</Text></TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TextInput
+                style={styles.measurementInput}
+                placeholder="z.B. 5,00+6,00+9,20"
+                value={measurementExpression}
+                onChangeText={setMeasurementExpression}
+                keyboardType="numbers-and-punctuation"
+                autoFocus
+              />
             )}
             
             <Text style={styles.unitLabel}>Einheit wählen:</Text>

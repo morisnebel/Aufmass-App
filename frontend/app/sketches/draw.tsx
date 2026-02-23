@@ -229,6 +229,62 @@ export default function DrawSketchScreen() {
   const measurementInputRef = useRef<TextInput>(null);
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
   
+  // Aufmaß-Tool Funktionen
+  const calculateMeasurementExpression = (expr: string): number | null => {
+    try {
+      let cleanExpr = expr.replace(/\s/g, '').replace(/,/g, '.');
+      if (!/^[\d.+\-*/()]+$/.test(cleanExpr)) return null;
+      const result = Function('"use strict"; return (' + cleanExpr + ')')();
+      if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) return null;
+      return Math.round(result * 100) / 100;
+    } catch { return null; }
+  };
+  
+  const handleMeasurementNumpadPress = (key: string) => {
+    if (key === '⌫') {
+      setMeasurementExpression(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      setMeasurementExpression('');
+    } else {
+      setMeasurementExpression(prev => prev + key);
+    }
+    setTimeout(() => measurementInputRef.current?.focus(), 10);
+  };
+  
+  const insertMeasurementAsText = () => {
+    const result = calculateMeasurementExpression(measurementExpression);
+    if (result === null) {
+      Alert.alert('Fehler', 'Ungültiger Rechenausdruck');
+      return;
+    }
+    // Formatiere den Text
+    const formattedExpr = measurementExpression.replace(/\./g, ',').replace(/\*/g, '×');
+    const displayText = `${formattedExpr} = ${result.toString().replace('.', ',')} ${measurementUnit}`;
+    
+    // Füge als Text-Element in die Skizze ein
+    const newElement: DrawElement = {
+      id: Date.now().toString(),
+      type: 'text',
+      x: 100,
+      y: 100,
+      data: { text: displayText },
+      color: '#1976d2',
+      fontSize: 16,
+      fontWeight: 'bold',
+      fontStyle: 'normal',
+    };
+    
+    const newElements = [...elements, newElement];
+    setElements(newElements);
+    saveToHistory(newElements);
+    setSelectedElementId(newElement.id);
+    setDrawMode('select');
+    
+    // Aufmaß-Tool schließen
+    setShowMeasurementTool(false);
+    setMeasurementExpression('');
+  };
+  
   // Modals
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);

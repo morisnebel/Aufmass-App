@@ -200,6 +200,71 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
+  // Messung hinzufügen
+  const addMeasurement = (path: number[], value: number, unit: string) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newMeasurements = [...(item.measurements || []), { value, unit }];
+    const newItems = updateItemAtPath(checklist.items, path, { measurements: newMeasurements });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Messung entfernen
+  const removeMeasurement = (path: number[], measurementIndex: number) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item || !item.measurements) return;
+    
+    const newMeasurements = item.measurements.filter((_, i) => i !== measurementIndex);
+    const newItems = updateItemAtPath(checklist.items, path, { measurements: newMeasurements });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Messungs-Modal öffnen
+  const openMeasurementModal = (path: number[]) => {
+    setMeasurementModalPath(path);
+    setMeasurementValue('');
+    setMeasurementUnit('m²');
+  };
+
+  // Messung bestätigen
+  const confirmMeasurement = () => {
+    if (!measurementModalPath || !measurementValue.trim()) {
+      setMeasurementModalPath(null);
+      return;
+    }
+    
+    const value = parseFloat(measurementValue.replace(',', '.'));
+    if (isNaN(value)) {
+      Alert.alert('Fehler', 'Bitte geben Sie eine gültige Zahl ein');
+      return;
+    }
+    
+    addMeasurement(measurementModalPath, value, measurementUnit);
+    setMeasurementModalPath(null);
+    setMeasurementValue('');
+  };
+
   // Neuen Unterpunkt hinzufügen
   const addSubItem = (path: number[]) => {
     if (!checklist) return;

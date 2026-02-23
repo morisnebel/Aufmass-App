@@ -282,7 +282,7 @@ export default function DrawSketchScreen() {
   const [modalNumpadCaps, setModalNumpadCaps] = useState(false); // Groß/Klein
   
   // Öffne Numpad mit bestimmtem Setter und Ref
-  const openModalNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => {
+  const openModalNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput | null>) => {
     setActiveNumpadSetter(() => setter);
     setActiveNumpadRef(inputRef);
     setShowModalNumpad(true);

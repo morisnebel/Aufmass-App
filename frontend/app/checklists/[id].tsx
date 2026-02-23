@@ -1925,7 +1925,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   closeButtonCompact: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
     padding: 4,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
   },
   expressionInputCompact: {
     borderWidth: 2,

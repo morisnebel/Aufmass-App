@@ -271,6 +271,8 @@ export default function DrawSketchScreen() {
   };
   
   // Kompaktes Numpad-Component für Modals mit Zahlen/Buchstaben-Umschaltung
+  const [modalNumpadCaps, setModalNumpadCaps] = useState(false); // Groß/Klein
+  
   const renderModalNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => (
     <View style={styles.modalNumpad}>
       {modalNumpadMode === 'numbers' ? (
@@ -278,28 +280,28 @@ export default function DrawSketchScreen() {
           {/* Zahlen-Modus */}
           <View style={styles.modalNumpadRow}>
             {['7','8','9','+'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+              <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
                 <Text style={k==='+' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
             {['4','5','6','-'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+              <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
                 <Text style={k==='-' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '-' ? '−' : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
             {['1','2','3','×'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='×' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '×' ? '*' : k, setter, inputRef)}>
+              <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='×' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '×' ? '*' : k, setter, inputRef)}>
                 <Text style={k==='×' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
             {[',','0','.','÷'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, k==='÷' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '÷' ? '/' : k, setter, inputRef)}>
+              <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='÷' && styles.modalNumpadOp]} onPress={() => handleModalNumpadPress(k === '÷' ? '/' : k, setter, inputRef)}>
                 <Text style={k==='÷' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
               </TouchableOpacity>
             ))}
@@ -312,7 +314,7 @@ export default function DrawSketchScreen() {
               <Text style={styles.modalNumpadClearText}>C</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(' ', setter, inputRef)}>
-              <Text style={styles.modalNumpadKeyText}>␣</Text>
+              <Text style={styles.modalNumpadKeyText}>{"␣"}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadDel]} onPress={() => handleModalNumpadPress('⌫', setter, inputRef)}>
               <Ionicons name="backspace-outline" size={18} color="#f44336" />
@@ -323,51 +325,51 @@ export default function DrawSketchScreen() {
         <>
           {/* Buchstaben-Modus */}
           <View style={styles.modalNumpadRow}>
-            {['m','m²','m³','lfm'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+            {['m','m²','m³','lfm'].map((k, i) => (
+              <TouchableOpacity key={`unit-${i}`} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
                 <Text style={styles.modalNumpadUnitText}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
-            {['Stk','Paar','kg','l'].map(k => (
-              <TouchableOpacity key={k} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
+            {['Stk','Paar','kg','l'].map((k, i) => (
+              <TouchableOpacity key={`unit2-${i}`} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
                 <Text style={styles.modalNumpadUnitText}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
             {['a','b','c','d','e','f'].map(k => (
-              <TouchableOpacity key={k} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
-                <Text style={styles.modalNumpadKeyText}>{k}</Text>
+              <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(modalNumpadCaps ? k.toUpperCase() : k, setter, inputRef)}>
+                <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
             {['g','h','i','j','k','l'].map(k => (
-              <TouchableOpacity key={k} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
-                <Text style={styles.modalNumpadKeyText}>{k}</Text>
+              <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(modalNumpadCaps ? k.toUpperCase() : k, setter, inputRef)}>
+                <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
-            {['m','n','o','p','q','r'].map(k => (
-              <TouchableOpacity key={k} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
-                <Text style={styles.modalNumpadKeyText}>{k}</Text>
+            {['n','o','p','q','r','s'].map(k => (
+              <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(modalNumpadCaps ? k.toUpperCase() : k, setter, inputRef)}>
+                <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
-            {['s','t','u','v','w','x'].map(k => (
-              <TouchableOpacity key={k} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
-                <Text style={styles.modalNumpadKeyText}>{k}</Text>
+            {['t','u','v','w','x','y'].map(k => (
+              <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(modalNumpadCaps ? k.toUpperCase() : k, setter, inputRef)}>
+                <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <View style={styles.modalNumpadRow}>
-            {['y','z','ä','ö','ü','ß'].map(k => (
-              <TouchableOpacity key={k} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(k, setter, inputRef)}>
-                <Text style={styles.modalNumpadKeyText}>{k}</Text>
+            {['z','ä','ö','ü','ß','-'].map(k => (
+              <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(modalNumpadCaps ? k.toUpperCase() : k, setter, inputRef)}>
+                <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -375,11 +377,11 @@ export default function DrawSketchScreen() {
             <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadMode]} onPress={() => setModalNumpadMode('numbers')}>
               <Text style={styles.modalNumpadModeText}>123</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadClear]} onPress={() => handleModalNumpadPress('C', setter, inputRef)}>
-              <Text style={styles.modalNumpadClearText}>C</Text>
+            <TouchableOpacity style={[styles.modalNumpadKey, modalNumpadCaps && styles.modalNumpadCapsActive]} onPress={() => setModalNumpadCaps(!modalNumpadCaps)}>
+              <Ionicons name="arrow-up" size={18} color={modalNumpadCaps ? '#fff' : '#666'} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalNumpadKey} onPress={() => handleModalNumpadPress(' ', setter, inputRef)}>
-              <Text style={styles.modalNumpadKeyText}>␣</Text>
+              <Text style={styles.modalNumpadKeyText}>{"␣"}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadDel]} onPress={() => handleModalNumpadPress('⌫', setter, inputRef)}>
               <Ionicons name="backspace-outline" size={18} color="#f44336" />

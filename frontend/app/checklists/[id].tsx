@@ -1067,7 +1067,7 @@ export default function EditChecklistScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Messungs-Modal */}
+      {/* Messungs-Modal - Kompakt & Verschiebbar */}
       <Modal
         visible={measurementModalPath !== null}
         transparent={true}
@@ -1075,139 +1075,180 @@ export default function EditChecklistScreen() {
         onRequestClose={() => setMeasurementModalPath(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.measurementModal}>
-            <Text style={styles.modalTitle}>
-              {editingMeasurementIndex !== null ? 'Aufmaß bearbeiten' : 'Aufmaß hinzufügen'}
-            </Text>
+          <Animated.View 
+            style={[
+              styles.measurementModalCompact,
+              { transform: modalPosition.getTranslateTransform() }
+            ]}
+          >
+            {/* Drag-Handle zum Verschieben */}
+            <View {...panResponder.panHandlers} style={styles.dragHandle}>
+              <View style={styles.dragIndicator} />
+              <Text style={styles.modalTitleCompact}>
+                {editingMeasurementIndex !== null ? 'Bearbeiten' : 'Aufmaß'}
+              </Text>
+              <TouchableOpacity 
+                style={styles.closeButtonCompact}
+                onPress={() => {
+                  setMeasurementModalPath(null);
+                  setEditingMeasurementIndex(null);
+                  modalPosition.setValue({ x: 0, y: 0 });
+                  modalPosition.setOffset({ x: 0, y: 0 });
+                }}
+              >
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
             
-            {/* Eingabefeld - empfängt Bluetooth UND Numpad-Eingaben gleichzeitig */}
+            {/* Eingabefeld - kompakter */}
             <TextInput
               ref={measurementInputRef}
-              style={styles.expressionInput}
+              style={styles.expressionInputCompact}
               value={measurementExpression}
               onChangeText={setMeasurementExpression}
-              placeholder="Bluetooth oder Nummernblock"
+              placeholder="Wert eingeben..."
               keyboardType="numbers-and-punctuation"
               autoFocus={true}
               autoCorrect={false}
               spellCheck={false}
+              showSoftInputOnFocus={showKeyboard}
             />
             
-            {/* Live-Vorschau des Ergebnisses */}
+            {/* Live-Ergebnis - kompakter */}
             {measurementExpression.trim() !== '' && (
-              <View style={styles.resultPreview}>
-                {calculateExpression(measurementExpression) !== null ? (
-                  <Text style={styles.resultPreviewText}>
-                    = {calculateExpression(measurementExpression)?.toString().replace('.', ',')} {measurementUnit}
-                  </Text>
-                ) : (
-                  <Text style={styles.resultPreviewError}>Ungültiger Ausdruck</Text>
-                )}
-              </View>
-            )}
-
-            {/* Umschalter Nummernblock ein/aus (nur Sichtbarkeit, nicht Eingabemethode) */}
-            <TouchableOpacity
-              style={[styles.numpadToggle, showNumpad && styles.numpadToggleActive]}
-              onPress={() => {
-                setShowNumpad(!showNumpad);
-                // Fokus behalten für Bluetooth
-                setTimeout(() => measurementInputRef.current?.focus(), 10);
-              }}
-            >
-              <Ionicons name="calculator" size={20} color={showNumpad ? '#fff' : '#2196f3'} />
-              <Text style={[styles.numpadToggleText, showNumpad && styles.numpadToggleTextActive]}>
-                {showNumpad ? 'Nummernblock ausblenden' : 'Nummernblock einblenden'}
+              <Text style={calculateExpression(measurementExpression) !== null ? styles.resultCompact : styles.resultErrorCompact}>
+                {calculateExpression(measurementExpression) !== null 
+                  ? `= ${calculateExpression(measurementExpression)?.toString().replace('.', ',')} ${measurementUnit}`
+                  : 'Ungültig'}
               </Text>
-            </TouchableOpacity>
-            
-            {/* Hinweis für Bluetooth-Eingabe */}
-            <Text style={styles.bluetoothHint}>
-              💡 Bluetooth-Eingaben werden immer akzeptiert
-            </Text>
+            )}
 
-            {/* Nummernblock (optional einblendbar) */}
+            {/* Toggle-Buttons: Numpad / Tastatur */}
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleButton, showNumpad && styles.toggleButtonActive]}
+                onPress={() => {
+                  setShowNumpad(!showNumpad);
+                  if (!showNumpad) setShowKeyboard(false);
+                  setTimeout(() => measurementInputRef.current?.focus(), 10);
+                }}
+              >
+                <Ionicons name="calculator" size={16} color={showNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.toggleButtonText, showNumpad && styles.toggleButtonTextActive]}>Pad</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toggleButton, showKeyboard && styles.toggleButtonActive]}
+                onPress={() => {
+                  setShowKeyboard(!showKeyboard);
+                  if (!showKeyboard) {
+                    setShowNumpad(false);
+                    setTimeout(() => {
+                      measurementInputRef.current?.blur();
+                      measurementInputRef.current?.focus();
+                    }, 50);
+                  } else {
+                    Keyboard.dismiss();
+                  }
+                }}
+              >
+                <Ionicons name="keypad" size={16} color={showKeyboard ? '#fff' : '#2196f3'} />
+                <Text style={[styles.toggleButtonText, showKeyboard && styles.toggleButtonTextActive]}>Tastatur</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.bluetoothBadge}>
+                <Ionicons name="bluetooth" size={14} color="#4caf50" />
+              </View>
+            </View>
+
+            {/* Kompakter Nummernblock */}
             {showNumpad && (
-              <View style={styles.numpad}>
-                <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('7')}><Text style={styles.numpadKeyText}>7</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('8')}><Text style={styles.numpadKeyText}>8</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('9')}><Text style={styles.numpadKeyText}>9</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('+')}><Text style={styles.numpadOperatorText}>+</Text></TouchableOpacity>
+              <View style={styles.numpadCompact}>
+                <View style={styles.numpadRowCompact}>
+                  {['7','8','9','+'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='+' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                      <Text style={k==='+' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('4')}><Text style={styles.numpadKeyText}>4</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('5')}><Text style={styles.numpadKeyText}>5</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('6')}><Text style={styles.numpadKeyText}>6</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('-')}><Text style={styles.numpadOperatorText}>−</Text></TouchableOpacity>
+                <View style={styles.numpadRowCompact}>
+                  {['4','5','6','-'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='-' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                      <Text style={k==='-' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '-' ? '−' : k}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('1')}><Text style={styles.numpadKeyText}>1</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('2')}><Text style={styles.numpadKeyText}>2</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('3')}><Text style={styles.numpadKeyText}>3</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('*')}><Text style={styles.numpadOperatorText}>×</Text></TouchableOpacity>
+                <View style={styles.numpadRowCompact}>
+                  {['1','2','3','*'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='*' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                      <Text style={k==='*' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '*' ? '×' : k}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress(',')}><Text style={styles.numpadKeyText}>,</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('0')}><Text style={styles.numpadKeyText}>0</Text></TouchableOpacity>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadDelete]} onPress={() => handleNumpadPress('⌫')}><Ionicons name="backspace-outline" size={24} color="#f44336" /></TouchableOpacity>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadOperator]} onPress={() => handleNumpadPress('/')}><Text style={styles.numpadOperatorText}>÷</Text></TouchableOpacity>
+                <View style={styles.numpadRowCompact}>
+                  {[',','0','⌫','/'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='⌫' && styles.numpadDelCompact, k==='/' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                      {k === '⌫' ? <Ionicons name="backspace-outline" size={18} color="#f44336" /> : <Text style={k==='/' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '/' ? '÷' : k}</Text>}
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <View style={styles.numpadRow}>
-                  <TouchableOpacity style={[styles.numpadKey, styles.numpadClear]} onPress={() => handleNumpadPress('C')}><Text style={styles.numpadClearText}>C</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('(')}><Text style={styles.numpadKeyText}>(</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress(')')}><Text style={styles.numpadKeyText}>)</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKey} onPress={() => handleNumpadPress('.')}><Text style={styles.numpadKeyText}>.</Text></TouchableOpacity>
+                <View style={styles.numpadRowCompact}>
+                  <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
+                    <Text style={styles.numpadClearTextCompact}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress('(')}>
+                    <Text style={styles.numpadKeyTextCompact}>(</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(')')}>
+                    <Text style={styles.numpadKeyTextCompact}>)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress('.')}>
+                    <Text style={styles.numpadKeyTextCompact}>.</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
             
-            <Text style={styles.unitLabel}>Einheit wählen:</Text>
-            <View style={styles.unitGrid}>
+            {/* Einheiten - kompakter */}
+            <View style={styles.unitRowCompact}>
               {availableUnits.map(unit => (
                 <TouchableOpacity
                   key={unit}
-                  style={[
-                    styles.unitButton,
-                    measurementUnit === unit && styles.unitButtonActive
-                  ]}
+                  style={[styles.unitChip, measurementUnit === unit && styles.unitChipActive]}
                   onPress={() => setMeasurementUnit(unit)}
                 >
-                  <Text style={[
-                    styles.unitButtonText,
-                    measurementUnit === unit && styles.unitButtonTextActive
-                  ]}>
-                    {unit}
-                  </Text>
+                  <Text style={[styles.unitChipText, measurementUnit === unit && styles.unitChipTextActive]}>{unit}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             
-            <View style={styles.modalButtons}>
+            {/* Buttons - kompakter */}
+            <View style={styles.modalButtonsCompact}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={styles.cancelBtnCompact}
                 onPress={() => {
                   setMeasurementModalPath(null);
                   setEditingMeasurementIndex(null);
+                  modalPosition.setValue({ x: 0, y: 0 });
+                  modalPosition.setOffset({ x: 0, y: 0 });
                 }}
               >
-                <Text style={styles.modalCancelText}>Abbrechen</Text>
+                <Text style={styles.cancelBtnText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.modalConfirmButton,
-                  calculateExpression(measurementExpression) === null && styles.buttonDisabled
-                ]}
-                onPress={confirmMeasurement}
+                style={[styles.confirmBtnCompact, calculateExpression(measurementExpression) === null && styles.btnDisabled]}
+                onPress={() => {
+                  confirmMeasurement();
+                  modalPosition.setValue({ x: 0, y: 0 });
+                  modalPosition.setOffset({ x: 0, y: 0 });
+                }}
                 disabled={calculateExpression(measurementExpression) === null}
               >
-                <Ionicons name="calculator" size={20} color="#fff" />
-                <Text style={styles.modalConfirmText}>
-                  {editingMeasurementIndex !== null ? 'Speichern' : 'Berechnen'}
-                </Text>
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.confirmBtnText}>OK</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </KeyboardAvoidingView>

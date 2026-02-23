@@ -3157,13 +3157,36 @@ export default function DrawSketchScreen() {
             <Text style={styles.modalTitle}>Memo-Pfeil</Text>
             <Text style={styles.modalSubtitle}>Optional: Notiz hinzufügen</Text>
             <TextInput
+              ref={pointerInputRef}
               style={styles.modalInput}
               value={pointerText}
               onChangeText={setPointerText}
               placeholder="Notiz eingeben (optional)"
               autoFocus
               multiline
+              showSoftInputOnFocus={!showModalNumpad}
             />
+            
+            {/* Numpad Toggle */}
+            <TouchableOpacity 
+              style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+              onPress={() => {
+                if (showModalNumpad) {
+                  closeModalNumpad();
+                } else {
+                  openModalNumpad(setPointerText, pointerInputRef);
+                }
+              }}
+            >
+              <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+              <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+              </Text>
+              <View style={styles.bluetoothBadgeSmall}>
+                <Ionicons name="bluetooth" size={12} color="#4caf50" />
+              </View>
+            </TouchableOpacity>
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -3171,13 +3194,17 @@ export default function DrawSketchScreen() {
                   setShowPointerModal(false);
                   setPointerText('');
                   setPendingPointer(null);
+                  closeModalNumpad();
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
-                onPress={addPointerElement}
+                onPress={() => {
+                  addPointerElement();
+                  closeModalNumpad();
+                }}
               >
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>

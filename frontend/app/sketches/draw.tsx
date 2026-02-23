@@ -4035,6 +4035,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#3949ab',
   },
+  modalNumpadCapsActive: {
+    backgroundColor: '#3949ab',
+  },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',

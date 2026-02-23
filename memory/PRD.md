@@ -119,5 +119,24 @@ Mobile app for roof measurement professionals to document projects, take photos,
 - Expo Account: moris_nebel@hotmail.com
 - Password: Miabalu1+
 
+### Session 20.02.2026
+- **[FIXED] Tastatur-Bug in Checklisten**
+  - Tastatur öffnete sich nicht mehr bei Notizen/Positions-Eingabefeldern
+  - Behoben durch Hinzufügen von `autoFocus={true}`
+  - File: `frontend/app/checklists/[id].tsx`
+
+- **[FIXED] Numpad Schließen-Button in Checklisten**
+  - X-Button zum Schließen funktionierte nicht
+  - Problem: Button war innerhalb des Drag-Bereichs (PanResponder fing Touch-Events ab)
+  - Lösung: Button außerhalb des Drag-Bereichs verschoben, absolut positioniert
+  - File: `frontend/app/checklists/[id].tsx`
+
+- **[FIXED] Numpad-Größe in Skizzen-Ansicht**
+  - Numpad war zu klein im Vergleich zur Checklisten-Ansicht
+  - Tasten vergrößert (minHeight: 44, aspectRatio: 1.5)
+  - Schriftgrößen erhöht (16px für Zahlen, 18px für Operatoren)
+  - Container breiter (maxWidth: 360)
+  - File: `frontend/app/sketches/draw.tsx`
+
 ## Last Updated
-December 2025
+February 2026

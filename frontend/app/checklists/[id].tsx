@@ -233,7 +233,7 @@ export default function EditChecklistScreen() {
   };
 
   // Messung hinzufügen
-  const addMeasurement = (path: number[], value: number, unit: string) => {
+  const addMeasurement = (path: number[], expression: string, result: number, unit: string) => {
     if (!checklist) return;
     
     const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
@@ -246,7 +246,7 @@ export default function EditChecklistScreen() {
     const item = getItemAtPath(checklist.items, path);
     if (!item) return;
     
-    const newMeasurements = [...(item.measurements || []), { value, unit }];
+    const newMeasurements = [...(item.measurements || []), { expression, result, unit }];
     const newItems = updateItemAtPath(checklist.items, path, { measurements: newMeasurements });
     setChecklist({ ...checklist, items: newItems });
     setHasChanges(true);

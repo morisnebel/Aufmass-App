@@ -1552,6 +1552,93 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  expressionDisplay: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#2196f3',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 8,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  expressionText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'right',
+  },
+  inputModeSwitch: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  switchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  switchButtonActive: {
+    backgroundColor: '#2196f3',
+  },
+  switchButtonText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  switchButtonTextActive: {
+    color: '#fff',
+  },
+  numpad: {
+    marginBottom: 12,
+  },
+  numpadRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  numpadKey: {
+    flex: 1,
+    aspectRatio: 1.3,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  numpadKeyText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#333',
+  },
+  numpadOperator: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  numpadOperatorText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1976d2',
+  },
+  numpadDelete: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+  },
+  numpadClear: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+  },
+  numpadClearText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f57c00',
+  },
   inputHint: {
     fontSize: 12,
     color: '#666',

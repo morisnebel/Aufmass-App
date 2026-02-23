@@ -827,26 +827,37 @@ export default function EditChecklistScreen() {
               {/* Vorhandene Messungen */}
               {item.measurements && item.measurements.length > 0 && (
                 <View style={styles.measurementsList}>
-                  {item.measurements.map((m, mIndex) => (
-                    <View key={mIndex} style={styles.measurementChip}>
-                      <Text style={styles.measurementChipText}>
-                        {formatExpression(m.expression)} = {m.result.toString().replace('.', ',')} {m.unit}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => removeMeasurement(path, mIndex)}
-                        style={styles.removeMeasurementButton}
+                  {item.measurements.map((m, mIndex) => {
+                    // Kompatibilität mit altem Format (value statt expression)
+                    const expr = m.expression || (m as any).value?.toString() || '0';
+                    const result = m.result ?? (m as any).value ?? 0;
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={mIndex} 
+                        style={styles.measurementChip}
+                        onPress={() => openEditMeasurementModal(path, mIndex, expr, m.unit)}
                       >
-                        <Ionicons name="close-circle" size={18} color="#f44336" />
+                        <Text style={styles.measurementChipText}>
+                          {formatExpression(expr)} = {result.toString().replace('.', ',')} {m.unit}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => removeMeasurement(path, mIndex)}
+                          style={styles.removeMeasurementButton}
+                        >
+                          <Ionicons name="close-circle" size={18} color="#f44336" />
+                        </TouchableOpacity>
                       </TouchableOpacity>
-                    </View>
-                  ))}
+                    );
+                  })}
                   
                   {/* Summe pro Einheit anzeigen */}
                   {(() => {
                     // Gruppiere nach Einheit
                     const sumsByUnit: { [unit: string]: number } = {};
                     item.measurements.forEach(m => {
-                      sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + m.result;
+                      const result = m.result ?? (m as any).value ?? 0;
+                      sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + result;
                     });
                     const units = Object.keys(sumsByUnit);
                     

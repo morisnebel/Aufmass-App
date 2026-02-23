@@ -275,26 +275,26 @@ export default function EditChecklistScreen() {
   // Messungs-Modal öffnen
   const openMeasurementModal = (path: number[]) => {
     setMeasurementModalPath(path);
-    setMeasurementValue('');
+    setMeasurementExpression('');
     setMeasurementUnit('m²');
   };
 
   // Messung bestätigen
   const confirmMeasurement = () => {
-    if (!measurementModalPath || !measurementValue.trim()) {
+    if (!measurementModalPath || !measurementExpression.trim()) {
       setMeasurementModalPath(null);
       return;
     }
     
-    const value = parseFloat(measurementValue.replace(',', '.'));
-    if (isNaN(value)) {
-      Alert.alert('Fehler', 'Bitte geben Sie eine gültige Zahl ein');
+    const result = calculateExpression(measurementExpression);
+    if (result === null) {
+      Alert.alert('Fehler', 'Ungültiger Rechenausdruck. Erlaubt: Zahlen und +, -, *, /\n\nBeispiele:\n• 5,00+6,00+9,20\n• 5,00*6,00\n• (3+4)*2');
       return;
     }
     
-    addMeasurement(measurementModalPath, value, measurementUnit);
+    addMeasurement(measurementModalPath, measurementExpression, result, measurementUnit);
     setMeasurementModalPath(null);
-    setMeasurementValue('');
+    setMeasurementExpression('');
   };
 
   // Neuen Unterpunkt hinzufügen

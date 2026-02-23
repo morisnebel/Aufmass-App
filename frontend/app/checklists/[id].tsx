@@ -829,7 +829,7 @@ export default function EditChecklistScreen() {
                   {item.measurements.map((m, mIndex) => (
                     <View key={mIndex} style={styles.measurementChip}>
                       <Text style={styles.measurementChipText}>
-                        {m.value.toString().replace('.', ',')} {m.unit}
+                        {formatExpression(m.expression)} = {m.result.toString().replace('.', ',')} {m.unit}
                       </Text>
                       <TouchableOpacity
                         onPress={() => removeMeasurement(path, mIndex)}
@@ -840,14 +840,29 @@ export default function EditChecklistScreen() {
                     </View>
                   ))}
                   
-                  {/* Summe anzeigen wenn mehrere Messungen */}
-                  {item.measurements.length > 1 && (
-                    <View style={styles.measurementSumContainer}>
-                      <Text style={styles.measurementSumText}>
-                        = {item.measurements.map(m => m.value.toString().replace('.', ',')).join(' + ')} = {item.measurements.reduce((sum, m) => sum + m.value, 0).toString().replace('.', ',')} {item.measurements[0].unit}
-                      </Text>
-                    </View>
-                  )}
+                  {/* Summe pro Einheit anzeigen */}
+                  {(() => {
+                    // Gruppiere nach Einheit
+                    const sumsByUnit: { [unit: string]: number } = {};
+                    item.measurements.forEach(m => {
+                      sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + m.result;
+                    });
+                    const units = Object.keys(sumsByUnit);
+                    
+                    if (units.length > 0) {
+                      return (
+                        <View style={styles.measurementSumContainer}>
+                          <Text style={styles.measurementSumLabel}>Summen:</Text>
+                          {units.map(unit => (
+                            <Text key={unit} style={styles.measurementSumText}>
+                              {sumsByUnit[unit].toFixed(2).replace('.', ',')} {unit}
+                            </Text>
+                          ))}
+                        </View>
+                      );
+                    }
+                    return null;
+                  })()}
                 </View>
               )}
             </View>

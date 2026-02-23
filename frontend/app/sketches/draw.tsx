@@ -3075,7 +3075,7 @@ export default function DrawSketchScreen() {
               {/* Numpad */}
               {showModalNumpad && renderModalNumpad(setArrowText, arrowInputRef)}
               
-              <View style={styles.arrowHeadsContainer}>>
+              <View style={styles.arrowHeadsContainer}>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
                 <View style={styles.arrowHeadsButtons}>
                   <TouchableOpacity

@@ -66,8 +66,8 @@ export default function EditChecklistScreen() {
   const [measurementUnit, setMeasurementUnit] = useState('m²');
   const [editingMeasurementIndex, setEditingMeasurementIndex] = useState<number | null>(null);
   const [showNumpad, setShowNumpad] = useState(true); // Nummernblock anzeigen
+  const [numpadMode, setNumpadMode] = useState<'numbers' | 'letters'>('numbers'); // Zahlen oder Buchstaben
   const measurementInputRef = React.useRef<TextInput>(null); // Ref für Bluetooth-Input
-  const [showKeyboard, setShowKeyboard] = useState(false); // Software-Tastatur anzeigen
   
   // Verschiebbare Modal-Position
   const modalPosition = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;

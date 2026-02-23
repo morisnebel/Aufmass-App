@@ -1086,6 +1086,21 @@ export default function EditChecklistScreen() {
               { transform: numpadPosition.getTranslateTransform() }
             ]}
           >
+            {/* Schließen-Button außerhalb des Drag-Bereichs */}
+            <TouchableOpacity 
+              style={styles.closeButtonCompact}
+              onPress={() => {
+                setMeasurementModalPath(null);
+                setEditingMeasurementIndex(null);
+                setNumpadMode('numbers');
+                numpadPosition.setValue({ x: 0, y: 0 });
+                numpadPosition.setOffset({ x: 0, y: 0 });
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={24} color="#999" />
+            </TouchableOpacity>
+            
             {/* Drag-Handle zum Verschieben */}
             <View {...numpadPanResponder.panHandlers} style={styles.dragHandle}>
               <View style={styles.dragIndicator} />
@@ -1095,18 +1110,6 @@ export default function EditChecklistScreen() {
               <View style={styles.bluetoothBadge}>
                 <Ionicons name="bluetooth" size={14} color="#4caf50" />
               </View>
-              <TouchableOpacity 
-                style={styles.closeButtonCompact}
-                onPress={() => {
-                  setMeasurementModalPath(null);
-                  setEditingMeasurementIndex(null);
-                  setNumpadMode('numbers');
-                  numpadPosition.setValue({ x: 0, y: 0 });
-                  numpadPosition.setOffset({ x: 0, y: 0 });
-                }}
-              >
-                <Ionicons name="close" size={20} color="#666" />
-              </TouchableOpacity>
             </View>
             
             {/* Eingabefeld - kompakter */}

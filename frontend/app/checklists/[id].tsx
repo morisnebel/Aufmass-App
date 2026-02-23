@@ -2021,6 +2021,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#f57c00',
   },
+  numpadModeCompact: {
+    backgroundColor: '#e8eaf6',
+    borderColor: '#5c6bc0',
+  },
+  numpadModeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3949ab',
+  },
+  numpadUnitCompact: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#4caf50',
+  },
+  numpadUnitText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#388e3c',
+  },
   unitRowCompact: {
     flexDirection: 'row',
     flexWrap: 'wrap',

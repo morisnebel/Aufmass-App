@@ -101,12 +101,13 @@ export default function EditChecklistScreen() {
             if (item.subItems && Array.isArray(item.subItems)) {
               subItems = item.subItems.map((sub: any) => {
                 if (typeof sub === 'string') {
-                  return { text: sub, checked: false, subItems: [] };
+                  return { text: sub, checked: false, subItems: [], measurements: [] };
                 }
                 return {
                   text: sub.text || '',
                   checked: sub.checked || false,
                   note: sub.note || '',
+                  measurements: sub.measurements || [],
                   subItems: sub.subItems ? convertItems(sub.subItems) : [],
                 };
               });
@@ -115,6 +116,7 @@ export default function EditChecklistScreen() {
               text: item.text || '',
               checked: item.checked || false,
               note: item.note || '',
+              measurements: item.measurements || [],
               subItems: subItems,
             };
           });

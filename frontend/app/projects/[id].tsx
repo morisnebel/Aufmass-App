@@ -976,6 +976,16 @@ export default function ProjectDetailScreen() {
           .pdf-note-icon {
             margin-right: 4px;
           }
+          .pdf-measurement {
+            background: #e3f2fd;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            color: #1565c0;
+            font-weight: 500;
+            margin-top: 3px;
+            margin-bottom: 3px;
+          }
           .photos-grid, .sketches-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);

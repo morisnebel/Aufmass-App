@@ -3395,6 +3395,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontStyle: 'italic',
   },
+  measurementDisplayContainer: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 4,
+    padding: 4,
+    marginTop: 4,
+  },
+  measurementDisplayText: {
+    fontSize: 10,
+    color: '#1565c0',
+    fontWeight: '500',
+  },
   noSubItemsHint: {
     fontSize: 12,
     color: '#999',

@@ -4024,6 +4024,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#388e3c',
   },
+  modalNumpadMode: {
+    backgroundColor: '#e8eaf6',
+    borderColor: '#5c6bc0',
+  },
+  modalNumpadModeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3949ab',
+  },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',

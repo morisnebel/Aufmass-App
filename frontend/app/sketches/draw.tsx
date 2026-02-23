@@ -231,6 +231,7 @@ export default function DrawSketchScreen() {
   
   // Numpad in Modals (für Arrow/Text/Pointer)
   const [showModalNumpad, setShowModalNumpad] = useState(false);
+  const [modalNumpadMode, setModalNumpadMode] = useState<'numbers' | 'letters'>('numbers');
   const arrowInputRef = useRef<TextInput>(null);
   const textInputRef = useRef<TextInput>(null);
   const pointerInputRef = useRef<TextInput>(null);

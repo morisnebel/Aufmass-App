@@ -1038,7 +1038,9 @@ export default function EditChecklistScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.measurementModal}>
-            <Text style={styles.modalTitle}>Aufmaß hinzufügen</Text>
+            <Text style={styles.modalTitle}>
+              {editingMeasurementIndex !== null ? 'Aufmaß bearbeiten' : 'Aufmaß hinzufügen'}
+            </Text>
             
             <Text style={styles.inputHint}>
               Rechenausdruck eingeben (z.B. 5,00+6,00+9,20 oder 5*6*3)
@@ -1090,7 +1092,10 @@ export default function EditChecklistScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
-                onPress={() => setMeasurementModalPath(null)}
+                onPress={() => {
+                  setMeasurementModalPath(null);
+                  setEditingMeasurementIndex(null);
+                }}
               >
                 <Text style={styles.modalCancelText}>Abbrechen</Text>
               </TouchableOpacity>
@@ -1103,7 +1108,9 @@ export default function EditChecklistScreen() {
                 disabled={calculateExpression(measurementExpression) === null}
               >
                 <Ionicons name="calculator" size={20} color="#fff" />
-                <Text style={styles.modalConfirmText}>Berechnen</Text>
+                <Text style={styles.modalConfirmText}>
+                  {editingMeasurementIndex !== null ? 'Speichern' : 'Berechnen'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

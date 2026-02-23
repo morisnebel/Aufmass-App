@@ -1381,15 +1381,28 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   measurementSumContainer: {
-    marginTop: 4,
-    paddingTop: 6,
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#90caf9',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
-  measurementSumText: {
-    fontSize: 13,
+  measurementSumLabel: {
+    fontSize: 12,
     color: '#1565c0',
     fontWeight: '600',
+  },
+  measurementSumText: {
+    fontSize: 14,
+    color: '#1565c0',
+    fontWeight: '700',
+    backgroundColor: '#bbdefb',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   // Modal-Styles
   modalOverlay: {

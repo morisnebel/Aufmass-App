@@ -11,6 +11,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Keyboard,
+  PanResponder,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

@@ -2040,6 +2040,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#388e3c',
   },
+  numpadCapsActive: {
+    backgroundColor: '#3949ab',
+  },
   unitRowCompact: {
     flexDirection: 'row',
     flexWrap: 'wrap',

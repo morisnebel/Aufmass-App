@@ -16,10 +16,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChecklistService, ProjectService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
+interface Measurement {
+  value: number;
+  unit: string;
+}
+
 interface RecursiveItem {
   text: string;
   checked: boolean;
   note?: string;
+  measurements?: Measurement[];
   subItems?: RecursiveItem[];
 }
 

@@ -970,6 +970,8 @@ export default function EditChecklistScreen() {
                   onChangeText={(text) => updateNote(path, text)}
                   multiline
                   numberOfLines={3}
+                  editable={true}
+                  showSoftInputOnFocus={true}
                 />
               </View>
             )}

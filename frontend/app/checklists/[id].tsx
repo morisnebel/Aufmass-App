@@ -1180,51 +1180,51 @@ export default function EditChecklistScreen() {
                   <>
                     {/* Buchstaben-Modus */}
                     <View style={styles.numpadRowCompact}>
-                      {['m','m²','m³','lfm'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
+                      {['m','m²','m³','lfm'].map((k, i) => (
+                        <TouchableOpacity key={`unit-${i}`} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
                           <Text style={styles.numpadUnitText}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
-                      {['Stk','Paar','kg','l'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
+                      {['Stk','Paar','kg','l'].map((k, i) => (
+                        <TouchableOpacity key={`unit2-${i}`} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
                           <Text style={styles.numpadUnitText}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
                       {['a','b','c','d','e','f'].map(k => (
-                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
                       {['g','h','i','j','k','l'].map(k => (
-                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
-                      {['m','n','o','p','q','r'].map(k => (
-                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                      {['n','o','p','q','r','s'].map(k => (
+                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
-                      {['s','t','u','v','w','x'].map(k => (
-                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                      {['t','u','v','w','x','y'].map(k => (
+                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
-                      {['y','z','ä','ö','ü','ß'].map(k => (
-                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                      {['z','ä','ö','ü','ß','-'].map(k => (
+                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -1232,11 +1232,11 @@ export default function EditChecklistScreen() {
                       <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadModeCompact]} onPress={() => setNumpadMode('numbers')}>
                         <Text style={styles.numpadModeText}>123</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
-                        <Text style={styles.numpadClearTextCompact}>C</Text>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, numpadCaps && styles.numpadCapsActive]} onPress={() => setNumpadCaps(!numpadCaps)}>
+                        <Ionicons name="arrow-up" size={18} color={numpadCaps ? '#fff' : '#666'} />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(' ')}>
-                        <Text style={styles.numpadKeyTextCompact}>␣</Text>
+                        <Text style={styles.numpadKeyTextCompact}>{"␣"}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadDelCompact]} onPress={() => handleNumpadPress('⌫')}>
                         <Ionicons name="backspace-outline" size={18} color="#f44336" />

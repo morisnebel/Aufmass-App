@@ -2884,7 +2884,13 @@ export default function DrawSketchScreen() {
               {/* Numpad Toggle */}
               <TouchableOpacity 
                 style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
-                onPress={() => setShowModalNumpad(!showModalNumpad)}
+                onPress={() => {
+                  if (showModalNumpad) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setArrowText, arrowInputRef);
+                  }
+                }}
               >
                 <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
                 <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
@@ -2894,9 +2900,6 @@ export default function DrawSketchScreen() {
                   <Ionicons name="bluetooth" size={12} color="#4caf50" />
                 </View>
               </TouchableOpacity>
-              
-              {/* Numpad */}
-              {showModalNumpad && renderModalNumpad(setArrowText, arrowInputRef)}
               
               <View style={styles.arrowHeadsContainer}>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
@@ -2922,7 +2925,7 @@ export default function DrawSketchScreen() {
                     setShowArrowModal(false);
                     setArrowText('');
                     setPendingArrow(null);
-                    setShowModalNumpad(false);
+                    closeModalNumpad();
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Abbrechen</Text>
@@ -2931,7 +2934,7 @@ export default function DrawSketchScreen() {
                   style={[styles.modalButton, styles.confirmButton]}
                   onPress={() => {
                     addArrowElement();
-                    setShowModalNumpad(false);
+                    closeModalNumpad();
                   }}
                 >
                   <Text style={styles.confirmButtonText}>Hinzufügen</Text>

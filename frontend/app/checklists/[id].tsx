@@ -1085,16 +1085,25 @@ export default function EditChecklistScreen() {
               </View>
             )}
 
-            {/* Umschalter Nummernblock ein/aus */}
+            {/* Umschalter Nummernblock ein/aus (nur Sichtbarkeit, nicht Eingabemethode) */}
             <TouchableOpacity
               style={[styles.numpadToggle, showNumpad && styles.numpadToggleActive]}
-              onPress={() => setShowNumpad(!showNumpad)}
+              onPress={() => {
+                setShowNumpad(!showNumpad);
+                // Fokus behalten für Bluetooth
+                setTimeout(() => measurementInputRef.current?.focus(), 10);
+              }}
             >
               <Ionicons name="calculator" size={20} color={showNumpad ? '#fff' : '#2196f3'} />
               <Text style={[styles.numpadToggleText, showNumpad && styles.numpadToggleTextActive]}>
                 {showNumpad ? 'Nummernblock ausblenden' : 'Nummernblock einblenden'}
               </Text>
             </TouchableOpacity>
+            
+            {/* Hinweis für Bluetooth-Eingabe */}
+            <Text style={styles.bluetoothHint}>
+              💡 Bluetooth-Eingaben werden immer akzeptiert
+            </Text>
 
             {/* Nummernblock (optional einblendbar) */}
             {showNumpad && (

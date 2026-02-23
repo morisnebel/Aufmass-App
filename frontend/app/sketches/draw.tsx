@@ -278,18 +278,6 @@ export default function DrawSketchScreen() {
     setTimeout(() => measurementInputRef.current?.focus(), 10);
   };
   
-  // Numpad für Modals (Arrow/Text/Pointer)
-  const handleModalNumpadPress = (key: string, setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput>) => {
-    if (key === '⌫') {
-      setter(prev => prev.slice(0, -1));
-    } else if (key === 'C') {
-      setter('');
-    } else {
-      setter(prev => prev + key);
-    }
-    setTimeout(() => inputRef.current?.focus(), 10);
-  };
-  
   // Kompaktes Numpad-Component für Modals mit Zahlen/Buchstaben-Umschaltung
   const [modalNumpadCaps, setModalNumpadCaps] = useState(false); // Groß/Klein
   

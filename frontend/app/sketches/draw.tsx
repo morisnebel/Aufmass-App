@@ -2598,6 +2598,147 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
+      {/* Aufmaß-Tool Panel (ausklappbar) */}
+      {showMeasurementTool && (
+        <View style={styles.measurementPanel}>
+          <View style={styles.measurementPanelHeader}>
+            <Ionicons name="calculator" size={18} color="#2196f3" />
+            <Text style={styles.measurementPanelTitle}>Aufmaß</Text>
+            <View style={styles.bluetoothBadge}>
+              <Ionicons name="bluetooth" size={12} color="#4caf50" />
+            </View>
+            <TouchableOpacity onPress={() => setShowMeasurementTool(false)} style={styles.measurementCloseBtn}>
+              <Ionicons name="close" size={18} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Eingabefeld */}
+          <TextInput
+            ref={measurementInputRef}
+            style={styles.measurementInput}
+            value={measurementExpression}
+            onChangeText={setMeasurementExpression}
+            placeholder="Wert eingeben..."
+            keyboardType="numbers-and-punctuation"
+            autoCorrect={false}
+            showSoftInputOnFocus={showMeasurementKeyboard}
+          />
+          
+          {/* Ergebnis */}
+          {measurementExpression.trim() !== '' && (
+            <Text style={calculateMeasurementExpression(measurementExpression) !== null ? styles.measurementResult : styles.measurementResultError}>
+              {calculateMeasurementExpression(measurementExpression) !== null 
+                ? `= ${calculateMeasurementExpression(measurementExpression)?.toString().replace('.', ',')} ${measurementUnit}`
+                : 'Ungültig'}
+            </Text>
+          )}
+          
+          {/* Toggle Buttons */}
+          <View style={styles.measurementToggleRow}>
+            <TouchableOpacity
+              style={[styles.measurementToggleBtn, showMeasurementNumpad && styles.measurementToggleBtnActive]}
+              onPress={() => {
+                setShowMeasurementNumpad(!showMeasurementNumpad);
+                if (!showMeasurementNumpad) setShowMeasurementKeyboard(false);
+                setTimeout(() => measurementInputRef.current?.focus(), 10);
+              }}
+            >
+              <Ionicons name="calculator" size={14} color={showMeasurementNumpad ? '#fff' : '#2196f3'} />
+              <Text style={[styles.measurementToggleText, showMeasurementNumpad && styles.measurementToggleTextActive]}>Pad</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.measurementToggleBtn, showMeasurementKeyboard && styles.measurementToggleBtnActive]}
+              onPress={() => {
+                setShowMeasurementKeyboard(!showMeasurementKeyboard);
+                if (!showMeasurementKeyboard) {
+                  setShowMeasurementNumpad(false);
+                  setTimeout(() => {
+                    measurementInputRef.current?.blur();
+                    measurementInputRef.current?.focus();
+                  }, 50);
+                } else {
+                  Keyboard.dismiss();
+                }
+              }}
+            >
+              <Ionicons name="keypad" size={14} color={showMeasurementKeyboard ? '#fff' : '#2196f3'} />
+              <Text style={[styles.measurementToggleText, showMeasurementKeyboard && styles.measurementToggleTextActive]}>Tastatur</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Kompakter Numpad */}
+          {showMeasurementNumpad && (
+            <View style={styles.measurementNumpad}>
+              <View style={styles.measurementNumpadRow}>
+                {['7','8','9','+'].map(k => (
+                  <TouchableOpacity key={k} style={[styles.measurementNumpadKey, k==='+' && styles.measurementNumpadOp]} onPress={() => handleMeasurementNumpadPress(k)}>
+                    <Text style={k==='+' ? styles.measurementNumpadOpText : styles.measurementNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.measurementNumpadRow}>
+                {['4','5','6','-'].map(k => (
+                  <TouchableOpacity key={k} style={[styles.measurementNumpadKey, k==='-' && styles.measurementNumpadOp]} onPress={() => handleMeasurementNumpadPress(k)}>
+                    <Text style={k==='-' ? styles.measurementNumpadOpText : styles.measurementNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.measurementNumpadRow}>
+                {['1','2','3','*'].map(k => (
+                  <TouchableOpacity key={k} style={[styles.measurementNumpadKey, k==='*' && styles.measurementNumpadOp]} onPress={() => handleMeasurementNumpadPress(k)}>
+                    <Text style={k==='*' ? styles.measurementNumpadOpText : styles.measurementNumpadKeyText}>{k === '*' ? '×' : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.measurementNumpadRow}>
+                {[',','0','⌫','/'].map(k => (
+                  <TouchableOpacity key={k} style={[styles.measurementNumpadKey, k==='⌫' && styles.measurementNumpadDel, k==='/' && styles.measurementNumpadOp]} onPress={() => handleMeasurementNumpadPress(k)}>
+                    {k === '⌫' ? <Ionicons name="backspace-outline" size={16} color="#f44336" /> : <Text style={k==='/' ? styles.measurementNumpadOpText : styles.measurementNumpadKeyText}>{k === '/' ? '÷' : k}</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.measurementNumpadRow}>
+                <TouchableOpacity style={[styles.measurementNumpadKey, styles.measurementNumpadClear]} onPress={() => handleMeasurementNumpadPress('C')}>
+                  <Text style={styles.measurementNumpadClearText}>C</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.measurementNumpadKey} onPress={() => handleMeasurementNumpadPress('(')}>
+                  <Text style={styles.measurementNumpadKeyText}>(</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.measurementNumpadKey} onPress={() => handleMeasurementNumpadPress(')')}>
+                  <Text style={styles.measurementNumpadKeyText}>)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.measurementNumpadKey} onPress={() => handleMeasurementNumpadPress('.')}>
+                  <Text style={styles.measurementNumpadKeyText}>.</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          
+          {/* Einheiten */}
+          <View style={styles.measurementUnitRow}>
+            {availableUnits.map(unit => (
+              <TouchableOpacity
+                key={unit}
+                style={[styles.measurementUnitChip, measurementUnit === unit && styles.measurementUnitChipActive]}
+                onPress={() => setMeasurementUnit(unit)}
+              >
+                <Text style={[styles.measurementUnitText, measurementUnit === unit && styles.measurementUnitTextActive]}>{unit}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Einfügen Button */}
+          <TouchableOpacity
+            style={[styles.measurementInsertBtn, calculateMeasurementExpression(measurementExpression) === null && styles.measurementInsertBtnDisabled]}
+            onPress={insertMeasurementAsText}
+            disabled={calculateMeasurementExpression(measurementExpression) === null}
+          >
+            <Ionicons name="add-circle" size={18} color="#fff" />
+            <Text style={styles.measurementInsertBtnText}>In Skizze einfügen</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Canvas */}
       <View
         ref={canvasRef}

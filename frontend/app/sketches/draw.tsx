@@ -3117,12 +3117,32 @@ export default function DrawSketchScreen() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
               <TextInput
+                ref={arrowInputRef}
                 style={styles.modalInput}
                 value={arrowText}
                 onChangeText={setArrowText}
-                placeholder="Maß eingeben (z.B. 5.5m)"
+                placeholder="Maß eingeben (z.B. 5,5m)"
+                showSoftInputOnFocus={!showModalNumpad}
               />
-              <View style={styles.arrowHeadsContainer}>
+              
+              {/* Numpad Toggle */}
+              <TouchableOpacity 
+                style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+                onPress={() => setShowModalNumpad(!showModalNumpad)}
+              >
+                <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                  {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+                </Text>
+                <View style={styles.bluetoothBadgeSmall}>
+                  <Ionicons name="bluetooth" size={12} color="#4caf50" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Numpad */}
+              {showModalNumpad && renderModalNumpad(setArrowText, arrowInputRef)}
+              
+              <View style={styles.arrowHeadsContainer}>>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
                 <View style={styles.arrowHeadsButtons}>
                   <TouchableOpacity

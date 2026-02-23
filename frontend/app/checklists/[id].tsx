@@ -1087,11 +1087,15 @@ export default function EditChecklistScreen() {
               <Text style={styles.modalTitleCompact}>
                 {editingMeasurementIndex !== null ? 'Bearbeiten' : 'Aufmaß'}
               </Text>
+              <View style={styles.bluetoothBadge}>
+                <Ionicons name="bluetooth" size={14} color="#4caf50" />
+              </View>
               <TouchableOpacity 
                 style={styles.closeButtonCompact}
                 onPress={() => {
                   setMeasurementModalPath(null);
                   setEditingMeasurementIndex(null);
+                  setNumpadMode('numbers');
                   modalPosition.setValue({ x: 0, y: 0 });
                   modalPosition.setOffset({ x: 0, y: 0 });
                 }}
@@ -1107,11 +1111,10 @@ export default function EditChecklistScreen() {
               value={measurementExpression}
               onChangeText={setMeasurementExpression}
               placeholder="Wert eingeben..."
-              keyboardType="decimal-pad"
               autoFocus={true}
               autoCorrect={false}
               spellCheck={false}
-              showSoftInputOnFocus={showKeyboard}
+              showSoftInputOnFocus={false}
             />
             
             {/* Live-Ergebnis - kompakter */}
@@ -1123,89 +1126,123 @@ export default function EditChecklistScreen() {
               </Text>
             )}
 
-            {/* Toggle-Buttons: Numpad / Tastatur */}
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[styles.toggleButton, showNumpad && styles.toggleButtonActive]}
-                onPress={() => {
-                  setShowNumpad(!showNumpad);
-                  if (!showNumpad) setShowKeyboard(false);
-                  setTimeout(() => measurementInputRef.current?.focus(), 10);
-                }}
-              >
-                <Ionicons name="calculator" size={16} color={showNumpad ? '#fff' : '#2196f3'} />
-                <Text style={[styles.toggleButtonText, showNumpad && styles.toggleButtonTextActive]}>Pad</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.toggleButton, showKeyboard && styles.toggleButtonActive]}
-                onPress={() => {
-                  setShowKeyboard(!showKeyboard);
-                  if (!showKeyboard) {
-                    setShowNumpad(false);
-                    setTimeout(() => {
-                      measurementInputRef.current?.blur();
-                      measurementInputRef.current?.focus();
-                    }, 50);
-                  } else {
-                    Keyboard.dismiss();
-                  }
-                }}
-              >
-                <Ionicons name="keypad" size={16} color={showKeyboard ? '#fff' : '#2196f3'} />
-                <Text style={[styles.toggleButtonText, showKeyboard && styles.toggleButtonTextActive]}>Tastatur</Text>
-              </TouchableOpacity>
-              
-              <View style={styles.bluetoothBadge}>
-                <Ionicons name="bluetooth" size={14} color="#4caf50" />
-              </View>
-            </View>
-
-            {/* Kompakter Nummernblock */}
+            {/* Erweitertes Numpad mit Zahlen/Buchstaben-Umschaltung */}
             {showNumpad && (
               <View style={styles.numpadCompact}>
-                <View style={styles.numpadRowCompact}>
-                  {['7','8','9','+'].map(k => (
-                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='+' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                      <Text style={k==='+' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.numpadRowCompact}>
-                  {['4','5','6','-'].map(k => (
-                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='-' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                      <Text style={k==='-' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '-' ? '−' : k}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.numpadRowCompact}>
-                  {['1','2','3','*'].map(k => (
-                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='*' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                      <Text style={k==='*' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '*' ? '×' : k}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.numpadRowCompact}>
-                  {[',','0','⌫','/'].map(k => (
-                    <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='⌫' && styles.numpadDelCompact, k==='/' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                      {k === '⌫' ? <Ionicons name="backspace-outline" size={18} color="#f44336" /> : <Text style={k==='/' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '/' ? '÷' : k}</Text>}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.numpadRowCompact}>
-                  <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
-                    <Text style={styles.numpadClearTextCompact}>C</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress('(')}>
-                    <Text style={styles.numpadKeyTextCompact}>(</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(')')}>
-                    <Text style={styles.numpadKeyTextCompact}>)</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress('.')}>
-                    <Text style={styles.numpadKeyTextCompact}>.</Text>
-                  </TouchableOpacity>
-                </View>
+                {numpadMode === 'numbers' ? (
+                  <>
+                    {/* Zahlen-Modus */}
+                    <View style={styles.numpadRowCompact}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='+' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                          <Text style={k==='+' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='-' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
+                          <Text style={k==='-' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '-' ? '−' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['1','2','3','×'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='×' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k === '×' ? '*' : k)}>
+                          <Text style={k==='×' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {[',','0','.','÷'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='÷' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k === '÷' ? '/' : k)}>
+                          <Text style={k==='÷' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadModeCompact]} onPress={() => setNumpadMode('letters')}>
+                        <Text style={styles.numpadModeText}>ABC</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
+                        <Text style={styles.numpadClearTextCompact}>C</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(' ')}>
+                        <Text style={styles.numpadKeyTextCompact}>␣</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadDelCompact]} onPress={() => handleNumpadPress('⌫')}>
+                        <Ionicons name="backspace-outline" size={18} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {/* Buchstaben-Modus */}
+                    <View style={styles.numpadRowCompact}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadUnitText}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['Stk','Paar','kg','l'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadUnitText}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['a','b','c','d','e','f'].map(k => (
+                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['g','h','i','j','k','l'].map(k => (
+                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['m','n','o','p','q','r'].map(k => (
+                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['s','t','u','v','w','x'].map(k => (
+                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      {['y','z','ä','ö','ü','ß'].map(k => (
+                        <TouchableOpacity key={k} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(k)}>
+                          <Text style={styles.numpadKeyTextCompact}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.numpadRowCompact}>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadModeCompact]} onPress={() => setNumpadMode('numbers')}>
+                        <Text style={styles.numpadModeText}>123</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
+                        <Text style={styles.numpadClearTextCompact}>C</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(' ')}>
+                        <Text style={styles.numpadKeyTextCompact}>␣</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadDelCompact]} onPress={() => handleNumpadPress('⌫')}>
+                        <Ionicons name="backspace-outline" size={18} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
             )}
             
@@ -1229,6 +1266,7 @@ export default function EditChecklistScreen() {
                 onPress={() => {
                   setMeasurementModalPath(null);
                   setEditingMeasurementIndex(null);
+                  setNumpadMode('numbers');
                   modalPosition.setValue({ x: 0, y: 0 });
                   modalPosition.setOffset({ x: 0, y: 0 });
                 }}
@@ -1239,6 +1277,7 @@ export default function EditChecklistScreen() {
                 style={[styles.confirmBtnCompact, calculateExpression(measurementExpression) === null && styles.btnDisabled]}
                 onPress={() => {
                   confirmMeasurement();
+                  setNumpadMode('numbers');
                   modalPosition.setValue({ x: 0, y: 0 });
                   modalPosition.setOffset({ x: 0, y: 0 });
                 }}

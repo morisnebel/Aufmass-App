@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ interface CompanySettings {
   services: string;
   author_name: string;
   logo_data: string | null;
+  bluetooth_mode: boolean;
 }
 
 export default function SettingsScreen() {

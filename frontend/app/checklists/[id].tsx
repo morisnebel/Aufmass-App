@@ -861,6 +861,8 @@ export default function EditChecklistScreen() {
                   onSubmitEditing={() => confirmNewSubItem(path)}
                   returnKeyType="done"
                   autoFocus
+                  editable={true}
+                  showSoftInputOnFocus={true}
                 />
                 <TouchableOpacity
                   onPress={() => confirmNewSubItem(path)}

@@ -60,6 +60,7 @@ export default function EditChecklistScreen() {
   const [measurementModalPath, setMeasurementModalPath] = useState<number[] | null>(null);
   const [measurementExpression, setMeasurementExpression] = useState('');
   const [measurementUnit, setMeasurementUnit] = useState('m²');
+  const [editingMeasurementIndex, setEditingMeasurementIndex] = useState<number | null>(null);
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];

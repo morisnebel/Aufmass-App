@@ -3356,6 +3356,8 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          {/* Numpad als floating Element INNERHALB des Modals */}
+          {renderInModalNumpad()}
         </KeyboardAvoidingView>
       </Modal>
 

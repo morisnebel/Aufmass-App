@@ -3279,7 +3279,11 @@ export default function DrawSketchScreen() {
               {/* Numpad Toggle */}
               <TouchableOpacity 
                 style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
-                onPress={() => setShowModalNumpad(!showModalNumpad)}
+                onPress={() => {
+                  setShowModalNumpad(!showModalNumpad);
+                  modalNumpadPosition.setValue({ x: 0, y: 0 });
+                  modalNumpadPosition.setOffset({ x: 0, y: 0 });
+                }}
               >
                 <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
                 <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
@@ -3289,9 +3293,6 @@ export default function DrawSketchScreen() {
                   <Ionicons name="bluetooth" size={12} color="#4caf50" />
                 </View>
               </TouchableOpacity>
-              
-              {/* Numpad */}
-              {showModalNumpad && renderModalNumpad(setPointerText, pointerInputRef)}
               
               {/* Stroke Width Slider */}
               <View style={styles.sliderContainer}>

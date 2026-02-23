@@ -3012,51 +3012,77 @@ export default function DrawSketchScreen() {
       {/* Arrow Modal */}
       <Modal visible={showArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Bemaßungspfeil</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={arrowText}
-              onChangeText={setArrowText}
-              placeholder="Maß eingeben (z.B. 5.5m)"
-              autoFocus
-            />
-            <View style={styles.arrowHeadsContainer}>
-              <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
-              <View style={styles.arrowHeadsButtons}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Bemaßungspfeil</Text>
+              <TextInput
+                ref={arrowInputRef}
+                style={styles.modalInput}
+                value={arrowText}
+                onChangeText={setArrowText}
+                placeholder="Maß eingeben (z.B. 5,5m)"
+                autoFocus
+                showSoftInputOnFocus={!showModalNumpad}
+              />
+              
+              {/* Numpad Toggle */}
+              <TouchableOpacity 
+                style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+                onPress={() => setShowModalNumpad(!showModalNumpad)}
+              >
+                <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                  {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+                </Text>
+                <View style={styles.bluetoothBadgeSmall}>
+                  <Ionicons name="bluetooth" size={12} color="#4caf50" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Numpad */}
+              {showModalNumpad && renderModalNumpad(setArrowText, arrowInputRef)}
+              
+              <View style={styles.arrowHeadsContainer}>
+                <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
+                <View style={styles.arrowHeadsButtons}>
+                  <TouchableOpacity
+                    style={[styles.arrowHeadButton, arrowHeads === 'single' && styles.arrowHeadButtonActive]}
+                    onPress={() => setArrowHeads('single')}
+                  >
+                    <Text style={styles.arrowHeadButtonText}>Einfach →</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.arrowHeadButton, arrowHeads === 'double' && styles.arrowHeadButtonActive]}
+                    onPress={() => setArrowHeads('double')}
+                  >
+                    <Text style={styles.arrowHeadButtonText}>Doppelt ↔</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={[styles.arrowHeadButton, arrowHeads === 'single' && styles.arrowHeadButtonActive]}
-                  onPress={() => setArrowHeads('single')}
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowArrowModal(false);
+                    setArrowText('');
+                    setPendingArrow(null);
+                    setShowModalNumpad(false);
+                  }}
                 >
-                  <Text style={styles.arrowHeadButtonText}>Einfach →</Text>
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.arrowHeadButton, arrowHeads === 'double' && styles.arrowHeadButtonActive]}
-                  onPress={() => setArrowHeads('double')}
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={() => {
+                    addArrowElement();
+                    setShowModalNumpad(false);
+                  }}
                 >
-                  <Text style={styles.arrowHeadButtonText}>Doppelt ↔</Text>
+                  <Text style={styles.confirmButtonText}>Hinzufügen</Text>
                 </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowArrowModal(false);
-                  setArrowText('');
-                  setPendingArrow(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={addArrowElement}
-              >
-                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 

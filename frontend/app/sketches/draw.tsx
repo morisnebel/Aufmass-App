@@ -3403,12 +3403,31 @@ export default function DrawSketchScreen() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Text bearbeiten</Text>
               <TextInput
+                ref={textInputRef}
                 style={styles.modalInput}
                 value={textInput}
                 onChangeText={setTextInput}
                 placeholder="Text eingeben"
                 multiline
+                showSoftInputOnFocus={!showModalNumpad}
               />
+              
+              {/* Numpad Toggle */}
+              <TouchableOpacity 
+                style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+                onPress={() => setShowModalNumpad(!showModalNumpad)}
+              >
+                <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                  {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+                </Text>
+                <View style={styles.bluetoothBadgeSmall}>
+                  <Ionicons name="bluetooth" size={12} color="#4caf50" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Numpad */}
+              {showModalNumpad && renderModalNumpad(setTextInput, textInputRef)}
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>

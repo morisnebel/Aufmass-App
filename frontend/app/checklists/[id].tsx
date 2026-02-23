@@ -67,6 +67,7 @@ export default function EditChecklistScreen() {
   const [editingMeasurementIndex, setEditingMeasurementIndex] = useState<number | null>(null);
   const [showNumpad, setShowNumpad] = useState(true); // Nummernblock anzeigen
   const [numpadMode, setNumpadMode] = useState<'numbers' | 'letters'>('numbers'); // Zahlen oder Buchstaben
+  const [numpadCaps, setNumpadCaps] = useState(false); // Groß/Kleinschreibung
   const measurementInputRef = React.useRef<TextInput>(null); // Ref für Bluetooth-Input
   
   // Verschiebbare Modal-Position

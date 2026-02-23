@@ -4113,27 +4113,27 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 4,
   },
-  // Modal Numpad Styles
+  // Modal Numpad Styles - Kompakt wie bei Checklisten
   modalNumpad: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   modalNumpadRow: {
     flexDirection: 'row',
-    gap: 4,
-    marginBottom: 4,
+    gap: 3,
+    marginBottom: 3,
   },
   modalNumpadKey: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: '#f5f5f5',
-    borderRadius: 6,
+    borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
   modalNumpadKeyText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
   },

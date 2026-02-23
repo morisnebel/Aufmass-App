@@ -67,6 +67,23 @@ export default function EditChecklistScreen() {
   const [editingMeasurementIndex, setEditingMeasurementIndex] = useState<number | null>(null);
   const [showNumpad, setShowNumpad] = useState(true); // Nummernblock anzeigen
   const measurementInputRef = React.useRef<TextInput>(null); // Ref für Bluetooth-Input
+  const [showKeyboard, setShowKeyboard] = useState(false); // Software-Tastatur anzeigen
+  
+  // Verschiebbare Modal-Position
+  const modalPosition = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: Animated.event(
+        [null, { dx: modalPosition.x, dy: modalPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        modalPosition.extractOffset();
+      },
+    })
+  ).current;
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];

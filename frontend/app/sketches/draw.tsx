@@ -4231,9 +4231,11 @@ const styles = StyleSheet.create({
   numpadCloseBtn: {
     position: 'absolute',
     right: 4,
-    top: -2,
-    padding: 4,
+    top: 4,
+    padding: 2,
     zIndex: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
   },
   numpadDragHandle: {
     flexDirection: 'row',

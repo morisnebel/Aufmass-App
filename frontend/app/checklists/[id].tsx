@@ -1097,8 +1097,8 @@ export default function EditChecklistScreen() {
                   setMeasurementModalPath(null);
                   setEditingMeasurementIndex(null);
                   setNumpadMode('numbers');
-                  modalPosition.setValue({ x: 0, y: 0 });
-                  modalPosition.setOffset({ x: 0, y: 0 });
+                  numpadPosition.setValue({ x: 0, y: 0 });
+                  numpadPosition.setOffset({ x: 0, y: 0 });
                 }}
               >
                 <Ionicons name="close" size={20} color="#666" />
@@ -1268,8 +1268,8 @@ export default function EditChecklistScreen() {
                   setMeasurementModalPath(null);
                   setEditingMeasurementIndex(null);
                   setNumpadMode('numbers');
-                  modalPosition.setValue({ x: 0, y: 0 });
-                  modalPosition.setOffset({ x: 0, y: 0 });
+                  numpadPosition.setValue({ x: 0, y: 0 });
+                  numpadPosition.setOffset({ x: 0, y: 0 });
                 }}
               >
                 <Text style={styles.cancelBtnText}>Abbrechen</Text>
@@ -1279,8 +1279,8 @@ export default function EditChecklistScreen() {
                 onPress={() => {
                   confirmMeasurement();
                   setNumpadMode('numbers');
-                  modalPosition.setValue({ x: 0, y: 0 });
-                  modalPosition.setOffset({ x: 0, y: 0 });
+                  numpadPosition.setValue({ x: 0, y: 0 });
+                  numpadPosition.setOffset({ x: 0, y: 0 });
                 }}
                 disabled={calculateExpression(measurementExpression) === null}
               >

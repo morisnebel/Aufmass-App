@@ -68,23 +68,40 @@ export default function EditChecklistScreen() {
   const [showNumpad, setShowNumpad] = useState(true); // Nummernblock anzeigen
   const [numpadMode, setNumpadMode] = useState<'numbers' | 'letters'>('numbers'); // Zahlen oder Buchstaben
   const [numpadCaps, setNumpadCaps] = useState(false); // Groß/Kleinschreibung
-  const measurementInputRef = React.useRef<TextInput>(null); // Ref für Bluetooth-Input
+  const [bluetoothMode, setBluetoothMode] = useState(false); // Bluetooth-Modus aus Einstellungen
+  const measurementInputRef = useRef<TextInput>(null); // Ref für Bluetooth-Input
   
-  // Verschiebbare Modal-Position
-  const modalPosition = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const panResponder = React.useRef(
+  // Verschiebbare Numpad-Position (in alle Richtungen)
+  const numpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const numpadPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderMove: Animated.event(
-        [null, { dx: modalPosition.x, dy: modalPosition.y }],
+        [null, { dx: numpadPosition.x, dy: numpadPosition.y }],
         { useNativeDriver: false }
       ),
       onPanResponderRelease: () => {
-        modalPosition.extractOffset();
+        numpadPosition.extractOffset();
       },
     })
   ).current;
+  
+  // Bluetooth-Modus aus Einstellungen laden
+  useEffect(() => {
+    const loadBluetoothMode = async () => {
+      try {
+        const settings = await SettingsService.get();
+        if (settings && settings.bluetooth_mode !== undefined) {
+          setBluetoothMode(settings.bluetooth_mode);
+          setShowNumpad(settings.bluetooth_mode);
+        }
+      } catch (error) {
+        console.error('Error loading bluetooth mode:', error);
+      }
+    };
+    loadBluetoothMode();
+  }, []);
   
   // Verfügbare Einheiten
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];

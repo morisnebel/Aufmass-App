@@ -1135,6 +1135,9 @@ export default function DrawSketchScreen() {
       addToHistory([...elements, newElement]);
     }
     setPolylinePoints([]);
+    // Position zurücksetzen
+    polylineControlPosition.setValue({ x: 0, y: 0 });
+    polylineControlPosition.setOffset({ x: 0, y: 0 });
   };
 
   // Polyline abbrechen

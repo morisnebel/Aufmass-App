@@ -303,7 +303,6 @@ export default function DrawSketchScreen() {
       },
     })
   ).current;
-  ).current;
   
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {

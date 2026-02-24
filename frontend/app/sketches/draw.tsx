@@ -781,13 +781,24 @@ export default function DrawSketchScreen() {
             }
             // Lade die Linien-Maße wenn vorhanden, sonst zurücksetzen
             if (metadata.lineSegmentMeasurements) {
+              console.log('Loading lineSegmentMeasurements:', metadata.lineSegmentMeasurements);
               setLineSegmentMeasurements(metadata.lineSegmentMeasurements);
             } else {
               setLineSegmentMeasurements({});
             }
-            // Summenbox-Position beim Laden zurücksetzen
-            totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-            totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+            // Summenbox-Position laden wenn vorhanden
+            if (metadata.totalLfmBoxPosition) {
+              console.log('Loading totalLfmBoxPosition:', metadata.totalLfmBoxPosition);
+              const savedPos = metadata.totalLfmBoxPosition;
+              setTotalLfmBoxSavedPosition(savedPos);
+              totalLfmBoxPosition.setValue({ x: savedPos.x, y: savedPos.y });
+              totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+            } else {
+              // Keine gespeicherte Position - auf Standard zurücksetzen
+              setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
+              totalLfmBoxPosition.setValue({ x: 0, y: 0 });
+              totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+            }
           } catch (e) {
             console.error('Error parsing metadata:', e);
           }

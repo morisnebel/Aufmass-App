@@ -708,32 +708,39 @@ export default function DrawSketchScreen() {
     useCallback(() => {
       console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current);
       
-      // Zuerst prüfen, ob sich die Skizze geändert hat
-      if (lastLoadedSketchId.current !== sketchId) {
-        console.log('Sketch ID changed, performing state transition');
-        
-        if (!sketchId) {
-          // Neue Skizze: Alles sofort zurücksetzen
-          console.log('Resetting to new sketch state');
-          setLineSegmentMeasurements({});
-          setSelectedLineSegment(null);
-          setElements([]);
-          setHistory([[]]);
-          setHistoryIndex(0);
-          setTitle('Neue Skizze');
-          setBackgroundImage(null);
-          totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-          totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
-          initialImageAdded.current = false;
-        }
-        
-        lastLoadedSketchId.current = sketchId;
-      }
+      // IMMER den State für die aktuelle Skizze initialisieren
+      // Dies verhindert, dass alte Daten aus vorherigen Skizzen angezeigt werden
+      const resetToCleanState = () => {
+        console.log('Resetting to clean state for new/different sketch');
+        setLineSegmentMeasurements({});
+        setSelectedLineSegment(null);
+        setElements([]);
+        setHistory([[]]);
+        setHistoryIndex(0);
+        setTitle('Neue Skizze');
+        setBackgroundImage(null);
+        setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
+        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
+        totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+        initialImageAdded.current = false;
+      };
       
-      // Dann die existierende Skizze laden, wenn vorhanden
-      if (sketchId) {
-        console.log('useFocusEffect: Loading sketch', sketchId);
-        loadSketch();
+      // Prüfen, ob sich die Skizze geändert hat
+      if (lastLoadedSketchId.current !== sketchId) {
+        console.log('Sketch ID changed from', lastLoadedSketchId.current, 'to', sketchId);
+        
+        // Immer zuerst reset, dann laden falls nötig
+        resetToCleanState();
+        lastLoadedSketchId.current = sketchId;
+        
+        // Existierende Skizze laden, wenn vorhanden
+        if (sketchId) {
+          console.log('useFocusEffect: Loading sketch', sketchId);
+          loadSketch();
+        }
+      } else if (sketchId && lastLoadedSketchId.current === sketchId) {
+        // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
+        console.log('useFocusEffect: Re-focused on same sketch', sketchId);
       }
     }, [sketchId])
   );

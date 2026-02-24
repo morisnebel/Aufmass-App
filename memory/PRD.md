@@ -242,3 +242,12 @@ February 2026
 - **[REMOVED] Alte verschiebbare Summenboxen**
   - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der Summary Legend aufgegeben
 
+- **[ENHANCED] Größere Summary Legend im PDF/Vorschau**
+  - Legendenbreite: 130-160px → **220px**
+  - Zeilenhöhe: 22-28px → **36px**
+  - Titel-Schriftgröße: 12px → **18px**
+  - Badge-Größe: 28×18 → **38×24px**
+  - Badge-Schrift: 10px → **14px**
+  - Werte-Schrift: 11px → **16px**
+  - Files: `frontend/app/sketches/draw.tsx`, `frontend/app/projects/[id].tsx`
+

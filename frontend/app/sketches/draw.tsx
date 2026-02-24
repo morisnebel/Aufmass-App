@@ -3542,6 +3542,25 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
+      {/* Legende mit Skizzen-Summen (S1, S2, S3...) */}
+      {getPolylineElementsWithMeasurements().length > 0 && (
+        <View style={styles.sketchLegend}>
+          <Text style={styles.sketchLegendTitle}>Übersicht</Text>
+          {getPolylineElementsWithMeasurements().map((element, index) => {
+            const totalForElement = calculateTotalLfmForElement(element.id);
+            if (totalForElement <= 0) return null;
+            return (
+              <View key={`legend-${element.id}`} style={styles.sketchLegendRow}>
+                <View style={styles.sketchLegendLabel}>
+                  <Text style={styles.sketchLegendLabelText}>S{index + 1}</Text>
+                </View>
+                <Text style={styles.sketchLegendValue}>= {totalForElement.toString().replace('.', ',')} lfm</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {/* Linien-Maß Eingabe Modal */}
       <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

@@ -958,10 +958,6 @@ export default function DrawSketchScreen() {
       try {
         setLoading(true);
         
-        // Aktuelle Position der Summenbox ermitteln
-        const currentBoxPosX = (totalLfmBoxPosition.x as any)._value + (totalLfmBoxPosition.x as any)._offset;
-        const currentBoxPosY = (totalLfmBoxPosition.y as any)._value + (totalLfmBoxPosition.y as any)._offset;
-        
         // Create metadata with elements and canvas dimensions for proper scaling
         const metadata = {
           elements,
@@ -969,11 +965,11 @@ export default function DrawSketchScreen() {
           canvasWidth: width,
           canvasHeight: height - 120,
           lineSegmentMeasurements,
-          totalLfmBoxPosition: { x: currentBoxPosX, y: currentBoxPosY },
+          totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
-        console.log('Saving totalLfmBoxPosition:', metadata.totalLfmBoxPosition);
+        console.log('Saving totalLfmBoxPositions:', totalLfmBoxPositions);
 
         // Generate preview image
         let sketchData = '';

@@ -2749,9 +2749,9 @@ export default function DrawSketchScreen() {
     // Berechne Legend-Position für die viewBox-Erweiterung
     // VERGRÖSSERTE Legend für PDF/Vorschau
     const polylinesForLegend = getPolylineElementsWithMeasurements();
-    const svgLegendWidth = 160; // Breiter
-    const svgLegendLineHeight = 28; // Höhere Zeilen
-    const svgLegendHeight = polylinesForLegend.length > 0 ? (40 + polylinesForLegend.length * svgLegendLineHeight + 20) : 0;
+    const svgLegendWidth = 220; // Noch breiter für bessere Lesbarkeit
+    const svgLegendLineHeight = 36; // Deutlich höhere Zeilen
+    const svgLegendHeight = polylinesForLegend.length > 0 ? (55 + polylinesForLegend.length * svgLegendLineHeight + 25) : 0;
     
     // Legend-Position berechnen (wird auch später für das Rendering verwendet)
     const canvasWidthForLegend = width;
@@ -2947,28 +2947,28 @@ export default function DrawSketchScreen() {
     // Render Summary Legend (Übersicht) in the SVG for PDF/Preview
     // Verwende die bereits berechneten Koordinaten: svgLegendXPos, svgLegendYPos
     if (polylinesForLegend.length > 0) {
-      const lineHeight = 22;
+      const lineHeight = svgLegendLineHeight; // Verwende konsistente Zeilenhöhe
       
       // Legend background
-      svgElements += `<rect x="${svgLegendXPos}" y="${svgLegendYPos - svgLegendHeight}" width="${svgLegendWidth}" height="${svgLegendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
+      svgElements += `<rect x="${svgLegendXPos}" y="${svgLegendYPos - svgLegendHeight}" width="${svgLegendWidth}" height="${svgLegendHeight}" fill="white" stroke="#e3f2fd" stroke-width="2" rx="8" ry="8"/>`;
       
-      // Legend title
-      svgElements += `<text x="${svgLegendXPos + 10}" y="${svgLegendYPos - svgLegendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
+      // Legend title - größere Schrift
+      svgElements += `<text x="${svgLegendXPos + 15}" y="${svgLegendYPos - svgLegendHeight + 30}" fill="#333" font-size="18" font-weight="bold">Übersicht</text>`;
       
       // Legend items
       polylinesForLegend.forEach((element, index) => {
         const totalForElement = calculateTotalLfmForElement(element.id);
         if (totalForElement <= 0) return;
         
-        const itemY = svgLegendYPos - svgLegendHeight + 38 + (index * lineHeight);
+        const itemY = svgLegendYPos - svgLegendHeight + 55 + (index * lineHeight);
         const labelText = `S${index + 1}`;
         
-        // Label badge
-        svgElements += `<rect x="${svgLegendXPos + 10}" y="${itemY - 12}" width="28" height="18" fill="#1976d2" rx="3" ry="3"/>`;
-        svgElements += `<text x="${svgLegendXPos + 24}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+        // Label badge - größer
+        svgElements += `<rect x="${svgLegendXPos + 15}" y="${itemY - 16}" width="38" height="24" fill="#1976d2" rx="4" ry="4"/>`;
+        svgElements += `<text x="${svgLegendXPos + 34}" y="${itemY + 2}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         
-        // Value text
-        svgElements += `<text x="${svgLegendXPos + 45}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
+        // Value text - größere Schrift
+        svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
       });
     }
     

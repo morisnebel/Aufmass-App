@@ -226,6 +226,7 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
+  const isResettingRef = useRef(false);
   
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');

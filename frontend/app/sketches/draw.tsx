@@ -2870,8 +2870,38 @@ export default function DrawSketchScreen() {
       }
     });
     
-    // Gesamt-Felder werden NICHT mehr automatisch im SVG generiert
-    // Der Benutzer kann sie in der Skizze manuell positionieren
+    // Render Summary Legend (Übersicht) in the SVG for PDF/Preview
+    const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
+    if (polylinesWithMeasurements.length > 0) {
+      // Position legend in bottom-right corner within viewBox
+      const legendX = maxX - 10;
+      const legendY = maxY - 10;
+      const legendWidth = 120;
+      const lineHeight = 22;
+      const legendHeight = 30 + (polylinesWithMeasurements.length * lineHeight);
+      
+      // Legend background
+      svgElements += `<rect x="${legendX - legendWidth}" y="${legendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6" filter="url(#legendShadow)"/>`;
+      
+      // Legend title
+      svgElements += `<text x="${legendX - legendWidth + 10}" y="${legendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
+      
+      // Legend items
+      polylinesWithMeasurements.forEach((element, index) => {
+        const totalForElement = calculateTotalLfmForElement(element.id);
+        if (totalForElement <= 0) return;
+        
+        const itemY = legendY - legendHeight + 38 + (index * lineHeight);
+        const labelText = `S${index + 1}`;
+        
+        // Label badge
+        svgElements += `<rect x="${legendX - legendWidth + 10}" y="${itemY - 12}" width="24" height="18" fill="#1976d2" rx="3" ry="3"/>`;
+        svgElements += `<text x="${legendX - legendWidth + 22}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+        
+        // Value text
+        svgElements += `<text x="${legendX - legendWidth + 42}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
+      });
+    }
     
     // Create SVG with viewBox that matches the drawing bounds
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions

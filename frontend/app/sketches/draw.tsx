@@ -279,20 +279,30 @@ export default function DrawSketchScreen() {
     })
   ).current;
 
-  // Verschiebbare Position für Summenbox (lfm)
+  // Verschiebbare Position für Summenbox (lfm) - mit State für persistente Position
+  const [totalLfmBoxOffset, setTotalLfmBoxOffset] = useState({ x: 0, y: 0 });
   const totalLfmBoxPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const totalLfmBoxPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        // Setze den Offset beim Start des Drags
+        totalLfmBoxPosition.setOffset({
+          x: (totalLfmBoxPosition.x as any)._value + (totalLfmBoxPosition.x as any)._offset,
+          y: (totalLfmBoxPosition.y as any)._value + (totalLfmBoxPosition.y as any)._offset,
+        });
+        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
+      },
       onPanResponderMove: Animated.event(
         [null, { dx: totalLfmBoxPosition.x, dy: totalLfmBoxPosition.y }],
         { useNativeDriver: false }
       ),
       onPanResponderRelease: () => {
-        totalLfmBoxPosition.extractOffset();
+        totalLfmBoxPosition.flattenOffset();
       },
     })
+  ).current;
   ).current;
   
   // Aufmaß-Tool Funktionen

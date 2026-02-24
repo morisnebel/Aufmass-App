@@ -3341,14 +3341,23 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Summenbox für Gesamtlänge (lfm) - erscheint wenn Maße vorhanden sind */}
+      {/* Summenbox für Gesamtlänge (lfm) - erscheint wenn Maße vorhanden sind, verschiebbar */}
       {Object.keys(lineSegmentMeasurements).length > 0 && (
-        <View style={styles.totalLfmBox}>
-          <Ionicons name="calculator-outline" size={14} color="#1976d2" />
+        <Animated.View 
+          style={[
+            styles.totalLfmBox,
+            { transform: totalLfmBoxPosition.getTranslateTransform() }
+          ]}
+          {...totalLfmBoxPanResponder.panHandlers}
+        >
+          <View style={styles.totalLfmBoxDragHandle}>
+            <Ionicons name="move" size={12} color="#999" />
+          </View>
+          <Ionicons name="calculator-outline" size={18} color="#1976d2" />
           <Text style={styles.totalLfmText}>
             Gesamt: {calculateTotalLfm().toString().replace('.', ',')} lfm
           </Text>
-        </View>
+        </Animated.View>
       )}
 
       {/* Linien-Maß Eingabe Modal */}

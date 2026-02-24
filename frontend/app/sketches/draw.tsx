@@ -923,6 +923,16 @@ export default function DrawSketchScreen() {
               // Keine gespeicherte Positionen - auf Standard zurücksetzen
               setTotalLfmBoxPositions({});
             }
+            // Legend-Position laden wenn vorhanden
+            if (metadata.legendPosition) {
+              console.log('Loading legendPosition:', metadata.legendPosition);
+              setLegendPosition(metadata.legendPosition);
+              legendPan.setValue(metadata.legendPosition);
+            } else {
+              // Keine gespeicherte Position - auf Standard zurücksetzen
+              setLegendPosition({ x: 0, y: 0 });
+              legendPan.setValue({ x: 0, y: 0 });
+            }
           } catch (e) {
             console.error('Error parsing metadata:', e);
           }

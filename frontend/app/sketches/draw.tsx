@@ -692,33 +692,6 @@ export default function DrawSketchScreen() {
     }
   }, [backgroundImageUri, photoId, sketchId]);
 
-  // Reset state when sketchId changes (including when creating new sketch)
-  useEffect(() => {
-    console.log('sketchId changed to:', sketchId, 'lastLoaded:', lastLoadedSketchId.current);
-    
-    // Nur zurücksetzen, wenn sich die sketchId wirklich geändert hat
-    if (lastLoadedSketchId.current !== sketchId) {
-      console.log('Sketch changed, performing reset');
-      
-      if (!sketchId) {
-        // Neue Skizze: Alles zurücksetzen
-        console.log('New sketch detected, resetting all state');
-        setLineSegmentMeasurements({});
-        setSelectedLineSegment(null);
-        setElements([]);
-        setHistory([[]]);
-        setHistoryIndex(0);
-        setTitle('Neue Skizze');
-        setBackgroundImage(null);
-        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-        totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
-        initialImageAdded.current = false;
-      }
-      
-      lastLoadedSketchId.current = sketchId;
-    }
-  }, [sketchId]);
-
   // Load existing sketch when screen comes into focus
   useFocusEffect(
     useCallback(() => {

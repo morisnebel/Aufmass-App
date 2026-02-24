@@ -227,6 +227,12 @@ export default function DrawSketchScreen() {
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
   const isResettingRef = useRef(false);
+  const currentSketchIdRef = useRef<string | undefined>(sketchId);
+  
+  // Update ref whenever sketchId changes
+  useEffect(() => {
+    currentSketchIdRef.current = sketchId;
+  }, [sketchId]);
   
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');

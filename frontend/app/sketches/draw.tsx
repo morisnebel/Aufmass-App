@@ -2650,13 +2650,12 @@ export default function DrawSketchScreen() {
       maxY = 400;
     }
     
-    // Add padding - extra padding for bottom to accommodate "Gesamt" boxes (40px under shapes)
+    // Add padding
     const padding = 30;
-    const bottomPadding = 80; // Extra space for "Gesamt" boxes
     minX -= padding;
     minY -= padding;
     maxX += padding;
-    maxY += bottomPadding; // More space at bottom for total boxes
+    maxY += padding;
     
     // Calculate actual drawing dimensions
     const drawWidth = Math.max(maxX - minX, 100);

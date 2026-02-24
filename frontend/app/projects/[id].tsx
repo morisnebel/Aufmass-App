@@ -1977,10 +1977,9 @@ export default function ProjectDetailScreen() {
 
                   if (!hasValidBounds) return null;
 
-                  // Add padding - extra padding for bottom to accommodate "Gesamt" boxes (40px under shapes)
+                  // Add padding
                   const padding = 30;
-                  const bottomPadding = 80; // Extra space for "Gesamt" boxes
-                  minX -= padding; minY -= padding; maxX += padding; maxY += bottomPadding;
+                  minX -= padding; minY -= padding; maxX += padding; maxY += padding;
                   const drawWidth = Math.max(maxX - minX, 100);
                   const drawHeight = Math.max(maxY - minY, 100);
 

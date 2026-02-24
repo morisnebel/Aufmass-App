@@ -2849,6 +2849,22 @@ export default function DrawSketchScreen() {
           // Measurement text
           svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="#1976d2" font-size="12" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
         });
+        
+        // Render label (S1, S2, S3...) at center if this polyline has measurements
+        const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
+        const labelIndex = polylinesWithMeasurements.findIndex(p => p.id === el.id);
+        if (labelIndex !== -1) {
+          const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
+          const sumY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0);
+          const centerX = sumX / points.length;
+          const centerY = sumY / points.length;
+          const labelText = `S${labelIndex + 1}`;
+          
+          // Label circle background
+          svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="#1976d2" stroke="#fff" stroke-width="2"/>`;
+          // Label text
+          svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+        }
       } else if (el.type === 'polygon' && typeof el.data === 'string') {
         svgElements += `<path d="${el.data}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="${el.color}" fill-opacity="0.3" stroke-linecap="round" stroke-linejoin="round"/>`;
       }

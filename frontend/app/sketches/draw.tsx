@@ -290,7 +290,7 @@ export default function DrawSketchScreen() {
   ).current;
 
   // Verschiebbare Position für Summenbox (lfm) - mit State für persistente Position
-  const [totalLfmBoxOffset, setTotalLfmBoxOffset] = useState({ x: 0, y: 0 });
+  const [totalLfmBoxSavedPosition, setTotalLfmBoxSavedPosition] = useState({ x: 0, y: 0 });
   const totalLfmBoxPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const totalLfmBoxPanResponder = useRef(
     PanResponder.create({
@@ -310,6 +310,10 @@ export default function DrawSketchScreen() {
       ),
       onPanResponderRelease: () => {
         totalLfmBoxPosition.flattenOffset();
+        // Speichere die finale Position im State für Persistenz
+        const finalX = (totalLfmBoxPosition.x as any)._value + (totalLfmBoxPosition.x as any)._offset;
+        const finalY = (totalLfmBoxPosition.y as any)._value + (totalLfmBoxPosition.y as any)._offset;
+        setTotalLfmBoxSavedPosition({ x: finalX, y: finalY });
       },
     })
   ).current;

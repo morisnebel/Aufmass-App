@@ -2043,6 +2043,27 @@ export default function ProjectDetailScreen() {
                         // Text
                         svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="#1976d2" font-size="12" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
                       });
+                      
+                      // Render label (S1, S2, S3...) at center if this polyline has measurements
+                      if (Object.keys(elementMeasurements).length > 0) {
+                        const sumX = points.reduce((acc: number, pt: {x: number; y: number}) => acc + pt.x, 0);
+                        const sumY = points.reduce((acc: number, pt: {x: number; y: number}) => acc + pt.y, 0);
+                        const centerX = sumX / points.length;
+                        const centerY = sumY / points.length;
+                        
+                        // Find index of this element among all polylines with measurements
+                        const polylinesWithMeasurements = elements.filter((e: any) => 
+                          e.type === 'polyline' && 
+                          e.data?.points && 
+                          Object.keys(lineSegmentMeasurements[e.id] || {}).length > 0
+                        );
+                        const labelIndex = polylinesWithMeasurements.findIndex((e: any) => e.id === el.id);
+                        if (labelIndex !== -1) {
+                          const labelText = `S${labelIndex + 1}`;
+                          svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="#1976d2" stroke="#fff" stroke-width="2"/>`;
+                          svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+                        }
+                      }
                     } else if (el.type === 'arrow') {
                       const { x1, y1, x2, y2, text, heads } = el.data;
                       const angle = Math.atan2(y2 - y1, x2 - x1);

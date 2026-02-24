@@ -3239,6 +3239,135 @@ export default function DrawSketchScreen() {
         </Animated.View>
       )}
 
+      {/* Maß hinzufügen Button - erscheint wenn ein Liniensegment ausgewählt ist */}
+      {selectedLineSegment && drawMode === 'select' && (
+        <View style={styles.measurementActionBar}>
+          <View style={styles.measurementActionContent}>
+            <TouchableOpacity 
+              style={styles.measurementActionButton}
+              onPress={() => {
+                setLineMeasurementExpression('');
+                setShowLineMeasurementNumpad(true);
+              }}
+            >
+              <Ionicons name="resize" size={18} color="#fff" />
+              <Text style={styles.measurementActionText}>Maß hinzufügen</Text>
+            </TouchableOpacity>
+            
+            {/* Zeige existierendes Maß wenn vorhanden */}
+            {lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
+              <TouchableOpacity 
+                style={styles.measurementDeleteButton}
+                onPress={removeMeasurementFromSelectedLine}
+              >
+                <Ionicons name="trash-outline" size={16} color="#f44336" />
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={styles.measurementCancelButton}
+              onPress={() => setSelectedLineSegment(null)}
+            >
+              <Ionicons name="close" size={18} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Summenbox für Gesamtlänge (lfm) - erscheint wenn Maße vorhanden sind */}
+      {Object.keys(lineSegmentMeasurements).length > 0 && (
+        <View style={styles.totalLfmBox}>
+          <Ionicons name="calculator-outline" size={14} color="#1976d2" />
+          <Text style={styles.totalLfmText}>
+            Gesamt: {calculateTotalLfm().toString().replace('.', ',')} lfm
+          </Text>
+        </View>
+      )}
+
+      {/* Linien-Maß Eingabe Modal */}
+      <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Maß eingeben</Text>
+            <TextInput
+              ref={lineMeasurementInputRef}
+              style={styles.modalInput}
+              value={lineMeasurementExpression}
+              onChangeText={setLineMeasurementExpression}
+              placeholder="z.B. 2,50 oder 2.50m"
+              keyboardType="decimal-pad"
+              autoFocus
+            />
+            
+            {/* Kompaktes Numpad für Maß-Eingabe */}
+            <View style={styles.lineMeasureNumpad}>
+              <View style={styles.lineMeasureNumpadRow}>
+                {['7','8','9'].map(k => (
+                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.lineMeasureNumpadRow}>
+                {['4','5','6'].map(k => (
+                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.lineMeasureNumpadRow}>
+                {['1','2','3'].map(k => (
+                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.lineMeasureNumpadRow}>
+                <TouchableOpacity style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(',')}>
+                  <Text style={styles.lineMeasureNumpadKeyText}>,</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress('0')}>
+                  <Text style={styles.lineMeasureNumpadKeyText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadDel]} onPress={() => handleLineMeasurementNumpadPress('⌫')}>
+                  <Ionicons name="backspace-outline" size={20} color="#f44336" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.lineMeasureNumpadRow}>
+                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('m')}>
+                  <Text style={styles.lineMeasureNumpadUnitText}>m</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('cm')}>
+                  <Text style={styles.lineMeasureNumpadUnitText}>cm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadClear]} onPress={() => handleLineMeasurementNumpadPress('C')}>
+                  <Text style={styles.lineMeasureNumpadClearText}>C</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowLineMeasurementNumpad(false);
+                  setLineMeasurementExpression('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, !lineMeasurementExpression.trim() && styles.buttonDisabled]}
+                onPress={addMeasurementToSelectedLine}
+                disabled={!lineMeasurementExpression.trim()}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

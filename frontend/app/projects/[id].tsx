@@ -2003,6 +2003,46 @@ export default function ProjectDetailScreen() {
                       let pathData = points.map((pt: {x: number; y: number}, idx: number) => `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
                       if (isClosed) pathData += ' Z';
                       svgElements += `<path d="${pathData}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+                      
+                      // Render dimension lines for this polyline if measurements exist in metadata
+                      const lineSegmentMeasurements = metadata.lineSegmentMeasurements || {};
+                      const elementMeasurements = lineSegmentMeasurements[el.id] || {};
+                      Object.keys(elementMeasurements).forEach((segIdxStr: string) => {
+                        const segIdx = parseInt(segIdxStr, 10);
+                        const measurementText = elementMeasurements[segIdx];
+                        if (!measurementText) return;
+                        
+                        const p1 = points[segIdx];
+                        const p2 = segIdx === points.length - 1 && isClosed 
+                          ? points[0] 
+                          : points[segIdx + 1];
+                        if (!p1 || !p2) return;
+                        
+                        // Midpoint of the line
+                        const midX = (p1.x + p2.x) / 2;
+                        const midY = (p1.y + p2.y) / 2;
+                        
+                        // Angle of the line
+                        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                        
+                        // Offset for dimension line
+                        const offset = 15;
+                        const offsetX = -Math.sin(angle) * offset;
+                        const offsetY = Math.cos(angle) * offset;
+                        const tickLength = 8;
+                        
+                        // Dimension line
+                        svgElements += `<line x1="${p1.x + offsetX}" y1="${p1.y + offsetY}" x2="${p2.x + offsetX}" y2="${p2.y + offsetY}" stroke="#1976d2" stroke-width="1.5"/>`;
+                        // Left tick
+                        svgElements += `<line x1="${p1.x + offsetX - Math.sin(angle) * tickLength}" y1="${p1.y + offsetY + Math.cos(angle) * tickLength}" x2="${p1.x + offsetX + Math.sin(angle) * tickLength}" y2="${p1.y + offsetY - Math.cos(angle) * tickLength}" stroke="#1976d2" stroke-width="1.5"/>`;
+                        // Right tick
+                        svgElements += `<line x1="${p2.x + offsetX - Math.sin(angle) * tickLength}" y1="${p2.y + offsetY + Math.cos(angle) * tickLength}" x2="${p2.x + offsetX + Math.sin(angle) * tickLength}" y2="${p2.y + offsetY - Math.cos(angle) * tickLength}" stroke="#1976d2" stroke-width="1.5"/>`;
+                        // Text background
+                        const textWidth = measurementText.length * 8 + 8;
+                        svgElements += `<rect x="${midX + offsetX - textWidth/2}" y="${midY + offsetY - 10}" width="${textWidth}" height="16" fill="white" rx="2"/>`;
+                        // Text
+                        svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="#1976d2" font-size="12" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
+                      });
                     } else if (el.type === 'arrow') {
                       const { x1, y1, x2, y2, text, heads } = el.data;
                       const angle = Math.atan2(y2 - y1, x2 - x1);

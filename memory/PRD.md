@@ -138,5 +138,21 @@ Mobile app for roof measurement professionals to document projects, take photos,
   - Container breiter (maxWidth: 360)
   - File: `frontend/app/sketches/draw.tsx`
 
+- **[COMPLETED] Verschiebbare Grundriss-Steuerung**
+  - Grundriss-Steuerungsleiste ist jetzt kompakter und verschiebbar
+  - Drag-Handle zum Verschieben
+  - Bessere Bedienbarkeit bei Grundrisszeichnungen
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[NEW] Maße zu Grundriss-Linien hinzufügen**
+  - Einzelne Liniensegmente im Grundriss antippen zur Auswahl
+  - Ausgewähltes Segment wird orange hervorgehoben
+  - "Maß hinzufügen"-Button erscheint bei Auswahl
+  - Eigenes Numpad-Modal für schnelle Maß-Eingabe (m, cm)
+  - Maßlinie wird als Bemaßung parallel zur Linie dargestellt
+  - Summenbox zeigt automatisch Gesamtlänge aller Maße in lfm
+  - Maße können wieder gelöscht werden
+  - File: `frontend/app/sketches/draw.tsx`
+
 ## Last Updated
 February 2026

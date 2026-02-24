@@ -5194,6 +5194,7 @@ const styles = StyleSheet.create({
     right: 12,
     backgroundColor: '#fff',
     padding: 12,
+    paddingTop: 8,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -5204,6 +5205,12 @@ const styles = StyleSheet.create({
     borderColor: '#e3f2fd',
     zIndex: 50,
     minWidth: 120,
+  },
+  sketchLegendDragHandle: {
+    position: 'absolute',
+    top: 4,
+    right: 8,
+    opacity: 0.5,
   },
   sketchLegendTitle: {
     fontSize: 14,

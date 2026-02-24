@@ -3542,27 +3542,6 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Summenboxen für jedes Polyline-Element mit Maßen - jeder Grundriss hat sein eigenes Gesamt-Feld */}
-      {getPolylineElementsWithMeasurements().map((element, index) => {
-        const totalForElement = calculateTotalLfmForElement(element.id);
-        if (totalForElement <= 0) return null;
-        
-        // Hole gespeicherte Position oder verwende Standard
-        const savedPos = totalLfmBoxPositions[element.id] || { x: 0, y: 0 };
-        
-        return (
-          <DraggableTotalBox
-            key={`total-box-${element.id}`}
-            elementId={element.id}
-            totalValue={totalForElement}
-            initialPosition={savedPos}
-            baseTop={130 + (index * 50)}
-            isCompact={width < 500}
-            onPositionChange={(x, y) => updateTotalLfmBoxPosition(element.id, x, y)}
-          />
-        );
-      })}
-
       {/* Linien-Maß Eingabe Modal */}
       <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

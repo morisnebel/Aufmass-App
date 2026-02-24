@@ -822,9 +822,7 @@ export default function DrawSketchScreen() {
         setHistoryIndex(0);
         setTitle('Neue Skizze');
         setBackgroundImage(null);
-        setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
-        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-        totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+        setTotalLfmBoxPositions({}); // Reset alle Summenbox-Positionen
         initialImageAdded.current = false;
       };
       

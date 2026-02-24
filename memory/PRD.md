@@ -242,7 +242,7 @@ February 2026
 - **[REMOVED] Alte verschiebbare Summenboxen**
   - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der Summary Legend aufgegeben
 
-- **[ENHANCED] Größere Summary Legend im PDF/Vorschau**
+- **[ENHANCED] Größere Summary Legend im PDF/Vorschau** (24.02.2026)
   - Legendenbreite: 130-160px → **220px**
   - Zeilenhöhe: 22-28px → **36px**
   - Titel-Schriftgröße: 12px → **18px**
@@ -250,4 +250,24 @@ February 2026
   - Badge-Schrift: 10px → **14px**
   - Werte-Schrift: 11px → **16px**
   - Files: `frontend/app/sketches/draw.tsx`, `frontend/app/projects/[id].tsx`
+  - Status: ✅ Vom Benutzer verifiziert
+
+## Last Updated
+February 2026
+
+## Prioritized Backlog
+
+### P0 (Critical)
+- ✅ Summary Legend Feature komplett implementiert und verifiziert
+
+### P1 (High Priority)
+- Neuer TestFlight Build erstellen
+- SVG-Generierungslogik refaktorieren (Code-Duplikation bereinigen)
+
+### P2 (Medium Priority)
+- Pro/Base Version Split (In-App-Käufe)
+- Preisberechnung basierend auf Messungen
+
+### P3 (Lower Priority)
+- iCloud Sync re-implementieren
 

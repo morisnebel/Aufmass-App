@@ -887,18 +887,13 @@ export default function DrawSketchScreen() {
             } else {
               setLineSegmentMeasurements({});
             }
-            // Summenbox-Position laden wenn vorhanden
-            if (metadata.totalLfmBoxPosition) {
-              console.log('Loading totalLfmBoxPosition:', metadata.totalLfmBoxPosition);
-              const savedPos = metadata.totalLfmBoxPosition;
-              setTotalLfmBoxSavedPosition(savedPos);
-              totalLfmBoxPosition.setValue({ x: savedPos.x, y: savedPos.y });
-              totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+            // Summenbox-Positionen laden wenn vorhanden (pro Element)
+            if (metadata.totalLfmBoxPositions) {
+              console.log('Loading totalLfmBoxPositions:', metadata.totalLfmBoxPositions);
+              setTotalLfmBoxPositions(metadata.totalLfmBoxPositions);
             } else {
-              // Keine gespeicherte Position - auf Standard zurücksetzen
-              setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
-              totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-              totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+              // Keine gespeicherte Positionen - auf Standard zurücksetzen
+              setTotalLfmBoxPositions({});
             }
           } catch (e) {
             console.error('Error parsing metadata:', e);

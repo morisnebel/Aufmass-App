@@ -2812,8 +2812,7 @@ export default function DrawSketchScreen() {
     });
     
     // Add total length (lfm) for each polyline element that has measurements
-    // Verwende die gespeicherten Positionen wenn vorhanden
-    let defaultBoxIndex = 0;
+    // Positioniere jedes Gesamt-Feld direkt unter seinem Grundriss
     elements.forEach((el) => {
       if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
         const totalForElement = calculateTotalLfmForElement(el.id);
@@ -2822,8 +2821,10 @@ export default function DrawSketchScreen() {
           const textWidth = totalText.length * 7 + 16;
           const textHeight = 20;
           
-          // Berechne den Mittelpunkt des Polyline-Elements für bessere Positionierung
+          // Berechne die Bounds des Polyline-Elements
           const points = el.data?.points || [];
+          if (points.length === 0) return;
+          
           let polyMinX = Infinity, polyMinY = Infinity, polyMaxX = -Infinity, polyMaxY = -Infinity;
           points.forEach((pt: { x: number; y: number }) => {
             if (pt.x < polyMinX) polyMinX = pt.x;
@@ -2832,27 +2833,12 @@ export default function DrawSketchScreen() {
             if (pt.y > polyMaxY) polyMaxY = pt.y;
           });
           
-          // Verwende gespeicherte Position wenn vorhanden
-          const savedPos = totalLfmBoxPositions[el.id];
-          let textX, textY;
-          
-          if (savedPos && (savedPos.x !== 0 || savedPos.y !== 0)) {
-            // Position basierend auf der Mitte des Grundrisses + Offset
-            const polyCenterX = (polyMinX + polyMaxX) / 2;
-            const polyCenterY = (polyMinY + polyMaxY) / 2;
-            
-            // Skaliere die gespeicherte Position relativ zur Grundriss-Größe
-            textX = polyCenterX - textWidth / 2 + savedPos.x * 0.5;
-            textY = polyCenterY - textHeight / 2 + savedPos.y * 0.5;
-          } else {
-            // Standard-Position: Mitte des Grundrisses
-            textX = (polyMinX + polyMaxX) / 2 - textWidth / 2;
-            textY = polyMinY - 25 - (defaultBoxIndex * 25);
-          }
+          // Positioniere das Gesamt-Feld links unter dem Grundriss
+          const textX = polyMinX;
+          const textY = polyMaxY + 10; // 10px unter dem Grundriss
           
           svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
           svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-          defaultBoxIndex++;
         }
       }
     });

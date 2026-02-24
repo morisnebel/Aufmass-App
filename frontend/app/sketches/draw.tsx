@@ -2951,49 +2951,56 @@ export default function DrawSketchScreen() {
 
       </View>
 
-      {/* Polyline Steuerung - AUSSERHALB des Canvas für Touch-Events */}
+      {/* Polyline Steuerung - kompakt und verschiebbar */}
       {drawMode === 'polyline' && polylinePoints.length > 0 && (
-        <View style={styles.polylineControls} pointerEvents="box-none">
-          <Text style={styles.polylineInfo}>
-            Grundriss: {polylinePoints.length} Punkte
-          </Text>
-          <View style={styles.polylineButtons}>
+        <Animated.View 
+          style={[
+            styles.polylineControlsCompact,
+            { transform: polylineControlPosition.getTranslateTransform() }
+          ]}
+        >
+          {/* Drag Handle */}
+          <View {...polylineControlPanResponder.panHandlers} style={styles.polylineDragHandle}>
+            <View style={styles.polylineDragIndicator} />
+            <Text style={styles.polylineInfoCompact}>
+              Grundriss: {polylinePoints.length}
+            </Text>
+          </View>
+          
+          {/* Buttons */}
+          <View style={styles.polylineButtonsCompact}>
             <TouchableOpacity 
-              style={[styles.polylineButton, styles.polylineButtonUndo]} 
+              style={[styles.polylineButtonCompact, styles.polylineButtonUndo]} 
               onPress={undoLastPolylinePoint}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-undo" size={18} color="#fff" />
-              <Text style={styles.polylineButtonText}>Zurück</Text>
+              <Ionicons name="arrow-undo" size={16} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.polylineButton, styles.polylineButtonFinish]} 
+              style={[styles.polylineButtonCompact, styles.polylineButtonFinish]} 
               onPress={() => finishPolyline(false)}
               activeOpacity={0.7}
             >
-              <Ionicons name="checkmark" size={18} color="#fff" />
-              <Text style={styles.polylineButtonText}>Fertig</Text>
+              <Ionicons name="checkmark" size={16} color="#fff" />
             </TouchableOpacity>
             {polylinePoints.length >= 3 && (
               <TouchableOpacity 
-                style={[styles.polylineButton, styles.polylineButtonClose]} 
+                style={[styles.polylineButtonCompact, styles.polylineButtonClose]} 
                 onPress={() => finishPolyline(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={18} color="#fff" />
-                <Text style={styles.polylineButtonText}>Schließen</Text>
+                <Ionicons name="link" size={16} color="#fff" />
               </TouchableOpacity>
             )}
             <TouchableOpacity 
-              style={[styles.polylineButton, styles.polylineButtonCancel]} 
+              style={[styles.polylineButtonCompact, styles.polylineButtonCancel]} 
               onPress={cancelPolyline}
               activeOpacity={0.7}
             >
-              <Ionicons name="trash" size={18} color="#fff" />
-              <Text style={styles.polylineButtonText}>Abbrechen</Text>
+              <Ionicons name="trash" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Text Input Modal */}

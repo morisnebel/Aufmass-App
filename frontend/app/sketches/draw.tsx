@@ -2659,6 +2659,7 @@ export default function DrawSketchScreen() {
         backgroundImage,
         canvasWidth: width,
         canvasHeight: height - 120, // Subtract header/toolbar height
+        lineSegmentMeasurements, // Speichere die Linien-Maße
       };
 
       console.log('Saving sketch with', elements.length, 'elements');

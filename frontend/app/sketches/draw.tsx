@@ -994,10 +994,11 @@ export default function DrawSketchScreen() {
           canvasHeight: height - 120,
           lineSegmentMeasurements,
           totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
+          legendPosition, // Speichere Position der Übersicht-Legend
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
-        console.log('Saving totalLfmBoxPositions:', totalLfmBoxPositions);
+        console.log('Saving legendPosition:', legendPosition);
 
         // Generate preview image
         let sketchData = '';

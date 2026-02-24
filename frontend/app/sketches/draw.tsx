@@ -991,6 +991,7 @@ export default function DrawSketchScreen() {
     setLineSegmentMeasurements({});
     setSelectedLineSegment(null);
     // Summenbox-Position zurücksetzen
+    setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
     totalLfmBoxPosition.setValue({ x: 0, y: 0 });
     totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
   };

@@ -2438,6 +2438,15 @@ export default function DrawSketchScreen() {
           minY = Math.min(minY, pt.y);
           maxY = Math.max(maxY, pt.y);
         });
+        // Account for dimension lines offset (15px) and text
+        const elementMeasurements = lineSegmentMeasurements[el.id];
+        if (elementMeasurements && Object.keys(elementMeasurements).length > 0) {
+          // Add extra space for dimension lines (offset + tick + text)
+          minX -= 30;
+          maxX += 30;
+          minY -= 30;
+          maxY += 30;
+        }
         hasValidBounds = true;
       } else if (el.type === 'polygon') {
         const matches = el.data.match(/(-?\d+\.?\d*)/g);

@@ -2918,44 +2918,64 @@ export default function DrawSketchScreen() {
     // Render Summary Legend (Übersicht) in the SVG for PDF/Preview
     const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
     if (polylinesWithMeasurements.length > 0) {
-      const legendWidth = 120;
+      const legendWidth = 130;
       const lineHeight = 22;
       const legendHeight = 30 + (polylinesWithMeasurements.length * lineHeight);
       
-      // Legend position - verwende gespeicherte Position oder Standard (unten rechts)
-      // Die gespeicherte Position ist der Offset von der Standard-Position
-      // Standard: bottom: 150, right: 12 vom Canvas-Edge
-      // Konvertiere UI-Position in Canvas-Koordinaten
-      const canvasHeight = height - 120; // Canvas-Höhe ohne Toolbar
-      const standardBottomOffset = 150;
-      const standardRightOffset = 12;
+      // Berechne die Legend-Position im Canvas-Koordinatensystem
+      // Die UI-Legend startet bei bottom: 150, right: 12 vom Screen
+      // legendPosition enthält den Offset (dx, dy) von dieser Startposition
+      // 
+      // Im SVG müssen wir die Position basierend auf den Zeichnungsgrenzen berechnen
+      // Da die Zeichnung unterschiedlich groß sein kann, berechnen wir relativ zu den Bounds
       
-      // Berechne die Basis-Position im Canvas
-      // Die UI-Position ist relativ zum Canvas-Container, nicht zum viewBox
-      // Wir müssen den legendPosition-Offset darauf addieren
-      const legendX = maxX - standardRightOffset + legendPosition.x;
-      const legendY = maxY - standardBottomOffset + legendHeight + legendPosition.y;
+      // Canvas-Größe (der sichtbare Bereich beim Zeichnen)
+      const canvasWidth = width;
+      const canvasHeight = height - 120; // ohne Header
+      
+      // Standard-Startposition der Legend in Canvas-Pixeln (von unten-rechts)
+      // bottom: 150 bedeutet 150px vom unteren Rand
+      // right: 12 bedeutet 12px vom rechten Rand
+      const uiStartX = canvasWidth - 12 - legendWidth; // x-Position des linken Rands der Box
+      const uiStartY = canvasHeight - 150; // y-Position des unteren Rands der Box
+      
+      // Finale UI-Position mit Offset
+      const uiFinalX = uiStartX + legendPosition.x;
+      const uiFinalY = uiStartY + legendPosition.y;
+      
+      // Jetzt müssen wir diese UI-Position in SVG-Koordinaten umrechnen
+      // Die SVG viewBox geht von minX,minY bis maxX,maxY
+      // Wir müssen berechnen wo die Legend in diesem Koordinatensystem liegt
+      
+      // Skalierungsfaktor zwischen Canvas und SVG viewBox
+      // (vereinfacht: wir gehen davon aus, dass Canvas und viewBox ähnlich skaliert sind)
+      // Da wir padding hinzugefügt haben, müssen wir das berücksichtigen
+      
+      // Einfachere Lösung: Positioniere die Legend relativ zu den Zeichnungsgrenzen
+      // mit dem gleichen Offset-Verhältnis wie in der UI
+      const svgLegendX = minX + uiFinalX;
+      const svgLegendY = minY + uiFinalY;
       
       // Legend background
-      svgElements += `<rect x="${legendX - legendWidth}" y="${legendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
+      svgElements += `<rect x="${svgLegendX}" y="${svgLegendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
       
       // Legend title
-      svgElements += `<text x="${legendX - legendWidth + 10}" y="${legendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
+      svgElements += `<text x="${svgLegendX + 10}" y="${svgLegendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
       
       // Legend items
       polylinesWithMeasurements.forEach((element, index) => {
         const totalForElement = calculateTotalLfmForElement(element.id);
         if (totalForElement <= 0) return;
         
-        const itemY = legendY - legendHeight + 38 + (index * lineHeight);
+        const itemY = svgLegendY - legendHeight + 38 + (index * lineHeight);
         const labelText = `S${index + 1}`;
         
         // Label badge
-        svgElements += `<rect x="${legendX - legendWidth + 10}" y="${itemY - 12}" width="24" height="18" fill="#1976d2" rx="3" ry="3"/>`;
-        svgElements += `<text x="${legendX - legendWidth + 22}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+        svgElements += `<rect x="${svgLegendX + 10}" y="${itemY - 12}" width="28" height="18" fill="#1976d2" rx="3" ry="3"/>`;
+        svgElements += `<text x="${svgLegendX + 24}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         
         // Value text
-        svgElements += `<text x="${legendX - legendWidth + 42}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
+        svgElements += `<text x="${svgLegendX + 45}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
       });
     }
     

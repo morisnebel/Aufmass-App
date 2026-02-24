@@ -218,26 +218,27 @@ February 2026
   - `lineSegmentMeasurements` werden korrekt zurückgesetzt
   - File: `frontend/app/sketches/draw.tsx`
 
-### Session (aktuell - Summary Legend Feature)
+### Session 24.02.2026 - Summary Legend Feature (ABGESCHLOSSEN)
 - **[NEW] Summary Legend mit Grundriss-Beschriftung**
   - Jeder Grundriss (Polyline) mit Maßen erhält automatisch ein Label (S1, S2, S3...)
   - Label wird als blauer Kreis im Zentrum des Grundrisses angezeigt
-  - Summary Legend Box in der unteren rechten Ecke zeigt Übersicht aller Grundrisse mit Gesamtlängen
+  - Summary Legend Box zeigt Übersicht aller Grundrisse mit Gesamtlängen
   - Labels und Legend werden im Canvas während der Bearbeitung angezeigt
   - Labels und Legend werden im SVG für PDF und Vorschauen gerendert
-  - Ersetzt die alte komplizierte "verschiebbare Summenbox pro Grundriss" Lösung
-  - File: `frontend/app/sketches/draw.tsx`
+  - File: `frontend/app/sketches/draw.tsx`, `frontend/app/projects/[id].tsx`
 
 - **[NEW] Verschiebbare Übersicht-Legend**
-  - Die Übersicht-Box kann jetzt frei verschoben werden (per Drag & Drop)
-  - Drag-Handle-Icon zeigt Verschiebbarkeit an
-  - Position wird automatisch gespeichert und beim Laden wiederhergestellt
-  - Die gespeicherte Position wird im PDF und in Vorschauen verwendet
-  - `legendPosition` State und `legendPan` Animation hinzugefügt
+  - Die Übersicht-Box kann frei verschoben werden (per Drag & Drop)
+  - Position wird in den Sketch-Metadaten gespeichert (`legendPosition`)
+  - Gespeicherte Position erscheint korrekt im PDF und in Vorschauen
   - PanResponder für Drag-Gesten implementiert
   - File: `frontend/app/sketches/draw.tsx`
 
+- **[FIXED] "Maß hinzufügen" Button-Breite**
+  - Button-Container ist jetzt nur so breit wie der Inhalt
+  - Komplett blauer Hintergrund mit weißem X-Icon
+  - File: `frontend/app/sketches/draw.tsx`
+
 - **[REMOVED] Alte verschiebbare Summenboxen**
-  - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der einfacheren Summary Legend aufgegeben
-  - State `totalLfmBoxPositions` wird weiterhin für Rückwärtskompatibilität gespeichert
+  - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der Summary Legend aufgegeben
 

@@ -2635,6 +2635,19 @@ export default function DrawSketchScreen() {
       }
     });
     
+    // Add total length (lfm) as text in the SVG if measurements exist
+    const totalLfm = calculateTotalLfm();
+    if (totalLfm > 0) {
+      const totalText = `Gesamt: ${totalLfm.toString().replace('.', ',')} lfm`;
+      const textWidth = totalText.length * 7 + 16;
+      const textHeight = 20;
+      // Position in top-right corner of the drawing
+      const textX = maxX - padding - textWidth;
+      const textY = minY + padding;
+      svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
+      svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
+    }
+    
     // Create SVG with viewBox that matches the drawing bounds
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions
     const previewSvg = `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;

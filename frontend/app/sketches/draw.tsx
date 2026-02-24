@@ -3379,15 +3379,17 @@ export default function DrawSketchScreen() {
         <Animated.View 
           style={[
             styles.totalLfmBox,
-            { transform: totalLfmBoxPosition.getTranslateTransform() }
+            { transform: totalLfmBoxPosition.getTranslateTransform() },
+            // Auf iPhone (schmaler Bildschirm) kleiner machen
+            width < 500 && styles.totalLfmBoxCompact
           ]}
           {...totalLfmBoxPanResponder.panHandlers}
         >
           <View style={styles.totalLfmBoxDragHandle}>
-            <Ionicons name="move" size={12} color="#999" />
+            <Ionicons name="move" size={width < 500 ? 10 : 12} color="#999" />
           </View>
-          <Ionicons name="calculator-outline" size={18} color="#1976d2" />
-          <Text style={styles.totalLfmText}>
+          <Ionicons name="calculator-outline" size={width < 500 ? 14 : 18} color="#1976d2" />
+          <Text style={[styles.totalLfmText, width < 500 && styles.totalLfmTextCompact]}>
             Gesamt: {calculateTotalLfm().toString().replace('.', ',')} lfm
           </Text>
         </Animated.View>

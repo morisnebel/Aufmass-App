@@ -5145,15 +5145,15 @@ const styles = StyleSheet.create({
   measurementActionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#1976d2',
     borderRadius: 10,
-    padding: 6,
+    padding: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 8,
-    gap: 6,
+    gap: 4,
   },
   measurementActionButton: {
     flexDirection: 'row',
@@ -5177,7 +5177,7 @@ const styles = StyleSheet.create({
   },
   measurementCancelButton: {
     padding: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 6,
   },
   // Summenbox für Gesamtlänge - größer und verschiebbar

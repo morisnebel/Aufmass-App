@@ -2114,46 +2114,8 @@ export default function ProjectDetailScreen() {
                     }
                   });
 
-                  // Add total length (lfm) for each polyline element that has measurements
-                  const lineSegmentMeasurements = metadata.lineSegmentMeasurements || {};
-                  
-                  // Für jedes Polyline-Element mit Maßen eine eigene Summe unter dem Grundriss anzeigen
-                  elements.forEach((el: any) => {
-                    if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
-                      // Berechne die Summe für dieses Element
-                      let totalForElement = 0;
-                      const segmentMeasures = lineSegmentMeasurements[el.id];
-                      Object.values(segmentMeasures).forEach((measurement: any) => {
-                        const match = measurement.match(/^([\d.,]+)/);
-                        if (match) {
-                          const value = parseFloat(match[1].replace(',', '.'));
-                          if (!isNaN(value)) totalForElement += value;
-                        }
-                      });
-                      
-                      if (totalForElement > 0) {
-                        const totalText = `Gesamt: ${totalForElement.toFixed(0).replace('.', ',')} lfm`;
-                        const textWidth = totalText.length * 7 + 16;
-                        
-                        // Berechne die Bounds des Polyline-Elements
-                        const points = el.data?.points || [];
-                        if (points.length === 0) return;
-                        
-                        let polyMinX = Infinity, polyMaxY = -Infinity;
-                        points.forEach((pt: { x: number; y: number }) => {
-                          if (pt.x < polyMinX) polyMinX = pt.x;
-                          if (pt.y > polyMaxY) polyMaxY = pt.y;
-                        });
-                        
-                        // Positioniere das Gesamt-Feld links unter dem Grundriss (mit mehr Abstand für Maßlinien)
-                        const textX = polyMinX;
-                        const textY = polyMaxY + 40; // 40px unter dem Grundriss (Platz für Maßlinien)
-                        
-                        svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="20" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4"/>`;
-                        svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-                      }
-                    }
-                  });
+                  // Gesamt-Felder werden NICHT mehr automatisch im SVG generiert
+                  // Der Benutzer kann sie in der Skizze manuell positionieren
 
                   // Use viewBox for proper scaling - browser handles the resize
                   return `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;

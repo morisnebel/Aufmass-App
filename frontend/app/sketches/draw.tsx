@@ -2812,37 +2812,8 @@ export default function DrawSketchScreen() {
       }
     });
     
-    // Add total length (lfm) for each polyline element that has measurements
-    // Positioniere jedes Gesamt-Feld direkt unter seinem Grundriss
-    elements.forEach((el) => {
-      if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
-        const totalForElement = calculateTotalLfmForElement(el.id);
-        if (totalForElement > 0) {
-          const totalText = `Gesamt: ${totalForElement.toString().replace('.', ',')} lfm`;
-          const textWidth = totalText.length * 7 + 16;
-          const textHeight = 20;
-          
-          // Berechne die Bounds des Polyline-Elements
-          const points = el.data?.points || [];
-          if (points.length === 0) return;
-          
-          let polyMinX = Infinity, polyMinY = Infinity, polyMaxX = -Infinity, polyMaxY = -Infinity;
-          points.forEach((pt: { x: number; y: number }) => {
-            if (pt.x < polyMinX) polyMinX = pt.x;
-            if (pt.y < polyMinY) polyMinY = pt.y;
-            if (pt.x > polyMaxX) polyMaxX = pt.x;
-            if (pt.y > polyMaxY) polyMaxY = pt.y;
-          });
-          
-          // Positioniere das Gesamt-Feld links unter dem Grundriss (mit mehr Abstand für Maßlinien)
-          const textX = polyMinX;
-          const textY = polyMaxY + 40; // 40px unter dem Grundriss (Platz für Maßlinien)
-          
-          svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
-          svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-        }
-      }
-    });
+    // Gesamt-Felder werden NICHT mehr automatisch im SVG generiert
+    // Der Benutzer kann sie in der Skizze manuell positionieren
     
     // Create SVG with viewBox that matches the drawing bounds
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions

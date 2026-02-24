@@ -393,6 +393,34 @@ export default function DrawSketchScreen() {
     }));
   };
   
+  // Verschiebbare Position für Übersicht-Legend
+  const [legendPosition, setLegendPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const legendPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const legendPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        legendPan.setOffset({
+          x: (legendPan.x as any)._value,
+          y: (legendPan.y as any)._value,
+        });
+        legendPan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: legendPan.x, dy: legendPan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        legendPan.flattenOffset();
+        // Speichere finale Position
+        const finalX = (legendPan.x as any)._value;
+        const finalY = (legendPan.y as any)._value;
+        setLegendPosition({ x: finalX, y: finalY });
+      },
+    })
+  ).current;
+  
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {
     try {

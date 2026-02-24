@@ -708,6 +708,10 @@ export default function DrawSketchScreen() {
             if (metadata.backgroundImage) {
               setBackgroundImage(metadata.backgroundImage);
             }
+            // Lade die Linien-Maße wenn vorhanden
+            if (metadata.lineSegmentMeasurements) {
+              setLineSegmentMeasurements(metadata.lineSegmentMeasurements);
+            }
           } catch (e) {
             console.error('Error parsing metadata:', e);
           }

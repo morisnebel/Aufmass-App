@@ -3663,9 +3663,18 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Legende mit Skizzen-Summen (S1, S2, S3...) */}
+      {/* Legende mit Skizzen-Summen (S1, S2, S3...) - verschiebbar */}
       {getPolylineElementsWithMeasurements().length > 0 && (
-        <View style={styles.sketchLegend}>
+        <Animated.View 
+          style={[
+            styles.sketchLegend,
+            { transform: legendPan.getTranslateTransform() }
+          ]}
+          {...legendPanResponder.panHandlers}
+        >
+          <View style={styles.sketchLegendDragHandle}>
+            <Ionicons name="move" size={12} color="#999" />
+          </View>
           <Text style={styles.sketchLegendTitle}>Übersicht</Text>
           {getPolylineElementsWithMeasurements().map((element, index) => {
             const totalForElement = calculateTotalLfmForElement(element.id);
@@ -3679,7 +3688,7 @@ export default function DrawSketchScreen() {
               </View>
             );
           })}
-        </View>
+        </Animated.View>
       )}
 
       {/* Linien-Maß Eingabe Modal */}

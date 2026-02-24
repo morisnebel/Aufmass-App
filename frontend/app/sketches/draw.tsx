@@ -4870,6 +4870,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e3f2fd',
   },
+  // Kompakte Version für iPhone
+  totalLfmBoxCompact: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingLeft: 6,
+    borderRadius: 8,
+    gap: 5,
+  },
   totalLfmBoxDragHandle: {
     marginRight: 4,
     opacity: 0.6,
@@ -4878,6 +4886,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#1976d2',
+  },
+  // Kompakte Textgröße für iPhone
+  totalLfmTextCompact: {
+    fontSize: 12,
   },
   // Linien-Maß Numpad
   lineMeasureNumpad: {

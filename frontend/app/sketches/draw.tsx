@@ -3487,21 +3487,19 @@ export default function DrawSketchScreen() {
         const totalForElement = calculateTotalLfmForElement(element.id);
         if (totalForElement <= 0) return null;
         
+        // Hole gespeicherte Position oder verwende Standard
+        const savedPos = totalLfmBoxPositions[element.id] || { x: 0, y: 0 };
+        
         return (
-          <View 
+          <DraggableTotalBox
             key={`total-box-${element.id}`}
-            style={[
-              styles.totalLfmBox,
-              // Positioniere die Boxen untereinander
-              { top: 130 + (index * 50) },
-              width < 500 && styles.totalLfmBoxCompact
-            ]}
-          >
-            <Ionicons name="calculator-outline" size={width < 500 ? 14 : 18} color="#1976d2" />
-            <Text style={[styles.totalLfmText, width < 500 && styles.totalLfmTextCompact]}>
-              Gesamt: {totalForElement.toString().replace('.', ',')} lfm
-            </Text>
-          </View>
+            elementId={element.id}
+            totalValue={totalForElement}
+            initialPosition={savedPos}
+            baseTop={130 + (index * 50)}
+            isCompact={width < 500}
+            onPositionChange={(x, y) => updateTotalLfmBoxPosition(element.id, x, y)}
+          />
         );
       })}
 

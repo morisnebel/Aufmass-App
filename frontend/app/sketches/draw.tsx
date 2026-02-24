@@ -2427,6 +2427,49 @@ export default function DrawSketchScreen() {
               );
             })}
             
+            {/* Label (S1, S2, S3...) im Zentrum des Grundrisses */}
+            {(() => {
+              // Berechne Zentrum des Grundrisses
+              const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
+              const sumY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0);
+              const centerX = sumX / points.length;
+              const centerY = sumY / points.length;
+              
+              // Finde Index dieses Elements unter allen Polylines mit Maßen
+              const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
+              const labelIndex = polylinesWithMeasurements.findIndex(el => el.id === element.id);
+              
+              // Nur Label anzeigen wenn dieses Element Maße hat
+              if (labelIndex === -1) return null;
+              
+              const labelText = `S${labelIndex + 1}`;
+              
+              return (
+                <G key={`label-${element.id}`}>
+                  {/* Hintergrund-Kreis für Label */}
+                  <Circle
+                    cx={centerX}
+                    cy={centerY}
+                    r={18}
+                    fill="#1976d2"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  />
+                  {/* Label-Text */}
+                  <SvgText
+                    x={centerX}
+                    y={centerY + 5}
+                    fill="#fff"
+                    fontSize={14}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {labelText}
+                  </SvgText>
+                </G>
+              );
+            })()}
+            
             {/* Punkte anzeigen wenn ausgewählt - größer und interaktiv */}
             {isSelected && points.map((pt: { x: number; y: number }, idx: number) => (
               <Circle 

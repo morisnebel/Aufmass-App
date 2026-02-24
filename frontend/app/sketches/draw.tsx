@@ -278,6 +278,22 @@ export default function DrawSketchScreen() {
       },
     })
   ).current;
+
+  // Verschiebbare Position für Summenbox (lfm)
+  const totalLfmBoxPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const totalLfmBoxPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: Animated.event(
+        [null, { dx: totalLfmBoxPosition.x, dy: totalLfmBoxPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        totalLfmBoxPosition.extractOffset();
+      },
+    })
+  ).current;
   
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {

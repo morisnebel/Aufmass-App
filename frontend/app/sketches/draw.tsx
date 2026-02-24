@@ -3693,7 +3693,7 @@ export default function DrawSketchScreen() {
               style={styles.measurementCancelButton}
               onPress={() => setSelectedLineSegment(null)}
             >
-              <Ionicons name="close" size={18} color="#666" />
+              <Ionicons name="close" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>

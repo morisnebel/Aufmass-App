@@ -217,3 +217,18 @@ February 2026
   - Jeder Grundriss hat sein eigenes unabhängiges Zusammenfassungs-Fenster
   - `lineSegmentMeasurements` werden korrekt zurückgesetzt
   - File: `frontend/app/sketches/draw.tsx`
+
+### Session (aktuell - Summary Legend Feature)
+- **[NEW] Summary Legend mit Grundriss-Beschriftung**
+  - Jeder Grundriss (Polyline) mit Maßen erhält automatisch ein Label (S1, S2, S3...)
+  - Label wird als blauer Kreis im Zentrum des Grundrisses angezeigt
+  - Summary Legend Box in der unteren rechten Ecke zeigt Übersicht aller Grundrisse mit Gesamtlängen
+  - Labels und Legend werden im Canvas während der Bearbeitung angezeigt
+  - Labels und Legend werden im SVG für PDF und Vorschauen gerendert
+  - Ersetzt die alte komplizierte "verschiebbare Summenbox pro Grundriss" Lösung
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[REMOVED] Alte verschiebbare Summenboxen**
+  - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der einfacheren Summary Legend aufgegeben
+  - State `totalLfmBoxPositions` wird weiterhin für Rückwärtskompatibilität gespeichert
+

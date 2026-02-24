@@ -2812,7 +2812,8 @@ export default function DrawSketchScreen() {
     });
     
     // Add total length (lfm) for each polyline element that has measurements
-    let totalBoxYOffset = 0;
+    // Verwende die gespeicherten Positionen wenn vorhanden
+    let defaultBoxIndex = 0;
     elements.forEach((el) => {
       if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
         const totalForElement = calculateTotalLfmForElement(el.id);
@@ -2820,12 +2821,25 @@ export default function DrawSketchScreen() {
           const totalText = `Gesamt: ${totalForElement.toString().replace('.', ',')} lfm`;
           const textWidth = totalText.length * 7 + 16;
           const textHeight = 20;
-          // Position in top-right corner of the drawing, stacked vertically
-          const textX = maxX - padding - textWidth;
-          const textY = minY + padding + totalBoxYOffset;
+          
+          // Verwende gespeicherte Position wenn vorhanden
+          const savedPos = totalLfmBoxPositions[el.id];
+          let textX, textY;
+          
+          if (savedPos && (savedPos.x !== 0 || savedPos.y !== 0)) {
+            // Konvertiere die UI-Position in SVG-Koordinaten
+            // Die Box ist rechts oben positioniert (right: 12), also berechne die X-Position relativ
+            textX = maxX - padding - textWidth + savedPos.x;
+            textY = minY + padding + (defaultBoxIndex * 50) + savedPos.y;
+          } else {
+            // Standard-Position (oben rechts, gestapelt)
+            textX = maxX - padding - textWidth;
+            textY = minY + padding + (defaultBoxIndex * 25);
+          }
+          
           svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
           svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-          totalBoxYOffset += 25; // Offset for next box
+          defaultBoxIndex++;
         }
       }
     });

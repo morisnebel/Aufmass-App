@@ -3494,26 +3494,28 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Summenbox für Gesamtlänge (lfm) - erscheint wenn Maße vorhanden sind, verschiebbar */}
-      {Object.keys(lineSegmentMeasurements).length > 0 && (
-        <Animated.View 
-          style={[
-            styles.totalLfmBox,
-            { transform: totalLfmBoxPosition.getTranslateTransform() },
-            // Auf iPhone (schmaler Bildschirm) kleiner machen
-            width < 500 && styles.totalLfmBoxCompact
-          ]}
-          {...totalLfmBoxPanResponder.panHandlers}
-        >
-          <View style={styles.totalLfmBoxDragHandle}>
-            <Ionicons name="move" size={width < 500 ? 10 : 12} color="#999" />
+      {/* Summenboxen für jedes Polyline-Element mit Maßen - jeder Grundriss hat sein eigenes Gesamt-Feld */}
+      {getPolylineElementsWithMeasurements().map((element, index) => {
+        const totalForElement = calculateTotalLfmForElement(element.id);
+        if (totalForElement <= 0) return null;
+        
+        return (
+          <View 
+            key={`total-box-${element.id}`}
+            style={[
+              styles.totalLfmBox,
+              // Positioniere die Boxen untereinander
+              { top: 130 + (index * 50) },
+              width < 500 && styles.totalLfmBoxCompact
+            ]}
+          >
+            <Ionicons name="calculator-outline" size={width < 500 ? 14 : 18} color="#1976d2" />
+            <Text style={[styles.totalLfmText, width < 500 && styles.totalLfmTextCompact]}>
+              Gesamt: {totalForElement.toString().replace('.', ',')} lfm
+            </Text>
           </View>
-          <Ionicons name="calculator-outline" size={width < 500 ? 14 : 18} color="#1976d2" />
-          <Text style={[styles.totalLfmText, width < 500 && styles.totalLfmTextCompact]}>
-            Gesamt: {calculateTotalLfm().toString().replace('.', ',')} lfm
-          </Text>
-        </Animated.View>
-      )}
+        );
+      })}
 
       {/* Linien-Maß Eingabe Modal */}
       <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">

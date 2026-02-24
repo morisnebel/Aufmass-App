@@ -2734,16 +2734,36 @@ export default function DrawSketchScreen() {
       maxY = 400;
     }
     
-    // Add padding - extra space at bottom-right for legend
+    // Add padding - extra space for legend based on its position
     const padding = 30;
     const polylinesForLegend = getPolylineElementsWithMeasurements();
-    const legendExtraHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
-    const legendExtraWidth = polylinesForLegend.length > 0 ? 130 : 0;
+    const legendWidth = 130;
+    const legendHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
+    
+    // Berechne wo die Legend positioniert wird (basierend auf UI-Position)
+    const canvasWidth = width;
+    const canvasHeight = height - 120;
+    const uiStartX = canvasWidth - 12 - legendWidth;
+    const uiStartY = canvasHeight - 150;
+    const uiFinalX = uiStartX + legendPosition.x;
+    const uiFinalY = uiStartY + legendPosition.y;
     
     minX -= padding;
     minY -= padding;
-    maxX += padding + legendExtraWidth;
-    maxY += padding + legendExtraHeight;
+    maxX += padding;
+    maxY += padding;
+    
+    // Erweitere die Bounds um die Legend-Position zu berücksichtigen
+    if (polylinesForLegend.length > 0) {
+      const svgLegendX = minX + uiFinalX;
+      const svgLegendY = minY + uiFinalY;
+      
+      // Stelle sicher, dass die Legend komplett sichtbar ist
+      if (svgLegendX < minX) minX = svgLegendX - 10;
+      if (svgLegendX + legendWidth > maxX) maxX = svgLegendX + legendWidth + 10;
+      if (svgLegendY - legendHeight < minY) minY = svgLegendY - legendHeight - 10;
+      if (svgLegendY > maxY) maxY = svgLegendY + 10;
+    }
     
     // Calculate actual drawing dimensions
     const drawWidth = Math.max(maxX - minX, 100);

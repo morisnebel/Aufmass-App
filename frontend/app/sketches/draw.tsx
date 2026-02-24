@@ -290,6 +290,81 @@ export default function DrawSketchScreen() {
     } catch { return null; }
   };
   
+  // Berechne Gesamtlänge aller Maße in lfm
+  const calculateTotalLfm = (): number => {
+    let total = 0;
+    Object.values(lineSegmentMeasurements).forEach(segmentMeasures => {
+      Object.values(segmentMeasures).forEach(measurement => {
+        // Extrahiere Zahl aus dem Maß-String (z.B. "2,50m" -> 2.50)
+        const match = measurement.match(/^([\d.,]+)/);
+        if (match) {
+          const value = parseFloat(match[1].replace(',', '.'));
+          if (!isNaN(value)) {
+            total += value;
+          }
+        }
+      });
+    });
+    return Math.round(total * 100) / 100;
+  };
+  
+  // Handler für Linien-Maß Numpad
+  const handleLineMeasurementNumpadPress = (key: string) => {
+    if (key === '⌫') {
+      setLineMeasurementExpression(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      setLineMeasurementExpression('');
+    } else {
+      setLineMeasurementExpression(prev => prev + key);
+    }
+    setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
+  };
+  
+  // Maß zur ausgewählten Linie hinzufügen
+  const addMeasurementToSelectedLine = () => {
+    if (!selectedLineSegment || !lineMeasurementExpression.trim()) return;
+    
+    // Formatiere das Maß (füge 'm' hinzu wenn nur Zahl)
+    let formattedMeasurement = lineMeasurementExpression.trim();
+    if (/^[\d.,]+$/.test(formattedMeasurement)) {
+      formattedMeasurement = formattedMeasurement.replace('.', ',') + 'm';
+    }
+    
+    setLineSegmentMeasurements(prev => ({
+      ...prev,
+      [selectedLineSegment.elementId]: {
+        ...prev[selectedLineSegment.elementId],
+        [selectedLineSegment.segmentIndex]: formattedMeasurement,
+      },
+    }));
+    
+    // Reset
+    setLineMeasurementExpression('');
+    setShowLineMeasurementNumpad(false);
+    setSelectedLineSegment(null);
+  };
+  
+  // Maß von Linie entfernen
+  const removeMeasurementFromSelectedLine = () => {
+    if (!selectedLineSegment) return;
+    
+    setLineSegmentMeasurements(prev => {
+      const newMeasurements = { ...prev };
+      if (newMeasurements[selectedLineSegment.elementId]) {
+        const segmentMeasures = { ...newMeasurements[selectedLineSegment.elementId] };
+        delete segmentMeasures[selectedLineSegment.segmentIndex];
+        if (Object.keys(segmentMeasures).length === 0) {
+          delete newMeasurements[selectedLineSegment.elementId];
+        } else {
+          newMeasurements[selectedLineSegment.elementId] = segmentMeasures;
+        }
+      }
+      return newMeasurements;
+    });
+    
+    setSelectedLineSegment(null);
+  };
+  
   const handleMeasurementNumpadPress = (key: string) => {
     if (key === '⌫') {
       setMeasurementExpression(prev => prev.slice(0, -1));

@@ -228,6 +228,15 @@ February 2026
   - Ersetzt die alte komplizierte "verschiebbare Summenbox pro Grundriss" Lösung
   - File: `frontend/app/sketches/draw.tsx`
 
+- **[NEW] Verschiebbare Übersicht-Legend**
+  - Die Übersicht-Box kann jetzt frei verschoben werden (per Drag & Drop)
+  - Drag-Handle-Icon zeigt Verschiebbarkeit an
+  - Position wird automatisch gespeichert und beim Laden wiederhergestellt
+  - Die gespeicherte Position wird im PDF und in Vorschauen verwendet
+  - `legendPosition` State und `legendPan` Animation hinzugefügt
+  - PanResponder für Drag-Gesten implementiert
+  - File: `frontend/app/sketches/draw.tsx`
+
 - **[REMOVED] Alte verschiebbare Summenboxen**
   - Die komplexe DraggableTotalBox-Funktion wurde zugunsten der einfacheren Summary Legend aufgegeben
   - State `totalLfmBoxPositions` wird weiterhin für Rückwärtskompatibilität gespeichert

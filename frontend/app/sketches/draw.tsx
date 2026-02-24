@@ -1086,16 +1086,14 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // Clear all - auch Maße und Summenbox-Position zurücksetzen
+  // Clear all - auch Maße und Summenbox-Positionen zurücksetzen
   const clearAll = () => {
     addToHistory([]);
     setSelectedElementId(null);
     setLineSegmentMeasurements({});
     setSelectedLineSegment(null);
-    // Summenbox-Position zurücksetzen
-    setTotalLfmBoxSavedPosition({ x: 0, y: 0 });
-    totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-    totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
+    // Alle Summenbox-Positionen zurücksetzen
+    setTotalLfmBoxPositions({});
   };
 
   // Background image

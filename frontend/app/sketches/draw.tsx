@@ -5057,6 +5057,51 @@ const styles = StyleSheet.create({
   totalLfmTextCompact: {
     fontSize: 12,
   },
+  // Skizzen-Legende (S1, S2, S3...)
+  sketchLegend: {
+    position: 'absolute',
+    bottom: 150,
+    right: 12,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e3f2fd',
+    zIndex: 50,
+    minWidth: 120,
+  },
+  sketchLegendTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 8,
+  },
+  sketchLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 3,
+  },
+  sketchLegendLabel: {
+    backgroundColor: '#1976d2',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: 8,
+  },
+  sketchLegendLabelText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  sketchLegendValue: {
+    fontSize: 13,
+    color: '#333',
+  },
   // Linien-Maß Numpad
   lineMeasureNumpad: {
     marginVertical: 16,

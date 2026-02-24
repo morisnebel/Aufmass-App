@@ -224,6 +224,9 @@ export default function DrawSketchScreen() {
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
   
+  // Tracking für Skizzen-Wechsel (Reset-Erkennung)
+  const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
+  
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
   

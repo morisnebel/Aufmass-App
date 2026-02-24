@@ -2916,15 +2916,26 @@ export default function DrawSketchScreen() {
     // Render Summary Legend (Übersicht) in the SVG for PDF/Preview
     const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
     if (polylinesWithMeasurements.length > 0) {
-      // Position legend in bottom-right corner within viewBox
-      const legendX = maxX - 10;
-      const legendY = maxY - 10;
       const legendWidth = 120;
       const lineHeight = 22;
       const legendHeight = 30 + (polylinesWithMeasurements.length * lineHeight);
       
+      // Legend position - verwende gespeicherte Position oder Standard (unten rechts)
+      // Die gespeicherte Position ist der Offset von der Standard-Position
+      // Standard: bottom: 150, right: 12 vom Canvas-Edge
+      // Konvertiere UI-Position in Canvas-Koordinaten
+      const canvasHeight = height - 120; // Canvas-Höhe ohne Toolbar
+      const standardBottomOffset = 150;
+      const standardRightOffset = 12;
+      
+      // Berechne die Basis-Position im Canvas
+      // Die UI-Position ist relativ zum Canvas-Container, nicht zum viewBox
+      // Wir müssen den legendPosition-Offset darauf addieren
+      const legendX = maxX - standardRightOffset + legendPosition.x;
+      const legendY = maxY - standardBottomOffset + legendHeight + legendPosition.y;
+      
       // Legend background
-      svgElements += `<rect x="${legendX - legendWidth}" y="${legendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6" filter="url(#legendShadow)"/>`;
+      svgElements += `<rect x="${legendX - legendWidth}" y="${legendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
       
       // Legend title
       svgElements += `<text x="${legendX - legendWidth + 10}" y="${legendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;

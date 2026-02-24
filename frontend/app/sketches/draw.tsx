@@ -3958,6 +3958,51 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   // Polyline Steuerung
+  // Kompakte, verschiebbare Polyline-Steuerung
+  polylineControlsCompact: {
+    position: 'absolute',
+    bottom: 100,
+    right: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 10,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 10,
+    zIndex: 1000,
+    minWidth: 140,
+  },
+  polylineDragHandle: {
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingVertical: 4,
+  },
+  polylineDragIndicator: {
+    width: 30,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    marginBottom: 4,
+  },
+  polylineInfoCompact: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  polylineButtonsCompact: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  polylineButtonCompact: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   polylineControls: {
     position: 'absolute',
     bottom: 80,

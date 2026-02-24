@@ -1609,6 +1609,33 @@ export default function DrawSketchScreen() {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
+  // Funktion um das spezifische Polyline-Segment zu finden
+  const findPolylineSegmentAtPoint = (x: number, y: number): { element: DrawElement; segmentIndex: number } | null => {
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type === 'polyline') {
+        const points = el.data.points;
+        if (points && points.length >= 2) {
+          // Prüfe jedes Segment
+          for (let j = 0; j < points.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
+            if (dist < 20) {
+              return { element: el, segmentIndex: j };
+            }
+          }
+          // Prüfe auch die schließende Linie wenn geschlossen
+          if (el.data.closed && points.length >= 3) {
+            const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
+            if (dist < 20) {
+              return { element: el, segmentIndex: points.length - 1 }; // Index für Schlusslinie
+            }
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   // Check transform handles
   const checkTransformHandles = (element: DrawElement, x: number, y: number): { type: 'rotate' | 'resize', handle: string } | null => {
     const handleRadius = 15;

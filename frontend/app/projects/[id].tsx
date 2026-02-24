@@ -2143,9 +2143,9 @@ export default function ProjectDetailScreen() {
                   );
                   
                   if (polylinesWithMeasurements.length > 0) {
-                    const legendWidth = 130;
-                    const lineHeight = 22;
-                    const legendHeight = 30 + (polylinesWithMeasurements.length * lineHeight);
+                    const legendWidth = 220; // Noch breiter für bessere Lesbarkeit
+                    const lineHeight = 36; // Deutlich höhere Zeilen
+                    const legendHeight = 55 + (polylinesWithMeasurements.length * lineHeight) + 25;
                     
                     // Get legend position from metadata or use default
                     const legendPosition = metadata.legendPosition || { x: 0, y: 0 };
@@ -2170,11 +2170,11 @@ export default function ProjectDetailScreen() {
                     if (svgLegendY - legendHeight < minY) minY = svgLegendY - legendHeight - 10;
                     if (svgLegendY > maxY) maxY = svgLegendY + 10;
                     
-                    // Legend background
-                    svgElements += `<rect x="${svgLegendX}" y="${svgLegendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
+                    // Legend background - größer
+                    svgElements += `<rect x="${svgLegendX}" y="${svgLegendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="2" rx="8" ry="8"/>`;
                     
-                    // Legend title
-                    svgElements += `<text x="${svgLegendX + 10}" y="${svgLegendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
+                    // Legend title - größere Schrift
+                    svgElements += `<text x="${svgLegendX + 15}" y="${svgLegendY - legendHeight + 30}" fill="#333" font-size="18" font-weight="bold">Übersicht</text>`;
                     
                     // Legend items
                     polylinesWithMeasurements.forEach((polyEl: any, index: number) => {
@@ -2191,15 +2191,15 @@ export default function ProjectDetailScreen() {
                       
                       if (totalLfm <= 0) return;
                       
-                      const itemY = svgLegendY - legendHeight + 38 + (index * lineHeight);
+                      const itemY = svgLegendY - legendHeight + 55 + (index * lineHeight);
                       const labelText = `S${index + 1}`;
                       
-                      // Label badge
-                      svgElements += `<rect x="${svgLegendX + 10}" y="${itemY - 12}" width="28" height="18" fill="#1976d2" rx="3" ry="3"/>`;
-                      svgElements += `<text x="${svgLegendX + 24}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+                      // Label badge - größer
+                      svgElements += `<rect x="${svgLegendX + 15}" y="${itemY - 16}" width="38" height="24" fill="#1976d2" rx="4" ry="4"/>`;
+                      svgElements += `<text x="${svgLegendX + 34}" y="${itemY + 2}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
                       
-                      // Value text
-                      svgElements += `<text x="${svgLegendX + 45}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalLfm.toString().replace('.', ',')} lfm</text>`;
+                      // Value text - größere Schrift
+                      svgElements += `<text x="${svgLegendX + 62}" y="${itemY + 2}" fill="#333" font-size="16">= ${totalLfm.toString().replace('.', ',')} lfm</text>`;
                     });
                   }
                   

@@ -5139,12 +5139,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 100,
     left: 16,
-    right: 16,
     zIndex: 100,
   },
   measurementActionContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#1976d2',
     borderRadius: 10,
     padding: 4,

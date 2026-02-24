@@ -2747,9 +2747,11 @@ export default function DrawSketchScreen() {
     maxY += padding;
     
     // Berechne Legend-Position für die viewBox-Erweiterung
+    // VERGRÖSSERTE Legend für PDF/Vorschau
     const polylinesForLegend = getPolylineElementsWithMeasurements();
-    const svgLegendWidth = 130;
-    const svgLegendHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
+    const svgLegendWidth = 160; // Breiter
+    const svgLegendLineHeight = 28; // Höhere Zeilen
+    const svgLegendHeight = polylinesForLegend.length > 0 ? (40 + polylinesForLegend.length * svgLegendLineHeight + 20) : 0;
     
     // Legend-Position berechnen (wird auch später für das Rendering verwendet)
     const canvasWidthForLegend = width;

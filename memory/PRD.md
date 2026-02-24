@@ -202,3 +202,18 @@ Mobile app for roof measurement professionals to document projects, take photos,
 
 ## Last Updated
 February 2026
+
+### Session 22.02.2026 (oder aktuell)
+- **[FIXED] Summenbox-Position wird jetzt gespeichert**
+  - Die Position der verschiebbaren Summenbox wird in den Sketch-Metadaten gespeichert
+  - Beim Laden einer Skizze wird die Position wiederhergestellt
+  - `totalLfmBoxPosition` und `totalLfmBoxSavedPosition` State hinzugefügt
+  - Änderungen in: `handleBackPress`, `saveSketch`, `loadSketch`
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] State-Reset bei neuen Skizzen verbessert**
+  - `useFocusEffect` führt jetzt IMMER einen Reset durch bevor neue Daten geladen werden
+  - Verhindert, dass alte Maße aus vorherigen Skizzen in neuen Skizzen angezeigt werden
+  - Jeder Grundriss hat sein eigenes unabhängiges Zusammenfassungs-Fenster
+  - `lineSegmentMeasurements` werden korrekt zurückgesetzt
+  - File: `frontend/app/sketches/draw.tsx`

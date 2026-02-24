@@ -834,8 +834,11 @@ export default function DrawSketchScreen() {
 
   // Handle back button - auto save before navigating back
   const handleBackPress = async () => {
-    // Only auto-save if there are elements to save
-    if (elements.length > 0) {
+    // Nur auto-speichern wenn wir die aktuelle Skizze bearbeiten (nicht beim Reset)
+    const currentSketchId = lastLoadedSketchId.current;
+    
+    // Only auto-save if there are elements to save AND we're still on the same sketch
+    if (elements.length > 0 && currentSketchId === sketchId) {
       try {
         setLoading(true);
         

@@ -2115,10 +2115,8 @@ export default function ProjectDetailScreen() {
 
                   // Add total length (lfm) for each polyline element that has measurements
                   const lineSegmentMeasurements = metadata.lineSegmentMeasurements || {};
-                  const totalLfmBoxPositions = metadata.totalLfmBoxPositions || {};
                   
-                  // Für jedes Polyline-Element mit Maßen eine eigene Summe anzeigen
-                  let defaultBoxIndex = 0;
+                  // Für jedes Polyline-Element mit Maßen eine eigene Summe unter dem Grundriss anzeigen
                   elements.forEach((el: any) => {
                     if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
                       // Berechne die Summe für dieses Element
@@ -2137,37 +2135,22 @@ export default function ProjectDetailScreen() {
                         const textWidth = totalText.length * 7 + 16;
                         const textHeight = 20;
                         
-                        // Berechne den Mittelpunkt des Polyline-Elements
+                        // Berechne die Bounds des Polyline-Elements
                         const points = el.data?.points || [];
-                        let polyMinX = Infinity, polyMinY = Infinity, polyMaxX = -Infinity, polyMaxY = -Infinity;
+                        if (points.length === 0) return;
+                        
+                        let polyMinX = Infinity, polyMaxY = -Infinity;
                         points.forEach((pt: { x: number; y: number }) => {
                           if (pt.x < polyMinX) polyMinX = pt.x;
-                          if (pt.y < polyMinY) polyMinY = pt.y;
-                          if (pt.x > polyMaxX) polyMaxX = pt.x;
                           if (pt.y > polyMaxY) polyMaxY = pt.y;
                         });
                         
-                        // Verwende gespeicherte Position wenn vorhanden
-                        const savedPos = totalLfmBoxPositions[el.id];
-                        let textX, textY;
-                        
-                        if (savedPos && (savedPos.x !== 0 || savedPos.y !== 0)) {
-                          // Position basierend auf der Mitte des Grundrisses + Offset
-                          const polyCenterX = (polyMinX + polyMaxX) / 2;
-                          const polyCenterY = (polyMinY + polyMaxY) / 2;
-                          
-                          // Skaliere die gespeicherte Position relativ zur Grundriss-Größe
-                          textX = polyCenterX - textWidth / 2 + savedPos.x * 0.5;
-                          textY = polyCenterY - textHeight / 2 + savedPos.y * 0.5;
-                        } else {
-                          // Standard-Position: über dem Grundriss
-                          textX = (polyMinX + polyMaxX) / 2 - textWidth / 2;
-                          textY = polyMinY - 25 - (defaultBoxIndex * 25);
-                        }
+                        // Positioniere das Gesamt-Feld links unter dem Grundriss
+                        const textX = polyMinX;
+                        const textY = polyMaxY + 10; // 10px unter dem Grundriss
                         
                         svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="20" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4"/>`;
                         svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-                        defaultBoxIndex++;
                       }
                     }
                   });

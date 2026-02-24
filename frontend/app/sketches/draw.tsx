@@ -2023,6 +2023,13 @@ export default function DrawSketchScreen() {
           polylinePath += ' Z';
         }
         
+        // Prüfe ob dieses Element ein ausgewähltes Segment hat
+        const hasSelectedSegment = selectedLineSegment?.elementId === element.id;
+        const selectedSegIdx = hasSelectedSegment ? selectedLineSegment.segmentIndex : -1;
+        
+        // Maße für dieses Element
+        const elementMeasurements = lineSegmentMeasurements[element.id] || {};
+        
         return (
           <G key={element.id}>
             <Path
@@ -2033,6 +2040,111 @@ export default function DrawSketchScreen() {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+            
+            {/* Ausgewähltes Segment hervorheben */}
+            {hasSelectedSegment && selectedSegIdx >= 0 && selectedSegIdx < points.length && (() => {
+              const p1 = points[selectedSegIdx];
+              const p2 = selectedSegIdx === points.length - 1 && closed 
+                ? points[0] 
+                : points[selectedSegIdx + 1];
+              if (!p1 || !p2) return null;
+              return (
+                <Line
+                  x1={p1.x}
+                  y1={p1.y}
+                  x2={p2.x}
+                  y2={p2.y}
+                  stroke="#FF9800"
+                  strokeWidth={element.strokeWidth + 4}
+                  strokeLinecap="round"
+                  opacity={0.7}
+                />
+              );
+            })()}
+            
+            {/* Maßlinien für alle Segmente mit Maßen anzeigen */}
+            {Object.keys(elementMeasurements).map((segIdxStr) => {
+              const segIdx = parseInt(segIdxStr, 10);
+              const measurementText = elementMeasurements[segIdx];
+              if (!measurementText) return null;
+              
+              const p1 = points[segIdx];
+              const p2 = segIdx === points.length - 1 && closed 
+                ? points[0] 
+                : points[segIdx + 1];
+              if (!p1 || !p2) return null;
+              
+              // Mittelpunkt der Linie
+              const midX = (p1.x + p2.x) / 2;
+              const midY = (p1.y + p2.y) / 2;
+              
+              // Winkel der Linie
+              const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+              const angleDeg = angle * 180 / Math.PI;
+              
+              // Offset für die Maßlinie (oberhalb der Linie)
+              const offset = 15;
+              const offsetX = -Math.sin(angle) * offset;
+              const offsetY = Math.cos(angle) * offset;
+              
+              // Linienlänge für End-Striche
+              const lineLength = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+              const tickLength = 8;
+              
+              return (
+                <G key={`measure-${element.id}-${segIdx}`}>
+                  {/* Maßlinie parallel zur Original-Linie */}
+                  <Line
+                    x1={p1.x + offsetX}
+                    y1={p1.y + offsetY}
+                    x2={p2.x + offsetX}
+                    y2={p2.y + offsetY}
+                    stroke="#1976d2"
+                    strokeWidth={1.5}
+                  />
+                  {/* End-Strich links */}
+                  <Line
+                    x1={p1.x + offsetX - Math.sin(angle) * tickLength}
+                    y1={p1.y + offsetY + Math.cos(angle) * tickLength}
+                    x2={p1.x + offsetX + Math.sin(angle) * tickLength}
+                    y2={p1.y + offsetY - Math.cos(angle) * tickLength}
+                    stroke="#1976d2"
+                    strokeWidth={1.5}
+                  />
+                  {/* End-Strich rechts */}
+                  <Line
+                    x1={p2.x + offsetX - Math.sin(angle) * tickLength}
+                    y1={p2.y + offsetY + Math.cos(angle) * tickLength}
+                    x2={p2.x + offsetX + Math.sin(angle) * tickLength}
+                    y2={p2.y + offsetY - Math.cos(angle) * tickLength}
+                    stroke="#1976d2"
+                    strokeWidth={1.5}
+                  />
+                  {/* Hintergrund für Text */}
+                  <Rect
+                    x={midX + offsetX - measurementText.length * 4 - 4}
+                    y={midY + offsetY - 10}
+                    width={measurementText.length * 8 + 8}
+                    height={16}
+                    fill="white"
+                    rx={2}
+                    ry={2}
+                  />
+                  {/* Maß-Text */}
+                  <SvgText
+                    x={midX + offsetX}
+                    y={midY + offsetY + 3}
+                    fill="#1976d2"
+                    fontSize={12}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {measurementText}
+                  </SvgText>
+                </G>
+              );
+            })}
+            
             {/* Punkte anzeigen wenn ausgewählt - größer und interaktiv */}
             {isSelected && points.map((pt: { x: number; y: number }, idx: number) => (
               <Circle 

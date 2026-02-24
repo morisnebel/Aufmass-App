@@ -686,6 +686,13 @@ export default function DrawSketchScreen() {
       if (sketchId) {
         console.log('useFocusEffect: Loading sketch', sketchId);
         loadSketch();
+      } else {
+        // Neue Skizze: Maße und Position zurücksetzen
+        console.log('useFocusEffect: New sketch, resetting measurements');
+        setLineSegmentMeasurements({});
+        setSelectedLineSegment(null);
+        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
+        totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
       }
     }, [sketchId])
   );

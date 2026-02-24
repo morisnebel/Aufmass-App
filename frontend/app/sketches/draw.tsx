@@ -851,6 +851,8 @@ export default function DrawSketchScreen() {
         setTitle('Neue Skizze');
         setBackgroundImage(null);
         setTotalLfmBoxPositions({}); // Reset alle Summenbox-Positionen
+        setLegendPosition({ x: 0, y: 0 }); // Reset Legend-Position
+        legendPan.setValue({ x: 0, y: 0 }); // Reset Pan-Animation
         initialImageAdded.current = false;
       };
       

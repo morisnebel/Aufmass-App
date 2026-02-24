@@ -2134,11 +2134,81 @@ export default function ProjectDetailScreen() {
                     }
                   });
 
-                  // Gesamt-Felder werden NICHT mehr automatisch im SVG generiert
-                  // Der Benutzer kann sie in der Skizze manuell positionieren
+                  // Render Summary Legend (Übersicht)
+                  const lineSegmentMeasurements = metadata.lineSegmentMeasurements || {};
+                  const polylinesWithMeasurements = elements.filter((e: any) => 
+                    e.type === 'polyline' && 
+                    e.data?.points && 
+                    Object.keys(lineSegmentMeasurements[e.id] || {}).length > 0
+                  );
+                  
+                  if (polylinesWithMeasurements.length > 0) {
+                    const legendWidth = 130;
+                    const lineHeight = 22;
+                    const legendHeight = 30 + (polylinesWithMeasurements.length * lineHeight);
+                    
+                    // Get legend position from metadata or use default
+                    const legendPosition = metadata.legendPosition || { x: 0, y: 0 };
+                    const canvasWidth = metadata.canvasWidth || 400;
+                    const canvasHeight = metadata.canvasHeight || 600;
+                    
+                    // Calculate legend position
+                    const uiStartX = canvasWidth - 12 - legendWidth;
+                    const uiStartY = canvasHeight - 150;
+                    const uiFinalX = uiStartX + legendPosition.x;
+                    const uiFinalY = uiStartY + legendPosition.y;
+                    
+                    // Convert to SVG coordinates (relative to original minX/minY before padding)
+                    const origMinX = minX;
+                    const origMinY = minY;
+                    const svgLegendX = origMinX + uiFinalX;
+                    const svgLegendY = origMinY + uiFinalY;
+                    
+                    // Extend bounds to include legend
+                    if (svgLegendX < minX) minX = svgLegendX - 10;
+                    if (svgLegendX + legendWidth > maxX) maxX = svgLegendX + legendWidth + 10;
+                    if (svgLegendY - legendHeight < minY) minY = svgLegendY - legendHeight - 10;
+                    if (svgLegendY > maxY) maxY = svgLegendY + 10;
+                    
+                    // Legend background
+                    svgElements += `<rect x="${svgLegendX}" y="${svgLegendY - legendHeight}" width="${legendWidth}" height="${legendHeight}" fill="white" stroke="#e3f2fd" stroke-width="1" rx="6" ry="6"/>`;
+                    
+                    // Legend title
+                    svgElements += `<text x="${svgLegendX + 10}" y="${svgLegendY - legendHeight + 20}" fill="#333" font-size="12" font-weight="bold">Übersicht</text>`;
+                    
+                    // Legend items
+                    polylinesWithMeasurements.forEach((polyEl: any, index: number) => {
+                      const elementMeasurements = lineSegmentMeasurements[polyEl.id] || {};
+                      let totalLfm = 0;
+                      
+                      // Calculate total for this element
+                      Object.values(elementMeasurements).forEach((measurementText: any) => {
+                        if (!measurementText) return;
+                        const cleanText = measurementText.replace('m', '').replace(',', '.').trim();
+                        const value = parseFloat(cleanText);
+                        if (!isNaN(value)) totalLfm += value;
+                      });
+                      
+                      if (totalLfm <= 0) return;
+                      
+                      const itemY = svgLegendY - legendHeight + 38 + (index * lineHeight);
+                      const labelText = `S${index + 1}`;
+                      
+                      // Label badge
+                      svgElements += `<rect x="${svgLegendX + 10}" y="${itemY - 12}" width="28" height="18" fill="#1976d2" rx="3" ry="3"/>`;
+                      svgElements += `<text x="${svgLegendX + 24}" y="${itemY + 1}" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+                      
+                      // Value text
+                      svgElements += `<text x="${svgLegendX + 45}" y="${itemY + 1}" fill="#333" font-size="11">= ${totalLfm.toString().replace('.', ',')} lfm</text>`;
+                    });
+                  }
+                  
+                  // Recalculate dimensions after adding legend
+                  const finalDrawWidth = Math.max(maxX - minX, 100);
+                  const finalDrawHeight = Math.max(maxY - minY, 100);
 
                   // Use viewBox for proper scaling - browser handles the resize
-                  return `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
+                  return `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${finalDrawWidth} ${finalDrawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${finalDrawWidth}" height="${finalDrawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
                 } catch (e) {
                   console.log('Error generating SVG from metadata:', e);
                   return null;

@@ -2693,12 +2693,16 @@ export default function DrawSketchScreen() {
       maxY = 400;
     }
     
-    // Add padding
+    // Add padding - extra space at bottom-right for legend
     const padding = 30;
+    const polylinesForLegend = getPolylineElementsWithMeasurements();
+    const legendExtraHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
+    const legendExtraWidth = polylinesForLegend.length > 0 ? 130 : 0;
+    
     minX -= padding;
     minY -= padding;
-    maxX += padding;
-    maxY += padding;
+    maxX += padding + legendExtraWidth;
+    maxY += padding + legendExtraHeight;
     
     // Calculate actual drawing dimensions
     const drawWidth = Math.max(maxX - minX, 100);

@@ -724,10 +724,15 @@ export default function DrawSketchScreen() {
             if (metadata.backgroundImage) {
               setBackgroundImage(metadata.backgroundImage);
             }
-            // Lade die Linien-Maße wenn vorhanden
+            // Lade die Linien-Maße wenn vorhanden, sonst zurücksetzen
             if (metadata.lineSegmentMeasurements) {
               setLineSegmentMeasurements(metadata.lineSegmentMeasurements);
+            } else {
+              setLineSegmentMeasurements({});
             }
+            // Summenbox-Position beim Laden zurücksetzen
+            totalLfmBoxPosition.setValue({ x: 0, y: 0 });
+            totalLfmBoxPosition.setOffset({ x: 0, y: 0 });
           } catch (e) {
             console.error('Error parsing metadata:', e);
           }

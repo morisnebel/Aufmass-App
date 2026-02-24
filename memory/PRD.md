@@ -154,5 +154,35 @@ Mobile app for roof measurement professionals to document projects, take photos,
   - Maße können wieder gelöscht werden
   - File: `frontend/app/sketches/draw.tsx`
 
+### Session 21.02.2026
+- **[FIXED] Maße werden jetzt gespeichert und in PDF/Vorschau gerendert**
+  - `lineSegmentMeasurements` werden im Sketch-Metadata gespeichert
+  - `generatePreviewSvg()` rendert jetzt Maßlinien mit Text im SVG
+  - Bounds-Berechnung erweitert für Maßlinien-Offset
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] Summenbox ist jetzt verschiebbar (iPhone-Fix)**
+  - Summenbox verwendet jetzt `Animated.View` mit `PanResponder`
+  - Drag-Handle für einfaches Verschieben
+  - Position wird beim Laden/Erstellen einer neuen Skizze zurückgesetzt
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] Summenbox größer gemacht**
+  - Padding und Schriftgröße erhöht (16px statt 13px)
+  - Icon größer (18px statt 14px)
+  - Bessere Sichtbarkeit auf allen Geräten
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] "Maß hinzufügen"-Button kleiner gemacht**
+  - Padding reduziert (8px statt 12px)
+  - Schriftgröße reduziert (12px statt 14px)
+  - `flex: 1` entfernt für kompaktere Darstellung
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] Summenbox Reset bei neuem Grundriss**
+  - `clearAll()` setzt jetzt auch `lineSegmentMeasurements` zurück
+  - Position der Summenbox wird beim Laden/Erstellen zurückgesetzt
+  - File: `frontend/app/sketches/draw.tsx`
+
 ## Last Updated
 February 2026

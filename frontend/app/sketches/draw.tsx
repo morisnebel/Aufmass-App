@@ -1302,6 +1302,21 @@ export default function DrawSketchScreen() {
 
     // Reset polyline point editing when clicking elsewhere
     setEditingPolylinePoint(null);
+    
+    // Prüfe ob auf ein Polyline-Segment geklickt wurde (für Maß-Funktion)
+    const segmentHit = findPolylineSegmentAtPoint(locationX, locationY);
+    if (segmentHit) {
+      // Segment gefunden - auswählen für Maß-Eingabe
+      setSelectedLineSegment({ 
+        elementId: segmentHit.element.id, 
+        segmentIndex: segmentHit.segmentIndex 
+      });
+      setSelectedElementId(segmentHit.element.id);
+      return;
+    } else {
+      // Kein Segment getroffen - Auswahl zurücksetzen
+      setSelectedLineSegment(null);
+    }
 
     // Check if clicking on an element - im Foto-Modus nur Bilder, sonst nur andere Elemente
     const clickedElement = findElementAtPoint(locationX, locationY, photoEditMode);

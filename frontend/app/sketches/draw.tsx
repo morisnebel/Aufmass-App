@@ -1140,6 +1140,9 @@ export default function DrawSketchScreen() {
   // Polyline abbrechen
   const cancelPolyline = () => {
     setPolylinePoints([]);
+    // Position zurücksetzen
+    polylineControlPosition.setValue({ x: 0, y: 0 });
+    polylineControlPosition.setOffset({ x: 0, y: 0 });
   };
 
   // Letzten Punkt der Polyline entfernen (Undo)

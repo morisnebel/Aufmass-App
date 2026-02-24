@@ -2734,35 +2734,42 @@ export default function DrawSketchScreen() {
       maxY = 400;
     }
     
-    // Add padding - extra space for legend based on its position
+    // Add padding
     const padding = 30;
-    const polylinesForLegend = getPolylineElementsWithMeasurements();
-    const legendWidth = 130;
-    const legendHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
     
-    // Berechne wo die Legend positioniert wird (basierend auf UI-Position)
-    const canvasWidth = width;
-    const canvasHeight = height - 120;
-    const uiStartX = canvasWidth - 12 - legendWidth;
-    const uiStartY = canvasHeight - 150;
-    const uiFinalX = uiStartX + legendPosition.x;
-    const uiFinalY = uiStartY + legendPosition.y;
+    // Speichere die originalen Bounds (vor Padding und Legend-Erweiterung)
+    const origMinX = minX - padding;
+    const origMinY = minY - padding;
     
     minX -= padding;
     minY -= padding;
     maxX += padding;
     maxY += padding;
     
+    // Berechne Legend-Position für die viewBox-Erweiterung
+    const polylinesForLegend = getPolylineElementsWithMeasurements();
+    const svgLegendWidth = 130;
+    const svgLegendHeight = polylinesForLegend.length > 0 ? (30 + polylinesForLegend.length * 22 + 20) : 0;
+    
+    // Legend-Position berechnen (wird auch später für das Rendering verwendet)
+    const canvasWidthForLegend = width;
+    const canvasHeightForLegend = height - 120;
+    const uiStartXLegend = canvasWidthForLegend - 12 - svgLegendWidth;
+    const uiStartYLegend = canvasHeightForLegend - 150;
+    const uiFinalXLegend = uiStartXLegend + legendPosition.x;
+    const uiFinalYLegend = uiStartYLegend + legendPosition.y;
+    
+    // SVG-Koordinaten für Legend (relativ zur ursprünglichen minX/minY)
+    const svgLegendXPos = origMinX + uiFinalXLegend;
+    const svgLegendYPos = origMinY + uiFinalYLegend;
+    
     // Erweitere die Bounds um die Legend-Position zu berücksichtigen
     if (polylinesForLegend.length > 0) {
-      const svgLegendX = minX + uiFinalX;
-      const svgLegendY = minY + uiFinalY;
-      
       // Stelle sicher, dass die Legend komplett sichtbar ist
-      if (svgLegendX < minX) minX = svgLegendX - 10;
-      if (svgLegendX + legendWidth > maxX) maxX = svgLegendX + legendWidth + 10;
-      if (svgLegendY - legendHeight < minY) minY = svgLegendY - legendHeight - 10;
-      if (svgLegendY > maxY) maxY = svgLegendY + 10;
+      if (svgLegendXPos < minX) minX = svgLegendXPos - 10;
+      if (svgLegendXPos + svgLegendWidth > maxX) maxX = svgLegendXPos + svgLegendWidth + 10;
+      if (svgLegendYPos - svgLegendHeight < minY) minY = svgLegendYPos - svgLegendHeight - 10;
+      if (svgLegendYPos > maxY) maxY = svgLegendYPos + 10;
     }
     
     // Calculate actual drawing dimensions

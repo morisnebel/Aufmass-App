@@ -2133,7 +2133,6 @@ export default function ProjectDetailScreen() {
                       if (totalForElement > 0) {
                         const totalText = `Gesamt: ${totalForElement.toFixed(0).replace('.', ',')} lfm`;
                         const textWidth = totalText.length * 7 + 16;
-                        const textHeight = 20;
                         
                         // Berechne die Bounds des Polyline-Elements
                         const points = el.data?.points || [];
@@ -2145,9 +2144,9 @@ export default function ProjectDetailScreen() {
                           if (pt.y > polyMaxY) polyMaxY = pt.y;
                         });
                         
-                        // Positioniere das Gesamt-Feld links unter dem Grundriss
+                        // Positioniere das Gesamt-Feld links unter dem Grundriss (mit mehr Abstand für Maßlinien)
                         const textX = polyMinX;
-                        const textY = polyMaxY + 10; // 10px unter dem Grundriss
+                        const textY = polyMaxY + 40; // 40px unter dem Grundriss (Platz für Maßlinien)
                         
                         svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="20" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4"/>`;
                         svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;

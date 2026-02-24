@@ -2833,9 +2833,9 @@ export default function DrawSketchScreen() {
             if (pt.y > polyMaxY) polyMaxY = pt.y;
           });
           
-          // Positioniere das Gesamt-Feld links unter dem Grundriss
+          // Positioniere das Gesamt-Feld links unter dem Grundriss (mit mehr Abstand für Maßlinien)
           const textX = polyMinX;
-          const textY = polyMaxY + 10; // 10px unter dem Grundriss
+          const textY = polyMaxY + 40; // 40px unter dem Grundriss (Platz für Maßlinien)
           
           svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
           svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;

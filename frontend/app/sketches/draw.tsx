@@ -329,7 +329,26 @@ export default function DrawSketchScreen() {
     } catch { return null; }
   };
   
-  // Berechne Gesamtlänge aller Maße in lfm
+  // Berechne Gesamtlänge für ein einzelnes Element (Grundriss)
+  const calculateTotalLfmForElement = (elementId: string): number => {
+    let total = 0;
+    const segmentMeasures = lineSegmentMeasurements[elementId];
+    if (segmentMeasures) {
+      Object.values(segmentMeasures).forEach(measurement => {
+        // Extrahiere Zahl aus dem Maß-String (z.B. "2,50m" -> 2.50)
+        const match = measurement.match(/^([\d.,]+)/);
+        if (match) {
+          const value = parseFloat(match[1].replace(',', '.'));
+          if (!isNaN(value)) {
+            total += value;
+          }
+        }
+      });
+    }
+    return Math.round(total * 100) / 100;
+  };
+  
+  // Berechne Gesamtlänge aller Maße in lfm (für Preview/PDF)
   const calculateTotalLfm = (): number => {
     let total = 0;
     Object.values(lineSegmentMeasurements).forEach(segmentMeasures => {
@@ -345,6 +364,15 @@ export default function DrawSketchScreen() {
       });
     });
     return Math.round(total * 100) / 100;
+  };
+  
+  // Finde alle Polyline-Elemente die Maße haben
+  const getPolylineElementsWithMeasurements = (): DrawElement[] => {
+    return elements.filter(el => 
+      el.type === 'polyline' && 
+      lineSegmentMeasurements[el.id] && 
+      Object.keys(lineSegmentMeasurements[el.id]).length > 0
+    );
   };
   
   // Handler für Linien-Maß Numpad

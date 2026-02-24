@@ -774,6 +774,7 @@ export default function DrawSketchScreen() {
           backgroundImage,
           canvasWidth: width,
           canvasHeight: height - 120,
+          lineSegmentMeasurements,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');

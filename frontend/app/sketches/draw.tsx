@@ -217,6 +217,13 @@ export default function DrawSketchScreen() {
   // Polyline Punkt-Bearbeitung
   const [editingPolylinePoint, setEditingPolylinePoint] = useState<number | null>(null);
   
+  // Polyline Linien-Maße (für Grundriss-Bemaßung)
+  const [selectedLineSegment, setSelectedLineSegment] = useState<{ elementId: string; segmentIndex: number } | null>(null);
+  const [lineSegmentMeasurements, setLineSegmentMeasurements] = useState<{ [key: string]: { [segmentIndex: number]: string } }>({});
+  const [showLineMeasurementNumpad, setShowLineMeasurementNumpad] = useState(false);
+  const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
+  const lineMeasurementInputRef = useRef<TextInput>(null);
+  
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
   

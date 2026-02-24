@@ -289,34 +289,16 @@ export default function DrawSketchScreen() {
     })
   ).current;
 
-  // Verschiebbare Position für Summenbox (lfm) - mit State für persistente Position
-  const [totalLfmBoxSavedPosition, setTotalLfmBoxSavedPosition] = useState({ x: 0, y: 0 });
-  const totalLfmBoxPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const totalLfmBoxPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        // Setze den Offset beim Start des Drags
-        totalLfmBoxPosition.setOffset({
-          x: (totalLfmBoxPosition.x as any)._value + (totalLfmBoxPosition.x as any)._offset,
-          y: (totalLfmBoxPosition.y as any)._value + (totalLfmBoxPosition.y as any)._offset,
-        });
-        totalLfmBoxPosition.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: Animated.event(
-        [null, { dx: totalLfmBoxPosition.x, dy: totalLfmBoxPosition.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
-        totalLfmBoxPosition.flattenOffset();
-        // Speichere die finale Position im State für Persistenz
-        const finalX = (totalLfmBoxPosition.x as any)._value + (totalLfmBoxPosition.x as any)._offset;
-        const finalY = (totalLfmBoxPosition.y as any)._value + (totalLfmBoxPosition.y as any)._offset;
-        setTotalLfmBoxSavedPosition({ x: finalX, y: finalY });
-      },
-    })
-  ).current;
+  // Verschiebbare Positionen für Summenboxen (lfm) - eine Position pro Polyline-Element
+  const [totalLfmBoxPositions, setTotalLfmBoxPositions] = useState<{ [elementId: string]: { x: number, y: number } }>({});
+  
+  // Funktion um die Position eines Gesamt-Feldes zu aktualisieren
+  const updateTotalLfmBoxPosition = (elementId: string, x: number, y: number) => {
+    setTotalLfmBoxPositions(prev => ({
+      ...prev,
+      [elementId]: { x, y }
+    }));
+  };
   
   // Aufmaß-Tool Funktionen
   const calculateMeasurementExpression = (expr: string): number | null => {

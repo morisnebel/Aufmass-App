@@ -2113,6 +2113,29 @@ export default function ProjectDetailScreen() {
                     }
                   });
 
+                  // Add total length (lfm) as text if measurements exist
+                  const lineSegmentMeasurements = metadata.lineSegmentMeasurements || {};
+                  if (Object.keys(lineSegmentMeasurements).length > 0) {
+                    let totalLfm = 0;
+                    Object.values(lineSegmentMeasurements).forEach((segmentMeasures: any) => {
+                      Object.values(segmentMeasures).forEach((measurement: any) => {
+                        const match = measurement.match(/^([\d.,]+)/);
+                        if (match) {
+                          const value = parseFloat(match[1].replace(',', '.'));
+                          if (!isNaN(value)) totalLfm += value;
+                        }
+                      });
+                    });
+                    if (totalLfm > 0) {
+                      const totalText = `Gesamt: ${totalLfm.toFixed(2).replace('.', ',')} lfm`;
+                      const textWidth = totalText.length * 7 + 16;
+                      const textX = maxX - padding - textWidth;
+                      const textY = minY + padding;
+                      svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="20" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4"/>`;
+                      svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
+                    }
+                  }
+
                   // Use viewBox for proper scaling - browser handles the resize
                   return `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
                 } catch (e) {

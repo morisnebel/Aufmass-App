@@ -2749,18 +2749,24 @@ export default function DrawSketchScreen() {
       }
     });
     
-    // Add total length (lfm) as text in the SVG if measurements exist
-    const totalLfm = calculateTotalLfm();
-    if (totalLfm > 0) {
-      const totalText = `Gesamt: ${totalLfm.toString().replace('.', ',')} lfm`;
-      const textWidth = totalText.length * 7 + 16;
-      const textHeight = 20;
-      // Position in top-right corner of the drawing
-      const textX = maxX - padding - textWidth;
-      const textY = minY + padding;
-      svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
-      svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
-    }
+    // Add total length (lfm) for each polyline element that has measurements
+    let totalBoxYOffset = 0;
+    elements.forEach((el) => {
+      if (el.type === 'polyline' && lineSegmentMeasurements[el.id]) {
+        const totalForElement = calculateTotalLfmForElement(el.id);
+        if (totalForElement > 0) {
+          const totalText = `Gesamt: ${totalForElement.toString().replace('.', ',')} lfm`;
+          const textWidth = totalText.length * 7 + 16;
+          const textHeight = 20;
+          // Position in top-right corner of the drawing, stacked vertically
+          const textX = maxX - padding - textWidth;
+          const textY = minY + padding + totalBoxYOffset;
+          svgElements += `<rect x="${textX}" y="${textY}" width="${textWidth}" height="${textHeight}" fill="#e3f2fd" stroke="#1976d2" stroke-width="1" rx="4" ry="4"/>`;
+          svgElements += `<text x="${textX + 8}" y="${textY + 14}" fill="#1976d2" font-size="11" font-weight="bold">${totalText}</text>`;
+          totalBoxYOffset += 25; // Offset for next box
+        }
+      }
+    });
     
     // Create SVG with viewBox that matches the drawing bounds
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions

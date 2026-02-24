@@ -983,6 +983,16 @@ export default function DrawSketchScreen() {
     if (selectedElementId) {
       const newElements = elements.filter(el => el.id !== selectedElementId);
       addToHistory(newElements);
+      
+      // Auch die Maße für dieses Element löschen
+      if (lineSegmentMeasurements[selectedElementId]) {
+        setLineSegmentMeasurements(prev => {
+          const newMeasurements = { ...prev };
+          delete newMeasurements[selectedElementId];
+          return newMeasurements;
+        });
+      }
+      
       setSelectedElementId(null);
       setShowDeleteConfirm(false);
     }

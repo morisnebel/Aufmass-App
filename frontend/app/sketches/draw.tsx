@@ -2961,11 +2961,12 @@ export default function DrawSketchScreen() {
         canvasHeight: height - 120, // Subtract header/toolbar height
         lineSegmentMeasurements, // Speichere die Linien-Maße
         totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
+        legendPosition, // Speichere Position der Übersicht-Legend
       };
 
       console.log('Saving sketch with', elements.length, 'elements');
       console.log('Canvas dimensions:', width, 'x', (height - 120));
-      console.log('Saving totalLfmBoxPositions:', totalLfmBoxPositions);
+      console.log('Saving legendPosition:', legendPosition);
       console.log('Metadata:', metadata);
 
       // Generate preview image

@@ -160,6 +160,99 @@ interface DrawElement {
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline';
 
+// Verschiebbare Summenbox-Komponente für jedes Polyline-Element
+interface DraggableTotalBoxProps {
+  elementId: string;
+  totalValue: number;
+  initialPosition: { x: number; y: number };
+  baseTop: number;
+  isCompact: boolean;
+  onPositionChange: (x: number, y: number) => void;
+}
+
+const DraggableTotalBox: React.FC<DraggableTotalBoxProps> = ({ 
+  elementId, 
+  totalValue, 
+  initialPosition, 
+  baseTop, 
+  isCompact, 
+  onPositionChange 
+}) => {
+  const pan = useRef(new Animated.ValueXY({ x: initialPosition.x, y: initialPosition.y })).current;
+  
+  // Aktualisiere Position wenn sich initialPosition ändert
+  useEffect(() => {
+    pan.setValue({ x: initialPosition.x, y: initialPosition.y });
+  }, [initialPosition.x, initialPosition.y]);
+  
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        pan.setOffset({
+          x: (pan.x as any)._value,
+          y: (pan.y as any)._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+        // Speichere die finale Position
+        const finalX = (pan.x as any)._value;
+        const finalY = (pan.y as any)._value;
+        onPositionChange(finalX, finalY);
+      },
+    })
+  ).current;
+  
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          top: baseTop,
+          right: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#fff',
+          paddingVertical: isCompact ? 6 : 10,
+          paddingHorizontal: isCompact ? 10 : 14,
+          paddingLeft: isCompact ? 6 : 8,
+          borderRadius: isCompact ? 8 : 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          elevation: 5,
+          gap: isCompact ? 5 : 8,
+          zIndex: 50,
+          borderWidth: 1,
+          borderColor: '#e3f2fd',
+          transform: pan.getTranslateTransform(),
+        },
+      ]}
+      {...panResponder.panHandlers}
+    >
+      <View style={{ marginRight: 4, opacity: 0.6 }}>
+        <Ionicons name="move" size={isCompact ? 10 : 12} color="#999" />
+      </View>
+      <Ionicons name="calculator-outline" size={isCompact ? 14 : 18} color="#1976d2" />
+      <Text style={{ 
+        fontSize: isCompact ? 13 : 16, 
+        fontWeight: '700', 
+        color: '#1976d2' 
+      }}>
+        Gesamt: {totalValue.toString().replace('.', ',')} lfm
+      </Text>
+    </Animated.View>
+  );
+};
+
 export default function DrawSketchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();

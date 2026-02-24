@@ -184,5 +184,21 @@ Mobile app for roof measurement professionals to document projects, take photos,
   - Position der Summenbox wird beim Laden/Erstellen zurückgesetzt
   - File: `frontend/app/sketches/draw.tsx`
 
+- **[FIXED] lineSegmentMeasurements werden in saveSketch() gespeichert**
+  - Das Speichern der Maße fehlte in der `saveSketch()` Funktion
+  - Jetzt werden Maße korrekt in den Metadaten gespeichert
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] Gesamtlänge erscheint jetzt in Vorschau und PDF**
+  - Die Gesamtlänge (lfm) wird als Text-Element im SVG gerendert
+  - Position: Oben rechts in der Zeichnung
+  - Blaue Box mit "Gesamt: X,XX lfm"
+  - File: `frontend/app/sketches/draw.tsx`
+
+- **[FIXED] Summenbox auf iPhone kleiner**
+  - Bildschirmbreite < 500px: kompaktere Darstellung
+  - Kleinere Icons, Schriftgröße und Padding
+  - File: `frontend/app/sketches/draw.tsx`
+
 ## Last Updated
 February 2026

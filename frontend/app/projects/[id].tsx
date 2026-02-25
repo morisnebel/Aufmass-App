@@ -789,6 +789,19 @@ export default function ProjectDetailScreen() {
             .new-page {
               page-break-before: always;
             }
+            .remarks-page {
+              page-break-before: always;
+              display: block !important;
+              visibility: visible !important;
+            }
+            .remarks-section {
+              display: block !important;
+              visibility: visible !important;
+            }
+            .remarks-box {
+              display: block !important;
+              visibility: visible !important;
+            }
           }
           * {
             box-sizing: border-box;

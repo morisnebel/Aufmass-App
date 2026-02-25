@@ -1496,7 +1496,7 @@ export default function ProjectDetailScreen() {
               <h2>Skizzen</h2>
               ${sketchesHtml}
             </div>
-            ${!remarks ? `
+            ${!(remarks || project?.remarks) ? `
               <div class="footer" style="margin-top: 30px;">
                 Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
               </div>
@@ -1504,12 +1504,12 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        ${remarks ? `
+        ${(remarks || project?.remarks) ? `
           <div class="new-page remarks-page">
             <div class="remarks-section">
               <h2>Bemerkungen</h2>
               <div class="remarks-box">
-                ${remarks.replace(/\n/g, '<br/>')}
+                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
               </div>
             </div>
             <div class="footer">

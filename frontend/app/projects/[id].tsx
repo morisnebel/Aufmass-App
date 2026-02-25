@@ -454,6 +454,11 @@ export default function ProjectDetailScreen() {
     const companyLogo = settings.logo_data || '';
     const authorName = settings.author_name || '';
     
+    // PDF Layout Einstellungen
+    const checklistColumns = (settings as any).pdf_checklist_columns || 2;
+    // Berechne die minWidth basierend auf der Spaltenanzahl
+    const columnMinWidth = checklistColumns === 1 ? '100%' : checklistColumns === 2 ? '280px' : '180px';
+    
     // Format date
     const formatDate = (dateStr: string) => {
       try {

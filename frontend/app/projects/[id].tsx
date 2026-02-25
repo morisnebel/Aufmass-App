@@ -1608,11 +1608,6 @@ export default function ProjectDetailScreen() {
 
   // Share PDF from preview - use native print/share
   const sharePdfFromPreview = async () => {
-    if (!pdfHtmlContent) {
-      Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
-      return;
-    }
-    
     try {
       // Close modal first
       setShowPdfPreviewModal(false);
@@ -1620,9 +1615,12 @@ export default function ProjectDetailScreen() {
       // Small delay to let modal close
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Generate fresh HTML to ensure all data is current
+      const html = await generatePdfHtml();
+      
       // Use native print which allows sharing
       await Print.printAsync({
-        html: pdfHtmlContent,
+        html: html,
       });
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
@@ -1632,11 +1630,6 @@ export default function ProjectDetailScreen() {
 
   // Save PDF from preview - same as share (iOS shows save option in print dialog)
   const savePdfFromPreview = async () => {
-    if (!pdfHtmlContent) {
-      Alert.alert('Fehler', 'Keine Vorschau verfügbar.');
-      return;
-    }
-    
     try {
       // Close modal first
       setShowPdfPreviewModal(false);
@@ -1644,9 +1637,12 @@ export default function ProjectDetailScreen() {
       // Small delay to let modal close
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Generate fresh HTML to ensure all data is current
+      const html = await generatePdfHtml();
+      
       // Use native print which allows saving
       await Print.printAsync({
-        html: pdfHtmlContent,
+        html: html,
       });
     } catch (error) {
       console.error('Error saving PDF from preview:', error);

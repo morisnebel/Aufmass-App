@@ -601,4 +601,42 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
   },
+  sublabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 12,
+  },
+  columnSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  columnOption: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  columnOptionActive: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  columnOptionText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  columnOptionTextActive: {
+    color: '#1976d2',
+  },
+  columnOptionLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  columnOptionLabelActive: {
+    color: '#1976d2',
+  },
 });

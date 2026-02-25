@@ -733,13 +733,22 @@ export default function ProjectDetailScreen() {
             .page {
               background: #fff;
               width: 210mm;
-              height: 297mm;
+              min-height: 297mm;
               padding: 15mm;
               margin: 0 auto 20px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
-              overflow: hidden;
               position: relative;
+            }
+            /* Visuelle Seitenmarkierung alle 297mm */
+            .page::after {
+              content: '';
+              position: absolute;
+              left: 0;
+              right: 0;
+              top: 297mm;
+              height: 2px;
+              background: repeating-linear-gradient(90deg, #ccc 0, #ccc 10px, transparent 10px, transparent 20px);
             }
             .page-break {
               display: none;
@@ -747,13 +756,21 @@ export default function ProjectDetailScreen() {
             .new-page {
               background: #fff;
               width: 210mm;
-              height: 297mm;
+              min-height: 297mm;
               padding: 15mm;
               margin: 20px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
-              overflow: hidden;
               position: relative;
+            }
+            .new-page::after {
+              content: '';
+              position: absolute;
+              left: 0;
+              right: 0;
+              top: 297mm;
+              height: 2px;
+              background: repeating-linear-gradient(90deg, #ccc 0, #ccc 10px, transparent 10px, transparent 20px);
             }
           }
           @media print {

@@ -840,10 +840,13 @@ export default function ProjectDetailScreen() {
             background: linear-gradient(135deg, #1976d2, #1565c0);
             color: white;
             padding: 15px 20px;
-            margin: -15mm -15mm 20px -15mm;
+            margin: 0 0 20px 0;
+            border-radius: 0;
             display: flex;
             flex-direction: column;
             gap: 15px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .header-top {
             display: flex;

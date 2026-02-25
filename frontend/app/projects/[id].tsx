@@ -765,7 +765,7 @@ export default function ProjectDetailScreen() {
             background: linear-gradient(135deg, #1976d2, #1565c0);
             color: white;
             padding: 15px 20px;
-            margin: -15px -15px 20px -15px;
+            margin: -15mm -15mm 20px -15mm;
             display: flex;
             flex-direction: column;
             gap: 15px;

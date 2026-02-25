@@ -1517,9 +1517,26 @@ export default function ProjectDetailScreen() {
           </div>
         </div>
         
-        <!-- Dummy page to prevent last page from being cut off by iOS Print bug -->
-        <div class="new-page dummy-page" style="height: 297mm; visibility: hidden;">
-          <div style="height: 100%; width: 100%;">&nbsp;</div>
+        <!-- Contact/Closing page -->
+        <div class="new-page">
+          <div style="text-align: center; padding-top: 40px;">
+            ${companyLogo ? `<img src="${companyLogo}" style="max-width: 150px; max-height: 80px; margin-bottom: 20px;" />` : ''}
+            <h2 style="color: #1976d2; margin-bottom: 20px;">Vielen Dank für Ihr Vertrauen!</h2>
+            ${companyName ? `<p style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">${companyName}</p>` : ''}
+            ${companySubtitle ? `<p style="font-size: 12px; color: #666; margin-bottom: 15px;">${companySubtitle}</p>` : ''}
+            ${(companyStreet || companyCity) ? `
+              <p style="font-size: 11px; color: #333; margin-bottom: 3px;">
+                ${companyStreet}${companyStreet && companyCity ? ', ' : ''}${companyZipCode} ${companyCity}
+              </p>
+            ` : ''}
+            ${companyPhone ? `<p style="font-size: 11px; color: #333; margin-bottom: 3px;">Tel: ${companyPhone}</p>` : ''}
+            ${companyEmail ? `<p style="font-size: 11px; color: #333; margin-bottom: 20px;">${companyEmail}</p>` : ''}
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+              <p style="font-size: 10px; color: #999;">
+                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              </p>
+            </div>
+          </div>
         </div>
       </body>
       </html>

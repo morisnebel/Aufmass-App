@@ -1291,13 +1291,6 @@ export default function ProjectDetailScreen() {
         <h2>Checklisten</h2>
         ${checklistsHtml}
         
-        ${project?.remarks ? `
-          <h2>Bemerkungen</h2>
-          <div class="remarks-box">
-            ${project.remarks.replace(/\n/g, '<br/>')}
-          </div>
-        ` : ''}
-        
         ${photos.length > 0 ? `
           <div class="page-break"></div>
           <h2>Fotos</h2>
@@ -1309,6 +1302,13 @@ export default function ProjectDetailScreen() {
           <div class="sketches-section">
             <h2>Skizzen</h2>
             ${sketchesHtml}
+          </div>
+        ` : ''}
+        
+        ${project?.remarks ? `
+          <h2>Bemerkungen</h2>
+          <div class="remarks-box">
+            ${project.remarks.replace(/\n/g, '<br/>')}
           </div>
         ` : ''}
         

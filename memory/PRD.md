@@ -28,6 +28,7 @@ Build a construction surveying app for roof measurements with the following core
 - ✅ Legend size increased for better readability
 - ✅ Floor plan labels (S1, S2, S3...) at center of polylines
 - ✅ **Checklist Grid Layout in PDF** (2-3 columns) - RESTORED
+- ✅ **Configurable Checklist Columns** - Users can choose 1, 2, or 3 columns in Settings → PDF-Layout
 
 ## Prioritized Backlog
 

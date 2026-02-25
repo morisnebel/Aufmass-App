@@ -782,7 +782,7 @@ export default function ProjectDetailScreen() {
               background: #fff !important;
               padding: 0 !important;
             }
-            .page, .new-page {
+            .page, .new-page, .remarks-and-footer-page {
               width: auto;
               min-height: auto;
               padding: 0;
@@ -790,7 +790,7 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
             }
-            .new-page {
+            .new-page, .remarks-and-footer-page {
               page-break-before: always;
             }
             .remarks-page {

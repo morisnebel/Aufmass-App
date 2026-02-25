@@ -27,8 +27,12 @@ Build a construction surveying app for roof measurements with the following core
 - ✅ Draggable summary legend with position persistence
 - ✅ Legend size increased for better readability
 - ✅ Floor plan labels (S1, S2, S3...) at center of polylines
-- ✅ **Checklist Grid Layout in PDF** (2-3 columns) - RESTORED
-- ✅ **Configurable Checklist Columns** - Users can choose 1, 2, or 3 columns in Settings → PDF-Layout
+- ✅ **Checklist Grid Layout in PDF** (configurable 1-3 columns in Settings)
+- ✅ **PDF Page Break Optimization** - containers no longer cut off
+- ✅ **Photo Size Options** - removed "Full" option, only Small/Medium/Large
+- ✅ **PDF Header** - blue background now prints correctly, no clipping
+- ✅ **PDF Structure** - Roofs → Checklists → Photos → Sketches → Remarks → Footer
+- ✅ **PDF Footer** - "Erstellt mit AUFMASSPROFI DACH" at document end
 
 ## Prioritized Backlog
 

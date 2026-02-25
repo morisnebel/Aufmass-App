@@ -753,12 +753,20 @@ export default function ProjectDetailScreen() {
             }
           }
           @media print {
-            .page {
+            body {
+              background: #fff !important;
+              padding: 0 !important;
+            }
+            .page, .new-page {
               width: auto;
               min-height: auto;
               padding: 0;
               margin: 0;
               box-shadow: none;
+              border-radius: 0;
+            }
+            .new-page {
+              page-break-before: always;
             }
           }
           * {

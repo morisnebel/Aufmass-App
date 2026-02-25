@@ -1494,6 +1494,17 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
+        ${(remarks || project?.remarks) ? `
+          <div class="new-page">
+            <div class="remarks-section">
+              <h2>Bemerkungen</h2>
+              <div class="remarks-box">
+                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        
         ${sketches.length > 0 ? `
           <div class="new-page">
             <div class="sketches-section">
@@ -1503,21 +1514,11 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        <div class="remarks-and-footer-page" style="page-break-before: always;">
-          ${(remarks || project?.remarks) ? `
-            <div class="remarks-section">
-              <h2>Bemerkungen</h2>
-              <div class="remarks-box">
-                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
-              </div>
-            </div>
-          ` : ''}
-          <div class="footer" style="margin-top: ${(remarks || project?.remarks) ? '30px' : '50px'};">
+        <div class="footer-page" style="page-break-before: always;">
+          <div class="footer">
             Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
           </div>
         </div>
-        <!-- Spacer to prevent last page from being cut off -->
-        <div style="height: 1px; page-break-after: always;">&nbsp;</div>
       </body>
       </html>
     `;

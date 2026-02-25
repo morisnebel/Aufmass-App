@@ -782,16 +782,27 @@ export default function ProjectDetailScreen() {
               background: #fff !important;
               padding: 0 !important;
             }
-            .page, .new-page, .remarks-and-footer-page {
+            .page {
               width: auto;
               min-height: auto;
               padding: 0;
               margin: 0;
               box-shadow: none;
               border-radius: 0;
+              padding-top: 10mm; /* Extra space at top for printer margins */
+            }
+            .page .header {
+              margin-top: 0;
             }
             .new-page, .remarks-and-footer-page {
+              width: auto;
+              min-height: auto;
+              padding: 0;
+              margin: 0;
+              box-shadow: none;
+              border-radius: 0;
               page-break-before: always;
+              padding-top: 10mm; /* Extra space at top for printer margins */
             }
             .remarks-page {
               page-break-before: always;

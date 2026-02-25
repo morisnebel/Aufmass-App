@@ -308,6 +308,41 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* PDF Einstellungen Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>PDF-Layout</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Checklisten-Spalten im PDF</Text>
+              <Text style={styles.sublabel}>Wie viele Spalten sollen für Checklisten-Kategorien verwendet werden?</Text>
+              <View style={styles.columnSelector}>
+                {[1, 2, 3].map((num) => (
+                  <TouchableOpacity
+                    key={num}
+                    style={[
+                      styles.columnOption,
+                      settings.pdf_checklist_columns === num && styles.columnOptionActive
+                    ]}
+                    onPress={() => setSettings({ ...settings, pdf_checklist_columns: num })}
+                  >
+                    <Text style={[
+                      styles.columnOptionText,
+                      settings.pdf_checklist_columns === num && styles.columnOptionTextActive
+                    ]}>
+                      {num}
+                    </Text>
+                    <Text style={[
+                      styles.columnOptionLabel,
+                      settings.pdf_checklist_columns === num && styles.columnOptionLabelActive
+                    ]}>
+                      {num === 1 ? 'Spalte' : 'Spalten'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+
           {/* Zurücksetzen Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Daten zurücksetzen</Text>

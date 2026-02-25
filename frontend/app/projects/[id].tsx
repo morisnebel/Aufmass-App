@@ -1486,12 +1486,12 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        ${project?.remarks ? `
+        ${remarks ? `
           <div class="new-page">
             <div class="remarks-section">
               <h2>Bemerkungen</h2>
               <div class="remarks-box">
-                ${project.remarks.replace(/\n/g, '<br/>')}
+                ${remarks.replace(/\n/g, '<br/>')}
               </div>
             </div>
             <div class="footer">

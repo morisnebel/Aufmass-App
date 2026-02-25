@@ -1361,15 +1361,17 @@ export default function ProjectDetailScreen() {
             margin-top: 10px;
           }
           .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 2px solid #1976d2;
-            font-size: 11px;
+            position: fixed;
+            bottom: 10mm;
+            left: 15mm;
+            right: 15mm;
+            padding-top: 10px;
+            border-top: 1px solid #1976d2;
+            font-size: 10px;
             color: #666;
             text-align: center;
             font-weight: 500;
-            page-break-before: avoid !important;
-            page-break-inside: avoid !important;
+            background: #fff;
           }
           .page-break {
             page-break-before: always;

@@ -648,7 +648,7 @@ export default function ProjectDetailScreen() {
           let sizeClass = 'photo-medium'; // default: 2 pro Zeile
           if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
           if (size === 'large') sizeClass = 'photo-large'; // 1 pro Zeile
-          if (size === 'full') sizeClass = 'photo-full'; // volle Breite
+          if (size === 'full') sizeClass = 'photo-large'; // full wird zu large (verhindert Abschneiden)
           
           // Generate annotation SVG overlay if annotations exist
           let annotationSvg = '';

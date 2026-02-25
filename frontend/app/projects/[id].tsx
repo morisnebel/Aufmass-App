@@ -1009,17 +1009,43 @@ export default function ProjectDetailScreen() {
           }
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {
-            display: grid;
-            grid-template-columns: ${gridColumns};
-            gap: 12px;
-            margin-bottom: 12px;
+            display: block;
+          }
+          .pdf-categories-grid::after {
+            content: "";
+            display: table;
+            clear: both;
           }
           .pdf-category-section {
             background: #f9f9f9;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             padding: 10px;
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+          }
+          /* Spalten-Layout basierend auf Einstellung */
+          .pdf-category-section.cols-1 {
+            width: 100%;
+          }
+          .pdf-category-section.cols-2 {
+            width: calc(50% - 6px);
+            float: left;
+            margin-right: 12px;
+          }
+          .pdf-category-section.cols-2:nth-child(2n) {
+            margin-right: 0;
+          }
+          .pdf-category-section.cols-3 {
+            width: calc(33.33% - 8px);
+            float: left;
+            margin-right: 12px;
+          }
+          .pdf-category-section.cols-3:nth-child(3n) {
+            margin-right: 0;
           }
           .pdf-category-header {
             display: flex;

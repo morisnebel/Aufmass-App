@@ -1018,26 +1018,26 @@ export default function ProjectDetailScreen() {
           }
           .pdf-note {
             background: #fff8e1;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 9px;
+            padding: 3px 5px;
+            border-radius: 3px;
+            font-size: 8px;
             color: #f57c00;
             font-style: italic;
-            margin-top: 3px;
-            margin-bottom: 3px;
+            margin-top: 2px;
+            margin-bottom: 2px;
           }
           .pdf-note-icon {
-            margin-right: 4px;
+            margin-right: 2px;
           }
           .pdf-measurement {
             background: #e3f2fd;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 9px;
+            padding: 3px 5px;
+            border-radius: 3px;
+            font-size: 8px;
             color: #1565c0;
             font-weight: 500;
-            margin-top: 3px;
-            margin-bottom: 3px;
+            margin-top: 2px;
+            margin-bottom: 2px;
           }
           .photos-grid, .sketches-grid {
             display: grid;

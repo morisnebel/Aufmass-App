@@ -1241,6 +1241,7 @@ export default function ProjectDetailScreen() {
         </style>
       </head>
       <body>
+        <div class="page">
         <div class="header">
           <div class="header-top">
             <div class="company-header">

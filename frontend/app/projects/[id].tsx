@@ -630,7 +630,7 @@ export default function ProjectDetailScreen() {
             <span class="checklist-main-title">${checklist.template_name}</span>
             <span class="checklist-main-count">${totalChecked} von ${totalItems}</span>
           </div>
-          ${categoriesHtml}
+          <div class="pdf-categories-grid">${categoriesHtml}</div>
         </div>
       `;
     }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';

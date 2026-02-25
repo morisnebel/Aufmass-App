@@ -888,7 +888,7 @@ export default function ProjectDetailScreen() {
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(${columnMinWidth}, 1fr));
+            grid-template-columns: ${gridColumns};
             gap: 12px;
             margin-bottom: 12px;
           }

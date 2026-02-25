@@ -806,6 +806,17 @@ export default function ProjectDetailScreen() {
               display: block !important;
               visibility: visible !important;
             }
+            /* Hide dummy page in print */
+            .dummy-page {
+              display: none !important;
+              height: 0 !important;
+              min-height: 0 !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              visibility: hidden !important;
+              page-break-before: avoid !important;
+              page-break-after: avoid !important;
+            }
           }
           * {
             box-sizing: border-box;

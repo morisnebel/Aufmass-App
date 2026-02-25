@@ -905,44 +905,45 @@ export default function ProjectDetailScreen() {
           .pdf-cat-check {
             color: #4caf50;
             font-weight: bold;
+            font-size: 11px;
           }
           .pdf-category-title {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #333;
             flex: 1;
           }
           .pdf-category-count {
-            font-size: 11px;
+            font-size: 9px;
             color: #4caf50;
             font-weight: 600;
           }
           .pdf-category-note {
             background: #fff8e1;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 9px;
             color: #f57c00;
             font-style: italic;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
           .pdf-category-measurements {
             background: #e3f2fd;
-            padding: 8px 10px;
-            border-radius: 4px;
-            margin-bottom: 8px;
+            padding: 4px 6px;
+            border-radius: 3px;
+            margin-bottom: 6px;
           }
           .pdf-measurement-line {
-            font-size: 10px;
+            font-size: 9px;
             color: #1565c0;
             font-weight: 500;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
           }
           .pdf-measurement-sum {
-            margin-top: 6px;
-            padding-top: 6px;
+            margin-top: 4px;
+            padding-top: 4px;
             border-top: 1px solid #90caf9;
-            font-size: 10px;
+            font-size: 9px;
             color: #1565c0;
           }
           .pdf-sum-badge {

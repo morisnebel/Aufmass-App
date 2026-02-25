@@ -1226,7 +1226,9 @@ export default function ProjectDetailScreen() {
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             overflow: hidden;
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           /* All images fill their container width */
           .photo-item img, .sketch-item img {
@@ -1234,6 +1236,8 @@ export default function ProjectDetailScreen() {
             width: 100%;
             height: auto;
             background: #f5f5f5;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .photo-item p, .sketch-item p {
             margin: 0;

@@ -409,6 +409,10 @@ export default function ProjectDetailScreen() {
 
   // Generate PDF HTML content
   const generatePdfHtml = async () => {
+    // Debug: Log remarks status
+    console.log('generatePdfHtml - remarks state:', remarks);
+    console.log('generatePdfHtml - project?.remarks:', project?.remarks);
+    
     // Get company settings for header
     const settings = await SettingsService.get();
     

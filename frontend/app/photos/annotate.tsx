@@ -35,7 +35,6 @@ const PDF_SIZES = [
   { value: 'small', label: 'Klein', icon: 'grid-outline', description: '3 pro Zeile' },
   { value: 'medium', label: 'Mittel', icon: 'apps-outline', description: '2 pro Zeile' },
   { value: 'large', label: 'Groß', icon: 'square-outline', description: '1 pro Zeile' },
-  { value: 'full', label: 'Voll', icon: 'expand-outline', description: 'Volle Breite' },
 ];
 
 export default function AnnotatePhotoScreen() {

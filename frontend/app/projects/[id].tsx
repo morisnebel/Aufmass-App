@@ -757,7 +757,7 @@ export default function ProjectDetailScreen() {
             .page-break {
               display: none;
             }
-            .new-page {
+            .new-page, .remarks-and-footer-page {
               background: #fff;
               width: 210mm;
               min-height: 297mm;
@@ -767,7 +767,7 @@ export default function ProjectDetailScreen() {
               border-radius: 2px;
               position: relative;
             }
-            .new-page::after {
+            .new-page::after, .remarks-and-footer-page::after {
               content: '';
               position: absolute;
               left: 0;

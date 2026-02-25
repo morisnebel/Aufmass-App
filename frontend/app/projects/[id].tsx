@@ -1634,10 +1634,24 @@ export default function ProjectDetailScreen() {
       // Generate fresh HTML to ensure all data is current
       const html = await generatePdfHtml();
       
-      // Use native print which allows sharing
-      await Print.printAsync({
+      // Generate PDF file first, then share
+      const { uri } = await Print.printToFileAsync({
         html: html,
+        base64: false,
       });
+      
+      // Share the PDF file
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Aufmaß ${project?.name} teilen`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        // Fallback to native print
+        await Print.printAsync({ html: html });
+      }
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
       Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
@@ -1656,10 +1670,24 @@ export default function ProjectDetailScreen() {
       // Generate fresh HTML to ensure all data is current
       const html = await generatePdfHtml();
       
-      // Use native print which allows saving
-      await Print.printAsync({
+      // Generate PDF file first, then share (iOS shows "Save to Files" option)
+      const { uri } = await Print.printToFileAsync({
         html: html,
+        base64: false,
       });
+      
+      // Share the PDF file - iOS will show save option
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'PDF speichern',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        // Fallback to native print
+        await Print.printAsync({ html: html });
+      }
     } catch (error) {
       console.error('Error saving PDF from preview:', error);
       Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');

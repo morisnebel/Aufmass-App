@@ -373,6 +373,8 @@ export default function SettingsScreen() {
                           services: '',
                           author_name: '',
                           logo_data: null,
+                          bluetooth_mode: false,
+                          pdf_checklist_columns: 2,
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },

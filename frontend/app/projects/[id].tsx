@@ -885,10 +885,10 @@ export default function ProjectDetailScreen() {
             color: #4caf50;
             font-weight: 600;
           }
-          /* Grid container for categories - 2-3 columns */
+          /* Grid container for categories - configurable columns */
           .pdf-categories-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(${columnMinWidth}, 1fr));
             gap: 12px;
             margin-bottom: 12px;
           }

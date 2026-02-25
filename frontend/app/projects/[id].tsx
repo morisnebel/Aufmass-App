@@ -955,9 +955,19 @@ export default function ProjectDetailScreen() {
             padding: 12px;
             margin-bottom: 10px;
             page-break-inside: avoid;
+            break-inside: avoid;
           }
           .roof-card h4, .checklist-card h4 {
             margin-top: 0;
+          }
+          /* Alle Kategorie-Container nicht trennen */
+          .pdf-category-section {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .pdf-level1-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           /* New checklist PDF styles */
           .checklist-main-header {

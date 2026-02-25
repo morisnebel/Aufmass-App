@@ -1313,16 +1313,22 @@ export default function ProjectDetailScreen() {
           </div>
         </div>
         
-        <h2>Dachflächen</h2>
-        ${roofsHtml}
+        <div class="roofs-section">
+          <h2>Dachflächen</h2>
+          ${roofsHtml}
+        </div>
         
-        <h2>Checklisten</h2>
-        ${checklistsHtml}
+        <div class="checklists-section">
+          <h2>Checklisten</h2>
+          ${checklistsHtml}
+        </div>
         
         ${photos.length > 0 ? `
           <div class="page-break"></div>
-          <h2>Fotos</h2>
-          ${photosHtml}
+          <div class="photos-section">
+            <h2>Fotos</h2>
+            ${photosHtml}
+          </div>
         ` : ''}
         
         ${sketches.length > 0 ? `
@@ -1334,9 +1340,11 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${project?.remarks ? `
-          <h2>Bemerkungen</h2>
-          <div class="remarks-box">
-            ${project.remarks.replace(/\n/g, '<br/>')}
+          <div class="remarks-section">
+            <h2>Bemerkungen</h2>
+            <div class="remarks-box">
+              ${project.remarks.replace(/\n/g, '<br/>')}
+            </div>
           </div>
         ` : ''}
         

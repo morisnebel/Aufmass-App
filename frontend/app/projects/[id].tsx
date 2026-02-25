@@ -834,6 +834,15 @@ export default function ProjectDetailScreen() {
             align-items: flex-start;
             width: 100%;
           }
+          .company-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+          }
+          .company-logo {
+            max-width: 80px;
+            max-height: 50px;
+          }
           .header h1 {
             margin: 0;
             font-size: 20px;
@@ -843,6 +852,7 @@ export default function ProjectDetailScreen() {
             font-size: 11px;
             opacity: 0.9;
             margin-top: 4px;
+            white-space: nowrap;
           }
           .company-info {
             text-align: right;

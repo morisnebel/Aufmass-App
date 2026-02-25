@@ -725,6 +725,30 @@ export default function ProjectDetailScreen() {
             margin: 15mm;
             size: A4;
           }
+          @media screen {
+            body {
+              background: #e0e0e0 !important;
+              padding: 20px !important;
+            }
+            .page {
+              background: #fff;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 15mm;
+              margin: 0 auto 20px auto;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              border-radius: 2px;
+            }
+          }
+          @media print {
+            .page {
+              width: auto;
+              min-height: auto;
+              padding: 0;
+              margin: 0;
+              box-shadow: none;
+            }
+          }
           * {
             box-sizing: border-box;
           }

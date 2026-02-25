@@ -1521,12 +1521,17 @@ export default function ProjectDetailScreen() {
               <h2>Fotos</h2>
               ${photosHtml}
             </div>
-            ${sketches.length === 0 && (remarks || project?.remarks) ? `
-              <div class="remarks-section" style="margin-top: 30px;">
-                <h2>Bemerkungen</h2>
-                <div class="remarks-box">
-                  ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+            ${sketches.length === 0 ? `
+              ${(remarks || project?.remarks) ? `
+                <div class="remarks-section" style="margin-top: 30px;">
+                  <h2>Bemerkungen</h2>
+                  <div class="remarks-box">
+                    ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+                  </div>
                 </div>
+              ` : ''}
+              <div class="footer">
+                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
               </div>
             ` : ''}
           </div>
@@ -1546,22 +1551,25 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>
             ` : ''}
-          </div>
-        ` : ''}
-        
-        ${photos.length === 0 && sketches.length === 0 && (remarks || project?.remarks) ? `
-          <div class="remarks-section" style="margin-top: 30px;">
-            <h2>Bemerkungen</h2>
-            <div class="remarks-box">
-              ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+            <div class="footer">
+              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         ` : ''}
         
-        <!-- Fixed footer on every page -->
-        <div class="footer">
-          Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-        </div>
+        ${photos.length === 0 && sketches.length === 0 ? `
+          ${(remarks || project?.remarks) ? `
+            <div class="remarks-section" style="margin-top: 30px;">
+              <h2>Bemerkungen</h2>
+              <div class="remarks-box">
+                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+              </div>
+            </div>
+          ` : ''}
+          <div class="footer">
+            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+          </div>
+        ` : ''}
       </body>
       </html>
     `;

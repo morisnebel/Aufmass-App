@@ -776,6 +776,11 @@ export default function ProjectDetailScreen() {
             margin-bottom: 15px;
             font-size: 14px;
             page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          /* Sektionen zusammenhalten */
+          .section-with-header {
+            page-break-inside: avoid;
           }
           /* Ensure Skizzen header stays with sketches */
           .sketches-section {
@@ -788,11 +793,34 @@ export default function ProjectDetailScreen() {
           .sketches-section .sketches-container {
             page-break-before: avoid;
           }
+          /* Fotos Sektion */
+          .photos-section {
+            page-break-inside: avoid;
+          }
+          .photos-section h2 {
+            page-break-after: avoid;
+          }
+          /* Bemerkungen Sektion */
+          .remarks-section {
+            page-break-inside: avoid;
+          }
+          .remarks-section h2 {
+            page-break-after: avoid;
+          }
+          /* Checklisten Sektion */
+          .checklists-section h2 {
+            page-break-after: avoid;
+          }
+          /* Dachflächen Sektion */
+          .roofs-section h2 {
+            page-break-after: avoid;
+          }
           h3 {
             color: #333;
             margin-top: 15px;
             margin-bottom: 10px;
             font-size: 13px;
+            page-break-after: avoid;
           }
           h4 {
             color: #1976d2;

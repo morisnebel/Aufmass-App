@@ -1223,15 +1223,23 @@ export default function ProjectDetailScreen() {
           /* Sketch sizes */
           .sketch-small {
             width: calc(33.33% - 10px);
+            float: left;
+            margin-right: 15px;
+            margin-bottom: 15px;
           }
           .sketch-medium {
             width: calc(50% - 10px);
+            float: left;
+            margin-right: 15px;
+            margin-bottom: 15px;
           }
           .sketch-large {
             width: 100%;
+            margin-bottom: 15px;
           }
           .sketch-full {
             width: 100%;
+            margin-bottom: 15px;
           }
           .photo-item, .sketch-item {
             border: 1px solid #e0e0e0;

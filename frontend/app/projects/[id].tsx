@@ -1512,9 +1512,6 @@ export default function ProjectDetailScreen() {
               </div>
             </div>
           ` : ''}
-          <div class="footer" style="margin-top: 30px;">
-            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-          </div>
         </div>
         
         <!-- Contact/Closing page -->

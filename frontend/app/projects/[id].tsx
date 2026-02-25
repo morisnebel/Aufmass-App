@@ -1529,7 +1529,7 @@ export default function ProjectDetailScreen() {
         </div>
         
         <!-- Dummy page to prevent last page from being cut off by iOS Print bug -->
-        <div class="new-page" style="height: 297mm; visibility: hidden;">
+        <div class="new-page dummy-page" style="height: 297mm; visibility: hidden;">
           <div style="height: 100%; width: 100%;">&nbsp;</div>
         </div>
       </body>

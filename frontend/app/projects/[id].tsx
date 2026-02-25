@@ -954,20 +954,39 @@ export default function ProjectDetailScreen() {
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 10px;
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           .roof-card h4, .checklist-card h4 {
             margin-top: 0;
           }
           /* Alle Kategorie-Container nicht trennen */
           .pdf-category-section {
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           .pdf-level1-container {
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          /* Fotos nicht trennen */
+          .photo-card {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          .photo-card img {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          /* Skizzen nicht trennen */
+          .sketch-item {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           /* New checklist PDF styles */
           .checklist-main-header {

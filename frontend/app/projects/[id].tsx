@@ -1483,19 +1483,6 @@ export default function ProjectDetailScreen() {
           <h2>Checklisten</h2>
           ${checklistsHtml}
         </div>
-        
-        ${(remarks || project?.remarks) ? `
-          <div class="remarks-section" style="margin-top: 25px;">
-            <h2>Bemerkungen</h2>
-            <div class="remarks-box">
-              ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
-            </div>
-          </div>
-        ` : ''}
-        
-        <div class="footer" style="margin-top: 30px; margin-bottom: 20px;">
-          Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-        </div>
         </div><!-- end .page -->
         
         ${photos.length > 0 ? `

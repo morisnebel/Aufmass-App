@@ -1502,6 +1502,25 @@ export default function ProjectDetailScreen() {
             </div>
           </div>
         ` : ''}
+        
+        <div class="new-page">
+          ${(remarks || project?.remarks) ? `
+            <div class="remarks-section">
+              <h2>Bemerkungen</h2>
+              <div class="remarks-box">
+                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+              </div>
+            </div>
+          ` : ''}
+          <div class="footer" style="margin-top: 30px;">
+            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+          </div>
+        </div>
+        
+        <!-- Dummy page to prevent last page from being cut off by iOS Print bug -->
+        <div class="new-page" style="height: 297mm; visibility: hidden;">
+          <div style="height: 100%; width: 100%;">&nbsp;</div>
+        </div>
       </body>
       </html>
     `;

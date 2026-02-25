@@ -51,6 +51,7 @@ export default function SettingsScreen() {
     author_name: '',
     logo_data: null,
     bluetooth_mode: false,
+    pdf_checklist_columns: 2, // Standard: 2 Spalten
   });
 
   useEffect(() => {

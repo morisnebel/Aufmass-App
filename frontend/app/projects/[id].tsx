@@ -1516,6 +1516,8 @@ export default function ProjectDetailScreen() {
             Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
           </div>
         </div>
+        <!-- Spacer to prevent last page from being cut off -->
+        <div style="height: 1px; page-break-after: always;">&nbsp;</div>
       </body>
       </html>
     `;

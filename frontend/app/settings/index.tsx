@@ -31,6 +31,7 @@ interface CompanySettings {
   author_name: string;
   logo_data: string | null;
   bluetooth_mode: boolean;
+  pdf_checklist_columns: number; // 1, 2, oder 3 Spalten
 }
 
 export default function SettingsScreen() {

@@ -739,6 +739,18 @@ export default function ProjectDetailScreen() {
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
             }
+            .page-break {
+              display: none;
+            }
+            .new-page {
+              background: #fff;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 15mm;
+              margin: 20px auto;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              border-radius: 2px;
+            }
           }
           @media print {
             .page {

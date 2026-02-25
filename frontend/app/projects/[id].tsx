@@ -983,35 +983,35 @@ export default function ProjectDetailScreen() {
           }
           .pdf-checkmark-circle {
             color: #4caf50;
-            font-size: 12px;
+            font-size: 10px;
           }
           .pdf-level1-title {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             color: #333;
             flex: 1;
           }
           .pdf-level1-content {
-            padding-left: 4px;
+            padding-left: 2px;
           }
           .pdf-deep-sub {
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding: 2px 0;
+            gap: 3px;
+            padding: 1px 0;
           }
           .pdf-deep-prefix {
-            font-size: 10px;
+            font-size: 9px;
             color: #666;
             font-weight: 600;
-            min-width: 30px;
+            min-width: 24px;
           }
           .pdf-checkmark {
             color: #4caf50;
-            font-size: 10px;
+            font-size: 9px;
           }
           .pdf-deep-text {
-            font-size: 10px;
+            font-size: 9px;
             color: #444;
             flex: 1;
           }

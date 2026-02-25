@@ -953,35 +953,33 @@ export default function ProjectDetailScreen() {
             margin-left: 4px;
           }
           .pdf-level1-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
           }
           .pdf-level1-container {
             background: #fff;
             border: 1px solid #e0e0e0;
-            border-left: 4px solid #1976d2;
-            border-radius: 6px;
-            padding: 8px;
-            min-width: 45%;
-            flex: 1;
+            border-left: 3px solid #1976d2;
+            border-radius: 4px;
+            padding: 6px;
             box-sizing: border-box;
           }
           .pdf-level1-header {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding-bottom: 6px;
+            gap: 4px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #eee;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
           }
           .pdf-level1-prefix {
             background: #1976d2;
             color: #fff;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 1px 4px;
+            border-radius: 3px;
           }
           .pdf-checkmark-circle {
             color: #4caf50;

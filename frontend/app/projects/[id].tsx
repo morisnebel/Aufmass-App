@@ -1483,11 +1483,16 @@ export default function ProjectDetailScreen() {
               <h2>Skizzen</h2>
               ${sketchesHtml}
             </div>
+            ${!remarks ? `
+              <div class="footer" style="margin-top: 30px;">
+                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              </div>
+            ` : ''}
           </div>
         ` : ''}
         
         ${remarks ? `
-          <div class="new-page">
+          <div class="new-page remarks-page">
             <div class="remarks-section">
               <h2>Bemerkungen</h2>
               <div class="remarks-box">
@@ -1498,13 +1503,11 @@ export default function ProjectDetailScreen() {
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
-        ` : `
-          <div class="new-page" style="min-height: auto; padding: 15mm;">
-            <div class="footer">
-              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-            </div>
+        ` : (!sketches.length && !photos.length ? `
+          <div class="footer" style="margin-top: 30px;">
+            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
           </div>
-        `}
+        ` : '')}
       </body>
       </html>
     `;

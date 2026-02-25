@@ -1388,19 +1388,6 @@ export default function ProjectDetailScreen() {
           <h2>Checklisten</h2>
           ${checklistsHtml}
         </div>
-        
-        ${project?.remarks ? `
-          <div class="remarks-section">
-            <h2>Bemerkungen</h2>
-            <div class="remarks-box">
-              ${project.remarks.replace(/\n/g, '<br/>')}
-            </div>
-          </div>
-        ` : ''}
-        
-        <div class="footer">
-          Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-        </div>
         </div><!-- end .page -->
         
         ${photos.length > 0 ? `
@@ -1420,6 +1407,26 @@ export default function ProjectDetailScreen() {
             </div>
           </div>
         ` : ''}
+        
+        ${project?.remarks ? `
+          <div class="new-page">
+            <div class="remarks-section">
+              <h2>Bemerkungen</h2>
+              <div class="remarks-box">
+                ${project.remarks.replace(/\n/g, '<br/>')}
+              </div>
+            </div>
+            <div class="footer">
+              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+            </div>
+          </div>
+        ` : `
+          <div class="new-page" style="min-height: auto; padding: 15mm;">
+            <div class="footer">
+              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+            </div>
+          </div>
+        `}
       </body>
       </html>
     `;

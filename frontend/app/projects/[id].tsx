@@ -1368,6 +1368,8 @@ export default function ProjectDetailScreen() {
             color: #666;
             text-align: center;
             font-weight: 500;
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
           }
           .page-break {
             page-break-before: always;

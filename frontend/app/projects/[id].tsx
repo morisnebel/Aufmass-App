@@ -1173,22 +1173,33 @@ export default function ProjectDetailScreen() {
           }
           /* Flexible photo/sketch containers */
           .photos-container, .sketches-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
+            display: block;
+          }
+          .photos-container::after, .sketches-container::after {
+            content: "";
+            display: table;
+            clear: both;
           }
           /* Photo sizes */
           .photo-small {
             width: calc(33.33% - 10px);
+            float: left;
+            margin-right: 15px;
+            margin-bottom: 15px;
           }
           .photo-medium {
             width: calc(50% - 10px);
+            float: left;
+            margin-right: 15px;
+            margin-bottom: 15px;
           }
           .photo-large {
             width: 100%;
+            margin-bottom: 15px;
           }
           .photo-full {
             width: 100%;
+            margin-bottom: 15px;
           }
           /* Photo wrapper for annotation overlay */
           .photo-wrapper {

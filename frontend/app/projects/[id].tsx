@@ -597,7 +597,7 @@ export default function ProjectDetailScreen() {
         }).join('');
         
         return `
-          <div class="pdf-category-section">
+          <div class="pdf-category-section cols-${checklistColumns}">
             <div class="pdf-category-header">
               <span class="pdf-cat-check">✓</span>
               <span class="pdf-category-title">${category.text}</span>

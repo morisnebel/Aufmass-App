@@ -456,8 +456,8 @@ export default function ProjectDetailScreen() {
     
     // PDF Layout Einstellungen
     const checklistColumns = (settings as any).pdf_checklist_columns || 2;
-    // Berechne die minWidth basierend auf der Spaltenanzahl
-    const columnMinWidth = checklistColumns === 1 ? '100%' : checklistColumns === 2 ? '280px' : '180px';
+    // Feste Spaltenanzahl statt auto-fit
+    const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
     
     // Format date
     const formatDate = (dateStr: string) => {

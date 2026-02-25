@@ -733,11 +733,13 @@ export default function ProjectDetailScreen() {
             .page {
               background: #fff;
               width: 210mm;
-              min-height: 297mm;
+              height: 297mm;
               padding: 15mm;
               margin: 0 auto 20px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
+              overflow: hidden;
+              position: relative;
             }
             .page-break {
               display: none;
@@ -745,11 +747,13 @@ export default function ProjectDetailScreen() {
             .new-page {
               background: #fff;
               width: 210mm;
-              min-height: 297mm;
+              height: 297mm;
               padding: 15mm;
               margin: 20px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
+              overflow: hidden;
+              position: relative;
             }
           }
           @media print {

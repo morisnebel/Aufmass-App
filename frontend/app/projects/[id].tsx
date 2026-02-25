@@ -880,13 +880,24 @@ export default function ProjectDetailScreen() {
             color: #4caf50;
             font-weight: 600;
           }
+          /* Grid container for categories - 2-3 columns */
+          .pdf-categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+          }
           .pdf-category-section {
-            margin-bottom: 14px;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            page-break-inside: avoid;
           }
           .pdf-category-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             padding-bottom: 6px;
             border-bottom: 2px solid #4caf50;
             margin-bottom: 8px;

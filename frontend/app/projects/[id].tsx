@@ -781,6 +781,9 @@ export default function ProjectDetailScreen() {
             body {
               background: #fff !important;
               padding: 0 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
             .page {
               width: auto;
@@ -789,10 +792,13 @@ export default function ProjectDetailScreen() {
               margin: 0;
               box-shadow: none;
               border-radius: 0;
-              padding-top: 10mm; /* Extra space at top for printer margins */
+              padding-top: 5mm;
             }
             .page .header {
-              margin-top: 0;
+              margin: 0 0 20px 0 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              background: linear-gradient(135deg, #1976d2, #1565c0) !important;
             }
             .new-page, .remarks-and-footer-page {
               width: auto;
@@ -802,7 +808,7 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
-              padding-top: 10mm; /* Extra space at top for printer margins */
+              padding-top: 5mm;
             }
             .remarks-page {
               page-break-before: always;

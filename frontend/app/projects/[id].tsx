@@ -1551,7 +1551,7 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>
             ` : ''}
-            <div class="footer" style="margin-top: 30px;">
+            <div class="footer" style="margin-top: 30px; page-break-before: avoid;">
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
@@ -1566,7 +1566,7 @@ export default function ProjectDetailScreen() {
               </div>
             </div>
           ` : ''}
-          <div class="footer" style="margin-top: 30px;">
+          <div class="footer" style="margin-top: 30px; page-break-before: avoid;">
             Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
           </div>
         ` : ''}

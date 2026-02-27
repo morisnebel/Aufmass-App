@@ -19,6 +19,9 @@ import { ChecklistTemplateService } from '../../services/LocalStorage';
 interface RecursiveTemplateItem {
   text: string;
   subItems: RecursiveTemplateItem[];
+  printImage?: string; // Bild für PDF-Druck (Base64)
+  previewImages?: string[]; // Bilder für Vorschau-Galerie (nicht gedruckt)
+  categoryLogo?: string; // Logo für Kategorien (Base64)
 }
 
 interface ChecklistTemplate {

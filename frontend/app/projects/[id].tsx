@@ -741,7 +741,7 @@ export default function ProjectDetailScreen() {
     ` : '<p class="empty">Keine Fotos erfasst</p>';
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
-    // Jede Skizze als eigener Block mit integrierter Überschrift (verhindert Trennung auf iPhone)
+    // Jede Skizze als eigener Block - TABLE-Struktur für bessere iPhone-Kompatibilität
     const sketchItems = sketches.map((sketch, index) => {
       // Read pdf_size from sketch object or metadata
       let size = (sketch as any).pdf_size || 'large';
@@ -759,19 +759,24 @@ export default function ProjectDetailScreen() {
       if (size === 'medium') sizeClass = 'sketch-medium';
       if (size === 'full') sizeClass = 'sketch-full';
       
-      // Erste Skizze bekommt "Skizzen" als Hauptüberschrift, weitere bekommen Titel oder "Skizze X"
+      // Erste Skizze bekommt "Skizzen" als Hauptüberschrift
       const sketchHeading = index === 0 
-        ? '<h2 class="sketch-inline-heading">Skizzen</h2>' 
-        : `<h4 class="sketch-inline-title">${sketch.title || `Skizze ${index + 1}`}</h4>`;
+        ? `<tr><td colspan="1"><h2 class="sketch-inline-heading" style="margin:0 0 10px 0;">Skizzen</h2></td></tr>` 
+        : (sketch.title ? `<tr><td colspan="1"><h4 class="sketch-inline-title" style="margin:15px 0 10px 0;">${sketch.title}</h4></td></tr>` : '');
       
+      // TABLE-Struktur verhindert Trennung auf allen iOS-Geräten
       return `
-        <div class="sketch-block">
+        <table class="sketch-table" style="page-break-inside: avoid; width: 100%; border-collapse: collapse;">
           ${sketchHeading}
-          <div class="sketch-item ${sizeClass}">
-            ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-            ${index === 0 && sketch.title ? `<p>${sketch.title}</p>` : ''}
-          </div>
-        </div>
+          <tr>
+            <td>
+              <div class="sketch-item ${sizeClass}">
+                ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+                ${index === 0 && sketch.title ? `<p>${sketch.title}</p>` : ''}
+              </div>
+            </td>
+          </tr>
+        </table>
       `;
     });
     

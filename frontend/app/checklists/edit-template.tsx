@@ -611,12 +611,29 @@ export default function EditTemplateScreen() {
         <View style={styles.content}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Vorlagen-Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="z.B. Dachinspektion"
-              value={templateName}
-              onChangeText={setTemplateName}
-            />
+            <View style={styles.templateNameRow}>
+              <TextInput
+                style={[styles.input, styles.templateNameInput]}
+                placeholder="z.B. Dachinspektion"
+                value={templateName}
+                onChangeText={setTemplateName}
+              />
+              {templateLogo ? (
+                <View style={styles.templateLogoContainer}>
+                  <TouchableOpacity onPress={() => openImagePreview([templateLogo], templateName || 'Logo')}>
+                    <Image source={{ uri: templateLogo }} style={styles.templateLogoPreview} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.removeLogoBtn} onPress={() => setTemplateLogo(undefined)}>
+                    <Ionicons name="close-circle" size={20} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.addLogoBtn} onPress={pickTemplateLogo}>
+                  <Ionicons name="business-outline" size={20} color="#1976d2" />
+                  <Text style={styles.addLogoText}>Logo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.itemsSection}>

@@ -462,6 +462,72 @@ export default function EditTemplateScreen() {
           </View>
         )}
         
+        {/* Bild-Bereich */}
+        <View style={styles.imageSection}>
+          {/* Logo für Hauptpunkte (Kategorien) */}
+          {isMainItem && (
+            <View style={styles.imageRow}>
+              <Text style={styles.imageLabel}>Firmenlogo:</Text>
+              {item.categoryLogo ? (
+                <View style={styles.imagePreviewContainer}>
+                  <TouchableOpacity onPress={() => openImagePreview([item.categoryLogo!], item.text || 'Logo')}>
+                    <Image source={{ uri: item.categoryLogo }} style={styles.logoPreview} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(path, 'logo')}>
+                    <Ionicons name="close-circle" size={20} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.addImageBtn} onPress={() => pickImage(path, 'logo')}>
+                  <Ionicons name="business-outline" size={16} color="#1976d2" />
+                  <Text style={styles.addImageText}>Logo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          
+          {/* Druckbild (wird im PDF gedruckt) */}
+          <View style={styles.imageRow}>
+            <Text style={styles.imageLabel}>Druckbild:</Text>
+            {item.printImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <TouchableOpacity onPress={() => openImagePreview([item.printImage!], item.text || 'Druckbild')}>
+                  <Image source={{ uri: item.printImage }} style={styles.thumbnailPreview} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(path, 'print')}>
+                  <Ionicons name="close-circle" size={20} color="#f44336" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.addImageBtn} onPress={() => pickImage(path, 'print')}>
+                <Ionicons name="print-outline" size={16} color="#4caf50" />
+                <Text style={styles.addImageText}>Druckbild</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Vorschau-Galerie (nur zur Beratung, nicht gedruckt) */}
+          <View style={styles.imageRow}>
+            <Text style={styles.imageLabel}>Vorschau:</Text>
+            <View style={styles.previewImagesContainer}>
+              {(item.previewImages || []).map((img, idx) => (
+                <View key={idx} style={styles.imagePreviewContainer}>
+                  <TouchableOpacity onPress={() => openImagePreview(item.previewImages || [], item.text || 'Vorschau', idx)}>
+                    <Image source={{ uri: img }} style={styles.smallThumbnail} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.removeImageBtnSmall} onPress={() => removeImage(path, 'preview', idx)}>
+                    <Ionicons name="close-circle" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addImageBtn} onPress={() => pickImage(path, 'preview')}>
+                <Ionicons name="images-outline" size={16} color="#ff9800" />
+                <Text style={styles.addImageText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        
         {/* Anzeige wenn eingeklappt */}
         {hasSubItems && collapsed && (
           <TouchableOpacity 

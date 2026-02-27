@@ -2844,9 +2844,20 @@ export default function ProjectDetailScreen() {
                     style={styles.compactChecklistCard}
                     onPress={() => router.push(`/checklists/${checklist.id}`)}
                   >
-                    {/* Hauptüberschrift - prominent hervorgehoben */}
+                    {/* Hauptüberschrift - mit Template-Logo */}
                     <View style={styles.checklistMainHeader}>
-                      <Text style={styles.checklistMainTitle}>{checklist.template_name}</Text>
+                      {(checklist as any).templateLogo && (
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setCurrentImageIndex(0);
+                            setImagePreviewModal({ visible: true, images: [(checklist as any).templateLogo], title: checklist.template_name });
+                          }}
+                        >
+                          <Image source={{ uri: (checklist as any).templateLogo }} style={styles.checklistTemplateLogo} />
+                        </TouchableOpacity>
+                      )}
+                      <Text style={[styles.checklistMainTitle, (checklist as any).templateLogo && { flex: 1 }]}>{checklist.template_name}</Text>
                       <View style={styles.headerRight}>
                         <View style={styles.checkedBadge}>
                           <Text style={styles.checkedBadgeText}>

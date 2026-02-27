@@ -1460,12 +1460,13 @@ export default function ProjectDetailScreen() {
             margin: 0;
           }
           .photo-iphone .photo-wrapper {
-            height: 200px;
+            height: 320px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f5f5f5;
+            border-radius: 4px;
           }
           .photo-iphone img {
             width: 100%;

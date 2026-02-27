@@ -399,17 +399,9 @@ export default function EditTemplateScreen() {
 
     setSaving(true);
     try {
-      const convertedItems = convertToApiFormat(items);
-      console.log('Saving items with images:', JSON.stringify(convertedItems.map(i => ({
-        text: i.text,
-        hasPrintImage: !!i.printImage,
-        previewImagesCount: i.previewImages?.length || 0,
-        hasCategoryLogo: !!i.categoryLogo,
-      }))));
-      
       const payload = {
         name: templateName,
-        items: convertedItems,
+        items: convertToApiFormat(items),
         templateLogo: templateLogo,
       };
 

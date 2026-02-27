@@ -30,7 +30,7 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - Vorlagen mit beliebig tiefen Hierarchien
 - Check/Uncheck mit Notizen
 - Maßangaben pro Position
-- **NEU (Dez 2025)**: Bilder in Checklisten
+- **NEU (Feb 2026)**: Bilder in Checklisten
   - Template-Logo
   - Kategorie-Logos
   - Druckbilder (erscheinen im PDF)
@@ -43,6 +43,8 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - Skizzen eingebettet
 - Checklisten mit Hierarchie und Bildern
 - Konfigurierbare Spaltenanzahl
+- **NEU**: PDF-Farbeinstellung (8 Optionen zum Tinte sparen)
+- **NEU**: iPhone-optimiertes Layout (6 Fotos/Seite, 2 Skizzen/Zeile)
 
 ### 7. Bemerkungen
 - Freitext-Bemerkungen pro Projekt
@@ -62,7 +64,8 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 
 ### P0 - Critical
 - [x] Checklisten-Bild-Feature implementieren
-- [ ] User-Testing auf TestFlight
+- [x] iPhone PDF-Optimierung
+- [x] PDF-Farbeinstellung
 
 ### P1 - High Priority  
 - [ ] Neuer TestFlight Build
@@ -78,13 +81,28 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 
 ## Recent Changes (Changelog)
 
-### Dezember 2025
+### 27. Februar 2026
 - **Checklisten-Bild-Feature**: Template-Logos, Kategorie-Logos, Druck- und Vorschau-Bilder implementiert
-- **PDF-Generierung**: Bilder werden korrekt im PDF eingebettet
-- **Bildvorschau-Modal**: Vollbild-Galerie mit Navigation in Projekt-Ansicht
+- **Bilder im Originalformat**: Kein Zuschnitt mehr beim Speichern (allowsEditing entfernt)
+- **PDF-Farbeinstellung**: 8 Farboptionen (Blau, Hellblau, Grau, Hellgrau, Grün, Hellgrün, Schwarz, Weiß)
+- **iPhone PDF-Optimierung**:
+  - Fotos: 6 pro Seite in 2x3 Grid
+  - Skizzen: 2 pro Zeile
+  - Bilder behalten ihr Seitenverhältnis (Hoch-/Querformat)
+  - Keine abgeschnittenen Bilder mehr
+- **iPad PDF**: Unverändert (eigene Logik)
 
 ### Frühere Updates
 - PDF-Generierung stabilisiert (Last-Page Bug Workaround)
 - Hierarchische Checklisten-Anzeige
 - Foto-Annotationen
 - Skizzen-Editor mit Maßangaben
+
+## Key Files
+- `/app/frontend/app/projects/[id].tsx` - Projekt-Ansicht und PDF-Generierung
+- `/app/frontend/app/checklists/edit-template.tsx` - Checklisten-Vorlagen Editor
+- `/app/frontend/app/settings/index.tsx` - Einstellungen inkl. PDF-Farbe
+- `/app/frontend/services/LocalStorage.ts` - Datenpersistenz
+
+## Credentials
+- Expo Account: `moris_nebel@hotmail.com` / `Miabalu1+`

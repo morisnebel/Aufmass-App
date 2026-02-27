@@ -10,10 +10,13 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
+import * as ImagePicker from 'expo-image-picker';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {

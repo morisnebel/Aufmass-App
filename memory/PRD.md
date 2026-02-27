@@ -1,77 +1,90 @@
-# Aufmaß-Profi Dach - Product Requirements Document
+# AUFMASSPROFI DACH - Product Requirements Document
 
 ## Original Problem Statement
-Build a construction surveying app for roof measurements with the following core features:
-- Auto-labeling floor plans (S1, S2, etc.)
-- Draggable summary legend with position persistence in previews and PDFs
-- Measurement tools for construction professionals
-- Photo annotation capabilities
-- Checklist management with hierarchical structure
-- PDF export with comprehensive project documentation
+Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizzen und Checklisten. Die App ermöglicht das Erstellen professioneller PDF-Dokumentationen für Kunden.
 
-## User Persona
-- **Primary Users:** Construction professionals, roofers, surveyors
-- **Language:** German (all UI and communications)
-- **Platform:** iOS (via Expo/React Native)
+## Core Features Implemented
 
-## Core Requirements
-1. **Floor Plan Drawing:** Polyline-based floor plan sketching with measurements
-2. **Photo Management:** Take/upload photos with annotation support
-3. **Measurements:** Line segment measurements with totals per floor plan
-4. **Checklists:** Hierarchical checklists with categories, items, notes, and measurements
-5. **PDF Export:** Comprehensive project documentation with all data
+### 1. Projekt-Management
+- Projekte mit Kunden und Objektadressen erstellen/bearbeiten
+- Bauherr-Daten separat erfassbar
+- Projekt-Status (aktiv, abgeschlossen, abgebrochen)
 
-## What's Been Implemented
+### 2. Dachflächen-Erfassung
+- Verschiedene Dachtypen unterstützt
+- Detaillierte Maßeingaben (Länge, Breite, Neigung, etc.)
+- Automatische Flächenberechnung
 
-### Session - December 2025
-- ✅ Draggable summary legend with position persistence
-- ✅ Legend size increased for better readability
-- ✅ Floor plan labels (S1, S2, S3...) at center of polylines
-- ✅ **Checklist Grid Layout in PDF** (configurable 1-3 columns in Settings)
-- ✅ **PDF Page Break Optimization** - containers no longer cut off
-- ✅ **Photo Size Options** - removed "Full" option, only Small/Medium/Large
-- ✅ **PDF Header** - blue background now prints correctly, no clipping
-- ✅ **PDF Structure** - Roofs → Checklists → Photos → Sketches → Remarks → Footer
-- ✅ **PDF Footer** - "Erstellt mit AUFMASSPROFI DACH" at document end
+### 3. Foto-Dokumentation
+- Fotos mit Beschreibungen hinzufügen
+- Foto-Annotationen (Zeichnen, Text, Pfeile)
+- PDF-Größenanpassung pro Foto
 
-## Prioritized Backlog
+### 4. Skizzen-Editor
+- Freihand-Zeichnen
+- Polylinien mit Maßangaben
+- Formen und Beschriftungen
+- SVG-basierte Speicherung
 
-### P0 (Critical)
-- None currently
+### 5. Checklisten-System
+- Vorlagen mit beliebig tiefen Hierarchien
+- Check/Uncheck mit Notizen
+- Maßangaben pro Position
+- **NEU (Dez 2025)**: Bilder in Checklisten
+  - Template-Logo
+  - Kategorie-Logos
+  - Druckbilder (erscheinen im PDF)
+  - Vorschau-Bilder (nur zur Beratung, nicht im PDF)
 
-### P1 (High Priority)
-- [ ] SVG Generation Refactoring: Extract duplicated code from `draw.tsx` and `[id].tsx` into shared utility
-- [ ] New TestFlight Build after verification
+### 6. PDF-Export
+- Professionelle Dokumentation mit Firmenlogo
+- Alle Projektdaten übersichtlich dargestellt
+- Fotos mit Annotationen
+- Skizzen eingebettet
+- Checklisten mit Hierarchie und Bildern
+- Konfigurierbare Spaltenanzahl
 
-### P2 (Medium Priority)
-- [ ] Pro/Base Version Split (In-App Purchases)
-- [ ] Price Calculation based on measurements
+### 7. Bemerkungen
+- Freitext-Bemerkungen pro Projekt
+- Erscheint am Ende des PDFs
 
-### P3 (Low Priority)
-- [ ] iCloud Sync reimplementation
+## Technical Stack
+- **Framework**: React Native / Expo
+- **Storage**: AsyncStorage (lokal)
+- **PDF**: expo-print
+- **Images**: expo-image-picker
+- **Navigation**: expo-router
 
-## Technical Architecture
+## Known Issues & Workarounds
+- **expo-print Last-Page Bug**: Ein "Final Page" Buffer wird am Ende des HTML hinzugefügt, um das Abschneiden der letzten Seite zu verhindern.
 
-### Frontend Stack
-- React Native with Expo
-- expo-router for navigation
-- react-native-svg for drawing
-- @react-native-async-storage/async-storage for local data
-- expo-print for PDF generation
+## Backlog (Prioritized)
 
-### Key Files
-- `/app/frontend/app/sketches/draw.tsx` - Main drawing screen with SVG generation
-- `/app/frontend/app/projects/[id].tsx` - Project detail screen with PDF generation
-- `/app/frontend/services/LocalStorage.ts` - Data persistence layer
+### P0 - Critical
+- [x] Checklisten-Bild-Feature implementieren
+- [ ] User-Testing auf TestFlight
 
-### Data Storage
-- Local storage via AsyncStorage (no backend database)
-- Projects, sketches, photos, checklists stored as JSON
+### P1 - High Priority  
+- [ ] Neuer TestFlight Build
+- [ ] Pro/Base Version Split (In-App-Käufe)
 
-## Known Technical Debt
-1. **SVG Generation Duplication:** `generatePreviewSvg` in `draw.tsx` and `generateSvgFromMetadata` in `[id].tsx` contain nearly identical logic. Should be refactored into a shared utility function.
+### P2 - Medium Priority
+- [ ] Preiskalkulation (Kosten basierend auf Maßen)
+- [ ] iCloud Sync wiederherstellen
 
-## Testing Notes
-- Test account: moris_nebel@hotmail.com / Miabalu1+
-- Testing done via Expo Go app on iOS device
-- PDF generation must be tested on actual device
+### P3 - Low Priority
+- [ ] SVG-Duplikation aufräumen
+- [ ] Code-Refactoring
+
+## Recent Changes (Changelog)
+
+### Dezember 2025
+- **Checklisten-Bild-Feature**: Template-Logos, Kategorie-Logos, Druck- und Vorschau-Bilder implementiert
+- **PDF-Generierung**: Bilder werden korrekt im PDF eingebettet
+- **Bildvorschau-Modal**: Vollbild-Galerie mit Navigation in Projekt-Ansicht
+
+### Frühere Updates
+- PDF-Generierung stabilisiert (Last-Page Bug Workaround)
+- Hierarchische Checklisten-Anzeige
+- Foto-Annotationen
+- Skizzen-Editor mit Maßangaben

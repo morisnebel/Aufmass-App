@@ -1141,6 +1141,25 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
           }
+          /* Block-Struktur für Fotos und Skizzen (iPhone-kompatibel) */
+          .photo-block, .sketch-block {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          .photo-inline-heading, .sketch-inline-heading {
+            color: ${headerBgColor};
+            border-bottom: 2px solid ${headerBgColor};
+            padding-bottom: 5px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 14px;
+          }
+          .sketch-inline-title {
+            color: ${headerBgColor};
+            margin: 15px 0 10px 0;
+            font-size: 12px;
+          }
           /* New checklist PDF styles */
           .checklist-main-header {
             display: flex;

@@ -477,6 +477,9 @@ export interface ChecklistItem {
   checked: boolean;
   note?: string;
   subItems?: ChecklistItem[];
+  printImage?: string; // Bild für PDF-Druck (Base64)
+  previewImages?: string[]; // Bilder für Vorschau-Galerie (nicht gedruckt)
+  categoryLogo?: string; // Logo für Kategorien (Base64)
 }
 
 export interface Checklist {
@@ -484,6 +487,7 @@ export interface Checklist {
   project_id: string;
   template_id: string;
   template_name: string;
+  templateLogo?: string; // Logo der Vorlage (Base64)
   items: ChecklistItem[];
   created_at: string;
   updated_at: string;

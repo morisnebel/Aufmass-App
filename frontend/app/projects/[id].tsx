@@ -1233,7 +1233,7 @@ export default function ProjectDetailScreen() {
           .pdf-level1-container {
             background: #fff;
             border: 1px solid #e0e0e0;
-            border-left: 3px solid #1976d2;
+            border-left: 3px solid ${headerBgColor};
             border-radius: 4px;
             padding: 6px;
             box-sizing: border-box;
@@ -1247,8 +1247,8 @@ export default function ProjectDetailScreen() {
             margin-bottom: 4px;
           }
           .pdf-level1-prefix {
-            background: #1976d2;
-            color: #fff;
+            background: ${headerBgColor};
+            color: ${headerTextColor};
             font-size: 9px;
             font-weight: 700;
             padding: 1px 4px;

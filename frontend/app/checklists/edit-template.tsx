@@ -166,6 +166,27 @@ export default function EditTemplateScreen() {
     return getItemAtPath(items[first]?.subItems || [], rest);
   };
 
+  // Template-Logo auswählen
+  const pickTemplateLogo = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 1],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setTemplateLogo(base64Image);
+      }
+    } catch (error) {
+      console.error('Error picking template logo:', error);
+      Alert.alert('Fehler', 'Logo konnte nicht ausgewählt werden');
+    }
+  };
+
   // Bild entfernen
   const removeImage = (path: number[], type: 'print' | 'preview' | 'logo', previewIndex?: number) => {
     if (type === 'print') {

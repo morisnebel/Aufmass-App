@@ -603,31 +603,8 @@ export const ChecklistTemplateService = {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
     const index = templates.findIndex(t => t.id === id);
     if (index === -1) return null;
-    
-    // Debug: Log items being saved
-    if (data.items) {
-      console.log('ChecklistTemplateService.update - items to save:', data.items.map((i: any) => ({
-        text: i.text,
-        hasPrintImage: !!i.printImage,
-        printImageLength: i.printImage?.length || 0,
-        previewImagesCount: i.previewImages?.length || 0,
-      })));
-    }
-    
     templates[index] = { ...templates[index], ...data, updated_at: new Date().toISOString() };
     await setItems(KEYS.CHECKLIST_TEMPLATES, templates);
-    
-    // Debug: Verify saved data
-    const saved = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
-    const savedTemplate = saved.find(t => t.id === id);
-    if (savedTemplate) {
-      console.log('ChecklistTemplateService.update - saved items:', savedTemplate.items.map((i: any) => ({
-        text: i.text,
-        hasPrintImage: !!i.printImage,
-        printImageLength: i.printImage?.length || 0,
-      })));
-    }
-    
     return templates[index];
   },
 

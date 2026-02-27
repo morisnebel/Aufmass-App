@@ -3404,6 +3404,59 @@ export default function ProjectDetailScreen() {
         </View>
       </Modal>
 
+      {/* Checklist Image Preview Modal */}
+      <Modal
+        visible={imagePreviewModal.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImagePreviewModal({ ...imagePreviewModal, visible: false })}
+      >
+        <View style={styles.imageModalOverlay}>
+          <View style={styles.imageModalContent}>
+            <View style={styles.imageModalHeader}>
+              <Text style={styles.imageModalTitle}>{imagePreviewModal.title}</Text>
+              <TouchableOpacity onPress={() => setImagePreviewModal({ ...imagePreviewModal, visible: false })}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            {imagePreviewModal.images.length > 0 && (
+              <View style={styles.imageModalBody}>
+                <Image
+                  source={{ uri: imagePreviewModal.images[currentImageIndex] }}
+                  style={styles.fullPreviewImage}
+                  resizeMode="contain"
+                />
+                
+                {imagePreviewModal.images.length > 1 && (
+                  <View style={styles.imageNavigation}>
+                    <TouchableOpacity
+                      style={[styles.imageNavButton, currentImageIndex === 0 && styles.imageNavButtonDisabled]}
+                      onPress={() => setCurrentImageIndex(Math.max(0, currentImageIndex - 1))}
+                      disabled={currentImageIndex === 0}
+                    >
+                      <Ionicons name="chevron-back" size={30} color={currentImageIndex === 0 ? '#ccc' : '#1976d2'} />
+                    </TouchableOpacity>
+                    
+                    <Text style={styles.imageCounter}>
+                      {currentImageIndex + 1} / {imagePreviewModal.images.length}
+                    </Text>
+                    
+                    <TouchableOpacity
+                      style={[styles.imageNavButton, currentImageIndex === imagePreviewModal.images.length - 1 && styles.imageNavButtonDisabled]}
+                      onPress={() => setCurrentImageIndex(Math.min(imagePreviewModal.images.length - 1, currentImageIndex + 1))}
+                      disabled={currentImageIndex === imagePreviewModal.images.length - 1}
+                    >
+                      <Ionicons name="chevron-forward" size={30} color={currentImageIndex === imagePreviewModal.images.length - 1 ? '#ccc' : '#1976d2'} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Loading Overlay for PDF Generation */}
       {isGeneratingPdf && (
         <View style={styles.pdfLoadingOverlay}>

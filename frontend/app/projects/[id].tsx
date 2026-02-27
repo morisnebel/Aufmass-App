@@ -734,7 +734,7 @@ export default function ProjectDetailScreen() {
     ` : '<p class="empty">Keine Fotos erfasst</p>';
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
-    // Erste Skizze wird separat behandelt, um mit Überschrift zusammenzubleiben
+    // Jede Skizze als eigener Block mit integrierter Überschrift (verhindert Trennung auf iPhone)
     const sketchItems = sketches.map((sketch, index) => {
       // Read pdf_size from sketch object or metadata
       let size = (sketch as any).pdf_size || 'large';
@@ -751,17 +751,25 @@ export default function ProjectDetailScreen() {
       if (size === 'small') sizeClass = 'sketch-small';
       if (size === 'medium') sizeClass = 'sketch-medium';
       if (size === 'full') sizeClass = 'sketch-full';
+      
+      // Erste Skizze bekommt "Skizzen" als Hauptüberschrift, weitere bekommen Titel oder "Skizze X"
+      const sketchHeading = index === 0 
+        ? '<h2 class="sketch-inline-heading">Skizzen</h2>' 
+        : `<h4 class="sketch-inline-title">${sketch.title || `Skizze ${index + 1}`}</h4>`;
+      
       return `
-        <div class="sketch-item ${sizeClass}">
-          ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-          ${sketch.title ? `<p>${sketch.title}</p>` : ''}
+        <div class="sketch-block">
+          ${sketchHeading}
+          <div class="sketch-item ${sizeClass}">
+            ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+            ${index === 0 && sketch.title ? `<p>${sketch.title}</p>` : ''}
+          </div>
         </div>
       `;
     });
     
-    // Erste Skizze für Wrapper mit Überschrift
-    const firstSketchHtml = sketchItems.length > 0 ? sketchItems[0] : '';
-    const restSketchesHtml = sketchItems.slice(1).join('');
+    // Alle Skizzen zusammen
+    const allSketchesHtml = sketchItems.join('');
     
     const sketchesHtml = sketches.length > 0 ? `
       <div class="sketches-container">

@@ -683,46 +683,53 @@ export default function ProjectDetailScreen() {
     }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
+    // Erste Foto wird separat behandelt, um mit Überschrift zusammenzubleiben
+    const photoItems = photos.map(photo => {
+      const size = (photo as any).pdf_size || 'medium';
+      let sizeClass = 'photo-medium'; // default: 2 pro Zeile
+      if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
+      if (size === 'large') sizeClass = 'photo-large'; // 1 pro Zeile
+      if (size === 'full') sizeClass = 'photo-large'; // full wird zu large (verhindert Abschneiden)
+      
+      // Generate annotation SVG overlay if annotations exist
+      let annotationSvg = '';
+      if ((photo as any).annotations) {
+        try {
+          const annotationData = JSON.parse((photo as any).annotations);
+          if (annotationData.paths && annotationData.paths.length > 0) {
+            const canvasWidth = annotationData.canvasWidth || 400;
+            const canvasHeight = annotationData.canvasHeight || 300;
+            
+            // Build SVG paths for annotations
+            const svgPaths = annotationData.paths.map((p: any) => 
+              `<path d="${p.path}" stroke="${p.color || '#FF0000'}" stroke-width="${p.strokeWidth || 3}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+            ).join('');
+            
+            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgPaths}</svg>`;
+          }
+        } catch (e) {
+          console.error('Error parsing photo annotations:', e);
+        }
+      }
+      
+      return `
+        <div class="photo-item ${sizeClass}">
+          <div class="photo-wrapper">
+            <img src="${photo.image_data}" alt="Foto" />
+            ${annotationSvg}
+          </div>
+          ${photo.description ? `<p>${photo.description}</p>` : ''}
+        </div>
+      `;
+    });
+    
+    // Erstes Foto für Wrapper mit Überschrift
+    const firstPhotoHtml = photoItems.length > 0 ? photoItems[0] : '';
+    const restPhotosHtml = photoItems.slice(1).join('');
+    
     const photosHtml = photos.length > 0 ? `
       <div class="photos-container">
-        ${photos.map(photo => {
-          const size = (photo as any).pdf_size || 'medium';
-          let sizeClass = 'photo-medium'; // default: 2 pro Zeile
-          if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
-          if (size === 'large') sizeClass = 'photo-large'; // 1 pro Zeile
-          if (size === 'full') sizeClass = 'photo-large'; // full wird zu large (verhindert Abschneiden)
-          
-          // Generate annotation SVG overlay if annotations exist
-          let annotationSvg = '';
-          if ((photo as any).annotations) {
-            try {
-              const annotationData = JSON.parse((photo as any).annotations);
-              if (annotationData.paths && annotationData.paths.length > 0) {
-                const canvasWidth = annotationData.canvasWidth || 400;
-                const canvasHeight = annotationData.canvasHeight || 300;
-                
-                // Build SVG paths for annotations
-                const svgPaths = annotationData.paths.map((p: any) => 
-                  `<path d="${p.path}" stroke="${p.color || '#FF0000'}" stroke-width="${p.strokeWidth || 3}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
-                ).join('');
-                
-                annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgPaths}</svg>`;
-              }
-            } catch (e) {
-              console.error('Error parsing photo annotations:', e);
-            }
-          }
-          
-          return `
-            <div class="photo-item ${sizeClass}">
-              <div class="photo-wrapper">
-                <img src="${photo.image_data}" alt="Foto" />
-                ${annotationSvg}
-              </div>
-              ${photo.description ? `<p>${photo.description}</p>` : ''}
-            </div>
-          `;
-        }).join('')}
+        ${photoItems.join('')}
       </div>
     ` : '<p class="empty">Keine Fotos erfasst</p>';
     

@@ -727,31 +727,38 @@ export default function ProjectDetailScreen() {
     ` : '<p class="empty">Keine Fotos erfasst</p>';
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
+    // Erste Skizze wird separat behandelt, um mit Überschrift zusammenzubleiben
+    const sketchItems = sketches.map((sketch, index) => {
+      // Read pdf_size from sketch object or metadata
+      let size = (sketch as any).pdf_size || 'large';
+      if (!size || size === 'large') {
+        // Try to read from metadata
+        try {
+          const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
+          if (metadata.pdf_size) {
+            size = metadata.pdf_size;
+          }
+        } catch (e) {}
+      }
+      let sizeClass = 'sketch-large';
+      if (size === 'small') sizeClass = 'sketch-small';
+      if (size === 'medium') sizeClass = 'sketch-medium';
+      if (size === 'full') sizeClass = 'sketch-full';
+      return `
+        <div class="sketch-item ${sizeClass}">
+          ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+          ${sketch.title ? `<p>${sketch.title}</p>` : ''}
+        </div>
+      `;
+    });
+    
+    // Erste Skizze für Wrapper mit Überschrift
+    const firstSketchHtml = sketchItems.length > 0 ? sketchItems[0] : '';
+    const restSketchesHtml = sketchItems.slice(1).join('');
+    
     const sketchesHtml = sketches.length > 0 ? `
       <div class="sketches-container">
-        ${sketches.map(sketch => {
-          // Read pdf_size from sketch object or metadata
-          let size = (sketch as any).pdf_size || 'large';
-          if (!size || size === 'large') {
-            // Try to read from metadata
-            try {
-              const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
-              if (metadata.pdf_size) {
-                size = metadata.pdf_size;
-              }
-            } catch (e) {}
-          }
-          let sizeClass = 'sketch-large';
-          if (size === 'small') sizeClass = 'sketch-small';
-          if (size === 'medium') sizeClass = 'sketch-medium';
-          if (size === 'full') sizeClass = 'sketch-full';
-          return `
-            <div class="sketch-item ${sizeClass}">
-              ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-              ${sketch.title ? `<p>${sketch.title}</p>` : ''}
-            </div>
-          `;
-        }).join('')}
+        ${sketchItems.join('')}
       </div>
     ` : '<p class="empty">Keine Skizzen erfasst</p>';
     

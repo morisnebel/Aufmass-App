@@ -683,8 +683,8 @@ export default function ProjectDetailScreen() {
     }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
-    // Erste Foto wird separat behandelt, um mit Überschrift zusammenzubleiben
-    const photoItems = photos.map(photo => {
+    // Jedes Foto als eigener Block mit integrierter Überschrift (verhindert Trennung auf iPhone)
+    const photoItems = photos.map((photo, index) => {
       const size = (photo as any).pdf_size || 'medium';
       let sizeClass = 'photo-medium'; // default: 2 pro Zeile
       if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
@@ -712,20 +712,27 @@ export default function ProjectDetailScreen() {
         }
       }
       
+      // Erstes Foto bekommt "Fotos" als Hauptüberschrift
+      const photoHeading = index === 0 
+        ? '<h2 class="photo-inline-heading">Fotos</h2>' 
+        : '';
+      
       return `
-        <div class="photo-item ${sizeClass}">
-          <div class="photo-wrapper">
-            <img src="${photo.image_data}" alt="Foto" />
-            ${annotationSvg}
+        <div class="photo-block">
+          ${photoHeading}
+          <div class="photo-item ${sizeClass}">
+            <div class="photo-wrapper">
+              <img src="${photo.image_data}" alt="Foto" />
+              ${annotationSvg}
+            </div>
+            ${photo.description ? `<p>${photo.description}</p>` : ''}
           </div>
-          ${photo.description ? `<p>${photo.description}</p>` : ''}
         </div>
       `;
     });
     
-    // Erstes Foto für Wrapper mit Überschrift
-    const firstPhotoHtml = photoItems.length > 0 ? photoItems[0] : '';
-    const restPhotosHtml = photoItems.slice(1).join('');
+    // Alle Fotos zusammen
+    const allPhotosHtml = photoItems.join('');
     
     const photosHtml = photos.length > 0 ? `
       <div class="photos-container">

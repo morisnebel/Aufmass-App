@@ -875,8 +875,8 @@ export default function ProjectDetailScreen() {
             background: #fff;
           }
           .header {
-            background: linear-gradient(135deg, #1976d2, #1565c0);
-            color: white;
+            background: ${headerBgColor};
+            color: ${headerTextColor};
             padding: 15px 20px;
             margin: 0 0 20px 0;
             border-radius: 0;

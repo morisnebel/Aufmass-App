@@ -1471,7 +1471,7 @@ export default function ProjectDetailScreen() {
           .photo-iphone img {
             width: 100%;
             height: auto;
-            max-height: 350px;
+            max-height: 200px;
             object-fit: contain;
           }
           /* Photo sizes */

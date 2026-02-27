@@ -1643,8 +1643,13 @@ export default function ProjectDetailScreen() {
         ${photos.length > 0 ? `
           <div class="new-page">
             <div class="photos-section">
-              <h2>Fotos</h2>
-              ${photosHtml}
+              <!-- Wrapper hält Überschrift + erstes Foto zusammen -->
+              <div class="photos-wrapper">
+                <h2>Fotos</h2>
+                ${firstPhotoHtml}
+              </div>
+              <!-- Restliche Fotos -->
+              ${restPhotosHtml}
             </div>
             ${sketches.length === 0 ? `
               ${(remarks || project?.remarks) ? `

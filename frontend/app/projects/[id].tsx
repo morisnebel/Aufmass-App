@@ -1429,6 +1429,20 @@ export default function ProjectDetailScreen() {
             max-height: 280px;
             object-fit: contain;
           }
+          /* iPhone-spezifischer Fotos-Container: Grid mit 2 Spalten */
+          .photos-container-iphone {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .photo-iphone {
+            width: 100%;
+            margin: 0;
+          }
+          .photo-iphone img {
+            max-height: 280px;
+            object-fit: contain;
+          }
           /* Photo sizes */
           .photo-small {
             width: calc(33.33% - 10px);

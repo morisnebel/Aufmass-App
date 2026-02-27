@@ -1458,7 +1458,7 @@ export default function ProjectDetailScreen() {
           }
           .roof-area {
             font-size: 14px;
-            color: #1976d2;
+            color: ${headerBgColor};
             margin-bottom: 5px;
           }
           .roof-notes {

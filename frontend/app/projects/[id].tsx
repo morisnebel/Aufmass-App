@@ -1449,12 +1449,15 @@ export default function ProjectDetailScreen() {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+            margin-bottom: 20px;
+          }
+          .photos-container-iphone.photos-new-page {
+            page-break-before: always !important;
+            break-before: page !important;
           }
           .photo-iphone {
             width: 100%;
             margin: 0;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
           }
           .photo-iphone .photo-wrapper {
             height: 200px;
@@ -1468,13 +1471,6 @@ export default function ProjectDetailScreen() {
             width: 100%;
             height: 100%;
             object-fit: contain;
-          }
-          /* Foto-Zeilen gruppieren: max 4 pro Seite (2 Zeilen) */
-          .photo-iphone:nth-child(4n+1) {
-            page-break-before: auto;
-          }
-          .photo-iphone:nth-child(4n+5) {
-            page-break-before: always;
           }
           /* Photo sizes */
           .photo-small {

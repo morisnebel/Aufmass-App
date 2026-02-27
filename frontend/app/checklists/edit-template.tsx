@@ -944,8 +944,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   thumbnailPreview: {
-    width: 60,
-    height: 45,
+    width: 80,
+    height: 60,
     borderRadius: 4,
     backgroundColor: '#f5f5f5',
   },

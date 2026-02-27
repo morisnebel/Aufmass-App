@@ -1091,16 +1091,16 @@ export default function ProjectDetailScreen() {
             border-radius: 2px;
           }
           .pdf-print-thumbnail {
-            width: 40px;
-            height: 30px;
+            width: 55px;
+            height: 42px;
             object-fit: cover;
             border-radius: 3px;
             border: 1px solid #4caf50;
             margin-left: auto;
           }
           .pdf-print-thumbnail-small {
-            width: 30px;
-            height: 22px;
+            width: 45px;
+            height: 34px;
             object-fit: cover;
             border-radius: 2px;
             border: 1px solid #4caf50;
@@ -3999,8 +3999,8 @@ const styles = StyleSheet.create({
     borderColor: '#4caf50',
   },
   printImageThumbnail: {
-    width: 36,
-    height: 28,
+    width: 50,
+    height: 38,
     backgroundColor: '#f5f5f5',
   },
   printImageThumbnailBtnSmall: {
@@ -4011,8 +4011,8 @@ const styles = StyleSheet.create({
     borderColor: '#4caf50',
   },
   printImageThumbnailSmall: {
-    width: 28,
-    height: 22,
+    width: 40,
+    height: 30,
     backgroundColor: '#f5f5f5',
   },
   previewGalleryBtn: {

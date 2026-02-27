@@ -39,6 +39,7 @@ export default function EditTemplateScreen() {
   const { templateId } = useLocalSearchParams();
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
+  const [templateLogo, setTemplateLogo] = useState<string | undefined>(undefined);
   const [items, setItems] = useState<RecursiveTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

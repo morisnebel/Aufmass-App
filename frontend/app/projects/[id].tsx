@@ -164,6 +164,10 @@ export default function ProjectDetailScreen() {
   const [isSharingImage, setIsSharingImage] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
 
+  // Checklist Image Preview Modal state
+  const [imagePreviewModal, setImagePreviewModal] = useState<{ visible: boolean; images: string[]; title: string }>({ visible: false, images: [], title: '' });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   // Helper to parse address from customer
   const parseCustomerAddress = (address: string | undefined) => {
     if (!address) return { street: '', plz: '', city: '' };

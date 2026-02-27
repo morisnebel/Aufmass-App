@@ -84,6 +84,10 @@ export default function EditTemplateScreen() {
               return {
                 text: sub.text || '',
                 subItems: sub.subItems ? convertItems(sub.subItems) : [],
+                // Bilder mit laden
+                printImage: sub.printImage,
+                previewImages: sub.previewImages,
+                categoryLogo: sub.categoryLogo,
               };
             });
           }
@@ -91,6 +95,10 @@ export default function EditTemplateScreen() {
           return {
             text: item.text || '',
             subItems: subItems,
+            // Bilder mit laden
+            printImage: item.printImage,
+            previewImages: item.previewImages,
+            categoryLogo: item.categoryLogo,
           };
         });
       };

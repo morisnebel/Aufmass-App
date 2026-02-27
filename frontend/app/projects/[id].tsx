@@ -614,8 +614,10 @@ export default function ProjectDetailScreen() {
         return `
           <div class="pdf-category-section cols-${checklistColumns}">
             <div class="pdf-category-header">
+              ${category.categoryLogo ? `<img src="${category.categoryLogo}" class="pdf-category-logo" alt="Logo" />` : ''}
               <span class="pdf-cat-check">✓</span>
               <span class="pdf-category-title">${category.text}</span>
+              ${category.printImage ? `<img src="${category.printImage}" class="pdf-print-thumbnail" alt="Bild" />` : ''}
               ${totalSubCount > 0 ? `<span class="pdf-category-count">${checkedSubCount}/${totalSubCount}</span>` : ''}
             </div>
             ${category.note ? `<div class="pdf-category-note"><span class="pdf-note-icon">📝</span> ${category.note}</div>` : ''}

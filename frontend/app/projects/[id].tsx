@@ -3999,11 +3999,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#4caf50',
+    backgroundColor: '#f5f5f5',
   },
   printImageThumbnail: {
     width: 50,
     height: 38,
-    backgroundColor: '#f5f5f5',
   },
   printImageThumbnailBtnSmall: {
     marginLeft: 4,
@@ -4011,11 +4011,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#4caf50',
+    backgroundColor: '#f5f5f5',
   },
   printImageThumbnailSmall: {
     width: 40,
     height: 30,
-    backgroundColor: '#f5f5f5',
   },
   previewGalleryBtn: {
     flexDirection: 'row',

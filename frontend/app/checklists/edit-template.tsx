@@ -70,6 +70,13 @@ export default function EditTemplateScreen() {
         
         // Konvertiere Items zu rekursiver Struktur
         const convertItems = (rawItems: any[]): RecursiveTemplateItem[] => {
+          console.log('Loading raw items:', JSON.stringify(rawItems.map(i => ({
+            text: i.text,
+            hasPrintImage: !!i.printImage,
+            previewImagesCount: i.previewImages?.length || 0,
+            hasCategoryLogo: !!i.categoryLogo,
+          }))));
+          
           return rawItems.map((item: any) => {
             if (typeof item === 'string') {
               return { text: item, subItems: [] };

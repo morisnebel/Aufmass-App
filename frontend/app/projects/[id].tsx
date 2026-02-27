@@ -2687,7 +2687,6 @@ export default function ProjectDetailScreen() {
                       prefix: currentPrefix,
                       note: item.note,
                       measurements: item.measurements,
-                      note: item.note,
                     });
                   }
                   if (item.subItems && item.subItems.length > 0) {

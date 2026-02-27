@@ -861,4 +861,129 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Image Styles
+  imageSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  imageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  imageLabel: {
+    fontSize: 12,
+    color: '#666',
+    width: 80,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  logoPreview: {
+    width: 80,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: '#f5f5f5',
+  },
+  thumbnailPreview: {
+    width: 60,
+    height: 45,
+    borderRadius: 4,
+    backgroundColor: '#f5f5f5',
+  },
+  smallThumbnail: {
+    width: 40,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: '#f5f5f5',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  removeImageBtnSmall: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  addImageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    gap: 4,
+  },
+  addImageText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  previewImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
+    gap: 8,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    width: '95%',
+    maxHeight: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  imageModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  imageModalBody: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  fullImage: {
+    width: '100%',
+    height: 400,
+  },
+  imageNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 20,
+  },
+  navButton: {
+    padding: 8,
+  },
+  navButtonDisabled: {
+    opacity: 0.5,
+  },
+  imageCounter: {
+    fontSize: 16,
+    color: '#666',
+  },
 });

@@ -731,7 +731,7 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // iPhone: Fotos in Gruppen von 4 aufteilen (jede Gruppe = 1 Seite)
+    // iPhone: Fotos in Gruppen von 6 aufteilen (jede Gruppe = 1 Seite)
     // iPad: Alle Fotos in einem Container
     let photosHtml = '';
     if (photos.length > 0) {
@@ -739,8 +739,8 @@ export default function ProjectDetailScreen() {
         // iPad: normaler Container
         photosHtml = `<div class="photos-container">${photoItems.join('')}</div>`;
       } else {
-        // iPhone: Gruppen von 4 Fotos pro Seite (2 Zeilen)
-        const photosPerPage = 4;
+        // iPhone: Gruppen von 6 Fotos pro Seite (3 Zeilen)
+        const photosPerPage = 6;
         const photoGroups: string[][] = [];
         for (let i = 0; i < photoItems.length; i += photosPerPage) {
           photoGroups.push(photoItems.slice(i, i + photosPerPage));

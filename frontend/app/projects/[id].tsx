@@ -683,7 +683,7 @@ export default function ProjectDetailScreen() {
     }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
-    // iPhone: 2 Fotos nebeneinander pro Zeile
+    // iPhone: 2 Fotos nebeneinander pro Zeile, max 4 pro Seite
     // iPad: normale Größenlogik
     const isIpadForPhotos = Platform.OS === 'ios' && Platform.isPad;
     
@@ -731,14 +731,29 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // iPhone: Grid-Container mit 2 Spalten, iPad: normaler Container
-    const photosContainerClass = isIpadForPhotos ? 'photos-container' : 'photos-container-iphone';
-    
-    const photosHtml = photos.length > 0 ? `
-      <div class="${photosContainerClass}">
-        ${photoItems.join('')}
-      </div>
-    ` : '<p class="empty">Keine Fotos erfasst</p>';
+    // iPhone: Fotos in Gruppen von 4 aufteilen (jede Gruppe = 1 Seite)
+    // iPad: Alle Fotos in einem Container
+    let photosHtml = '';
+    if (photos.length > 0) {
+      if (isIpadForPhotos) {
+        // iPad: normaler Container
+        photosHtml = `<div class="photos-container">${photoItems.join('')}</div>`;
+      } else {
+        // iPhone: Gruppen von 4 Fotos pro Seite
+        const photosPerPage = 4;
+        const photoGroups: string[][] = [];
+        for (let i = 0; i < photoItems.length; i += photosPerPage) {
+          photoGroups.push(photoItems.slice(i, i + photosPerPage));
+        }
+        photosHtml = photoGroups.map((group, groupIndex) => `
+          <div class="photos-container-iphone ${groupIndex > 0 ? 'photos-new-page' : ''}">
+            ${group.join('')}
+          </div>
+        `).join('');
+      }
+    } else {
+      photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
+    }
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
     // iPhone: kleinere Skizzen (2 pro Seite) für bessere Kompatibilität

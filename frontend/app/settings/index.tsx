@@ -32,7 +32,20 @@ interface CompanySettings {
   logo_data: string | null;
   bluetooth_mode: boolean;
   pdf_checklist_columns: number; // 1, 2, oder 3 Spalten
+  pdf_header_color: string; // Hintergrundfarbe für PDF-Header
 }
+
+// Verfügbare Farboptionen für PDF-Header
+const PDF_COLOR_OPTIONS = [
+  { id: 'blue', label: 'Blau (Standard)', color: '#1976d2', textColor: '#ffffff' },
+  { id: 'light_blue', label: 'Hellblau', color: '#bbdefb', textColor: '#1565c0' },
+  { id: 'gray', label: 'Grau', color: '#9e9e9e', textColor: '#ffffff' },
+  { id: 'light_gray', label: 'Hellgrau', color: '#e0e0e0', textColor: '#424242' },
+  { id: 'green', label: 'Grün', color: '#388e3c', textColor: '#ffffff' },
+  { id: 'light_green', label: 'Hellgrün', color: '#c8e6c9', textColor: '#2e7d32' },
+  { id: 'black', label: 'Schwarz', color: '#212121', textColor: '#ffffff' },
+  { id: 'white', label: 'Weiß (kein Druck)', color: '#ffffff', textColor: '#333333' },
+];
 
 export default function SettingsScreen() {
   const router = useRouter();

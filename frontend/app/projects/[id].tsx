@@ -2791,6 +2791,30 @@ export default function ProjectDetailScreen() {
                                       <Text style={styles.level1Prefix}>{containerPrefix}</Text>
                                       <Ionicons name="checkmark-circle" size={14} color="#4caf50" />
                                       <Text style={styles.level1Title} numberOfLines={2}>{level1Item.text}</Text>
+                                      {/* Druckbild und Galerie für Level 1 */}
+                                      {level1Item.printImage && (
+                                        <TouchableOpacity 
+                                          onPress={() => {
+                                            setCurrentImageIndex(0);
+                                            setImagePreviewModal({ visible: true, images: [level1Item.printImage], title: `${level1Item.text} - Druckbild` });
+                                          }}
+                                          style={styles.printImageThumbnailBtnSmall}
+                                        >
+                                          <Image source={{ uri: level1Item.printImage }} style={styles.printImageThumbnailSmall} />
+                                        </TouchableOpacity>
+                                      )}
+                                      {level1Item.previewImages && level1Item.previewImages.length > 0 && (
+                                        <TouchableOpacity 
+                                          onPress={() => {
+                                            setCurrentImageIndex(0);
+                                            setImagePreviewModal({ visible: true, images: level1Item.previewImages, title: `${level1Item.text} - Galerie` });
+                                          }}
+                                          style={styles.previewGalleryBtnSmall}
+                                        >
+                                          <Ionicons name="images" size={14} color="#ff9800" />
+                                          <Text style={styles.previewGalleryCountSmall}>{level1Item.previewImages.length}</Text>
+                                        </TouchableOpacity>
+                                      )}
                                     </View>
                                     
                                     {/* Notiz für Level 1 Item */}

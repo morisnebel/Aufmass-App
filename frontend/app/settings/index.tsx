@@ -683,4 +683,40 @@ const styles = StyleSheet.create({
   columnOptionLabelActive: {
     color: '#1976d2',
   },
+  colorSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  colorOption: {
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    width: '23%',
+  },
+  colorOptionActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  colorPreview: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 4,
+  },
+  colorLabel: {
+    fontSize: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+  colorLabelActive: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
 });

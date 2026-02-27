@@ -45,6 +45,9 @@ export default function EditTemplateScreen() {
   const [copiedItem, setCopiedItem] = useState<RecursiveTemplateItem | null>(null);
   // State für eingeklappte Items (Set von Pfaden als String)
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
+  // State für Bild-Vorschau Modal
+  const [imagePreviewModal, setImagePreviewModal] = useState<{ visible: boolean; images: string[]; title: string }>({ visible: false, images: [], title: '' });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     if (templateId) {

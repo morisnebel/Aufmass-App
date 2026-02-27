@@ -919,8 +919,8 @@ export default function ProjectDetailScreen() {
             word-wrap: break-word;
           }
           h2 {
-            color: #1976d2;
-            border-bottom: 2px solid #1976d2;
+            color: ${headerBgColor};
+            border-bottom: 2px solid ${headerBgColor};
             padding-bottom: 5px;
             margin-top: 25px;
             margin-bottom: 15px;

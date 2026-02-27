@@ -1415,6 +1415,20 @@ export default function ProjectDetailScreen() {
             display: table;
             clear: both;
           }
+          /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
+          .sketches-container-iphone {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .sketch-iphone {
+            width: 100%;
+            margin: 0;
+          }
+          .sketch-iphone img {
+            max-height: 280px;
+            object-fit: contain;
+          }
           /* Photo sizes */
           .photo-small {
             width: calc(33.33% - 10px);

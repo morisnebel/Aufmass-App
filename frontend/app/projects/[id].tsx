@@ -2747,7 +2747,7 @@ export default function ProjectDetailScreen() {
                                 }}
                                 style={styles.printImageThumbnailBtn}
                               >
-                                <Image source={{ uri: category.printImage }} style={styles.printImageThumbnail} />
+                                <Image source={{ uri: category.printImage }} style={styles.printImageThumbnail} resizeMode="contain" />
                               </TouchableOpacity>
                             )}
                             {/* Galerie-Button für Vorschau-Bilder */}
@@ -2842,7 +2842,7 @@ export default function ProjectDetailScreen() {
                                           }}
                                           style={styles.printImageThumbnailBtnSmall}
                                         >
-                                          <Image source={{ uri: level1Item.printImage }} style={styles.printImageThumbnailSmall} />
+                                          <Image source={{ uri: level1Item.printImage }} style={styles.printImageThumbnailSmall} resizeMode="contain" />
                                         </TouchableOpacity>
                                       )}
                                       {level1Item.previewImages && level1Item.previewImages.length > 0 && (

@@ -836,7 +836,7 @@ export default function ProjectDetailScreen() {
               margin: 0 0 20px 0 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
-              background: linear-gradient(135deg, #1976d2, #1565c0) !important;
+              background: ${headerBgColor} !important;
             }
             .new-page, .remarks-and-footer-page {
               width: auto;

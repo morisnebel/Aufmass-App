@@ -84,6 +84,9 @@ interface Sketch {
 interface SubItem {
   text: string;
   checked: boolean;
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
 }
 
 interface ChecklistItem {
@@ -91,11 +94,15 @@ interface ChecklistItem {
   checked: boolean;
   note?: string;
   subItems?: SubItem[];
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
 }
 
 interface Checklist {
   id: string;
   template_name: string;
+  templateLogo?: string;
   items: ChecklistItem[];
 }
 

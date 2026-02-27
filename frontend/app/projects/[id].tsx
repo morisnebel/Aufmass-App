@@ -928,42 +928,81 @@ export default function ProjectDetailScreen() {
             page-break-after: avoid;
             page-break-inside: avoid;
           }
-          /* Sektionen zusammenhalten */
+          /* Sektionen zusammenhalten - verstärkt für iPhone */
           .section-with-header {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          /* Überschriften NIEMALS alleine lassen */
+          h2, h3, h4 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            -webkit-column-break-after: avoid !important;
+            orphans: 3;
+            widows: 3;
           }
           /* Ensure Skizzen header stays with sketches */
           .sketches-section {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .sketches-section h2 {
-            page-break-after: avoid;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
             margin-bottom: 10px;
           }
           .sketches-section .sketches-container {
-            page-break-before: avoid;
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
+          /* Skizzen-Wrapper: Überschrift + erste Skizze zusammen */
+          .sketch-wrapper {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           /* Fotos Sektion */
           .photos-section {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .photos-section h2 {
-            page-break-after: avoid;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          /* Fotos-Wrapper: Überschrift + erstes Foto zusammen */
+          .photos-wrapper {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           /* Bemerkungen Sektion */
           .remarks-section {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .remarks-section h2 {
-            page-break-after: avoid;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
           /* Checklisten Sektion */
+          .checklists-section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
           .checklists-section h2 {
-            page-break-after: avoid;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
           /* Dachflächen Sektion */
+          .roofs-section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
           .roofs-section h2 {
-            page-break-after: avoid;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
           h3 {
             color: #333;

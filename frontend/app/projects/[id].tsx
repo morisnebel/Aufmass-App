@@ -603,6 +603,7 @@ export default function ProjectDetailScreen() {
                 <span class="pdf-level1-prefix">${containerPrefix}</span>
                 <span class="pdf-checkmark-circle">✓</span>
                 <span class="pdf-level1-title">${l1Item.text}</span>
+                ${l1Item.printImage ? `<img src="${l1Item.printImage}" class="pdf-print-thumbnail-small" alt="Bild" />` : ''}
               </div>
               ${l1Item.note ? `<div class="pdf-note"><span class="pdf-note-icon">📝</span> ${l1Item.note}</div>` : ''}
               ${l1Item.measurements && l1Item.measurements.length > 0 ? `<div class="pdf-measurement">${l1Item.measurements.map((m: any) => `📐 ${formatMeasurementForPdf(m)}`).join('<br>')}</div>` : ''}

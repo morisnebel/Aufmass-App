@@ -739,8 +739,8 @@ export default function ProjectDetailScreen() {
         // iPad: normaler Container
         photosHtml = `<div class="photos-container">${photoItems.join('')}</div>`;
       } else {
-        // iPhone: Gruppen von 4 Fotos pro Seite
-        const photosPerPage = 4;
+        // iPhone: Gruppen von 2 Fotos pro Seite (1 Zeile)
+        const photosPerPage = 2;
         const photoGroups: string[][] = [];
         for (let i = 0; i < photoItems.length; i += photosPerPage) {
           photoGroups.push(photoItems.slice(i, i + photosPerPage));

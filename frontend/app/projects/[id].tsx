@@ -1079,13 +1079,13 @@ export default function ProjectDetailScreen() {
             justify-content: space-between;
             align-items: center;
             padding-bottom: 8px;
-            border-bottom: 2px solid #1976d2;
+            border-bottom: 2px solid ${headerBgColor};
             margin-bottom: 12px;
           }
           .checklist-main-title {
             font-size: 16px;
             font-weight: 700;
-            color: #1976d2;
+            color: ${headerBgColor};
             flex: 1;
           }
           .checklist-main-count {

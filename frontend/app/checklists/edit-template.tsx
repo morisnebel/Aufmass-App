@@ -31,6 +31,7 @@ interface ChecklistTemplate {
   id: string;
   name: string;
   items: any[];
+  templateLogo?: string; // Logo für die gesamte Vorlage
 }
 
 export default function EditTemplateScreen() {

@@ -683,13 +683,21 @@ export default function ProjectDetailScreen() {
     }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
-    // Jedes Foto als eigener Block mit integrierter Überschrift (verhindert Trennung auf iPhone)
+    // iPhone: 2 Fotos nebeneinander pro Zeile
+    // iPad: normale Größenlogik
+    const isIpadForPhotos = Platform.OS === 'ios' && Platform.isPad;
+    
     const photoItems = photos.map((photo, index) => {
       const size = (photo as any).pdf_size || 'medium';
-      let sizeClass = 'photo-medium'; // default: 2 pro Zeile
-      if (size === 'small') sizeClass = 'photo-small'; // 3 pro Zeile
-      if (size === 'large') sizeClass = 'photo-large'; // 1 pro Zeile
-      if (size === 'full') sizeClass = 'photo-large'; // full wird zu large (verhindert Abschneiden)
+      
+      // iPhone: Alle Fotos als Grid-Items (2 pro Zeile)
+      // iPad: Normale Größenlogik
+      let sizeClass = isIpadForPhotos ? 'photo-medium' : 'photo-iphone';
+      if (isIpadForPhotos) {
+        if (size === 'small') sizeClass = 'photo-small';
+        if (size === 'large') sizeClass = 'photo-large';
+        if (size === 'full') sizeClass = 'photo-large';
+      }
       
       // Generate annotation SVG overlay if annotations exist
       let annotationSvg = '';
@@ -712,30 +720,22 @@ export default function ProjectDetailScreen() {
         }
       }
       
-      // Erstes Foto bekommt "Fotos" als Hauptüberschrift
-      const photoHeading = index === 0 
-        ? '<h2 class="photo-inline-heading">Fotos</h2>' 
-        : '';
-      
       return `
-        <div class="photo-block">
-          ${photoHeading}
-          <div class="photo-item ${sizeClass}">
-            <div class="photo-wrapper">
-              <img src="${photo.image_data}" alt="Foto" />
-              ${annotationSvg}
-            </div>
-            ${photo.description ? `<p>${photo.description}</p>` : ''}
+        <div class="photo-item ${sizeClass}">
+          <div class="photo-wrapper">
+            <img src="${photo.image_data}" alt="Foto" />
+            ${annotationSvg}
           </div>
+          ${photo.description ? `<p>${photo.description}</p>` : ''}
         </div>
       `;
     });
     
-    // Alle Fotos zusammen
-    const allPhotosHtml = photoItems.join('');
+    // iPhone: Grid-Container mit 2 Spalten, iPad: normaler Container
+    const photosContainerClass = isIpadForPhotos ? 'photos-container' : 'photos-container-iphone';
     
     const photosHtml = photos.length > 0 ? `
-      <div class="photos-container">
+      <div class="${photosContainerClass}">
         ${photoItems.join('')}
       </div>
     ` : '<p class="empty">Keine Fotos erfasst</p>';

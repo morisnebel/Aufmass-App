@@ -2682,10 +2682,45 @@ export default function ProjectDetailScreen() {
                       
                       return (
                         <View key={`cat-${catIndex}`} style={styles.categorySection}>
-                          {/* Kategorie-Überschrift (außerhalb der Container) */}
+                          {/* Kategorie-Überschrift mit Logo */}
                           <View style={styles.categorySectionHeader}>
+                            {category.categoryLogo && (
+                              <TouchableOpacity 
+                                onPress={() => {
+                                  setCurrentImageIndex(0);
+                                  setImagePreviewModal({ visible: true, images: [category.categoryLogo], title: category.text });
+                                }}
+                              >
+                                <Image source={{ uri: category.categoryLogo }} style={styles.categoryLogoSmall} />
+                              </TouchableOpacity>
+                            )}
                             <Ionicons name="checkbox" size={18} color="#4caf50" />
                             <Text style={styles.categorySectionTitle}>{category.text}</Text>
+                            {/* Druckbild Thumbnail */}
+                            {category.printImage && (
+                              <TouchableOpacity 
+                                onPress={() => {
+                                  setCurrentImageIndex(0);
+                                  setImagePreviewModal({ visible: true, images: [category.printImage], title: `${category.text} - Druckbild` });
+                                }}
+                                style={styles.printImageThumbnailBtn}
+                              >
+                                <Image source={{ uri: category.printImage }} style={styles.printImageThumbnail} />
+                              </TouchableOpacity>
+                            )}
+                            {/* Galerie-Button für Vorschau-Bilder */}
+                            {category.previewImages && category.previewImages.length > 0 && (
+                              <TouchableOpacity 
+                                onPress={() => {
+                                  setCurrentImageIndex(0);
+                                  setImagePreviewModal({ visible: true, images: category.previewImages, title: `${category.text} - Galerie` });
+                                }}
+                                style={styles.previewGalleryBtn}
+                              >
+                                <Ionicons name="images" size={18} color="#ff9800" />
+                                <Text style={styles.previewGalleryCount}>{category.previewImages.length}</Text>
+                              </TouchableOpacity>
+                            )}
                             {totalSubCount > 0 && (
                               <Text style={styles.categorySectionCount}>{checkedSubCount}/{totalSubCount}</Text>
                             )}

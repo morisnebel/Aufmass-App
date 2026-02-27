@@ -531,7 +531,7 @@ export default function EditTemplateScreen() {
             {item.printImage ? (
               <View style={styles.imagePreviewContainer}>
                 <TouchableOpacity onPress={() => openImagePreview([item.printImage!], item.text || 'Druckbild')}>
-                  <Image source={{ uri: item.printImage }} style={styles.thumbnailPreview} />
+                  <Image source={{ uri: item.printImage }} style={styles.thumbnailPreview} resizeMode="contain" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(path, 'print')}>
                   <Ionicons name="close-circle" size={20} color="#f44336" />
@@ -552,7 +552,7 @@ export default function EditTemplateScreen() {
               {(item.previewImages || []).map((img, idx) => (
                 <View key={idx} style={styles.imagePreviewContainer}>
                   <TouchableOpacity onPress={() => openImagePreview(item.previewImages || [], item.text || 'Vorschau', idx)}>
-                    <Image source={{ uri: img }} style={styles.smallThumbnail} />
+                    <Image source={{ uri: img }} style={styles.smallThumbnail} resizeMode="contain" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.removeImageBtnSmall} onPress={() => removeImage(path, 'preview', idx)}>
                     <Ionicons name="close-circle" size={16} color="#f44336" />

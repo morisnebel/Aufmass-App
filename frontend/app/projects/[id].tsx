@@ -1439,8 +1439,17 @@ export default function ProjectDetailScreen() {
             width: 100%;
             margin: 0;
           }
+          .photo-iphone .photo-wrapper {
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+          }
           .photo-iphone img {
-            max-height: 280px;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
           }
           /* Photo sizes */

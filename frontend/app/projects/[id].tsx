@@ -973,7 +973,7 @@ export default function ProjectDetailScreen() {
             page-break-after: avoid;
           }
           h4 {
-            color: #1976d2;
+            color: ${headerBgColor};
             margin: 10px 0 5px 0;
             font-size: 12px;
           }

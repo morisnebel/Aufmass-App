@@ -1704,7 +1704,8 @@ export default function ProjectDetailScreen() {
         ${sketches.length > 0 ? `
           <div class="new-page">
             <div class="sketches-section">
-              ${allSketchesHtml}
+              <h2>Skizzen</h2>
+              ${sketchesHtml}
             </div>
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">

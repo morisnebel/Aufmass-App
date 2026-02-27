@@ -1068,11 +1068,43 @@ export default function ProjectDetailScreen() {
             font-size: 16px;
             font-weight: 700;
             color: #1976d2;
+            flex: 1;
           }
           .checklist-main-count {
             font-size: 12px;
             color: #4caf50;
             font-weight: 600;
+          }
+          /* PDF Checklist Image Styles */
+          .pdf-template-logo {
+            max-width: 80px;
+            max-height: 30px;
+            margin-right: 10px;
+            object-fit: contain;
+            border-radius: 3px;
+          }
+          .pdf-category-logo {
+            max-width: 50px;
+            max-height: 20px;
+            margin-right: 4px;
+            object-fit: contain;
+            border-radius: 2px;
+          }
+          .pdf-print-thumbnail {
+            width: 40px;
+            height: 30px;
+            object-fit: cover;
+            border-radius: 3px;
+            border: 1px solid #4caf50;
+            margin-left: auto;
+          }
+          .pdf-print-thumbnail-small {
+            width: 30px;
+            height: 22px;
+            object-fit: cover;
+            border-radius: 2px;
+            border: 1px solid #4caf50;
+            margin-left: auto;
           }
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {

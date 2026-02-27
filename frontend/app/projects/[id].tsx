@@ -1694,7 +1694,8 @@ export default function ProjectDetailScreen() {
         ${photos.length > 0 ? `
           <div class="new-page">
             <div class="photos-section">
-              ${allPhotosHtml}
+              <h2>Fotos</h2>
+              ${photosHtml}
             </div>
             ${sketches.length === 0 ? `
               ${(remarks || project?.remarks) ? `

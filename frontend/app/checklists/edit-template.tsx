@@ -362,6 +362,7 @@ export default function EditTemplateScreen() {
       const payload = {
         name: templateName,
         items: convertToApiFormat(items),
+        templateLogo: templateLogo,
       };
 
       if (templateId) {

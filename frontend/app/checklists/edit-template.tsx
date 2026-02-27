@@ -138,11 +138,13 @@ export default function EditTemplateScreen() {
   // Bild auswählen für Druckbild oder Vorschau-Galerie
   const pickImage = async (path: number[], type: 'print' | 'preview' | 'logo') => {
     try {
+      // Für Logos: festes Seitenverhältnis (3:1)
+      // Für Druck- und Vorschaubilder: kein festes Verhältnis, Originalbild behalten
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: type === 'logo' ? [3, 1] : [4, 3],
-        quality: 0.7,
+        allowsEditing: type === 'logo', // Nur für Logos bearbeiten
+        aspect: type === 'logo' ? [3, 1] : undefined,
+        quality: 0.8,
         base64: true,
       });
 

@@ -1450,6 +1450,7 @@ export default function ProjectDetailScreen() {
             grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 20px;
+            align-items: start;
           }
           .photos-container-iphone.photos-new-page {
             page-break-before: always !important;
@@ -1460,17 +1461,17 @@ export default function ProjectDetailScreen() {
             margin: 0;
           }
           .photo-iphone .photo-wrapper {
-            height: 320px;
-            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f5f5f5;
             border-radius: 4px;
+            overflow: hidden;
           }
           .photo-iphone img {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 350px;
             object-fit: contain;
           }
           /* Photo sizes */

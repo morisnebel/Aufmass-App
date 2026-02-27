@@ -1435,7 +1435,7 @@ export default function ProjectDetailScreen() {
           .footer {
             margin-top: 30px;
             padding-top: 15px;
-            border-top: 2px solid #1976d2;
+            border-top: 2px solid ${headerBgColor};
             font-size: 11px;
             color: #666;
             text-align: center;

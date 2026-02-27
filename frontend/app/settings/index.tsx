@@ -418,6 +418,7 @@ export default function SettingsScreen() {
                           logo_data: null,
                           bluetooth_mode: false,
                           pdf_checklist_columns: 2,
+                          pdf_header_color: 'blue',
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },

@@ -1028,4 +1028,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  // Template Logo Styles
+  templateNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  templateNameInput: {
+    flex: 1,
+  },
+  templateLogoContainer: {
+    position: 'relative',
+  },
+  templateLogoPreview: {
+    width: 100,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  removeLogoBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  addLogoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    gap: 6,
+  },
+  addLogoText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
 });

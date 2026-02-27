@@ -355,6 +355,35 @@ export default function SettingsScreen() {
                 ))}
               </View>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>PDF Kopfzeilen-Farbe</Text>
+              <Text style={styles.sublabel}>Wählen Sie eine Farbe für den PDF-Header (hellere Farben sparen Tinte)</Text>
+              <View style={styles.colorSelector}>
+                {PDF_COLOR_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.colorOption,
+                      settings.pdf_header_color === option.id && styles.colorOptionActive
+                    ]}
+                    onPress={() => setSettings({ ...settings, pdf_header_color: option.id })}
+                  >
+                    <View style={[styles.colorPreview, { backgroundColor: option.color }]}>
+                      {settings.pdf_header_color === option.id && (
+                        <Ionicons name="checkmark" size={16} color={option.textColor} />
+                      )}
+                    </View>
+                    <Text style={[
+                      styles.colorLabel,
+                      settings.pdf_header_color === option.id && styles.colorLabelActive
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
 
           {/* Zurücksetzen Section */}

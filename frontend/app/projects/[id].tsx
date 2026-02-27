@@ -644,9 +644,15 @@ export default function ProjectDetailScreen() {
       const totalChecked = countCheckedForPdf(checklist.items);
       const totalItems = countTotalForPdf(checklist.items);
       
+      // Template Logo für PDF
+      const templateLogoHtml = (checklist as any).templateLogo 
+        ? `<img src="${(checklist as any).templateLogo}" class="pdf-template-logo" alt="Logo" />`
+        : '';
+      
       return `
         <div class="checklist-card">
           <div class="checklist-main-header">
+            ${templateLogoHtml}
             <span class="checklist-main-title">${checklist.template_name}</span>
             <span class="checklist-main-count">${totalChecked} von ${totalItems}</span>
           </div>

@@ -15,7 +15,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

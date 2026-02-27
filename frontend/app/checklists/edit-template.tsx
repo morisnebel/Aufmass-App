@@ -124,6 +124,65 @@ export default function EditTemplateScreen() {
     setItems([...items, { text: '', subItems: [] }]);
   };
 
+  // Bild auswählen für Druckbild oder Vorschau-Galerie
+  const pickImage = async (path: number[], type: 'print' | 'preview' | 'logo') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: type === 'logo' ? [3, 1] : [4, 3],
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        if (type === 'print') {
+          setItems(updateItemAtPath(items, path, { printImage: base64Image }));
+        } else if (type === 'logo') {
+          setItems(updateItemAtPath(items, path, { categoryLogo: base64Image }));
+        } else {
+          // Vorschau-Galerie - mehrere Bilder erlauben
+          const currentItem = getItemAtPath(items, path);
+          const currentPreviewImages = currentItem?.previewImages || [];
+          setItems(updateItemAtPath(items, path, { previewImages: [...currentPreviewImages, base64Image] }));
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Fehler', 'Bild konnte nicht ausgewählt werden');
+    }
+  };
+
+  // Item an Pfad abrufen
+  const getItemAtPath = (items: RecursiveTemplateItem[], path: number[]): RecursiveTemplateItem | null => {
+    if (path.length === 0) return null;
+    if (path.length === 1) return items[path[0]] || null;
+    const [first, ...rest] = path;
+    return getItemAtPath(items[first]?.subItems || [], rest);
+  };
+
+  // Bild entfernen
+  const removeImage = (path: number[], type: 'print' | 'preview' | 'logo', previewIndex?: number) => {
+    if (type === 'print') {
+      setItems(updateItemAtPath(items, path, { printImage: undefined }));
+    } else if (type === 'logo') {
+      setItems(updateItemAtPath(items, path, { categoryLogo: undefined }));
+    } else if (type === 'preview' && previewIndex !== undefined) {
+      const currentItem = getItemAtPath(items, path);
+      const currentPreviewImages = currentItem?.previewImages || [];
+      const newPreviewImages = currentPreviewImages.filter((_, i) => i !== previewIndex);
+      setItems(updateItemAtPath(items, path, { previewImages: newPreviewImages }));
+    }
+  };
+
+  // Bild-Vorschau öffnen
+  const openImagePreview = (images: string[], title: string, startIndex: number = 0) => {
+    setCurrentImageIndex(startIndex);
+    setImagePreviewModal({ visible: true, images, title });
+  };
+
   // Rekursiv Item an Pfad aktualisieren
   const updateItemAtPath = (
     items: RecursiveTemplateItem[],

@@ -363,6 +363,10 @@ export default function EditTemplateScreen() {
       .map(item => ({
         text: item.text.trim(),
         subItems: item.subItems.length > 0 ? convertToApiFormat(item.subItems) : [],
+        // Bilder mit speichern
+        printImage: item.printImage,
+        previewImages: item.previewImages,
+        categoryLogo: item.categoryLogo,
       }));
   };
 

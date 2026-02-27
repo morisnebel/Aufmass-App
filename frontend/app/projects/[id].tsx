@@ -1658,8 +1658,13 @@ export default function ProjectDetailScreen() {
         ${sketches.length > 0 ? `
           <div class="new-page">
             <div class="sketches-section">
-              <h2>Skizzen</h2>
-              ${sketchesHtml}
+              <!-- Wrapper hält Überschrift + erste Skizze zusammen -->
+              <div class="sketch-wrapper">
+                <h2>Skizzen</h2>
+                ${firstSketchHtml}
+              </div>
+              <!-- Restliche Skizzen -->
+              ${restSketchesHtml}
             </div>
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">

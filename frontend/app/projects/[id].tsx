@@ -1093,18 +1093,20 @@ export default function ProjectDetailScreen() {
           .pdf-print-thumbnail {
             width: 55px;
             height: 42px;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 3px;
             border: 1px solid #4caf50;
             margin-left: auto;
+            background: #f5f5f5;
           }
           .pdf-print-thumbnail-small {
             width: 45px;
             height: 34px;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 2px;
             border: 1px solid #4caf50;
             margin-left: auto;
+            background: #f5f5f5;
           }
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {

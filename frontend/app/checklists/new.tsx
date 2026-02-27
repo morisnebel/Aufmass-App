@@ -15,12 +15,16 @@ import { ChecklistTemplateService, ChecklistService } from '../../services/Local
 interface TemplateItem {
   text: string;
   subItems?: any[];
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
 }
 
 interface ChecklistTemplate {
   id: string;
   name: string;
   items: (string | TemplateItem)[];
+  templateLogo?: string;
 }
 
 // Rekursive SubItem Struktur
@@ -28,6 +32,9 @@ interface SubItem {
   text: string;
   checked: boolean;
   subItems?: SubItem[];
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
 }
 
 interface ChecklistItem {
@@ -35,6 +42,9 @@ interface ChecklistItem {
   checked: boolean;
   note?: string;
   subItems?: SubItem[];
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
 }
 
 export default function NewChecklistScreen() {
@@ -61,7 +71,7 @@ export default function NewChecklistScreen() {
     }
   };
 
-  // Rekursive Funktion zum Konvertieren von Template-Items
+  // Rekursive Funktion zum Konvertieren von Template-Items (mit Bildern)
   const convertTemplateItem = (item: any): ChecklistItem => {
     if (typeof item === 'string') {
       return {
@@ -80,11 +90,15 @@ export default function NewChecklistScreen() {
           subItems: [],
         };
       }
-      // Rekursiv konvertieren für tiefere Ebenen
+      // Rekursiv konvertieren für tiefere Ebenen (mit Bildern)
       return {
         text: subItem.text || '',
         checked: false,
         subItems: (subItem.subItems || []).map((deepSub: any) => convertTemplateItem(deepSub)),
+        // Bilder mit übernehmen
+        printImage: subItem.printImage,
+        previewImages: subItem.previewImages,
+        categoryLogo: subItem.categoryLogo,
       };
     });
     
@@ -93,6 +107,10 @@ export default function NewChecklistScreen() {
       checked: false,
       note: '',
       subItems: subItems,
+      // Bilder mit übernehmen
+      printImage: item.printImage,
+      previewImages: item.previewImages,
+      categoryLogo: item.categoryLogo,
     };
   };
 
@@ -147,6 +165,7 @@ export default function NewChecklistScreen() {
         project_id: projId || '',
         template_id: selectedTemplate.id,
         template_name: selectedTemplate.name,
+        templateLogo: (selectedTemplate as any).templateLogo,
         items: checklistItems,
       });
 

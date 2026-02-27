@@ -66,6 +66,7 @@ export default function EditTemplateScreen() {
       if (data) {
         setTemplate(data);
         setTemplateName(data.name);
+        setTemplateLogo((data as any).templateLogo);
         
         // Konvertiere Items zu rekursiver Struktur
         const convertItems = (rawItems: any[]): RecursiveTemplateItem[] => {

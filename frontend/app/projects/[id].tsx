@@ -744,7 +744,6 @@ export default function ProjectDetailScreen() {
     // iPhone: kleinere Skizzen (2 pro Seite) für bessere Kompatibilität
     // iPad: normale Größe
     const isIpad = Platform.OS === 'ios' && Platform.isPad;
-    const iphoneSketchSize = 'medium'; // 2 pro Zeile auf iPhone
     
     const sketchItems = sketches.map((sketch, index) => {
       // Read pdf_size from sketch object or metadata
@@ -759,15 +758,14 @@ export default function ProjectDetailScreen() {
         } catch (e) {}
       }
       
-      // iPhone: Überschreibe Größe auf 'medium' (außer bei 'small')
-      if (!isIpad && size !== 'small') {
-        size = iphoneSketchSize;
+      // iPhone: Alle Skizzen werden als Grid-Items behandelt (immer 2 pro Zeile)
+      // iPad: Normale Größenlogik
+      let sizeClass = isIpad ? 'sketch-large' : 'sketch-iphone';
+      if (isIpad) {
+        if (size === 'small') sizeClass = 'sketch-small';
+        if (size === 'medium') sizeClass = 'sketch-medium';
+        if (size === 'full') sizeClass = 'sketch-full';
       }
-      
-      let sizeClass = 'sketch-large';
-      if (size === 'small') sizeClass = 'sketch-small';
-      if (size === 'medium') sizeClass = 'sketch-medium';
-      if (size === 'full') sizeClass = 'sketch-full';
       
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
@@ -780,11 +778,11 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // Alle Skizzen zusammen
-    const allSketchesHtml = sketchItems.join('');
+    // iPhone: Grid-Container mit 2 Spalten, iPad: normaler Container
+    const sketchesContainerClass = isIpad ? 'sketches-container' : 'sketches-container-iphone';
     
     const sketchesHtml = sketches.length > 0 ? `
-      <div class="sketches-container">
+      <div class="${sketchesContainerClass}">
         ${sketchItems.join('')}
       </div>
     ` : '<p class="empty">Keine Skizzen erfasst</p>';

@@ -539,6 +539,7 @@ export interface ChecklistTemplate {
   id: string;
   name: string;
   items: any[];
+  templateLogo?: string;
   created_at: string;
   updated_at: string;
 }

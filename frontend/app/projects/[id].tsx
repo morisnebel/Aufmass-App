@@ -4612,4 +4612,57 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
+  // Checklist Image Preview Modal Styles
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    width: '95%',
+    maxHeight: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  imageModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  imageModalBody: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  fullPreviewImage: {
+    width: '100%',
+    height: 400,
+  },
+  imageNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 20,
+  },
+  imageNavButton: {
+    padding: 8,
+  },
+  imageNavButtonDisabled: {
+    opacity: 0.5,
+  },
+  imageCounter: {
+    fontSize: 16,
+    color: '#666',
+  },
 });

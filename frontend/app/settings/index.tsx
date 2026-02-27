@@ -65,6 +65,7 @@ export default function SettingsScreen() {
     logo_data: null,
     bluetooth_mode: false,
     pdf_checklist_columns: 2, // Standard: 2 Spalten
+    pdf_header_color: 'blue', // Standard: Blau
   });
 
   useEffect(() => {

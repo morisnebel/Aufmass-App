@@ -474,6 +474,24 @@ export default function ProjectDetailScreen() {
     // Feste Spaltenanzahl statt auto-fit
     const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
     
+    // PDF Farb-Einstellungen
+    const pdfColorId = (settings as any).pdf_header_color || 'blue';
+    const colorOptions: { [key: string]: { color: string; textColor: string } } = {
+      blue: { color: '#1976d2', textColor: '#ffffff' },
+      light_blue: { color: '#bbdefb', textColor: '#1565c0' },
+      gray: { color: '#9e9e9e', textColor: '#ffffff' },
+      light_gray: { color: '#e0e0e0', textColor: '#424242' },
+      green: { color: '#388e3c', textColor: '#ffffff' },
+      light_green: { color: '#c8e6c9', textColor: '#2e7d32' },
+      black: { color: '#212121', textColor: '#ffffff' },
+      white: { color: '#ffffff', textColor: '#333333' },
+    };
+    const pdfColor = colorOptions[pdfColorId] || colorOptions.blue;
+    const headerBgColor = pdfColor.color;
+    const headerTextColor = pdfColor.textColor;
+    // Dunklere Version für Gradient (oder gleich bei hellen Farben)
+    const headerBgColorDark = pdfColorId === 'white' ? '#f5f5f5' : pdfColorId.includes('light') ? pdfColor.color : pdfColor.color;
+    
     // Format date
     const formatDate = (dateStr: string) => {
       try {

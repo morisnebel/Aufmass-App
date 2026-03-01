@@ -583,15 +583,9 @@ export default function ProjectDetailScreen() {
       // Filter checked main categories
       const checkedCategories = checklist.items.filter((item: any) => item.checked);
       
-      // Überschrift "Checklisten" nur bei der ersten Checkliste anzeigen
-      const checklistSectionHeader = checklistIndex === 0 
-        ? '<h2 style="color: ' + headerBgColor + '; border-bottom: 2px solid ' + headerBgColor + '; padding-bottom: 5px; margin-top: 0; margin-bottom: 15px; font-size: 14px;">Checklisten</h2>'
-        : '';
-      
       if (checkedCategories.length === 0) {
         return `
           <div class="checklist-card">
-            ${checklistSectionHeader}
             <div class="checklist-main-header">${checklist.template_name}</div>
             <p class="empty">Keine Positionen abgehakt</p>
           </div>

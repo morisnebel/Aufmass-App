@@ -2241,9 +2241,9 @@ export default function ProjectDetailScreen() {
               )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Status:</Text>
-                <View style={[styles.statusBadge, { backgroundColor: project.status === 'active' ? '#4caf50' : project.status === 'completed' ? '#2196f3' : '#ff9800' }]}>
+                <View style={[styles.statusBadge, { backgroundColor: project.status === 'aktiv' ? '#4caf50' : project.status === 'abgeschlossen' ? '#2196f3' : '#ff9800' }]}>
                   <Text style={styles.statusBadgeText}>
-                    {project.status === 'active' ? 'Aktiv' : project.status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}
+                    {project.status === 'aktiv' ? 'Aktiv' : project.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}
                   </Text>
                 </View>
               </View>

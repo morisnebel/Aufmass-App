@@ -129,8 +129,8 @@ export default function NewProjectScreen() {
   };
 
   const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (customer.address && customer.address.toLowerCase().includes(searchQuery.toLowerCase()))
+    (customer.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (customer.address?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
   // Open contact picker from device

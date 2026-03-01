@@ -1050,6 +1050,12 @@ export default function ProjectDetailScreen() {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
+          /* Checklisten-Wrapper: Überschrift + erste Checkliste zusammen */
+          .checklists-wrapper {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
           /* Dachflächen Sektion */
           .roofs-section {
             page-break-inside: avoid !important;

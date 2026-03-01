@@ -2336,21 +2336,49 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
 
             {roofs.map((roof) => (
-              <TouchableOpacity
-                key={roof.id}
-                style={styles.itemCard}
-                onPress={() => router.push(`/roofs/${roof.id}`)}
-              >
-                <View style={styles.itemHeader}>
-                  <Ionicons name="home" size={24} color="#1976d2" />
-                  <Text style={styles.itemTitle}>{roof.roof_type}</Text>
-                  <Ionicons name="create-outline" size={20} color="#1976d2" />
-                </View>
-                <Text style={styles.itemDetail}>Fläche: {roof.area.toFixed(2)} m²</Text>
-                {roof.notes && (
-                  <Text style={styles.itemNotes}>{roof.notes}</Text>
-                )}
-              </TouchableOpacity>
+              <View key={roof.id} style={styles.itemCardWithDelete}>
+                <TouchableOpacity
+                  style={styles.itemCardContent}
+                  onPress={() => router.push(`/roofs/${roof.id}`)}
+                >
+                  <View style={styles.itemHeader}>
+                    <Ionicons name="home" size={24} color="#1976d2" />
+                    <Text style={styles.itemTitle}>{roof.roof_type}</Text>
+                    <Ionicons name="create-outline" size={20} color="#1976d2" />
+                  </View>
+                  <Text style={styles.itemDetail}>Fläche: {roof.area.toFixed(2)} m²</Text>
+                  {roof.notes && (
+                    <Text style={styles.itemNotes}>{roof.notes}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.roofDeleteButton}
+                  onPress={() => {
+                    Alert.alert(
+                      'Dachfläche löschen',
+                      `Möchten Sie "${roof.roof_type}" wirklich löschen?`,
+                      [
+                        { text: 'Abbrechen', style: 'cancel' },
+                        {
+                          text: 'Löschen',
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              await RoofService.delete(roof.id);
+                              setRoofs(roofs.filter(r => r.id !== roof.id));
+                            } catch (error) {
+                              console.error('Error deleting roof:', error);
+                              Alert.alert('Fehler', 'Dachfläche konnte nicht gelöscht werden');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="trash" size={20} color="#f44336" />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}

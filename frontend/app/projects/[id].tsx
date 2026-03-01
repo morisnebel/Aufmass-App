@@ -1744,7 +1744,8 @@ export default function ProjectDetailScreen() {
           ${roofsHtml}
         </div>
         
-        <div class="checklists-section">
+        <div class="checklists-section new-page">
+          <h2>Checklisten</h2>
           ${checklistsHtml}
         </div>
         </div><!-- end .page -->

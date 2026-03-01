@@ -680,7 +680,7 @@ export default function ProjectDetailScreen() {
           <div class="pdf-categories-grid">${categoriesHtml}</div>
         </div>
       `;
-    });
+    }) : [];
     
     // Erste Checkliste mit Überschrift zusammen (verhindert Trennung)
     const firstChecklistHtml = checklistItems.length > 0 ? checklistItems[0] : '';

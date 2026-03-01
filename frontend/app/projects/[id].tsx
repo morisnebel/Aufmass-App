@@ -672,7 +672,6 @@ export default function ProjectDetailScreen() {
       
       return `
         <div class="checklist-card">
-          ${checklistSectionHeader}
           <div class="checklist-main-header">
             ${templateLogoHtml}
             <span class="checklist-main-title">${checklist.template_name}</span>

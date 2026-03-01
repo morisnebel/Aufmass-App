@@ -1679,7 +1679,7 @@ export default function ProjectDetailScreen() {
             ` : ''}
             <div class="info-row">
               <span class="info-label">Status:</span>
-              <span class="info-value">${project?.status === 'active' ? 'Aktiv' : project?.status === 'completed' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
+              <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">

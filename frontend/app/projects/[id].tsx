@@ -2178,7 +2178,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('roofs')}
         >
           <Text style={[styles.tabText, activeTab === 'roofs' && styles.tabTextActive]}>
-            Dächer ({roofs.length})
+            Dächer
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'roofs' && styles.tabCountActive]}>
+            ({roofs.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2186,7 +2189,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('photos')}
         >
           <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>
-            Fotos ({photos.length})
+            Fotos
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'photos' && styles.tabCountActive]}>
+            ({photos.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2194,7 +2200,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('sketches')}
         >
           <Text style={[styles.tabText, activeTab === 'sketches' && styles.tabTextActive]}>
-            Skizzen ({sketches.length})
+            Skizzen
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'sketches' && styles.tabCountActive]}>
+            ({sketches.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2202,7 +2211,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('checklists')}
         >
           <Text style={[styles.tabText, activeTab === 'checklists' && styles.tabTextActive]}>
-            Listen ({checklists.length})
+            Listen
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'checklists' && styles.tabCountActive]}>
+            ({checklists.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

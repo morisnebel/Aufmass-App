@@ -1046,15 +1046,13 @@ export default function ProjectDetailScreen() {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
+          .checklists-section.new-page {
+            page-break-before: always !important;
+            break-before: page !important;
+          }
           .checklists-section h2 {
             page-break-after: avoid !important;
             break-after: avoid !important;
-          }
-          /* Checklisten-Wrapper: Überschrift + erste Checkliste zusammen */
-          .checklists-wrapper {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            -webkit-column-break-inside: avoid !important;
           }
           /* Dachflächen Sektion */
           .roofs-section {

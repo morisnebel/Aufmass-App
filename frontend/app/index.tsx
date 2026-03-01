@@ -344,6 +344,51 @@ export default function HomeScreen() {
         />
       </View>
 
+      {/* Suchleiste */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#666" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Projekt oder Kunde suchen..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Status-Filter Tabs */}
+      <View style={styles.filterContainer}>
+        {STATUS_OPTIONS.map(option => (
+          <TouchableOpacity
+            key={option.key}
+            style={[
+              styles.filterTab,
+              activeFilter === option.key && styles.filterTabActive,
+              activeFilter === option.key && option.color && { borderColor: option.color }
+            ]}
+            onPress={() => setActiveFilter(option.key)}
+          >
+            <Ionicons 
+              name={option.icon as any} 
+              size={16} 
+              color={activeFilter === option.key ? (option.color || '#1976d2') : '#666'} 
+            />
+            <Text style={[
+              styles.filterTabText,
+              activeFilter === option.key && styles.filterTabTextActive,
+              activeFilter === option.key && option.color && { color: option.color }
+            ]}>
+              {option.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={styles.actionButtons}>
         <View style={styles.buttonRow}>
           <TouchableOpacity

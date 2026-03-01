@@ -640,8 +640,14 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 35"
                   value={dachneigung1}
-                  onChangeText={(text) => setDachneigung1(formatDecimal(text))}
-                  onBlur={() => { if (dachneigung1 && !dachneigung2) setDachneigung2(dachneigung1); }}
+                  onChangeText={(text) => {
+                    const formatted = formatDecimal(text);
+                    setDachneigung1(formatted);
+                    // Automatisch Dachfläche 2 synchronisieren wenn leer oder gleich wie vorher
+                    if (!dachneigung2 || dachneigung2 === dachneigung1) {
+                      setDachneigung2(formatted);
+                    }
+                  }}
                   keyboardType="decimal-pad"
                 />
               </View>

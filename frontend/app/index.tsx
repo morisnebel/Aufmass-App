@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
   Image,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,12 +19,22 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 
+// Status-Optionen
+const STATUS_OPTIONS = [
+  { key: 'all', label: 'Alle', icon: 'folder-outline' },
+  { key: 'aktiv', label: 'Aktiv', icon: 'play-circle-outline', color: '#4caf50' },
+  { key: 'abgeschlossen', label: 'Fertig', icon: 'checkmark-circle-outline', color: '#2196f3' },
+  { key: 'abgebrochen', label: 'Abgebr.', icon: 'close-circle-outline', color: '#f44336' },
+];
+
 export default function HomeScreen() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<{ [key: string]: Customer }>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
 
   const loadData = async () => {
     try {

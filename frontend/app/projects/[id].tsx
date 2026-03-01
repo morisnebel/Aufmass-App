@@ -916,6 +916,11 @@ export default function ProjectDetailScreen() {
               display: block !important;
               visibility: visible !important;
             }
+            /* Checklisten auf neuer Seite nur beim Druck */
+            .checklists-page-break {
+              page-break-before: always !important;
+              break-before: page !important;
+            }
           }
           * {
             box-sizing: border-box;

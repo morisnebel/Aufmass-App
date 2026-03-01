@@ -422,7 +422,7 @@ export default function NewProjectScreen() {
         name,
         description: description || undefined,
         customer_id: customerId,
-        status: 'active',
+        status: 'aktiv',
         bauherr_name: selectedCustomer?.name || undefined,
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,

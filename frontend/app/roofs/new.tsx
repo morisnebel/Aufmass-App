@@ -641,6 +641,7 @@ export default function NewRoofScreen() {
                   placeholder="z.B. 35"
                   value={dachneigung1}
                   onChangeText={(text) => setDachneigung1(formatDecimal(text))}
+                  onBlur={() => { if (dachneigung1 && !dachneigung2) setDachneigung2(dachneigung1); }}
                   keyboardType="decimal-pad"
                 />
               </View>

@@ -680,7 +680,15 @@ export default function ProjectDetailScreen() {
           <div class="pdf-categories-grid">${categoriesHtml}</div>
         </div>
       `;
-    }).join('') : '<p class="empty">Keine Checklisten erfasst</p>';
+    });
+    
+    // Erste Checkliste mit Überschrift zusammen (verhindert Trennung)
+    const firstChecklistHtml = checklistItems.length > 0 ? checklistItems[0] : '';
+    const restChecklistsHtml = checklistItems.slice(1).join('');
+    
+    const checklistsHtml = checklists.length > 0 
+      ? checklistItems.join('')
+      : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
     // iPhone: 2 Fotos nebeneinander pro Zeile, max 4 pro Seite

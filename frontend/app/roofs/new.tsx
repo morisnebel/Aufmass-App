@@ -643,14 +643,7 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="z.B. 35"
                   value={dachneigung1}
-                  onChangeText={(text) => {
-                    const formatted = formatDecimal(text);
-                    setDachneigung1(formatted);
-                    // Automatisch Dachfläche 2 synchronisieren wenn leer oder gleich wie vorher
-                    if (!dachneigung2 || dachneigung2 === dachneigung1) {
-                      setDachneigung2(formatted);
-                    }
-                  }}
+                  onChangeText={(text) => setDachneigung1(formatDecimal(text))}
                   keyboardType="decimal-pad"
                 />
               </View>
@@ -660,7 +653,10 @@ export default function NewRoofScreen() {
                   style={styles.input}
                   placeholder="gleich wie DF1"
                   value={dachneigung2}
-                  onChangeText={(text) => setDachneigung2(formatDecimal(text))}
+                  onChangeText={(text) => {
+                    setNeigung2ManuallyEdited(true);
+                    setDachneigung2(formatDecimal(text));
+                  }}
                   keyboardType="decimal-pad"
                 />
               </View>

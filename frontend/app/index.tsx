@@ -640,14 +640,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusBadge: {
-    backgroundColor: '#e3f2fd',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
   },
   statusText: {
     fontSize: 12,
-    color: '#1976d2',
     fontWeight: '600',
   },
   projectDate: {

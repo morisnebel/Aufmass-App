@@ -3891,6 +3891,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  itemCardWithDelete: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemCardContent: {
+    flex: 1,
+    padding: 16,
+  },
+  roofDeleteButton: {
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',

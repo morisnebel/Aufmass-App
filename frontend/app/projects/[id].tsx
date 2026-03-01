@@ -1752,11 +1752,7 @@ export default function ProjectDetailScreen() {
         </div>
         
         <div class="checklists-section">
-          <div class="checklists-wrapper">
-            <h2>Checklisten</h2>
-            ${firstChecklistHtml}
-          </div>
-          ${restChecklistsHtml}
+          ${checklistsHtml}
         </div>
         </div><!-- end .page -->
         

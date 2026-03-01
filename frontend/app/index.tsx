@@ -285,13 +285,14 @@ export default function HomeScreen() {
 
   const renderProject = ({ item }: { item: Project }) => {
     const customer = customers[item.customer_id];
+    const statusColor = getStatusColor(item.status);
     return (
       <TouchableOpacity
         style={styles.projectCard}
         onPress={() => router.push(`/projects/${item.id}`)}
       >
         <View style={styles.projectHeader}>
-          <Ionicons name="folder" size={24} color="#1976d2" />
+          <Ionicons name="folder" size={24} color={statusColor} />
           <View style={styles.projectInfo}>
             <Text style={styles.projectName}>{item.name}</Text>
             {customer && (
@@ -309,9 +310,13 @@ export default function HomeScreen() {
           <Text style={styles.projectDescription}>{item.description}</Text>
         )}
         <View style={styles.projectFooter}>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
+          <TouchableOpacity 
+            style={[styles.statusBadge, { backgroundColor: statusColor + '20', borderColor: statusColor }]}
+            onPress={() => changeProjectStatus(item.id, item.status)}
+          >
+            <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+            <Ionicons name="chevron-down" size={14} color={statusColor} />
+          </TouchableOpacity>
           <Text style={styles.projectDate}>
             {new Date(item.created_at).toLocaleDateString('de-DE')}
           </Text>

@@ -3772,7 +3772,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 8,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -3781,13 +3781,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#1976d2',
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     fontWeight: '500',
   },
   tabTextActive: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  tabCount: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  tabCountActive: {
+    color: '#1976d2',
   },
   content: {
     flex: 1,

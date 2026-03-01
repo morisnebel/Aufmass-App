@@ -56,6 +56,9 @@ export default function NewRoofScreen() {
   const [traufhoeheHaupt, setTraufhoeheHaupt] = useState('');       // Traufhöhe Hauptdachflächen (absolut)
   const [traufhoeheWalm, setTraufhoeheWalm] = useState('');         // Traufhöhe Walmflächen (absolut, höher)
   
+  // Flag: Hat der Benutzer Dachneigung 2 manuell geändert?
+  const [neigung2ManuallyEdited, setNeigung2ManuallyEdited] = useState(false);
+  
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 

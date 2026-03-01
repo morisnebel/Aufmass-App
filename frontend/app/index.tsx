@@ -436,17 +436,23 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {projects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="folder-open-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>Keine Projekte vorhanden</Text>
+          <Text style={styles.emptyText}>
+            {projects.length === 0 ? 'Keine Projekte vorhanden' : 'Keine Projekte gefunden'}
+          </Text>
           <Text style={styles.emptySubtext}>
-            Erstellen Sie Ihr erstes Projekt
+            {projects.length === 0 
+              ? 'Erstellen Sie Ihr erstes Projekt' 
+              : searchQuery 
+                ? 'Versuchen Sie einen anderen Suchbegriff'
+                : 'Keine Projekte mit diesem Status'}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={projects}
+          data={filteredProjects}
           renderItem={renderProject}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.projectList}

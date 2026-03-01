@@ -579,7 +579,7 @@ export default function ProjectDetailScreen() {
       return total;
     };
     
-    const checklistsHtml = checklists.length > 0 ? checklists.map(checklist => {
+    const checklistItems = checklists.length > 0 ? checklists.map(checklist => {
       // Filter checked main categories
       const checkedCategories = checklist.items.filter((item: any) => item.checked);
       

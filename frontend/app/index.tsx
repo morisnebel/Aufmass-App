@@ -226,6 +226,63 @@ export default function HomeScreen() {
     );
   };
 
+  // Status ändern
+  const changeProjectStatus = async (projectId: string, currentStatus: string) => {
+    const statusOptions = ['aktiv', 'abgeschlossen', 'abgebrochen'];
+    const buttons = statusOptions.map(status => ({
+      text: status.charAt(0).toUpperCase() + status.slice(1),
+      onPress: async () => {
+        try {
+          const project = projects.find(p => p.id === projectId);
+          if (project) {
+            await ProjectService.update(projectId, { ...project, status });
+            loadData();
+          }
+        } catch (error) {
+          console.error('Error updating status:', error);
+          Alert.alert('Fehler', 'Status konnte nicht geändert werden');
+        }
+      },
+      style: status === currentStatus ? 'cancel' : 'default' as const,
+    }));
+    buttons.push({ text: 'Abbrechen', onPress: () => {}, style: 'cancel' as const });
+    
+    Alert.alert('Status ändern', 'Wählen Sie den neuen Status:', buttons);
+  };
+
+  // Gefilterte Projekte
+  const filteredProjects = projects.filter(project => {
+    // Status-Filter
+    if (activeFilter !== 'all' && project.status !== activeFilter) {
+      return false;
+    }
+    
+    // Suchfilter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const customer = customers[project.customer_id];
+      const customerName = customer?.name?.toLowerCase() || '';
+      const projectName = project.name?.toLowerCase() || '';
+      const description = project.description?.toLowerCase() || '';
+      
+      return projectName.includes(query) || 
+             customerName.includes(query) || 
+             description.includes(query);
+    }
+    
+    return true;
+  });
+
+  // Status-Farbe ermitteln
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'aktiv': return '#4caf50';
+      case 'abgeschlossen': return '#2196f3';
+      case 'abgebrochen': return '#f44336';
+      default: return '#1976d2';
+    }
+  };
+
   const renderProject = ({ item }: { item: Project }) => {
     const customer = customers[item.customer_id];
     return (

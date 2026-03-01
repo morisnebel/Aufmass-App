@@ -850,15 +850,6 @@ export default function ProjectDetailScreen() {
               border-radius: 2px;
               position: relative;
             }
-            .new-page::after, .remarks-and-footer-page::after {
-              content: '';
-              position: absolute;
-              left: 0;
-              right: 0;
-              top: 297mm;
-              height: 2px;
-              background: repeating-linear-gradient(90deg, #ccc 0, #ccc 10px, transparent 10px, transparent 20px);
-            }
           }
           @media print {
             body {

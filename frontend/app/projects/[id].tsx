@@ -2170,7 +2170,7 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('overview')}
         >
           <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
-            Übersicht
+            Info
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2178,10 +2178,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('roofs')}
         >
           <Text style={[styles.tabText, activeTab === 'roofs' && styles.tabTextActive]}>
-            Dächer
+            Dach
           </Text>
           <Text style={[styles.tabCount, activeTab === 'roofs' && styles.tabCountActive]}>
-            ({roofs.length})
+            {roofs.length}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2189,10 +2189,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('photos')}
         >
           <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>
-            Fotos
+            Foto
           </Text>
           <Text style={[styles.tabCount, activeTab === 'photos' && styles.tabCountActive]}>
-            ({photos.length})
+            {photos.length}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2200,10 +2200,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('sketches')}
         >
           <Text style={[styles.tabText, activeTab === 'sketches' && styles.tabTextActive]}>
-            Skizzen
+            Skizze
           </Text>
           <Text style={[styles.tabCount, activeTab === 'sketches' && styles.tabCountActive]}>
-            ({sketches.length})
+            {sketches.length}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2211,10 +2211,10 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('checklists')}
         >
           <Text style={[styles.tabText, activeTab === 'checklists' && styles.tabTextActive]}>
-            Listen
+            Liste
           </Text>
           <Text style={[styles.tabCount, activeTab === 'checklists' && styles.tabCountActive]}>
-            ({checklists.length})
+            {checklists.length}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -2222,7 +2222,7 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('remarks')}
         >
           <Text style={[styles.tabText, activeTab === 'remarks' && styles.tabTextActive]}>
-            Sonstiges
+            Notiz
           </Text>
         </TouchableOpacity>
       </View>

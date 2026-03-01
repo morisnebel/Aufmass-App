@@ -3424,7 +3424,7 @@ export default function ProjectDetailScreen() {
                   <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Status</Text>
                     <View style={styles.statusButtonsCompact}>
-                      {['active', 'completed', 'cancelled'].map((status) => (
+                      {['aktiv', 'abgeschlossen', 'abgebrochen'].map((status) => (
                         <TouchableOpacity
                           key={status}
                           style={[
@@ -3437,7 +3437,7 @@ export default function ProjectDetailScreen() {
                             styles.statusButtonTextCompact,
                             editProjectStatus === status && styles.statusButtonTextActiveCompact,
                           ]}>
-                            {status === 'active' ? 'Aktiv' : status === 'completed' ? 'Fertig' : 'Abgebr.'}
+                            {status === 'aktiv' ? 'Aktiv' : status === 'abgeschlossen' ? 'Fertig' : 'Abgebr.'}
                           </Text>
                         </TouchableOpacity>
                       ))}

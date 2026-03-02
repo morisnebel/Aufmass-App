@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
+import { File } from 'expo-file-system/next';
 import * as FileSystem from 'expo-file-system';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

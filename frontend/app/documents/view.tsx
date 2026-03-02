@@ -78,7 +78,10 @@ export default function DocumentViewScreen() {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [renderingPage, setRenderingPage] = useState(false);
   
-  // Drawing
+  // Page-specific annotations storage
+  const [pageAnnotations, setPageAnnotations] = useState<{[page: number]: {paths: DrawPath[], shapes: Shape[], texts: TextAnnotation[]}}>({});
+  
+  // Drawing (current page)
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState('');
   const [drawColor, setDrawColor] = useState('#FF0000');
@@ -86,7 +89,7 @@ export default function DocumentViewScreen() {
   const [isHighlighter, setIsHighlighter] = useState(false);
   const [isEraser, setIsEraser] = useState(false);
   
-  // Shapes
+  // Shapes (current page)
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [currentShape, setCurrentShape] = useState<{type: string, x1: number, y1: number, x2: number, y2: number} | null>(null);
   const [shapeMode, setShapeMode] = useState<'none' | 'rectangle' | 'circle' | 'arrow' | 'line'>('none');
@@ -94,7 +97,7 @@ export default function DocumentViewScreen() {
   // Actual canvas area size (measured via onLayout)
   const [canvasAreaSize, setCanvasAreaSize] = useState({ width: 0, height: 0 });
   
-  // Text
+  // Text (current page)
   const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
   const [showTextModal, setShowTextModal] = useState(false);
   const [newText, setNewText] = useState('');
@@ -152,6 +155,39 @@ export default function DocumentViewScreen() {
       setLoading(false);
     }
   };
+
+  // Save current page annotations and load new page annotations when page changes
+  const [prevPage, setPrevPage] = useState(currentPage);
+  
+  useEffect(() => {
+    if (isEditing && prevPage !== currentPage) {
+      // Save current page annotations before switching
+      setPageAnnotations(prev => ({
+        ...prev,
+        [prevPage]: { paths, shapes, texts: textAnnotations }
+      }));
+      
+      // Load new page annotations
+      const newPageAnnotations = pageAnnotations[currentPage];
+      if (newPageAnnotations) {
+        setPaths(newPageAnnotations.paths || []);
+        setShapes(newPageAnnotations.shapes || []);
+        setTextAnnotations(newPageAnnotations.texts || []);
+      } else {
+        setPaths([]);
+        setShapes([]);
+        setTextAnnotations([]);
+      }
+      setUndoHistory([]);
+      setSelectedElement(null);
+      
+      // Re-render the new page image
+      setRenderingPage(true);
+      setPageImage(null);
+      
+      setPrevPage(currentPage);
+    }
+  }, [currentPage, isEditing]);
 
   const handleWebViewMessage = (event: any) => {
     try {
@@ -270,17 +306,26 @@ export default function DocumentViewScreen() {
   const saveAnnotations = async () => {
     if (!document) return;
     
-    const annotationData: SavedAnnotations = {
-      paths,
-      shapes,
-      texts: textAnnotations,
+    // First save current page to pageAnnotations
+    const allAnnotations = {
+      ...pageAnnotations,
+      [currentPage]: { paths, shapes, texts: textAnnotations }
     };
+    setPageAnnotations(allAnnotations);
     
     try {
-      await DocumentService.updatePage(document.id, currentPage, {
-        annotations: JSON.stringify(annotationData),
-      });
-      Alert.alert('Gespeichert', 'Anmerkungen wurden gespeichert');
+      // Save all pages
+      for (const [pageNum, annotations] of Object.entries(allAnnotations)) {
+        const annotationData: SavedAnnotations = {
+          paths: annotations.paths,
+          shapes: annotations.shapes,
+          texts: annotations.texts,
+        };
+        await DocumentService.updatePage(document.id, parseInt(pageNum), {
+          annotations: JSON.stringify(annotationData),
+        });
+      }
+      Alert.alert('Gespeichert', 'Alle Anmerkungen wurden gespeichert');
     } catch (error) {
       Alert.alert('Fehler', 'Konnte nicht gespeichert werden');
     }

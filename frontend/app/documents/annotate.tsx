@@ -722,7 +722,6 @@ export default function DocumentAnnotateScreen() {
             onResponderGrant={onTouchStart}
             onResponderMove={onTouchMove}
             onResponderRelease={onTouchEnd}
-            pointerEvents="box-only"
           >
             <Svg height="100%" width="100%" style={styles.svg}>
               {/* Drawn paths */}

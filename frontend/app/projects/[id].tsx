@@ -115,11 +115,12 @@ export default function ProjectDetailScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Determine initial tab from URL parameter
-  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks') ? tab : 'overview';
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks'>(initialTab);
+  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents') ? tab : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents'>(initialTab);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);

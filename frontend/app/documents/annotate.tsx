@@ -793,11 +793,12 @@ export default function DocumentAnnotateScreen() {
 
       {/* Tool Picker Modal */}
       <Modal visible={showToolPicker} transparent animationType="fade">
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1}
-          onPress={() => setShowToolPicker(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackground} 
+            activeOpacity={1}
+            onPress={() => setShowToolPicker(false)}
+          />
           <View style={styles.toolPickerModal}>
             <Text style={styles.modalTitle}>Werkzeug wählen</Text>
             <View style={styles.toolGrid}>
@@ -827,8 +828,14 @@ export default function DocumentAnnotateScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            <TouchableOpacity 
+              style={styles.closeModalButton}
+              onPress={() => setShowToolPicker(false)}
+            >
+              <Text style={styles.closeModalButtonText}>Schließen</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Stroke Width Picker Modal */}

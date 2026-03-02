@@ -1,7 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { View, LogBox } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
+
+// Ignore canvas render warnings from pdf.js in WebView
+LogBox.ignoreLogs([
+  'PDF Error:',
+  'Cannot use the same canvas',
+  'RenderingCancelledException',
+]);
 
 export default function RootLayout() {
   return (

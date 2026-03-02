@@ -158,6 +158,8 @@ export default function DocumentAnnotateScreen() {
           pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           
           let pdfDoc = null;
+          let currentRenderTask = null;
+          let isRendering = false;
           const scale = 2.0;
           
           async function loadPdf() {
@@ -191,19 +193,40 @@ export default function DocumentAnnotateScreen() {
           async function renderPageAsImage(pageNum) {
             if (!pdfDoc) return;
             
+            // Cancel any ongoing render task
+            if (currentRenderTask) {
+              try {
+                currentRenderTask.cancel();
+              } catch (e) {
+                // Ignore cancel errors
+              }
+              currentRenderTask = null;
+            }
+            
+            // Wait if still rendering
+            if (isRendering) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            isRendering = true;
+            
             try {
               const page = await pdfDoc.getPage(pageNum);
               const viewport = page.getViewport({ scale: scale });
               
-              const canvas = document.getElementById('canvas');
+              // Create a new canvas for each render to avoid conflicts
+              const canvas = document.createElement('canvas');
               const context = canvas.getContext('2d');
               canvas.height = viewport.height;
               canvas.width = viewport.width;
               
-              await page.render({
+              currentRenderTask = page.render({
                 canvasContext: context,
                 viewport: viewport
-              }).promise;
+              });
+              
+              await currentRenderTask.promise;
+              currentRenderTask = null;
               
               const imageData = canvas.toDataURL('image/png');
               
@@ -214,10 +237,14 @@ export default function DocumentAnnotateScreen() {
               }));
               
             } catch (error) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'error',
-                message: error.message
-              }));
+              if (error.name !== 'RenderingCancelledException') {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'error',
+                  message: error.message
+                }));
+              }
+            } finally {
+              isRendering = false;
             }
           }
           

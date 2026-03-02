@@ -735,76 +735,82 @@ export default function DocumentAnnotateScreen() {
             </View>
           </View>
 
-          {/* Right Side Toolbar */}
-          <View style={styles.sideToolbar}>
-            {/* Undo/Clear */}
-            <TouchableOpacity style={styles.sideToolButton} onPress={undo}>
-              <Ionicons name="arrow-undo" size={22} color="#1976d2" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.sideToolButton} onPress={clear}>
-              <Ionicons name="trash-outline" size={20} color="#f44336" />
-            </TouchableOpacity>
-            
-            <View style={styles.sideDivider} />
-            
-            {/* Tools */}
-            {tools.map((tool) => (
+          {/* Right Side Toolbar - in ScrollView to prevent overflow issues */}
+          <View style={[styles.sideToolbar, { backgroundColor: 'orange' }]}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.sideToolbarContent}
+              bounces={false}
+            >
+              {/* Undo/Clear */}
+              <TouchableOpacity style={styles.sideToolButton} onPress={undo}>
+                <Ionicons name="arrow-undo" size={22} color="#1976d2" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sideToolButton} onPress={clear}>
+                <Ionicons name="trash-outline" size={20} color="#f44336" />
+              </TouchableOpacity>
+              
+              <View style={styles.sideDivider} />
+              
+              {/* Tools */}
+              {tools.map((tool) => (
+                <TouchableOpacity 
+                  key={tool.mode}
+                  style={[
+                    styles.sideToolButton, 
+                    toolMode === tool.mode && styles.sideToolButtonActive
+                  ]}
+                  onPress={() => setToolMode(tool.mode)}
+                >
+                  <Ionicons 
+                    name={tool.icon as any} 
+                    size={20} 
+                    color={toolMode === tool.mode ? '#fff' : '#666'} 
+                  />
+                </TouchableOpacity>
+              ))}
+              
+              <View style={styles.sideDivider} />
+              
+              {/* Zoom Toggle */}
               <TouchableOpacity 
-                key={tool.mode}
                 style={[
                   styles.sideToolButton, 
-                  toolMode === tool.mode && styles.sideToolButtonActive
+                  zoomEnabled && styles.sideToolButtonActive
                 ]}
-                onPress={() => setToolMode(tool.mode)}
+                onPress={() => setZoomEnabled(!zoomEnabled)}
               >
                 <Ionicons 
-                  name={tool.icon as any} 
+                  name={zoomEnabled ? "scan" : "expand"} 
                   size={20} 
-                  color={toolMode === tool.mode ? '#fff' : '#666'} 
+                  color={zoomEnabled ? '#fff' : '#666'} 
                 />
               </TouchableOpacity>
-            ))}
-            
-            <View style={styles.sideDivider} />
-            
-            {/* Zoom Toggle */}
-            <TouchableOpacity 
-              style={[
-                styles.sideToolButton, 
-                zoomEnabled && styles.sideToolButtonActive
-              ]}
-              onPress={() => setZoomEnabled(!zoomEnabled)}
-            >
-              <Ionicons 
-                name={zoomEnabled ? "scan" : "expand"} 
-                size={20} 
-                color={zoomEnabled ? '#fff' : '#666'} 
-              />
-            </TouchableOpacity>
-            
-            {/* Stroke Width */}
-            <TouchableOpacity 
-              style={styles.sideToolButton}
-              onPress={() => setShowStrokePicker(true)}
-            >
-              <View style={[styles.strokePreviewSide, { height: strokeWidth, backgroundColor: drawColor }]} />
-            </TouchableOpacity>
-            
-            <View style={styles.sideDivider} />
-            
-            {/* Colors */}
-            {colors.map((c) => (
-              <TouchableOpacity
-                key={c.color}
-                style={[
-                  styles.sideColorButton,
-                  { backgroundColor: c.color },
-                  drawColor === c.color && styles.sideColorButtonActive,
-                  c.color === '#FFFFFF' && styles.colorButtonWhite,
-                ]}
-                onPress={() => setDrawColor(c.color)}
-              />
-            ))}
+              
+              {/* Stroke Width */}
+              <TouchableOpacity 
+                style={styles.sideToolButton}
+                onPress={() => setShowStrokePicker(true)}
+              >
+                <View style={[styles.strokePreviewSide, { height: strokeWidth, backgroundColor: drawColor }]} />
+              </TouchableOpacity>
+              
+              <View style={styles.sideDivider} />
+              
+              {/* Colors */}
+              {colors.map((c) => (
+                <TouchableOpacity
+                  key={c.color}
+                  style={[
+                    styles.sideColorButton,
+                    { backgroundColor: c.color },
+                    drawColor === c.color && styles.sideColorButtonActive,
+                    c.color === '#FFFFFF' && styles.colorButtonWhite,
+                  ]}
+                  onPress={() => setDrawColor(c.color)}
+                />
+              ))}
+            </ScrollView>
           </View>
         </View>
 
@@ -1027,9 +1033,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'orange', // DEBUG
     borderLeftWidth: 1,
     borderLeftColor: '#e0e0e0',
-    paddingVertical: 8,
-    alignItems: 'center',
     overflow: 'hidden', // WICHTIG: Verhindert, dass Elemente über den Bereich hinausgehen
+  },
+  sideToolbarContent: {
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   sideToolButton: {
     width: 40,

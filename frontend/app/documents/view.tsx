@@ -659,7 +659,8 @@ export default function DocumentViewScreen() {
               bottom: TOOLBAR_H, 
               justifyContent: 'center', 
               alignItems: 'center',
-              backgroundColor: '#d0d0d0'
+              backgroundColor: '#d0d0d0',
+              zIndex: 1,
             }} 
             onLayout={onCanvasAreaLayout}
           >
@@ -701,8 +702,8 @@ export default function DocumentViewScreen() {
             )}
           </View>
 
-          {/* Toolbar - fixed at bottom */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd' }}>
+          {/* Toolbar - fixed at bottom with higher zIndex */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd', zIndex: 10 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />

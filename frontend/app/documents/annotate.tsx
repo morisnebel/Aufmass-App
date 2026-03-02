@@ -613,15 +613,32 @@ export default function DocumentAnnotateScreen() {
         javaScriptEnabled={true}
       />
 
-      {/* Header */}
+      {/* Compact Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
           <Text style={styles.title} numberOfLines={1}>{document?.name}</Text>
-          <Text style={styles.pageInfo}>Seite {currentPage} von {totalPages}</Text>
         </View>
+        
+        {/* Page Navigation in Header */}
+        <TouchableOpacity 
+          style={styles.headerNavButton}
+          onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+          disabled={currentPage <= 1}
+        >
+          <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#ccc' : '#1976d2'} />
+        </TouchableOpacity>
+        <Text style={styles.headerPageInfo}>{currentPage}/{totalPages}</Text>
+        <TouchableOpacity 
+          style={styles.headerNavButton}
+          onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+        >
+          <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#ccc' : '#1976d2'} />
+        </TouchableOpacity>
+        
         <TouchableOpacity onPress={shareAnnotatedPage} style={styles.headerButton}>
           <Ionicons name="share-outline" size={24} color="#1976d2" />
         </TouchableOpacity>
@@ -630,179 +647,162 @@ export default function DocumentAnnotateScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Main Toolbar */}
-      <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.toolButton} onPress={undo}>
-          <Ionicons name="arrow-undo" size={22} color="#1976d2" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={clear}>
-          <Ionicons name="trash-outline" size={22} color="#f44336" />
-        </TouchableOpacity>
-        <View style={styles.toolDivider} />
-        
-        {/* Tool Buttons - Direct Selection */}
-        {tools.map((tool) => (
-          <TouchableOpacity 
-            key={tool.mode}
-            style={[
-              styles.toolIconButton, 
-              toolMode === tool.mode && styles.toolIconButtonActive
-            ]}
-            onPress={() => setToolMode(tool.mode)}
+      {/* Main Content Area with Side Toolbar */}
+      <View style={styles.mainContent}>
+        {/* Canvas Area with Zoom */}
+        <ScrollView 
+          style={styles.zoomContainer}
+          contentContainerStyle={styles.zoomContent}
+          maximumZoomScale={4}
+          minimumZoomScale={1}
+          bouncesZoom={true}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          centerContent={true}
+        >
+          {renderingPage && (
+            <View style={styles.renderingOverlayCenter}>
+              <ActivityIndicator size="large" color="#1976d2" />
+              <Text style={styles.renderingText}>Seite wird geladen...</Text>
+            </View>
+          )}
+          
+          <View 
+            ref={canvasRef}
+            style={[styles.canvasContainerCentered, { 
+              width: canvasDimensions.width, 
+              height: canvasDimensions.height,
+            }]}
           >
-            <Ionicons 
-              name={tool.icon as any} 
-              size={22} 
-              color={toolMode === tool.mode ? '#fff' : '#666'} 
-            />
-          </TouchableOpacity>
-        ))}
-        
-        <View style={styles.toolDivider} />
-        
-        {/* Stroke Width */}
-        <TouchableOpacity 
-          style={styles.toolButton}
-          onPress={() => setShowStrokePicker(true)}
-        >
-          <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
-        </TouchableOpacity>
-
-        <View style={styles.toolDivider} />
-
-        {/* Color Picker - inline */}
-        {colors.map((c) => (
-          <TouchableOpacity
-            key={c.color}
-            style={[
-              styles.colorButtonSmall,
-              { backgroundColor: c.color },
-              drawColor === c.color && styles.colorButtonSmallActive,
-              c.color === '#FFFFFF' && styles.colorButtonWhite,
-            ]}
-            onPress={() => setDrawColor(c.color)}
-          />
-        ))}
-      </View>
-
-      {/* Canvas Area - No scroll, fit to screen */}
-      <View style={styles.canvasArea}>
-        {renderingPage && (
-          <View style={styles.renderingOverlayCenter}>
-            <ActivityIndicator size="large" color="#1976d2" />
-            <Text style={styles.renderingText}>Seite wird geladen...</Text>
-          </View>
-        )}
-        
-        <View 
-          ref={canvasRef}
-          style={[styles.canvasContainerCentered, { 
-            width: canvasDimensions.width, 
-            height: canvasDimensions.height,
-          }]}
-        >
-          {/* PDF Page Image as Background */}
-          {pageImage && (
-            <Image
-              source={{ uri: pageImage }}
+            {pageImage && (
+              <Image
+                source={{ uri: pageImage }}
+                style={{
+                  width: canvasDimensions.width,
+                  height: canvasDimensions.height,
+                }}
+                resizeMode="contain"
+              />
+            )}
+            
+            <View
               style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 width: canvasDimensions.width,
                 height: canvasDimensions.height,
               }}
-              resizeMode="contain"
-            />
-          )}
-          
-          {/* Drawing Layer - Positioned over image */}
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: canvasDimensions.width,
-              height: canvasDimensions.height,
-            }}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-            onResponderGrant={onTouchStart}
-            onResponderMove={onTouchMove}
-            onResponderRelease={onTouchEnd}
-          >
-            <Svg height="100%" width="100%" style={styles.svg}>
-              {/* Drawn paths */}
-              {paths.map((p, index) => (
-                <Path
-                  key={index}
-                  d={p.path}
-                  stroke={p.color}
-                  strokeWidth={p.strokeWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={p.opacity || 1}
-                />
-              ))}
-              
-              {/* Current path being drawn */}
-              {currentPath && (
-                <Path
-                  d={currentPath}
-                  stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
-                  strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={toolMode === 'highlighter' ? 0.4 : 1}
-                />
-              )}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={onTouchStart}
+              onResponderMove={onTouchMove}
+              onResponderRelease={onTouchEnd}
+            >
+              <Svg height="100%" width="100%" style={styles.svg}>
+                {paths.map((p, index) => (
+                  <Path
+                    key={index}
+                    d={p.path}
+                    stroke={p.color}
+                    strokeWidth={p.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={p.opacity || 1}
+                  />
+                ))}
+                
+                {currentPath && (
+                  <Path
+                    d={currentPath}
+                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
+                  />
+                )}
 
-              {/* Shapes */}
-              {shapes.map(shape => renderShape(shape))}
-              
-              {/* Current shape being drawn */}
-              {currentShape && renderShape(currentShape, true)}
-              
-              {/* Text annotations */}
-              {textAnnotations.map((t) => (
-                <SvgText
-                  key={t.id}
-                  x={t.x}
-                  y={t.y}
-                  fill={t.color}
-                  fontSize={t.fontSize}
-                  fontWeight="bold"
-                  stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
-                  strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
-                >
-                  {t.text}
-                </SvgText>
-              ))}
-            </Svg>
+                {shapes.map(shape => renderShape(shape))}
+                {currentShape && renderShape(currentShape, true)}
+                
+                {textAnnotations.map((t) => (
+                  <SvgText
+                    key={t.id}
+                    x={t.x}
+                    y={t.y}
+                    fill={t.color}
+                    fontSize={t.fontSize}
+                    fontWeight="bold"
+                    stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
+                    strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
+                  >
+                    {t.text}
+                  </SvgText>
+                ))}
+              </Svg>
+            </View>
           </View>
-        </View>
-      </View>
+        </ScrollView>
 
-      {/* Page Navigation */}
-      <View style={styles.pageNav}>
-        <TouchableOpacity 
-          style={[styles.navButton, currentPage <= 1 && styles.navButtonDisabled]}
-          onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-          disabled={currentPage <= 1}
-        >
-          <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#ccc' : '#1976d2'} />
-          <Text style={[styles.navText, currentPage <= 1 && styles.navTextDisabled]}>Vorherige</Text>
-        </TouchableOpacity>
-        
-        <Text style={styles.pageIndicator}>{currentPage} / {totalPages}</Text>
-        
-        <TouchableOpacity 
-          style={[styles.navButton, currentPage >= totalPages && styles.navButtonDisabled]}
-          onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-        >
-          <Text style={[styles.navText, currentPage >= totalPages && styles.navTextDisabled]}>Nächste</Text>
-          <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#ccc' : '#1976d2'} />
-        </TouchableOpacity>
+        {/* Right Side Toolbar */}
+        <View style={styles.sideToolbar}>
+          {/* Undo/Clear */}
+          <TouchableOpacity style={styles.sideToolButton} onPress={undo}>
+            <Ionicons name="arrow-undo" size={22} color="#1976d2" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.sideToolButton} onPress={clear}>
+            <Ionicons name="trash-outline" size={20} color="#f44336" />
+          </TouchableOpacity>
+          
+          <View style={styles.sideDivider} />
+          
+          {/* Tools */}
+          {tools.map((tool) => (
+            <TouchableOpacity 
+              key={tool.mode}
+              style={[
+                styles.sideToolButton, 
+                toolMode === tool.mode && styles.sideToolButtonActive
+              ]}
+              onPress={() => setToolMode(tool.mode)}
+            >
+              <Ionicons 
+                name={tool.icon as any} 
+                size={20} 
+                color={toolMode === tool.mode ? '#fff' : '#666'} 
+              />
+            </TouchableOpacity>
+          ))}
+          
+          <View style={styles.sideDivider} />
+          
+          {/* Stroke Width */}
+          <TouchableOpacity 
+            style={styles.sideToolButton}
+            onPress={() => setShowStrokePicker(true)}
+          >
+            <View style={[styles.strokePreviewSide, { height: strokeWidth, backgroundColor: drawColor }]} />
+          </TouchableOpacity>
+          
+          <View style={styles.sideDivider} />
+          
+          {/* Colors */}
+          {colors.map((c) => (
+            <TouchableOpacity
+              key={c.color}
+              style={[
+                styles.sideColorButton,
+                { backgroundColor: c.color },
+                drawColor === c.color && styles.sideColorButtonActive,
+                c.color === '#FFFFFF' && styles.colorButtonWhite,
+              ]}
+              onPress={() => setDrawColor(c.color)}
+            />
+          ))}
+        </View>
       </View>
 
       {/* Stroke Width Picker Modal */}

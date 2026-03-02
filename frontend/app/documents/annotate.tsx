@@ -644,9 +644,15 @@ export default function DocumentAnnotateScreen() {
         {/* Main Content Area with Side Toolbar */}
         <View style={styles.mainContent}>
           {/* Canvas Area */}
-          <View style={styles.canvasWrapper}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.canvasScrollView}
+            contentContainerStyle={styles.canvasScrollContent}
+            scrollEnabled={zoomEnabled}
+            showsVerticalScrollIndicator={true}
+          >
             {renderingPage && (
-              <View style={styles.renderingOverlayCenter}>
+              <View style={styles.renderingOverlayInline}>
                 <ActivityIndicator size="large" color="#1976d2" />
                 <Text style={styles.renderingText}>Seite wird geladen...</Text>
               </View>
@@ -658,6 +664,11 @@ export default function DocumentAnnotateScreen() {
                 width: canvasDimensions.width, 
                 height: canvasDimensions.height,
               }]}
+              onStartShouldSetResponder={() => !zoomEnabled}
+              onMoveShouldSetResponder={() => !zoomEnabled}
+              onResponderGrant={onTouchStart}
+              onResponderMove={onTouchMove}
+              onResponderRelease={onTouchEnd}
             >
               {pageImage && (
                 <Image
@@ -670,67 +681,56 @@ export default function DocumentAnnotateScreen() {
                 />
               )}
               
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: canvasDimensions.width,
-                  height: canvasDimensions.height,
-                }}
-                onStartShouldSetResponder={() => true}
-                onMoveShouldSetResponder={() => true}
-                onResponderGrant={onTouchStart}
-                onResponderMove={onTouchMove}
-                onResponderRelease={onTouchEnd}
+              <Svg 
+                height={canvasDimensions.height} 
+                width={canvasDimensions.width} 
+                style={styles.svgOverlay}
               >
-                <Svg height="100%" width="100%" style={styles.svg}>
-                  {paths.map((p, index) => (
-                    <Path
-                      key={index}
-                      d={p.path}
-                      stroke={p.color}
-                      strokeWidth={p.strokeWidth}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity={p.opacity || 1}
-                    />
-                  ))}
-                  
-                  {currentPath && (
-                    <Path
-                      d={currentPath}
-                      stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
-                      strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity={toolMode === 'highlighter' ? 0.4 : 1}
-                    />
-                  )}
+                {paths.map((p, index) => (
+                  <Path
+                    key={index}
+                    d={p.path}
+                    stroke={p.color}
+                    strokeWidth={p.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={p.opacity || 1}
+                  />
+                ))}
+                
+                {currentPath && (
+                  <Path
+                    d={currentPath}
+                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
+                  />
+                )}
 
-                  {shapes.map(shape => renderShape(shape))}
-                  {currentShape && renderShape(currentShape, true)}
-                  
-                  {textAnnotations.map((t) => (
-                    <SvgText
-                      key={t.id}
-                      x={t.x}
-                      y={t.y}
-                      fill={t.color}
-                      fontSize={t.fontSize}
-                      fontWeight="bold"
-                      stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
-                      strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
-                    >
-                      {t.text}
-                    </SvgText>
-                  ))}
-                </Svg>
-              </View>
+                {shapes.map(shape => renderShape(shape))}
+                {currentShape && renderShape(currentShape, true)}
+                
+                {textAnnotations.map((t) => (
+                  <SvgText
+                    key={t.id}
+                    x={t.x}
+                    y={t.y}
+                    fill={t.color}
+                    fontSize={t.fontSize}
+                    fontWeight="bold"
+                    stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
+                    strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
+                  >
+                    {t.text}
+                  </SvgText>
+                ))}
+              </Svg>
             </View>
-          </View>
+          </ScrollView>
 
           {/* Right Side Toolbar */}
           <View style={styles.sideToolbar}>
@@ -973,6 +973,20 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  canvasScrollView: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+  },
+  canvasScrollContent: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    minHeight: '100%',
+  },
+  renderingOverlayInline: {
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   canvasWrapper: {
     flex: 1,
     backgroundColor: '#e8e8e8',
@@ -1190,6 +1204,11 @@ const styles = StyleSheet.create({
   },
   svg: {
     position: 'absolute',
+  },
+  svgOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   pageNav: {
     flexDirection: 'row',

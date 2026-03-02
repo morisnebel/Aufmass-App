@@ -81,6 +81,7 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - [x] Checklisten-Bild-Feature implementieren
 - [x] iPhone PDF-Optimierung
 - [x] PDF-Farbeinstellung
+- [x] PDF-Dokument-Feature mit Anmerkungen
 
 ### P1 - High Priority  
 - [ ] Neuer TestFlight Build
@@ -95,6 +96,25 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - [ ] Code-Refactoring
 
 ## Recent Changes (Changelog)
+
+### 2. März 2026
+- **PDF-Dokument-Feature**: Komplette Neuentwicklung
+  - PDFs aus der Dateien-App importieren
+  - Dokumente im Projekt-Tab "Doku" verfügbar
+  - PDF-Viewer mit Seitennavigation
+  - Annotations-System mit vielen Werkzeugen
+- **Annotation-Werkzeuge**:
+  - Stift (Freihand)
+  - Marker/Highlighter (halbtransparent)
+  - Radierer
+  - Text über Tastatur
+  - Formen: Rechteck, Kreis, Pfeil, Linie
+- **Anpassbare Einstellungen**:
+  - 3 Strichstärken (dünn/mittel/dick)
+  - 3 Textgrößen (klein/mittel/groß)
+  - 7 Farben
+- **PDF-Vorschau-Fix**: Gestrichelte Linien und visuellen Versatz behoben
+- **LogBox-Warnung**: Canvas-Fehler von pdf.js werden jetzt ignoriert
 
 ### 27. Februar 2026
 - **Checklisten-Bild-Feature**: Template-Logos, Kategorie-Logos, Druck- und Vorschau-Bilder implementiert

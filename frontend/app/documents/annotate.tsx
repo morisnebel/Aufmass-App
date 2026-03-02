@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
   Image,
   useWindowDimensions,
   SafeAreaView,
+  PanResponder,
+  GestureResponderEvent,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,6 +95,75 @@ export default function DocumentAnnotateScreen() {
   const canvasRef = useRef(null);
   const webViewRef = useRef<WebView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const drawingViewRef = useRef<View>(null);
+
+  // PanResponder for robust touch handling
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => !zoomEnabled,
+    onMoveShouldSetPanResponder: () => !zoomEnabled,
+    onPanResponderGrant: (evt) => {
+      const { locationX, locationY } = evt.nativeEvent;
+      
+      if (toolMode === 'text') {
+        setTextPosition({ x: locationX, y: locationY });
+        setShowTextModal(true);
+        return;
+      }
+
+      if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
+        const newShape: ShapeAnnotation = {
+          id: Date.now().toString(),
+          type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
+          x1: locationX,
+          y1: locationY,
+          x2: locationX,
+          y2: locationY,
+          color: drawColor,
+          strokeWidth: strokeWidth,
+        };
+        setCurrentShape(newShape);
+        return;
+      }
+
+      // Pen, highlighter, or eraser
+      setCurrentPath(`M ${locationX} ${locationY}`);
+    },
+    onPanResponderMove: (evt) => {
+      const { locationX, locationY } = evt.nativeEvent;
+
+      if (currentShape) {
+        setCurrentShape({
+          ...currentShape,
+          x2: locationX,
+          y2: locationY,
+        });
+        return;
+      }
+
+      if (currentPath) {
+        setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+      }
+    },
+    onPanResponderRelease: () => {
+      if (currentShape) {
+        setShapes((prev) => [...prev, currentShape]);
+        setCurrentShape(null);
+        return;
+      }
+
+      if (currentPath && currentPath.length > 0) {
+        const newPath: DrawPath = {
+          path: currentPath,
+          color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
+          strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
+          opacity: toolMode === 'highlighter' ? 0.4 : 1,
+          type: toolMode as 'pen' | 'highlighter' | 'eraser',
+        };
+        setPaths((prev) => [...prev, newPath]);
+        setCurrentPath('');
+      }
+    },
+  }), [zoomEnabled, toolMode, drawColor, strokeWidth, currentPath, currentShape]);
 
   useEffect(() => {
     loadDocument();
@@ -300,76 +371,6 @@ export default function DocumentAnnotateScreen() {
       </body>
       </html>
     `;
-  };
-
-  // Touch handlers
-  const onTouchStart = (event: any) => {
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
-
-    if (toolMode === 'text') {
-      setTextPosition({ x: locationX, y: locationY });
-      setShowTextModal(true);
-      return;
-    }
-
-    if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
-      const newShape: ShapeAnnotation = {
-        id: Date.now().toString(),
-        type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
-        x1: locationX,
-        y1: locationY,
-        x2: locationX,
-        y2: locationY,
-        color: drawColor,
-        strokeWidth: strokeWidth,
-      };
-      setCurrentShape(newShape);
-      return;
-    }
-
-    // Pen, highlighter, or eraser
-    setCurrentPath(`M ${locationX} ${locationY}`);
-  };
-
-  const onTouchMove = (event: any) => {
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
-
-    if (currentShape) {
-      setCurrentShape({
-        ...currentShape,
-        x2: locationX,
-        y2: locationY,
-      });
-      return;
-    }
-
-    if (currentPath) {
-      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
-    }
-  };
-
-  const onTouchEnd = () => {
-    if (currentShape) {
-      setShapes([...shapes, currentShape]);
-      setCurrentShape(null);
-      return;
-    }
-
-    if (currentPath && currentPath.length > 0) {
-      const newPath: DrawPath = {
-        path: currentPath,
-        color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
-        strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
-        opacity: toolMode === 'highlighter' ? 0.4 : 1,
-        type: toolMode as 'pen' | 'highlighter' | 'eraser',
-      };
-      setPaths([...paths, newPath]);
-      setCurrentPath('');
-    }
   };
 
   const addTextAnnotation = () => {
@@ -664,11 +665,6 @@ export default function DocumentAnnotateScreen() {
                 width: canvasDimensions.width, 
                 height: canvasDimensions.height,
               }]}
-              onStartShouldSetResponder={() => !zoomEnabled}
-              onMoveShouldSetResponder={() => !zoomEnabled}
-              onResponderGrant={onTouchStart}
-              onResponderMove={onTouchMove}
-              onResponderRelease={onTouchEnd}
             >
               {pageImage && (
                 <Image
@@ -681,54 +677,70 @@ export default function DocumentAnnotateScreen() {
                 />
               )}
               
-              <Svg 
-                height={canvasDimensions.height} 
-                width={canvasDimensions.width} 
-                style={styles.svgOverlay}
+              {/* Touch handler layer - MUST be on top and full size */}
+              <View
+                ref={drawingViewRef}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: canvasDimensions.width,
+                  height: canvasDimensions.height,
+                }}
+                {...panResponder.panHandlers}
               >
-                {paths.map((p, index) => (
-                  <Path
-                    key={index}
-                    d={p.path}
-                    stroke={p.color}
-                    strokeWidth={p.strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={p.opacity || 1}
-                  />
-                ))}
-                
-                {currentPath && (
-                  <Path
-                    d={currentPath}
-                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
-                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
-                  />
-                )}
+                <Svg 
+                  height="100%" 
+                  width="100%" 
+                  style={{ position: 'absolute', top: 0, left: 0 }}
+                  pointerEvents="none"
+                >
+                  {paths.map((p, index) => (
+                    <Path
+                      key={index}
+                      d={p.path}
+                      stroke={p.color}
+                      strokeWidth={p.strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={p.opacity || 1}
+                    />
+                  ))}
+                  
+                  {currentPath && (
+                    <Path
+                      d={currentPath}
+                      stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                      strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={toolMode === 'highlighter' ? 0.4 : 1}
+                    />
+                  )}
 
-                {shapes.map(shape => renderShape(shape))}
-                {currentShape && renderShape(currentShape, true)}
-                
-                {textAnnotations.map((t) => (
-                  <SvgText
-                    key={t.id}
-                    x={t.x}
-                    y={t.y}
-                    fill={t.color}
-                    fontSize={t.fontSize}
-                    fontWeight="bold"
-                    stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
-                    strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
-                  >
-                    {t.text}
-                  </SvgText>
-                ))}
-              </Svg>
+                  {shapes.map(shape => renderShape(shape))}
+                  {currentShape && renderShape(currentShape, true)}
+                  
+                  {textAnnotations.map((t) => (
+                    <SvgText
+                      key={t.id}
+                      x={t.x}
+                      y={t.y}
+                      fill={t.color}
+                      fontSize={t.fontSize}
+                      fontWeight="bold"
+                      stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
+                      strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
+                    >
+                      {t.text}
+                    </SvgText>
+                  ))}
+                </Svg>
+              </View>
             </View>
           </ScrollView>
 

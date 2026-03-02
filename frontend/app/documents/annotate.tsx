@@ -1024,11 +1024,12 @@ const styles = StyleSheet.create({
   },
   sideToolbar: {
     width: 50,
-    backgroundColor: '#fff',
+    backgroundColor: 'orange', // DEBUG
     borderLeftWidth: 1,
     borderLeftColor: '#e0e0e0',
     paddingVertical: 8,
     alignItems: 'center',
+    overflow: 'hidden', // WICHTIG: Verhindert, dass Elemente über den Bereich hinausgehen
   },
   sideToolButton: {
     width: 40,

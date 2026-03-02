@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,6 @@ import {
   Platform,
   Image,
   useWindowDimensions,
-  PanResponder,
-  GestureResponderEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -97,78 +95,79 @@ export default function DocumentAnnotateScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const drawingViewRef = useRef<View>(null);
 
-  // PanResponder for robust touch handling
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: (evt) => {
-      console.log('🟢 onStartShouldSetPanResponder:', evt.nativeEvent.locationX, evt.nativeEvent.locationY, 'zoomEnabled:', zoomEnabled);
-      return !zoomEnabled;
-    },
-    onMoveShouldSetPanResponder: () => !zoomEnabled,
-    onPanResponderGrant: (evt) => {
-      const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
-      console.log('🔵 onPanResponderGrant - locationX:', locationX, 'locationY:', locationY, 'pageX:', pageX, 'pageY:', pageY);
-      
-      if (toolMode === 'text') {
-        setTextPosition({ x: locationX, y: locationY });
-        setShowTextModal(true);
-        return;
-      }
+  // Touch handlers that use current state
+  const handleTouchStart = (evt: any) => {
+    if (zoomEnabled) return;
+    
+    const { locationX, locationY } = evt.nativeEvent;
+    console.log('🟢 handleTouchStart:', locationX, locationY, 'tool:', toolMode);
+    
+    if (toolMode === 'text') {
+      setTextPosition({ x: locationX, y: locationY });
+      setShowTextModal(true);
+      return;
+    }
 
-      if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
-        const newShape: ShapeAnnotation = {
-          id: Date.now().toString(),
-          type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
-          x1: locationX,
-          y1: locationY,
-          x2: locationX,
-          y2: locationY,
-          color: drawColor,
-          strokeWidth: strokeWidth,
-        };
-        setCurrentShape(newShape);
-        return;
-      }
+    if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
+      const newShape: ShapeAnnotation = {
+        id: Date.now().toString(),
+        type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
+        x1: locationX,
+        y1: locationY,
+        x2: locationX,
+        y2: locationY,
+        color: drawColor,
+        strokeWidth: strokeWidth,
+      };
+      setCurrentShape(newShape);
+      return;
+    }
 
-      // Pen, highlighter, or eraser
-      setCurrentPath(`M ${locationX} ${locationY}`);
-    },
-    onPanResponderMove: (evt) => {
-      const { locationX, locationY } = evt.nativeEvent;
+    // Pen, highlighter, or eraser
+    setCurrentPath(`M ${locationX} ${locationY}`);
+  };
 
-      if (currentShape) {
-        setCurrentShape({
-          ...currentShape,
-          x2: locationX,
-          y2: locationY,
-        });
-        return;
-      }
+  const handleTouchMove = (evt: any) => {
+    if (zoomEnabled) return;
+    
+    const { locationX, locationY } = evt.nativeEvent;
 
-      if (currentPath) {
-        setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
-      }
-    },
-    onPanResponderRelease: () => {
-      console.log('🔴 onPanResponderRelease');
-      if (currentShape) {
-        setShapes((prev) => [...prev, currentShape]);
-        setCurrentShape(null);
-        return;
-      }
+    if (currentShape) {
+      setCurrentShape({
+        ...currentShape,
+        x2: locationX,
+        y2: locationY,
+      });
+      return;
+    }
 
-      if (currentPath && currentPath.length > 0) {
-        const newPath: DrawPath = {
-          path: currentPath,
-          color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
-          strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
-          opacity: toolMode === 'highlighter' ? 0.4 : 1,
-          type: toolMode as 'pen' | 'highlighter' | 'eraser',
-        };
-        setPaths((prev) => [...prev, newPath]);
-        setCurrentPath('');
-      }
-    },
-  }), [zoomEnabled, toolMode, drawColor, strokeWidth, currentPath, currentShape]);
+    if (currentPath) {
+      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (zoomEnabled) return;
+    
+    console.log('🔴 handleTouchEnd');
+    if (currentShape) {
+      setShapes((prev) => [...prev, currentShape]);
+      setCurrentShape(null);
+      return;
+    }
+
+    if (currentPath && currentPath.length > 0) {
+      const newPath: DrawPath = {
+        path: currentPath,
+        color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
+        strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
+        opacity: toolMode === 'highlighter' ? 0.4 : 1,
+        type: toolMode as 'pen' | 'highlighter' | 'eraser',
+      };
+      setPaths((prev) => [...prev, newPath]);
+      setCurrentPath('');
+    }
+  };
 
   useEffect(() => {
     loadDocument();
@@ -681,7 +680,11 @@ export default function DocumentAnnotateScreen() {
               <View
                 ref={drawingViewRef}
                 style={styles.touchLayer}
-                {...panResponder.panHandlers}
+                onStartShouldSetResponder={() => !zoomEnabled}
+                onMoveShouldSetResponder={() => !zoomEnabled}
+                onResponderGrant={handleTouchStart}
+                onResponderMove={handleTouchMove}
+                onResponderRelease={handleTouchEnd}
               >
                 <Svg 
                   height={canvasDimensions.height} 

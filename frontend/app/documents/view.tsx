@@ -114,8 +114,8 @@ export default function DocumentViewScreen() {
         let displayWidth, displayHeight;
         
         // Use measured size if available, otherwise fall back to calculated
-        const useWidth = canvasAreaSize.width > 0 ? canvasAreaSize.width - 20 : availableWidth;
-        const useHeight = canvasAreaSize.height > 0 ? canvasAreaSize.height - 20 : availableHeight;
+        const useWidth = canvasAreaSize.width > 0 ? canvasAreaSize.width : availableWidth;
+        const useHeight = canvasAreaSize.height > 0 ? canvasAreaSize.height : availableHeight;
         
         if (useWidth / useHeight > pdfAspect) {
           displayHeight = useHeight;
@@ -569,7 +569,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 70, // Space for fixed toolbar
+    paddingBottom: 60, // Just enough for fixed toolbar
+    paddingTop: 5,
+    paddingHorizontal: 5,
   },
   editCanvas: {
     flex: 1,

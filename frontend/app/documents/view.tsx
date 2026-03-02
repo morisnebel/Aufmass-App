@@ -572,6 +572,7 @@ const styles = StyleSheet.create({
     paddingBottom: 60, // Just enough for fixed toolbar
     paddingTop: 5,
     paddingHorizontal: 5,
+    backgroundColor: 'lightblue', // DEBUG - sollte den ganzen verfügbaren Bereich zeigen
   },
   editCanvas: {
     flex: 1,

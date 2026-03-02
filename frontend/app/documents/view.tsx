@@ -324,8 +324,8 @@ export default function DocumentViewScreen() {
   if (isEditing) {
     return (
       <View style={styles.editRoot}>
-        {/* Fixed Header */}
-        <View style={[styles.editHeader, { height: headerHeight }]}>
+        {/* Fixed Header at TOP */}
+        <View style={styles.editHeader}>
           <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
             <Ionicons name="close" size={24} color="#f44336" />
           </TouchableOpacity>
@@ -341,8 +341,8 @@ export default function DocumentViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Canvas Area - Fixed size in center */}
-        <View style={styles.editCanvas}>
+        {/* Canvas Area - Uses remaining space */}
+        <View style={styles.editCanvasContainer}>
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -379,8 +379,8 @@ export default function DocumentViewScreen() {
           )}
         </View>
 
-        {/* Fixed Toolbar at bottom */}
-        <View style={[styles.editToolbar, { height: toolbarHeight }]}>
+        {/* Fixed Toolbar at ABSOLUTE BOTTOM */}
+        <View style={styles.editToolbarFixed}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
             <TouchableOpacity 
               style={[styles.toolBtn, !isTextMode && !isHighlighter && styles.toolBtnActive]} 
@@ -538,14 +538,24 @@ const styles = StyleSheet.create({
   editBtnText: { color: '#fff', fontWeight: '600' },
 
   // Edit mode styles
-  editRoot: { flex: 1, backgroundColor: '#e8e8e8' },
+  editRoot: { 
+    flex: 1, 
+    backgroundColor: '#e8e8e8',
+  },
   editHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+  },
+  editCanvasContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 70, // Space for fixed toolbar
   },
   editCanvas: {
     flex: 1,
@@ -561,6 +571,17 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   editToolbar: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    justifyContent: 'center',
+  },
+  editToolbarFixed: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#ddd',

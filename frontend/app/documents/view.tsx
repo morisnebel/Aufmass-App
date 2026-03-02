@@ -628,28 +628,7 @@ export default function DocumentViewScreen() {
       <Modal visible={true} animationType="none" statusBarTranslucent={true} presentationStyle="overFullScreen">
         <StatusBar hidden={true} />
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#e8e8e8' }}>
-          {/* Header */}
-          <View style={[styles.editHeader, { height: HEADER_H }]}>
-            <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
-              <Ionicons name="close" size={24} color="#f44336" />
-            </TouchableOpacity>
-            <Text style={styles.headerText}>Seite {currentPage}</Text>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
-              <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
-              <Ionicons name="trash-outline" size={24} color="#f44336" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
-              <Ionicons name="save-outline" size={24} color="#4caf50" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-              <Ionicons name="share-outline" size={24} color="#1976d2" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Canvas Area - fixed position */}
+          {/* Canvas Area FIRST - lower in z-order */}
           <View 
             style={{ 
               position: 'absolute', 
@@ -660,7 +639,6 @@ export default function DocumentViewScreen() {
               justifyContent: 'center', 
               alignItems: 'center',
               backgroundColor: '#d0d0d0',
-              zIndex: 1,
             }} 
             onLayout={onCanvasAreaLayout}
           >
@@ -702,8 +680,29 @@ export default function DocumentViewScreen() {
             )}
           </View>
 
-          {/* Toolbar - fixed at bottom with higher zIndex */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd', zIndex: 10 }}>
+          {/* Header SECOND - over canvas */}
+          <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_H }]}>
+            <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
+              <Ionicons name="close" size={24} color="#f44336" />
+            </TouchableOpacity>
+            <Text style={styles.headerText}>Seite {currentPage}</Text>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+              <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
+              <Ionicons name="trash-outline" size={24} color="#f44336" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+              <Ionicons name="save-outline" size={24} color="#4caf50" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
+              <Ionicons name="share-outline" size={24} color="#1976d2" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Toolbar LAST - highest in z-order */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd' }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />

@@ -611,25 +611,33 @@ export default function DocumentViewScreen() {
     );
   }
 
-  // EDIT MODE
+  // EDIT MODE - Simple flexbox layout (no absolute positioning)
   if (isEditing) {
-    const HEADER_HEIGHT = 50;
-    const TOOLBAR_HEIGHT = 60;
-    
     return (
-      <View style={styles.editRoot}>
-        {/* Canvas Area - absolute fill between header and toolbar - ZUERST (unter Header und Toolbar) */}
-        <View 
-          style={[styles.editCanvasContainer, { 
-            position: 'absolute', 
-            top: HEADER_HEIGHT, 
-            left: 0, 
-            right: 0, 
-            bottom: TOOLBAR_HEIGHT,
-            zIndex: 1,
-          }]} 
-          onLayout={onCanvasAreaLayout}
-        >
+      <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
+        {/* Header */}
+        <View style={styles.editHeader}>
+          <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
+            <Ionicons name="close" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <Text style={styles.headerText}>Seite {currentPage}</Text>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
+            <Ionicons name="trash-outline" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+            <Ionicons name="save-outline" size={24} color="#4caf50" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
+            <Ionicons name="share-outline" size={24} color="#1976d2" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Canvas Area */}
+        <View style={styles.editCanvasContainer} onLayout={onCanvasAreaLayout}>
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -652,19 +660,14 @@ export default function DocumentViewScreen() {
                 />
               )}
               <Svg style={StyleSheet.absoluteFill}>
-                {/* Paths (pen, highlighter, eraser) */}
                 {paths.map((p, i) => (
                   <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
                 ))}
                 {currentPath && (
                   <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
                 )}
-                
-                {/* Shapes */}
                 {shapes.map(shape => renderShape(shape))}
                 {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
-                
-                {/* Text */}
                 {textAnnotations.map(t => (
                   <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
                 ))}
@@ -673,84 +676,58 @@ export default function DocumentViewScreen() {
           )}
         </View>
 
-        {/* Header - absolute top - über Canvas */}
-        <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, zIndex: 10 }]}>
-          <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
-            <Ionicons name="close" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Seite {currentPage}</Text>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
-            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
-            <Ionicons name="trash-outline" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
-            <Ionicons name="save-outline" size={24} color="#4caf50" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-            <Ionicons name="share-outline" size={24} color="#1976d2" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Toolbar - absolute bottom - über Canvas */}
-        <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT, zIndex: 10 }]}>
+        {/* Toolbar */}
+        <View style={styles.editToolbar}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={styles.toolbarContent}
             keyboardShouldPersistTaps="always"
           >
-            {/* Drawing Tools */}
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
               <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
               <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
               <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
               <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
-            </Pressable>
+            </TouchableOpacity>
             
             <View style={styles.divider} />
             
-            {/* Shape Tools */}
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
               <Ionicons name="square-outline" size={20} color={getCurrentTool() === 'rectangle' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
               <Ionicons name="ellipse-outline" size={20} color={getCurrentTool() === 'circle' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
               <Ionicons name="arrow-forward" size={20} color={getCurrentTool() === 'arrow' ? '#fff' : '#666'} />
-            </Pressable>
-            <Pressable style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
               <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
-            </Pressable>
+            </TouchableOpacity>
             
             <View style={styles.divider} />
             
-            {/* Stroke Width */}
-            <Pressable style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
+            <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
               <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
-            </Pressable>
+            </TouchableOpacity>
             
-            {/* Text Size (only visible when text tool active) */}
             {isTextMode && (
-              <Pressable style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
                 <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
-              </Pressable>
+              </TouchableOpacity>
             )}
             
             <View style={styles.divider} />
             
-            {/* Colors */}
             {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
-              <Pressable
+              <TouchableOpacity
                 key={color}
                 style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive, color === '#FFFFFF' && styles.colorBtnWhite]}
                 onPress={() => setDrawColor(color)}
@@ -759,7 +736,7 @@ export default function DocumentViewScreen() {
           </ScrollView>
         </View>
 
-        {/* Hidden WebView for rendering */}
+        {/* Hidden WebView */}
         <WebView
           ref={pageWebViewRef}
           source={{ html: getPageRendererHtml() }}
@@ -937,6 +914,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   editToolbar: {
+    height: 60,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#ddd',

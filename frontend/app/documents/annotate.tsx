@@ -1120,12 +1120,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  modalBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   toolPickerModal: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     width: '100%',
     maxWidth: 400,
+  },
+  closeModalButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  closeModalButtonText: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 16,
   },
   modalTitle: {
     fontSize: 18,

@@ -674,7 +674,7 @@ export default function DocumentAnnotateScreen() {
         bounces={true}
       >
         {renderingPage && (
-          <View style={styles.renderingOverlay}>
+          <View style={[styles.renderingOverlay, { height: canvasDimensions.height || 600 }]}>
             <ActivityIndicator size="large" color="#1976d2" />
             <Text style={styles.renderingText}>Seite wird geladen...</Text>
           </View>
@@ -684,27 +684,30 @@ export default function DocumentAnnotateScreen() {
           ref={canvasRef}
           style={[styles.canvasContainer, { 
             width: canvasDimensions.width, 
-            height: canvasDimensions.height,
+            height: canvasDimensions.height || 600,
           }]}
         >
-          {/* PDF Page Image */}
+          {/* PDF Page Image as Background */}
           {pageImage && (
             <Image
               source={{ uri: pageImage }}
-              style={[styles.pageImage, {
+              style={{
                 width: canvasDimensions.width,
-                height: canvasDimensions.height,
-              }]}
-              resizeMode="stretch"
+                height: canvasDimensions.height || 600,
+              }}
+              resizeMode="contain"
             />
           )}
           
-          {/* Drawing Layer */}
+          {/* Drawing Layer - Absolute positioned over image */}
           <View
-            style={[styles.drawingLayer, {
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: canvasDimensions.width,
-              height: canvasDimensions.height,
-            }]}
+              height: canvasDimensions.height || 600,
+            }}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
             onResponderGrant={onTouchStart}

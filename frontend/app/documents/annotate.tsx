@@ -966,6 +966,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  canvasWrapper: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+    alignItems: 'center',
+    paddingTop: 8,
+  },
   zoomContainer: {
     flex: 1,
     backgroundColor: '#e8e8e8',

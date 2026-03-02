@@ -553,8 +553,12 @@ const styles = StyleSheet.create({
 
   // Edit mode styles
   editRoot: { 
-    flex: 1, 
-    backgroundColor: 'red', // DEBUG - sollte NICHT sichtbar sein wenn alles richtig ist
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#e8e8e8',
   },
   editHeader: {
     flexDirection: 'row',
@@ -569,7 +573,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'lightblue', // DEBUG
+    backgroundColor: '#e8e8e8',
   },
   editCanvas: {
     flex: 1,

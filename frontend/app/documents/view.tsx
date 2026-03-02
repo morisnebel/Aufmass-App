@@ -613,14 +613,20 @@ export default function DocumentViewScreen() {
     );
   }
 
-  // EDIT MODE - Simple flexbox layout (no absolute positioning)
+  // EDIT MODE - Using absolute positioning with screen dimensions
   if (isEditing) {
-    const { height: screenH } = Dimensions.get('window');
+    const { width: screenW, height: screenH } = Dimensions.get('screen'); // Use 'screen' instead of 'window'
+    const HEADER_H = 50;
+    const TOOLBAR_H = 60;
+    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H;
+    
+    console.log(`Screen dimensions: ${screenW} x ${screenH}, Canvas height: ${CANVAS_H}`);
     
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#e8e8e8' }} edges={['top', 'left', 'right']}>
-        {/* Header */}
-        <View style={styles.editHeader}>
+      <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
+          {/* Header - fixed at top */}
+          <View style={[styles.editHeader, { height: HEADER_H }]}>
           <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
             <Ionicons name="close" size={24} color="#f44336" />
           </TouchableOpacity>
@@ -640,8 +646,8 @@ export default function DocumentViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Canvas Area */}
-        <View style={styles.editCanvasContainer} onLayout={onCanvasAreaLayout}>
+        {/* Canvas Area - takes all remaining space */}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e8e8e8' }} onLayout={onCanvasAreaLayout}>
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -788,7 +794,7 @@ export default function DocumentViewScreen() {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
     );
   }
 

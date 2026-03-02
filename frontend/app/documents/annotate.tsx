@@ -780,7 +780,7 @@ export default function DocumentAnnotateScreen() {
             </Svg>
           </View>
         </View>
-      </ScrollView>
+      </View>
 
       {/* Page Navigation */}
       <View style={styles.pageNav}>

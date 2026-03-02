@@ -9,16 +9,41 @@ import {
   Dimensions,
   ScrollView,
   Platform,
+  Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import { DocumentService, Document } from '../../services/LocalStorage';
+import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
+import { DocumentService, Document, TextAnnotation } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
-import { File } from 'expo-file-system/next';
 import * as FileSystem from 'expo-file-system';
+import { captureRef } from 'react-native-view-shot';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+interface DrawPath {
+  path: string;
+  color: string;
+  strokeWidth: number;
+  opacity?: number;
+}
+
+interface ShapeAnnotation {
+  id: string;
+  type: 'rectangle' | 'circle' | 'arrow' | 'line';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  strokeWidth: number;
+}
+
+type ToolMode = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'line';
 
 export default function DocumentViewScreen() {
   const router = useRouter();
@@ -32,6 +57,54 @@ export default function DocumentViewScreen() {
   const [totalPages, setTotalPages] = useState(0);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const webViewRef = useRef<WebView>(null);
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [pageImage, setPageImage] = useState<string | null>(null);
+  const [renderingPage, setRenderingPage] = useState(false);
+  const pageWebViewRef = useRef<WebView>(null);
+  const canvasRef = useRef<View>(null);
+  
+  // Drawing state
+  const [paths, setPaths] = useState<DrawPath[]>([]);
+  const [currentPath, setCurrentPath] = useState<string>('');
+  const [drawColor, setDrawColor] = useState('#FF0000');
+  const [strokeWidth, setStrokeWidth] = useState(3);
+  
+  // Shape annotations
+  const [shapes, setShapes] = useState<ShapeAnnotation[]>([]);
+  const [currentShape, setCurrentShape] = useState<ShapeAnnotation | null>(null);
+  
+  // Text annotations
+  const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [newTextAnnotation, setNewTextAnnotation] = useState('');
+  const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  
+  // Tool mode
+  const [toolMode, setToolMode] = useState<ToolMode>('pen');
+
+  // Colors available
+  const colors = [
+    { color: '#FF0000', name: 'Rot' },
+    { color: '#00FF00', name: 'Grün' },
+    { color: '#0000FF', name: 'Blau' },
+    { color: '#FFFF00', name: 'Gelb' },
+    { color: '#FF9800', name: 'Orange' },
+    { color: '#000000', name: 'Schwarz' },
+  ];
+
+  // Tools available
+  const tools = [
+    { mode: 'pen' as ToolMode, icon: 'pencil', name: 'Stift' },
+    { mode: 'highlighter' as ToolMode, icon: 'brush', name: 'Marker' },
+    { mode: 'eraser' as ToolMode, icon: 'backspace', name: 'Radierer' },
+    { mode: 'text' as ToolMode, icon: 'text', name: 'Text' },
+    { mode: 'rectangle' as ToolMode, icon: 'square-outline', name: 'Rechteck' },
+    { mode: 'circle' as ToolMode, icon: 'ellipse-outline', name: 'Kreis' },
+    { mode: 'arrow' as ToolMode, icon: 'arrow-forward', name: 'Pfeil' },
+    { mode: 'line' as ToolMode, icon: 'remove', name: 'Linie' },
+  ];
 
   useEffect(() => {
     loadDocument();
@@ -63,11 +136,25 @@ export default function DocumentViewScreen() {
       } else if (data.type === 'currentPage') {
         setCurrentPage(data.page);
       } else if (data.type === 'error') {
-        // Just log canvas-related errors, don't show alert
         console.warn('PDF render warning:', data.message);
       }
     } catch (e) {
       console.warn('Error parsing WebView message:', e);
+    }
+  };
+
+  const handlePageImageMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'pageRendered') {
+        setPageImage(data.imageData);
+        setRenderingPage(false);
+      } else if (data.type === 'error') {
+        console.warn('Page render error:', data.message);
+        setRenderingPage(false);
+      }
+    } catch (e) {
+      console.warn('Error parsing page WebView message:', e);
     }
   };
 
@@ -77,11 +164,226 @@ export default function DocumentViewScreen() {
     }
   };
 
-  const openAnnotateScreen = () => {
-    router.push({
-      pathname: '/documents/annotate',
-      params: { documentId, projectId, page: currentPage },
-    });
+  const startEditing = () => {
+    setIsEditing(true);
+    setRenderingPage(true);
+    // Clear any previous annotations
+    setPaths([]);
+    setShapes([]);
+    setTextAnnotations([]);
+    setCurrentPath('');
+    setCurrentShape(null);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setPageImage(null);
+    setPaths([]);
+    setShapes([]);
+    setTextAnnotations([]);
+  };
+
+  const saveAnnotations = async () => {
+    if (!canvasRef.current) {
+      Alert.alert('Fehler', 'Canvas nicht verfügbar');
+      return;
+    }
+
+    try {
+      // Capture the annotated image
+      const uri = await captureRef(canvasRef.current, {
+        format: 'png',
+        quality: 1,
+      });
+
+      // Share the annotated image
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Annotiertes PDF teilen',
+        });
+      }
+
+      setIsEditing(false);
+      setPageImage(null);
+    } catch (error) {
+      console.error('Error saving annotations:', error);
+      Alert.alert('Fehler', 'Annotationen konnten nicht gespeichert werden');
+    }
+  };
+
+  // Touch handlers for drawing
+  const handleTouchStart = (evt: any) => {
+    const { locationX, locationY } = evt.nativeEvent;
+
+    if (toolMode === 'text') {
+      setTextPosition({ x: locationX, y: locationY });
+      setShowTextModal(true);
+      return;
+    }
+
+    if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
+      const newShape: ShapeAnnotation = {
+        id: Date.now().toString(),
+        type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
+        x1: locationX,
+        y1: locationY,
+        x2: locationX,
+        y2: locationY,
+        color: drawColor,
+        strokeWidth: strokeWidth,
+      };
+      setCurrentShape(newShape);
+      return;
+    }
+
+    setCurrentPath(`M ${locationX} ${locationY}`);
+  };
+
+  const handleTouchMove = (evt: any) => {
+    const { locationX, locationY } = evt.nativeEvent;
+
+    if (currentShape) {
+      setCurrentShape({
+        ...currentShape,
+        x2: locationX,
+        y2: locationY,
+      });
+      return;
+    }
+
+    if (currentPath) {
+      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (currentShape) {
+      setShapes((prev) => [...prev, currentShape]);
+      setCurrentShape(null);
+      return;
+    }
+
+    if (currentPath && currentPath.length > 0) {
+      const newPath: DrawPath = {
+        path: currentPath,
+        color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
+        strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
+        opacity: toolMode === 'highlighter' ? 0.4 : 1,
+      };
+      setPaths((prev) => [...prev, newPath]);
+      setCurrentPath('');
+    }
+  };
+
+  const addTextAnnotation = () => {
+    if (newTextAnnotation.trim()) {
+      const newText: TextAnnotation = {
+        id: Date.now().toString(),
+        text: newTextAnnotation.trim(),
+        x: textPosition.x,
+        y: textPosition.y,
+        fontSize: 16,
+        color: drawColor,
+      };
+      setTextAnnotations((prev) => [...prev, newText]);
+    }
+    setNewTextAnnotation('');
+    setShowTextModal(false);
+  };
+
+  const undo = () => {
+    if (paths.length > 0) {
+      setPaths((prev) => prev.slice(0, -1));
+    } else if (shapes.length > 0) {
+      setShapes((prev) => prev.slice(0, -1));
+    } else if (textAnnotations.length > 0) {
+      setTextAnnotations((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const clearAll = () => {
+    setPaths([]);
+    setShapes([]);
+    setTextAnnotations([]);
+    setCurrentPath('');
+    setCurrentShape(null);
+  };
+
+  const renderShape = (shape: ShapeAnnotation, isPreview = false) => {
+    const { type, x1, y1, x2, y2, color, strokeWidth } = shape;
+    const key = isPreview ? 'preview' : shape.id;
+
+    switch (type) {
+      case 'rectangle':
+        return (
+          <Rect
+            key={key}
+            x={Math.min(x1, x2)}
+            y={Math.min(y1, y2)}
+            width={Math.abs(x2 - x1)}
+            height={Math.abs(y2 - y1)}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+        );
+      case 'circle':
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const rx = Math.abs(x2 - x1) / 2;
+        const ry = Math.abs(y2 - y1) / 2;
+        return (
+          <Circle
+            key={key}
+            cx={cx}
+            cy={cy}
+            r={Math.max(rx, ry)}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+        );
+      case 'line':
+        return (
+          <Line
+            key={key}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+        );
+      case 'arrow':
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headLength = 15;
+        return (
+          <G key={key}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={strokeWidth} />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle - Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle - Math.PI / 6)}
+              stroke={color}
+              strokeWidth={strokeWidth}
+            />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle + Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle + Math.PI / 6)}
+              stroke={color}
+              strokeWidth={strokeWidth}
+            />
+          </G>
+        );
+      default:
+        return null;
+    }
   };
 
   const shareDocument = async () => {
@@ -91,12 +393,10 @@ export default function DocumentViewScreen() {
     }
 
     try {
-      // Extract base64 data
       const base64Data = document.originalPdfData.includes(',')
         ? document.originalPdfData.split(',')[1]
         : document.originalPdfData;
 
-      // Save to temp file using the new API
       const filename = `${document.name.replace('.pdf', '')}_${Date.now()}.pdf`;
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
       
@@ -104,7 +404,6 @@ export default function DocumentViewScreen() {
         encoding: 'base64',
       });
 
-      // Share
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
@@ -144,7 +443,7 @@ export default function DocumentViewScreen() {
     );
   };
 
-  // HTML for PDF viewer using pdf.js
+  // HTML for PDF viewer
   const getPdfViewerHtml = () => {
     if (!document?.originalPdfData) return '';
 
@@ -187,17 +486,10 @@ export default function DocumentViewScreen() {
             font-size: 18px;
             padding: 20px;
           }
-          #error {
-            color: #ff6b6b;
-            font-size: 16px;
-            padding: 20px;
-            text-align: center;
-          }
         </style>
       </head>
       <body>
         <div id="loading">PDF wird geladen...</div>
-        <div id="error" style="display: none;"></div>
         <div id="pdf-container"></div>
         
         <script>
@@ -205,8 +497,7 @@ export default function DocumentViewScreen() {
           
           let pdfDoc = null;
           let currentPage = 1;
-          let pageRenderTasks = new Map();
-          const scale = 2.0; // Higher resolution for better quality
+          const scale = 2.0;
           
           async function loadPdf() {
             try {
@@ -219,43 +510,23 @@ export default function DocumentViewScreen() {
               }
               
               pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
-              
               document.getElementById('loading').style.display = 'none';
               
-              // Send page count to React Native
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'pageCount',
                 count: pdfDoc.numPages
               }));
               
-              // Render pages one by one with delay
               for (let i = 1; i <= pdfDoc.numPages; i++) {
                 await renderPage(i);
-                // Add small delay between pages
                 await new Promise(resolve => setTimeout(resolve, 100));
               }
-              
             } catch (error) {
               console.error('Error loading PDF:', error);
-              document.getElementById('loading').style.display = 'none';
-              document.getElementById('error').style.display = 'block';
-              document.getElementById('error').textContent = 'Fehler beim Laden: ' + error.message;
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'error',
-                message: error.message
-              }));
             }
           }
           
           async function renderPage(pageNum) {
-            // Cancel any existing render task for this page
-            if (pageRenderTasks.has(pageNum)) {
-              try {
-                pageRenderTasks.get(pageNum).cancel();
-              } catch (e) {}
-              pageRenderTasks.delete(pageNum);
-            }
-            
             try {
               const page = await pdfDoc.getPage(pageNum);
               const viewport = page.getViewport({ scale: scale });
@@ -265,9 +536,7 @@ export default function DocumentViewScreen() {
               wrapper.id = 'page-' + pageNum;
               wrapper.setAttribute('data-page', pageNum);
               
-              // Create a unique canvas for this page
               const canvas = document.createElement('canvas');
-              canvas.id = 'canvas-page-' + pageNum;
               const context = canvas.getContext('2d');
               canvas.height = viewport.height;
               canvas.width = viewport.width;
@@ -277,22 +546,9 @@ export default function DocumentViewScreen() {
               wrapper.appendChild(canvas);
               document.getElementById('pdf-container').appendChild(wrapper);
               
-              const renderTask = page.render({
-                canvasContext: context,
-                viewport: viewport
-              });
-              
-              pageRenderTasks.set(pageNum, renderTask);
-              
-              await renderTask.promise;
-              
-              pageRenderTasks.delete(pageNum);
-              
+              await page.render({ canvasContext: context, viewport: viewport }).promise;
             } catch (error) {
-              if (error && error.name !== 'RenderingCancelledException') {
-                console.error('Error rendering page ' + pageNum + ':', error);
-                // Don't send error to RN for rendering issues, just log
-              }
+              console.error('Error rendering page:', error);
             }
           }
           
@@ -308,7 +564,6 @@ export default function DocumentViewScreen() {
             }
           }
           
-          // Intersection Observer to track current page
           const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
               if (entry.isIntersecting) {
@@ -324,13 +579,71 @@ export default function DocumentViewScreen() {
             });
           }, { threshold: 0.5 });
           
-          // Start loading
           loadPdf().then(() => {
-            // Observe all pages
             document.querySelectorAll('.page-wrapper').forEach(el => {
               observer.observe(el);
             });
           });
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
+  // HTML for single page rendering (for annotation)
+  const getPageRendererHtml = () => {
+    if (!document?.originalPdfData) return '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+      </head>
+      <body>
+        <canvas id="canvas"></canvas>
+        <script>
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          async function renderPage() {
+            try {
+              const pdfData = '${document.originalPdfData}';
+              const base64Data = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+              const binaryString = atob(base64Data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              
+              const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+              const page = await pdfDoc.getPage(${currentPage});
+              const scale = 2.0;
+              const viewport = page.getViewport({ scale: scale });
+              
+              const canvas = document.getElementById('canvas');
+              const context = canvas.getContext('2d');
+              canvas.height = viewport.height;
+              canvas.width = viewport.width;
+              
+              await page.render({ canvasContext: context, viewport: viewport }).promise;
+              
+              const imageData = canvas.toDataURL('image/png');
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'pageRendered',
+                imageData: imageData,
+                width: viewport.width,
+                height: viewport.height
+              }));
+            } catch (error) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'error',
+                message: error.message
+              }));
+            }
+          }
+          
+          renderPage();
         </script>
       </body>
       </html>
@@ -346,6 +659,193 @@ export default function DocumentViewScreen() {
     );
   }
 
+  // Edit mode view
+  if (isEditing) {
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={cancelEditing} style={styles.headerButton}>
+            <Ionicons name="close" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.title}>Seite {currentPage} bearbeiten</Text>
+          </View>
+          <TouchableOpacity onPress={undo} style={styles.headerButton}>
+            <Ionicons name="arrow-undo" size={24} color="#1976d2" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={clearAll} style={styles.headerButton}>
+            <Ionicons name="trash-outline" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={saveAnnotations} style={styles.headerButton}>
+            <Ionicons name="share-outline" size={24} color="#4caf50" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Canvas Area */}
+        <View style={styles.canvasContainer}>
+          {renderingPage && !pageImage && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#1976d2" />
+              <Text style={styles.loadingText}>Seite wird geladen...</Text>
+            </View>
+          )}
+
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            bouncesZoom={true}
+          >
+            <View 
+              ref={canvasRef}
+              style={styles.canvasWrapper}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={handleTouchStart}
+              onResponderMove={handleTouchMove}
+              onResponderRelease={handleTouchEnd}
+            >
+              {pageImage && (
+                <Image
+                  source={{ uri: pageImage }}
+                  style={styles.pageImage}
+                  resizeMode="contain"
+                />
+              )}
+              
+              <Svg style={StyleSheet.absoluteFill}>
+                {paths.map((p, index) => (
+                  <Path
+                    key={index}
+                    d={p.path}
+                    stroke={p.color}
+                    strokeWidth={p.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={p.opacity || 1}
+                  />
+                ))}
+                
+                {currentPath && (
+                  <Path
+                    d={currentPath}
+                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
+                  />
+                )}
+
+                {shapes.map(shape => renderShape(shape))}
+                {currentShape && renderShape(currentShape, true)}
+                
+                {textAnnotations.map((t) => (
+                  <SvgText
+                    key={t.id}
+                    x={t.x}
+                    y={t.y}
+                    fill={t.color}
+                    fontSize={t.fontSize}
+                    fontWeight="bold"
+                  >
+                    {t.text}
+                  </SvgText>
+                ))}
+              </Svg>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Tool Selection Bar */}
+        <View style={styles.toolBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {tools.map((tool) => (
+              <TouchableOpacity
+                key={tool.mode}
+                style={[
+                  styles.toolItem,
+                  toolMode === tool.mode && styles.toolItemActive,
+                ]}
+                onPress={() => setToolMode(tool.mode)}
+              >
+                <Ionicons
+                  name={tool.icon as any}
+                  size={22}
+                  color={toolMode === tool.mode ? '#fff' : '#666'}
+                />
+              </TouchableOpacity>
+            ))}
+            <View style={styles.toolDivider} />
+            {colors.map((c) => (
+              <TouchableOpacity
+                key={c.color}
+                style={[
+                  styles.colorItem,
+                  { backgroundColor: c.color },
+                  drawColor === c.color && styles.colorItemActive,
+                ]}
+                onPress={() => setDrawColor(c.color)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Hidden WebView for page rendering */}
+        <WebView
+          ref={pageWebViewRef}
+          source={{ html: getPageRendererHtml() }}
+          style={{ height: 1, width: 1, position: 'absolute', top: -1000 }}
+          onMessage={handlePageImageMessage}
+          javaScriptEnabled={true}
+        />
+
+        {/* Text Input Modal */}
+        <Modal visible={showTextModal} transparent animationType="fade">
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.textModal}>
+              <Text style={styles.modalTitle}>Text hinzufügen</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newTextAnnotation}
+                onChangeText={setNewTextAnnotation}
+                placeholder="Text eingeben..."
+                placeholderTextColor="#999"
+                multiline
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setNewTextAnnotation('');
+                    setShowTextModal(false);
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.addButton]}
+                  onPress={addTextAnnotation}
+                >
+                  <Text style={styles.addButtonText}>Hinzufügen</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      </View>
+    );
+  }
+
+  // Normal view mode
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -395,7 +895,7 @@ export default function DocumentViewScreen() {
       {/* Bottom Toolbar */}
       <View style={styles.toolbar}>
         <TouchableOpacity 
-          style={styles.toolButton} 
+          style={styles.navButton} 
           onPress={() => goToPage(currentPage - 1)}
           disabled={currentPage <= 1}
         >
@@ -404,18 +904,18 @@ export default function DocumentViewScreen() {
             size={28} 
             color={currentPage <= 1 ? '#ccc' : '#1976d2'} 
           />
-          <Text style={[styles.toolText, currentPage <= 1 && styles.toolTextDisabled]}>
+          <Text style={[styles.navText, currentPage <= 1 && styles.navTextDisabled]}>
             Zurück
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.annotateButton} onPress={openAnnotateScreen}>
+        <TouchableOpacity style={styles.editButton} onPress={startEditing}>
           <Ionicons name="pencil" size={28} color="#fff" />
-          <Text style={styles.annotateText}>Bearbeiten</Text>
+          <Text style={styles.editText}>Bearbeiten</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.toolButton} 
+          style={styles.navButton} 
           onPress={() => goToPage(currentPage + 1)}
           disabled={currentPage >= totalPages}
         >
@@ -424,7 +924,7 @@ export default function DocumentViewScreen() {
             size={28} 
             color={currentPage >= totalPages ? '#ccc' : '#1976d2'} 
           />
-          <Text style={[styles.toolText, currentPage >= totalPages && styles.toolTextDisabled]}>
+          <Text style={[styles.navText, currentPage >= totalPages && styles.navTextDisabled]}>
             Weiter
           </Text>
         </TouchableOpacity>
@@ -501,30 +1001,154 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
-  toolButton: {
+  navButton: {
     alignItems: 'center',
     padding: 8,
     minWidth: 70,
   },
-  toolText: {
+  navText: {
     fontSize: 12,
     color: '#1976d2',
     marginTop: 4,
   },
-  toolTextDisabled: {
+  navTextDisabled: {
     color: '#ccc',
   },
-  annotateButton: {
+  editButton: {
     alignItems: 'center',
     backgroundColor: '#4caf50',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
   },
-  annotateText: {
+  editText: {
     fontSize: 12,
     color: '#fff',
     fontWeight: '600',
     marginTop: 4,
+  },
+  // Edit mode styles
+  canvasContainer: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    zIndex: 10,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    padding: 10,
+  },
+  canvasWrapper: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  pageImage: {
+    width: SCREEN_WIDTH - 40,
+    height: (SCREEN_WIDTH - 40) * 1.414, // A4 aspect ratio
+  },
+  toolBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  toolItem: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  toolItemActive: {
+    backgroundColor: '#1976d2',
+  },
+  toolDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#ddd',
+    marginHorizontal: 8,
+  },
+  colorItem: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  colorItemActive: {
+    borderWidth: 3,
+    borderColor: '#1976d2',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  textModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  addButton: {
+    backgroundColor: '#1976d2',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

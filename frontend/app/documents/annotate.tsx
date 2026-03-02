@@ -924,14 +924,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   headerButton: {
-    padding: 8,
+    padding: 6,
+  },
+  headerNavButton: {
+    padding: 4,
+  },
+  headerPageInfo: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginHorizontal: 4,
   },
   headerTitle: {
     flex: 1,
@@ -945,6 +954,62 @@ const styles = StyleSheet.create({
   pageInfo: {
     fontSize: 12,
     color: '#666',
+  },
+  mainContent: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  zoomContainer: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+  },
+  zoomContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  sideToolbar: {
+    width: 50,
+    backgroundColor: '#fff',
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  sideToolButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  sideToolButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  sideDivider: {
+    width: 30,
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 6,
+  },
+  sideColorButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    marginVertical: 2,
+  },
+  sideColorButtonActive: {
+    borderWidth: 3,
+    borderColor: '#1976d2',
+  },
+  strokePreviewSide: {
+    width: 24,
+    borderRadius: 2,
   },
   toolbar: {
     flexDirection: 'row',

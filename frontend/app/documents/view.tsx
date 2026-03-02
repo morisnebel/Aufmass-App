@@ -614,11 +614,13 @@ export default function DocumentViewScreen() {
   }
 
 
-  // EDIT MODE
+  // EDIT MODE - Using Modal for fullscreen
   if (isEditing) {
+    const { width: screenW, height: screenH } = Dimensions.get('screen');
+    
     return (
-      <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
+      <Modal visible={true} animationType="none" presentationStyle="fullScreen" supportedOrientations={['portrait', 'landscape']}>
+        <View style={{ flex: 1, backgroundColor: '#e8e8e8', width: screenW, height: screenH }}>
           {/* Header */}
           <View style={[styles.editHeader, { height: 50 }]}>
             <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
@@ -777,7 +779,7 @@ export default function DocumentViewScreen() {
             </View>
           </Modal>
         </View>
-      </View>
+      </Modal>
     );
   }
 

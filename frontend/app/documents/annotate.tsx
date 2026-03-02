@@ -803,53 +803,6 @@ export default function DocumentAnnotateScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tool Picker Modal */}
-      <Modal visible={showToolPicker} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackground} 
-            activeOpacity={1}
-            onPress={() => setShowToolPicker(false)}
-          />
-          <View style={styles.toolPickerModal}>
-            <Text style={styles.modalTitle}>Werkzeug wählen</Text>
-            <View style={styles.toolGrid}>
-              {tools.map((tool) => (
-                <TouchableOpacity
-                  key={tool.mode}
-                  style={[
-                    styles.toolPickerButton,
-                    toolMode === tool.mode && styles.toolPickerButtonActive,
-                  ]}
-                  onPress={() => {
-                    setToolMode(tool.mode);
-                    setShowToolPicker(false);
-                  }}
-                >
-                  <Ionicons 
-                    name={tool.icon as any} 
-                    size={28} 
-                    color={toolMode === tool.mode ? '#fff' : '#1976d2'} 
-                  />
-                  <Text style={[
-                    styles.toolPickerLabel,
-                    toolMode === tool.mode && styles.toolPickerLabelActive,
-                  ]}>
-                    {tool.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity 
-              style={styles.closeModalButton}
-              onPress={() => setShowToolPicker(false)}
-            >
-              <Text style={styles.closeModalButtonText}>Schließen</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* Stroke Width Picker Modal */}
       <Modal visible={showStrokePicker} transparent animationType="fade">
         <View style={styles.modalOverlay}>

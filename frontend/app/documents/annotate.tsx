@@ -1020,6 +1020,23 @@ const styles = StyleSheet.create({
   colorButtonWhite: {
     borderColor: '#999',
   },
+  canvasArea: {
+    flex: 1,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  renderingOverlayCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
   scrollContainer: {
     flex: 1,
     backgroundColor: '#e0e0e0',
@@ -1044,6 +1061,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 12,
     fontSize: 14,
+  },
+  canvasContainerCentered: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    position: 'relative',
   },
   canvasContainer: {
     backgroundColor: '#fff',

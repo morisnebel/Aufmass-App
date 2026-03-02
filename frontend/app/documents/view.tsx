@@ -616,14 +616,19 @@ export default function DocumentViewScreen() {
 
 
 
-  // EDIT MODE - Simple flexbox, no absolute positioning
+  // EDIT MODE - Hybrid: flexbox with calculated canvas height
   if (isEditing) {
+    const { width: screenW, height: screenH } = Dimensions.get('screen');
+    const HEADER_H = 50;
+    const TOOLBAR_H = 60;
+    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H;
+    
     return (
       <Modal visible={true} animationType="none" statusBarTranslucent={true} presentationStyle="overFullScreen">
         <StatusBar hidden={true} />
-        <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
-          {/* Header */}
-          <View style={styles.editHeader}>
+        <View style={{ width: screenW, height: screenH, backgroundColor: '#e8e8e8' }}>
+          {/* Header - fixed height */}
+          <View style={[styles.editHeader, { height: HEADER_H }]}>
             <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
               <Ionicons name="close" size={24} color="#f44336" />
             </TouchableOpacity>
@@ -643,8 +648,8 @@ export default function DocumentViewScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Canvas Area - flex: 1 to fill remaining space */}
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#d0d0d0' }} onLayout={onCanvasAreaLayout}>
+          {/* Canvas Area - explicit calculated height */}
+          <View style={{ width: screenW, height: CANVAS_H, justifyContent: 'center', alignItems: 'center', backgroundColor: '#d0d0d0' }} onLayout={onCanvasAreaLayout}>
             {renderingPage && !pageImage ? (
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -684,9 +689,9 @@ export default function DocumentViewScreen() {
           </View>
 
           {/* Toolbar - fixed height at bottom */}
-          <View style={styles.editToolbar}>
+          <View style={[styles.editToolbar, { height: TOOLBAR_H }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
-              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => { console.log('PEN PRESSED'); selectTool('pen'); }}>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>

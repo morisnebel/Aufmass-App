@@ -14,10 +14,10 @@ import {
   Platform,
   Image,
   useWindowDimensions,
-  SafeAreaView,
   PanResponder,
   GestureResponderEvent,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
@@ -99,10 +99,14 @@ export default function DocumentAnnotateScreen() {
 
   // PanResponder for robust touch handling
   const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => !zoomEnabled,
+    onStartShouldSetPanResponder: (evt) => {
+      console.log('🟢 onStartShouldSetPanResponder:', evt.nativeEvent.locationX, evt.nativeEvent.locationY, 'zoomEnabled:', zoomEnabled);
+      return !zoomEnabled;
+    },
     onMoveShouldSetPanResponder: () => !zoomEnabled,
     onPanResponderGrant: (evt) => {
-      const { locationX, locationY } = evt.nativeEvent;
+      const { locationX, locationY, pageX, pageY } = evt.nativeEvent;
+      console.log('🔵 onPanResponderGrant - locationX:', locationX, 'locationY:', locationY, 'pageX:', pageX, 'pageY:', pageY);
       
       if (toolMode === 'text') {
         setTextPosition({ x: locationX, y: locationY });
@@ -145,6 +149,7 @@ export default function DocumentAnnotateScreen() {
       }
     },
     onPanResponderRelease: () => {
+      console.log('🔴 onPanResponderRelease');
       if (currentShape) {
         setShapes((prev) => [...prev, currentShape]);
         setCurrentShape(null);

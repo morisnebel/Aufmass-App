@@ -88,16 +88,14 @@ export default function DocumentAnnotateScreen() {
   const [toolMode, setToolMode] = useState<ToolMode>('pen');
   const [showToolPicker, setShowToolPicker] = useState(false);
   const [showStrokePicker, setShowStrokePicker] = useState(false);
-  const [zoomEnabled, setZoomEnabled] = useState(false);
   
   const canvasRef = useRef(null);
   const webViewRef = useRef<WebView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const drawingViewRef = useRef<View>(null);
 
-  // Touch handlers that use current state
+  // Touch handlers
   const handleTouchStart = (evt: any) => {
-    if (zoomEnabled) return;
     
     const { locationX, locationY } = evt.nativeEvent;
     console.log('🟢 handleTouchStart:', locationX, locationY, 'tool:', toolMode);
@@ -128,8 +126,6 @@ export default function DocumentAnnotateScreen() {
   };
 
   const handleTouchMove = (evt: any) => {
-    if (zoomEnabled) return;
-    
     const { locationX, locationY } = evt.nativeEvent;
 
     if (currentShape) {
@@ -147,8 +143,6 @@ export default function DocumentAnnotateScreen() {
   };
 
   const handleTouchEnd = () => {
-    if (zoomEnabled) return;
-    
     console.log('🔴 handleTouchEnd');
     if (currentShape) {
       setShapes((prev) => [...prev, currentShape]);
@@ -647,9 +641,9 @@ export default function DocumentAnnotateScreen() {
         </View>
 
         {/* Main Content Area with Side Toolbar */}
-        <View style={[styles.mainContent, { backgroundColor: 'blue' }]}>
+        <View style={styles.mainContent}>
           {/* Canvas Area - NO ScrollView to avoid touch conflicts */}
-          <View style={[styles.canvasArea, { backgroundColor: 'green' }]}>
+          <View style={styles.canvasArea}>
             {renderingPage && (
               <View style={styles.renderingOverlayInline}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -662,7 +656,7 @@ export default function DocumentAnnotateScreen() {
               style={[styles.canvasContainerCentered, { 
                 width: canvasDimensions.width, 
                 height: canvasDimensions.height,
-                backgroundColor: 'yellow',
+                backgroundColor: '#fff',
               }]}
             >
               {pageImage && (
@@ -680,8 +674,8 @@ export default function DocumentAnnotateScreen() {
               <View
                 ref={drawingViewRef}
                 style={styles.touchLayer}
-                onStartShouldSetResponder={() => !zoomEnabled}
-                onMoveShouldSetResponder={() => !zoomEnabled}
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
                 onResponderGrant={handleTouchStart}
                 onResponderMove={handleTouchMove}
                 onResponderRelease={handleTouchEnd}
@@ -739,11 +733,10 @@ export default function DocumentAnnotateScreen() {
           </View>
 
           {/* Right Side Toolbar - in ScrollView to prevent overflow issues */}
-          <View style={[styles.sideToolbar, { backgroundColor: 'orange' }]}>
+          <View style={styles.sideToolbar}>
             <ScrollView 
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.sideToolbarContent, { backgroundColor: 'brown' }]}
-              style={{ backgroundColor: 'pink' }}
+              contentContainerStyle={styles.sideToolbarContent}
               bounces={false}
             >
               {/* Undo/Clear */}
@@ -775,21 +768,6 @@ export default function DocumentAnnotateScreen() {
               ))}
               
               <View style={styles.sideDivider} />
-              
-              {/* Zoom Toggle */}
-              <TouchableOpacity 
-                style={[
-                  styles.sideToolButton, 
-                  zoomEnabled && styles.sideToolButtonActive
-                ]}
-                onPress={() => setZoomEnabled(!zoomEnabled)}
-              >
-                <Ionicons 
-                  name={zoomEnabled ? "scan" : "expand"} 
-                  size={20} 
-                  color={zoomEnabled ? '#fff' : '#666'} 
-                />
-              </TouchableOpacity>
               
               {/* Stroke Width */}
               <TouchableOpacity 
@@ -931,11 +909,11 @@ export default function DocumentAnnotateScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'cyan', // DEBUG: War blau
+    backgroundColor: '#1976d2',
   },
   container: {
     flex: 1,
-    backgroundColor: 'purple', // DEBUG: Sollte NICHT sichtbar sein
+    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -985,11 +963,10 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: 'blue', // DEBUG
   },
   canvasArea: {
     flex: 1,
-    backgroundColor: 'green', // DEBUG
+    backgroundColor: '#e8e8e8',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 8,
@@ -1000,7 +977,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 0, 0, 0.2)', // DEBUG: Zeigt die Touch-Zone
   },
   canvasScrollView: {
     flex: 1,
@@ -1034,10 +1010,10 @@ const styles = StyleSheet.create({
   },
   sideToolbar: {
     width: 50,
-    backgroundColor: 'orange', // DEBUG
+    backgroundColor: '#fff',
     borderLeftWidth: 1,
     borderLeftColor: '#e0e0e0',
-    overflow: 'hidden', // WICHTIG: Verhindert, dass Elemente über den Bereich hinausgehen
+    overflow: 'hidden',
   },
   sideToolbarContent: {
     alignItems: 'center',
@@ -1047,7 +1023,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: 'red', // DEBUG
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 2,

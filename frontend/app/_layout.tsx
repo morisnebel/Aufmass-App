@@ -12,7 +12,7 @@ LogBox.ignoreLogs([
 
 export default function RootLayout() {
   return (
-    <View style={{ flex: 1, backgroundColor: 'magenta' }}>
+    <View style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <Stack
         screenOptions={{

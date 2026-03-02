@@ -899,6 +899,15 @@ export default function DocumentAnnotateScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Hidden WebView for PDF rendering - placed at end to not affect layout */}
+      <WebView
+        ref={webViewRef}
+        source={{ html: getPdfRendererHtml() }}
+        style={{ height: 1, width: 1, position: 'absolute', top: -100, left: -100 }}
+        onMessage={handleWebViewMessage}
+        javaScriptEnabled={true}
+      />
     </View>
   );
 }

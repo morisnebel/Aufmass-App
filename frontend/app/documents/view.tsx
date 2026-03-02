@@ -355,7 +355,7 @@ export default function DocumentViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Canvas Area - Uses remaining space */}
+        {/* Canvas Area - Takes ALL remaining space */}
         <View style={styles.editCanvasContainer} onLayout={onCanvasAreaLayout}>
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
@@ -393,8 +393,8 @@ export default function DocumentViewScreen() {
           )}
         </View>
 
-        {/* Fixed Toolbar at ABSOLUTE BOTTOM */}
-        <View style={styles.editToolbarFixed}>
+        {/* Toolbar at BOTTOM - Normal layout, not absolute */}
+        <View style={styles.editToolbarNormal}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
             <TouchableOpacity 
               style={[styles.toolBtn, !isTextMode && !isHighlighter && styles.toolBtnActive]} 
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   // Edit mode styles
   editRoot: { 
     flex: 1, 
-    backgroundColor: '#e8e8e8',
+    backgroundColor: 'red', // DEBUG - sollte NICHT sichtbar sein wenn alles richtig ist
   },
   editHeader: {
     flexDirection: 'row',
@@ -569,10 +569,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 60, // Just enough for fixed toolbar
-    paddingTop: 5,
-    paddingHorizontal: 5,
-    backgroundColor: 'lightblue', // DEBUG - sollte den ganzen verfügbaren Bereich zeigen
+    backgroundColor: 'lightblue', // DEBUG
   },
   editCanvas: {
     flex: 1,
@@ -598,6 +595,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    height: 60,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    justifyContent: 'center',
+  },
+  editToolbarNormal: {
     height: 60,
     backgroundColor: '#fff',
     borderTopWidth: 1,

@@ -894,11 +894,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: 10,
-    paddingTop: 5,
+    paddingTop: 0,
     paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    marginTop: -10,
   },
   editCanvasContainer: {
     flex: 1,

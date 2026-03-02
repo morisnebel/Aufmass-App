@@ -238,11 +238,9 @@ export default function DocumentAnnotateScreen() {
               }));
               
             } catch (error) {
+              // Don't send canvas errors to React Native - just log them
               if (error.name !== 'RenderingCancelledException') {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'error',
-                  message: error.message
-                }));
+                console.warn('PDF render warning:', error.message);
               }
             } finally {
               isRendering = false;

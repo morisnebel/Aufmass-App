@@ -1117,6 +1117,25 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350,
   },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  closeModalButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  closeModalButtonText: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 16,
+  },
   strokeOptions: {
     flexDirection: 'row',
     justifyContent: 'space-around',

@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +51,7 @@ export default function DocumentViewScreen() {
   const params = useLocalSearchParams();
   const documentId = Array.isArray(params.documentId) ? params.documentId[0] : params.documentId;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export default function DocumentViewScreen() {
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [pageImage, setPageImage] = useState<string | null>(null);
+  const [pageImageSize, setPageImageSize] = useState({ width: 0, height: 0 });
   const [renderingPage, setRenderingPage] = useState(false);
   const pageWebViewRef = useRef<WebView>(null);
   const canvasRef = useRef<View>(null);
@@ -148,6 +151,30 @@ export default function DocumentViewScreen() {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'pageRendered') {
         setPageImage(data.imageData);
+        // Calculate the best fit size for the screen
+        const pdfWidth = data.width;
+        const pdfHeight = data.height;
+        const aspectRatio = pdfWidth / pdfHeight;
+        
+        // Available space (subtract header ~50px and toolbar ~60px)
+        const availableWidth = windowWidth - 20;
+        const availableHeight = windowHeight - 120;
+        
+        let displayWidth, displayHeight;
+        
+        // Fit to available space while maintaining aspect ratio
+        if (availableWidth / availableHeight > aspectRatio) {
+          // Height is the limiting factor
+          displayHeight = availableHeight;
+          displayWidth = displayHeight * aspectRatio;
+        } else {
+          // Width is the limiting factor
+          displayWidth = availableWidth;
+          displayHeight = displayWidth / aspectRatio;
+        }
+        
+        console.log(`Canvas size: ${displayWidth} x ${displayHeight}, available: ${availableWidth} x ${availableHeight}`);
+        setPageImageSize({ width: displayWidth, height: displayHeight });
         setRenderingPage(false);
       } else if (data.type === 'error') {
         console.warn('Page render error:', data.message);
@@ -691,74 +718,83 @@ export default function DocumentViewScreen() {
             </View>
           )}
 
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            bouncesZoom={true}
+          {/* Direct drawing area - NO ScrollView */}
+          <View 
+            ref={canvasRef}
+            style={[
+              styles.canvasWrapper,
+              pageImageSize.width > 0 && {
+                width: pageImageSize.width,
+                height: pageImageSize.height,
+              }
+            ]}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={handleTouchStart}
+            onResponderMove={handleTouchMove}
+            onResponderRelease={handleTouchEnd}
           >
-            <View 
-              ref={canvasRef}
-              style={styles.canvasWrapper}
-              onStartShouldSetResponder={() => true}
-              onMoveShouldSetResponder={() => true}
-              onResponderGrant={handleTouchStart}
-              onResponderMove={handleTouchMove}
-              onResponderRelease={handleTouchEnd}
+            {pageImage && (
+              <Image
+                source={{ uri: pageImage }}
+                style={[
+                  styles.pageImage,
+                  pageImageSize.width > 0 && {
+                    width: pageImageSize.width,
+                    height: pageImageSize.height,
+                  }
+                ]}
+                resizeMode="contain"
+              />
+            )}
+            
+            <Svg 
+              style={StyleSheet.absoluteFill}
+              width={pageImageSize.width || '100%'}
+              height={pageImageSize.height || '100%'}
             >
-              {pageImage && (
-                <Image
-                  source={{ uri: pageImage }}
-                  style={styles.pageImage}
-                  resizeMode="contain"
+              {paths.map((p, index) => (
+                <Path
+                  key={index}
+                  d={p.path}
+                  stroke={p.color}
+                  strokeWidth={p.strokeWidth}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={p.opacity || 1}
+                />
+              ))}
+              
+              {currentPath && (
+                <Path
+                  d={currentPath}
+                  stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                  strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={toolMode === 'highlighter' ? 0.4 : 1}
                 />
               )}
-              
-              <Svg style={StyleSheet.absoluteFill}>
-                {paths.map((p, index) => (
-                  <Path
-                    key={index}
-                    d={p.path}
-                    stroke={p.color}
-                    strokeWidth={p.strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={p.opacity || 1}
-                  />
-                ))}
-                
-                {currentPath && (
-                  <Path
-                    d={currentPath}
-                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
-                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
-                  />
-                )}
 
-                {shapes.map(shape => renderShape(shape))}
-                {currentShape && renderShape(currentShape, true)}
-                
-                {textAnnotations.map((t) => (
-                  <SvgText
-                    key={t.id}
-                    x={t.x}
-                    y={t.y}
-                    fill={t.color}
-                    fontSize={t.fontSize}
-                    fontWeight="bold"
-                  >
-                    {t.text}
-                  </SvgText>
-                ))}
-              </Svg>
-            </View>
-          </ScrollView>
+              {shapes.map(shape => renderShape(shape))}
+              {currentShape && renderShape(currentShape, true)}
+              
+              {textAnnotations.map((t) => (
+                <SvgText
+                  key={t.id}
+                  x={t.x}
+                  y={t.y}
+                  fill={t.color}
+                  fontSize={t.fontSize}
+                  fontWeight="bold"
+                >
+                  {t.text}
+                </SvgText>
+              ))}
+            </Svg>
+          </View>
         </View>
 
         {/* Tool Selection Bar */}
@@ -1031,6 +1067,8 @@ const styles = StyleSheet.create({
   canvasContainer: {
     flex: 1,
     backgroundColor: '#e8e8e8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1056,8 +1094,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   pageImage: {
-    width: SCREEN_WIDTH - 40,
-    height: (SCREEN_WIDTH - 40) * 1.414, // A4 aspect ratio
+    // Default size, will be overridden dynamically
   },
   toolBar: {
     flexDirection: 'row',

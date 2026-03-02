@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   ScrollView,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -614,15 +615,21 @@ export default function DocumentViewScreen() {
   }
 
 
-  // EDIT MODE - Using Modal for fullscreen
+  // EDIT MODE - Using fixed dimensions
   if (isEditing) {
     const { width: screenW, height: screenH } = Dimensions.get('screen');
+    const HEADER_H = 50;
+    const TOOLBAR_H = 60;
+    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H - 20; // 20 for safe area
+    
+    console.log(`Edit mode: screen=${screenW}x${screenH}, canvas height=${CANVAS_H}`);
     
     return (
-      <Modal visible={true} animationType="none" presentationStyle="fullScreen" supportedOrientations={['portrait', 'landscape']}>
-        <View style={{ flex: 1, backgroundColor: '#e8e8e8', width: screenW, height: screenH }}>
+      <Modal visible={true} animationType="none" statusBarTranslucent={true} presentationStyle="overFullScreen">
+        <StatusBar hidden={true} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#e8e8e8' }}>
           {/* Header */}
-          <View style={[styles.editHeader, { height: 50 }]}>
+          <View style={[styles.editHeader, { height: HEADER_H }]}>
             <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
               <Ionicons name="close" size={24} color="#f44336" />
             </TouchableOpacity>
@@ -642,8 +649,20 @@ export default function DocumentViewScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Canvas Area */}
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} onLayout={onCanvasAreaLayout}>
+          {/* Canvas Area - fixed position */}
+          <View 
+            style={{ 
+              position: 'absolute', 
+              top: HEADER_H, 
+              left: 0, 
+              right: 0, 
+              bottom: TOOLBAR_H, 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              backgroundColor: '#d0d0d0'
+            }} 
+            onLayout={onCanvasAreaLayout}
+          >
             {renderingPage && !pageImage ? (
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -682,8 +701,8 @@ export default function DocumentViewScreen() {
             )}
           </View>
 
-          {/* Toolbar */}
-          <View style={[styles.editToolbar, { height: 60 }]}>
+          {/* Toolbar - fixed at bottom */}
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd' }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />

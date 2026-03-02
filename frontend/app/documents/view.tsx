@@ -613,187 +613,170 @@ export default function DocumentViewScreen() {
     );
   }
 
-  // EDIT MODE - Using absolute positioning with screen dimensions
+
+  // EDIT MODE
   if (isEditing) {
-    const { width: screenW, height: screenH } = Dimensions.get('screen'); // Use 'screen' instead of 'window'
-    const HEADER_H = 50;
-    const TOOLBAR_H = 60;
-    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H;
-    
-    console.log(`Screen dimensions: ${screenW} x ${screenH}, Canvas height: ${CANVAS_H}`);
-    
     return (
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
-          {/* Header - fixed at top */}
-          <View style={[styles.editHeader, { height: HEADER_H }]}>
-          <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
-            <Ionicons name="close" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Seite {currentPage}</Text>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
-            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
-            <Ionicons name="trash-outline" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
-            <Ionicons name="save-outline" size={24} color="#4caf50" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-            <Ionicons name="share-outline" size={24} color="#1976d2" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Canvas Area - takes all remaining space */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e8e8e8' }} onLayout={onCanvasAreaLayout}>
-          {renderingPage && !pageImage ? (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#1976d2" />
-            </View>
-          ) : (
-            <View
-              ref={canvasRef}
-              style={[styles.canvas, { width: imageSize.width, height: imageSize.height }]}
-              onStartShouldSetResponder={() => true}
-              onMoveShouldSetResponder={() => true}
-              onResponderGrant={(e) => handleTouch(e, 'start')}
-              onResponderMove={(e) => handleTouch(e, 'move')}
-              onResponderRelease={(e) => handleTouch(e, 'end')}
-            >
-              {pageImage && (
-                <Image
-                  source={{ uri: pageImage }}
-                  style={{ width: imageSize.width, height: imageSize.height }}
-                  resizeMode="contain"
-                />
-              )}
-              <Svg style={StyleSheet.absoluteFill}>
-                {paths.map((p, i) => (
-                  <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
-                ))}
-                {currentPath && (
-                  <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
-                )}
-                {shapes.map(shape => renderShape(shape))}
-                {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
-                {textAnnotations.map(t => (
-                  <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
-                ))}
-              </Svg>
-            </View>
-          )}
-        </View>
-
-        {/* Toolbar */}
-        <View style={styles.editToolbar}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.toolbarContent}
-            keyboardShouldPersistTaps="always"
-          >
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
-              <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
+          {/* Header */}
+          <View style={[styles.editHeader, { height: 50 }]}>
+            <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
+              <Ionicons name="close" size={24} color="#f44336" />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
-              <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
+            <Text style={styles.headerText}>Seite {currentPage}</Text>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+              <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
-              <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
+            <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
+              <Ionicons name="trash-outline" size={24} color="#f44336" />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
-              <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
+            <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+              <Ionicons name="save-outline" size={24} color="#4caf50" />
             </TouchableOpacity>
-            
-            <View style={styles.divider} />
-            
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
-              <Ionicons name="square-outline" size={20} color={getCurrentTool() === 'rectangle' ? '#fff' : '#666'} />
+            <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
+              <Ionicons name="share-outline" size={24} color="#1976d2" />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
-              <Ionicons name="ellipse-outline" size={20} color={getCurrentTool() === 'circle' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
-              <Ionicons name="arrow-forward" size={20} color={getCurrentTool() === 'arrow' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
-              <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            
-            <View style={styles.divider} />
-            
-            <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
-              <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
-            </TouchableOpacity>
-            
-            {isTextMode && (
-              <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
-                <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
-              </TouchableOpacity>
-            )}
-            
-            <View style={styles.divider} />
-            
-            {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
-              <TouchableOpacity
-                key={color}
-                style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive, color === '#FFFFFF' && styles.colorBtnWhite]}
-                onPress={() => setDrawColor(color)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Hidden WebView */}
-        <WebView
-          ref={pageWebViewRef}
-          source={{ html: getPageRendererHtml() }}
-          style={{ height: 1, width: 1, position: 'absolute', top: -1000 }}
-          onMessage={handlePageRendered}
-          javaScriptEnabled
-        />
-
-        {/* Text Modal */}
-        <Modal visible={showTextModal} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Text hinzufügen</Text>
-              <TextInput
-                style={[styles.textInput, { color: drawColor, fontSize: textFontSize }]}
-                value={newText}
-                onChangeText={setNewText}
-                placeholder="Text eingeben..."
-                placeholderTextColor="#999"
-                autoFocus
-                multiline
-              />
-              <View style={styles.textSizeRow}>
-                <Text style={styles.textSizeLabel}>Textgröße:</Text>
-                {[12, 16, 24].map(size => (
-                  <TouchableOpacity 
-                    key={size}
-                    style={[styles.textSizeBtn, textFontSize === size && styles.textSizeBtnActive]}
-                    onPress={() => setTextFontSize(size)}
-                  >
-                    <Text style={{ fontSize: size * 0.6, fontWeight: textFontSize === size ? 'bold' : 'normal' }}>
-                      {size === 12 ? 'S' : size === 16 ? 'M' : 'L'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setNewText(''); setShowTextModal(false); }}>
-                  <Text>Abbrechen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalBtnOk} onPress={addText}>
-                  <Text style={{ color: '#fff' }}>OK</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
-        </Modal>
+
+          {/* Canvas Area */}
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} onLayout={onCanvasAreaLayout}>
+            {renderingPage && !pageImage ? (
+              <View style={styles.centered}>
+                <ActivityIndicator size="large" color="#1976d2" />
+              </View>
+            ) : (
+              <View
+                ref={canvasRef}
+                style={[styles.canvas, { width: imageSize.width, height: imageSize.height }]}
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={(e) => handleTouch(e, 'start')}
+                onResponderMove={(e) => handleTouch(e, 'move')}
+                onResponderRelease={(e) => handleTouch(e, 'end')}
+              >
+                {pageImage && (
+                  <Image
+                    source={{ uri: pageImage }}
+                    style={{ width: imageSize.width, height: imageSize.height }}
+                    resizeMode="contain"
+                  />
+                )}
+                <Svg style={StyleSheet.absoluteFill}>
+                  {paths.map((p, i) => (
+                    <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
+                  ))}
+                  {currentPath && (
+                    <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
+                  )}
+                  {shapes.map(shape => renderShape(shape))}
+                  {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
+                  {textAnnotations.map(t => (
+                    <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
+                  ))}
+                </Svg>
+              </View>
+            )}
+          </View>
+
+          {/* Toolbar */}
+          <View style={[styles.editToolbar, { height: 60 }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
+                <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
+                <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
+                <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
+                <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
+                <Ionicons name="square-outline" size={20} color={getCurrentTool() === 'rectangle' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
+                <Ionicons name="ellipse-outline" size={20} color={getCurrentTool() === 'circle' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
+                <Ionicons name="arrow-forward" size={20} color={getCurrentTool() === 'arrow' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
+                <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
+                <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
+              </TouchableOpacity>
+              {isTextMode && (
+                <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
+                  <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
+                </TouchableOpacity>
+              )}
+              <View style={styles.divider} />
+              {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive, color === '#FFFFFF' && styles.colorBtnWhite]}
+                  onPress={() => setDrawColor(color)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Hidden WebView */}
+          <WebView
+            ref={pageWebViewRef}
+            source={{ html: getPageRendererHtml() }}
+            style={{ height: 1, width: 1, position: 'absolute', top: -1000 }}
+            onMessage={handlePageRendered}
+            javaScriptEnabled
+          />
+
+          {/* Text Modal */}
+          <Modal visible={showTextModal} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Text hinzufügen</Text>
+                <TextInput
+                  style={[styles.textInput, { color: drawColor, fontSize: textFontSize }]}
+                  value={newText}
+                  onChangeText={setNewText}
+                  placeholder="Text eingeben..."
+                  placeholderTextColor="#999"
+                  autoFocus
+                  multiline
+                />
+                <View style={styles.textSizeRow}>
+                  <Text style={styles.textSizeLabel}>Textgröße:</Text>
+                  {[12, 16, 24].map(size => (
+                    <TouchableOpacity 
+                      key={size}
+                      style={[styles.textSizeBtn, textFontSize === size && styles.textSizeBtnActive]}
+                      onPress={() => setTextFontSize(size)}
+                    >
+                      <Text style={{ fontSize: size * 0.6, fontWeight: textFontSize === size ? 'bold' : 'normal' }}>
+                        {size === 12 ? 'S' : size === 16 ? 'M' : 'L'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setNewText(''); setShowTextModal(false); }}>
+                    <Text>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.modalBtnOk} onPress={addText}>
+                    <Text style={{ color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        </View>
       </View>
     );
   }

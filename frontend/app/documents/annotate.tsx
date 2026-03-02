@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#1976d2',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },

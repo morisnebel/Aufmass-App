@@ -101,6 +101,12 @@ export default function DocumentViewScreen() {
   const [isTextMode, setIsTextMode] = useState(false);
   const [textFontSize, setTextFontSize] = useState(16);
   
+  // Zoom
+  const [zoomLevel, setZoomLevel] = useState(1);
+  
+  // Dragging text
+  const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
+  
   // Track undo history for better ordering
   const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
   
@@ -636,7 +642,24 @@ export default function DocumentViewScreen() {
             <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
               <Ionicons name="close" size={24} color="#f44336" />
             </TouchableOpacity>
-            <Text style={styles.headerText}>Seite {currentPage}</Text>
+            
+            {/* Page Navigation */}
+            <TouchableOpacity 
+              onPress={() => { if (currentPage > 1) setCurrentPage(currentPage - 1); }} 
+              style={styles.iconBtn}
+              disabled={currentPage <= 1}
+            >
+              <Ionicons name="chevron-back" size={24} color={currentPage > 1 ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+            <Text style={styles.headerText}>Seite {currentPage}/{document?.pages?.length || 1}</Text>
+            <TouchableOpacity 
+              onPress={() => { if (document?.pages && currentPage < document.pages.length) setCurrentPage(currentPage + 1); }} 
+              style={styles.iconBtn}
+              disabled={!document?.pages || currentPage >= document.pages.length}
+            >
+              <Ionicons name="chevron-forward" size={24} color={document?.pages && currentPage < document.pages.length ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+            
             <View style={{ flex: 1 }} />
             <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
               <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
@@ -659,36 +682,55 @@ export default function DocumentViewScreen() {
                 <ActivityIndicator size="large" color="#1976d2" />
               </View>
             ) : (
-              <View
-                ref={canvasRef}
-                style={[styles.canvas, { width: imageSize.width, height: imageSize.height }]}
-                onStartShouldSetResponder={() => true}
-                onMoveShouldSetResponder={() => true}
-                onResponderGrant={(e) => handleTouch(e, 'start')}
-                onResponderMove={(e) => handleTouch(e, 'move')}
-                onResponderRelease={(e) => handleTouch(e, 'end')}
+              <ScrollView 
+                horizontal 
+                contentContainerStyle={{ justifyContent: 'center', alignItems: 'center', minWidth: '100%', minHeight: '100%' }}
+                maximumZoomScale={3}
+                minimumZoomScale={0.5}
+                showsHorizontalScrollIndicator={false}
+                showsVerticalScrollIndicator={false}
               >
-                {pageImage && (
-                  <Image
-                    source={{ uri: pageImage }}
-                    style={{ width: imageSize.width, height: imageSize.height }}
-                    resizeMode="contain"
-                  />
-                )}
-                <Svg style={StyleSheet.absoluteFill}>
-                  {paths.map((p, i) => (
-                    <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
-                  ))}
-                  {currentPath && (
-                    <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
-                  )}
-                  {shapes.map(shape => renderShape(shape))}
-                  {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
-                  {textAnnotations.map(t => (
-                    <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
-                  ))}
-                </Svg>
-              </View>
+                <ScrollView 
+                  contentContainerStyle={{ justifyContent: 'center', alignItems: 'center' }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View
+                    ref={canvasRef}
+                    style={[styles.canvas, { 
+                      width: imageSize.width * zoomLevel, 
+                      height: imageSize.height * zoomLevel,
+                      transform: [{ scale: zoomLevel }],
+                      transformOrigin: 'center center',
+                    }]}
+                    onStartShouldSetResponder={() => true}
+                    onMoveShouldSetResponder={() => true}
+                    onResponderGrant={(e) => handleTouch(e, 'start')}
+                    onResponderMove={(e) => handleTouch(e, 'move')}
+                    onResponderRelease={(e) => handleTouch(e, 'end')}
+                  >
+                    {pageImage && (
+                      <Image
+                        source={{ uri: pageImage }}
+                        style={{ width: imageSize.width, height: imageSize.height }}
+                        resizeMode="contain"
+                      />
+                    )}
+                    <Svg style={StyleSheet.absoluteFill}>
+                      {paths.map((p, i) => (
+                        <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
+                      ))}
+                      {currentPath && (
+                        <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
+                      )}
+                      {shapes.map(shape => renderShape(shape))}
+                      {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
+                      {textAnnotations.map(t => (
+                        <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
+                      ))}
+                    </Svg>
+                  </View>
+                </ScrollView>
+              </ScrollView>
             )}
           </View>
 
@@ -698,11 +740,8 @@ export default function DocumentViewScreen() {
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
-                <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
-                <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
+                <Ionicons name="cut-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
                 <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
@@ -729,6 +768,17 @@ export default function DocumentViewScreen() {
                   <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
                 </TouchableOpacity>
               )}
+              <View style={styles.divider} />
+              
+              {/* Zoom Controls */}
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}>
+                <Ionicons name="remove-circle-outline" size={20} color="#666" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 12, color: '#666', minWidth: 40, textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</Text>
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}>
+                <Ionicons name="add-circle-outline" size={20} color="#666" />
+              </TouchableOpacity>
+              
               <View style={styles.divider} />
               {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
                 <TouchableOpacity

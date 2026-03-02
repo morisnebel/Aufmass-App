@@ -980,10 +980,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
   },
   zoomContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: 8,
+    paddingTop: 8,
+    paddingHorizontal: 8,
   },
   sideToolbar: {
     width: 50,

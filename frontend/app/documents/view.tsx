@@ -23,6 +23,7 @@ import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import * as Print from 'expo-print';
 import { captureRef } from 'react-native-view-shot';
 
 // Annotation types for saving
@@ -160,29 +161,31 @@ export default function DocumentViewScreen() {
   const [prevPage, setPrevPage] = useState(currentPage);
   
   // Function to change page with proper annotation saving
+  // Use ref to store annotations immediately (React state is async)
+  const pageAnnotationsRef = useRef<{[page: number]: {paths: DrawPath[], shapes: Shape[], texts: TextAnnotation[]}}>({});
+  
   const changePage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
     
-    // Save current page annotations first
-    setPageAnnotations(prev => ({
-      ...prev,
-      [currentPage]: { paths, shapes, texts: textAnnotations }
-    }));
+    // Save current page annotations to ref immediately
+    pageAnnotationsRef.current[currentPage] = { 
+      paths: [...paths], 
+      shapes: [...shapes], 
+      texts: [...textAnnotations] 
+    };
+    setPageAnnotations({...pageAnnotationsRef.current});
     
-    // Load new page annotations from the updated state
-    setPageAnnotations(prev => {
-      const newPageAnnotations = prev[newPage];
-      if (newPageAnnotations) {
-        setPaths(newPageAnnotations.paths || []);
-        setShapes(newPageAnnotations.shapes || []);
-        setTextAnnotations(newPageAnnotations.texts || []);
-      } else {
-        setPaths([]);
-        setShapes([]);
-        setTextAnnotations([]);
-      }
-      return prev;
-    });
+    // Load new page annotations from ref
+    const newPageAnnotations = pageAnnotationsRef.current[newPage];
+    if (newPageAnnotations) {
+      setPaths(newPageAnnotations.paths || []);
+      setShapes(newPageAnnotations.shapes || []);
+      setTextAnnotations(newPageAnnotations.texts || []);
+    } else {
+      setPaths([]);
+      setShapes([]);
+      setTextAnnotations([]);
+    }
     
     setUndoHistory([]);
     setSelectedElement(null);
@@ -303,11 +306,15 @@ export default function DocumentViewScreen() {
       return;
     }
     
-    // Include current page annotations
-    const allAnnotations = {
-      ...pageAnnotations,
-      [currentPage]: { paths, shapes, texts: textAnnotations }
+    // Save current page to ref first
+    pageAnnotationsRef.current[currentPage] = { 
+      paths: [...paths], 
+      shapes: [...shapes], 
+      texts: [...textAnnotations] 
     };
+    
+    // Get all annotations from ref
+    const allAnnotations = pageAnnotationsRef.current;
     
     console.log('saveAllAnnotations: Saving pages', Object.keys(allAnnotations));
     
@@ -370,6 +377,335 @@ export default function DocumentViewScreen() {
       }
     } catch (error) {
       Alert.alert('Fehler', 'Konnte nicht geteilt werden');
+    }
+  };
+
+  // State for PDF export progress
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // Share/Print all pages with annotations as PDF
+  const shareAllPagesAnnotated = async () => {
+    if (!document?.originalPdfData) {
+      Alert.alert('Fehler', 'Keine PDF-Daten vorhanden');
+      return;
+    }
+
+    // Save current page first
+    pageAnnotationsRef.current[currentPage] = { 
+      paths: [...paths], 
+      shapes: [...shapes], 
+      texts: [...textAnnotations] 
+    };
+    await saveAllAnnotations();
+    
+    // Reload document to get all saved annotations
+    const freshDoc = await DocumentService.getById(documentId || '');
+    if (!freshDoc) {
+      Alert.alert('Fehler', 'Dokument konnte nicht geladen werden');
+      return;
+    }
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      // Build annotations data for all pages
+      const allPagesAnnotations: {[key: number]: any} = {};
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const pageData = freshDoc.pages?.find(p => p.pageNumber === pageNum);
+        if (pageData?.annotations) {
+          try {
+            allPagesAnnotations[pageNum] = JSON.parse(pageData.annotations);
+          } catch (e) {
+            allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
+          }
+        } else {
+          allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
+        }
+      }
+
+      // Create HTML that will render and export all pages
+      const pdfExportHtml = generatePdfExportHtml(
+        document.originalPdfData, 
+        totalPages, 
+        allPagesAnnotations,
+        imageSize.width || 615,
+        imageSize.height || 870
+      );
+      
+      setExportHtml(pdfExportHtml);
+      // The rest will be handled by handleExportMessage
+
+    } catch (error) {
+      console.log('Error starting PDF export:', error);
+      Alert.alert('Fehler', 'PDF-Export konnte nicht gestartet werden');
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
+  // Generate HTML for PDF export with all pages
+  const generatePdfExportHtml = (pdfData: string, pageCount: number, annotationsData: any, canvasWidth: number, canvasHeight: number) => {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <style>
+          * { margin: 0; padding: 0; }
+          body { background: white; }
+        </style>
+      </head>
+      <body>
+        <canvas id="render-canvas"></canvas>
+        <script>
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          const pdfData = '${pdfData}';
+          const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+          const allAnnotations = ${JSON.stringify(annotationsData)};
+          const pageCount = ${pageCount};
+          const originalWidth = ${canvasWidth};
+          const originalHeight = ${canvasHeight};
+          
+          async function renderAllPages() {
+            const pageImages = [];
+            
+            try {
+              const pdf = await pdfjsLib.getDocument({data: bytes}).promise;
+              const canvas = document.getElementById('render-canvas');
+              const ctx = canvas.getContext('2d');
+              
+              for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+                // Report progress
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'progress',
+                  progress: Math.round((pageNum / pageCount) * 100)
+                }));
+                
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({scale: 2});
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                // Clear and render PDF page
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, viewport.width, viewport.height);
+                
+                await page.render({
+                  canvasContext: ctx,
+                  viewport: viewport
+                }).promise;
+                
+                // Draw annotations on canvas
+                const annotations = allAnnotations[pageNum] || { paths: [], shapes: [], texts: [] };
+                const scaleX = viewport.width / originalWidth;
+                const scaleY = viewport.height / originalHeight;
+                
+                // Draw paths
+                if (annotations.paths && annotations.paths.length > 0) {
+                  annotations.paths.forEach(p => {
+                    ctx.beginPath();
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = p.strokeWidth * Math.min(scaleX, scaleY);
+                    ctx.lineCap = 'round';
+                    ctx.globalAlpha = p.opacity;
+                    
+                    // Parse and draw path
+                    const commands = p.path.match(/[ML]\\s*[\\d.]+\\s+[\\d.]+/g) || [];
+                    commands.forEach((cmd, i) => {
+                      const match = cmd.match(/([ML])\\s*([\\d.]+)\\s+([\\d.]+)/);
+                      if (match) {
+                        const x = parseFloat(match[2]) * scaleX;
+                        const y = parseFloat(match[3]) * scaleY;
+                        if (match[1] === 'M' || i === 0) {
+                          ctx.moveTo(x, y);
+                        } else {
+                          ctx.lineTo(x, y);
+                        }
+                      }
+                    });
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                  });
+                }
+                
+                // Draw shapes
+                if (annotations.shapes && annotations.shapes.length > 0) {
+                  annotations.shapes.forEach(s => {
+                    const x1 = s.x1 * scaleX, y1 = s.y1 * scaleY;
+                    const x2 = s.x2 * scaleX, y2 = s.y2 * scaleY;
+                    const sw = (s.strokeWidth || 3) * Math.min(scaleX, scaleY);
+                    
+                    ctx.strokeStyle = s.color;
+                    ctx.lineWidth = sw;
+                    ctx.beginPath();
+                    
+                    if (s.type === 'rectangle') {
+                      ctx.rect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(x2-x1), Math.abs(y2-y1));
+                      ctx.stroke();
+                    } else if (s.type === 'circle') {
+                      const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+                      const r = Math.max(Math.abs(x2-x1), Math.abs(y2-y1)) / 2;
+                      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                      ctx.stroke();
+                    } else if (s.type === 'line') {
+                      ctx.moveTo(x1, y1);
+                      ctx.lineTo(x2, y2);
+                      ctx.stroke();
+                    } else if (s.type === 'arrow' || s.type === 'pointer') {
+                      const angle = Math.atan2(y2-y1, x2-x1);
+                      const headLen = 15 * Math.min(scaleX, scaleY);
+                      
+                      // Main line
+                      ctx.moveTo(x1, y1);
+                      ctx.lineTo(x2, y2);
+                      ctx.stroke();
+                      
+                      // Arrow head
+                      ctx.beginPath();
+                      ctx.moveTo(x2, y2);
+                      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6), y2 - headLen * Math.sin(angle - Math.PI/6));
+                      ctx.stroke();
+                      ctx.beginPath();
+                      ctx.moveTo(x2, y2);
+                      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI/6), y2 - headLen * Math.sin(angle + Math.PI/6));
+                      ctx.stroke();
+                      
+                      // Text for pointer
+                      if (s.text) {
+                        const fontSize = 14 * Math.min(scaleX, scaleY);
+                        ctx.font = 'bold ' + fontSize + 'px sans-serif';
+                        ctx.fillStyle = s.color;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(s.text, x1, y1 - 25 * scaleY);
+                      }
+                    }
+                  });
+                }
+                
+                // Draw text annotations
+                if (annotations.texts && annotations.texts.length > 0) {
+                  annotations.texts.forEach(t => {
+                    const fontSize = (t.fontSize || 16) * Math.min(scaleX, scaleY);
+                    ctx.font = 'bold ' + fontSize + 'px sans-serif';
+                    ctx.fillStyle = t.color;
+                    ctx.textAlign = 'left';
+                    ctx.fillText(t.text, t.x * scaleX, t.y * scaleY);
+                  });
+                }
+                
+                // Capture page image
+                pageImages.push(canvas.toDataURL('image/png'));
+              }
+              
+              // Send all page images back
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'allPagesRendered',
+                images: pageImages
+              }));
+              
+            } catch (err) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'error',
+                error: err.message
+              }));
+            }
+          }
+          
+          renderAllPages();
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
+  // Refs for export
+  const exportResolveRef = useRef<((value: string | null) => void) | null>(null);
+  const [exportHtml, setExportHtml] = useState<string | null>(null);
+
+  const handleExportMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      
+      if (data.type === 'progress') {
+        setExportProgress(data.progress);
+      } else if (data.type === 'allPagesRendered') {
+        setExportHtml(null);
+        
+        const pageImages = data.images;
+        if (!pageImages || pageImages.length === 0) {
+          Alert.alert('Fehler', 'Keine Seiten konnten gerendert werden');
+          setIsExporting(false);
+          return;
+        }
+
+        // Create HTML for final PDF
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              @page { margin: 0; padding: 0; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { margin: 0; padding: 0; }
+              .page { 
+                width: 100vw; 
+                height: 100vh; 
+                page-break-after: always;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: white;
+              }
+              .page:last-child { page-break-after: avoid; }
+              .page img { 
+                max-width: 100%; 
+                max-height: 100%; 
+                object-fit: contain;
+              }
+            </style>
+          </head>
+          <body>
+            ${pageImages.map((img: string) => `
+              <div class="page">
+                <img src="${img}" />
+              </div>
+            `).join('')}
+          </body>
+          </html>
+        `;
+
+        // Generate PDF using expo-print
+        const { uri } = await Print.printToFileAsync({
+          html: htmlContent,
+          width: 595,
+          height: 842,
+        });
+
+        // Share the PDF
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { 
+            mimeType: 'application/pdf',
+            UTI: 'com.adobe.pdf',
+          });
+        }
+
+        setIsExporting(false);
+        setExportProgress(0);
+      } else if (data.type === 'error') {
+        console.log('Export error:', data.error);
+        Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+        setExportHtml(null);
+        setIsExporting(false);
+        setExportProgress(0);
+      }
+    } catch (e) {
+      console.log('Error parsing export message:', e);
     }
   };
 
@@ -975,7 +1311,10 @@ export default function DocumentViewScreen() {
               <Ionicons name="save-outline" size={24} color="#4caf50" />
             </TouchableOpacity>
             <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-              <Ionicons name="share-outline" size={24} color="#1976d2" />
+              <Ionicons name="image-outline" size={24} color="#1976d2" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={shareAllPagesAnnotated} style={styles.iconBtn}>
+              <Ionicons name="print-outline" size={24} color="#4caf50" />
             </TouchableOpacity>
           </View>
 
@@ -1182,6 +1521,29 @@ export default function DocumentViewScreen() {
             onMessage={handlePageRendered}
             javaScriptEnabled
           />
+
+          {/* Hidden WebView for PDF Export */}
+          {exportHtml && (
+            <WebView
+              source={{ html: exportHtml }}
+              style={{ height: 1, width: 1, position: 'absolute', top: -2000 }}
+              onMessage={handleExportMessage}
+              javaScriptEnabled
+            />
+          )}
+
+          {/* Export Progress Modal */}
+          <Modal visible={isExporting} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>PDF wird erstellt...</Text>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${exportProgress}%` }]} />
+                </View>
+                <Text style={styles.progressText}>{exportProgress}%</Text>
+              </View>
+            </View>
+          </Modal>
 
           {/* Text Modal */}
           <Modal visible={showTextModal} transparent animationType="fade">
@@ -1449,4 +1811,25 @@ const styles = StyleSheet.create({
   textSizeBtnActive: { backgroundColor: '#1976d2', color: '#fff' },
   strokePreview: { width: 30, borderRadius: 2 },
   colorBtnWhite: { borderColor: '#ccc' },
+  
+  // Progress bar styles
+  progressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginTop: 15,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4caf50',
+    borderRadius: 4,
+  },
+  progressText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
 });

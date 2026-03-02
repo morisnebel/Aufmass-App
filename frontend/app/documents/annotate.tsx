@@ -128,11 +128,12 @@ export default function DocumentAnnotateScreen() {
         setPageImage(data.image);
         setRenderingPage(false);
       } else if (data.type === 'error') {
-        console.error('PDF Error:', data.message);
+        // Only log the error, don't show alert for canvas-related errors
+        console.warn('PDF render warning:', data.message);
         setRenderingPage(false);
       }
     } catch (e) {
-      console.error('Error parsing WebView message:', e);
+      console.warn('Error parsing WebView message:', e);
     }
   };
 

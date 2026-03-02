@@ -618,35 +618,15 @@ export default function DocumentViewScreen() {
     
     return (
       <View style={styles.editRoot}>
-        {/* Header - absolute top */}
-        <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT }]}>
-          <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
-            <Ionicons name="close" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <Text style={styles.headerText}>Seite {currentPage}</Text>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
-            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
-            <Ionicons name="trash-outline" size={24} color="#f44336" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
-            <Ionicons name="save-outline" size={24} color="#4caf50" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-            <Ionicons name="share-outline" size={24} color="#1976d2" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Canvas Area - absolute fill between header and toolbar */}
+        {/* Canvas Area - absolute fill between header and toolbar - ZUERST (unter Header und Toolbar) */}
         <View 
           style={[styles.editCanvasContainer, { 
             position: 'absolute', 
             top: HEADER_HEIGHT, 
             left: 0, 
             right: 0, 
-            bottom: TOOLBAR_HEIGHT 
+            bottom: TOOLBAR_HEIGHT,
+            zIndex: 1,
           }]} 
           onLayout={onCanvasAreaLayout}
         >
@@ -693,8 +673,29 @@ export default function DocumentViewScreen() {
           )}
         </View>
 
-        {/* Toolbar - absolute bottom */}
-        <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT }]}>
+        {/* Header - absolute top - über Canvas */}
+        <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, zIndex: 10 }]}>
+          <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
+            <Ionicons name="close" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <Text style={styles.headerText}>Seite {currentPage}</Text>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
+            <Ionicons name="trash-outline" size={24} color="#f44336" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+            <Ionicons name="save-outline" size={24} color="#4caf50" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
+            <Ionicons name="share-outline" size={24} color="#1976d2" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Toolbar - absolute bottom - über Canvas */}
+        <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT, zIndex: 10 }]}>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 

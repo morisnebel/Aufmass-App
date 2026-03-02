@@ -611,7 +611,7 @@ export default function DocumentAnnotateScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Text style={styles.title} numberOfLines={1}>{document?.name}</Text>
+          <Text style={[styles.title, { color: '#fff' }]} numberOfLines={1}>{document?.name}</Text>
         </View>
         
         {/* Page Navigation in Header */}
@@ -620,19 +620,19 @@ export default function DocumentAnnotateScreen() {
           onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
           disabled={currentPage <= 1}
         >
-          <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#ccc' : '#1976d2'} />
+          <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#90caf9' : '#fff'} />
         </TouchableOpacity>
-        <Text style={styles.headerPageInfo}>{currentPage}/{totalPages}</Text>
+        <Text style={[styles.headerPageInfo, { color: '#fff' }]}>{currentPage}/{totalPages}</Text>
         <TouchableOpacity 
           style={styles.headerNavButton}
           onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
           disabled={currentPage >= totalPages}
         >
-          <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#ccc' : '#1976d2'} />
+          <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#90caf9' : '#fff'} />
         </TouchableOpacity>
         
         <TouchableOpacity onPress={shareAnnotatedPage} style={styles.headerButton}>
-          <Ionicons name="share-outline" size={24} color="#1976d2" />
+          <Ionicons name="share-outline" size={24} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={save} style={styles.headerButton}>
           <Ionicons name="checkmark" size={28} color="#4caf50" />

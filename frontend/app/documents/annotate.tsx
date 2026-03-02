@@ -54,6 +54,9 @@ export default function DocumentAnnotateScreen() {
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
   const initialPage = parseInt(Array.isArray(params.page) ? params.page[0] : params.page || '1');
   
+  // Use window dimensions for responsive sizing
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  
   const [document, setDocument] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -67,7 +70,7 @@ export default function DocumentAnnotateScreen() {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: SCREEN_WIDTH, height: 600 });
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: windowWidth - 20, height: 600 });
   
   // Shape annotations
   const [shapes, setShapes] = useState<ShapeAnnotation[]>([]);

@@ -668,10 +668,8 @@ export default function DocumentAnnotateScreen() {
         ref={scrollViewRef}
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
-        maximumZoomScale={3}
-        minimumZoomScale={1}
-        bouncesZoom={true}
         showsVerticalScrollIndicator={true}
+        bounces={true}
       >
         {renderingPage && (
           <View style={styles.renderingOverlay}>
@@ -685,7 +683,6 @@ export default function DocumentAnnotateScreen() {
           style={[styles.canvasContainer, { 
             width: canvasDimensions.width, 
             height: canvasDimensions.height,
-            minHeight: 400,
           }]}
         >
           {/* PDF Page Image */}
@@ -696,7 +693,7 @@ export default function DocumentAnnotateScreen() {
                 width: canvasDimensions.width,
                 height: canvasDimensions.height,
               }]}
-              resizeMode="contain"
+              resizeMode="stretch"
             />
           )}
           

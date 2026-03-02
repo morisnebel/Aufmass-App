@@ -742,7 +742,8 @@ export default function DocumentAnnotateScreen() {
           <View style={[styles.sideToolbar, { backgroundColor: 'orange' }]}>
             <ScrollView 
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.sideToolbarContent}
+              contentContainerStyle={[styles.sideToolbarContent, { backgroundColor: 'brown' }]}
+              style={{ backgroundColor: 'pink' }}
               bounces={false}
             >
               {/* Undo/Clear */}

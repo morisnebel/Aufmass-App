@@ -689,9 +689,9 @@ export default function DocumentViewScreen() {
   // Edit mode view
   if (isEditing) {
     return (
-      <View style={styles.container}>
+      <View style={styles.editContainer}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={styles.editHeader}>
           <TouchableOpacity onPress={cancelEditing} style={styles.headerButton}>
             <Ionicons name="close" size={24} color="#f44336" />
           </TouchableOpacity>
@@ -709,8 +709,8 @@ export default function DocumentViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Canvas Area */}
-        <View style={styles.canvasContainer}>
+        {/* Canvas Area - Takes all remaining space */}
+        <View style={styles.editCanvasArea}>
           {renderingPage && !pageImage && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -718,11 +718,11 @@ export default function DocumentViewScreen() {
             </View>
           )}
 
-          {/* Direct drawing area - NO ScrollView */}
+          {/* Drawing Canvas */}
           <View 
             ref={canvasRef}
             style={[
-              styles.canvasWrapper,
+              styles.drawingCanvas,
               pageImageSize.width > 0 && {
                 width: pageImageSize.width,
                 height: pageImageSize.height,
@@ -738,7 +738,7 @@ export default function DocumentViewScreen() {
               <Image
                 source={{ uri: pageImage }}
                 style={[
-                  styles.pageImage,
+                  styles.canvasImage,
                   pageImageSize.width > 0 && {
                     width: pageImageSize.width,
                     height: pageImageSize.height,
@@ -797,8 +797,8 @@ export default function DocumentViewScreen() {
           </View>
         </View>
 
-        {/* Tool Selection Bar */}
-        <View style={styles.toolBar}>
+        {/* Tool Selection Bar - Fixed at bottom */}
+        <View style={styles.editToolBar}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {tools.map((tool) => (
               <TouchableOpacity
@@ -1064,6 +1064,42 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   // Edit mode styles
+  editContainer: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+  },
+  editHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  editCanvasArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  drawingCanvas: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  canvasImage: {
+    // Size set dynamically
+  },
+  editToolBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
   canvasContainer: {
     flex: 1,
     backgroundColor: '#e8e8e8',

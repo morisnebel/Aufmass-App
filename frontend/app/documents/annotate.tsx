@@ -840,11 +840,12 @@ export default function DocumentAnnotateScreen() {
 
       {/* Stroke Width Picker Modal */}
       <Modal visible={showStrokePicker} transparent animationType="fade">
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1}
-          onPress={() => setShowStrokePicker(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackground} 
+            activeOpacity={1}
+            onPress={() => setShowStrokePicker(false)}
+          />
           <View style={styles.strokePickerModal}>
             <Text style={styles.modalTitle}>Strichstärke</Text>
             <View style={styles.strokeOptions}>

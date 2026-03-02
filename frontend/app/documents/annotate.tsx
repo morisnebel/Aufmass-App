@@ -974,10 +974,11 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     flexDirection: 'row',
+    backgroundColor: 'blue', // DEBUG
   },
   canvasArea: {
     flex: 1,
-    backgroundColor: 'rgba(0, 255, 0, 0.3)', // DEBUG: Grün zeigt den Canvas-Bereich
+    backgroundColor: 'green', // DEBUG
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 8,

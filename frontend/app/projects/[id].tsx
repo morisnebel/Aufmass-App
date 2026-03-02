@@ -3264,6 +3264,85 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
         )}
+
+        {activeTab === 'documents' && (
+          <View style={styles.documentsSection}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push({
+                pathname: '/documents/new',
+                params: { projectId: Array.isArray(id) ? id[0] : id },
+              })}
+            >
+              <Ionicons name="add-circle" size={24} color="#fff" />
+              <Text style={styles.addButtonText}>PDF hinzufügen</Text>
+            </TouchableOpacity>
+
+            {documents.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="document-text-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Keine Dokumente vorhanden</Text>
+                <Text style={styles.emptySubtext}>
+                  Fügen Sie PDF-Dokumente hinzu, um Angebote mit Kunden zu besprechen und Anmerkungen zu machen.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.documentsGrid}>
+                {documents.map((doc) => (
+                  <TouchableOpacity
+                    key={doc.id}
+                    style={styles.documentCard}
+                    onPress={() => router.push({
+                      pathname: '/documents/view',
+                      params: { documentId: doc.id, projectId: Array.isArray(id) ? id[0] : id },
+                    })}
+                  >
+                    <View style={styles.documentIcon}>
+                      <Ionicons name="document-text" size={40} color="#1976d2" />
+                      {doc.pages.length > 0 && (
+                        <View style={styles.annotationBadge}>
+                          <Ionicons name="pencil" size={12} color="#fff" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.documentName} numberOfLines={2}>{doc.name}</Text>
+                    <Text style={styles.documentDate}>
+                      {new Date(doc.updated_at).toLocaleDateString('de-DE')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.deleteDocButton}
+                      onPress={() => {
+                        Alert.alert(
+                          'Dokument löschen',
+                          `Möchten Sie "${doc.name}" wirklich löschen?`,
+                          [
+                            { text: 'Abbrechen', style: 'cancel' },
+                            {
+                              text: 'Löschen',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await DocumentService.delete(doc.id);
+                                  await loadProjectData();
+                                  Alert.alert('Erfolg', 'Dokument wurde gelöscht');
+                                } catch (error) {
+                                  console.error('Error deleting document:', error);
+                                  Alert.alert('Fehler', 'Dokument konnte nicht gelöscht werden');
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#f44336" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Delete Confirmation Modal */}

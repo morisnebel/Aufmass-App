@@ -729,16 +729,27 @@ export const DocumentService = {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
     const docIndex = documents.findIndex((doc) => doc.id === documentId);
     if (docIndex !== -1) {
-      const pageIndex = documents[docIndex].pages.findIndex((p) => p.pageNumber === pageNumber);
-      if (pageIndex !== -1) {
+      let pageIndex = documents[docIndex].pages.findIndex((p) => p.pageNumber === pageNumber);
+      
+      // If page doesn't exist, create it
+      if (pageIndex === -1) {
+        const newPage: DocumentPage = {
+          pageNumber,
+          annotations: '',
+          ...pageData,
+        };
+        documents[docIndex].pages.push(newPage);
+        pageIndex = documents[docIndex].pages.length - 1;
+      } else {
         documents[docIndex].pages[pageIndex] = {
           ...documents[docIndex].pages[pageIndex],
           ...pageData,
         };
-        documents[docIndex].updated_at = new Date().toISOString();
-        await setItems(KEYS.DOCUMENTS, documents);
-        return documents[docIndex];
       }
+      
+      documents[docIndex].updated_at = new Date().toISOString();
+      await setItems(KEYS.DOCUMENTS, documents);
+      return documents[docIndex];
     }
     return null;
   },

@@ -280,6 +280,8 @@ export default function DocumentViewScreen() {
   const cancelEditing = async () => {
     // Always save all annotations before leaving
     await saveAllAnnotations();
+    // Reload document to get updated annotations
+    await loadDocument();
     exitEditMode();
   };
 
@@ -294,13 +296,18 @@ export default function DocumentViewScreen() {
   };
 
   const saveAllAnnotations = async () => {
-    if (!document) return;
+    if (!document) {
+      console.log('saveAllAnnotations: No document');
+      return;
+    }
     
     // Include current page annotations
     const allAnnotations = {
       ...pageAnnotations,
       [currentPage]: { paths, shapes, texts: textAnnotations }
     };
+    
+    console.log('saveAllAnnotations: Saving pages', Object.keys(allAnnotations));
     
     try {
       // Save all pages that have annotations
@@ -311,11 +318,14 @@ export default function DocumentViewScreen() {
             shapes: annotations.shapes,
             texts: annotations.texts,
           };
-          await DocumentService.updatePage(document.id, parseInt(pageNum), {
+          console.log(`saveAllAnnotations: Saving page ${pageNum} with ${annotations.paths.length} paths, ${annotations.shapes.length} shapes, ${annotations.texts.length} texts`);
+          const result = await DocumentService.updatePage(document.id, parseInt(pageNum), {
             annotations: JSON.stringify(annotationData),
           });
+          console.log(`saveAllAnnotations: Page ${pageNum} saved, result:`, result ? 'success' : 'failed');
         }
       }
+      console.log('saveAllAnnotations: All saved successfully');
     } catch (error) {
       console.log('Error saving annotations:', error);
     }

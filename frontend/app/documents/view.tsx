@@ -205,8 +205,7 @@ export default function DocumentViewScreen() {
           
           let pdfDoc = null;
           let currentPage = 1;
-          let renderQueue = [];
-          let isRendering = false;
+          let pageRenderTasks = new Map();
           const scale = 2.0; // Higher resolution for better quality
           
           async function loadPdf() {
@@ -229,13 +228,12 @@ export default function DocumentViewScreen() {
                 count: pdfDoc.numPages
               }));
               
-              // Queue all pages for rendering
+              // Render pages one by one with delay
               for (let i = 1; i <= pdfDoc.numPages; i++) {
-                renderQueue.push(i);
+                await renderPage(i);
+                // Add small delay between pages
+                await new Promise(resolve => setTimeout(resolve, 100));
               }
-              
-              // Start processing the queue
-              processRenderQueue();
               
             } catch (error) {
               console.error('Error loading PDF:', error);
@@ -249,27 +247,15 @@ export default function DocumentViewScreen() {
             }
           }
           
-          async function processRenderQueue() {
-            if (isRendering || renderQueue.length === 0) return;
-            
-            isRendering = true;
-            const pageNum = renderQueue.shift();
-            
-            try {
-              await renderPage(pageNum);
-            } catch (error) {
-              console.error('Error in render queue:', error);
-            }
-            
-            isRendering = false;
-            
-            // Process next page
-            if (renderQueue.length > 0) {
-              setTimeout(processRenderQueue, 50);
-            }
-          }
-          
           async function renderPage(pageNum) {
+            // Cancel any existing render task for this page
+            if (pageRenderTasks.has(pageNum)) {
+              try {
+                pageRenderTasks.get(pageNum).cancel();
+              } catch (e) {}
+              pageRenderTasks.delete(pageNum);
+            }
+            
             try {
               const page = await pdfDoc.getPage(pageNum);
               const viewport = page.getViewport({ scale: scale });
@@ -279,7 +265,9 @@ export default function DocumentViewScreen() {
               wrapper.id = 'page-' + pageNum;
               wrapper.setAttribute('data-page', pageNum);
               
+              // Create a unique canvas for this page
               const canvas = document.createElement('canvas');
+              canvas.id = 'canvas-page-' + pageNum;
               const context = canvas.getContext('2d');
               canvas.height = viewport.height;
               canvas.width = viewport.width;
@@ -294,11 +282,16 @@ export default function DocumentViewScreen() {
                 viewport: viewport
               });
               
+              pageRenderTasks.set(pageNum, renderTask);
+              
               await renderTask.promise;
               
+              pageRenderTasks.delete(pageNum);
+              
             } catch (error) {
-              if (error.name !== 'RenderingCancelledException') {
+              if (error && error.name !== 'RenderingCancelledException') {
                 console.error('Error rendering page ' + pageNum + ':', error);
+                // Don't send error to RN for rendering issues, just log
               }
             }
           }

@@ -87,6 +87,7 @@ export default function DocumentAnnotateScreen() {
   const [toolMode, setToolMode] = useState<ToolMode>('pen');
   const [showToolPicker, setShowToolPicker] = useState(false);
   const [showStrokePicker, setShowStrokePicker] = useState(false);
+  const [zoomEnabled, setZoomEnabled] = useState(false);
   
   const canvasRef = useRef(null);
   const webViewRef = useRef<WebView>(null);

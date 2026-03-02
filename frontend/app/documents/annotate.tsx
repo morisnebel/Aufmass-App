@@ -667,17 +667,17 @@ export default function DocumentAnnotateScreen() {
         >
           <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
         </TouchableOpacity>
-      </View>
 
-      {/* Color Picker */}
-      <View style={styles.colorPicker}>
+        <View style={styles.toolDivider} />
+
+        {/* Color Picker - inline */}
         {colors.map((c) => (
           <TouchableOpacity
             key={c.color}
             style={[
-              styles.colorButton,
+              styles.colorButtonSmall,
               { backgroundColor: c.color },
-              drawColor === c.color && styles.colorButtonActive,
+              drawColor === c.color && styles.colorButtonSmallActive,
               c.color === '#FFFFFF' && styles.colorButtonWhite,
             ]}
             onPress={() => setDrawColor(c.color)}

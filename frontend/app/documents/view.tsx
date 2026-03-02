@@ -615,33 +615,36 @@ export default function DocumentViewScreen() {
   }
 
 
-  // EDIT MODE - Using fixed dimensions
+
+  // EDIT MODE - Simple flexbox, no absolute positioning
   if (isEditing) {
-    const { width: screenW, height: screenH } = Dimensions.get('screen');
-    const HEADER_H = 50;
-    const TOOLBAR_H = 60;
-    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H - 20; // 20 for safe area
-    
-    console.log(`Edit mode: screen=${screenW}x${screenH}, canvas height=${CANVAS_H}`);
-    
     return (
       <Modal visible={true} animationType="none" statusBarTranslucent={true} presentationStyle="overFullScreen">
         <StatusBar hidden={true} />
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#e8e8e8' }}>
-          {/* Canvas Area FIRST - lower in z-order */}
-          <View 
-            style={{ 
-              position: 'absolute', 
-              top: HEADER_H, 
-              left: 0, 
-              right: 0, 
-              bottom: TOOLBAR_H, 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              backgroundColor: '#d0d0d0',
-            }} 
-            onLayout={onCanvasAreaLayout}
-          >
+        <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
+          {/* Header */}
+          <View style={styles.editHeader}>
+            <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
+              <Ionicons name="close" size={24} color="#f44336" />
+            </TouchableOpacity>
+            <Text style={styles.headerText}>Seite {currentPage}</Text>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+              <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
+              <Ionicons name="trash-outline" size={24} color="#f44336" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+              <Ionicons name="save-outline" size={24} color="#4caf50" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
+              <Ionicons name="share-outline" size={24} color="#1976d2" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Canvas Area - flex: 1 to fill remaining space */}
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#d0d0d0' }} onLayout={onCanvasAreaLayout}>
             {renderingPage && !pageImage ? (
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -680,31 +683,10 @@ export default function DocumentViewScreen() {
             )}
           </View>
 
-          {/* Header SECOND - over canvas */}
-          <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_H }]}>
-            <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
-              <Ionicons name="close" size={24} color="#f44336" />
-            </TouchableOpacity>
-            <Text style={styles.headerText}>Seite {currentPage}</Text>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
-              <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
-              <Ionicons name="trash-outline" size={24} color="#f44336" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
-              <Ionicons name="save-outline" size={24} color="#4caf50" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-              <Ionicons name="share-outline" size={24} color="#1976d2" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Toolbar LAST - highest in z-order */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_H, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#ddd' }}>
+          {/* Toolbar - fixed height at bottom */}
+          <View style={styles.editToolbar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
-              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => { console.log('PEN PRESSED'); selectTool('pen'); }}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>

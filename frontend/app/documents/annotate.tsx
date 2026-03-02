@@ -621,36 +621,39 @@ export default function DocumentAnnotateScreen() {
       {/* Main Toolbar */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolButton} onPress={undo}>
-          <Ionicons name="arrow-undo" size={20} color="#1976d2" />
-          <Text style={styles.toolText}>Zurück</Text>
+          <Ionicons name="arrow-undo" size={22} color="#1976d2" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.toolButton} onPress={clear}>
-          <Ionicons name="trash-outline" size={20} color="#f44336" />
-          <Text style={styles.toolText}>Löschen</Text>
+          <Ionicons name="trash-outline" size={22} color="#f44336" />
         </TouchableOpacity>
+        <View style={styles.toolDivider} />
         
-        {/* Current Tool Indicator */}
-        <TouchableOpacity 
-          style={[styles.toolButton, styles.toolButtonActive]}
-          onPress={() => setShowToolPicker(true)}
-        >
-          <Ionicons 
-            name={tools.find(t => t.mode === toolMode)?.icon as any || 'pencil'} 
-            size={20} 
-            color="#fff" 
-          />
-          <Text style={styles.toolTextActive}>
-            {tools.find(t => t.mode === toolMode)?.label || 'Stift'}
-          </Text>
-        </TouchableOpacity>
-
+        {/* Tool Buttons - Direct Selection */}
+        {tools.map((tool) => (
+          <TouchableOpacity 
+            key={tool.mode}
+            style={[
+              styles.toolIconButton, 
+              toolMode === tool.mode && styles.toolIconButtonActive
+            ]}
+            onPress={() => setToolMode(tool.mode)}
+          >
+            <Ionicons 
+              name={tool.icon as any} 
+              size={22} 
+              color={toolMode === tool.mode ? '#fff' : '#666'} 
+            />
+          </TouchableOpacity>
+        ))}
+        
+        <View style={styles.toolDivider} />
+        
         {/* Stroke Width */}
         <TouchableOpacity 
           style={styles.toolButton}
           onPress={() => setShowStrokePicker(true)}
         >
-          <View style={[styles.strokePreview, { height: strokeWidth }]} />
-          <Text style={styles.toolText}>Stärke</Text>
+          <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
         </TouchableOpacity>
       </View>
 

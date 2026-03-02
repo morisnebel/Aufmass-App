@@ -1021,6 +1021,18 @@ const styles = StyleSheet.create({
   colorButtonWhite: {
     borderColor: '#999',
   },
+  colorButtonSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    marginHorizontal: 2,
+  },
+  colorButtonSmallActive: {
+    borderWidth: 3,
+    borderColor: '#1976d2',
+  },
   canvasArea: {
     flex: 1,
     backgroundColor: '#e0e0e0',

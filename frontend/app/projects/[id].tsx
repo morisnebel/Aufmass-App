@@ -182,7 +182,7 @@ export default function ProjectDetailScreen() {
 
   // Update active tab when URL parameter changes (e.g., when navigating back from sketch editor)
   useEffect(() => {
-    if (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks') {
+    if (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents') {
       setActiveTab(tab);
     }
   }, [tab]);

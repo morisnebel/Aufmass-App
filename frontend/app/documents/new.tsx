@@ -43,7 +43,7 @@ export default function NewDocumentScreen() {
 
       // Read the PDF file as base64
       const pdfBase64 = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       setLoadingText('Dokument wird erstellt...');

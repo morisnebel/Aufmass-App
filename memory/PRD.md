@@ -137,7 +137,10 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - `/app/frontend/app/projects/[id].tsx` - Projekt-Ansicht und PDF-Generierung
 - `/app/frontend/app/checklists/edit-template.tsx` - Checklisten-Vorlagen Editor
 - `/app/frontend/app/settings/index.tsx` - Einstellungen inkl. PDF-Farbe
-- `/app/frontend/services/LocalStorage.ts` - Datenpersistenz
+- `/app/frontend/app/documents/new.tsx` - PDF-Dokument hinzufügen
+- `/app/frontend/app/documents/view.tsx` - PDF-Dokument Viewer
+- `/app/frontend/app/documents/annotate.tsx` - PDF-Annotationen mit vielen Werkzeugen
+- `/app/frontend/services/LocalStorage.ts` - Datenpersistenz (inkl. DocumentService)
 
 ## Credentials
 - Expo Account: `moris_nebel@hotmail.com` / `Miabalu1+`

@@ -619,14 +619,18 @@ export default function DocumentViewScreen() {
   // EDIT MODE - Hybrid: flexbox with calculated canvas height
   if (isEditing) {
     const { width: screenW, height: screenH } = Dimensions.get('screen');
-    const HEADER_H = 60;
+    const SAFE_AREA_TOP = 20;
+    const HEADER_H = 50;
     const TOOLBAR_H = 60;
-    const CANVAS_H = screenH - HEADER_H - TOOLBAR_H;
+    const CANVAS_H = screenH - SAFE_AREA_TOP - HEADER_H - TOOLBAR_H;
     
     return (
       <Modal visible={true} animationType="none" statusBarTranslucent={true} presentationStyle="overFullScreen">
         <StatusBar hidden={true} />
         <View style={{ width: screenW, height: screenH, backgroundColor: '#e8e8e8' }}>
+          {/* Safe Area Spacer */}
+          <View style={{ height: SAFE_AREA_TOP, backgroundColor: '#fff' }} />
+          
           {/* Header - fixed height */}
           <View style={[styles.editHeader, { height: HEADER_H }]}>
             <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>

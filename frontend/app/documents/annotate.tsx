@@ -1016,7 +1016,6 @@ const styles = StyleSheet.create({
   colorButtonActive: {
     borderWidth: 3,
     borderColor: '#1976d2',
-    transform: [{ scale: 1.1 }],
   },
   colorButtonWhite: {
     borderColor: '#999',

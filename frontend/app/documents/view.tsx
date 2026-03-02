@@ -619,7 +619,7 @@ export default function DocumentViewScreen() {
   // EDIT MODE - Hybrid: flexbox with calculated canvas height
   if (isEditing) {
     const { width: screenW, height: screenH } = Dimensions.get('screen');
-    const SAFE_AREA_TOP = 20;
+    const SAFE_AREA_TOP = 40;
     const HEADER_H = 50;
     const TOOLBAR_H = 60;
     const CANVAS_H = screenH - SAFE_AREA_TOP - HEADER_H - TOOLBAR_H;

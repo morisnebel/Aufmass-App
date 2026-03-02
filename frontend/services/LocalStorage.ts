@@ -16,6 +16,7 @@ const KEYS = {
   CHECKLIST_TEMPLATES: 'aufmassprofi_checklist_templates',
   SETTINGS: 'aufmassprofi_settings',
   SYNC_TIMESTAMP: 'aufmassprofi_sync_timestamp',
+  DOCUMENTS: 'aufmassprofi_documents',
 };
 
 // Helper to generate unique IDs

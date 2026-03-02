@@ -892,9 +892,10 @@ const styles = StyleSheet.create({
   },
   editHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingTop: 5,
+    paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',

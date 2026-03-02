@@ -159,16 +159,19 @@ export default function DocumentViewScreen() {
   // Save current page annotations and load new page annotations when page changes
   const [prevPage, setPrevPage] = useState(currentPage);
   
-  useEffect(() => {
-    if (isEditing && prevPage !== currentPage) {
-      // Save current page annotations before switching
-      setPageAnnotations(prev => ({
-        ...prev,
-        [prevPage]: { paths, shapes, texts: textAnnotations }
-      }));
-      
-      // Load new page annotations
-      const newPageAnnotations = pageAnnotations[currentPage];
+  // Function to change page with proper annotation saving
+  const changePage = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    
+    // Save current page annotations first
+    setPageAnnotations(prev => ({
+      ...prev,
+      [currentPage]: { paths, shapes, texts: textAnnotations }
+    }));
+    
+    // Load new page annotations from the updated state
+    setPageAnnotations(prev => {
+      const newPageAnnotations = prev[newPage];
       if (newPageAnnotations) {
         setPaths(newPageAnnotations.paths || []);
         setShapes(newPageAnnotations.shapes || []);
@@ -178,16 +181,15 @@ export default function DocumentViewScreen() {
         setShapes([]);
         setTextAnnotations([]);
       }
-      setUndoHistory([]);
-      setSelectedElement(null);
-      
-      // Re-render the new page image
-      setRenderingPage(true);
-      setPageImage(null);
-      
-      setPrevPage(currentPage);
-    }
-  }, [currentPage, isEditing]);
+      return prev;
+    });
+    
+    setUndoHistory([]);
+    setSelectedElement(null);
+    setRenderingPage(true);
+    setPageImage(null);
+    setCurrentPage(newPage);
+  };
 
   const handleWebViewMessage = (event: any) => {
     try {
@@ -981,7 +983,7 @@ export default function DocumentViewScreen() {
           <View style={{ width: screenW, height: CANVAS_H, flexDirection: 'row', alignItems: 'center', backgroundColor: '#d0d0d0' }}>
             {/* Left Arrow */}
             <TouchableOpacity 
-              onPress={() => { if (currentPage > 1) setCurrentPage(currentPage - 1); }} 
+              onPress={() => changePage(currentPage - 1)} 
               style={styles.sideArrow}
               disabled={currentPage <= 1}
             >
@@ -1099,7 +1101,7 @@ export default function DocumentViewScreen() {
             
             {/* Right Arrow */}
             <TouchableOpacity 
-              onPress={() => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); }} 
+              onPress={() => changePage(currentPage + 1)} 
               style={styles.sideArrow}
               disabled={currentPage >= totalPages}
             >

@@ -12,23 +12,39 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import Svg, { Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { DocumentService, Document, DocumentPage, TextAnnotation } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface DrawPath {
   path: string;
   color: string;
   strokeWidth: number;
+  opacity?: number;
+  type: 'pen' | 'highlighter' | 'eraser';
 }
+
+interface ShapeAnnotation {
+  id: string;
+  type: 'rectangle' | 'circle' | 'arrow' | 'line';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  strokeWidth: number;
+}
+
+type ToolMode = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'line';
 
 export default function DocumentAnnotateScreen() {
   const router = useRouter();
@@ -43,25 +59,34 @@ export default function DocumentAnnotateScreen() {
   const [totalPages, setTotalPages] = useState(0);
   const [pageImage, setPageImage] = useState<string | null>(null);
   const [renderingPage, setRenderingPage] = useState(false);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   
   // Drawing state
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: SCREEN_WIDTH, height: 600 });
+  
+  // Shape annotations
+  const [shapes, setShapes] = useState<ShapeAnnotation[]>([]);
+  const [currentShape, setCurrentShape] = useState<ShapeAnnotation | null>(null);
   
   // Text annotations
   const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
   const [showTextModal, setShowTextModal] = useState(false);
   const [newTextAnnotation, setNewTextAnnotation] = useState('');
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [textSize, setTextSize] = useState<'small' | 'medium' | 'large'>('medium');
   
-  // Mode: 'draw' or 'text'
-  const [mode, setMode] = useState<'draw' | 'text'>('draw');
+  // Tool mode
+  const [toolMode, setToolMode] = useState<ToolMode>('pen');
+  const [showToolPicker, setShowToolPicker] = useState(false);
+  const [showStrokePicker, setShowStrokePicker] = useState(false);
   
   const canvasRef = useRef(null);
   const webViewRef = useRef<WebView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadDocument();
@@ -96,25 +121,28 @@ export default function DocumentAnnotateScreen() {
     
     const page = document.pages.find(p => p.pageNumber === currentPage);
     if (page) {
-      // Load drawing annotations
       if (page.annotations) {
         try {
           const annotationData = JSON.parse(page.annotations);
           if (annotationData.paths) {
             setPaths(annotationData.paths);
           }
+          if (annotationData.shapes) {
+            setShapes(annotationData.shapes);
+          }
         } catch (e) {
           console.error('Error parsing annotations:', e);
           setPaths([]);
+          setShapes([]);
         }
       } else {
         setPaths([]);
+        setShapes([]);
       }
-      
-      // Load text annotations
       setTextAnnotations(page.textAnnotations || []);
     } else {
       setPaths([]);
+      setShapes([]);
       setTextAnnotations([]);
     }
   };
@@ -126,9 +154,14 @@ export default function DocumentAnnotateScreen() {
         setTotalPages(data.count);
       } else if (data.type === 'pageImage') {
         setPageImage(data.image);
+        setImageSize({ width: data.width, height: data.height });
+        // Calculate canvas dimensions based on image aspect ratio
+        const aspectRatio = data.height / data.width;
+        const canvasWidth = SCREEN_WIDTH - 20;
+        const canvasHeight = canvasWidth * aspectRatio;
+        setCanvasDimensions({ width: canvasWidth, height: canvasHeight });
         setRenderingPage(false);
       } else if (data.type === 'error') {
-        // Only log the error, don't show alert for canvas-related errors
         console.warn('PDF render warning:', data.message);
         setRenderingPage(false);
       }
@@ -142,7 +175,6 @@ export default function DocumentAnnotateScreen() {
     webViewRef.current?.injectJavaScript(`renderPageAsImage(${currentPage}); true;`);
   };
 
-  // PDF renderer WebView (hidden, just for rendering pages as images)
   const getPdfRendererHtml = () => {
     if (!document?.originalPdfData) return '';
 
@@ -180,7 +212,6 @@ export default function DocumentAnnotateScreen() {
                 count: pdfDoc.numPages
               }));
               
-              // Render initial page
               await renderPageAsImage(${initialPage});
               
             } catch (error) {
@@ -194,17 +225,13 @@ export default function DocumentAnnotateScreen() {
           async function renderPageAsImage(pageNum) {
             if (!pdfDoc) return;
             
-            // Cancel any ongoing render task
             if (currentRenderTask) {
               try {
                 currentRenderTask.cancel();
-              } catch (e) {
-                // Ignore cancel errors
-              }
+              } catch (e) {}
               currentRenderTask = null;
             }
             
-            // Wait if still rendering
             if (isRendering) {
               await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -215,7 +242,6 @@ export default function DocumentAnnotateScreen() {
               const page = await pdfDoc.getPage(pageNum);
               const viewport = page.getViewport({ scale: scale });
               
-              // Create a new canvas for each render to avoid conflicts
               const canvas = document.createElement('canvas');
               const context = canvas.getContext('2d');
               canvas.height = viewport.height;
@@ -234,11 +260,12 @@ export default function DocumentAnnotateScreen() {
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'pageImage',
                 image: imageData,
-                page: pageNum
+                page: pageNum,
+                width: viewport.width,
+                height: viewport.height
               }));
               
             } catch (error) {
-              // Don't send canvas errors to React Native - just log them
               if (error.name !== 'RenderingCancelledException') {
                 console.warn('PDF render warning:', error.message);
               }
@@ -254,38 +281,72 @@ export default function DocumentAnnotateScreen() {
     `;
   };
 
-  // Drawing handlers
+  // Touch handlers
   const onTouchStart = (event: any) => {
-    if (mode === 'text') {
-      // In text mode, tap to place text
-      const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-      const locationX = touch.locationX || touch.pageX;
-      const locationY = touch.locationY || touch.pageY;
+    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
+    const locationX = touch.locationX || touch.pageX;
+    const locationY = touch.locationY || touch.pageY;
+
+    if (toolMode === 'text') {
       setTextPosition({ x: locationX, y: locationY });
       setShowTextModal(true);
       return;
     }
-    
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
+
+    if (['rectangle', 'circle', 'arrow', 'line'].includes(toolMode)) {
+      const newShape: ShapeAnnotation = {
+        id: Date.now().toString(),
+        type: toolMode as 'rectangle' | 'circle' | 'arrow' | 'line',
+        x1: locationX,
+        y1: locationY,
+        x2: locationX,
+        y2: locationY,
+        color: drawColor,
+        strokeWidth: strokeWidth,
+      };
+      setCurrentShape(newShape);
+      return;
+    }
+
+    // Pen, highlighter, or eraser
     setCurrentPath(`M ${locationX} ${locationY}`);
   };
 
   const onTouchMove = (event: any) => {
-    if (mode === 'text' || !currentPath) return;
-    
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     const locationX = touch.locationX || touch.pageX;
     const locationY = touch.locationY || touch.pageY;
-    setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+
+    if (currentShape) {
+      setCurrentShape({
+        ...currentShape,
+        x2: locationX,
+        y2: locationY,
+      });
+      return;
+    }
+
+    if (currentPath) {
+      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+    }
   };
 
   const onTouchEnd = () => {
-    if (mode === 'text') return;
-    
+    if (currentShape) {
+      setShapes([...shapes, currentShape]);
+      setCurrentShape(null);
+      return;
+    }
+
     if (currentPath && currentPath.length > 0) {
-      setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
+      const newPath: DrawPath = {
+        path: currentPath,
+        color: toolMode === 'eraser' ? '#FFFFFF' : drawColor,
+        strokeWidth: toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth,
+        opacity: toolMode === 'highlighter' ? 0.4 : 1,
+        type: toolMode as 'pen' | 'highlighter' | 'eraser',
+      };
+      setPaths([...paths, newPath]);
       setCurrentPath('');
     }
   };
@@ -296,13 +357,14 @@ export default function DocumentAnnotateScreen() {
       return;
     }
 
+    const fontSize = textSize === 'small' ? 12 : textSize === 'large' ? 24 : 16;
     const newAnnotation: TextAnnotation = {
       id: Date.now().toString(),
       x: textPosition.x,
       y: textPosition.y,
       text: newTextAnnotation.trim(),
       color: drawColor,
-      fontSize: 16,
+      fontSize: fontSize,
     };
 
     setTextAnnotations([...textAnnotations, newAnnotation]);
@@ -310,13 +372,11 @@ export default function DocumentAnnotateScreen() {
     setShowTextModal(false);
   };
 
-  const deleteTextAnnotation = (id: string) => {
-    setTextAnnotations(textAnnotations.filter(t => t.id !== id));
-  };
-
   const undo = () => {
     if (paths.length > 0) {
       setPaths(paths.slice(0, -1));
+    } else if (shapes.length > 0) {
+      setShapes(shapes.slice(0, -1));
     } else if (textAnnotations.length > 0) {
       setTextAnnotations(textAnnotations.slice(0, -1));
     }
@@ -325,13 +385,15 @@ export default function DocumentAnnotateScreen() {
   const clear = () => {
     Alert.alert(
       'Alle Anmerkungen löschen',
-      'Möchten Sie alle Zeichnungen und Texte auf dieser Seite löschen?',
+      'Möchten Sie alle Zeichnungen, Formen und Texte auf dieser Seite löschen?',
       [
         { text: 'Abbrechen', style: 'cancel' },
         { 
           text: 'Löschen', 
+          style: 'destructive',
           onPress: () => {
             setPaths([]);
+            setShapes([]);
             setTextAnnotations([]);
           }
         },
@@ -343,14 +405,13 @@ export default function DocumentAnnotateScreen() {
     try {
       setLoading(true);
       
-      // Create annotation data
       const annotationData = {
         paths: paths,
-        canvasWidth: canvasDimensions.width || SCREEN_WIDTH,
-        canvasHeight: canvasDimensions.height || 400,
+        shapes: shapes,
+        canvasWidth: canvasDimensions.width,
+        canvasHeight: canvasDimensions.height,
       };
 
-      // Find or create page entry
       let pages = document?.pages || [];
       const pageIndex = pages.findIndex(p => p.pageNumber === currentPage);
       
@@ -367,7 +428,6 @@ export default function DocumentAnnotateScreen() {
         pages.push(pageData);
       }
 
-      // Update document
       await DocumentService.update(documentId || '', {
         pages: pages,
       });
@@ -387,7 +447,6 @@ export default function DocumentAnnotateScreen() {
     try {
       setLoading(true);
       
-      // Capture the canvas with annotations
       const uri = await captureRef(canvasRef, {
         format: 'png',
         quality: 1,
@@ -410,12 +469,110 @@ export default function DocumentAnnotateScreen() {
 
   const colors = [
     { color: '#FF0000', name: 'Rot' },
-    { color: '#00FF00', name: 'Grün' },
+    { color: '#00AA00', name: 'Grün' },
     { color: '#0000FF', name: 'Blau' },
+    { color: '#FF9900', name: 'Orange' },
     { color: '#FFFF00', name: 'Gelb' },
     { color: '#000000', name: 'Schwarz' },
     { color: '#FFFFFF', name: 'Weiß' },
   ];
+
+  const strokeWidths = [
+    { width: 2, label: 'Dünn' },
+    { width: 4, label: 'Mittel' },
+    { width: 8, label: 'Dick' },
+  ];
+
+  const tools = [
+    { mode: 'pen' as ToolMode, icon: 'pencil', label: 'Stift' },
+    { mode: 'highlighter' as ToolMode, icon: 'color-fill', label: 'Marker' },
+    { mode: 'eraser' as ToolMode, icon: 'backspace', label: 'Radierer' },
+    { mode: 'text' as ToolMode, icon: 'text', label: 'Text' },
+    { mode: 'rectangle' as ToolMode, icon: 'square-outline', label: 'Rechteck' },
+    { mode: 'circle' as ToolMode, icon: 'ellipse-outline', label: 'Kreis' },
+    { mode: 'arrow' as ToolMode, icon: 'arrow-forward', label: 'Pfeil' },
+    { mode: 'line' as ToolMode, icon: 'remove', label: 'Linie' },
+  ];
+
+  const renderShape = (shape: ShapeAnnotation, isPreview = false) => {
+    const key = isPreview ? 'preview' : shape.id;
+    
+    switch (shape.type) {
+      case 'rectangle':
+        const rectX = Math.min(shape.x1, shape.x2);
+        const rectY = Math.min(shape.y1, shape.y2);
+        const rectW = Math.abs(shape.x2 - shape.x1);
+        const rectH = Math.abs(shape.y2 - shape.y1);
+        return (
+          <Rect
+            key={key}
+            x={rectX}
+            y={rectY}
+            width={rectW}
+            height={rectH}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill="none"
+          />
+        );
+      case 'circle':
+        const cx = (shape.x1 + shape.x2) / 2;
+        const cy = (shape.y1 + shape.y2) / 2;
+        const rx = Math.abs(shape.x2 - shape.x1) / 2;
+        const ry = Math.abs(shape.y2 - shape.y1) / 2;
+        return (
+          <Circle
+            key={key}
+            cx={cx}
+            cy={cy}
+            r={Math.max(rx, ry)}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill="none"
+          />
+        );
+      case 'arrow':
+      case 'line':
+        const angle = Math.atan2(shape.y2 - shape.y1, shape.x2 - shape.x1);
+        const arrowLength = 15;
+        const arrowAngle = Math.PI / 6;
+        
+        return (
+          <G key={key}>
+            <Line
+              x1={shape.x1}
+              y1={shape.y1}
+              x2={shape.x2}
+              y2={shape.y2}
+              stroke={shape.color}
+              strokeWidth={shape.strokeWidth}
+            />
+            {shape.type === 'arrow' && (
+              <>
+                <Line
+                  x1={shape.x2}
+                  y1={shape.y2}
+                  x2={shape.x2 - arrowLength * Math.cos(angle - arrowAngle)}
+                  y2={shape.y2 - arrowLength * Math.sin(angle - arrowAngle)}
+                  stroke={shape.color}
+                  strokeWidth={shape.strokeWidth}
+                />
+                <Line
+                  x1={shape.x2}
+                  y1={shape.y2}
+                  x2={shape.x2 - arrowLength * Math.cos(angle + arrowAngle)}
+                  y2={shape.y2 - arrowLength * Math.sin(angle + arrowAngle)}
+                  stroke={shape.color}
+                  strokeWidth={shape.strokeWidth}
+                />
+              </>
+            )}
+          </G>
+        );
+      default:
+        return null;
+    }
+  };
 
   if (loading && !document) {
     return (
@@ -454,32 +611,40 @@ export default function DocumentAnnotateScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Toolbar */}
+      {/* Main Toolbar */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolButton} onPress={undo}>
           <Ionicons name="arrow-undo" size={20} color="#1976d2" />
-          <Text style={styles.toolText}>Rückgängig</Text>
+          <Text style={styles.toolText}>Zurück</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.toolButton} onPress={clear}>
           <Ionicons name="trash-outline" size={20} color="#f44336" />
           <Text style={styles.toolText}>Löschen</Text>
         </TouchableOpacity>
         
-        {/* Mode Toggle */}
-        <View style={styles.modeToggle}>
-          <TouchableOpacity 
-            style={[styles.modeButton, mode === 'draw' && styles.modeButtonActive]}
-            onPress={() => setMode('draw')}
-          >
-            <Ionicons name="pencil" size={20} color={mode === 'draw' ? '#fff' : '#1976d2'} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.modeButton, mode === 'text' && styles.modeButtonActive]}
-            onPress={() => setMode('text')}
-          >
-            <Ionicons name="text" size={20} color={mode === 'text' ? '#fff' : '#1976d2'} />
-          </TouchableOpacity>
-        </View>
+        {/* Current Tool Indicator */}
+        <TouchableOpacity 
+          style={[styles.toolButton, styles.toolButtonActive]}
+          onPress={() => setShowToolPicker(true)}
+        >
+          <Ionicons 
+            name={tools.find(t => t.mode === toolMode)?.icon as any || 'pencil'} 
+            size={20} 
+            color="#fff" 
+          />
+          <Text style={styles.toolTextActive}>
+            {tools.find(t => t.mode === toolMode)?.label || 'Stift'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Stroke Width */}
+        <TouchableOpacity 
+          style={styles.toolButton}
+          onPress={() => setShowStrokePicker(true)}
+        >
+          <View style={[styles.strokePreview, { height: strokeWidth }]} />
+          <Text style={styles.toolText}>Stärke</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Color Picker */}
@@ -491,14 +656,23 @@ export default function DocumentAnnotateScreen() {
               styles.colorButton,
               { backgroundColor: c.color },
               drawColor === c.color && styles.colorButtonActive,
+              c.color === '#FFFFFF' && styles.colorButtonWhite,
             ]}
             onPress={() => setDrawColor(c.color)}
           />
         ))}
       </View>
 
-      {/* Canvas Area */}
-      <View style={styles.canvasArea}>
+      {/* Canvas Area - Scrollable */}
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        maximumZoomScale={3}
+        minimumZoomScale={1}
+        bouncesZoom={true}
+        showsVerticalScrollIndicator={true}
+      >
         {renderingPage && (
           <View style={styles.renderingOverlay}>
             <ActivityIndicator size="large" color="#1976d2" />
@@ -508,40 +682,30 @@ export default function DocumentAnnotateScreen() {
         
         <View 
           ref={canvasRef}
-          style={styles.canvasContainer}
-          onLayout={(event) => {
-            const { width, height } = event.nativeEvent.layout;
-            setCanvasDimensions({ width, height });
-          }}
+          style={[styles.canvasContainer, { 
+            width: canvasDimensions.width, 
+            height: canvasDimensions.height,
+            minHeight: 400,
+          }]}
         >
+          {/* PDF Page Image */}
           {pageImage && (
-            <View style={styles.imageContainer}>
-              <WebView
-                source={{ html: `
-                  <html>
-                  <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                    <style>
-                      * { margin: 0; padding: 0; }
-                      body { display: flex; justify-content: center; align-items: flex-start; background: #333; }
-                      img { width: 100%; height: auto; }
-                    </style>
-                  </head>
-                  <body>
-                    <img src="${pageImage}" />
-                  </body>
-                  </html>
-                `}}
-                style={styles.pageImage}
-                scrollEnabled={false}
-                scalesPageToFit={true}
-              />
-            </View>
+            <Image
+              source={{ uri: pageImage }}
+              style={[styles.pageImage, {
+                width: canvasDimensions.width,
+                height: canvasDimensions.height,
+              }]}
+              resizeMode="contain"
+            />
           )}
           
           {/* Drawing Layer */}
           <View
-            style={styles.drawingLayer}
+            style={[styles.drawingLayer, {
+              width: canvasDimensions.width,
+              height: canvasDimensions.height,
+            }]}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
             onResponderGrant={onTouchStart}
@@ -559,19 +723,29 @@ export default function DocumentAnnotateScreen() {
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  opacity={p.opacity || 1}
                 />
               ))}
+              
               {/* Current path being drawn */}
               {currentPath && (
                 <Path
                   d={currentPath}
-                  stroke={drawColor}
-                  strokeWidth={strokeWidth}
+                  stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                  strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  opacity={toolMode === 'highlighter' ? 0.4 : 1}
                 />
               )}
+
+              {/* Shapes */}
+              {shapes.map(shape => renderShape(shape))}
+              
+              {/* Current shape being drawn */}
+              {currentShape && renderShape(currentShape, true)}
+              
               {/* Text annotations */}
               {textAnnotations.map((t) => (
                 <SvgText
@@ -590,7 +764,7 @@ export default function DocumentAnnotateScreen() {
             </Svg>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Page Navigation */}
       <View style={styles.pageNav}>
@@ -614,6 +788,98 @@ export default function DocumentAnnotateScreen() {
           <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#ccc' : '#1976d2'} />
         </TouchableOpacity>
       </View>
+
+      {/* Tool Picker Modal */}
+      <Modal visible={showToolPicker} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1}
+          onPress={() => setShowToolPicker(false)}
+        >
+          <View style={styles.toolPickerModal}>
+            <Text style={styles.modalTitle}>Werkzeug wählen</Text>
+            <View style={styles.toolGrid}>
+              {tools.map((tool) => (
+                <TouchableOpacity
+                  key={tool.mode}
+                  style={[
+                    styles.toolPickerButton,
+                    toolMode === tool.mode && styles.toolPickerButtonActive,
+                  ]}
+                  onPress={() => {
+                    setToolMode(tool.mode);
+                    setShowToolPicker(false);
+                  }}
+                >
+                  <Ionicons 
+                    name={tool.icon as any} 
+                    size={28} 
+                    color={toolMode === tool.mode ? '#fff' : '#1976d2'} 
+                  />
+                  <Text style={[
+                    styles.toolPickerLabel,
+                    toolMode === tool.mode && styles.toolPickerLabelActive,
+                  ]}>
+                    {tool.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Stroke Width Picker Modal */}
+      <Modal visible={showStrokePicker} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1}
+          onPress={() => setShowStrokePicker(false)}
+        >
+          <View style={styles.strokePickerModal}>
+            <Text style={styles.modalTitle}>Strichstärke</Text>
+            <View style={styles.strokeOptions}>
+              {strokeWidths.map((sw) => (
+                <TouchableOpacity
+                  key={sw.width}
+                  style={[
+                    styles.strokeOption,
+                    strokeWidth === sw.width && styles.strokeOptionActive,
+                  ]}
+                  onPress={() => {
+                    setStrokeWidth(sw.width);
+                    setShowStrokePicker(false);
+                  }}
+                >
+                  <View style={[styles.strokeLine, { height: sw.width, backgroundColor: drawColor }]} />
+                  <Text style={styles.strokeLabel}>{sw.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <Text style={[styles.modalTitle, { marginTop: 20 }]}>Textgröße</Text>
+            <View style={styles.strokeOptions}>
+              {[
+                { size: 'small' as const, label: 'Klein', fontSize: 12 },
+                { size: 'medium' as const, label: 'Mittel', fontSize: 16 },
+                { size: 'large' as const, label: 'Groß', fontSize: 24 },
+              ].map((ts) => (
+                <TouchableOpacity
+                  key={ts.size}
+                  style={[
+                    styles.strokeOption,
+                    textSize === ts.size && styles.strokeOptionActive,
+                  ]}
+                  onPress={() => setTextSize(ts.size)}
+                >
+                  <Text style={[styles.textSizePreview, { fontSize: ts.fontSize }]}>Aa</Text>
+                  <Text style={styles.strokeLabel}>{ts.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="fade">
@@ -659,7 +925,7 @@ export default function DocumentAnnotateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -702,33 +968,34 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#fff',
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   toolButton: {
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#f5f5f5',
-    minWidth: 70,
+    minWidth: 60,
+  },
+  toolButtonActive: {
+    backgroundColor: '#1976d2',
   },
   toolText: {
     fontSize: 10,
     color: '#333',
     marginTop: 2,
   },
-  modeToggle: {
-    flexDirection: 'row',
-    marginLeft: 'auto',
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#1976d2',
+  toolTextActive: {
+    fontSize: 10,
+    color: '#fff',
+    marginTop: 2,
   },
-  modeButton: {
-    padding: 10,
-    backgroundColor: '#fff',
-  },
-  modeButtonActive: {
-    backgroundColor: '#1976d2',
+  strokePreview: {
+    width: 30,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    marginBottom: 2,
   },
   colorPicker: {
     flexDirection: 'row',
@@ -747,10 +1014,18 @@ const styles = StyleSheet.create({
   colorButtonActive: {
     borderWidth: 3,
     borderColor: '#1976d2',
+    transform: [{ scale: 1.1 }],
   },
-  canvasArea: {
+  colorButtonWhite: {
+    borderColor: '#999',
+  },
+  scrollContainer: {
     flex: 1,
-    position: 'relative',
+    backgroundColor: '#e0e0e0',
+  },
+  scrollContent: {
+    alignItems: 'center',
+    padding: 10,
   },
   renderingOverlay: {
     position: 'absolute',
@@ -758,7 +1033,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -769,26 +1044,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   canvasContainer: {
-    flex: 1,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
     position: 'relative',
   },
-  imageContainer: {
+  pageImage: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  pageImage: {
-    flex: 1,
-    backgroundColor: '#333',
   },
   drawingLayer: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
   },
   svg: {
     position: 'absolute',
@@ -831,7 +1103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  textModal: {
+  toolPickerModal: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
@@ -843,6 +1115,76 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 16,
+    textAlign: 'center',
+  },
+  toolGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  toolPickerButton: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+    width: 80,
+  },
+  toolPickerButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  toolPickerLabel: {
+    fontSize: 12,
+    color: '#333',
+    marginTop: 4,
+  },
+  toolPickerLabelActive: {
+    color: '#fff',
+  },
+  strokePickerModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 350,
+  },
+  strokeOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 12,
+  },
+  strokeOption: {
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+    minWidth: 80,
+  },
+  strokeOptionActive: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 2,
+    borderColor: '#1976d2',
+  },
+  strokeLine: {
+    width: 50,
+    borderRadius: 2,
+    marginBottom: 8,
+  },
+  strokeLabel: {
+    fontSize: 12,
+    color: '#333',
+  },
+  textSizePreview: {
+    color: '#333',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  textModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
   },
   textInput: {
     borderWidth: 1,

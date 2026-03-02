@@ -689,7 +689,7 @@ export default function DocumentAnnotateScreen() {
                 <Svg 
                   height={canvasDimensions.height} 
                   width={canvasDimensions.width}
-                  pointerEvents="none"
+                  style={{ pointerEvents: 'none' }}
                 >
                   {paths.map((p, index) => (
                     <Path

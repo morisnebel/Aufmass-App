@@ -934,7 +934,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'purple', // DEBUG: Sollte NICHT sichtbar sein
   },
   loadingContainer: {
     flex: 1,

@@ -648,9 +648,9 @@ export default function DocumentAnnotateScreen() {
         </View>
 
         {/* Main Content Area with Side Toolbar */}
-        <View style={styles.mainContent}>
+        <View style={[styles.mainContent, { backgroundColor: 'blue' }]}>
           {/* Canvas Area - NO ScrollView to avoid touch conflicts */}
-          <View style={styles.canvasArea}>
+          <View style={[styles.canvasArea, { backgroundColor: 'green' }]}>
             {renderingPage && (
               <View style={styles.renderingOverlayInline}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -663,6 +663,7 @@ export default function DocumentAnnotateScreen() {
               style={[styles.canvasContainerCentered, { 
                 width: canvasDimensions.width, 
                 height: canvasDimensions.height,
+                backgroundColor: 'yellow',
               }]}
             >
               {pageImage && (

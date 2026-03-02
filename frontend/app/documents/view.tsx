@@ -63,11 +63,11 @@ export default function DocumentViewScreen() {
       } else if (data.type === 'currentPage') {
         setCurrentPage(data.page);
       } else if (data.type === 'error') {
-        console.error('PDF Error:', data.message);
-        Alert.alert('Fehler', 'PDF konnte nicht geladen werden');
+        // Just log canvas-related errors, don't show alert
+        console.warn('PDF render warning:', data.message);
       }
     } catch (e) {
-      console.error('Error parsing WebView message:', e);
+      console.warn('Error parsing WebView message:', e);
     }
   };
 

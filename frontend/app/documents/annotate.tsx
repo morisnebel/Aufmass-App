@@ -993,18 +993,38 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     backgroundColor: '#fff',
-    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexWrap: 'wrap',
   },
   toolButton: {
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#f5f5f5',
-    minWidth: 60,
+    marginHorizontal: 2,
+  },
+  toolDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#ddd',
+    marginHorizontal: 6,
+  },
+  toolIconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f0f0',
+    marginHorizontal: 2,
+  },
+  toolIconButtonActive: {
+    backgroundColor: '#1976d2',
   },
   toolButtonActive: {
     backgroundColor: '#1976d2',
@@ -1020,10 +1040,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   strokePreview: {
-    width: 30,
-    backgroundColor: '#333',
+    width: 24,
     borderRadius: 2,
-    marginBottom: 2,
   },
   colorPicker: {
     flexDirection: 'row',

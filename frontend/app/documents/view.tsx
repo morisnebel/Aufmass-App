@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
   Image,
@@ -283,6 +284,7 @@ export default function DocumentViewScreen() {
 
   const handleTouch = (evt: any, type: 'start' | 'move' | 'end') => {
     const { locationX, locationY } = evt.nativeEvent;
+    console.log(`Touch ${type}: x=${locationX}, y=${locationY}, tool=${getCurrentTool()}`);
     
     if (type === 'start') {
       // Text mode
@@ -328,6 +330,7 @@ export default function DocumentViewScreen() {
         setShapes(prev => [...prev, newShape]);
         setUndoHistory(prev => [...prev, { type: 'shape', id: newId }]);
         setCurrentShape(null);
+        console.log('Shape added:', newShape);
         return;
       }
       
@@ -342,11 +345,13 @@ export default function DocumentViewScreen() {
         }]);
         setUndoHistory(prev => [...prev, { type: 'path', id: pathId }]);
         setCurrentPath('');
+        console.log('Path added');
       }
     }
   };
 
   const selectTool = (tool: string) => {
+    console.log('Tool selected:', tool);
     setIsTextMode(false);
     setIsHighlighter(false);
     setIsEraser(false);
@@ -690,56 +695,61 @@ export default function DocumentViewScreen() {
 
         {/* Toolbar - absolute bottom */}
         <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.toolbarContent}
+            keyboardShouldPersistTaps="always"
+          >
             {/* Drawing Tools */}
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
               <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
               <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
               <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
               <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
-            </TouchableOpacity>
+            </Pressable>
             
             <View style={styles.divider} />
             
             {/* Shape Tools */}
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
               <Ionicons name="square-outline" size={20} color={getCurrentTool() === 'rectangle' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
               <Ionicons name="ellipse-outline" size={20} color={getCurrentTool() === 'circle' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
               <Ionicons name="arrow-forward" size={20} color={getCurrentTool() === 'arrow' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
+            </Pressable>
+            <Pressable style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
               <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
-            </TouchableOpacity>
+            </Pressable>
             
             <View style={styles.divider} />
             
             {/* Stroke Width */}
-            <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
+            <Pressable style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
               <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
-            </TouchableOpacity>
+            </Pressable>
             
             {/* Text Size (only visible when text tool active) */}
             {isTextMode && (
-              <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
+              <Pressable style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
                 <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
             
             <View style={styles.divider} />
             
             {/* Colors */}
             {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
-              <TouchableOpacity
+              <Pressable
                 key={color}
                 style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive, color === '#FFFFFF' && styles.colorBtnWhite]}
                 onPress={() => setDrawColor(color)}

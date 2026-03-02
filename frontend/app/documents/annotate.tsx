@@ -1034,9 +1034,10 @@ const styles = StyleSheet.create({
   },
   canvasArea: {
     flex: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 4,
   },
   renderingOverlayCenter: {
     position: 'absolute',

@@ -278,20 +278,9 @@ export default function DocumentViewScreen() {
   };
 
   const cancelEditing = async () => {
-    // Ask if user wants to save before leaving
-    if (paths.length > 0 || shapes.length > 0 || textAnnotations.length > 0) {
-      Alert.alert(
-        'Anmerkungen speichern?',
-        'Möchten Sie die Anmerkungen vor dem Beenden speichern?',
-        [
-          { text: 'Verwerfen', style: 'destructive', onPress: () => exitEditMode() },
-          { text: 'Abbrechen', style: 'cancel' },
-          { text: 'Speichern', onPress: () => saveAndExit() },
-        ]
-      );
-    } else {
-      exitEditMode();
-    }
+    // Always save all annotations before leaving
+    await saveAllAnnotations();
+    exitEditMode();
   };
 
   const exitEditMode = () => {
@@ -301,6 +290,35 @@ export default function DocumentViewScreen() {
     setShapes([]);
     setTextAnnotations([]);
     setUndoHistory([]);
+    setPageAnnotations({});
+  };
+
+  const saveAllAnnotations = async () => {
+    if (!document) return;
+    
+    // Include current page annotations
+    const allAnnotations = {
+      ...pageAnnotations,
+      [currentPage]: { paths, shapes, texts: textAnnotations }
+    };
+    
+    try {
+      // Save all pages that have annotations
+      for (const [pageNum, annotations] of Object.entries(allAnnotations)) {
+        if (annotations.paths.length > 0 || annotations.shapes.length > 0 || annotations.texts.length > 0) {
+          const annotationData: SavedAnnotations = {
+            paths: annotations.paths,
+            shapes: annotations.shapes,
+            texts: annotations.texts,
+          };
+          await DocumentService.updatePage(document.id, parseInt(pageNum), {
+            annotations: JSON.stringify(annotationData),
+          });
+        }
+      }
+    } catch (error) {
+      console.log('Error saving annotations:', error);
+    }
   };
 
   const saveAnnotations = async () => {
@@ -329,11 +347,6 @@ export default function DocumentViewScreen() {
     } catch (error) {
       Alert.alert('Fehler', 'Konnte nicht gespeichert werden');
     }
-  };
-
-  const saveAndExit = async () => {
-    await saveAnnotations();
-    exitEditMode();
   };
 
   const shareAnnotated = async () => {

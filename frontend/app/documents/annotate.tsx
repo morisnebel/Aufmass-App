@@ -156,9 +156,11 @@ export default function DocumentAnnotateScreen() {
         setPageImage(data.image);
         setImageSize({ width: data.width, height: data.height });
         // Calculate canvas dimensions based on image aspect ratio
+        // A4 aspect ratio is approximately 1:1.414
         const aspectRatio = data.height / data.width;
         const canvasWidth = SCREEN_WIDTH - 20;
         const canvasHeight = canvasWidth * aspectRatio;
+        console.log('PDF dimensions:', data.width, 'x', data.height, 'aspectRatio:', aspectRatio, 'canvas:', canvasWidth, 'x', canvasHeight);
         setCanvasDimensions({ width: canvasWidth, height: canvasHeight });
         setRenderingPage(false);
       } else if (data.type === 'error') {

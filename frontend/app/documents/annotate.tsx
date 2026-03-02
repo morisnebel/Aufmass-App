@@ -669,16 +669,20 @@ export default function DocumentAnnotateScreen() {
         ))}
       </View>
 
-      {/* Canvas Area - Scrollable */}
+      {/* Canvas Area - Scrollable with two fingers only */}
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
         bounces={true}
+        scrollEnabled={true}
+        scrollEventThrottle={16}
+        pinchGestureEnabled={true}
+        directionalLockEnabled={false}
       >
         {renderingPage && (
-          <View style={[styles.renderingOverlay, { height: canvasDimensions.height || 600 }]}>
+          <View style={[styles.renderingOverlay, { height: canvasDimensions.height || 800 }]}>
             <ActivityIndicator size="large" color="#1976d2" />
             <Text style={styles.renderingText}>Seite wird geladen...</Text>
           </View>
@@ -688,7 +692,7 @@ export default function DocumentAnnotateScreen() {
           ref={canvasRef}
           style={[styles.canvasContainer, { 
             width: canvasDimensions.width, 
-            height: canvasDimensions.height || 600,
+            height: canvasDimensions.height || 800,
           }]}
         >
           {/* PDF Page Image as Background */}
@@ -697,26 +701,27 @@ export default function DocumentAnnotateScreen() {
               source={{ uri: pageImage }}
               style={{
                 width: canvasDimensions.width,
-                height: canvasDimensions.height || 600,
+                height: canvasDimensions.height || 800,
               }}
               resizeMode="contain"
             />
           )}
           
-          {/* Drawing Layer - Absolute positioned over image */}
+          {/* Drawing Layer - Positioned over image */}
           <View
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: canvasDimensions.width,
-              height: canvasDimensions.height || 600,
+              height: canvasDimensions.height || 800,
             }}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
             onResponderGrant={onTouchStart}
             onResponderMove={onTouchMove}
             onResponderRelease={onTouchEnd}
+            pointerEvents="box-only"
           >
             <Svg height="100%" width="100%" style={styles.svg}>
               {/* Drawn paths */}

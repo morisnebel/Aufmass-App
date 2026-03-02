@@ -930,7 +930,7 @@ export default function DocumentAnnotateScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1976d2',
+    backgroundColor: 'cyan', // DEBUG: War blau
   },
   container: {
     flex: 1,

@@ -96,12 +96,12 @@ export default function DocumentViewScreen() {
         ? document.originalPdfData.split(',')[1]
         : document.originalPdfData;
 
-      // Save to temp file
+      // Save to temp file using the new API
       const filename = `${document.name.replace('.pdf', '')}_${Date.now()}.pdf`;
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
       
       await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64',
       });
 
       // Share

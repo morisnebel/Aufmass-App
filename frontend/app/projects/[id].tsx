@@ -2210,6 +2210,17 @@ export default function ProjectDetailScreen() {
             Notiz
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'documents' && styles.tabActive]}
+          onPress={() => setActiveTab('documents')}
+        >
+          <Text style={[styles.tabText, activeTab === 'documents' && styles.tabTextActive]}>
+            Doku
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'documents' && styles.tabCountActive]}>
+            {documents.length}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>

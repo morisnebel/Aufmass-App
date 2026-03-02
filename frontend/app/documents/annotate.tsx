@@ -685,20 +685,10 @@ export default function DocumentAnnotateScreen() {
         ))}
       </View>
 
-      {/* Canvas Area - Scrollable with two fingers only */}
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-        scrollEnabled={true}
-        scrollEventThrottle={16}
-        pinchGestureEnabled={true}
-        directionalLockEnabled={false}
-      >
+      {/* Canvas Area - No scroll, fit to screen */}
+      <View style={styles.canvasArea}>
         {renderingPage && (
-          <View style={[styles.renderingOverlay, { height: canvasDimensions.height || 800 }]}>
+          <View style={styles.renderingOverlayCenter}>
             <ActivityIndicator size="large" color="#1976d2" />
             <Text style={styles.renderingText}>Seite wird geladen...</Text>
           </View>
@@ -706,9 +696,9 @@ export default function DocumentAnnotateScreen() {
         
         <View 
           ref={canvasRef}
-          style={[styles.canvasContainer, { 
+          style={[styles.canvasContainerCentered, { 
             width: canvasDimensions.width, 
-            height: canvasDimensions.height || 800,
+            height: canvasDimensions.height,
           }]}
         >
           {/* PDF Page Image as Background */}
@@ -717,7 +707,7 @@ export default function DocumentAnnotateScreen() {
               source={{ uri: pageImage }}
               style={{
                 width: canvasDimensions.width,
-                height: canvasDimensions.height || 800,
+                height: canvasDimensions.height,
               }}
               resizeMode="contain"
             />
@@ -730,7 +720,7 @@ export default function DocumentAnnotateScreen() {
               top: 0,
               left: 0,
               width: canvasDimensions.width,
-              height: canvasDimensions.height || 800,
+              height: canvasDimensions.height,
             }}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}

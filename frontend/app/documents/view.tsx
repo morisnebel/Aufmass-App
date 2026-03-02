@@ -110,6 +110,8 @@ export default function DocumentViewScreen() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text', id: string} | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeCorner, setResizeCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
   
   // Memo pointer
   const [isPointerMode, setIsPointerMode] = useState(false);
@@ -308,6 +310,27 @@ export default function DocumentViewScreen() {
     if (type === 'start') {
       // Select/Move mode
       if (isSelectMode) {
+        // Check if clicking on a resize handle first
+        if (selectedElement && selectedElement.type === 'shape') {
+          const shape = shapes.find(s => s.id === selectedElement.id);
+          if (shape) {
+            const handleSize = 20;
+            const corners = [
+              { name: 'tl', x: Math.min(shape.x1, shape.x2), y: Math.min(shape.y1, shape.y2) },
+              { name: 'tr', x: Math.max(shape.x1, shape.x2), y: Math.min(shape.y1, shape.y2) },
+              { name: 'bl', x: Math.min(shape.x1, shape.x2), y: Math.max(shape.y1, shape.y2) },
+              { name: 'br', x: Math.max(shape.x1, shape.x2), y: Math.max(shape.y1, shape.y2) },
+            ];
+            for (const corner of corners) {
+              if (Math.abs(locationX - corner.x) < handleSize && Math.abs(locationY - corner.y) < handleSize) {
+                setIsResizing(true);
+                setResizeCorner(corner.name as 'tl' | 'tr' | 'bl' | 'br');
+                return;
+              }
+            }
+          }
+        }
+        
         // Find clicked element (shapes or text)
         const clickedShape = shapes.find(s => {
           const minX = Math.min(s.x1, s.x2) - 10;
@@ -354,6 +377,22 @@ export default function DocumentViewScreen() {
       // Drawing mode (pen, highlighter, eraser)
       setCurrentPath(`M ${locationX} ${locationY}`);
     } else if (type === 'move') {
+      // Resizing mode
+      if (isResizing && selectedElement && selectedElement.type === 'shape' && resizeCorner) {
+        setShapes(prev => prev.map(s => {
+          if (s.id === selectedElement.id) {
+            switch (resizeCorner) {
+              case 'tl': return { ...s, x1: locationX, y1: locationY };
+              case 'tr': return { ...s, x2: locationX, y1: locationY };
+              case 'bl': return { ...s, x1: locationX, y2: locationY };
+              case 'br': return { ...s, x2: locationX, y2: locationY };
+            }
+          }
+          return s;
+        }));
+        return;
+      }
+      
       // Select/Move mode - drag selected element
       if (isSelectMode && selectedElement) {
         const dx = locationX - dragOffset.x;
@@ -396,6 +435,13 @@ export default function DocumentViewScreen() {
         setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
       }
     } else if (type === 'end') {
+      // End resizing
+      if (isResizing) {
+        setIsResizing(false);
+        setResizeCorner(null);
+        return;
+      }
+      
       // Select mode - end drag
       if (isSelectMode) {
         return;
@@ -901,6 +947,55 @@ export default function DocumentViewScreen() {
                       {textAnnotations.map(t => (
                         <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
                       ))}
+                      
+                      {/* Resize Handles for selected shape */}
+                      {isSelectMode && selectedElement && selectedElement.type === 'shape' && (() => {
+                        const shape = shapes.find(s => s.id === selectedElement.id);
+                        if (!shape) return null;
+                        const minX = Math.min(shape.x1, shape.x2);
+                        const maxX = Math.max(shape.x1, shape.x2);
+                        const minY = Math.min(shape.y1, shape.y2);
+                        const maxY = Math.max(shape.y1, shape.y2);
+                        const handleSize = 12;
+                        return (
+                          <G>
+                            {/* Selection border */}
+                            <Rect 
+                              x={minX - 2} 
+                              y={minY - 2} 
+                              width={maxX - minX + 4} 
+                              height={maxY - minY + 4} 
+                              stroke="#1976d2" 
+                              strokeWidth={2} 
+                              strokeDasharray="5,5" 
+                              fill="none" 
+                            />
+                            {/* Corner handles */}
+                            <Rect x={minX - handleSize/2} y={minY - handleSize/2} width={handleSize} height={handleSize} fill="#1976d2" />
+                            <Rect x={maxX - handleSize/2} y={minY - handleSize/2} width={handleSize} height={handleSize} fill="#1976d2" />
+                            <Rect x={minX - handleSize/2} y={maxY - handleSize/2} width={handleSize} height={handleSize} fill="#1976d2" />
+                            <Rect x={maxX - handleSize/2} y={maxY - handleSize/2} width={handleSize} height={handleSize} fill="#1976d2" />
+                          </G>
+                        );
+                      })()}
+                      
+                      {/* Selection indicator for text */}
+                      {isSelectMode && selectedElement && selectedElement.type === 'text' && (() => {
+                        const text = textAnnotations.find(t => t.id === selectedElement.id);
+                        if (!text) return null;
+                        return (
+                          <Rect 
+                            x={text.x - 5} 
+                            y={text.y - (text.fontSize || 16)} 
+                            width={100} 
+                            height={(text.fontSize || 16) + 10} 
+                            stroke="#1976d2" 
+                            strokeWidth={2} 
+                            strokeDasharray="5,5" 
+                            fill="none" 
+                          />
+                        );
+                      })()}
                     </Svg>
                   </View>
                 </ScrollView>

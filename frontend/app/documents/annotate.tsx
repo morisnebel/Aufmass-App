@@ -161,8 +161,8 @@ export default function DocumentAnnotateScreen() {
         setImageSize({ width: data.width, height: data.height });
         
         // Calculate canvas dimensions to fit the available screen space
-        // Available height = window height - header(~50) - toolbar(~48) - colorPicker(~48) - pageNav(~50) - statusbar(~50)
-        const availableHeight = windowHeight - 250;
+        // Available height = window height - header(~44) - toolbar(~50) - pageNav(~50) - statusbar(~24) - padding(~16)
+        const availableHeight = windowHeight - 184;
         const availableWidth = windowWidth - 20;
         
         const aspectRatio = data.height / data.width;

@@ -41,10 +41,9 @@ export default function NewDocumentScreen() {
       setLoading(true);
       setLoadingText('PDF wird geladen...');
 
-      // Read the PDF file as base64
-      const pdfBase64 = await FileSystem.readAsStringAsync(file.uri, {
-        encoding: 'base64',
-      });
+      // Read the PDF file as base64 using the new expo-file-system/next API
+      const pdfFile = new File(file.uri);
+      const pdfBase64 = await pdfFile.base64();
 
       setLoadingText('Dokument wird erstellt...');
 

@@ -644,14 +644,8 @@ export default function DocumentAnnotateScreen() {
 
         {/* Main Content Area with Side Toolbar */}
         <View style={styles.mainContent}>
-          {/* Canvas Area */}
-          <ScrollView 
-            ref={scrollViewRef}
-            style={styles.canvasScrollView}
-            contentContainerStyle={styles.canvasScrollContent}
-            scrollEnabled={zoomEnabled}
-            showsVerticalScrollIndicator={true}
-          >
+          {/* Canvas Area - NO ScrollView to avoid touch conflicts */}
+          <View style={styles.canvasArea}>
             {renderingPage && (
               <View style={styles.renderingOverlayInline}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -680,21 +674,12 @@ export default function DocumentAnnotateScreen() {
               {/* Touch handler layer - MUST be on top and full size */}
               <View
                 ref={drawingViewRef}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  width: canvasDimensions.width,
-                  height: canvasDimensions.height,
-                }}
+                style={styles.touchLayer}
                 {...panResponder.panHandlers}
               >
                 <Svg 
-                  height="100%" 
-                  width="100%" 
-                  style={{ position: 'absolute', top: 0, left: 0 }}
+                  height={canvasDimensions.height} 
+                  width={canvasDimensions.width}
                   pointerEvents="none"
                 >
                   {paths.map((p, index) => (
@@ -742,7 +727,7 @@ export default function DocumentAnnotateScreen() {
                 </Svg>
               </View>
             </View>
-          </ScrollView>
+          </View>
 
           {/* Right Side Toolbar */}
           <View style={styles.sideToolbar}>
@@ -984,6 +969,20 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     flexDirection: 'row',
+  },
+  canvasArea: {
+    flex: 1,
+    backgroundColor: '#e8e8e8',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 8,
+  },
+  touchLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   canvasScrollView: {
     flex: 1,

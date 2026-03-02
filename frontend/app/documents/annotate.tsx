@@ -660,7 +660,6 @@ export default function DocumentAnnotateScreen() {
           scrollEnabled={zoomEnabled}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
-          centerContent={true}
         >
           {renderingPage && (
             <View style={styles.renderingOverlayCenter}>

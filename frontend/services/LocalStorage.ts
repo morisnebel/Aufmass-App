@@ -655,6 +655,101 @@ export const SettingsService = {
   },
 };
 
+// ============ DOCUMENTS (PDF with annotations) ============
+export interface DocumentPage {
+  pageNumber: number;
+  imageData: string; // Base64 image of the PDF page
+  annotations?: string; // JSON string with drawing paths
+  textAnnotations?: TextAnnotation[]; // Text notes on this page
+}
+
+export interface TextAnnotation {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  fontSize: number;
+}
+
+export interface Document {
+  id: string;
+  project_id: string;
+  name: string;
+  originalPdfData?: string; // Base64 of original PDF (optional, for re-rendering)
+  pages: DocumentPage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export const DocumentService = {
+  getAll: async (): Promise<Document[]> => {
+    return getItems<Document>(KEYS.DOCUMENTS);
+  },
+
+  getByProjectId: async (projectId: string): Promise<Document[]> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    return documents.filter((doc) => doc.project_id === projectId);
+  },
+
+  getById: async (id: string): Promise<Document | null> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    return documents.find((doc) => doc.id === id) || null;
+  },
+
+  create: async (data: Omit<Document, 'id' | 'created_at' | 'updated_at'>): Promise<Document> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const newDocument: Document = {
+      ...data,
+      id: generateId(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    documents.push(newDocument);
+    await setItems(KEYS.DOCUMENTS, documents);
+    return newDocument;
+  },
+
+  update: async (id: string, data: Partial<Document>): Promise<Document | null> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const index = documents.findIndex((doc) => doc.id === id);
+    if (index !== -1) {
+      documents[index] = {
+        ...documents[index],
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+      await setItems(KEYS.DOCUMENTS, documents);
+      return documents[index];
+    }
+    return null;
+  },
+
+  updatePage: async (documentId: string, pageNumber: number, pageData: Partial<DocumentPage>): Promise<Document | null> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const docIndex = documents.findIndex((doc) => doc.id === documentId);
+    if (docIndex !== -1) {
+      const pageIndex = documents[docIndex].pages.findIndex((p) => p.pageNumber === pageNumber);
+      if (pageIndex !== -1) {
+        documents[docIndex].pages[pageIndex] = {
+          ...documents[docIndex].pages[pageIndex],
+          ...pageData,
+        };
+        documents[docIndex].updated_at = new Date().toISOString();
+        await setItems(KEYS.DOCUMENTS, documents);
+        return documents[docIndex];
+      }
+    }
+    return null;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const filtered = documents.filter((doc) => doc.id !== id);
+    await setItems(KEYS.DOCUMENTS, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -666,6 +761,7 @@ export const LocalStorage = {
   ChecklistTemplates: ChecklistTemplateService,
   Settings: SettingsService,
   Sync: SyncService,
+  Documents: DocumentService,
 };
 
 export default LocalStorage;

@@ -605,19 +605,10 @@ export default function DocumentAnnotateScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Hidden WebView for PDF rendering */}
-      <WebView
-        ref={webViewRef}
-        source={{ html: getPdfRendererHtml() }}
-        style={{ height: 0, width: 0, opacity: 0, position: 'absolute' }}
-        onMessage={handleWebViewMessage}
-        javaScriptEnabled={true}
-      />
-
       {/* Compact Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#1976d2" />
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitle}>
           <Text style={styles.title} numberOfLines={1}>{document?.name}</Text>

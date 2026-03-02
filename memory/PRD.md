@@ -57,13 +57,16 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
   - **Stift**: Freihandzeichnen
   - **Marker/Highlighter**: Halbtransparente Hervorhebung
   - **Radierer**: Zeichnungen entfernen
-  - **Text**: Textanmerkungen über Tastatur
+  - **Text**: Textanmerkungen über Tastatur mit Größenwahl (S/M/L)
   - **Formen**: Rechteck, Kreis, Pfeil, Linie
 - Strichstärke wählbar (dünn/mittel/dick)
 - Textgröße wählbar (klein/mittel/groß)
 - 7 Farben zur Auswahl
 - Seiten einzeln annotieren und teilen
-- Anmerkungen werden pro Seite gespeichert
+- **NEU: Anmerkungen werden pro Seite in AsyncStorage gespeichert**
+- **NEU: Undo-Funktion in korrekter Reihenfolge**
+- **NEU: Speichern-Button im Header**
+- **NEU: Bestätigung beim Verlassen mit ungespeicherten Änderungen**
 
 ## Technical Stack
 - **Framework**: React Native / Expo
@@ -96,6 +99,17 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - [ ] Code-Refactoring
 
 ## Recent Changes (Changelog)
+
+### 3. März 2026 (Aktuell)
+- **PDF-Annotationen verbessert**:
+  - Alle Tools jetzt voll funktionsfähig: Stift, Highlighter, Radierer, Text, Formen
+  - **Speichern-Funktion**: Annotationen werden in AsyncStorage persistiert
+  - **Undo in korrekter Reihenfolge**: Entfernt die zuletzt gezeichnete Annotation
+  - **Speichern-Button** im Header hinzugefügt
+  - **Bestätigung beim Verlassen** wenn ungespeicherte Änderungen vorhanden
+  - **Textgröße wählbar** (S/M/L) im Text-Modal
+  - **Alles löschen** mit Bestätigungsdialog
+  - Annotationen werden beim erneuten Bearbeiten geladen
 
 ### 2. März 2026
 - **PDF-Dokument-Feature**: Komplette Neuentwicklung

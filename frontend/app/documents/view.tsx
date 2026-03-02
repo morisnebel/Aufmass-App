@@ -15,11 +15,38 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import Svg, { Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { captureRef } from 'react-native-view-shot';
+
+// Annotation types for saving
+interface SavedAnnotations {
+  paths: DrawPath[];
+  shapes: Shape[];
+  texts: TextAnnotation[];
+}
+
+interface Shape {
+  id: string;
+  type: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  strokeWidth: number;
+}
+
+interface TextAnnotation {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  fontSize: number;
+}
 
 interface DrawPath {
   path: string;
@@ -50,18 +77,28 @@ export default function DocumentViewScreen() {
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState('');
   const [drawColor, setDrawColor] = useState('#FF0000');
-  const [strokeWidth] = useState(3);
+  const [strokeWidth, setStrokeWidth] = useState(3);
   const [isHighlighter, setIsHighlighter] = useState(false);
+  const [isEraser, setIsEraser] = useState(false);
+  
+  // Shapes
+  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [currentShape, setCurrentShape] = useState<{type: string, x1: number, y1: number, x2: number, y2: number} | null>(null);
+  const [shapeMode, setShapeMode] = useState<'none' | 'rectangle' | 'circle' | 'arrow' | 'line'>('none');
   
   // Actual canvas area size (measured via onLayout)
   const [canvasAreaSize, setCanvasAreaSize] = useState({ width: 0, height: 0 });
   
   // Text
-  const [textAnnotations, setTextAnnotations] = useState<{id: string, text: string, x: number, y: number}[]>([]);
+  const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
   const [showTextModal, setShowTextModal] = useState(false);
   const [newText, setNewText] = useState('');
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const [isTextMode, setIsTextMode] = useState(false);
+  const [textFontSize, setTextFontSize] = useState(16);
+  
+  // Track undo history for better ordering
+  const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
   
   const webViewRef = useRef<WebView>(null);
   const pageWebViewRef = useRef<WebView>(null);
@@ -147,18 +184,89 @@ export default function DocumentViewScreen() {
     }
   };
 
-  const startEditing = () => {
+  const startEditing = async () => {
     setIsEditing(true);
     setRenderingPage(true);
-    setPaths([]);
-    setTextAnnotations([]);
+    
+    // Load existing annotations for this page if available
+    if (document) {
+      const page = document.pages?.find(p => p.pageNumber === currentPage);
+      if (page?.annotations) {
+        try {
+          const saved: SavedAnnotations = JSON.parse(page.annotations);
+          setPaths(saved.paths || []);
+          setShapes(saved.shapes || []);
+          setTextAnnotations(saved.texts || []);
+          // Rebuild undo history
+          const history: Array<{type: 'path' | 'shape' | 'text', id: string}> = [];
+          (saved.paths || []).forEach((_, i) => history.push({ type: 'path', id: `path-${i}` }));
+          (saved.shapes || []).forEach(s => history.push({ type: 'shape', id: s.id }));
+          (saved.texts || []).forEach(t => history.push({ type: 'text', id: t.id }));
+          setUndoHistory(history);
+        } catch (e) {
+          console.log('Error parsing annotations:', e);
+          setPaths([]);
+          setShapes([]);
+          setTextAnnotations([]);
+          setUndoHistory([]);
+        }
+      } else {
+        setPaths([]);
+        setShapes([]);
+        setTextAnnotations([]);
+        setUndoHistory([]);
+      }
+    }
   };
 
-  const cancelEditing = () => {
+  const cancelEditing = async () => {
+    // Ask if user wants to save before leaving
+    if (paths.length > 0 || shapes.length > 0 || textAnnotations.length > 0) {
+      Alert.alert(
+        'Anmerkungen speichern?',
+        'Möchten Sie die Anmerkungen vor dem Beenden speichern?',
+        [
+          { text: 'Verwerfen', style: 'destructive', onPress: () => exitEditMode() },
+          { text: 'Abbrechen', style: 'cancel' },
+          { text: 'Speichern', onPress: () => saveAndExit() },
+        ]
+      );
+    } else {
+      exitEditMode();
+    }
+  };
+
+  const exitEditMode = () => {
     setIsEditing(false);
     setPageImage(null);
     setPaths([]);
+    setShapes([]);
     setTextAnnotations([]);
+    setUndoHistory([]);
+  };
+
+  const saveAnnotations = async () => {
+    if (!document) return;
+    
+    const annotationData: SavedAnnotations = {
+      paths,
+      shapes,
+      texts: textAnnotations,
+    };
+    
+    try {
+      await DocumentService.updatePage(document.id, currentPage, {
+        annotations: JSON.stringify(annotationData),
+      });
+      Alert.alert('Gespeichert', 'Anmerkungen wurden gespeichert');
+    } catch (error) {
+      Alert.alert('Fehler', 'Konnte nicht gespeichert werden');
+    }
+  };
+
+  const saveAndExit = async () => {
+    await saveAnnotations();
+    exitEditMode();
   };
 
   const shareAnnotated = async () => {
@@ -177,44 +285,208 @@ export default function DocumentViewScreen() {
     const { locationX, locationY } = evt.nativeEvent;
     
     if (type === 'start') {
+      // Text mode
       if (isTextMode) {
         setTextPosition({ x: locationX, y: locationY });
         setShowTextModal(true);
         return;
       }
+      
+      // Shape mode
+      if (shapeMode !== 'none') {
+        setCurrentShape({ type: shapeMode, x1: locationX, y1: locationY, x2: locationX, y2: locationY });
+        return;
+      }
+      
+      // Drawing mode (pen, highlighter, eraser)
       setCurrentPath(`M ${locationX} ${locationY}`);
-    } else if (type === 'move' && currentPath) {
-      setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
-    } else if (type === 'end' && currentPath) {
-      setPaths(prev => [...prev, {
-        path: currentPath,
-        color: drawColor,
-        strokeWidth: strokeWidth,
-        opacity: isHighlighter ? 0.4 : 1,
-      }]);
-      setCurrentPath('');
+    } else if (type === 'move') {
+      // Shape mode
+      if (currentShape) {
+        setCurrentShape({ ...currentShape, x2: locationX, y2: locationY });
+        return;
+      }
+      
+      // Drawing mode
+      if (currentPath) {
+        setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+      }
+    } else if (type === 'end') {
+      // Shape mode
+      if (currentShape) {
+        const newId = Date.now().toString();
+        const newShape: Shape = {
+          id: newId,
+          type: currentShape.type,
+          x1: currentShape.x1,
+          y1: currentShape.y1,
+          x2: locationX,
+          y2: locationY,
+          color: drawColor,
+          strokeWidth: strokeWidth,
+        };
+        setShapes(prev => [...prev, newShape]);
+        setUndoHistory(prev => [...prev, { type: 'shape', id: newId }]);
+        setCurrentShape(null);
+        return;
+      }
+      
+      // Drawing mode
+      if (currentPath) {
+        const pathId = `path-${Date.now()}`;
+        setPaths(prev => [...prev, {
+          path: currentPath,
+          color: isEraser ? '#FFFFFF' : drawColor,
+          strokeWidth: isEraser ? strokeWidth * 3 : strokeWidth,
+          opacity: isHighlighter ? 0.4 : 1,
+        }]);
+        setUndoHistory(prev => [...prev, { type: 'path', id: pathId }]);
+        setCurrentPath('');
+      }
+    }
+  };
+
+  const selectTool = (tool: string) => {
+    setIsTextMode(false);
+    setIsHighlighter(false);
+    setIsEraser(false);
+    setShapeMode('none');
+    
+    switch(tool) {
+      case 'pen': break; // Default
+      case 'highlighter': setIsHighlighter(true); break;
+      case 'eraser': setIsEraser(true); break;
+      case 'text': setIsTextMode(true); break;
+      case 'rectangle': setShapeMode('rectangle'); break;
+      case 'circle': setShapeMode('circle'); break;
+      case 'arrow': setShapeMode('arrow'); break;
+      case 'line': setShapeMode('line'); break;
+    }
+  };
+
+  const getCurrentTool = () => {
+    if (isTextMode) return 'text';
+    if (isHighlighter) return 'highlighter';
+    if (isEraser) return 'eraser';
+    if (shapeMode !== 'none') return shapeMode;
+    return 'pen';
+  };
+
+  const renderShape = (shape: any, isPreview = false) => {
+    const { type, x1, y1, x2, y2, color, strokeWidth: sw } = shape;
+    const key = isPreview ? 'preview' : shape.id;
+
+    switch (type) {
+      case 'rectangle':
+        return (
+          <Rect
+            key={key}
+            x={Math.min(x1, x2)}
+            y={Math.min(y1, y2)}
+            width={Math.abs(x2 - x1)}
+            height={Math.abs(y2 - y1)}
+            stroke={color || drawColor}
+            strokeWidth={sw || strokeWidth}
+            fill="none"
+          />
+        );
+      case 'circle':
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const r = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+        return (
+          <Circle key={key} cx={cx} cy={cy} r={r} stroke={color || drawColor} strokeWidth={sw || strokeWidth} fill="none" />
+        );
+      case 'line':
+        return (
+          <Line key={key} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color || drawColor} strokeWidth={sw || strokeWidth} />
+        );
+      case 'arrow':
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headLength = 15;
+        return (
+          <G key={key}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color || drawColor} strokeWidth={sw || strokeWidth} />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle - Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle - Math.PI / 6)}
+              stroke={color || drawColor}
+              strokeWidth={sw || strokeWidth}
+            />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle + Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle + Math.PI / 6)}
+              stroke={color || drawColor}
+              strokeWidth={sw || strokeWidth}
+            />
+          </G>
+        );
+      default:
+        return null;
     }
   };
 
   const addText = () => {
     if (newText.trim()) {
-      setTextAnnotations(prev => [...prev, {
-        id: Date.now().toString(),
+      const newId = Date.now().toString();
+      const newTextAnnotation: TextAnnotation = {
+        id: newId,
         text: newText.trim(),
         x: textPosition.x,
         y: textPosition.y,
-      }]);
+        color: drawColor,
+        fontSize: textFontSize,
+      };
+      setTextAnnotations(prev => [...prev, newTextAnnotation]);
+      setUndoHistory(prev => [...prev, { type: 'text', id: newId }]);
     }
     setNewText('');
     setShowTextModal(false);
   };
 
   const undo = () => {
-    if (paths.length > 0) {
-      setPaths(prev => prev.slice(0, -1));
-    } else if (textAnnotations.length > 0) {
-      setTextAnnotations(prev => prev.slice(0, -1));
+    if (undoHistory.length === 0) return;
+    
+    const lastAction = undoHistory[undoHistory.length - 1];
+    setUndoHistory(prev => prev.slice(0, -1));
+    
+    switch (lastAction.type) {
+      case 'path':
+        setPaths(prev => prev.slice(0, -1));
+        break;
+      case 'shape':
+        setShapes(prev => prev.filter(s => s.id !== lastAction.id));
+        break;
+      case 'text':
+        setTextAnnotations(prev => prev.filter(t => t.id !== lastAction.id));
+        break;
     }
+  };
+
+  const clearAll = () => {
+    Alert.alert(
+      'Alles löschen?',
+      'Möchten Sie wirklich alle Anmerkungen löschen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        { 
+          text: 'Löschen', 
+          style: 'destructive',
+          onPress: () => {
+            setPaths([]);
+            setShapes([]);
+            setTextAnnotations([]);
+            setCurrentPath('');
+            setCurrentShape(null);
+            setUndoHistory([]);
+          }
+        },
+      ]
+    );
   };
 
   const shareDocument = async () => {
@@ -347,14 +619,18 @@ export default function DocumentViewScreen() {
             <Ionicons name="close" size={24} color="#f44336" />
           </TouchableOpacity>
           <Text style={styles.headerText}>Seite {currentPage}</Text>
-          <TouchableOpacity onPress={undo} style={styles.iconBtn}>
-            <Ionicons name="arrow-undo" size={24} color="#1976d2" />
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
+            <Ionicons name="arrow-undo" size={24} color={undoHistory.length > 0 ? "#1976d2" : "#ccc"} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { setPaths([]); setTextAnnotations([]); }} style={styles.iconBtn}>
+          <TouchableOpacity onPress={clearAll} style={styles.iconBtn}>
             <Ionicons name="trash-outline" size={24} color="#f44336" />
           </TouchableOpacity>
+          <TouchableOpacity onPress={saveAnnotations} style={styles.iconBtn}>
+            <Ionicons name="save-outline" size={24} color="#4caf50" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={shareAnnotated} style={styles.iconBtn}>
-            <Ionicons name="share-outline" size={24} color="#4caf50" />
+            <Ionicons name="share-outline" size={24} color="#1976d2" />
           </TouchableOpacity>
         </View>
 
@@ -391,14 +667,21 @@ export default function DocumentViewScreen() {
                 />
               )}
               <Svg style={StyleSheet.absoluteFill}>
+                {/* Paths (pen, highlighter, eraser) */}
                 {paths.map((p, i) => (
                   <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
                 ))}
                 {currentPath && (
-                  <Path d={currentPath} stroke={drawColor} strokeWidth={strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
+                  <Path d={currentPath} stroke={isEraser ? '#FFFFFF' : drawColor} strokeWidth={isEraser ? strokeWidth * 3 : strokeWidth} fill="none" opacity={isHighlighter ? 0.4 : 1} strokeLinecap="round" />
                 )}
+                
+                {/* Shapes */}
+                {shapes.map(shape => renderShape(shape))}
+                {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
+                
+                {/* Text */}
                 {textAnnotations.map(t => (
-                  <SvgText key={t.id} x={t.x} y={t.y} fill={drawColor} fontSize={16} fontWeight="bold">{t.text}</SvgText>
+                  <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
                 ))}
               </Svg>
             </View>
@@ -408,31 +691,57 @@ export default function DocumentViewScreen() {
         {/* Toolbar - absolute bottom */}
         <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
-            <TouchableOpacity 
-              style={[styles.toolBtn, !isTextMode && !isHighlighter && styles.toolBtnActive]} 
-              onPress={() => { setIsTextMode(false); setIsHighlighter(false); }}
-            >
-              <Ionicons name="pencil" size={20} color={!isTextMode && !isHighlighter ? '#fff' : '#666'} />
+            {/* Drawing Tools */}
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
+              <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toolBtn, isHighlighter && styles.toolBtnActive]} 
-              onPress={() => { setIsTextMode(false); setIsHighlighter(true); }}
-            >
-              <Ionicons name="brush" size={20} color={isHighlighter ? '#fff' : '#666'} />
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'highlighter' && styles.toolBtnActive]} onPress={() => selectTool('highlighter')}>
+              <Ionicons name="brush" size={20} color={getCurrentTool() === 'highlighter' ? '#fff' : '#666'} />
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.toolBtn, isTextMode && styles.toolBtnActive]} 
-              onPress={() => { setIsTextMode(true); setIsHighlighter(false); }}
-            >
-              <Ionicons name="text" size={20} color={isTextMode ? '#fff' : '#666'} />
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
+              <Ionicons name="backspace-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
+              <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
             </TouchableOpacity>
             
             <View style={styles.divider} />
             
-            {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000'].map(color => (
+            {/* Shape Tools */}
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'rectangle' && styles.toolBtnActive]} onPress={() => selectTool('rectangle')}>
+              <Ionicons name="square-outline" size={20} color={getCurrentTool() === 'rectangle' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'circle' && styles.toolBtnActive]} onPress={() => selectTool('circle')}>
+              <Ionicons name="ellipse-outline" size={20} color={getCurrentTool() === 'circle' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'arrow' && styles.toolBtnActive]} onPress={() => selectTool('arrow')}>
+              <Ionicons name="arrow-forward" size={20} color={getCurrentTool() === 'arrow' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
+              <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            
+            <View style={styles.divider} />
+            
+            {/* Stroke Width */}
+            <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
+              <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
+            </TouchableOpacity>
+            
+            {/* Text Size (only visible when text tool active) */}
+            {isTextMode && (
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
+                <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
+              </TouchableOpacity>
+            )}
+            
+            <View style={styles.divider} />
+            
+            {/* Colors */}
+            {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
               <TouchableOpacity
                 key={color}
-                style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive]}
+                style={[styles.colorBtn, { backgroundColor: color }, drawColor === color && styles.colorBtnActive, color === '#FFFFFF' && styles.colorBtnWhite]}
                 onPress={() => setDrawColor(color)}
               />
             ))}
@@ -454,12 +763,28 @@ export default function DocumentViewScreen() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Text hinzufügen</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { color: drawColor, fontSize: textFontSize }]}
                 value={newText}
                 onChangeText={setNewText}
                 placeholder="Text eingeben..."
+                placeholderTextColor="#999"
                 autoFocus
+                multiline
               />
+              <View style={styles.textSizeRow}>
+                <Text style={styles.textSizeLabel}>Textgröße:</Text>
+                {[12, 16, 24].map(size => (
+                  <TouchableOpacity 
+                    key={size}
+                    style={[styles.textSizeBtn, textFontSize === size && styles.textSizeBtnActive]}
+                    onPress={() => setTextFontSize(size)}
+                  >
+                    <Text style={{ fontSize: size * 0.6, fontWeight: textFontSize === size ? 'bold' : 'normal' }}>
+                      {size === 12 ? 'S' : size === 16 ? 'M' : 'L'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setNewText(''); setShowTextModal(false); }}>
                   <Text>Abbrechen</Text>
@@ -654,8 +979,14 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '80%', maxWidth: 400 },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 15, textAlign: 'center' },
-  textInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16 },
+  textInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, minHeight: 60 },
   modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 10 },
   modalBtnCancel: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#f0f0f0', alignItems: 'center' },
   modalBtnOk: { flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#1976d2', alignItems: 'center' },
+  textSizeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 8 },
+  textSizeLabel: { fontSize: 14, color: '#666' },
+  textSizeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
+  textSizeBtnActive: { backgroundColor: '#1976d2', color: '#fff' },
+  strokePreview: { width: 30, borderRadius: 2 },
+  colorBtnWhite: { borderColor: '#ccc' },
 });

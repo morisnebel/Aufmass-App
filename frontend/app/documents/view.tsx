@@ -12,7 +12,9 @@ import {
   TextInput,
   useWindowDimensions,
   ScrollView,
+  Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
@@ -613,8 +615,10 @@ export default function DocumentViewScreen() {
 
   // EDIT MODE - Simple flexbox layout (no absolute positioning)
   if (isEditing) {
+    const { height: screenH } = Dimensions.get('window');
+    
     return (
-      <View style={{ flex: 1, backgroundColor: '#e8e8e8' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#e8e8e8' }} edges={['top', 'left', 'right']}>
         {/* Header */}
         <View style={styles.editHeader}>
           <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
@@ -784,7 +788,7 @@ export default function DocumentViewScreen() {
             </View>
           </View>
         </Modal>
-      </View>
+      </SafeAreaView>
     );
   }
 

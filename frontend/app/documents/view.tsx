@@ -53,6 +53,9 @@ export default function DocumentViewScreen() {
   const [strokeWidth] = useState(3);
   const [isHighlighter, setIsHighlighter] = useState(false);
   
+  // Actual canvas area size (measured via onLayout)
+  const [canvasAreaSize, setCanvasAreaSize] = useState({ width: 0, height: 0 });
+  
   // Text
   const [textAnnotations, setTextAnnotations] = useState<{id: string, text: string, x: number, y: number}[]>([]);
   const [showTextModal, setShowTextModal] = useState(false);
@@ -106,18 +109,23 @@ export default function DocumentViewScreen() {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'pageRendered') {
-        // Calculate display size maintaining aspect ratio
+        // Use the measured canvas area size instead of calculated
         const pdfAspect = data.width / data.height;
         let displayWidth, displayHeight;
         
-        if (availableWidth / availableHeight > pdfAspect) {
-          displayHeight = availableHeight;
+        // Use measured size if available, otherwise fall back to calculated
+        const useWidth = canvasAreaSize.width > 0 ? canvasAreaSize.width - 20 : availableWidth;
+        const useHeight = canvasAreaSize.height > 0 ? canvasAreaSize.height - 20 : availableHeight;
+        
+        if (useWidth / useHeight > pdfAspect) {
+          displayHeight = useHeight;
           displayWidth = displayHeight * pdfAspect;
         } else {
-          displayWidth = availableWidth;
+          displayWidth = useWidth;
           displayHeight = displayWidth / pdfAspect;
         }
         
+        console.log(`PDF size: ${displayWidth} x ${displayHeight}, area: ${useWidth} x ${useHeight}`);
         setImageSize({ width: displayWidth, height: displayHeight });
         setPageImage(data.imageData);
         setRenderingPage(false);
@@ -125,6 +133,12 @@ export default function DocumentViewScreen() {
     } catch (e) {
       setRenderingPage(false);
     }
+  };
+
+  const onCanvasAreaLayout = (event: any) => {
+    const { width, height } = event.nativeEvent.layout;
+    console.log(`Canvas area measured: ${width} x ${height}`);
+    setCanvasAreaSize({ width, height });
   };
 
   const goToPage = (page: number) => {
@@ -342,7 +356,7 @@ export default function DocumentViewScreen() {
         </View>
 
         {/* Canvas Area - Uses remaining space */}
-        <View style={styles.editCanvasContainer}>
+        <View style={styles.editCanvasContainer} onLayout={onCanvasAreaLayout}>
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color="#1976d2" />

@@ -650,17 +650,8 @@ export default function DocumentAnnotateScreen() {
 
       {/* Main Content Area with Side Toolbar */}
       <View style={styles.mainContent}>
-        {/* Canvas Area with optional Zoom */}
-        <ScrollView 
-          style={styles.zoomContainer}
-          contentContainerStyle={styles.zoomContent}
-          maximumZoomScale={zoomEnabled ? 4 : 1}
-          minimumZoomScale={1}
-          bouncesZoom={zoomEnabled}
-          scrollEnabled={zoomEnabled}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-        >
+        {/* Canvas Area */}
+        <View style={styles.canvasWrapper}>
           {renderingPage && (
             <View style={styles.renderingOverlayCenter}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -746,7 +737,7 @@ export default function DocumentAnnotateScreen() {
               </Svg>
             </View>
           </View>
-        </ScrollView>
+        </View>
 
         {/* Right Side Toolbar */}
         <View style={styles.sideToolbar}>

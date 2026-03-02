@@ -41,6 +41,7 @@ interface Shape {
   y2: number;
   color: string;
   strokeWidth: number;
+  text?: string;
 }
 
 interface TextAnnotation {
@@ -105,8 +106,16 @@ export default function DocumentViewScreen() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [zoomEnabled, setZoomEnabled] = useState(false);
   
-  // Dragging text
-  const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
+  // Select/Move mode
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text', id: string} | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
+  // Memo pointer
+  const [isPointerMode, setIsPointerMode] = useState(false);
+  const [pendingPointer, setPendingPointer] = useState<{x1: number, y1: number, x2: number, y2: number} | null>(null);
+  const [showPointerModal, setShowPointerModal] = useState(false);
+  const [pointerText, setPointerText] = useState('');
   
   // Track undo history for better ordering
   const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
@@ -297,6 +306,38 @@ export default function DocumentViewScreen() {
     console.log(`Touch ${type}: x=${locationX}, y=${locationY}, tool=${getCurrentTool()}`);
     
     if (type === 'start') {
+      // Select/Move mode
+      if (isSelectMode) {
+        // Find clicked element (shapes or text)
+        const clickedShape = shapes.find(s => {
+          const minX = Math.min(s.x1, s.x2) - 10;
+          const maxX = Math.max(s.x1, s.x2) + 10;
+          const minY = Math.min(s.y1, s.y2) - 10;
+          const maxY = Math.max(s.y1, s.y2) + 10;
+          return locationX >= minX && locationX <= maxX && locationY >= minY && locationY <= maxY;
+        });
+        const clickedText = textAnnotations.find(t => {
+          return locationX >= t.x - 50 && locationX <= t.x + 100 && locationY >= t.y - 20 && locationY <= t.y + 10;
+        });
+        
+        if (clickedShape) {
+          setSelectedElement({ type: 'shape', id: clickedShape.id });
+          setDragOffset({ x: locationX - clickedShape.x1, y: locationY - clickedShape.y1 });
+        } else if (clickedText) {
+          setSelectedElement({ type: 'text', id: clickedText.id });
+          setDragOffset({ x: locationX - clickedText.x, y: locationY - clickedText.y });
+        } else {
+          setSelectedElement(null);
+        }
+        return;
+      }
+      
+      // Pointer/Memo mode
+      if (isPointerMode) {
+        setPendingPointer({ x1: locationX, y1: locationY, x2: locationX, y2: locationY });
+        return;
+      }
+      
       // Text mode
       if (isTextMode) {
         setTextPosition({ x: locationX, y: locationY });
@@ -313,6 +354,37 @@ export default function DocumentViewScreen() {
       // Drawing mode (pen, highlighter, eraser)
       setCurrentPath(`M ${locationX} ${locationY}`);
     } else if (type === 'move') {
+      // Select/Move mode - drag selected element
+      if (isSelectMode && selectedElement) {
+        const dx = locationX - dragOffset.x;
+        const dy = locationY - dragOffset.y;
+        
+        if (selectedElement.type === 'shape') {
+          setShapes(prev => prev.map(s => {
+            if (s.id === selectedElement.id) {
+              const width = s.x2 - s.x1;
+              const height = s.y2 - s.y1;
+              return { ...s, x1: dx, y1: dy, x2: dx + width, y2: dy + height };
+            }
+            return s;
+          }));
+        } else if (selectedElement.type === 'text') {
+          setTextAnnotations(prev => prev.map(t => {
+            if (t.id === selectedElement.id) {
+              return { ...t, x: dx, y: dy };
+            }
+            return t;
+          }));
+        }
+        return;
+      }
+      
+      // Pointer mode
+      if (pendingPointer) {
+        setPendingPointer({ ...pendingPointer, x2: locationX, y2: locationY });
+        return;
+      }
+      
       // Shape mode
       if (currentShape) {
         setCurrentShape({ ...currentShape, x2: locationX, y2: locationY });
@@ -324,6 +396,17 @@ export default function DocumentViewScreen() {
         setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
       }
     } else if (type === 'end') {
+      // Select mode - end drag
+      if (isSelectMode) {
+        return;
+      }
+      
+      // Pointer mode - show text modal
+      if (pendingPointer) {
+        setShowPointerModal(true);
+        return;
+      }
+      
       // Shape mode
       if (currentShape) {
         const newId = Date.now().toString();
@@ -360,12 +443,38 @@ export default function DocumentViewScreen() {
     }
   };
 
+  // Add pointer element
+  const addPointerElement = () => {
+    if (pendingPointer) {
+      const newId = Date.now().toString();
+      const newShape: Shape = {
+        id: newId,
+        type: 'pointer',
+        x1: pendingPointer.x1,
+        y1: pendingPointer.y1,
+        x2: pendingPointer.x2,
+        y2: pendingPointer.y2,
+        color: drawColor,
+        strokeWidth: 3,
+        text: pointerText,
+      };
+      setShapes(prev => [...prev, newShape]);
+      setUndoHistory(prev => [...prev, { type: 'shape', id: newId }]);
+      setPointerText('');
+      setPendingPointer(null);
+      setShowPointerModal(false);
+    }
+  };
+
   const selectTool = (tool: string) => {
     console.log('Tool selected:', tool);
     setIsTextMode(false);
     setIsHighlighter(false);
     setIsEraser(false);
     setShapeMode('none');
+    setIsSelectMode(false);
+    setIsPointerMode(false);
+    setSelectedElement(null);
     
     switch(tool) {
       case 'pen': break; // Default
@@ -376,15 +485,50 @@ export default function DocumentViewScreen() {
       case 'circle': setShapeMode('circle'); break;
       case 'arrow': setShapeMode('arrow'); break;
       case 'line': setShapeMode('line'); break;
+      case 'select': setIsSelectMode(true); break;
+      case 'pointer': setIsPointerMode(true); break;
     }
   };
 
   const getCurrentTool = () => {
+    if (isSelectMode) return 'select';
+    if (isPointerMode) return 'pointer';
     if (isTextMode) return 'text';
     if (isHighlighter) return 'highlighter';
     if (isEraser) return 'eraser';
     if (shapeMode !== 'none') return shapeMode;
     return 'pen';
+  };
+
+  // Render pointer/memo arrow
+  const renderPointer = (pointer: any, isPreview = false) => {
+    const { x1, y1, x2, y2, text, color: pColor } = pointer;
+    const key = isPreview ? 'preview-pointer' : pointer.id;
+    const col = pColor || drawColor;
+    
+    // Calculate arrow angle
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const arrowLength = 15;
+    const arrowAngle = Math.PI / 6;
+    
+    // Arrow head points
+    const ax1 = x2 - arrowLength * Math.cos(angle - arrowAngle);
+    const ay1 = y2 - arrowLength * Math.sin(angle - arrowAngle);
+    const ax2 = x2 - arrowLength * Math.cos(angle + arrowAngle);
+    const ay2 = y2 - arrowLength * Math.sin(angle + arrowAngle);
+    
+    // Text position (middle of line, offset)
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2 - 10;
+    
+    return (
+      <G key={key}>
+        <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={3} />
+        <Line x1={x2} y1={y2} x2={ax1} y2={ay1} stroke={col} strokeWidth={3} />
+        <Line x1={x2} y1={y2} x2={ax2} y2={ay2} stroke={col} strokeWidth={3} />
+        {text && <SvgText x={midX} y={midY} fill={col} fontSize={14} fontWeight="bold" textAnchor="middle">{text}</SvgText>}
+      </G>
+    );
   };
 
   const renderShape = (shape: any, isPreview = false) => {
@@ -438,6 +582,38 @@ export default function DocumentViewScreen() {
               stroke={color || drawColor}
               strokeWidth={sw || strokeWidth}
             />
+          </G>
+        );
+      case 'pointer':
+        const pAngle = Math.atan2(y2 - y1, x2 - x1);
+        const pHeadLength = 15;
+        const pAngleOffset = Math.PI / 6;
+        const pMidX = (x1 + x2) / 2;
+        const pMidY = (y1 + y2) / 2 - 15;
+        return (
+          <G key={key}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color || drawColor} strokeWidth={sw || 3} />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - pHeadLength * Math.cos(pAngle - pAngleOffset)}
+              y2={y2 - pHeadLength * Math.sin(pAngle - pAngleOffset)}
+              stroke={color || drawColor}
+              strokeWidth={sw || 3}
+            />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - pHeadLength * Math.cos(pAngle + pAngleOffset)}
+              y2={y2 - pHeadLength * Math.sin(pAngle + pAngleOffset)}
+              stroke={color || drawColor}
+              strokeWidth={sw || 3}
+            />
+            {shape.text && (
+              <SvgText x={pMidX} y={pMidY} fill={color || drawColor} fontSize={14} fontWeight="bold" textAnchor="middle">
+                {shape.text}
+              </SvgText>
+            )}
           </G>
         );
       default:
@@ -745,6 +921,12 @@ export default function DocumentViewScreen() {
           {/* Toolbar - fixed height at bottom */}
           <View style={[styles.editToolbar, { height: TOOLBAR_H }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
+              {/* Select/Move Tool */}
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'select' && styles.toolBtnActive]} onPress={() => selectTool('select')}>
+                <Ionicons name="move" size={20} color={getCurrentTool() === 'select' ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pen' && styles.toolBtnActive]} onPress={() => selectTool('pen')}>
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
               </TouchableOpacity>
@@ -767,6 +949,10 @@ export default function DocumentViewScreen() {
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'line' && styles.toolBtnActive]} onPress={() => selectTool('line')}>
                 <Ionicons name="remove" size={20} color={getCurrentTool() === 'line' ? '#fff' : '#666'} />
               </TouchableOpacity>
+              {/* Memo Pointer */}
+              <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'pointer' && styles.toolBtnActive]} onPress={() => selectTool('pointer')}>
+                <Ionicons name="chatbubble-outline" size={20} color={getCurrentTool() === 'pointer' ? '#fff' : '#666'} />
+              </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
                 <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
@@ -778,24 +964,13 @@ export default function DocumentViewScreen() {
               )}
               <View style={styles.divider} />
               
-              {/* Zoom Toggle & Controls */}
+              {/* Zoom Toggle */}
               <TouchableOpacity 
                 style={[styles.toolBtn, zoomEnabled && styles.toolBtnActive]} 
                 onPress={() => setZoomEnabled(!zoomEnabled)}
               >
                 <Ionicons name="search" size={20} color={zoomEnabled ? '#fff' : '#666'} />
               </TouchableOpacity>
-              {zoomEnabled && (
-                <>
-                  <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}>
-                    <Ionicons name="remove-circle-outline" size={20} color="#666" />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 12, color: '#666', minWidth: 40, textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</Text>
-                  <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}>
-                    <Ionicons name="add-circle-outline" size={20} color="#666" />
-                  </TouchableOpacity>
-                </>
-              )}
               
               <View style={styles.divider} />
               {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
@@ -820,7 +995,7 @@ export default function DocumentViewScreen() {
           {/* Text Modal */}
           <Modal visible={showTextModal} transparent animationType="fade">
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, { marginBottom: 200 }]}>
                 <Text style={styles.modalTitle}>Text hinzufügen</Text>
                 <TextInput
                   style={[styles.textInput, { color: drawColor, fontSize: textFontSize }]}
@@ -850,6 +1025,31 @@ export default function DocumentViewScreen() {
                     <Text>Abbrechen</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalBtnOk} onPress={addText}>
+                    <Text style={{ color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Pointer Text Modal */}
+          <Modal visible={showPointerModal} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { marginBottom: 200 }]}>
+                <Text style={styles.modalTitle}>Memo-Pfeil Text</Text>
+                <TextInput
+                  style={[styles.textInput, { color: drawColor }]}
+                  value={pointerText}
+                  onChangeText={setPointerText}
+                  placeholder="Text für Pfeil (optional)..."
+                  placeholderTextColor="#999"
+                  autoFocus
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setPointerText(''); setPendingPointer(null); setShowPointerModal(false); }}>
+                    <Text>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.modalBtnOk} onPress={addPointerElement}>
                     <Text style={{ color: '#fff' }}>OK</Text>
                   </TouchableOpacity>
                 </View>

@@ -159,13 +159,25 @@ export default function DocumentAnnotateScreen() {
       } else if (data.type === 'pageImage') {
         setPageImage(data.image);
         setImageSize({ width: data.width, height: data.height });
-        // Calculate canvas dimensions to fill available space
-        // Use the full window width minus some padding
+        
+        // Calculate canvas dimensions to fit the available screen space
+        // Available height = window height - header(~56) - toolbar(~50) - colorPicker(~50) - pageNav(~60) - padding(~20)
+        const availableHeight = windowHeight - 236;
+        const availableWidth = windowWidth - 16;
+        
         const aspectRatio = data.height / data.width;
-        // For iPad, use more of the screen width
-        const canvasWidth = windowWidth - 16;
-        const canvasHeight = canvasWidth * aspectRatio;
-        console.log('PDF dimensions:', data.width, 'x', data.height, 'aspectRatio:', aspectRatio, 'canvas:', canvasWidth, 'x', canvasHeight, 'windowWidth:', windowWidth);
+        
+        // Scale to fit within available space
+        let canvasWidth = availableWidth;
+        let canvasHeight = canvasWidth * aspectRatio;
+        
+        // If too tall, scale by height instead
+        if (canvasHeight > availableHeight) {
+          canvasHeight = availableHeight;
+          canvasWidth = canvasHeight / aspectRatio;
+        }
+        
+        console.log('PDF fit:', canvasWidth, 'x', canvasHeight, 'available:', availableWidth, 'x', availableHeight);
         setCanvasDimensions({ width: canvasWidth, height: canvasHeight });
         setRenderingPage(false);
       } else if (data.type === 'error') {

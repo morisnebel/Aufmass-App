@@ -650,13 +650,14 @@ export default function DocumentAnnotateScreen() {
 
       {/* Main Content Area with Side Toolbar */}
       <View style={styles.mainContent}>
-        {/* Canvas Area with Zoom */}
+        {/* Canvas Area with optional Zoom */}
         <ScrollView 
           style={styles.zoomContainer}
           contentContainerStyle={styles.zoomContent}
-          maximumZoomScale={4}
+          maximumZoomScale={zoomEnabled ? 4 : 1}
           minimumZoomScale={1}
-          bouncesZoom={true}
+          bouncesZoom={zoomEnabled}
+          scrollEnabled={zoomEnabled}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
           centerContent={true}

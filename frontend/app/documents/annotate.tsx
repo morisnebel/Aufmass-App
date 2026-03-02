@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
   },
   zoomContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 8,
   },

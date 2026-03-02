@@ -103,6 +103,7 @@ export default function DocumentViewScreen() {
   
   // Zoom
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomEnabled, setZoomEnabled] = useState(false);
   
   // Dragging text
   const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
@@ -643,22 +644,7 @@ export default function DocumentViewScreen() {
               <Ionicons name="close" size={24} color="#f44336" />
             </TouchableOpacity>
             
-            {/* Page Navigation */}
-            <TouchableOpacity 
-              onPress={() => { if (currentPage > 1) setCurrentPage(currentPage - 1); }} 
-              style={styles.iconBtn}
-              disabled={currentPage <= 1}
-            >
-              <Ionicons name="chevron-back" size={24} color={currentPage > 1 ? "#1976d2" : "#ccc"} />
-            </TouchableOpacity>
-            <Text style={styles.headerText}>Seite {currentPage}/{document?.pages?.length || 1}</Text>
-            <TouchableOpacity 
-              onPress={() => { if (document?.pages && currentPage < document.pages.length) setCurrentPage(currentPage + 1); }} 
-              style={styles.iconBtn}
-              disabled={!document?.pages || currentPage >= document.pages.length}
-            >
-              <Ionicons name="chevron-forward" size={24} color={document?.pages && currentPage < document.pages.length ? "#1976d2" : "#ccc"} />
-            </TouchableOpacity>
+            <Text style={styles.headerText}>Seite {currentPage}/{totalPages || 1}</Text>
             
             <View style={{ flex: 1 }} />
             <TouchableOpacity onPress={undo} style={styles.iconBtn} disabled={undoHistory.length === 0}>
@@ -675,8 +661,19 @@ export default function DocumentViewScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Canvas Area - explicit calculated height */}
-          <View style={{ width: screenW, height: CANVAS_H, justifyContent: 'center', alignItems: 'center', backgroundColor: '#d0d0d0' }} onLayout={onCanvasAreaLayout}>
+          {/* Canvas Area with side navigation arrows */}
+          <View style={{ width: screenW, height: CANVAS_H, flexDirection: 'row', alignItems: 'center', backgroundColor: '#d0d0d0' }}>
+            {/* Left Arrow */}
+            <TouchableOpacity 
+              onPress={() => { if (currentPage > 1) setCurrentPage(currentPage - 1); }} 
+              style={styles.sideArrow}
+              disabled={currentPage <= 1}
+            >
+              <Ionicons name="chevron-back" size={40} color={currentPage > 1 ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+            
+            {/* Canvas */}
+            <View style={{ flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center' }} onLayout={onCanvasAreaLayout}>
             {renderingPage && !pageImage ? (
               <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#1976d2" />
@@ -689,21 +686,22 @@ export default function DocumentViewScreen() {
                 minimumZoomScale={0.5}
                 showsHorizontalScrollIndicator={false}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={zoomEnabled}
               >
                 <ScrollView 
                   contentContainerStyle={{ justifyContent: 'center', alignItems: 'center' }}
                   showsVerticalScrollIndicator={false}
+                  scrollEnabled={zoomEnabled}
                 >
                   <View
                     ref={canvasRef}
                     style={[styles.canvas, { 
-                      width: imageSize.width * zoomLevel, 
-                      height: imageSize.height * zoomLevel,
-                      transform: [{ scale: zoomLevel }],
-                      transformOrigin: 'center center',
+                      width: imageSize.width * (zoomEnabled ? zoomLevel : 1), 
+                      height: imageSize.height * (zoomEnabled ? zoomLevel : 1),
+                      transform: [{ scale: zoomEnabled ? zoomLevel : 1 }],
                     }]}
-                    onStartShouldSetResponder={() => true}
-                    onMoveShouldSetResponder={() => true}
+                    onStartShouldSetResponder={() => !zoomEnabled}
+                    onMoveShouldSetResponder={() => !zoomEnabled}
                     onResponderGrant={(e) => handleTouch(e, 'start')}
                     onResponderMove={(e) => handleTouch(e, 'move')}
                     onResponderRelease={(e) => handleTouch(e, 'end')}
@@ -733,6 +731,16 @@ export default function DocumentViewScreen() {
               </ScrollView>
             )}
           </View>
+            
+            {/* Right Arrow */}
+            <TouchableOpacity 
+              onPress={() => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); }} 
+              style={styles.sideArrow}
+              disabled={currentPage >= totalPages}
+            >
+              <Ionicons name="chevron-forward" size={40} color={currentPage < totalPages ? "#1976d2" : "#ccc"} />
+            </TouchableOpacity>
+          </View>
 
           {/* Toolbar - fixed height at bottom */}
           <View style={[styles.editToolbar, { height: TOOLBAR_H }]}>
@@ -741,7 +749,7 @@ export default function DocumentViewScreen() {
                 <Ionicons name="pencil" size={20} color={getCurrentTool() === 'pen' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'eraser' && styles.toolBtnActive]} onPress={() => selectTool('eraser')}>
-                <Ionicons name="cut-outline" size={20} color={getCurrentTool() === 'eraser' ? '#fff' : '#666'} />
+                <Text style={{ fontSize: 18 }}>🧽</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'text' && styles.toolBtnActive]} onPress={() => selectTool('text')}>
                 <Ionicons name="text" size={20} color={getCurrentTool() === 'text' ? '#fff' : '#666'} />
@@ -770,14 +778,24 @@ export default function DocumentViewScreen() {
               )}
               <View style={styles.divider} />
               
-              {/* Zoom Controls */}
-              <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}>
-                <Ionicons name="remove-circle-outline" size={20} color="#666" />
+              {/* Zoom Toggle & Controls */}
+              <TouchableOpacity 
+                style={[styles.toolBtn, zoomEnabled && styles.toolBtnActive]} 
+                onPress={() => setZoomEnabled(!zoomEnabled)}
+              >
+                <Ionicons name="search" size={20} color={zoomEnabled ? '#fff' : '#666'} />
               </TouchableOpacity>
-              <Text style={{ fontSize: 12, color: '#666', minWidth: 40, textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</Text>
-              <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}>
-                <Ionicons name="add-circle-outline" size={20} color="#666" />
-              </TouchableOpacity>
+              {zoomEnabled && (
+                <>
+                  <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}>
+                    <Ionicons name="remove-circle-outline" size={20} color="#666" />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 12, color: '#666', minWidth: 40, textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</Text>
+                  <TouchableOpacity style={styles.toolBtn} onPress={() => setZoomLevel(Math.min(3, zoomLevel + 0.25))}>
+                    <Ionicons name="add-circle-outline" size={20} color="#666" />
+                  </TouchableOpacity>
+                </>
+              )}
               
               <View style={styles.divider} />
               {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
@@ -1018,6 +1036,13 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   colorBtnActive: { borderColor: '#1976d2', borderWidth: 3 },
+  sideArrow: {
+    width: 50,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
 
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },

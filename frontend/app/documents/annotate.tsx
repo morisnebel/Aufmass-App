@@ -887,8 +887,14 @@ export default function DocumentAnnotateScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            <TouchableOpacity 
+              style={styles.closeModalButton}
+              onPress={() => setShowStrokePicker(false)}
+            >
+              <Text style={styles.closeModalButtonText}>Schließen</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Text Input Modal */}

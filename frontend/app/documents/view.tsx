@@ -336,10 +336,13 @@ export default function DocumentViewScreen() {
 
   // EDIT MODE
   if (isEditing) {
+    const HEADER_HEIGHT = 50;
+    const TOOLBAR_HEIGHT = 60;
+    
     return (
       <View style={styles.editRoot}>
-        {/* Fixed Header at TOP */}
-        <View style={styles.editHeader}>
+        {/* Header - absolute top */}
+        <View style={[styles.editHeader, { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT }]}>
           <TouchableOpacity onPress={cancelEditing} style={styles.iconBtn}>
             <Ionicons name="close" size={24} color="#f44336" />
           </TouchableOpacity>
@@ -355,8 +358,17 @@ export default function DocumentViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Canvas Area - Takes ALL remaining space */}
-        <View style={styles.editCanvasContainer} onLayout={onCanvasAreaLayout}>
+        {/* Canvas Area - absolute fill between header and toolbar */}
+        <View 
+          style={[styles.editCanvasContainer, { 
+            position: 'absolute', 
+            top: HEADER_HEIGHT, 
+            left: 0, 
+            right: 0, 
+            bottom: TOOLBAR_HEIGHT 
+          }]} 
+          onLayout={onCanvasAreaLayout}
+        >
           {renderingPage && !pageImage ? (
             <View style={styles.centered}>
               <ActivityIndicator size="large" color="#1976d2" />
@@ -393,8 +405,8 @@ export default function DocumentViewScreen() {
           )}
         </View>
 
-        {/* Toolbar at BOTTOM - Normal layout, not absolute */}
-        <View style={styles.editToolbarNormal}>
+        {/* Toolbar - absolute bottom */}
+        <View style={[styles.editToolbarNormal, { position: 'absolute', bottom: 0, left: 0, right: 0, height: TOOLBAR_HEIGHT }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent}>
             <TouchableOpacity 
               style={[styles.toolBtn, !isTextMode && !isHighlighter && styles.toolBtnActive]} 

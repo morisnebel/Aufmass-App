@@ -632,33 +632,59 @@ export default function DocumentViewScreen() {
         );
       case 'pointer':
         const pAngle = Math.atan2(y2 - y1, x2 - x1);
-        const pHeadLength = 15;
-        const pAngleOffset = Math.PI / 6;
-        const pMidX = (x1 + x2) / 2;
-        const pMidY = (y1 + y2) / 2 - 15;
+        const pHeadLength = 18;
+        const pAngleOffset = Math.PI / 7;
+        const col = color || drawColor;
+        
+        // Calculate text box position - at the start of the arrow
+        const textBoxX = x1;
+        const textBoxY = y1 - 25;
+        const textWidth = shape.text ? Math.max(shape.text.length * 8, 60) : 0;
+        const textHeight = 22;
+        
+        // Filled arrow head points for polygon
+        const ax1 = x2 - pHeadLength * Math.cos(pAngle - pAngleOffset);
+        const ay1 = y2 - pHeadLength * Math.sin(pAngle - pAngleOffset);
+        const ax2 = x2 - pHeadLength * Math.cos(pAngle + pAngleOffset);
+        const ay2 = y2 - pHeadLength * Math.sin(pAngle + pAngleOffset);
+        
         return (
           <G key={key}>
-            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color || drawColor} strokeWidth={sw || 3} />
-            <Line
-              x1={x2}
-              y1={y2}
-              x2={x2 - pHeadLength * Math.cos(pAngle - pAngleOffset)}
-              y2={y2 - pHeadLength * Math.sin(pAngle - pAngleOffset)}
-              stroke={color || drawColor}
-              strokeWidth={sw || 3}
+            {/* Main line */}
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={3} />
+            
+            {/* Filled arrow head */}
+            <Path 
+              d={`M ${x2} ${y2} L ${ax1} ${ay1} L ${ax2} ${ay2} Z`} 
+              fill={col} 
+              stroke={col} 
+              strokeWidth={1} 
             />
-            <Line
-              x1={x2}
-              y1={y2}
-              x2={x2 - pHeadLength * Math.cos(pAngle + pAngleOffset)}
-              y2={y2 - pHeadLength * Math.sin(pAngle + pAngleOffset)}
-              stroke={color || drawColor}
-              strokeWidth={sw || 3}
-            />
+            
+            {/* Text box with background */}
             {shape.text && (
-              <SvgText x={pMidX} y={pMidY} fill={color || drawColor} fontSize={14} fontWeight="bold" textAnchor="middle">
-                {shape.text}
-              </SvgText>
+              <G>
+                <Rect 
+                  x={textBoxX - textWidth/2 - 5} 
+                  y={textBoxY - textHeight + 5} 
+                  width={textWidth + 10} 
+                  height={textHeight} 
+                  fill="white" 
+                  stroke={col} 
+                  strokeWidth={2} 
+                  rx={4}
+                />
+                <SvgText 
+                  x={textBoxX} 
+                  y={textBoxY} 
+                  fill={col} 
+                  fontSize={14} 
+                  fontWeight="bold" 
+                  textAnchor="middle"
+                >
+                  {shape.text}
+                </SvgText>
+              </G>
             )}
           </G>
         );

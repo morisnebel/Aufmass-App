@@ -197,12 +197,13 @@ export default function ProjectDetailScreen() {
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
-      const [projectData, roofsData, photosData, sketchesData, checklistsData] = await Promise.all([
+      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData] = await Promise.all([
         ProjectService.getById(projectId),
         RoofService.getByProjectId(projectId),
         PhotoService.getByProjectId(projectId),
         SketchService.getByProjectId(projectId),
         ChecklistService.getByProjectId(projectId),
+        DocumentService.getByProjectId(projectId),
       ]);
 
       if (projectData) {
@@ -221,6 +222,7 @@ export default function ProjectDetailScreen() {
       setPhotos(photosData);
       setSketches(sketchesData);
       setChecklists(checklistsData);
+      setDocuments(documentsData);
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');

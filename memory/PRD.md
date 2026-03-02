@@ -50,6 +50,21 @@ Bau-Vermessungs-App für Dachdecker zur Erfassung von Dachflächen, Fotos, Skizz
 - Freitext-Bemerkungen pro Projekt
 - Erscheint am Ende des PDFs
 
+### 8. PDF-Dokumente (NEU - März 2026)
+- PDF-Dateien aus der Dateien-App importieren
+- Beim Kunden Angebote und Dokumente besprechen
+- Umfangreiche Anmerkungsfunktionen:
+  - **Stift**: Freihandzeichnen
+  - **Marker/Highlighter**: Halbtransparente Hervorhebung
+  - **Radierer**: Zeichnungen entfernen
+  - **Text**: Textanmerkungen über Tastatur
+  - **Formen**: Rechteck, Kreis, Pfeil, Linie
+- Strichstärke wählbar (dünn/mittel/dick)
+- Textgröße wählbar (klein/mittel/groß)
+- 7 Farben zur Auswahl
+- Seiten einzeln annotieren und teilen
+- Anmerkungen werden pro Seite gespeichert
+
 ## Technical Stack
 - **Framework**: React Native / Expo
 - **Storage**: AsyncStorage (lokal)

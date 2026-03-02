@@ -159,12 +159,13 @@ export default function DocumentAnnotateScreen() {
       } else if (data.type === 'pageImage') {
         setPageImage(data.image);
         setImageSize({ width: data.width, height: data.height });
-        // Calculate canvas dimensions based on image aspect ratio
-        // A4 aspect ratio is approximately 1:1.414
+        // Calculate canvas dimensions to fill available space
+        // Use the full window width minus some padding
         const aspectRatio = data.height / data.width;
-        const canvasWidth = windowWidth - 20;
+        // For iPad, use more of the screen width
+        const canvasWidth = windowWidth - 16;
         const canvasHeight = canvasWidth * aspectRatio;
-        console.log('PDF dimensions:', data.width, 'x', data.height, 'aspectRatio:', aspectRatio, 'canvas:', canvasWidth, 'x', canvasHeight);
+        console.log('PDF dimensions:', data.width, 'x', data.height, 'aspectRatio:', aspectRatio, 'canvas:', canvasWidth, 'x', canvasHeight, 'windowWidth:', windowWidth);
         setCanvasDimensions({ width: canvasWidth, height: canvasHeight });
         setRenderingPage(false);
       } else if (data.type === 'error') {

@@ -77,6 +77,18 @@ export default function RootLayout() {
           name="roofs/[id]" 
           options={{ title: 'Dachmessung bearbeiten' }} 
         />
+        <Stack.Screen 
+          name="documents/new" 
+          options={{ title: 'Dokument hinzufügen' }} 
+        />
+        <Stack.Screen 
+          name="documents/view" 
+          options={{ title: 'Dokument', headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="documents/annotate" 
+          options={{ title: 'Dokument bearbeiten', headerShown: false }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

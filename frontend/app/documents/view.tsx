@@ -620,7 +620,7 @@ export default function DocumentViewScreen() {
   if (isEditing) {
     const { width: screenW, height: screenH } = Dimensions.get('screen');
     const SAFE_AREA_TOP = 24;
-    const HEADER_H = 50;
+    const HEADER_H = 70;
     const TOOLBAR_H = 60;
     const CANVAS_H = screenH - SAFE_AREA_TOP - HEADER_H - TOOLBAR_H;
     

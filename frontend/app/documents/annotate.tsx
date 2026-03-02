@@ -161,13 +161,13 @@ export default function DocumentAnnotateScreen() {
         setImageSize({ width: data.width, height: data.height });
         
         // Calculate canvas dimensions to fit the available screen space
-        // Available height = window height - header(~44) - toolbar(~50) - pageNav(~50) - statusbar(~24) - padding(~16)
-        const availableHeight = windowHeight - 184;
-        const availableWidth = windowWidth - 20;
+        // Now with side toolbar: subtract header(~40) and side toolbar width(50) and padding(20)
+        const availableHeight = windowHeight - 60;
+        const availableWidth = windowWidth - 70; // 50 for toolbar + 20 padding
         
         const aspectRatio = data.height / data.width;
         
-        // Scale to fit within available space - prioritize filling width first
+        // Scale to fit within available space
         let canvasWidth = availableWidth;
         let canvasHeight = canvasWidth * aspectRatio;
         

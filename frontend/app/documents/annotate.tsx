@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
   },
   canvasArea: {
     flex: 1,
-    backgroundColor: '#e8e8e8',
+    backgroundColor: 'rgba(0, 255, 0, 0.3)', // DEBUG: Grün zeigt den Canvas-Bereich
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 8,

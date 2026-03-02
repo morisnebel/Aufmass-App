@@ -609,7 +609,7 @@ export default function DocumentAnnotateScreen() {
       <WebView
         ref={webViewRef}
         source={{ html: getPdfRendererHtml() }}
-        style={{ height: 0, width: 0, opacity: 0 }}
+        style={{ height: 0, width: 0, opacity: 0, position: 'absolute' }}
         onMessage={handleWebViewMessage}
         javaScriptEnabled={true}
       />

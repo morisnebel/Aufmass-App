@@ -204,6 +204,8 @@ export default function DocumentViewScreen() {
           
           let pdfDoc = null;
           let currentPage = 1;
+          let renderQueue = [];
+          let isRendering = false;
           const scale = 2.0; // Higher resolution for better quality
           
           async function loadPdf() {
@@ -226,10 +228,13 @@ export default function DocumentViewScreen() {
                 count: pdfDoc.numPages
               }));
               
-              // Render all pages
+              // Queue all pages for rendering
               for (let i = 1; i <= pdfDoc.numPages; i++) {
-                await renderPage(i);
+                renderQueue.push(i);
               }
+              
+              // Start processing the queue
+              processRenderQueue();
               
             } catch (error) {
               console.error('Error loading PDF:', error);
@@ -240,6 +245,26 @@ export default function DocumentViewScreen() {
                 type: 'error',
                 message: error.message
               }));
+            }
+          }
+          
+          async function processRenderQueue() {
+            if (isRendering || renderQueue.length === 0) return;
+            
+            isRendering = true;
+            const pageNum = renderQueue.shift();
+            
+            try {
+              await renderPage(pageNum);
+            } catch (error) {
+              console.error('Error in render queue:', error);
+            }
+            
+            isRendering = false;
+            
+            // Process next page
+            if (renderQueue.length > 0) {
+              setTimeout(processRenderQueue, 50);
             }
           }
           
@@ -263,13 +288,17 @@ export default function DocumentViewScreen() {
               wrapper.appendChild(canvas);
               document.getElementById('pdf-container').appendChild(wrapper);
               
-              await page.render({
+              const renderTask = page.render({
                 canvasContext: context,
                 viewport: viewport
-              }).promise;
+              });
+              
+              await renderTask.promise;
               
             } catch (error) {
-              console.error('Error rendering page ' + pageNum + ':', error);
+              if (error.name !== 'RenderingCancelledException') {
+                console.error('Error rendering page ' + pageNum + ':', error);
+              }
             }
           }
           

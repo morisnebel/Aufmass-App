@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://inventory-check-test.preview.emergentagent.com/api"
+BACKEND_URL = "https://pdf-markup-5.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

@@ -14,6 +14,7 @@ import {
   Platform,
   Image,
   useWindowDimensions,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -604,315 +605,321 @@ export default function DocumentAnnotateScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Compact Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerTitle}>
-          <Text style={[styles.title, { color: '#fff' }]} numberOfLines={1}>{document?.name}</Text>
-        </View>
-        
-        {/* Page Navigation in Header */}
-        <TouchableOpacity 
-          style={styles.headerNavButton}
-          onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-          disabled={currentPage <= 1}
-        >
-          <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#90caf9' : '#fff'} />
-        </TouchableOpacity>
-        <Text style={[styles.headerPageInfo, { color: '#fff' }]}>{currentPage}/{totalPages}</Text>
-        <TouchableOpacity 
-          style={styles.headerNavButton}
-          onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-        >
-          <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#90caf9' : '#fff'} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity onPress={shareAnnotatedPage} style={styles.headerButton}>
-          <Ionicons name="share-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={save} style={styles.headerButton}>
-          <Ionicons name="checkmark" size={28} color="#4caf50" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Main Content Area with Side Toolbar */}
-      <View style={styles.mainContent}>
-        {/* Canvas Area */}
-        <View style={styles.canvasWrapper}>
-          {renderingPage && (
-            <View style={styles.renderingOverlayCenter}>
-              <ActivityIndicator size="large" color="#1976d2" />
-              <Text style={styles.renderingText}>Seite wird geladen...</Text>
-            </View>
-          )}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Compact Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={[styles.title, { color: '#fff' }]} numberOfLines={1}>{document?.name}</Text>
+          </View>
           
-          <View 
-            ref={canvasRef}
-            style={[styles.canvasContainerCentered, { 
-              width: canvasDimensions.width, 
-              height: canvasDimensions.height,
-            }]}
+          {/* Page Navigation in Header */}
+          <TouchableOpacity 
+            style={styles.headerNavButton}
+            onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+            disabled={currentPage <= 1}
           >
-            {pageImage && (
-              <Image
-                source={{ uri: pageImage }}
+            <Ionicons name="chevron-back" size={24} color={currentPage <= 1 ? '#90caf9' : '#fff'} />
+          </TouchableOpacity>
+          <Text style={[styles.headerPageInfo, { color: '#fff' }]}>{currentPage}/{totalPages}</Text>
+          <TouchableOpacity 
+            style={styles.headerNavButton}
+            onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            <Ionicons name="chevron-forward" size={24} color={currentPage >= totalPages ? '#90caf9' : '#fff'} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity onPress={shareAnnotatedPage} style={styles.headerButton}>
+            <Ionicons name="share-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={save} style={styles.headerButton}>
+            <Ionicons name="checkmark" size={28} color="#4caf50" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Main Content Area with Side Toolbar */}
+        <View style={styles.mainContent}>
+          {/* Canvas Area */}
+          <View style={styles.canvasWrapper}>
+            {renderingPage && (
+              <View style={styles.renderingOverlayCenter}>
+                <ActivityIndicator size="large" color="#1976d2" />
+                <Text style={styles.renderingText}>Seite wird geladen...</Text>
+              </View>
+            )}
+            
+            <View 
+              ref={canvasRef}
+              style={[styles.canvasContainerCentered, { 
+                width: canvasDimensions.width, 
+                height: canvasDimensions.height,
+              }]}
+            >
+              {pageImage && (
+                <Image
+                  source={{ uri: pageImage }}
+                  style={{
+                    width: canvasDimensions.width,
+                    height: canvasDimensions.height,
+                  }}
+                  resizeMode="contain"
+                />
+              )}
+              
+              <View
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
                   width: canvasDimensions.width,
                   height: canvasDimensions.height,
                 }}
-                resizeMode="contain"
-              />
-            )}
-            
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: canvasDimensions.width,
-                height: canvasDimensions.height,
-              }}
-              onStartShouldSetResponder={() => true}
-              onMoveShouldSetResponder={() => true}
-              onResponderGrant={onTouchStart}
-              onResponderMove={onTouchMove}
-              onResponderRelease={onTouchEnd}
-            >
-              <Svg height="100%" width="100%" style={styles.svg}>
-                {paths.map((p, index) => (
-                  <Path
-                    key={index}
-                    d={p.path}
-                    stroke={p.color}
-                    strokeWidth={p.strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={p.opacity || 1}
-                  />
-                ))}
-                
-                {currentPath && (
-                  <Path
-                    d={currentPath}
-                    stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
-                    strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={toolMode === 'highlighter' ? 0.4 : 1}
-                  />
-                )}
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={onTouchStart}
+                onResponderMove={onTouchMove}
+                onResponderRelease={onTouchEnd}
+              >
+                <Svg height="100%" width="100%" style={styles.svg}>
+                  {paths.map((p, index) => (
+                    <Path
+                      key={index}
+                      d={p.path}
+                      stroke={p.color}
+                      strokeWidth={p.strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={p.opacity || 1}
+                    />
+                  ))}
+                  
+                  {currentPath && (
+                    <Path
+                      d={currentPath}
+                      stroke={toolMode === 'eraser' ? '#FFFFFF' : drawColor}
+                      strokeWidth={toolMode === 'eraser' ? strokeWidth * 3 : strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={toolMode === 'highlighter' ? 0.4 : 1}
+                    />
+                  )}
 
-                {shapes.map(shape => renderShape(shape))}
-                {currentShape && renderShape(currentShape, true)}
-                
-                {textAnnotations.map((t) => (
-                  <SvgText
-                    key={t.id}
-                    x={t.x}
-                    y={t.y}
-                    fill={t.color}
-                    fontSize={t.fontSize}
-                    fontWeight="bold"
-                    stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
-                    strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
-                  >
-                    {t.text}
-                  </SvgText>
-                ))}
-              </Svg>
+                  {shapes.map(shape => renderShape(shape))}
+                  {currentShape && renderShape(currentShape, true)}
+                  
+                  {textAnnotations.map((t) => (
+                    <SvgText
+                      key={t.id}
+                      x={t.x}
+                      y={t.y}
+                      fill={t.color}
+                      fontSize={t.fontSize}
+                      fontWeight="bold"
+                      stroke={t.color === '#FFFFFF' || t.color === '#FFFF00' ? '#000' : 'none'}
+                      strokeWidth={t.color === '#FFFFFF' || t.color === '#FFFF00' ? 0.5 : 0}
+                    >
+                      {t.text}
+                    </SvgText>
+                  ))}
+                </Svg>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Right Side Toolbar */}
-        <View style={styles.sideToolbar}>
-          {/* Undo/Clear */}
-          <TouchableOpacity style={styles.sideToolButton} onPress={undo}>
-            <Ionicons name="arrow-undo" size={22} color="#1976d2" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sideToolButton} onPress={clear}>
-            <Ionicons name="trash-outline" size={20} color="#f44336" />
-          </TouchableOpacity>
-          
-          <View style={styles.sideDivider} />
-          
-          {/* Tools */}
-          {tools.map((tool) => (
+          {/* Right Side Toolbar */}
+          <View style={styles.sideToolbar}>
+            {/* Undo/Clear */}
+            <TouchableOpacity style={styles.sideToolButton} onPress={undo}>
+              <Ionicons name="arrow-undo" size={22} color="#1976d2" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.sideToolButton} onPress={clear}>
+              <Ionicons name="trash-outline" size={20} color="#f44336" />
+            </TouchableOpacity>
+            
+            <View style={styles.sideDivider} />
+            
+            {/* Tools */}
+            {tools.map((tool) => (
+              <TouchableOpacity 
+                key={tool.mode}
+                style={[
+                  styles.sideToolButton, 
+                  toolMode === tool.mode && styles.sideToolButtonActive
+                ]}
+                onPress={() => setToolMode(tool.mode)}
+              >
+                <Ionicons 
+                  name={tool.icon as any} 
+                  size={20} 
+                  color={toolMode === tool.mode ? '#fff' : '#666'} 
+                />
+              </TouchableOpacity>
+            ))}
+            
+            <View style={styles.sideDivider} />
+            
+            {/* Zoom Toggle */}
             <TouchableOpacity 
-              key={tool.mode}
               style={[
                 styles.sideToolButton, 
-                toolMode === tool.mode && styles.sideToolButtonActive
+                zoomEnabled && styles.sideToolButtonActive
               ]}
-              onPress={() => setToolMode(tool.mode)}
+              onPress={() => setZoomEnabled(!zoomEnabled)}
             >
               <Ionicons 
-                name={tool.icon as any} 
+                name={zoomEnabled ? "scan" : "expand"} 
                 size={20} 
-                color={toolMode === tool.mode ? '#fff' : '#666'} 
+                color={zoomEnabled ? '#fff' : '#666'} 
               />
             </TouchableOpacity>
-          ))}
-          
-          <View style={styles.sideDivider} />
-          
-          {/* Zoom Toggle */}
-          <TouchableOpacity 
-            style={[
-              styles.sideToolButton, 
-              zoomEnabled && styles.sideToolButtonActive
-            ]}
-            onPress={() => setZoomEnabled(!zoomEnabled)}
-          >
-            <Ionicons 
-              name={zoomEnabled ? "scan" : "expand"} 
-              size={20} 
-              color={zoomEnabled ? '#fff' : '#666'} 
-            />
-          </TouchableOpacity>
-          
-          {/* Stroke Width */}
-          <TouchableOpacity 
-            style={styles.sideToolButton}
-            onPress={() => setShowStrokePicker(true)}
-          >
-            <View style={[styles.strokePreviewSide, { height: strokeWidth, backgroundColor: drawColor }]} />
-          </TouchableOpacity>
-          
-          <View style={styles.sideDivider} />
-          
-          {/* Colors */}
-          {colors.map((c) => (
-            <TouchableOpacity
-              key={c.color}
-              style={[
-                styles.sideColorButton,
-                { backgroundColor: c.color },
-                drawColor === c.color && styles.sideColorButtonActive,
-                c.color === '#FFFFFF' && styles.colorButtonWhite,
-              ]}
-              onPress={() => setDrawColor(c.color)}
-            />
-          ))}
+            
+            {/* Stroke Width */}
+            <TouchableOpacity 
+              style={styles.sideToolButton}
+              onPress={() => setShowStrokePicker(true)}
+            >
+              <View style={[styles.strokePreviewSide, { height: strokeWidth, backgroundColor: drawColor }]} />
+            </TouchableOpacity>
+            
+            <View style={styles.sideDivider} />
+            
+            {/* Colors */}
+            {colors.map((c) => (
+              <TouchableOpacity
+                key={c.color}
+                style={[
+                  styles.sideColorButton,
+                  { backgroundColor: c.color },
+                  drawColor === c.color && styles.sideColorButtonActive,
+                  c.color === '#FFFFFF' && styles.colorButtonWhite,
+                ]}
+                onPress={() => setDrawColor(c.color)}
+              />
+            ))}
+          </View>
         </View>
-      </View>
 
-      {/* Stroke Width Picker Modal */}
-      <Modal visible={showStrokePicker} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackground} 
-            activeOpacity={1}
-            onPress={() => setShowStrokePicker(false)}
-          />
-          <View style={styles.strokePickerModal}>
-            <Text style={styles.modalTitle}>Strichstärke</Text>
-            <View style={styles.strokeOptions}>
-              {strokeWidths.map((sw) => (
-                <TouchableOpacity
-                  key={sw.width}
-                  style={[
-                    styles.strokeOption,
-                    strokeWidth === sw.width && styles.strokeOptionActive,
-                  ]}
+        {/* Stroke Width Picker Modal */}
+        <Modal visible={showStrokePicker} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity 
+              style={styles.modalBackground} 
+              activeOpacity={1}
+              onPress={() => setShowStrokePicker(false)}
+            />
+            <View style={styles.strokePickerModal}>
+              <Text style={styles.modalTitle}>Strichstärke</Text>
+              <View style={styles.strokeOptions}>
+                {strokeWidths.map((sw) => (
+                  <TouchableOpacity
+                    key={sw.width}
+                    style={[
+                      styles.strokeOption,
+                      strokeWidth === sw.width && styles.strokeOptionActive,
+                    ]}
+                    onPress={() => {
+                      setStrokeWidth(sw.width);
+                      setShowStrokePicker(false);
+                    }}
+                  >
+                    <View style={[styles.strokeLine, { height: sw.width, backgroundColor: drawColor }]} />
+                    <Text style={styles.strokeLabel}>{sw.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <Text style={[styles.modalTitle, { marginTop: 20 }]}>Textgröße</Text>
+              <View style={styles.strokeOptions}>
+                {[
+                  { size: 'small' as const, label: 'Klein', fontSize: 12 },
+                  { size: 'medium' as const, label: 'Mittel', fontSize: 16 },
+                  { size: 'large' as const, label: 'Groß', fontSize: 24 },
+                ].map((ts) => (
+                  <TouchableOpacity
+                    key={ts.size}
+                    style={[
+                      styles.strokeOption,
+                      textSize === ts.size && styles.strokeOptionActive,
+                    ]}
+                    onPress={() => setTextSize(ts.size)}
+                  >
+                    <Text style={[styles.textSizePreview, { fontSize: ts.fontSize }]}>Aa</Text>
+                    <Text style={styles.strokeLabel}>{ts.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity 
+                style={styles.closeModalButton}
+                onPress={() => setShowStrokePicker(false)}
+              >
+                <Text style={styles.closeModalButtonText}>Schließen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Text Input Modal */}
+        <Modal visible={showTextModal} transparent animationType="fade">
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.textModal}>
+              <Text style={styles.modalTitle}>Text hinzufügen</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newTextAnnotation}
+                onChangeText={setNewTextAnnotation}
+                placeholder="Text eingeben..."
+                placeholderTextColor="#999"
+                multiline
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={() => {
-                    setStrokeWidth(sw.width);
-                    setShowStrokePicker(false);
+                    setNewTextAnnotation('');
+                    setShowTextModal(false);
                   }}
                 >
-                  <View style={[styles.strokeLine, { height: sw.width, backgroundColor: drawColor }]} />
-                  <Text style={styles.strokeLabel}>{sw.label}</Text>
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            
-            <Text style={[styles.modalTitle, { marginTop: 20 }]}>Textgröße</Text>
-            <View style={styles.strokeOptions}>
-              {[
-                { size: 'small' as const, label: 'Klein', fontSize: 12 },
-                { size: 'medium' as const, label: 'Mittel', fontSize: 16 },
-                { size: 'large' as const, label: 'Groß', fontSize: 24 },
-              ].map((ts) => (
-                <TouchableOpacity
-                  key={ts.size}
-                  style={[
-                    styles.strokeOption,
-                    textSize === ts.size && styles.strokeOptionActive,
-                  ]}
-                  onPress={() => setTextSize(ts.size)}
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.addButton]}
+                  onPress={addTextAnnotation}
                 >
-                  <Text style={[styles.textSizePreview, { fontSize: ts.fontSize }]}>Aa</Text>
-                  <Text style={styles.strokeLabel}>{ts.label}</Text>
+                  <Text style={styles.addButtonText}>Hinzufügen</Text>
                 </TouchableOpacity>
-              ))}
+              </View>
             </View>
-            <TouchableOpacity 
-              style={styles.closeModalButton}
-              onPress={() => setShowStrokePicker(false)}
-            >
-              <Text style={styles.closeModalButtonText}>Schließen</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          </KeyboardAvoidingView>
+        </Modal>
 
-      {/* Text Input Modal */}
-      <Modal visible={showTextModal} transparent animationType="fade">
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.textModal}>
-            <Text style={styles.modalTitle}>Text hinzufügen</Text>
-            <TextInput
-              style={styles.textInput}
-              value={newTextAnnotation}
-              onChangeText={setNewTextAnnotation}
-              placeholder="Text eingeben..."
-              placeholderTextColor="#999"
-              multiline
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setNewTextAnnotation('');
-                  setShowTextModal(false);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.addButton]}
-                onPress={addTextAnnotation}
-              >
-                <Text style={styles.addButtonText}>Hinzufügen</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Hidden WebView for PDF rendering - placed at end to not affect layout */}
-      <WebView
-        ref={webViewRef}
-        source={{ html: getPdfRendererHtml() }}
-        style={{ height: 1, width: 1, position: 'absolute', top: -100, left: -100 }}
-        onMessage={handleWebViewMessage}
-        javaScriptEnabled={true}
-      />
-    </View>
+        {/* Hidden WebView for PDF rendering - placed at end to not affect layout */}
+        <WebView
+          ref={webViewRef}
+          source={{ html: getPdfRendererHtml() }}
+          style={{ height: 1, width: 1, position: 'absolute', top: -100, left: -100 }}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled={true}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#1976d2',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -970,6 +977,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#e8e8e8',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     paddingTop: 8,
   },
   zoomContainer: {

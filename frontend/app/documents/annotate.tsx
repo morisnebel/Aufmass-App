@@ -781,6 +781,21 @@ export default function DocumentAnnotateScreen() {
           
           <View style={styles.sideDivider} />
           
+          {/* Zoom Toggle */}
+          <TouchableOpacity 
+            style={[
+              styles.sideToolButton, 
+              zoomEnabled && styles.sideToolButtonActive
+            ]}
+            onPress={() => setZoomEnabled(!zoomEnabled)}
+          >
+            <Ionicons 
+              name={zoomEnabled ? "scan" : "expand"} 
+              size={20} 
+              color={zoomEnabled ? '#fff' : '#666'} 
+            />
+          </TouchableOpacity>
+          
           {/* Stroke Width */}
           <TouchableOpacity 
             style={styles.sideToolButton}

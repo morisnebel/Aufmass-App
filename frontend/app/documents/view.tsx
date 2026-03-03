@@ -386,9 +386,15 @@ export default function DocumentViewScreen() {
   const [exportingPageNum, setExportingPageNum] = useState(0);
   const capturedPagesRef = useRef<string[]>([]);
   const isCapturingRef = useRef(false);
+  const printInProgressRef = useRef(false);
 
   // Share/Print all pages with annotations as PDF
   const shareAllPagesAnnotated = async () => {
+    if (printInProgressRef.current) {
+      console.log('Print already in progress');
+      return;
+    }
+    
     if (!canvasRef.current) {
       Alert.alert('Fehler', 'Canvas nicht bereit');
       return;
@@ -403,64 +409,93 @@ export default function DocumentViewScreen() {
     await saveAllAnnotations();
 
     // Start export process
+    printInProgressRef.current = true;
     setIsExporting(true);
     setExportProgress(0);
     capturedPagesRef.current = [];
     isCapturingRef.current = true;
     
-    // Start capturing from page 1
-    setExportingPageNum(1);
+    // If already on page 1, start capturing directly
+    if (currentPage === 1) {
+      // Wait for render then capture
+      setTimeout(() => captureAndContinue(1), 500);
+    } else {
+      // Go to page 1 first
+      setExportingPageNum(1);
+    }
   };
 
-  // Effect to handle page-by-page capturing
+  // Capture current page and continue to next
+  const captureAndContinue = async (pageNum: number) => {
+    if (!isCapturingRef.current) return;
+    
+    console.log('Capturing page', pageNum);
+    
+    if (!canvasRef.current) {
+      console.log('Canvas ref not available');
+      cancelExport();
+      return;
+    }
+
+    try {
+      // Capture this page
+      const uri = await captureRef(canvasRef.current, { format: 'png', quality: 0.9 });
+      capturedPagesRef.current[pageNum - 1] = uri;
+      console.log('Captured page', pageNum, 'uri length:', uri.length);
+      
+      const progress = Math.round((pageNum / totalPages) * 90);
+      setExportProgress(progress);
+
+      if (pageNum < totalPages) {
+        // Go to next page
+        setExportingPageNum(pageNum + 1);
+      } else {
+        // All pages captured - create PDF
+        console.log('All pages captured, finishing export');
+        finishExport();
+      }
+    } catch (error) {
+      console.log('Error capturing page:', error);
+      Alert.alert('Fehler', 'Seite konnte nicht erfasst werden');
+      cancelExport();
+    }
+  };
+
+  // Effect to handle page navigation during export
   useEffect(() => {
     if (!isCapturingRef.current || exportingPageNum === 0) return;
+    
+    console.log('Export effect: exportingPageNum=', exportingPageNum, 'currentPage=', currentPage);
 
-    const captureCurrentPage = async () => {
-      // Wait a bit for the page to render
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      if (!canvasRef.current) {
-        console.log('Canvas not ready for page', exportingPageNum);
-        return;
-      }
-
-      try {
-        // Capture this page
-        const uri = await captureRef(canvasRef.current, { format: 'png', quality: 0.9 });
-        capturedPagesRef.current[exportingPageNum - 1] = uri;
-        
-        const progress = Math.round((exportingPageNum / totalPages) * 90);
-        setExportProgress(progress);
-
-        if (exportingPageNum < totalPages) {
-          // Go to next page
-          setExportingPageNum(exportingPageNum + 1);
-        } else {
-          // All pages captured - create PDF
-          finishExport();
-        }
-      } catch (error) {
-        console.log('Error capturing page:', error);
-        Alert.alert('Fehler', 'Seite konnte nicht erfasst werden');
-        cancelExport();
-      }
-    };
-
-    // Only capture if we're on the right page
-    if (currentPage === exportingPageNum) {
-      captureCurrentPage();
-    } else {
+    if (currentPage !== exportingPageNum) {
       // Navigate to the export page
       changePage(exportingPageNum);
     }
-  }, [exportingPageNum, currentPage, pageImage]);
+  }, [exportingPageNum]);
+
+  // Effect to capture when page image is ready
+  useEffect(() => {
+    if (!isCapturingRef.current || exportingPageNum === 0) return;
+    if (currentPage !== exportingPageNum) return;
+    if (!pageImage) return;
+    
+    console.log('Page image ready for page', exportingPageNum);
+    
+    // Wait a bit more for SVG annotations to render
+    const timer = setTimeout(() => {
+      captureAndContinue(exportingPageNum);
+    }, 400);
+    
+    return () => clearTimeout(timer);
+  }, [pageImage, currentPage, exportingPageNum]);
 
   const finishExport = async () => {
     isCapturingRef.current = false;
     setExportProgress(95);
+    setExportingPageNum(0);
 
     const pages = capturedPagesRef.current.filter(p => p);
+    console.log('Finishing export with', pages.length, 'pages');
     
     if (pages.length === 0) {
       Alert.alert('Fehler', 'Keine Seiten erfasst');
@@ -499,18 +534,23 @@ export default function DocumentViewScreen() {
     setExportProgress(100);
     setIsExporting(false);
     setExportProgress(0);
-    setExportingPageNum(0);
     capturedPagesRef.current = [];
 
     try {
+      console.log('Opening print dialog');
       await Print.printAsync({ html: htmlContent });
+      console.log('Print dialog closed');
     } catch (e) {
-      console.log('Print cancelled or error:', e);
+      console.log('Print error:', e);
+    } finally {
+      printInProgressRef.current = false;
     }
   };
 
   const cancelExport = () => {
+    console.log('Cancelling export');
     isCapturingRef.current = false;
+    printInProgressRef.current = false;
     setIsExporting(false);
     setExportProgress(0);
     setExportingPageNum(0);

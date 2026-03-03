@@ -383,83 +383,141 @@ export default function DocumentViewScreen() {
   // State for PDF export progress
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportingPageNum, setExportingPageNum] = useState(0);
+  const capturedPagesRef = useRef<string[]>([]);
+  const isCapturingRef = useRef(false);
 
-  // Share/Print all pages with annotations as PDF - Simple approach
+  // Share/Print all pages with annotations as PDF
   const shareAllPagesAnnotated = async () => {
-    if (!document?.originalPdfData) {
-      Alert.alert('Fehler', 'Keine PDF-Daten vorhanden');
+    if (!canvasRef.current) {
+      Alert.alert('Fehler', 'Canvas nicht bereit');
       return;
     }
 
-    // Save current page first
+    // Save current page annotations first
     pageAnnotationsRef.current[currentPage] = { 
       paths: [...paths], 
       shapes: [...shapes], 
       texts: [...textAnnotations] 
     };
     await saveAllAnnotations();
+
+    // Start export process
+    setIsExporting(true);
+    setExportProgress(0);
+    capturedPagesRef.current = [];
+    isCapturingRef.current = true;
     
-    // Reload document to get all saved annotations
-    const freshDoc = await DocumentService.getById(documentId || '');
-    if (!freshDoc) {
-      Alert.alert('Fehler', 'Dokument konnte nicht geladen werden');
+    // Start capturing from page 1
+    setExportingPageNum(1);
+  };
+
+  // Effect to handle page-by-page capturing
+  useEffect(() => {
+    if (!isCapturingRef.current || exportingPageNum === 0) return;
+
+    const captureCurrentPage = async () => {
+      // Wait a bit for the page to render
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (!canvasRef.current) {
+        console.log('Canvas not ready for page', exportingPageNum);
+        return;
+      }
+
+      try {
+        // Capture this page
+        const uri = await captureRef(canvasRef.current, { format: 'png', quality: 0.9 });
+        capturedPagesRef.current[exportingPageNum - 1] = uri;
+        
+        const progress = Math.round((exportingPageNum / totalPages) * 90);
+        setExportProgress(progress);
+
+        if (exportingPageNum < totalPages) {
+          // Go to next page
+          setExportingPageNum(exportingPageNum + 1);
+        } else {
+          // All pages captured - create PDF
+          finishExport();
+        }
+      } catch (error) {
+        console.log('Error capturing page:', error);
+        Alert.alert('Fehler', 'Seite konnte nicht erfasst werden');
+        cancelExport();
+      }
+    };
+
+    // Only capture if we're on the right page
+    if (currentPage === exportingPageNum) {
+      captureCurrentPage();
+    } else {
+      // Navigate to the export page
+      changePage(exportingPageNum);
+    }
+  }, [exportingPageNum, currentPage, pageImage]);
+
+  const finishExport = async () => {
+    isCapturingRef.current = false;
+    setExportProgress(95);
+
+    const pages = capturedPagesRef.current.filter(p => p);
+    
+    if (pages.length === 0) {
+      Alert.alert('Fehler', 'Keine Seiten erfasst');
+      cancelExport();
       return;
     }
 
-    try {
-      // Build annotations data for all pages
-      const allPagesAnnotations: {[key: number]: any} = {};
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const pageData = freshDoc.pages?.find(p => p.pageNumber === pageNum);
-        if (pageData?.annotations) {
-          try {
-            allPagesAnnotations[pageNum] = JSON.parse(pageData.annotations);
-          } catch (e) {
-            allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
+    // Create HTML for print
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          @page { margin: 5mm; size: A4; }
+          * { margin: 0; padding: 0; }
+          body { margin: 0; }
+          .page { 
+            width: 200mm; 
+            height: 287mm; 
+            page-break-after: always;
+            display: flex;
+            justify-content: center;
+            align-items: center;
           }
-        } else {
-          allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
-        }
-      }
+          .page:last-child { page-break-after: avoid; }
+          .page img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        </style>
+      </head>
+      <body>
+        ${pages.map(uri => `<div class="page"><img src="${uri}"/></div>`).join('')}
+      </body>
+      </html>
+    `;
 
-      // Generate simple HTML with embedded PDF and SVG overlays
-      // Uses iframe for PDF and absolute positioned SVG for annotations
-      const pdfBase64 = document.originalPdfData.includes(',') 
-        ? document.originalPdfData 
-        : `data:application/pdf;base64,${document.originalPdfData}`;
+    setExportProgress(100);
+    setIsExporting(false);
+    setExportProgress(0);
+    setExportingPageNum(0);
+    capturedPagesRef.current = [];
 
-      // For now, just print the current page with annotations using captureRef
-      if (canvasRef.current) {
-        const uri = await captureRef(canvasRef.current, { format: 'png', quality: 1 });
-        
-        // Create simple single-page HTML
-        const htmlContent = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <style>
-              @page { margin: 10mm; }
-              body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-              img { max-width: 100%; max-height: 100%; }
-            </style>
-          </head>
-          <body>
-            <img src="${uri}" />
-          </body>
-          </html>
-        `;
-
-        await Print.printAsync({ html: htmlContent });
-      }
-
-    } catch (error) {
-      console.log('Error in PDF export:', error);
-      Alert.alert('Fehler', 'Drucken fehlgeschlagen');
+    try {
+      await Print.printAsync({ html: htmlContent });
+    } catch (e) {
+      console.log('Print cancelled or error:', e);
     }
   };
 
-  // Refs for export - not used currently
+  const cancelExport = () => {
+    isCapturingRef.current = false;
+    setIsExporting(false);
+    setExportProgress(0);
+    setExportingPageNum(0);
+    capturedPagesRef.current = [];
+  };
+
+  // Refs for export - legacy, kept for compatibility
   const exportResolveRef = useRef<((value: string | null) => void) | null>(null);
   const [exportHtml, setExportHtml] = useState<string | null>(null);
   const exportedPagesRef = useRef<string[]>([]);

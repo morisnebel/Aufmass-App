@@ -384,7 +384,7 @@ export default function DocumentViewScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
-  // Share/Print all pages with annotations as PDF
+  // Share/Print all pages with annotations as PDF - Direct approach using Print.printAsync
   const shareAllPagesAnnotated = async () => {
     if (!document?.originalPdfData) {
       Alert.alert('Fehler', 'Keine PDF-Daten vorhanden');
@@ -407,7 +407,7 @@ export default function DocumentViewScreen() {
     }
 
     setIsExporting(true);
-    setExportProgress(0);
+    setExportProgress(50);
 
     try {
       // Build annotations data for all pages
@@ -425,297 +425,160 @@ export default function DocumentViewScreen() {
         }
       }
 
-      // Create HTML that will render and export all pages
-      const pdfExportHtml = generatePdfExportHtml(
-        document.originalPdfData, 
-        totalPages, 
-        allPagesAnnotations,
-        imageSize.width || 615,
-        imageSize.height || 870
-      );
-      
-      setExportHtml(pdfExportHtml);
-      // The rest will be handled by handleExportMessage
+      // Get page images from document
+      const pageImages: string[] = [];
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const pageData = freshDoc.pages?.find(p => p.pageNumber === pageNum);
+        if (pageData?.imageData) {
+          pageImages.push(pageData.imageData);
+        }
+      }
+
+      if (pageImages.length === 0) {
+        Alert.alert('Fehler', 'Keine Seitenbilder gefunden');
+        setIsExporting(false);
+        setExportProgress(0);
+        return;
+      }
+
+      setExportProgress(75);
+
+      // Create HTML with page images and SVG annotations overlay
+      const htmlPages = pageImages.map((img, idx) => {
+        const pageNum = idx + 1;
+        const annotations = allPagesAnnotations[pageNum] || { paths: [], shapes: [], texts: [] };
+        
+        // Generate SVG for annotations
+        let svgContent = '';
+        
+        // Paths
+        if (annotations.paths) {
+          annotations.paths.forEach((p: any) => {
+            svgContent += `<path d="${p.path}" stroke="${p.color}" stroke-width="${p.strokeWidth}" fill="none" opacity="${p.opacity}" stroke-linecap="round"/>`;
+          });
+        }
+        
+        // Shapes
+        if (annotations.shapes) {
+          annotations.shapes.forEach((s: any) => {
+            const x1 = s.x1, y1 = s.y1, x2 = s.x2, y2 = s.y2;
+            const sw = s.strokeWidth || 3;
+            
+            if (s.type === 'rectangle') {
+              svgContent += `<rect x="${Math.min(x1,x2)}" y="${Math.min(y1,y2)}" width="${Math.abs(x2-x1)}" height="${Math.abs(y2-y1)}" stroke="${s.color}" stroke-width="${sw}" fill="none"/>`;
+            } else if (s.type === 'circle') {
+              const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+              const r = Math.max(Math.abs(x2-x1), Math.abs(y2-y1)) / 2;
+              svgContent += `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${s.color}" stroke-width="${sw}" fill="none"/>`;
+            } else if (s.type === 'line') {
+              svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s.color}" stroke-width="${sw}"/>`;
+            } else if (s.type === 'arrow' || s.type === 'pointer') {
+              const angle = Math.atan2(y2-y1, x2-x1);
+              const headLen = 15;
+              const ax1 = x2 - headLen * Math.cos(angle - Math.PI/6);
+              const ay1 = y2 - headLen * Math.sin(angle - Math.PI/6);
+              const ax2 = x2 - headLen * Math.cos(angle + Math.PI/6);
+              const ay2 = y2 - headLen * Math.sin(angle + Math.PI/6);
+              svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s.color}" stroke-width="${sw}"/>`;
+              svgContent += `<line x1="${x2}" y1="${y2}" x2="${ax1}" y2="${ay1}" stroke="${s.color}" stroke-width="${sw}"/>`;
+              svgContent += `<line x1="${x2}" y1="${y2}" x2="${ax2}" y2="${ay2}" stroke="${s.color}" stroke-width="${sw}"/>`;
+              if (s.text) {
+                svgContent += `<text x="${x1}" y="${y1 - 10}" fill="${s.color}" font-size="14" font-weight="bold" text-anchor="middle">${s.text}</text>`;
+              }
+            }
+          });
+        }
+        
+        // Text annotations
+        if (annotations.texts) {
+          annotations.texts.forEach((t: any) => {
+            svgContent += `<text x="${t.x}" y="${t.y}" fill="${t.color}" font-size="${t.fontSize || 16}" font-weight="bold">${t.text}</text>`;
+          });
+        }
+
+        return `
+          <div class="page">
+            <div class="page-container">
+              <img src="${img}" class="page-image"/>
+              <svg class="annotations" viewBox="0 0 ${imageSize.width || 615} ${imageSize.height || 870}" preserveAspectRatio="none">
+                ${svgContent}
+              </svg>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @page { margin: 0; padding: 0; size: A4; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { margin: 0; padding: 0; }
+            .page { 
+              width: 210mm;
+              height: 297mm;
+              page-break-after: always;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              background: white;
+              position: relative;
+            }
+            .page:last-child { page-break-after: avoid; }
+            .page-container {
+              position: relative;
+              width: 100%;
+              height: 100%;
+            }
+            .page-image { 
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+            }
+            .annotations {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              pointer-events: none;
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlPages}
+        </body>
+        </html>
+      `;
+
+      setExportProgress(100);
+
+      // Close modal before print dialog
+      setIsExporting(false);
+      setExportProgress(0);
+
+      // Use Print.printAsync to show print dialog directly
+      await Print.printAsync({
+        html: htmlContent,
+      });
 
     } catch (error) {
-      console.log('Error starting PDF export:', error);
-      Alert.alert('Fehler', 'PDF-Export konnte nicht gestartet werden');
+      console.log('Error in PDF export:', error);
+      Alert.alert('Fehler', 'PDF-Export fehlgeschlagen');
       setIsExporting(false);
       setExportProgress(0);
     }
   };
 
-  // Generate HTML for PDF export with all pages
-  const generatePdfExportHtml = (pdfData: string, pageCount: number, annotationsData: any, canvasWidth: number, canvasHeight: number) => {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-        <style>
-          * { margin: 0; padding: 0; }
-          body { background: white; }
-        </style>
-      </head>
-      <body>
-        <canvas id="render-canvas"></canvas>
-        <script>
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          
-          const pdfData = '${pdfData}';
-          const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
-          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-          const allAnnotations = ${JSON.stringify(annotationsData)};
-          const pageCount = ${pageCount};
-          const originalWidth = ${canvasWidth};
-          const originalHeight = ${canvasHeight};
-          
-          async function renderAllPages() {
-            const pageImages = [];
-            
-            try {
-              const pdf = await pdfjsLib.getDocument({data: bytes}).promise;
-              const canvas = document.getElementById('render-canvas');
-              const ctx = canvas.getContext('2d');
-              
-              for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-                // Report progress
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'progress',
-                  progress: Math.round((pageNum / pageCount) * 100)
-                }));
-                
-                const page = await pdf.getPage(pageNum);
-                const viewport = page.getViewport({scale: 2});
-                
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                
-                // Clear and render PDF page
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, viewport.width, viewport.height);
-                
-                await page.render({
-                  canvasContext: ctx,
-                  viewport: viewport
-                }).promise;
-                
-                // Draw annotations on canvas
-                const annotations = allAnnotations[pageNum] || { paths: [], shapes: [], texts: [] };
-                const scaleX = viewport.width / originalWidth;
-                const scaleY = viewport.height / originalHeight;
-                
-                // Draw paths
-                if (annotations.paths && annotations.paths.length > 0) {
-                  annotations.paths.forEach(p => {
-                    ctx.beginPath();
-                    ctx.strokeStyle = p.color;
-                    ctx.lineWidth = p.strokeWidth * Math.min(scaleX, scaleY);
-                    ctx.lineCap = 'round';
-                    ctx.globalAlpha = p.opacity;
-                    
-                    // Parse and draw path
-                    const commands = p.path.match(/[ML]\\s*[\\d.]+\\s+[\\d.]+/g) || [];
-                    commands.forEach((cmd, i) => {
-                      const match = cmd.match(/([ML])\\s*([\\d.]+)\\s+([\\d.]+)/);
-                      if (match) {
-                        const x = parseFloat(match[2]) * scaleX;
-                        const y = parseFloat(match[3]) * scaleY;
-                        if (match[1] === 'M' || i === 0) {
-                          ctx.moveTo(x, y);
-                        } else {
-                          ctx.lineTo(x, y);
-                        }
-                      }
-                    });
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                  });
-                }
-                
-                // Draw shapes
-                if (annotations.shapes && annotations.shapes.length > 0) {
-                  annotations.shapes.forEach(s => {
-                    const x1 = s.x1 * scaleX, y1 = s.y1 * scaleY;
-                    const x2 = s.x2 * scaleX, y2 = s.y2 * scaleY;
-                    const sw = (s.strokeWidth || 3) * Math.min(scaleX, scaleY);
-                    
-                    ctx.strokeStyle = s.color;
-                    ctx.lineWidth = sw;
-                    ctx.beginPath();
-                    
-                    if (s.type === 'rectangle') {
-                      ctx.rect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(x2-x1), Math.abs(y2-y1));
-                      ctx.stroke();
-                    } else if (s.type === 'circle') {
-                      const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
-                      const r = Math.max(Math.abs(x2-x1), Math.abs(y2-y1)) / 2;
-                      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                      ctx.stroke();
-                    } else if (s.type === 'line') {
-                      ctx.moveTo(x1, y1);
-                      ctx.lineTo(x2, y2);
-                      ctx.stroke();
-                    } else if (s.type === 'arrow' || s.type === 'pointer') {
-                      const angle = Math.atan2(y2-y1, x2-x1);
-                      const headLen = 15 * Math.min(scaleX, scaleY);
-                      
-                      // Main line
-                      ctx.moveTo(x1, y1);
-                      ctx.lineTo(x2, y2);
-                      ctx.stroke();
-                      
-                      // Arrow head
-                      ctx.beginPath();
-                      ctx.moveTo(x2, y2);
-                      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6), y2 - headLen * Math.sin(angle - Math.PI/6));
-                      ctx.stroke();
-                      ctx.beginPath();
-                      ctx.moveTo(x2, y2);
-                      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI/6), y2 - headLen * Math.sin(angle + Math.PI/6));
-                      ctx.stroke();
-                      
-                      // Text for pointer
-                      if (s.text) {
-                        const fontSize = 14 * Math.min(scaleX, scaleY);
-                        ctx.font = 'bold ' + fontSize + 'px sans-serif';
-                        ctx.fillStyle = s.color;
-                        ctx.textAlign = 'center';
-                        ctx.fillText(s.text, x1, y1 - 25 * scaleY);
-                      }
-                    }
-                  });
-                }
-                
-                // Draw text annotations
-                if (annotations.texts && annotations.texts.length > 0) {
-                  annotations.texts.forEach(t => {
-                    const fontSize = (t.fontSize || 16) * Math.min(scaleX, scaleY);
-                    ctx.font = 'bold ' + fontSize + 'px sans-serif';
-                    ctx.fillStyle = t.color;
-                    ctx.textAlign = 'left';
-                    ctx.fillText(t.text, t.x * scaleX, t.y * scaleY);
-                  });
-                }
-                
-                // Capture page image
-                pageImages.push(canvas.toDataURL('image/png'));
-              }
-              
-              // Send all page images back
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'allPagesRendered',
-                images: pageImages
-              }));
-              
-            } catch (err) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'error',
-                error: err.message
-              }));
-            }
-          }
-          
-          renderAllPages();
-        </script>
-      </body>
-      </html>
-    `;
-  };
-
-  // Refs for export
+  // Refs for export (keeping for compatibility but not used in new approach)
   const exportResolveRef = useRef<((value: string | null) => void) | null>(null);
   const [exportHtml, setExportHtml] = useState<string | null>(null);
 
   const handleExportMessage = async (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      
-      if (data.type === 'progress') {
-        setExportProgress(data.progress);
-      } else if (data.type === 'allPagesRendered') {
-        setExportHtml(null);
-        
-        const pageImages = data.images;
-        if (!pageImages || pageImages.length === 0) {
-          Alert.alert('Fehler', 'Keine Seiten konnten gerendert werden');
-          setIsExporting(false);
-          setExportProgress(0);
-          return;
-        }
-
-        // Close progress modal immediately before heavy operations
-        setIsExporting(false);
-        setExportProgress(0);
-
-        // Create HTML for final PDF
-        const htmlContent = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <style>
-              @page { margin: 0; padding: 0; }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body { margin: 0; padding: 0; }
-              .page { 
-                width: 100vw; 
-                height: 100vh; 
-                page-break-after: always;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background: white;
-              }
-              .page:last-child { page-break-after: avoid; }
-              .page img { 
-                max-width: 100%; 
-                max-height: 100%; 
-                object-fit: contain;
-              }
-            </style>
-          </head>
-          <body>
-            ${pageImages.map((img: string) => `
-              <div class="page">
-                <img src="${img}" />
-              </div>
-            `).join('')}
-          </body>
-          </html>
-        `;
-
-        try {
-          // Generate PDF using expo-print
-          const { uri } = await Print.printToFileAsync({
-            html: htmlContent,
-            width: 595,
-            height: 842,
-          });
-
-          // Share the PDF
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, { 
-              mimeType: 'application/pdf',
-              UTI: 'com.adobe.pdf',
-            });
-          }
-        } catch (printError) {
-          console.log('Print/Share error:', printError);
-          // Don't show error - user may have just cancelled
-        }
-      } else if (data.type === 'error') {
-        console.log('Export error:', data.error);
-        Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
-        setExportHtml(null);
-        setIsExporting(false);
-        setExportProgress(0);
-      }
-    } catch (e) {
-      console.log('Error parsing export message:', e);
-      setIsExporting(false);
-      setExportProgress(0);
-    }
+    // Not used in new approach
   };
 
   const handleTouch = (evt: any, type: 'start' | 'move' | 'end') => {
@@ -1534,10 +1397,16 @@ export default function DocumentViewScreen() {
           {/* Hidden WebView for PDF Export */}
           {exportHtml && (
             <WebView
+              key={`export-${Date.now()}`}
               source={{ html: exportHtml }}
-              style={{ height: 1, width: 1, position: 'absolute', top: -2000 }}
+              style={{ height: 1, width: 1, position: 'absolute', top: -2000, left: -2000 }}
               onMessage={handleExportMessage}
               javaScriptEnabled
+              onError={() => {
+                setExportHtml(null);
+                setIsExporting(false);
+                setExportProgress(0);
+              }}
             />
           )}
 

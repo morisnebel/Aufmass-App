@@ -640,8 +640,13 @@ export default function DocumentViewScreen() {
         if (!pageImages || pageImages.length === 0) {
           Alert.alert('Fehler', 'Keine Seiten konnten gerendert werden');
           setIsExporting(false);
+          setExportProgress(0);
           return;
         }
+
+        // Close progress modal immediately before heavy operations
+        setIsExporting(false);
+        setExportProgress(0);
 
         // Create HTML for final PDF
         const htmlContent = `
@@ -680,23 +685,25 @@ export default function DocumentViewScreen() {
           </html>
         `;
 
-        // Generate PDF using expo-print
-        const { uri } = await Print.printToFileAsync({
-          html: htmlContent,
-          width: 595,
-          height: 842,
-        });
-
-        // Share the PDF
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { 
-            mimeType: 'application/pdf',
-            UTI: 'com.adobe.pdf',
+        try {
+          // Generate PDF using expo-print
+          const { uri } = await Print.printToFileAsync({
+            html: htmlContent,
+            width: 595,
+            height: 842,
           });
-        }
 
-        setIsExporting(false);
-        setExportProgress(0);
+          // Share the PDF
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, { 
+              mimeType: 'application/pdf',
+              UTI: 'com.adobe.pdf',
+            });
+          }
+        } catch (printError) {
+          console.log('Print/Share error:', printError);
+          // Don't show error - user may have just cancelled
+        }
       } else if (data.type === 'error') {
         console.log('Export error:', data.error);
         Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
@@ -706,6 +713,8 @@ export default function DocumentViewScreen() {
       }
     } catch (e) {
       console.log('Error parsing export message:', e);
+      setIsExporting(false);
+      setExportProgress(0);
     }
   };
 

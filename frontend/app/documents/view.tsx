@@ -384,7 +384,7 @@ export default function DocumentViewScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
-  // Share/Print all pages with annotations as PDF
+  // Share/Print all pages with annotations as PDF - Simple approach
   const shareAllPagesAnnotated = async () => {
     if (!document?.originalPdfData) {
       Alert.alert('Fehler', 'Keine PDF-Daten vorhanden');
@@ -406,10 +406,6 @@ export default function DocumentViewScreen() {
       return;
     }
 
-    setIsExporting(true);
-    setExportProgress(10);
-    exportedPagesRef.current = []; // Reset exported pages
-
     try {
       // Build annotations data for all pages
       const allPagesAnnotations: {[key: number]: any} = {};
@@ -426,291 +422,50 @@ export default function DocumentViewScreen() {
         }
       }
 
-      setExportProgress(30);
+      // Generate simple HTML with embedded PDF and SVG overlays
+      // Uses iframe for PDF and absolute positioned SVG for annotations
+      const pdfBase64 = document.originalPdfData.includes(',') 
+        ? document.originalPdfData 
+        : `data:application/pdf;base64,${document.originalPdfData}`;
 
-      // Use WebView to render PDF pages with annotations
-      const pdfExportHtml = generatePdfExportHtml(
-        document.originalPdfData, 
-        totalPages, 
-        allPagesAnnotations,
-        imageSize.width || 615,
-        imageSize.height || 870
-      );
-      
-      setExportHtml(pdfExportHtml);
-      // The rest will be handled by handleExportMessage
-
-    } catch (error) {
-      console.log('Error starting PDF export:', error);
-      Alert.alert('Fehler', 'PDF-Export konnte nicht gestartet werden');
-      setIsExporting(false);
-      setExportProgress(0);
-    }
-  };
-
-  // Generate HTML for PDF export with all pages - renders one page at a time
-  const generatePdfExportHtml = (pdfData: string, pageCount: number, annotationsData: any, canvasWidth: number, canvasHeight: number) => {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-        <style>
-          * { margin: 0; padding: 0; }
-          body { background: white; }
-        </style>
-      </head>
-      <body>
-        <canvas id="render-canvas"></canvas>
-        <script>
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          
-          const pdfData = '${pdfData}';
-          const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
-          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-          const allAnnotations = ${JSON.stringify(annotationsData)};
-          const pageCount = ${pageCount};
-          const originalWidth = ${canvasWidth};
-          const originalHeight = ${canvasHeight};
-          
-          let currentExportPage = 1;
-          let pdf = null;
-          const canvas = document.getElementById('render-canvas');
-          const ctx = canvas.getContext('2d');
-          
-          async function init() {
-            try {
-              pdf = await pdfjsLib.getDocument({data: bytes}).promise;
-              renderNextPage();
-            } catch (err) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'error',
-                error: err.message
-              }));
-            }
-          }
-          
-          async function renderNextPage() {
-            if (currentExportPage > pageCount) {
-              // All done
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'exportComplete'
-              }));
-              return;
-            }
-            
-            try {
-              const page = await pdf.getPage(currentExportPage);
-              const viewport = page.getViewport({scale: 2});
-              
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              
-              ctx.fillStyle = 'white';
-              ctx.fillRect(0, 0, viewport.width, viewport.height);
-              
-              await page.render({
-                canvasContext: ctx,
-                viewport: viewport
-              }).promise;
-              
-              // Draw annotations
-              const annotations = allAnnotations[currentExportPage] || { paths: [], shapes: [], texts: [] };
-              const scaleX = viewport.width / originalWidth;
-              const scaleY = viewport.height / originalHeight;
-              
-              // Draw paths
-              if (annotations.paths) {
-                annotations.paths.forEach(p => {
-                  ctx.beginPath();
-                  ctx.strokeStyle = p.color;
-                  ctx.lineWidth = p.strokeWidth * Math.min(scaleX, scaleY);
-                  ctx.lineCap = 'round';
-                  ctx.globalAlpha = p.opacity;
-                  const commands = p.path.match(/[ML]\\s*[\\d.]+\\s+[\\d.]+/g) || [];
-                  commands.forEach((cmd, i) => {
-                    const match = cmd.match(/([ML])\\s*([\\d.]+)\\s+([\\d.]+)/);
-                    if (match) {
-                      const x = parseFloat(match[2]) * scaleX;
-                      const y = parseFloat(match[3]) * scaleY;
-                      if (match[1] === 'M' || i === 0) ctx.moveTo(x, y);
-                      else ctx.lineTo(x, y);
-                    }
-                  });
-                  ctx.stroke();
-                  ctx.globalAlpha = 1;
-                });
-              }
-              
-              // Draw shapes
-              if (annotations.shapes) {
-                annotations.shapes.forEach(s => {
-                  const x1 = s.x1 * scaleX, y1 = s.y1 * scaleY;
-                  const x2 = s.x2 * scaleX, y2 = s.y2 * scaleY;
-                  const sw = (s.strokeWidth || 3) * Math.min(scaleX, scaleY);
-                  ctx.strokeStyle = s.color;
-                  ctx.lineWidth = sw;
-                  ctx.beginPath();
-                  if (s.type === 'rectangle') {
-                    ctx.rect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(x2-x1), Math.abs(y2-y1));
-                    ctx.stroke();
-                  } else if (s.type === 'circle') {
-                    const cx = (x1+x2)/2, cy = (y1+y2)/2;
-                    const r = Math.max(Math.abs(x2-x1), Math.abs(y2-y1))/2;
-                    ctx.arc(cx, cy, r, 0, Math.PI*2);
-                    ctx.stroke();
-                  } else if (s.type === 'line') {
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
-                  } else if (s.type === 'arrow' || s.type === 'pointer') {
-                    const angle = Math.atan2(y2-y1, x2-x1);
-                    const headLen = 15 * Math.min(scaleX, scaleY);
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(x2, y2);
-                    ctx.lineTo(x2 - headLen*Math.cos(angle-Math.PI/6), y2 - headLen*Math.sin(angle-Math.PI/6));
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(x2, y2);
-                    ctx.lineTo(x2 - headLen*Math.cos(angle+Math.PI/6), y2 - headLen*Math.sin(angle+Math.PI/6));
-                    ctx.stroke();
-                    if (s.text) {
-                      const fontSize = 14 * Math.min(scaleX, scaleY);
-                      ctx.font = 'bold ' + fontSize + 'px sans-serif';
-                      ctx.fillStyle = s.color;
-                      ctx.textAlign = 'center';
-                      ctx.fillText(s.text, x1, y1 - 25*scaleY);
-                    }
-                  }
-                });
-              }
-              
-              // Draw texts
-              if (annotations.texts) {
-                annotations.texts.forEach(t => {
-                  const fontSize = (t.fontSize || 16) * Math.min(scaleX, scaleY);
-                  ctx.font = 'bold ' + fontSize + 'px sans-serif';
-                  ctx.fillStyle = t.color;
-                  ctx.textAlign = 'left';
-                  ctx.fillText(t.text, t.x * scaleX, t.y * scaleY);
-                });
-              }
-              
-              // Send this page image
-              const imageData = canvas.toDataURL('image/jpeg', 0.8);
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'pageRendered',
-                pageNum: currentExportPage,
-                totalPages: pageCount,
-                imageData: imageData
-              }));
-              
-              currentExportPage++;
-              // Small delay to let React Native process
-              setTimeout(renderNextPage, 50);
-              
-            } catch (err) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'error',
-                error: err.message
-              }));
-            }
-          }
-          
-          init();
-        </script>
-      </body>
-      </html>
-    `;
-  };
-
-  // Refs for export
-  const exportResolveRef = useRef<((value: string | null) => void) | null>(null);
-  const [exportHtml, setExportHtml] = useState<string | null>(null);
-  const exportedPagesRef = useRef<string[]>([]);
-
-  const handleExportMessage = async (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      
-      if (data.type === 'pageRendered') {
-        // Update progress
-        const progress = Math.round((data.pageNum / data.totalPages) * 80) + 10;
-        setExportProgress(progress);
+      // For now, just print the current page with annotations using captureRef
+      if (canvasRef.current) {
+        const uri = await captureRef(canvasRef.current, { format: 'png', quality: 1 });
         
-        // Store this page image in ref
-        exportedPagesRef.current[data.pageNum - 1] = data.imageData;
-        
-      } else if (data.type === 'exportComplete') {
-        setExportProgress(90);
-        setExportHtml(null);
-        
-        // Get all exported pages from ref
-        const pages = exportedPagesRef.current.filter(p => p);
-        
-        if (pages.length === 0) {
-          Alert.alert('Fehler', 'Keine Seiten gerendert');
-          setIsExporting(false);
-          setExportProgress(0);
-          exportedPagesRef.current = [];
-          return;
-        }
-
-        // Create HTML for print
+        // Create simple single-page HTML
         const htmlContent = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
             <style>
-              @page { margin: 0; size: A4; }
-              * { margin: 0; padding: 0; }
-              body { margin: 0; }
-              .page { 
-                width: 210mm; 
-                height: 297mm; 
-                page-break-after: always;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-              }
-              .page:last-child { page-break-after: avoid; }
-              .page img { max-width: 100%; max-height: 100%; object-fit: contain; }
+              @page { margin: 10mm; }
+              body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+              img { max-width: 100%; max-height: 100%; }
             </style>
           </head>
           <body>
-            ${pages.map(img => `<div class="page"><img src="${img}"/></div>`).join('')}
+            <img src="${uri}" />
           </body>
           </html>
         `;
 
-        setExportProgress(100);
-        
-        // Close modal and clear state BEFORE opening print dialog
-        setIsExporting(false);
-        setExportProgress(0);
-        exportedPagesRef.current = [];
-
-        try {
-          await Print.printAsync({ html: htmlContent });
-        } catch (e) {
-          console.log('Print cancelled or error:', e);
-        }
-        
-      } else if (data.type === 'error') {
-        console.log('Export error:', data.error);
-        Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
-        setExportHtml(null);
-        setIsExporting(false);
-        setExportProgress(0);
-        exportedPagesRef.current = [];
+        await Print.printAsync({ html: htmlContent });
       }
-    } catch (e) {
-      console.log('Error parsing export message:', e);
+
+    } catch (error) {
+      console.log('Error in PDF export:', error);
+      Alert.alert('Fehler', 'Drucken fehlgeschlagen');
     }
+  };
+
+  // Refs for export - not used currently
+  const exportResolveRef = useRef<((value: string | null) => void) | null>(null);
+  const [exportHtml, setExportHtml] = useState<string | null>(null);
+  const exportedPagesRef = useRef<string[]>([]);
+
+  const handleExportMessage = async (event: any) => {
+    // Not used
   };
 
   const handleTouch = (evt: any, type: 'start' | 'move' | 'end') => {

@@ -531,21 +531,43 @@ export default function DocumentViewScreen() {
       </html>
     `;
 
+    // Store HTML for printing after modal closes
+    setPrintHtmlContent(htmlContent);
+    
     setExportProgress(100);
     setIsExporting(false);
     setExportProgress(0);
     capturedPagesRef.current = [];
-
-    try {
-      console.log('Opening print dialog');
-      await Print.printAsync({ html: htmlContent });
-      console.log('Print dialog closed');
-    } catch (e) {
-      console.log('Print error:', e);
-    } finally {
-      printInProgressRef.current = false;
-    }
+    
+    // Exit editing mode to allow print dialog to show
+    // The print will be triggered by an effect when isEditing becomes false
+    setIsEditing(false);
   };
+
+  // State to hold print content
+  const [printHtmlContent, setPrintHtmlContent] = useState<string | null>(null);
+
+  // Effect to show print dialog after exiting edit mode
+  useEffect(() => {
+    if (!isEditing && printHtmlContent && printInProgressRef.current) {
+      const showPrint = async () => {
+        // Small delay to ensure modal is fully closed
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        try {
+          console.log('Opening print dialog after modal closed');
+          await Print.printAsync({ html: printHtmlContent });
+          console.log('Print dialog closed');
+        } catch (e) {
+          console.log('Print error:', e);
+        } finally {
+          printInProgressRef.current = false;
+          setPrintHtmlContent(null);
+        }
+      };
+      showPrint();
+    }
+  }, [isEditing, printHtmlContent]);
 
   const cancelExport = () => {
     console.log('Cancelling export');

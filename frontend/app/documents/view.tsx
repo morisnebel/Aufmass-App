@@ -822,9 +822,12 @@ export default function DocumentViewScreen() {
         return;
       }
       
-      // Pointer/Memo mode
+      // Pointer/Memo mode - Tap on TARGET point first, then drag to NOTE position
+      // x2,y2 = target (where the red circle will be - first tap stays fixed)
+      // x1,y1 = note box position (updated while dragging)
       if (isPointerMode) {
-        setPendingPointer({ x1: locationX, y1: locationY, x2: locationX, y2: locationY });
+        // Both start at tap position, then x1,y1 follows the drag
+        setPendingPointer({ x1: locationX, y1: locationY - 50, x2: locationX, y2: locationY });
         return;
       }
       
@@ -885,9 +888,9 @@ export default function DocumentViewScreen() {
         return;
       }
       
-      // Pointer mode
+      // Pointer mode - update note position (x1,y1), keep target fixed (x2,y2)
       if (pendingPointer) {
-        setPendingPointer({ ...pendingPointer, x2: locationX, y2: locationY });
+        setPendingPointer({ ...pendingPointer, x1: locationX, y1: locationY });
         return;
       }
       
@@ -1544,6 +1547,8 @@ export default function DocumentViewScreen() {
                       )}
                       {shapes.map(shape => renderShape(shape))}
                       {currentShape && renderShape({ ...currentShape, color: drawColor, strokeWidth }, true)}
+                      {/* Live preview of pointer/note while dragging */}
+                      {pendingPointer && renderPointer({ ...pendingPointer, text: '', color: drawColor }, true)}
                       {textAnnotations.map(t => (
                         <SvgText key={t.id} x={t.x} y={t.y} fill={t.color || drawColor} fontSize={t.fontSize || 16} fontWeight="bold">{t.text}</SvgText>
                       ))}

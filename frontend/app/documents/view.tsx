@@ -2192,7 +2192,7 @@ export default function DocumentViewScreen() {
 
   // NORMAL VIEW MODE
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
@@ -2261,7 +2261,7 @@ export default function DocumentViewScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

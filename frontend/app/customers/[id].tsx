@@ -69,6 +69,9 @@ export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams();
   const customerId = Array.isArray(id) ? id[0] : id;
   
+  // Skip if this is the index route being misrouted
+  const isValidCustomerId = customerId && customerId !== 'index' && customerId !== 'new';
+  
   // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -103,13 +106,15 @@ export default function EditCustomerScreen() {
   const isImportingRef = useRef(false);
 
   useEffect(() => {
-    if (!isImportingRef.current) {
+    if (!isImportingRef.current && isValidCustomerId) {
       loadCustomer();
+    } else if (!isValidCustomerId) {
+      setLoading(false);
     }
-  }, [customerId]);
+  }, [customerId, isValidCustomerId]);
 
   const loadCustomer = async () => {
-    if (isImportingRef.current) {
+    if (isImportingRef.current || !isValidCustomerId) {
       setLoading(false);
       return;
     }

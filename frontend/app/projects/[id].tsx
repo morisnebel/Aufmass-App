@@ -865,11 +865,10 @@ export default function ProjectDetailScreen() {
             .page {
               width: auto;
               min-height: auto;
-              padding: 0;
+              padding: 15mm;
               margin: 0;
               box-shadow: none;
               border-radius: 0;
-              padding-top: 5mm;
             }
             .page .header {
               margin: 0 0 10px 0 !important;
@@ -880,12 +879,11 @@ export default function ProjectDetailScreen() {
             .new-page, .remarks-and-footer-page {
               width: auto;
               min-height: auto;
-              padding: 0;
+              padding: 15mm;
               margin: 0;
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
-              padding-top: 5mm;
             }
             .remarks-page {
               page-break-before: always;

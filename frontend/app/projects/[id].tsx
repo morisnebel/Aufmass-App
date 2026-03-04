@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService } from '../../services/LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -335,6 +335,42 @@ export default function ProjectDetailScreen() {
       }
     } finally {
       setIsDeletingChecklist(false);
+    }
+  };
+
+  // Checkliste als Vorlage speichern
+  const saveChecklistAsTemplate = async (checklist: any) => {
+    try {
+      // Erstelle eine tiefe Kopie der Checklist-Items ohne IDs und Projekt-spezifische Daten
+      const cleanItems = (items: any[]): any[] => {
+        return items.map(item => ({
+          name: item.name,
+          note: '', // Notizen nicht übernehmen
+          measurement: '', // Messungen nicht übernehmen
+          checked: false, // Status zurücksetzen
+          children: item.children ? cleanItems(item.children) : [],
+        }));
+      };
+
+      const templateData = {
+        name: checklist.name,
+        items: cleanItems(checklist.items || []),
+      };
+
+      await ChecklistTemplateService.create(templateData);
+
+      if (Platform.OS === 'web') {
+        alert(`"${checklist.name}" wurde als Vorlage gespeichert`);
+      } else {
+        Alert.alert('Erfolg', `"${checklist.name}" wurde als Vorlage gespeichert.\n\nSie finden die Vorlage unter "Neue Checkliste" → "Aus Vorlage".`);
+      }
+    } catch (error) {
+      console.error('Error saving checklist as template:', error);
+      if (Platform.OS === 'web') {
+        alert('Fehler beim Speichern der Vorlage');
+      } else {
+        Alert.alert('Fehler', 'Vorlage konnte nicht gespeichert werden');
+      }
     }
   };
 
@@ -3222,6 +3258,14 @@ export default function ProjectDetailScreen() {
                     {renderCategoryContainers(checklist.items)}
                   </TouchableOpacity>
                   
+                  {/* Save as Template Button */}
+                  <TouchableOpacity
+                    style={styles.checklistTemplateButton}
+                    onPress={() => saveChecklistAsTemplate(checklist)}
+                  >
+                    <Ionicons name="copy-outline" size={18} color="#fff" />
+                  </TouchableOpacity>
+                  
                   {/* Delete Button */}
                   <TouchableOpacity
                     style={styles.checklistDeleteButton}
@@ -4632,6 +4676,15 @@ const styles = StyleSheet.create({
   },
   nestedSubItems: {
     marginLeft: 10,
+  },
+  checklistTemplateButton: {
+    position: 'absolute',
+    top: 8,
+    right: 44,
+    backgroundColor: 'rgba(25, 118, 210, 0.9)',
+    borderRadius: 16,
+    padding: 6,
+    zIndex: 10,
   },
   checklistDeleteButton: {
     position: 'absolute',

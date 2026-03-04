@@ -76,6 +76,7 @@ export default function EditCustomerScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,6 +129,7 @@ export default function EditCustomerScreen() {
         setName(customer.name || '');
         setEmail(customer.email || '');
         setPhone(customer.phone || '');
+        setMobile(customer.mobile || '');
         setAddress(customer.address || '');
       } else {
         console.log('Customer not found or importing');
@@ -251,6 +253,7 @@ export default function EditCustomerScreen() {
         name,
         email: email || undefined,
         phone: phone || undefined,
+        mobile: mobile || undefined,
         address: address || undefined,
       });
       
@@ -341,6 +344,17 @@ export default function EditCustomerScreen() {
               placeholder="+49 123 456789"
               value={phone}
               onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Handy</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="+49 170 1234567"
+              value={mobile}
+              onChangeText={setMobile}
               keyboardType="phone-pad"
             />
           </View>

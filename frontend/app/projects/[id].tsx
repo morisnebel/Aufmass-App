@@ -2381,9 +2381,18 @@ export default function ProjectDetailScreen() {
               {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name) && (
                 <>
                   <View style={styles.sectionDivider} />
-                  <Text style={styles.subSectionTitle}>
-                    Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
-                  </Text>
+                  <View style={styles.objektAdresseHeader}>
+                    <Text style={styles.subSectionTitle}>
+                      Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.aufmassButton}
+                      onPress={() => setActiveTab('roofs')}
+                    >
+                      <Ionicons name="resize" size={16} color="#fff" />
+                      <Text style={styles.aufmassButtonText}>Aufmaß</Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Straße:</Text>
                     <Text style={styles.infoValue}>{project.objekt_street || '-'}</Text>
@@ -4842,6 +4851,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1976d2',
     marginBottom: 8,
+  },
+  objektAdresseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aufmassButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  aufmassButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   statusBadge: {
     paddingHorizontal: 10,

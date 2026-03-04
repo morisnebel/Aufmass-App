@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -630,24 +631,30 @@ export default function NewProjectScreen() {
         transparent={true}
         onRequestClose={() => setShowNewCustomerModal(false)}
       >
-        <KeyboardAvoidingView 
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.newCustomerModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Neuer Kunde</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowNewCustomerModal(false);
-                  resetNewCustomerForm();
-                }}
-              >
-                <Ionicons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
+        <TouchableWithoutFeedback onPress={() => {}}>
+          <KeyboardAvoidingView 
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.newCustomerModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Neuer Kunde</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowNewCustomerModal(false);
+                    resetNewCustomerForm();
+                  }}
+                >
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
 
-            <ScrollView style={styles.newCustomerForm} keyboardShouldPersistTaps="handled">
+              <ScrollView 
+                style={styles.newCustomerForm} 
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="none"
+              >
               {/* Import from Contacts Button */}
               <Pressable
                 style={({ pressed }) => [
@@ -791,6 +798,7 @@ export default function NewProjectScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Contact Picker Modal */}

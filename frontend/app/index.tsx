@@ -455,9 +455,42 @@ export default function HomeScreen() {
             onPress={() => router.push('/customers/index')}
           >
             <Ionicons name="people" size={24} color="#1976d2" />
-            <Text style={styles.secondaryButtonText}>Kunden</Text>
+            <Text style={styles.secondaryButtonText}>Kunden verwalten</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Quick Customer List */}
+        {Object.values(customers).length > 0 && (
+          <View style={styles.quickCustomerSection}>
+            <Text style={styles.quickCustomerTitle}>Kunden ({Object.values(customers).length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickCustomerScroll}>
+              {Object.values(customers).slice(0, 10).map((customer) => (
+                <TouchableOpacity
+                  key={customer.id}
+                  style={styles.quickCustomerChip}
+                  onPress={() => router.push(`/customers/${customer.id}`)}
+                >
+                  <View style={styles.quickCustomerAvatar}>
+                    <Text style={styles.quickCustomerInitial}>
+                      {customer.name?.charAt(0).toUpperCase() || '?'}
+                    </Text>
+                  </View>
+                  <Text style={styles.quickCustomerName} numberOfLines={1}>
+                    {customer.name || 'Unbekannt'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {Object.values(customers).length > 10 && (
+                <TouchableOpacity
+                  style={styles.quickCustomerMore}
+                  onPress={() => router.push('/customers/index')}
+                >
+                  <Text style={styles.quickCustomerMoreText}>+{Object.values(customers).length - 10} mehr</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        )}
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
@@ -673,6 +706,63 @@ const styles = StyleSheet.create({
   importButtonText: {
     color: '#2e7d32',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  quickCustomerSection: {
+    marginTop: 8,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+  },
+  quickCustomerTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    paddingHorizontal: 12,
+  },
+  quickCustomerScroll: {
+    paddingHorizontal: 8,
+  },
+  quickCustomerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    gap: 6,
+  },
+  quickCustomerAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1976d2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickCustomerInitial: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  quickCustomerName: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: 100,
+  },
+  quickCustomerMore: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    marginHorizontal: 4,
+  },
+  quickCustomerMoreText: {
+    fontSize: 12,
+    color: '#1976d2',
     fontWeight: '600',
   },
   projectList: {

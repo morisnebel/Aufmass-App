@@ -341,36 +341,35 @@ export default function ProjectDetailScreen() {
   // Checkliste als Vorlage speichern
   const saveChecklistAsTemplate = async (checklist: any) => {
     try {
-      console.log('Original checklist:', JSON.stringify(checklist, null, 2));
-      
       // Erstelle eine tiefe Kopie der Checklist-Items ohne IDs und Projekt-spezifische Daten
       const cleanItems = (items: any[]): any[] => {
         if (!items || !Array.isArray(items)) return [];
         return items.map(item => ({
-          name: item.name || item.title || '',
+          name: item.text || item.name || '',
           note: '', // Notizen nicht übernehmen
           measurement: '', // Messungen nicht übernehmen
           checked: false, // Status zurücksetzen
-          children: item.children ? cleanItems(item.children) : (item.items ? cleanItems(item.items) : []),
+          children: cleanItems(item.subItems || item.children || []),
         }));
       };
 
-      const cleanedItems = cleanItems(checklist.items || checklist.categories || []);
-      console.log('Cleaned items:', JSON.stringify(cleanedItems, null, 2));
+      // Die Checkliste hat "items" als Hauptarray mit Kategorien
+      const cleanedItems = cleanItems(checklist.items || []);
+      
+      // Name: title > name > 'Kopierte Vorlage'
+      const templateName = checklist.title || checklist.name || 'Kopierte Vorlage';
 
       const templateData = {
-        name: checklist.name || checklist.title || 'Neue Vorlage',
+        name: templateName,
         items: cleanedItems,
       };
-
-      console.log('Template data to save:', JSON.stringify(templateData, null, 2));
 
       await ChecklistTemplateService.create(templateData);
 
       if (Platform.OS === 'web') {
-        alert(`"${checklist.name}" wurde als Vorlage gespeichert`);
+        alert(`"${templateName}" wurde als Vorlage gespeichert`);
       } else {
-        Alert.alert('Erfolg', `"${checklist.name}" wurde als Vorlage gespeichert.\n\nSie finden die Vorlage unter "Neue Checkliste" → "Aus Vorlage".`);
+        Alert.alert('Erfolg', `"${templateName}" wurde als Vorlage gespeichert.\n\nSie finden die Vorlage unter "Neue Checkliste" → "Aus Vorlage".`);
       }
     } catch (error) {
       console.error('Error saving checklist as template:', error);

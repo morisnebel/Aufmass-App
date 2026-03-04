@@ -111,12 +111,15 @@ export default function ChecklistTemplatesScreen() {
     if (index === 0) return;
     const newTemplates = [...templates];
     [newTemplates[index - 1], newTemplates[index]] = [newTemplates[index], newTemplates[index - 1]];
-    setTemplates(newTemplates);
     
-    // Speichern mit neuer Reihenfolge
+    // Setze order für alle Templates
+    const updatedTemplates = newTemplates.map((t, i) => ({ ...t, order: i }));
+    setTemplates(updatedTemplates);
+    
+    // Speichern aller Templates mit neuer Reihenfolge
     try {
-      for (let i = 0; i < newTemplates.length; i++) {
-        await ChecklistTemplateService.update(newTemplates[i].id, { ...newTemplates[i], order: i });
+      for (const template of updatedTemplates) {
+        await ChecklistTemplateService.update(template.id, { order: template.order });
       }
     } catch (error) {
       console.error('Error saving template order:', error);
@@ -128,12 +131,15 @@ export default function ChecklistTemplatesScreen() {
     if (index >= templates.length - 1) return;
     const newTemplates = [...templates];
     [newTemplates[index], newTemplates[index + 1]] = [newTemplates[index + 1], newTemplates[index]];
-    setTemplates(newTemplates);
     
-    // Speichern mit neuer Reihenfolge
+    // Setze order für alle Templates
+    const updatedTemplates = newTemplates.map((t, i) => ({ ...t, order: i }));
+    setTemplates(updatedTemplates);
+    
+    // Speichern aller Templates mit neuer Reihenfolge
     try {
-      for (let i = 0; i < newTemplates.length; i++) {
-        await ChecklistTemplateService.update(newTemplates[i].id, { ...newTemplates[i], order: i });
+      for (const template of updatedTemplates) {
+        await ChecklistTemplateService.update(template.id, { order: template.order });
       }
     } catch (error) {
       console.error('Error saving template order:', error);

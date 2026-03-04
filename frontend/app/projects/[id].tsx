@@ -49,6 +49,7 @@ interface Project {
   objekt_street?: string;
   objekt_plz?: string;
   objekt_city?: string;
+  objekt_address_name?: string; // Name der gespeicherten Adresse (z.B. "Haupthaus")
 }
 
 interface Customer {
@@ -522,6 +523,7 @@ export default function ProjectDetailScreen() {
     
     // Build objekt info - alle Felder
     const objektName = project?.objekt_name || '';
+    const objektAddressName = project?.objekt_address_name || ''; // z.B. "Haupthaus"
     const objektStreet = project?.objekt_street || '';
     const objektPlz = project?.objekt_plz || '';
     const objektCity = project?.objekt_city || '';
@@ -1740,9 +1742,9 @@ export default function ProjectDetailScreen() {
               <span class="info-label">Status:</span>
               <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
-            ${(objektStreet || objektPlz || objektCity || objektName) ? `
+            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <strong style="color: #1976d2;">Objektadresse</strong>
+                <strong style="color: #1976d2;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</strong>
                 ${objektName ? `<div style="margin-top: 4px;">${objektName}</div>` : ''}
                 <div style="margin-top: 2px;">${objektStreet || bauherrStreet}</div>
                 <div>${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</div>
@@ -2376,10 +2378,12 @@ export default function ProjectDetailScreen() {
               )}
               
               {/* Objektadresse (separate Felder) */}
-              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city) && (
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name) && (
                 <>
                   <View style={styles.sectionDivider} />
-                  <Text style={styles.subSectionTitle}>Objektadresse</Text>
+                  <Text style={styles.subSectionTitle}>
+                    Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
+                  </Text>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Straße:</Text>
                     <Text style={styles.infoValue}>{project.objekt_street || '-'}</Text>

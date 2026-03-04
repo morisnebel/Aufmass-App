@@ -577,7 +577,6 @@ export default function DocumentViewScreen() {
 
     setExportProgress(100);
     
-    // Don't close editing mode - print directly
     setIsExporting(false);
     setAllPageImages({});
     setRenderAllPagesMode(false);
@@ -594,23 +593,46 @@ export default function DocumentViewScreen() {
       
       console.log('PDF created at:', uri);
       
-      // Then share it (this will show print option on iOS)
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          UTI: 'com.adobe.pdf',
-        });
-        console.log('Share dialog closed');
-      } else {
-        Alert.alert('Fehler', 'Teilen nicht verfügbar');
-      }
+      // Store URI and close editor - share will be triggered after modal closes
+      setPendingShareUri(uri);
+      setIsEditing(false);
+      
     } catch (e) {
       console.log('PDF export error:', e);
       Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
-    } finally {
       isPrintingRef.current = false;
     }
   };
+
+  // State for pending share
+  const [pendingShareUri, setPendingShareUri] = useState<string | null>(null);
+
+  // Effect to share PDF after editor closes
+  useEffect(() => {
+    if (!isEditing && pendingShareUri && isPrintingRef.current) {
+      const doShare = async () => {
+        // Wait for modal animation to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        try {
+          console.log('Opening share dialog for:', pendingShareUri);
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(pendingShareUri, {
+              mimeType: 'application/pdf',
+              UTI: 'com.adobe.pdf',
+            });
+            console.log('Share dialog closed');
+          }
+        } catch (e) {
+          console.log('Share error:', e);
+        } finally {
+          isPrintingRef.current = false;
+          setPendingShareUri(null);
+        }
+      };
+      doShare();
+    }
+  }, [isEditing, pendingShareUri]);
 
   // Ref for export WebView
   const exportWebViewRef = useRef<WebView>(null);

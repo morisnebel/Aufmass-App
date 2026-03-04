@@ -116,11 +116,9 @@ export default function ChecklistTemplatesScreen() {
     const updatedTemplates = newTemplates.map((t, i) => ({ ...t, order: i }));
     setTemplates(updatedTemplates);
     
-    // Speichern aller Templates mit neuer Reihenfolge
+    // Speichern aller Templates auf einmal
     try {
-      for (const template of updatedTemplates) {
-        await ChecklistTemplateService.update(template.id, { order: template.order });
-      }
+      await ChecklistTemplateService.saveAll(updatedTemplates);
     } catch (error) {
       console.error('Error saving template order:', error);
     }
@@ -136,11 +134,9 @@ export default function ChecklistTemplatesScreen() {
     const updatedTemplates = newTemplates.map((t, i) => ({ ...t, order: i }));
     setTemplates(updatedTemplates);
     
-    // Speichern aller Templates mit neuer Reihenfolge
+    // Speichern aller Templates auf einmal
     try {
-      for (const template of updatedTemplates) {
-        await ChecklistTemplateService.update(template.id, { order: template.order });
-      }
+      await ChecklistTemplateService.saveAll(updatedTemplates);
     } catch (error) {
       console.error('Error saving template order:', error);
     }

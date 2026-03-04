@@ -619,6 +619,11 @@ export const ChecklistTemplateService = {
     await setItems(KEYS.CHECKLIST_TEMPLATES, filtered);
     return true;
   },
+
+  // Alle Templates auf einmal speichern (für Sortierung)
+  saveAll: async (templates: ChecklistTemplate[]): Promise<void> => {
+    await setItems(KEYS.CHECKLIST_TEMPLATES, templates);
+  },
 };
 
 // ============ SETTINGS ============

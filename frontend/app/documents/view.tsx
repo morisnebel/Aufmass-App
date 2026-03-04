@@ -1491,9 +1491,9 @@ export default function DocumentViewScreen() {
       const fileName = document.name.endsWith('.pdf') ? document.name : `${document.name}.pdf`;
       const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
       
-      // Write file using legacy method but with better error handling
+      // Write file - use string 'base64' for encoding
       await FileSystem.writeAsStringAsync(fileUri, base64, { 
-        encoding: FileSystem.EncodingType.Base64 
+        encoding: 'base64' 
       });
       
       // Check if file exists

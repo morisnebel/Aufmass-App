@@ -94,7 +94,13 @@ export default function ChecklistTemplatesScreen() {
   const loadTemplates = async () => {
     try {
       const data = await ChecklistTemplateService.getAll();
-      setTemplates(data);
+      // Sortiere nach order-Feld (falls vorhanden)
+      const sortedData = data.sort((a: any, b: any) => {
+        const orderA = a.order !== undefined ? a.order : 999;
+        const orderB = b.order !== undefined ? b.order : 999;
+        return orderA - orderB;
+      });
+      setTemplates(sortedData);
     } catch (error) {
       console.error('Error loading templates:', error);
     }

@@ -9,11 +9,14 @@ import {
   Alert,
   TextInput,
   Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService, Customer } from '../../services/LocalStorage';
+import { CustomerService, Customer, ProjectAddress } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -25,6 +28,15 @@ export default function CustomersScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Address modal state
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editingAddress, setEditingAddress] = useState<ProjectAddress | null>(null);
+  const [addressName, setAddressName] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressZip, setAddressZip] = useState('');
+  const [addressCity, setAddressCity] = useState('');
 
   const loadCustomers = async () => {
     try {
@@ -67,6 +79,98 @@ export default function CustomersScreen() {
     }
   };
 
+  // Address Management Functions
+  const openAddressModal = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setEditingAddress(null);
+    resetAddressForm();
+    setShowAddressModal(true);
+  };
+
+  const resetAddressForm = () => {
+    setAddressName('');
+    setAddressStreet('');
+    setAddressZip('');
+    setAddressCity('');
+    setEditingAddress(null);
+  };
+
+  const editAddress = (address: ProjectAddress) => {
+    setEditingAddress(address);
+    setAddressName(address.name);
+    setAddressStreet(address.street);
+    setAddressZip(address.zip);
+    setAddressCity(address.city);
+  };
+
+  const saveAddress = async () => {
+    if (!selectedCustomer || !addressName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Namen ein');
+      return;
+    }
+
+    const addresses = selectedCustomer.projectAddresses || [];
+    
+    if (editingAddress) {
+      // Bestehende Adresse aktualisieren
+      const updatedAddresses = addresses.map(a => 
+        a.id === editingAddress.id 
+          ? { ...a, name: addressName, street: addressStreet, zip: addressZip, city: addressCity }
+          : a
+      );
+      await CustomerService.update(selectedCustomer.id, { 
+        ...selectedCustomer, 
+        projectAddresses: updatedAddresses 
+      });
+    } else {
+      // Neue Adresse hinzufügen
+      const newAddress: ProjectAddress = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        name: addressName,
+        street: addressStreet,
+        zip: addressZip,
+        city: addressCity,
+      };
+      await CustomerService.update(selectedCustomer.id, { 
+        ...selectedCustomer, 
+        projectAddresses: [...addresses, newAddress] 
+      });
+    }
+
+    loadCustomers();
+    // Update selectedCustomer for UI refresh
+    const updatedCustomer = await CustomerService.getById(selectedCustomer.id);
+    setSelectedCustomer(updatedCustomer);
+    resetAddressForm();
+  };
+
+  const deleteAddress = async (addressId: string) => {
+    if (!selectedCustomer) return;
+    
+    Alert.alert(
+      'Adresse löschen',
+      'Möchten Sie diese Adresse wirklich löschen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        { 
+          text: 'Löschen', 
+          style: 'destructive',
+          onPress: async () => {
+            const addresses = selectedCustomer.projectAddresses || [];
+            const updatedAddresses = addresses.filter(a => a.id !== addressId);
+            await CustomerService.update(selectedCustomer.id, { 
+              ...selectedCustomer, 
+              projectAddresses: updatedAddresses 
+            });
+            loadCustomers();
+            const updatedCustomer = await CustomerService.getById(selectedCustomer.id);
+            setSelectedCustomer(updatedCustomer);
+          }
+        }
+      ]
+    );
+  };
+
   const filteredCustomers = customers.filter(customer =>
     customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,6 +206,20 @@ export default function CustomersScreen() {
         </View>
       </TouchableOpacity>
       <View style={styles.customerActions}>
+        {/* Adressen-Button */}
+        <TouchableOpacity
+          style={styles.addressButton}
+          onPress={() => openAddressModal(item)}
+        >
+          <Ionicons name="home" size={22} color="#ff9800" />
+          {(item.projectAddresses?.length || 0) > 0 && (
+            <View style={styles.addressBadge}>
+              <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
+        {/* Neues Projekt Button */}
         <TouchableOpacity
           style={styles.newProjectButton}
           onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
@@ -197,6 +315,114 @@ export default function CustomersScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Address Management Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddressModal(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.addressModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.addressModalContent}>
+            <View style={styles.addressModalHeader}>
+              <Text style={styles.addressModalTitle}>
+                Projektadressen - {selectedCustomer?.name}
+              </Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.addressList}>
+              {/* Bestehende Adressen */}
+              {selectedCustomer?.projectAddresses?.map((address) => (
+                <View key={address.id} style={styles.addressItem}>
+                  <View style={styles.addressItemContent}>
+                    <Text style={styles.addressItemName}>{address.name}</Text>
+                    <Text style={styles.addressItemDetails}>
+                      {address.street}{address.street && (address.zip || address.city) ? ', ' : ''}
+                      {address.zip} {address.city}
+                    </Text>
+                  </View>
+                  <View style={styles.addressItemActions}>
+                    <TouchableOpacity onPress={() => editAddress(address)}>
+                      <Ionicons name="pencil" size={20} color="#1976d2" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteAddress(address.id)}>
+                      <Ionicons name="trash-outline" size={20} color="#f44336" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {(!selectedCustomer?.projectAddresses || selectedCustomer.projectAddresses.length === 0) && !editingAddress && (
+                <Text style={styles.noAddressesText}>
+                  Noch keine Projektadressen hinterlegt
+                </Text>
+              )}
+            </ScrollView>
+
+            {/* Formular für neue/bearbeitete Adresse */}
+            <View style={styles.addressForm}>
+              <Text style={styles.addressFormTitle}>
+                {editingAddress ? 'Adresse bearbeiten' : 'Neue Adresse hinzufügen'}
+              </Text>
+              
+              <TextInput
+                style={styles.addressInput}
+                placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
+                value={addressName}
+                onChangeText={setAddressName}
+              />
+              <TextInput
+                style={styles.addressInput}
+                placeholder="Straße und Hausnummer"
+                value={addressStreet}
+                onChangeText={setAddressStreet}
+              />
+              <View style={styles.addressInputRow}>
+                <TextInput
+                  style={[styles.addressInput, { flex: 1 }]}
+                  placeholder="PLZ"
+                  value={addressZip}
+                  onChangeText={setAddressZip}
+                  keyboardType="number-pad"
+                />
+                <TextInput
+                  style={[styles.addressInput, { flex: 2 }]}
+                  placeholder="Stadt"
+                  value={addressCity}
+                  onChangeText={setAddressCity}
+                />
+              </View>
+              
+              <View style={styles.addressFormButtons}>
+                {editingAddress && (
+                  <TouchableOpacity 
+                    style={styles.addressCancelButton}
+                    onPress={resetAddressForm}
+                  >
+                    <Text style={styles.addressCancelButtonText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity 
+                  style={styles.addressSaveButton}
+                  onPress={saveAddress}
+                >
+                  <Ionicons name={editingAddress ? "checkmark" : "add"} size={20} color="#fff" />
+                  <Text style={styles.addressSaveButtonText}>
+                    {editingAddress ? 'Speichern' : 'Hinzufügen'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -366,6 +592,145 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Address Button & Badge
+  addressButton: {
+    padding: 4,
+    position: 'relative',
+  },
+  addressBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#ff9800',
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // Address Modal
+  addressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  addressModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
+  addressModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  addressModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  addressList: {
+    maxHeight: 200,
+    padding: 16,
+  },
+  addressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  addressItemContent: {
+    flex: 1,
+  },
+  addressItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  addressItemDetails: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  addressItemActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  noAddressesText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    padding: 20,
+  },
+  addressForm: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#f5f5f5',
+  },
+  addressFormTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  addressInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  addressInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addressFormButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  addressCancelButton: {
+    flex: 1,
+    backgroundColor: '#e0e0e0',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  addressCancelButtonText: {
+    color: '#666',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  addressSaveButton: {
+    flex: 2,
+    backgroundColor: '#4caf50',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addressSaveButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
 });

@@ -184,13 +184,23 @@ const setItems = async <T>(key: string, items: T[]): Promise<void> => {
 };
 
 // ============ CUSTOMERS ============
+export interface ProjectAddress {
+  id: string;
+  name: string; // z.B. "Haupthaus", "Garage"
+  street: string;
+  zip: string;
+  city: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
   email?: string;
   phone?: string;
+  mobile?: string;
   address?: string;
   notes?: string;
+  projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;
   updated_at: string;
 }

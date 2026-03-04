@@ -114,7 +114,7 @@ export default function DocumentViewScreen() {
   
   // Select/Move mode
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text' | 'pointer', id: string, dragPart?: 'note' | 'target'} | null>(null);
+  const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text' | 'pointer' | 'path', id: string, dragPart?: 'note' | 'target'} | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeCorner, setResizeCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
@@ -834,6 +834,29 @@ export default function DocumentViewScreen() {
           } else {
             setDragOffset({ x: locationX - clickedPointer.x1, y: locationY - clickedPointer.y1 });
           }
+          return;
+        }
+        
+        // Check for path (pencil drawing) clicks
+        const clickedPath = paths.find((p, index) => {
+          // Parse path to get points
+          const pathData = p.path;
+          const coords = pathData.match(/[\d.]+/g);
+          if (!coords || coords.length < 2) return false;
+          
+          // Check if click is near any point on the path
+          for (let i = 0; i < coords.length - 1; i += 2) {
+            const px = parseFloat(coords[i]);
+            const py = parseFloat(coords[i + 1]);
+            const dist = Math.sqrt(Math.pow(locationX - px, 2) + Math.pow(locationY - py, 2));
+            if (dist < 15) return true; // Within 15 pixels of path
+          }
+          return false;
+        });
+        
+        if (clickedPath) {
+          const pathIndex = paths.indexOf(clickedPath);
+          setSelectedElement({ type: 'path', id: `path-${pathIndex}` });
           return;
         }
         
@@ -1696,6 +1719,41 @@ export default function DocumentViewScreen() {
                           </G>
                         );
                       })()}
+                      
+                      {/* Selection indicator for path (pencil drawing) */}
+                      {isSelectMode && selectedElement && selectedElement.type === 'path' && (() => {
+                        const pathIndex = parseInt(selectedElement.id.replace('path-', ''));
+                        const pathObj = paths[pathIndex];
+                        if (!pathObj) return null;
+                        
+                        // Calculate bounding box of path
+                        const coords = pathObj.path.match(/[\d.]+/g);
+                        if (!coords || coords.length < 2) return null;
+                        
+                        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                        for (let i = 0; i < coords.length - 1; i += 2) {
+                          const px = parseFloat(coords[i]);
+                          const py = parseFloat(coords[i + 1]);
+                          minX = Math.min(minX, px);
+                          minY = Math.min(minY, py);
+                          maxX = Math.max(maxX, px);
+                          maxY = Math.max(maxY, py);
+                        }
+                        
+                        return (
+                          <Rect 
+                            x={minX - 10} 
+                            y={minY - 10} 
+                            width={maxX - minX + 20} 
+                            height={maxY - minY + 20} 
+                            stroke="#e91e63" 
+                            strokeWidth={2} 
+                            strokeDasharray="5,5" 
+                            fill="rgba(233, 30, 99, 0.1)" 
+                            rx={5}
+                          />
+                        );
+                      })()}
                     </Svg>
                   </View>
                 </ScrollView>
@@ -1783,6 +1841,30 @@ export default function DocumentViewScreen() {
                   >
                     <Ionicons name="create-outline" size={18} color="#fff" />
                     <Text style={{ color: '#fff', fontSize: 12, marginLeft: 4 }}>Text</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              
+              {/* Delete Button - shows when any element is selected */}
+              {isSelectMode && selectedElement && (
+                <>
+                  <View style={styles.divider} />
+                  <TouchableOpacity 
+                    style={[styles.toolBtn, { backgroundColor: '#f44336', paddingHorizontal: 12 }]} 
+                    onPress={() => {
+                      if (selectedElement.type === 'path') {
+                        const pathIndex = parseInt(selectedElement.id.replace('path-', ''));
+                        setPaths(prev => prev.filter((_, i) => i !== pathIndex));
+                      } else if (selectedElement.type === 'shape' || selectedElement.type === 'pointer') {
+                        setShapes(prev => prev.filter(s => s.id !== selectedElement.id));
+                      } else if (selectedElement.type === 'text') {
+                        setTextAnnotations(prev => prev.filter(t => t.id !== selectedElement.id));
+                      }
+                      setSelectedElement(null);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 12, marginLeft: 4 }}>Löschen</Text>
                   </TouchableOpacity>
                 </>
               )}

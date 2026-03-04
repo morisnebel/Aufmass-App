@@ -822,20 +822,20 @@ export default function ProjectDetailScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           @page {
-            margin: 15mm;
+            margin: 8mm;
             size: A4;
           }
           @media screen {
             body {
               background: #e0e0e0 !important;
-              padding: 20px !important;
+              padding: 10px !important;
             }
             .page {
               background: #fff;
               width: 210mm;
               min-height: 297mm;
-              padding: 15mm;
-              margin: 0 auto 20px auto;
+              padding: 8mm;
+              margin: 0 auto 10px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
               position: relative;
@@ -847,8 +847,8 @@ export default function ProjectDetailScreen() {
               background: #fff;
               width: 210mm;
               min-height: 297mm;
-              padding: 15mm;
-              margin: 20px auto;
+              padding: 8mm;
+              margin: 10px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
               position: relative;
@@ -869,10 +869,10 @@ export default function ProjectDetailScreen() {
               margin: 0;
               box-shadow: none;
               border-radius: 0;
-              padding-top: 5mm;
+              padding-top: 2mm;
             }
             .page .header {
-              margin: 0 0 20px 0 !important;
+              margin: 0 0 10px 0 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               background: ${headerBgColor} !important;
@@ -885,7 +885,7 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
-              padding-top: 5mm;
+              padding-top: 2mm;
             }
             .remarks-page {
               page-break-before: always;
@@ -900,10 +900,9 @@ export default function ProjectDetailScreen() {
               display: block !important;
               visibility: visible !important;
             }
-            /* Checklisten auf neuer Seite nur beim Druck */
+            /* Checklisten: Kein Seitenumbruch für platzsparendes Layout */
             .checklists-page-break {
-              page-break-before: always !important;
-              break-before: page !important;
+              /* page-break-before removed for compact layout */
             }
           }
           * {
@@ -911,22 +910,22 @@ export default function ProjectDetailScreen() {
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
+            font-size: 9px;
+            line-height: 1.3;
             color: #333;
             margin: 0;
-            padding: 15px;
+            padding: 8px;
             background: #fff;
           }
           .header {
             background: ${headerBgColor};
             color: ${headerTextColor};
-            padding: 15px 20px;
-            margin: 0 0 20px 0;
+            padding: 8px 12px;
+            margin: 0 0 10px 0;
             border-radius: 0;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 6px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
@@ -939,36 +938,37 @@ export default function ProjectDetailScreen() {
           .company-header {
             display: flex;
             align-items: flex-start;
-            gap: 15px;
+            gap: 10px;
           }
           .company-logo {
-            max-width: 80px;
-            max-height: 50px;
+            max-width: 60px;
+            max-height: 40px;
           }
           .header h1 {
             margin: 0;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
           }
           .header .date {
-            font-size: 11px;
+            font-size: 9px;
             opacity: 0.9;
-            margin-top: 4px;
+            margin-top: 2px;
             white-space: nowrap;
           }
           .company-info {
             text-align: right;
-            font-size: 10px;
-            max-width: 200px;
+            font-size: 8px;
+            max-width: 180px;
             word-wrap: break-word;
+            line-height: 1.2;
           }
           h2 {
             color: ${headerBgColor};
-            border-bottom: 2px solid ${headerBgColor};
-            padding-bottom: 5px;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-size: 14px;
+            border-bottom: 1px solid ${headerBgColor};
+            padding-bottom: 3px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-size: 11px;
             page-break-after: avoid;
             page-break-inside: avoid;
           }
@@ -1050,43 +1050,44 @@ export default function ProjectDetailScreen() {
           }
           h3 {
             color: #333;
-            margin-top: 15px;
-            margin-bottom: 10px;
-            font-size: 13px;
+            margin-top: 8px;
+            margin-bottom: 5px;
+            font-size: 10px;
             page-break-after: avoid;
           }
           h4 {
             color: ${headerBgColor};
-            margin: 10px 0 5px 0;
-            font-size: 12px;
+            margin: 5px 0 3px 0;
+            font-size: 9px;
           }
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 10px;
           }
           .info-box {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 4px;
+            padding: 6px 8px;
           }
           .info-box h3 {
             margin-top: 0;
             color: #1976d2;
-            font-size: 12px;
+            font-size: 9px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 5px;
-            margin-bottom: 8px;
+            padding-bottom: 3px;
+            margin-bottom: 4px;
           }
           .info-row {
             display: flex;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+            font-size: 8px;
           }
           .info-label {
             font-weight: 600;
-            width: 80px;
+            width: 55px;
             flex-shrink: 0;
             color: #666;
           }
@@ -1096,32 +1097,32 @@ export default function ProjectDetailScreen() {
           .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 8px;
+            margin-bottom: 12px;
           }
           .stat-box {
             background: #e3f2fd;
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 4px;
+            padding: 6px 4px;
             text-align: center;
           }
           .stat-value {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: 700;
             color: #1976d2;
           }
           .stat-label {
-            font-size: 10px;
+            font-size: 7px;
             color: #666;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
           }
           .roof-card, .checklist-card {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 10px;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin-bottom: 6px;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
@@ -1164,64 +1165,64 @@ export default function ProjectDetailScreen() {
           }
           .photo-inline-heading, .sketch-inline-heading {
             color: ${headerBgColor};
-            border-bottom: 2px solid ${headerBgColor};
-            padding-bottom: 5px;
+            border-bottom: 1px solid ${headerBgColor};
+            padding-bottom: 3px;
             margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 14px;
+            margin-bottom: 8px;
+            font-size: 11px;
           }
           .sketch-inline-title {
             color: ${headerBgColor};
-            margin: 15px 0 10px 0;
-            font-size: 12px;
+            margin: 8px 0 5px 0;
+            font-size: 9px;
           }
           /* New checklist PDF styles */
           .checklist-main-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 8px;
-            border-bottom: 2px solid ${headerBgColor};
-            margin-bottom: 12px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid ${headerBgColor};
+            margin-bottom: 6px;
           }
           .checklist-main-title {
-            font-size: 16px;
+            font-size: 11px;
             font-weight: 700;
             color: ${headerBgColor};
             flex: 1;
           }
           .checklist-main-count {
-            font-size: 12px;
+            font-size: 9px;
             color: #4caf50;
             font-weight: 600;
           }
           /* PDF Checklist Image Styles */
           .pdf-template-logo {
-            max-width: 80px;
-            max-height: 30px;
-            margin-right: 10px;
-            object-fit: contain;
-            border-radius: 3px;
-          }
-          .pdf-category-logo {
             max-width: 50px;
             max-height: 20px;
-            margin-right: 4px;
+            margin-right: 6px;
+            object-fit: contain;
+            border-radius: 2px;
+          }
+          .pdf-category-logo {
+            max-width: 35px;
+            max-height: 14px;
+            margin-right: 3px;
             object-fit: contain;
             border-radius: 2px;
           }
           .pdf-print-thumbnail {
-            width: 55px;
-            height: 42px;
+            width: 40px;
+            height: 30px;
             object-fit: contain;
-            border-radius: 3px;
+            border-radius: 2px;
             border: 1px solid #4caf50;
             margin-left: auto;
             background: #f5f5f5;
           }
           .pdf-print-thumbnail-small {
-            width: 45px;
-            height: 34px;
+            width: 32px;
+            height: 24px;
             object-fit: contain;
             border-radius: 2px;
             border: 1px solid #4caf50;
@@ -1240,30 +1241,30 @@ export default function ProjectDetailScreen() {
           .pdf-category-section {
             background: #f9f9f9;
             border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 10px;
+            border-radius: 3px;
+            padding: 5px 6px;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             box-sizing: border-box;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
           }
           /* Spalten-Layout basierend auf Einstellung */
           .pdf-category-section.cols-1 {
             width: 100%;
           }
           .pdf-category-section.cols-2 {
-            width: calc(50% - 6px);
+            width: calc(50% - 4px);
             float: left;
-            margin-right: 12px;
+            margin-right: 8px;
           }
           .pdf-category-section.cols-2:nth-child(2n) {
             margin-right: 0;
           }
           .pdf-category-section.cols-3 {
-            width: calc(33.33% - 8px);
+            width: calc(33.33% - 5px);
             float: left;
-            margin-right: 12px;
+            margin-right: 8px;
           }
           .pdf-category-section.cols-3:nth-child(3n) {
             margin-right: 0;
@@ -1271,147 +1272,147 @@ export default function ProjectDetailScreen() {
           .pdf-category-header {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #4caf50;
-            margin-bottom: 8px;
+            gap: 4px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #4caf50;
+            margin-bottom: 4px;
           }
           .pdf-cat-check {
             color: #4caf50;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 8px;
           }
           .pdf-category-title {
-            font-size: 11px;
+            font-size: 8px;
             font-weight: 700;
             color: #333;
             flex: 1;
           }
           .pdf-category-count {
-            font-size: 9px;
+            font-size: 7px;
             color: #4caf50;
             font-weight: 600;
           }
           .pdf-category-note {
             background: #fff8e1;
-            padding: 4px 6px;
-            border-radius: 3px;
-            font-size: 9px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 7px;
             color: #f57c00;
             font-style: italic;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
           }
           .pdf-category-measurements {
             background: #e3f2fd;
-            padding: 4px 6px;
-            border-radius: 3px;
-            margin-bottom: 6px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            margin-bottom: 3px;
           }
           .pdf-measurement-line {
-            font-size: 9px;
+            font-size: 7px;
             color: #1565c0;
             font-weight: 500;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
           }
           .pdf-measurement-sum {
-            margin-top: 4px;
-            padding-top: 4px;
+            margin-top: 2px;
+            padding-top: 2px;
             border-top: 1px solid #90caf9;
-            font-size: 9px;
+            font-size: 7px;
             color: #1565c0;
           }
           .pdf-sum-badge {
             background: #bbdefb;
-            padding: 2px 6px;
-            border-radius: 8px;
+            padding: 1px 4px;
+            border-radius: 6px;
             font-weight: 600;
-            margin-left: 4px;
+            margin-left: 3px;
           }
           .pdf-level1-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 6px;
+            gap: 3px;
           }
           .pdf-level1-container {
             background: #fff;
             border: 1px solid #e0e0e0;
-            border-left: 3px solid ${headerBgColor};
-            border-radius: 4px;
-            padding: 6px;
+            border-left: 2px solid ${headerBgColor};
+            border-radius: 2px;
+            padding: 3px 4px;
             box-sizing: border-box;
           }
           .pdf-level1-header {
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding-bottom: 4px;
+            gap: 3px;
+            padding-bottom: 2px;
             border-bottom: 1px solid #eee;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
           .pdf-level1-prefix {
             background: ${headerBgColor};
             color: ${headerTextColor};
-            font-size: 9px;
+            font-size: 7px;
             font-weight: 700;
-            padding: 1px 4px;
-            border-radius: 3px;
+            padding: 1px 3px;
+            border-radius: 2px;
           }
           .pdf-checkmark-circle {
             color: #4caf50;
-            font-size: 10px;
+            font-size: 8px;
           }
           .pdf-level1-title {
-            font-size: 10px;
+            font-size: 8px;
             font-weight: 600;
             color: #333;
             flex: 1;
           }
           .pdf-level1-content {
-            padding-left: 2px;
+            padding-left: 1px;
           }
           .pdf-deep-sub {
             display: flex;
             align-items: center;
-            gap: 3px;
-            padding: 1px 0;
+            gap: 2px;
+            padding: 0;
           }
           .pdf-deep-prefix {
-            font-size: 9px;
+            font-size: 7px;
             color: #666;
             font-weight: 600;
-            min-width: 24px;
+            min-width: 18px;
           }
           .pdf-checkmark {
             color: #4caf50;
-            font-size: 9px;
+            font-size: 7px;
           }
           .pdf-deep-text {
-            font-size: 9px;
+            font-size: 7px;
             color: #444;
             flex: 1;
           }
           .pdf-note {
             background: #fff8e1;
-            padding: 3px 5px;
-            border-radius: 3px;
-            font-size: 8px;
+            padding: 2px 3px;
+            border-radius: 2px;
+            font-size: 6px;
             color: #f57c00;
             font-style: italic;
-            margin-top: 2px;
-            margin-bottom: 2px;
+            margin-top: 1px;
+            margin-bottom: 1px;
           }
           .pdf-note-icon {
-            margin-right: 2px;
+            margin-right: 1px;
           }
           .pdf-measurement {
             background: #e3f2fd;
-            padding: 3px 5px;
-            border-radius: 3px;
-            font-size: 8px;
+            padding: 2px 3px;
+            border-radius: 2px;
+            font-size: 6px;
             color: #1565c0;
             font-weight: 500;
-            margin-top: 2px;
-            margin-bottom: 2px;
+            margin-top: 1px;
+            margin-bottom: 1px;
           }
           .photos-grid, .sketches-grid {
             display: grid;
@@ -1574,15 +1575,16 @@ export default function ProjectDetailScreen() {
           .remarks-box {
             background: #fff8e1;
             border: 1px solid #ffe082;
-            border-radius: 6px;
-            padding: 12px;
-            margin-top: 10px;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin-top: 5px;
+            font-size: 8px;
           }
           .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 2px solid ${headerBgColor};
-            font-size: 11px;
+            margin-top: 15px;
+            padding-top: 8px;
+            border-top: 1px solid ${headerBgColor};
+            font-size: 8px;
             color: #666;
             text-align: center;
             font-weight: 500;
@@ -1593,33 +1595,34 @@ export default function ProjectDetailScreen() {
           .measurements-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 5px;
-            margin-top: 8px;
+            gap: 2px;
+            margin-top: 4px;
           }
           .measure-item {
-            font-size: 11px;
+            font-size: 8px;
           }
           .measure-label {
             color: #666;
           }
           .roof-area {
-            font-size: 14px;
+            font-size: 10px;
             color: ${headerBgColor};
-            margin-bottom: 5px;
+            margin-bottom: 3px;
           }
           .roof-notes {
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 4px;
+            padding-top: 4px;
             border-top: 1px dashed #e0e0e0;
+            font-size: 8px;
           }
           .company-header {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
           }
           .company-logo {
-            max-width: 180px;
-            max-height: 130px;
+            max-width: 120px;
+            max-height: 80px;
             object-fit: contain;
           }
         </style>

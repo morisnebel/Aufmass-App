@@ -1469,25 +1469,8 @@ export default function DocumentViewScreen() {
   const shareDocument = async () => {
     if (!document?.originalPdfData) return;
     
-    // Show options
-    Alert.alert(
-      'PDF teilen',
-      'Wählen Sie eine Option',
-      [
-        {
-          text: 'Original-PDF teilen',
-          onPress: shareOriginalPdf,
-        },
-        {
-          text: 'Mit Annotationen teilen',
-          onPress: shareWithAnnotations,
-        },
-        {
-          text: 'Abbrechen',
-          style: 'cancel',
-        },
-      ]
-    );
+    // Share original PDF directly
+    await shareOriginalPdf();
   };
 
   const shareOriginalPdf = async () => {

@@ -644,9 +644,24 @@ export default function DocumentViewScreen() {
       
       console.log('PDF created at:', uri);
       
-      // Store URI and close editor - share will be triggered after modal closes
-      setPendingShareUri(uri);
-      setIsEditing(false);
+      // If we're in editing mode, close it first and share via effect
+      // If we're in preview mode, share directly
+      if (isEditing) {
+        // Store URI and close editor - share will be triggered after modal closes
+        setPendingShareUri(uri);
+        setIsEditing(false);
+      } else {
+        // We're in preview mode - share directly
+        console.log('Sharing directly from preview mode');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/pdf',
+            UTI: 'com.adobe.pdf',
+          });
+          console.log('Share dialog closed');
+        }
+        isPrintingRef.current = false;
+      }
       
     } catch (e) {
       console.log('PDF export error:', e);
@@ -1471,12 +1486,32 @@ export default function DocumentViewScreen() {
       const base64 = document.originalPdfData.includes(',') 
         ? document.originalPdfData.split(',')[1] 
         : document.originalPdfData;
-      const fileUri = `${FileSystem.cacheDirectory}${document.name}`;
-      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: 'base64' });
+      
+      // Create a proper filename
+      const fileName = document.name.endsWith('.pdf') ? document.name : `${document.name}.pdf`;
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      
+      // Write file using legacy method but with better error handling
+      await FileSystem.writeAsStringAsync(fileUri, base64, { 
+        encoding: FileSystem.EncodingType.Base64 
+      });
+      
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        throw new Error('File was not created');
+      }
+      
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, { mimeType: 'application/pdf' });
+        await Sharing.shareAsync(fileUri, { 
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen nicht verfügbar auf diesem Gerät');
       }
     } catch (error) {
+      console.log('Share error:', error);
       Alert.alert('Fehler', 'Konnte nicht geteilt werden');
     }
   };
@@ -1516,7 +1551,7 @@ export default function DocumentViewScreen() {
     }
 
     // Start the export process - this will render all pages with annotations
-    // Re-use the existing export logic from edit mode
+    isPrintingRef.current = true;
     setIsExporting(true);
     setExportProgress(10);
     

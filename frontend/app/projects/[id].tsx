@@ -564,6 +564,9 @@ export default function ProjectDetailScreen() {
     const headerTextColor = pdfHeaderStyle === 'outline' ? pdfColor.color : pdfColor.textColor;
     const headerBorderStyle = pdfHeaderStyle === 'outline' ? `border: 2px solid ${pdfColor.color};` : '';
     
+    // Akzentfarbe für Überschriften im Dokument (immer die gewählte Farbe, nie weiß)
+    const accentColor = pdfColor.color;
+    
     // Format date
     const formatDate = (dateStr: string) => {
       try {
@@ -1031,8 +1034,8 @@ export default function ProjectDetailScreen() {
             line-height: 1.2;
           }
           h2 {
-            color: ${headerBgColor};
-            border-bottom: 1px solid ${headerBgColor};
+            color: ${accentColor};
+            border-bottom: 1px solid ${accentColor};
             padding-bottom: 3px;
             margin-top: 12px;
             margin-bottom: 8px;
@@ -1124,7 +1127,7 @@ export default function ProjectDetailScreen() {
             page-break-after: avoid;
           }
           h4 {
-            color: ${headerBgColor};
+            color: ${accentColor};
             margin: 5px 0 3px 0;
             font-size: 9px;
           }
@@ -1232,15 +1235,15 @@ export default function ProjectDetailScreen() {
             -webkit-column-break-inside: avoid !important;
           }
           .photo-inline-heading, .sketch-inline-heading {
-            color: ${headerBgColor};
-            border-bottom: 1px solid ${headerBgColor};
+            color: ${accentColor};
+            border-bottom: 1px solid ${accentColor};
             padding-bottom: 3px;
             margin-top: 0;
             margin-bottom: 8px;
             font-size: 11px;
           }
           .sketch-inline-title {
-            color: ${headerBgColor};
+            color: ${accentColor};
             margin: 8px 0 5px 0;
             font-size: 9px;
           }
@@ -1250,13 +1253,13 @@ export default function ProjectDetailScreen() {
             justify-content: space-between;
             align-items: center;
             padding-bottom: 4px;
-            border-bottom: 1px solid ${headerBgColor};
+            border-bottom: 1px solid ${accentColor};
             margin-bottom: 6px;
           }
           .checklist-main-title {
             font-size: 11px;
             font-weight: 700;
-            color: ${headerBgColor};
+            color: ${accentColor};
             flex: 1;
           }
           .checklist-main-count {
@@ -1404,7 +1407,7 @@ export default function ProjectDetailScreen() {
           .pdf-level1-container {
             background: #fff;
             border: 1px solid #e0e0e0;
-            border-left: 2px solid ${headerBgColor};
+            border-left: 2px solid ${accentColor};
             border-radius: 2px;
             padding: 3px 4px;
             box-sizing: border-box;
@@ -1418,8 +1421,8 @@ export default function ProjectDetailScreen() {
             margin-bottom: 2px;
           }
           .pdf-level1-prefix {
-            background: ${headerBgColor};
-            color: ${headerTextColor};
+            background: ${accentColor};
+            color: ${pdfColor.textColor};
             font-size: 7px;
             font-weight: 700;
             padding: 1px 3px;
@@ -1651,7 +1654,7 @@ export default function ProjectDetailScreen() {
           .footer {
             margin-top: 15px;
             padding-top: 8px;
-            border-top: 1px solid ${headerBgColor};
+            border-top: 1px solid ${accentColor};
             font-size: 8px;
             color: #666;
             text-align: center;
@@ -1674,7 +1677,7 @@ export default function ProjectDetailScreen() {
           }
           .roof-area {
             font-size: 10px;
-            color: ${headerBgColor};
+            color: ${accentColor};
             margin-bottom: 3px;
           }
           .roof-notes {

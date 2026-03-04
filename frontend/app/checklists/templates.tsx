@@ -100,6 +100,40 @@ export default function ChecklistTemplatesScreen() {
     }
   };
 
+  // Vorlage nach oben verschieben
+  const moveTemplateUp = async (index: number) => {
+    if (index === 0) return;
+    const newTemplates = [...templates];
+    [newTemplates[index - 1], newTemplates[index]] = [newTemplates[index], newTemplates[index - 1]];
+    setTemplates(newTemplates);
+    
+    // Speichern mit neuer Reihenfolge
+    try {
+      for (let i = 0; i < newTemplates.length; i++) {
+        await ChecklistTemplateService.update(newTemplates[i].id, { ...newTemplates[i], order: i });
+      }
+    } catch (error) {
+      console.error('Error saving template order:', error);
+    }
+  };
+
+  // Vorlage nach unten verschieben
+  const moveTemplateDown = async (index: number) => {
+    if (index >= templates.length - 1) return;
+    const newTemplates = [...templates];
+    [newTemplates[index], newTemplates[index + 1]] = [newTemplates[index + 1], newTemplates[index]];
+    setTemplates(newTemplates);
+    
+    // Speichern mit neuer Reihenfolge
+    try {
+      for (let i = 0; i < newTemplates.length; i++) {
+        await ChecklistTemplateService.update(newTemplates[i].id, { ...newTemplates[i], order: i });
+      }
+    } catch (error) {
+      console.error('Error saving template order:', error);
+    }
+  };
+
   // Export a single template
   const exportTemplate = async (template: ChecklistTemplate) => {
     setIsExporting(true);
@@ -277,16 +311,34 @@ export default function ChecklistTemplatesScreen() {
     );
   };
 
-  const renderTemplate = ({ item }: { item: ChecklistTemplate }) => (
+  const renderTemplate = ({ item, index }: { item: ChecklistTemplate; index: number }) => (
     <View style={styles.templateCard}>
       <View style={styles.templateHeader}>
         <Ionicons name="list" size={24} color="#1976d2" />
         <Text style={styles.templateName}>{item.name}</Text>
+        
+        {/* Move Buttons */}
+        <View style={styles.moveButtons}>
+          <TouchableOpacity 
+            onPress={() => moveTemplateUp(index)}
+            style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
+            disabled={index === 0}
+          >
+            <Ionicons name="chevron-up" size={20} color={index === 0 ? '#ccc' : '#666'} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => moveTemplateDown(index)}
+            style={[styles.moveButton, index >= templates.length - 1 && styles.moveButtonDisabled]}
+            disabled={index >= templates.length - 1}
+          >
+            <Ionicons name="chevron-down" size={20} color={index >= templates.length - 1 ? '#ccc' : '#666'} />
+          </TouchableOpacity>
+        </View>
       </View>
       <Text style={styles.itemCount}>{item.items.length} Punkte</Text>
       <View style={styles.itemsList}>
-        {item.items.slice(0, 3).map((itm, index) => (
-          <Text key={index} style={styles.itemPreview}>
+        {item.items.slice(0, 3).map((itm, idx) => (
+          <Text key={idx} style={styles.itemPreview}>
             • {typeof itm === 'string' ? itm : itm.text}
           </Text>
         ))}
@@ -529,6 +581,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+  },
+  moveButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  moveButton: {
+    padding: 4,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 4,
+  },
+  moveButtonDisabled: {
+    opacity: 0.4,
   },
   actionButtonRow: {
     flexDirection: 'row',

@@ -272,6 +272,75 @@ export default function EditChecklistScreen() {
     setHasChanges(true);
   };
 
+  // Item nach oben verschieben
+  const moveItemUp = (path: number[]) => {
+    if (!checklist || path.length === 0) return;
+    
+    const index = path[path.length - 1];
+    if (index === 0) return; // Schon ganz oben
+    
+    const moveInArray = (items: RecursiveItem[], currentPath: number[]): RecursiveItem[] => {
+      if (currentPath.length === 1) {
+        const idx = currentPath[0];
+        const newItems = [...items];
+        [newItems[idx - 1], newItems[idx]] = [newItems[idx], newItems[idx - 1]];
+        return newItems;
+      }
+      
+      const [first, ...rest] = currentPath;
+      return items.map((item, i) => {
+        if (i === first) {
+          return { ...item, subItems: moveInArray(item.subItems || [], rest) };
+        }
+        return item;
+      });
+    };
+    
+    const newItems = moveInArray(checklist.items, path);
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Item nach unten verschieben
+  const moveItemDown = (path: number[]) => {
+    if (!checklist || path.length === 0) return;
+    
+    const getArrayLength = (items: RecursiveItem[], currentPath: number[]): number => {
+      if (currentPath.length === 1) return items.length;
+      const [first, ...rest] = currentPath;
+      return getArrayLength(items[first]?.subItems || [], rest);
+    };
+    
+    const index = path[path.length - 1];
+    const parentPath = path.slice(0, -1);
+    const arrayLength = parentPath.length === 0 
+      ? checklist.items.length 
+      : getArrayLength(checklist.items, [...parentPath, 0]);
+    
+    if (index >= arrayLength - 1) return; // Schon ganz unten
+    
+    const moveInArray = (items: RecursiveItem[], currentPath: number[]): RecursiveItem[] => {
+      if (currentPath.length === 1) {
+        const idx = currentPath[0];
+        const newItems = [...items];
+        [newItems[idx], newItems[idx + 1]] = [newItems[idx + 1], newItems[idx]];
+        return newItems;
+      }
+      
+      const [first, ...rest] = currentPath;
+      return items.map((item, i) => {
+        if (i === first) {
+          return { ...item, subItems: moveInArray(item.subItems || [], rest) };
+        }
+        return item;
+      });
+    };
+    
+    const newItems = moveInArray(checklist.items, path);
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
   // Messung hinzufügen
   const addMeasurement = (path: number[], expression: string, result: number, unit: string) => {
     if (!checklist) return;
@@ -781,6 +850,23 @@ export default function EditChecklistScreen() {
             
             {/* Action Buttons */}
             <View style={styles.itemActions}>
+              {/* Nach oben verschieben */}
+              <TouchableOpacity 
+                onPress={() => moveItemUp(path)}
+                style={[styles.actionButton, path[path.length - 1] === 0 && styles.actionButtonDisabled]}
+                disabled={path[path.length - 1] === 0}
+              >
+                <Ionicons name="chevron-up" size={18} color={path[path.length - 1] === 0 ? '#ccc' : '#666'} />
+              </TouchableOpacity>
+              
+              {/* Nach unten verschieben */}
+              <TouchableOpacity 
+                onPress={() => moveItemDown(path)}
+                style={styles.actionButton}
+              >
+                <Ionicons name="chevron-down" size={18} color="#666" />
+              </TouchableOpacity>
+              
               {/* Kopieren Button */}
               <TouchableOpacity 
                 onPress={() => copyItem(path)}
@@ -1392,6 +1478,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 6,
+  },
+  actionButtonDisabled: {
+    opacity: 0.4,
   },
   clipboardInfo: {
     flexDirection: 'row',

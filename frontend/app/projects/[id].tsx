@@ -401,6 +401,31 @@ export default function ProjectDetailScreen() {
         objekt_city: editObjektCity || undefined,
       });
 
+      // Synchronisiere Bauherr-Daten mit Kundenstamm
+      if (project?.customer_id) {
+        try {
+          const existingCustomer = await CustomerService.getById(project.customer_id);
+          if (existingCustomer) {
+            // Baue die Adresse zusammen
+            const newAddress = editBauherrStreet || editBauherrPlz || editBauherrCity
+              ? `${editBauherrStreet || ''}, ${editBauherrPlz || ''} ${editBauherrCity || ''}`.trim()
+              : existingCustomer.address;
+            
+            await CustomerService.update(project.customer_id, {
+              ...existingCustomer,
+              name: editBauherrName || existingCustomer.name,
+              phone: editBauherrPhone || existingCustomer.phone,
+              mobile: editBauherrMobile || existingCustomer.mobile,
+              email: editBauherrEmail || existingCustomer.email,
+              address: newAddress,
+            });
+          }
+        } catch (syncError) {
+          console.error('Error syncing customer data:', syncError);
+          // Fehler bei Synchronisation nicht an Benutzer zeigen, Projekt wurde trotzdem gespeichert
+        }
+      }
+
       setShowEditProjectModal(false);
       await loadProjectData();
 

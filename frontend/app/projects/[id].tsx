@@ -1085,7 +1085,7 @@ export default function ProjectDetailScreen() {
           }
           .info-label {
             font-weight: 600;
-            width: 55px;
+            width: 70px;
             flex-shrink: 0;
             color: #666;
           }

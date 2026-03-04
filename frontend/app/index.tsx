@@ -335,6 +335,8 @@ export default function HomeScreen() {
   const renderProject = ({ item }: { item: Project }) => {
     const customer = customers[item.customer_id];
     const statusColor = getStatusColor(item.status);
+    // Kundenname: erst aus Customer, dann aus bauherr_name des Projekts
+    const displayCustomerName = customer?.name || (item as any).bauherr_name;
     return (
       <TouchableOpacity
         style={styles.projectCard}
@@ -344,8 +346,8 @@ export default function HomeScreen() {
           <Ionicons name="folder" size={24} color={statusColor} />
           <View style={styles.projectInfo}>
             <Text style={styles.projectName}>{item.name}</Text>
-            {customer && (
-              <Text style={styles.customerName}>{customer.name}</Text>
+            {displayCustomerName && (
+              <Text style={styles.customerName}>{displayCustomerName}</Text>
             )}
           </View>
           <TouchableOpacity

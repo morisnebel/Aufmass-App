@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService, Customer, ProjectAddress } from '../../services/LocalStorage';
+import { CustomerService, Customer, ProjectAddress, ProjectService, Project } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -37,12 +37,18 @@ export default function CustomersScreen() {
   const [addressStreet, setAddressStreet] = useState('');
   const [addressZip, setAddressZip] = useState('');
   const [addressCity, setAddressCity] = useState('');
-
+  
+  // Projects für Aufmaß-Navigation
+  const [projects, setProjects] = useState<Project[]>([]);
   const loadCustomers = async () => {
     try {
-      const data = await CustomerService.getAll();
-      console.log('Loaded customers:', data.length, data);
-      setCustomers(data);
+      const [customerData, projectData] = await Promise.all([
+        CustomerService.getAll(),
+        ProjectService.getAll()
+      ]);
+      console.log('Loaded customers:', customerData.length, customerData);
+      setCustomers(customerData);
+      setProjects(projectData);
     } catch (error) {
       console.error('Error loading customers:', error);
       Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');
@@ -169,6 +175,58 @@ export default function CustomersScreen() {
         }
       ]
     );
+  };
+
+  // Funktion: Projekt mit dieser Adresse finden oder neues erstellen
+  const goToAufmass = async (address: ProjectAddress) => {
+    if (!selectedCustomer) return;
+    
+    // Suche nach Projekt mit dieser Adresse
+    const matchingProject = projects.find(p => 
+      p.customer_id === selectedCustomer.id && 
+      p.objekt_address_name === address.name &&
+      p.objekt_street === address.street
+    );
+    
+    if (matchingProject) {
+      // Projekt gefunden - navigiere dorthin
+      setShowAddressModal(false);
+      router.push(`/projects/${matchingProject.id}`);
+    } else {
+      // Kein Projekt gefunden - Frage ob neues erstellt werden soll
+      Alert.alert(
+        'Kein Projekt gefunden',
+        `Für "${address.name}" existiert noch kein Projekt. Möchten Sie ein neues Projekt erstellen?`,
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: 'Projekt erstellen',
+            onPress: async () => {
+              try {
+                const newProject = await ProjectService.create({
+                  name: `${selectedCustomer.name} - ${address.name}`,
+                  customer_id: selectedCustomer.id,
+                  status: 'aktiv',
+                  bauherr_name: selectedCustomer.name,
+                  bauherr_phone: selectedCustomer.phone,
+                  bauherr_email: selectedCustomer.email,
+                  bauherr_address: selectedCustomer.address,
+                  objekt_street: address.street,
+                  objekt_plz: address.zip,
+                  objekt_city: address.city,
+                  objekt_address_name: address.name,
+                });
+                setShowAddressModal(false);
+                router.push(`/projects/${newProject.id}`);
+              } catch (error) {
+                console.error('Error creating project:', error);
+                Alert.alert('Fehler', 'Projekt konnte nicht erstellt werden');
+              }
+            }
+          }
+        ]
+      );
+    }
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -342,14 +400,24 @@ export default function CustomersScreen() {
               {/* Bestehende Adressen */}
               {selectedCustomer?.projectAddresses?.map((address) => (
                 <View key={address.id} style={styles.addressItem}>
-                  <View style={styles.addressItemContent}>
+                  <TouchableOpacity 
+                    style={styles.addressItemContent}
+                    onPress={() => goToAufmass(address)}
+                  >
                     <Text style={styles.addressItemName}>{address.name}</Text>
                     <Text style={styles.addressItemDetails}>
                       {address.street}{address.street && (address.zip || address.city) ? ', ' : ''}
                       {address.zip} {address.city}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                   <View style={styles.addressItemActions}>
+                    <TouchableOpacity 
+                      style={styles.aufmassButton}
+                      onPress={() => goToAufmass(address)}
+                    >
+                      <Ionicons name="resize" size={16} color="#fff" />
+                      <Text style={styles.aufmassButtonText}>Aufmaß</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => editAddress(address)}>
                       <Ionicons name="pencil" size={20} color="#1976d2" />
                     </TouchableOpacity>
@@ -669,6 +737,21 @@ const styles = StyleSheet.create({
   addressItemActions: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'center',
+  },
+  aufmassButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    gap: 4,
+  },
+  aufmassButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   noAddressesText: {
     textAlign: 'center',

@@ -114,7 +114,7 @@ export default function DocumentViewScreen() {
   
   // Select/Move mode
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text', id: string} | null>(null);
+  const [selectedElement, setSelectedElement] = useState<{type: 'shape' | 'text' | 'pointer', id: string, dragPart?: 'note' | 'target'} | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isResizing, setIsResizing] = useState(false);
   const [resizeCorner, setResizeCorner] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
@@ -124,6 +124,10 @@ export default function DocumentViewScreen() {
   const [pendingPointer, setPendingPointer] = useState<{x1: number, y1: number, x2: number, y2: number} | null>(null);
   const [showPointerModal, setShowPointerModal] = useState(false);
   const [pointerText, setPointerText] = useState('');
+  
+  // Editing existing pointer text
+  const [editingPointerId, setEditingPointerId] = useState<string | null>(null);
+  const [editingPointerText, setEditingPointerText] = useState('');
   
   // Track undo history for better ordering
   const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
@@ -798,8 +802,44 @@ export default function DocumentViewScreen() {
           }
         }
         
+        // Check for pointer/note elements first (they have type 'pointer')
+        const clickedPointer = shapes.find(s => {
+          if (s.type !== 'pointer') return false;
+          // Check if clicking on note box area
+          const noteWidth = Math.max((s.text?.length || 0) * 9 + 20, 80);
+          const noteHeight = 32;
+          const noteX = s.x1 - noteWidth / 2;
+          const noteY = s.y1 - noteHeight - 5;
+          const inNoteBox = locationX >= noteX && locationX <= noteX + noteWidth && 
+                          locationY >= noteY && locationY <= noteY + noteHeight + 15;
+          // Check if clicking on target circle
+          const inTarget = Math.sqrt(Math.pow(locationX - s.x2, 2) + Math.pow(locationY - s.y2, 2)) < 20;
+          return inNoteBox || inTarget;
+        });
+        
+        if (clickedPointer) {
+          // Determine which part was clicked
+          const noteWidth = Math.max((clickedPointer.text?.length || 0) * 9 + 20, 80);
+          const noteHeight = 32;
+          const noteX = clickedPointer.x1 - noteWidth / 2;
+          const noteY = clickedPointer.y1 - noteHeight - 5;
+          const inNoteBox = locationX >= noteX && locationX <= noteX + noteWidth && 
+                          locationY >= noteY && locationY <= noteY + noteHeight + 15;
+          const inTarget = Math.sqrt(Math.pow(locationX - clickedPointer.x2, 2) + Math.pow(locationY - clickedPointer.y2, 2)) < 20;
+          
+          const dragPart = inTarget ? 'target' : 'note';
+          setSelectedElement({ type: 'pointer', id: clickedPointer.id, dragPart });
+          if (dragPart === 'target') {
+            setDragOffset({ x: locationX - clickedPointer.x2, y: locationY - clickedPointer.y2 });
+          } else {
+            setDragOffset({ x: locationX - clickedPointer.x1, y: locationY - clickedPointer.y1 });
+          }
+          return;
+        }
+        
         // Find clicked element (shapes or text)
         const clickedShape = shapes.find(s => {
+          if (s.type === 'pointer') return false; // Already handled above
           const minX = Math.min(s.x1, s.x2) - 10;
           const maxX = Math.max(s.x1, s.x2) + 10;
           const minY = Math.min(s.y1, s.y2) - 10;
@@ -883,6 +923,20 @@ export default function DocumentViewScreen() {
               return { ...t, x: dx, y: dy };
             }
             return t;
+          }));
+        } else if (selectedElement.type === 'pointer') {
+          // Move pointer/note element
+          setShapes(prev => prev.map(s => {
+            if (s.id === selectedElement.id && s.type === 'pointer') {
+              if (selectedElement.dragPart === 'target') {
+                // Move target point only
+                return { ...s, x2: dx, y2: dy };
+              } else {
+                // Move note box only
+                return { ...s, x1: dx, y1: dy };
+              }
+            }
+            return s;
           }));
         }
         return;
@@ -1601,6 +1655,47 @@ export default function DocumentViewScreen() {
                           />
                         );
                       })()}
+                      
+                      {/* Selection indicator for pointer/note */}
+                      {isSelectMode && selectedElement && selectedElement.type === 'pointer' && (() => {
+                        const pointer = shapes.find(s => s.id === selectedElement.id && s.type === 'pointer');
+                        if (!pointer) return null;
+                        const noteText = pointer.text || '';
+                        const noteWidth = Math.max(noteText.length * 9 + 20, 80);
+                        const noteHeight = 32;
+                        const noteX = pointer.x1 - noteWidth / 2;
+                        const noteY = pointer.y1 - noteHeight - 5;
+                        return (
+                          <G>
+                            {/* Highlight note box */}
+                            <Rect 
+                              x={noteX - 4} 
+                              y={noteY - 4} 
+                              width={noteWidth + 8} 
+                              height={noteHeight + 20} 
+                              stroke="#1976d2" 
+                              strokeWidth={2} 
+                              strokeDasharray="5,5" 
+                              fill="rgba(25, 118, 210, 0.1)" 
+                              rx={8}
+                            />
+                            {/* Highlight target point */}
+                            <Circle 
+                              cx={pointer.x2} 
+                              cy={pointer.y2} 
+                              r={14} 
+                              stroke="#1976d2" 
+                              strokeWidth={2} 
+                              strokeDasharray="5,5" 
+                              fill="rgba(25, 118, 210, 0.1)" 
+                            />
+                            {/* Move handle on note */}
+                            <Circle cx={noteX + noteWidth + 4} cy={noteY - 4} r={8} fill="#1976d2" />
+                            {/* Move handle on target */}
+                            <Circle cx={pointer.x2 + 14} cy={pointer.y2 - 14} r={8} fill="#e91e63" />
+                          </G>
+                        );
+                      })()}
                     </Svg>
                   </View>
                 </ScrollView>
@@ -1671,6 +1766,26 @@ export default function DocumentViewScreen() {
               >
                 <Ionicons name="search" size={20} color={zoomEnabled ? '#fff' : '#666'} />
               </TouchableOpacity>
+              
+              {/* Edit Text Button - shows when pointer is selected */}
+              {isSelectMode && selectedElement?.type === 'pointer' && (
+                <>
+                  <View style={styles.divider} />
+                  <TouchableOpacity 
+                    style={[styles.toolBtn, { backgroundColor: '#4caf50', paddingHorizontal: 12 }]} 
+                    onPress={() => {
+                      const pointer = shapes.find(s => s.id === selectedElement.id);
+                      if (pointer) {
+                        setEditingPointerId(pointer.id);
+                        setEditingPointerText(pointer.text || '');
+                      }
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 12, marginLeft: 4 }}>Text</Text>
+                  </TouchableOpacity>
+                </>
+              )}
               
               <View style={styles.divider} />
               {['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF9800', '#000000', '#FFFFFF'].map(color => (
@@ -1793,6 +1908,52 @@ export default function DocumentViewScreen() {
                     onPress={addPointerElement}
                   >
                     <Text style={styles.pointerBtnOkText}>Hinzufügen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
+
+          {/* Edit Pointer Text Modal */}
+          <Modal visible={!!editingPointerId} transparent animationType="fade">
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.pointerModalContainer}
+            >
+              <View style={styles.pointerModalBackdrop}>
+                <Text style={styles.pointerHintText}>Notiz-Text bearbeiten</Text>
+              </View>
+              
+              <View style={styles.pointerInputCard}>
+                <Text style={styles.pointerInputTitle}>Text ändern</Text>
+                <TextInput
+                  style={[styles.pointerTextInput, { borderColor: '#4caf50' }]}
+                  value={editingPointerText}
+                  onChangeText={setEditingPointerText}
+                  placeholder="Neuer Text..."
+                  placeholderTextColor="#999"
+                  autoFocus
+                />
+                <View style={styles.pointerInputButtons}>
+                  <TouchableOpacity 
+                    style={styles.pointerBtnCancel} 
+                    onPress={() => { setEditingPointerId(null); setEditingPointerText(''); }}
+                  >
+                    <Text style={styles.pointerBtnCancelText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.pointerBtnOk, { backgroundColor: '#4caf50' }]} 
+                    onPress={() => {
+                      if (editingPointerId) {
+                        setShapes(prev => prev.map(s => 
+                          s.id === editingPointerId ? { ...s, text: editingPointerText } : s
+                        ));
+                        setEditingPointerId(null);
+                        setEditingPointerText('');
+                      }
+                    }}
+                  >
+                    <Text style={styles.pointerBtnOkText}>Speichern</Text>
                   </TouchableOpacity>
                 </View>
               </View>

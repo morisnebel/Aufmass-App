@@ -43,6 +43,7 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 - Kunden können mehrere Projektadressen speichern
 - Adressen in der Kundenliste verwalten (oranges Haus-Symbol mit Badge)
 - Bei neuem Projekt: gespeicherte Adresse auswählen oder manuell eingeben
+- **NEU**: Neue manuelle Adressen werden automatisch beim Kunden gespeichert (mit Dialog)
 - Felder: Bezeichnung, Straße, PLZ, Ort
 - Objektadresse wird auf Projektdetailseite angezeigt (mit Adressname)
 - PDF-Export enthält Objektadresse mit Adressname

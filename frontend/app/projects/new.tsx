@@ -112,6 +112,10 @@ export default function NewProjectScreen() {
   const [objektPlz, setObjektPlz] = useState('');
   const [objektCity, setObjektCity] = useState('');
   const [showAddressPicker, setShowAddressPicker] = useState(false);
+  
+  // Adresse speichern Modal
+  const [showSaveAddressModal, setShowSaveAddressModal] = useState(false);
+  const [newAddressName, setNewAddressName] = useState('');
 
   useEffect(() => {
     loadCustomers();
@@ -453,8 +457,65 @@ export default function NewProjectScreen() {
       return;
     }
 
+    // Prüfen ob eine neue Objektadresse eingegeben wurde (nicht aus gespeicherten Adressen)
+    const hasNewAddress = (objektStreet || objektPlz || objektCity) && !selectedProjectAddress;
+    
+    if (hasNewAddress && selectedCustomer) {
+      // Frage ob die Adresse beim Kunden gespeichert werden soll
+      Alert.alert(
+        'Adresse speichern?',
+        'Möchten Sie diese Objektadresse auch beim Kunden für zukünftige Projekte speichern?',
+        [
+          {
+            text: 'Nein',
+            style: 'cancel',
+            onPress: () => saveProject(null),
+          },
+          {
+            text: 'Ja',
+            onPress: () => {
+              // Modal für Adressbezeichnung öffnen
+              setNewAddressName('');
+              setShowSaveAddressModal(true);
+            },
+          },
+        ]
+      );
+    } else {
+      saveProject(null);
+    }
+  };
+
+  const handleSaveAddressAndProject = () => {
+    const addressName = newAddressName.trim() || 'Projektadresse';
+    setShowSaveAddressModal(false);
+    saveProject(addressName);
+  };
+
+  const saveProject = async (saveAddressWithName: string | null) => {
     setLoading(true);
     try {
+      // Wenn eine neue Adresse gespeichert werden soll
+      let savedAddressName = selectedProjectAddress?.name;
+      
+      if (saveAddressWithName && selectedCustomer) {
+        const newAddress: ProjectAddress = {
+          id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+          name: saveAddressWithName,
+          street: objektStreet,
+          zip: objektPlz,
+          city: objektCity,
+        };
+        
+        const existingAddresses = selectedCustomer.projectAddresses || [];
+        await CustomerService.update(selectedCustomer.id, {
+          ...selectedCustomer,
+          projectAddresses: [...existingAddresses, newAddress],
+        });
+        
+        savedAddressName = saveAddressWithName;
+      }
+      
       const newProject = await ProjectService.create({
         name,
         description: description || undefined,
@@ -468,9 +529,14 @@ export default function NewProjectScreen() {
         objekt_street: objektStreet || undefined,
         objekt_plz: objektPlz || undefined,
         objekt_city: objektCity || undefined,
-        objekt_address_name: selectedProjectAddress?.name || undefined,
+        objekt_address_name: savedAddressName || undefined,
       });
-      Alert.alert('Erfolg', 'Projekt wurde erstellt', [
+      
+      const successMessage = saveAddressWithName 
+        ? 'Projekt wurde erstellt und Adresse beim Kunden gespeichert'
+        : 'Projekt wurde erstellt';
+        
+      Alert.alert('Erfolg', successMessage, [
         { text: 'OK', onPress: () => router.replace(`/projects/${newProject.id}`) },
       ]);
     } catch (error) {
@@ -1051,6 +1117,57 @@ export default function NewProjectScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Save Address Modal - für Adressbezeichnung */}
+      <Modal
+        visible={showSaveAddressModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setShowSaveAddressModal(false);
+          saveProject(null);
+        }}
+      >
+        <View style={styles.saveAddressModalOverlay}>
+          <View style={styles.saveAddressModalContent}>
+            <View style={styles.saveAddressModalHeader}>
+              <Ionicons name="home" size={32} color="#ff9800" />
+              <Text style={styles.saveAddressModalTitle}>Adresse benennen</Text>
+            </View>
+            
+            <Text style={styles.saveAddressModalText}>
+              Geben Sie eine Bezeichnung für die Adresse ein (z.B. "Haupthaus", "Garage"):
+            </Text>
+            
+            <TextInput
+              style={styles.saveAddressModalInput}
+              placeholder="z.B. Haupthaus"
+              value={newAddressName}
+              onChangeText={setNewAddressName}
+              autoFocus
+            />
+            
+            <View style={styles.saveAddressModalButtons}>
+              <TouchableOpacity
+                style={[styles.saveAddressModalButton, styles.saveAddressModalCancelButton]}
+                onPress={() => {
+                  setShowSaveAddressModal(false);
+                  saveProject(null);
+                }}
+              >
+                <Text style={styles.saveAddressModalCancelText}>Überspringen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveAddressModalButton, styles.saveAddressModalSaveButton]}
+                onPress={handleSaveAddressAndProject}
+              >
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.saveAddressModalSaveText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1497,5 +1614,75 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  // Save Address Modal
+  saveAddressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  saveAddressModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  saveAddressModalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  saveAddressModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+  },
+  saveAddressModalText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  saveAddressModalInput: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  saveAddressModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  saveAddressModalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  saveAddressModalCancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  saveAddressModalCancelText: {
+    color: '#666',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  saveAddressModalSaveButton: {
+    backgroundColor: '#ff9800',
+  },
+  saveAddressModalSaveText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

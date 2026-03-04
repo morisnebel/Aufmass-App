@@ -29,6 +29,7 @@ export default function CustomersScreen() {
   const loadCustomers = async () => {
     try {
       const data = await CustomerService.getAll();
+      console.log('Loaded customers:', data.length, data);
       setCustomers(data);
     } catch (error) {
       console.error('Error loading customers:', error);

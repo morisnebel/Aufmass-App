@@ -15,7 +15,7 @@ import {
   Pressable,
   InteractionManager,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import { CustomerService, ProjectService, Customer } from '../../services/LocalStorage';
@@ -71,6 +71,7 @@ function extractContactData(contact: Contacts.Contact) {
 
 export default function NewProjectScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ customer_id?: string }>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -112,7 +113,15 @@ export default function NewProjectScreen() {
     try {
       const data = await CustomerService.getAll();
       setCustomers(data);
-      // Don't pre-select any customer - leave it empty
+      
+      // Pre-select customer if customer_id is provided via URL params
+      if (params.customer_id) {
+        const preselectedCustomer = data.find(c => c.id === params.customer_id);
+        if (preselectedCustomer) {
+          setCustomerId(preselectedCustomer.id);
+          setSelectedCustomer(preselectedCustomer);
+        }
+      }
     } catch (error) {
       console.error('Error loading customers:', error);
       Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');

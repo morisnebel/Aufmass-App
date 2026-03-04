@@ -37,6 +37,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   const loadData = async () => {
     try {
@@ -323,6 +324,15 @@ export default function HomeScreen() {
     }
   });
 
+  // Gefilterte Kundenliste für Schnellauswahl
+  const filteredCustomerList = Object.values(customers).filter(customer => {
+    if (!customerSearchQuery.trim()) return true;
+    const query = customerSearchQuery.toLowerCase();
+    return customer.name?.toLowerCase().includes(query) ||
+           customer.phone?.includes(query) ||
+           customer.email?.toLowerCase().includes(query);
+  });
+
   // Status-Farbe ermitteln
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -460,38 +470,76 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Customer List */}
-        {Object.values(customers).length > 0 && (
-          <View style={styles.quickCustomerSection}>
-            <Text style={styles.quickCustomerTitle}>Kunden ({Object.values(customers).length})</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickCustomerScroll}>
-              {Object.values(customers).slice(0, 10).map((customer) => (
+        {/* Quick Customer Section with Search */}
+        <View style={styles.quickCustomerSection}>
+          <View style={styles.quickCustomerHeader}>
+            <Text style={styles.quickCustomerTitle}>Neues Projekt für Kunden</Text>
+            <TouchableOpacity onPress={() => router.push('/customers/new')}>
+              <Ionicons name="person-add" size={20} color="#1976d2" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.customerSearchContainer}>
+            <Ionicons name="search" size={18} color="#999" />
+            <TextInput
+              style={styles.customerSearchInput}
+              placeholder="Kunde suchen..."
+              value={customerSearchQuery}
+              onChangeText={setCustomerSearchQuery}
+              placeholderTextColor="#999"
+            />
+            {customerSearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setCustomerSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {filteredCustomerList.length > 0 ? (
+            <View style={styles.customerListContainer}>
+              {filteredCustomerList.slice(0, 5).map((customer) => (
                 <TouchableOpacity
                   key={customer.id}
-                  style={styles.quickCustomerChip}
-                  onPress={() => router.push(`/customers/${customer.id}`)}
+                  style={styles.customerListItem}
+                  onPress={() => router.push(`/projects/new?customer_id=${customer.id}`)}
                 >
-                  <View style={styles.quickCustomerAvatar}>
-                    <Text style={styles.quickCustomerInitial}>
+                  <View style={styles.customerListAvatar}>
+                    <Text style={styles.customerListInitial}>
                       {customer.name?.charAt(0).toUpperCase() || '?'}
                     </Text>
                   </View>
-                  <Text style={styles.quickCustomerName} numberOfLines={1}>
-                    {customer.name || 'Unbekannt'}
-                  </Text>
+                  <View style={styles.customerListInfo}>
+                    <Text style={styles.customerListName}>{customer.name || 'Unbekannt'}</Text>
+                    {customer.phone && (
+                      <Text style={styles.customerListPhone}>{customer.phone}</Text>
+                    )}
+                  </View>
+                  <View style={styles.customerListAction}>
+                    <Ionicons name="add-circle" size={24} color="#4caf50" />
+                  </View>
                 </TouchableOpacity>
               ))}
-              {Object.values(customers).length > 10 && (
-                <TouchableOpacity
-                  style={styles.quickCustomerMore}
-                  onPress={() => router.push('/customers/index')}
-                >
-                  <Text style={styles.quickCustomerMoreText}>+{Object.values(customers).length - 10} mehr</Text>
-                </TouchableOpacity>
+              {filteredCustomerList.length > 5 && (
+                <Text style={styles.customerListMore}>
+                  +{filteredCustomerList.length - 5} weitere Kunden
+                </Text>
               )}
-            </ScrollView>
-          </View>
-        )}
+            </View>
+          ) : (
+            <View style={styles.customerListEmpty}>
+              <Text style={styles.customerListEmptyText}>
+                {customerSearchQuery ? 'Kein Kunde gefunden' : 'Keine Kunden vorhanden'}
+              </Text>
+              <TouchableOpacity 
+                style={styles.customerAddButton}
+                onPress={() => router.push('/customers/new')}
+              >
+                <Ionicons name="person-add" size={16} color="#1976d2" />
+                <Text style={styles.customerAddButtonText}>Neuen Kunden anlegen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
@@ -711,60 +759,106 @@ const styles = StyleSheet.create({
   },
   quickCustomerSection: {
     marginTop: 8,
-    paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-  },
-  quickCustomerTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    paddingHorizontal: 12,
-  },
-  quickCustomerScroll: {
-    paddingHorizontal: 8,
-  },
-  quickCustomerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginHorizontal: 4,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    padding: 12,
+  },
+  quickCustomerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  quickCustomerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  customerSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+    gap: 8,
+  },
+  customerSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  customerListContainer: {
     gap: 6,
   },
-  quickCustomerAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  customerListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 10,
+    gap: 10,
+  },
+  customerListAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#1976d2',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  quickCustomerInitial: {
+  customerListInitial: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
   },
-  quickCustomerName: {
-    fontSize: 13,
+  customerListInfo: {
+    flex: 1,
+  },
+  customerListName: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
-    maxWidth: 100,
   },
-  quickCustomerMore: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    marginHorizontal: 4,
-  },
-  quickCustomerMoreText: {
+  customerListPhone: {
     fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  customerListAction: {
+    padding: 4,
+  },
+  customerListMore: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#666',
+    marginTop: 6,
+  },
+  customerListEmpty: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  customerListEmptyText: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 10,
+  },
+  customerAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+  },
+  customerAddButtonText: {
+    fontSize: 13,
     color: '#1976d2',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   projectList: {
     padding: 16,

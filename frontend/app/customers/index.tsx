@@ -76,7 +76,10 @@ export default function CustomersScreen() {
     <View style={styles.customerCard}>
       <TouchableOpacity
         style={styles.customerMainArea}
-        onPress={() => router.push(`/customers/${item.id}`)}
+        onPress={() => {
+          console.log('Navigating to customer with ID:', item.id);
+          router.push(`/customers/${item.id}`);
+        }}
       >
         <View style={styles.customerAvatar}>
           <Text style={styles.customerInitial}>

@@ -1443,6 +1443,30 @@ export default function DocumentViewScreen() {
 
   const shareDocument = async () => {
     if (!document?.originalPdfData) return;
+    
+    // Show options
+    Alert.alert(
+      'PDF teilen',
+      'Wählen Sie eine Option',
+      [
+        {
+          text: 'Original-PDF teilen',
+          onPress: shareOriginalPdf,
+        },
+        {
+          text: 'Mit Annotationen teilen',
+          onPress: shareWithAnnotations,
+        },
+        {
+          text: 'Abbrechen',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const shareOriginalPdf = async () => {
+    if (!document?.originalPdfData) return;
     try {
       const base64 = document.originalPdfData.includes(',') 
         ? document.originalPdfData.split(',')[1] 
@@ -1455,6 +1479,66 @@ export default function DocumentViewScreen() {
     } catch (error) {
       Alert.alert('Fehler', 'Konnte nicht geteilt werden');
     }
+  };
+
+  const shareWithAnnotations = async () => {
+    // Load all annotations and create PDF with them
+    const freshDoc = await DocumentService.getById(documentId || '');
+    if (!freshDoc) {
+      Alert.alert('Fehler', 'Dokument nicht gefunden');
+      return;
+    }
+
+    // Check if there are any annotations
+    let hasAnnotations = false;
+    if (freshDoc.pages) {
+      for (const page of freshDoc.pages) {
+        if (page.annotations) {
+          try {
+            const ann = JSON.parse(page.annotations);
+            if ((ann.paths?.length > 0) || (ann.shapes?.length > 0) || (ann.texts?.length > 0)) {
+              hasAnnotations = true;
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (!hasAnnotations) {
+      // No annotations, just share original
+      Alert.alert(
+        'Keine Annotationen',
+        'Es wurden keine Annotationen gefunden. Das Original-PDF wird geteilt.',
+        [{ text: 'OK', onPress: shareOriginalPdf }]
+      );
+      return;
+    }
+
+    // Start the export process - this will render all pages with annotations
+    // Re-use the existing export logic from edit mode
+    setIsExporting(true);
+    setExportProgress(10);
+    
+    // Build annotations data for all pages
+    const allPagesAnnotations: {[key: number]: any} = {};
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      const pageData = freshDoc.pages?.find(p => p.pageNumber === pageNum);
+      if (pageData?.annotations) {
+        try {
+          allPagesAnnotations[pageNum] = JSON.parse(pageData.annotations);
+        } catch (e) {
+          allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
+        }
+      } else {
+        allPagesAnnotations[pageNum] = { paths: [], shapes: [], texts: [] };
+      }
+    }
+
+    // Start rendering all pages for export
+    setAllPageImages({});
+    setRenderAllPagesMode(true);
+    setRenderingForExport(1);
   };
 
   const getPdfViewerHtml = () => {
@@ -2132,6 +2216,33 @@ export default function DocumentViewScreen() {
           <Ionicons name="chevron-forward" size={28} color={currentPage >= totalPages ? '#ccc' : '#1976d2'} />
         </TouchableOpacity>
       </View>
+
+      {/* Hidden WebView for PDF Export - renders all pages sequentially */}
+      {renderAllPagesMode && (
+        <WebView
+          ref={exportWebViewRef}
+          source={{ html: getExportWebViewHtml() }}
+          style={{ height: 1, width: 1, position: 'absolute', top: -2000, left: -2000 }}
+          onMessage={handleExportWebViewMessage}
+          javaScriptEnabled
+        />
+      )}
+
+      {/* Export Progress Modal */}
+      <Modal visible={isExporting} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>PDF wird erstellt...</Text>
+            <Text style={styles.progressSubtitle}>
+              {renderingForExport > 0 ? `Seite ${renderingForExport} von ${totalPages}` : 'Vorbereitung...'}
+            </Text>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${exportProgress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{exportProgress}%</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

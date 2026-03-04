@@ -121,17 +121,17 @@ export default function HomeScreen() {
       
       // Import customer if exists
       let newCustomerId = importData.project.customer_id;
-      if (importData.customer) {
-        const existingCustomer = await CustomerService.getById(importData.customer.id);
-        if (!existingCustomer) {
-          newCustomerId = generateId();
-          await CustomerService.create({
-            ...importData.customer,
-            id: undefined,
-            created_at: undefined,
-            updated_at: undefined,
-          });
-        }
+      if (importData.customer && importData.customer.name) {
+        // Always create a new customer for imports to avoid conflicts
+        const customerData = {
+          ...importData.customer,
+          id: undefined,
+          created_at: undefined,
+          updated_at: undefined,
+        };
+        delete customerData.id;
+        const newCustomer = await CustomerService.create(customerData);
+        newCustomerId = newCustomer.id;
       }
       
       // Import project with new ID

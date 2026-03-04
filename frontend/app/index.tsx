@@ -452,7 +452,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
-            onPress={() => router.push('/customers')}
+            onPress={() => router.push('/customers/index')}
           >
             <Ionicons name="people" size={24} color="#1976d2" />
             <Text style={styles.secondaryButtonText}>Kunden</Text>

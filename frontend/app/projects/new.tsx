@@ -647,7 +647,7 @@ export default function NewProjectScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.newCustomerForm}>
+            <ScrollView style={styles.newCustomerForm} keyboardShouldPersistTaps="handled">
               {/* Import from Contacts Button */}
               <Pressable
                 style={({ pressed }) => [

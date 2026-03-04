@@ -253,6 +253,16 @@ export interface Project {
   description?: string;
   address?: string;
   status: string;
+  // Bauherr-Daten
+  bauherr_name?: string;
+  bauherr_phone?: string;
+  bauherr_email?: string;
+  bauherr_address?: string;
+  // Objektadresse
+  objekt_street?: string;
+  objekt_plz?: string;
+  objekt_city?: string;
+  objekt_address_name?: string; // Name der gespeicherten Adresse (z.B. "Haupthaus")
   created_at: string;
   updated_at: string;
 }

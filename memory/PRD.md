@@ -19,7 +19,7 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 ### Projektverwaltung
 - Projekte erstellen/bearbeiten
 - Kunden-/Bauherr-Daten mit Synchronisation
-- Objektadressen
+- Objektadressen (NEU: mit gespeicherten Adressen)
 - Dachflächen mit Messungen
 - Fotos mit Annotations
 - Skizzen
@@ -37,6 +37,13 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 - Direktes Projekt erstellen aus Kundenliste
 - Synchronisation: Projekt-Änderungen → Kundenstamm
 - Felder: Name, E-Mail, Telefon, Handy, Adresse
+- **NEU**: Projekt-Adressen verwalten (hinzufügen, bearbeiten, löschen)
+
+### Projekt-Adressverwaltung (ABGESCHLOSSEN - März 2026)
+- Kunden können mehrere Projektadressen speichern
+- Adressen in der Kundenliste verwalten (oranges Haus-Symbol mit Badge)
+- Bei neuem Projekt: gespeicherte Adresse auswählen oder manuell eingeben
+- Felder: Bezeichnung, Straße, PLZ, Ort
 
 ## Architektur
 ```
@@ -49,17 +56,17 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
   │   │   └── new.tsx
   │   ├── customers/
   │   │   ├── _layout.tsx
-  │   │   ├── index.tsx         # Kundenliste mit Schnell-Projekt
+  │   │   ├── index.tsx         # Kundenliste mit Schnell-Projekt & Adressen
   │   │   ├── [id].tsx          # Kunde bearbeiten (mit Handy-Feld)
   │   │   └── new.tsx
   │   ├── documents/
   │   │   └── view.tsx          # PDF Annotations Editor
   │   ├── projects/
   │   │   ├── [id].tsx          # Projektdetails (PDF-Export, Checkliste-Kopieren)
-  │   │   └── new.tsx           # Neues Projekt
+  │   │   └── new.tsx           # Neues Projekt (mit Adressauswahl)
   │   └── index.tsx             # Startseite mit Sortierung
   └── services/
-      └── LocalStorage.ts       # AsyncStorage Persistenz (mit saveAll)
+      └── LocalStorage.ts       # AsyncStorage Persistenz (mit saveAll, ProjectAddress)
 ```
 
 ## Was wurde implementiert (März 2026)
@@ -82,6 +89,18 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 - **Checkliste als Vorlage**: Blauer Kopier-Button bei Projekt-Checklisten
 - **Sortierung für Checklisten-Vorlagen**: Persistent mit saveAll()
 - **Sortierung für Checklist-Items**: ⬆️⬇️ Pfeile
+
+### Session 6: Projekt-Adressverwaltung (NEU)
+- **Adress-Modal in Kundenliste**: Oranges Haus-Symbol mit Badge zeigt Anzahl
+- **Projektadressen pro Kunde**: Bezeichnung, Straße, PLZ, Ort
+- **"Neues Projekt"-Formular erweitert**:
+  - Objektadresse-Felder (Straße, PLZ, Ort) immer sichtbar
+  - Bei Kunde mit gespeicherten Adressen: Dropdown zur Auswahl
+  - Auswahl füllt Felder automatisch aus
+  - Manuelle Eingabe überschreibt Auswahl
+- **Datenmodell erweitert**: 
+  - Customer.projectAddresses[]
+  - Project.objekt_street, objekt_plz, objekt_city, objekt_address_name
 
 ## Offene Aufgaben
 

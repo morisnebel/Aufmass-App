@@ -19,7 +19,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
-import { CustomerService, ProjectService, Customer } from '../../services/LocalStorage';
+import { CustomerService, ProjectService, Customer, ProjectAddress } from '../../services/LocalStorage';
 
 // Customer type is imported from LocalStorage service
 
@@ -106,6 +106,13 @@ export default function NewProjectScreen() {
   // Importierte Kontakt-ID für Sync
   const [importedContactId, setImportedContactId] = useState<string | null>(null);
 
+  // Objektadresse States
+  const [selectedProjectAddress, setSelectedProjectAddress] = useState<ProjectAddress | null>(null);
+  const [objektStreet, setObjektStreet] = useState('');
+  const [objektPlz, setObjektPlz] = useState('');
+  const [objektCity, setObjektCity] = useState('');
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+
   useEffect(() => {
     loadCustomers();
   }, []);
@@ -136,6 +143,26 @@ export default function NewProjectScreen() {
     setSelectedCustomer(customer);
     setShowCustomerPicker(false);
     setSearchQuery('');
+    // Objektadresse zurücksetzen wenn Kunde wechselt
+    setSelectedProjectAddress(null);
+    setObjektStreet('');
+    setObjektPlz('');
+    setObjektCity('');
+  };
+
+  const handleSelectProjectAddress = (address: ProjectAddress) => {
+    setSelectedProjectAddress(address);
+    setObjektStreet(address.street);
+    setObjektPlz(address.zip);
+    setObjektCity(address.city);
+    setShowAddressPicker(false);
+  };
+
+  const clearProjectAddress = () => {
+    setSelectedProjectAddress(null);
+    setObjektStreet('');
+    setObjektPlz('');
+    setObjektCity('');
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -437,6 +464,11 @@ export default function NewProjectScreen() {
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,
         bauherr_address: selectedCustomer?.address || undefined,
+        // Objektadresse
+        objekt_street: objektStreet || undefined,
+        objekt_plz: objektPlz || undefined,
+        objekt_city: objektCity || undefined,
+        objekt_address_name: selectedProjectAddress?.name || undefined,
       });
       Alert.alert('Erfolg', 'Projekt wurde erstellt', [
         { text: 'OK', onPress: () => router.replace(`/projects/${newProject.id}`) },
@@ -495,6 +527,85 @@ export default function NewProjectScreen() {
               </View>
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
+          </View>
+
+          {/* Objektadresse - nur anzeigen wenn Kunde ausgewählt und Adressen vorhanden */}
+          {selectedCustomer && selectedCustomer.projectAddresses && selectedCustomer.projectAddresses.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Objektadresse</Text>
+              <TouchableOpacity
+                style={styles.addressSelector}
+                onPress={() => setShowAddressPicker(true)}
+              >
+                <View style={styles.addressSelectorContent}>
+                  <Ionicons name="home" size={20} color="#ff9800" />
+                  <View style={styles.addressInfo}>
+                    {selectedProjectAddress ? (
+                      <>
+                        <Text style={styles.addressName}>{selectedProjectAddress.name}</Text>
+                        <Text style={styles.addressDetails} numberOfLines={1}>
+                          {selectedProjectAddress.street}
+                          {selectedProjectAddress.street && (selectedProjectAddress.zip || selectedProjectAddress.city) ? ', ' : ''}
+                          {selectedProjectAddress.zip} {selectedProjectAddress.city}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.addressPlaceholder}>
+                        Gespeicherte Adresse auswählen...
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.addressSelectorRight}>
+                  {selectedProjectAddress && (
+                    <TouchableOpacity 
+                      onPress={(e) => { e.stopPropagation(); clearProjectAddress(); }}
+                      style={styles.clearAddressButton}
+                    >
+                      <Ionicons name="close-circle" size={22} color="#999" />
+                    </TouchableOpacity>
+                  )}
+                  <Ionicons name="chevron-down" size={20} color="#666" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Manuelle Objektadress-Felder */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              {selectedCustomer?.projectAddresses?.length ? 'Objektadresse (manuell)' : 'Objektadresse'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Straße und Hausnummer"
+              value={objektStreet}
+              onChangeText={(text) => {
+                setObjektStreet(text);
+                if (selectedProjectAddress) setSelectedProjectAddress(null);
+              }}
+            />
+            <View style={styles.addressRow}>
+              <TextInput
+                style={[styles.input, styles.plzInput]}
+                placeholder="PLZ"
+                value={objektPlz}
+                onChangeText={(text) => {
+                  setObjektPlz(text);
+                  if (selectedProjectAddress) setSelectedProjectAddress(null);
+                }}
+                keyboardType="number-pad"
+              />
+              <TextInput
+                style={[styles.input, styles.cityInput]}
+                placeholder="Ort"
+                value={objektCity}
+                onChangeText={(text) => {
+                  setObjektCity(text);
+                  if (selectedProjectAddress) setSelectedProjectAddress(null);
+                }}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -884,6 +995,62 @@ export default function NewProjectScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Project Address Picker Modal */}
+      <Modal
+        visible={showAddressPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddressPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.addressPickerContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Objektadresse wählen</Text>
+              <TouchableOpacity onPress={() => setShowAddressPicker(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.addressPickerList}>
+              {selectedCustomer?.projectAddresses?.map((address) => (
+                <TouchableOpacity
+                  key={address.id}
+                  style={[
+                    styles.addressPickerItem,
+                    selectedProjectAddress?.id === address.id && styles.addressPickerItemSelected
+                  ]}
+                  onPress={() => handleSelectProjectAddress(address)}
+                >
+                  <View style={styles.addressPickerItemIcon}>
+                    <Ionicons 
+                      name="home" 
+                      size={24} 
+                      color={selectedProjectAddress?.id === address.id ? '#ff9800' : '#ccc'} 
+                    />
+                  </View>
+                  <View style={styles.addressPickerItemInfo}>
+                    <Text style={[
+                      styles.addressPickerItemName,
+                      selectedProjectAddress?.id === address.id && styles.addressPickerItemNameSelected
+                    ]}>
+                      {address.name}
+                    </Text>
+                    <Text style={styles.addressPickerItemDetails}>
+                      {address.street}
+                      {address.street && (address.zip || address.city) ? ', ' : ''}
+                      {address.zip} {address.city}
+                    </Text>
+                  </View>
+                  {selectedProjectAddress?.id === address.id && (
+                    <Ionicons name="checkmark-circle" size={24} color="#ff9800" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1232,5 +1399,103 @@ const styles = StyleSheet.create({
   anredeChipTextSelected: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  // Address Selector Styles
+  addressSelector: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff9800',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addressSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  addressInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  addressName: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  addressDetails: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  addressPlaceholder: {
+    fontSize: 15,
+    color: '#999',
+  },
+  addressSelectorRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clearAddressButton: {
+    padding: 2,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  plzInput: {
+    flex: 1,
+  },
+  cityInput: {
+    flex: 2,
+  },
+  // Address Picker Modal
+  addressPickerContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  addressPickerList: {
+    padding: 16,
+  },
+  addressPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  addressPickerItemSelected: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+    borderWidth: 1,
+  },
+  addressPickerItemIcon: {
+    marginRight: 12,
+  },
+  addressPickerItemInfo: {
+    flex: 1,
+  },
+  addressPickerItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  addressPickerItemNameSelected: {
+    color: '#e65100',
+  },
+  addressPickerItemDetails: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
 });

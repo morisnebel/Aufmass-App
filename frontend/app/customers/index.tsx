@@ -73,33 +73,45 @@ export default function CustomersScreen() {
   );
 
   const renderCustomer = ({ item }: { item: Customer }) => (
-    <TouchableOpacity
-      style={styles.customerCard}
-      onPress={() => router.push(`/customers/${item.id}`)}
-    >
-      <View style={styles.customerAvatar}>
-        <Ionicons name="person" size={32} color="#fff" />
-      </View>
-      <View style={styles.customerInfo}>
-        <Text style={styles.customerName}>{item.name}</Text>
-        {item.email && (
-          <Text style={styles.customerDetail}>
-            <Ionicons name="mail" size={12} /> {item.email}
-          </Text>
-        )}
-        {item.phone && (
-          <Text style={styles.customerDetail}>
-            <Ionicons name="call" size={12} /> {item.phone}
-          </Text>
-        )}
-      </View>
+    <View style={styles.customerCard}>
       <TouchableOpacity
-        onPress={() => openDeleteModal(item)}
-        style={styles.deleteButton}
+        style={styles.customerMainArea}
+        onPress={() => router.push(`/customers/${item.id}`)}
       >
-        <Ionicons name="trash-outline" size={20} color="#f44336" />
+        <View style={styles.customerAvatar}>
+          <Text style={styles.customerInitial}>
+            {item.name?.charAt(0).toUpperCase() || '?'}
+          </Text>
+        </View>
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName}>{item.name || 'Unbekannt'}</Text>
+          {item.email && (
+            <Text style={styles.customerDetail}>
+              <Ionicons name="mail" size={12} color="#666" /> {item.email}
+            </Text>
+          )}
+          {item.phone && (
+            <Text style={styles.customerDetail}>
+              <Ionicons name="call" size={12} color="#666" /> {item.phone}
+            </Text>
+          )}
+        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
+      <View style={styles.customerActions}>
+        <TouchableOpacity
+          style={styles.newProjectButton}
+          onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
+        >
+          <Ionicons name="add-circle" size={28} color="#4caf50" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => openDeleteModal(item)}
+          style={styles.deleteButton}
+        >
+          <Ionicons name="trash-outline" size={20} color="#f44336" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   if (loading) {
@@ -233,7 +245,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 12,
     alignItems: 'center',
     shadowColor: '#000',
@@ -242,28 +254,46 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  customerMainArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   customerAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#1976d2',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  customerInitial: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '600',
+  },
   customerInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
   },
   customerName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   customerDetail: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  customerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  newProjectButton: {
+    padding: 4,
   },
   deleteButton: {
     padding: 8,

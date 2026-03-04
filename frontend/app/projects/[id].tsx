@@ -869,7 +869,7 @@ export default function ProjectDetailScreen() {
               margin: 0;
               box-shadow: none;
               border-radius: 0;
-              padding-top: 2mm;
+              padding-top: 5mm;
             }
             .page .header {
               margin: 0 0 10px 0 !important;
@@ -885,7 +885,7 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
-              padding-top: 2mm;
+              padding-top: 5mm;
             }
             .remarks-page {
               page-break-before: always;

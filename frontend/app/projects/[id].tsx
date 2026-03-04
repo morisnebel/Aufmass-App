@@ -341,21 +341,29 @@ export default function ProjectDetailScreen() {
   // Checkliste als Vorlage speichern
   const saveChecklistAsTemplate = async (checklist: any) => {
     try {
+      console.log('Original checklist:', JSON.stringify(checklist, null, 2));
+      
       // Erstelle eine tiefe Kopie der Checklist-Items ohne IDs und Projekt-spezifische Daten
       const cleanItems = (items: any[]): any[] => {
+        if (!items || !Array.isArray(items)) return [];
         return items.map(item => ({
-          name: item.name,
+          name: item.name || item.title || '',
           note: '', // Notizen nicht übernehmen
           measurement: '', // Messungen nicht übernehmen
           checked: false, // Status zurücksetzen
-          children: item.children ? cleanItems(item.children) : [],
+          children: item.children ? cleanItems(item.children) : (item.items ? cleanItems(item.items) : []),
         }));
       };
 
+      const cleanedItems = cleanItems(checklist.items || checklist.categories || []);
+      console.log('Cleaned items:', JSON.stringify(cleanedItems, null, 2));
+
       const templateData = {
-        name: checklist.name,
-        items: cleanItems(checklist.items || []),
+        name: checklist.name || checklist.title || 'Neue Vorlage',
+        items: cleanedItems,
       };
+
+      console.log('Template data to save:', JSON.stringify(templateData, null, 2));
 
       await ChecklistTemplateService.create(templateData);
 

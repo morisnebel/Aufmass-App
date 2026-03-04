@@ -551,14 +551,18 @@ export default function ProjectDetailScreen() {
       light_gray: { color: '#e0e0e0', textColor: '#424242' },
       green: { color: '#388e3c', textColor: '#ffffff' },
       light_green: { color: '#c8e6c9', textColor: '#2e7d32' },
+      orange: { color: '#f57c00', textColor: '#ffffff' },
+      red: { color: '#d32f2f', textColor: '#ffffff' },
       black: { color: '#212121', textColor: '#ffffff' },
       white: { color: '#ffffff', textColor: '#333333' },
     };
     const pdfColor = colorOptions[pdfColorId] || colorOptions.blue;
-    const headerBgColor = pdfColor.color;
-    const headerTextColor = pdfColor.textColor;
-    // Dunklere Version für Gradient (oder gleich bei hellen Farben)
-    const headerBgColorDark = pdfColorId === 'white' ? '#f5f5f5' : pdfColorId.includes('light') ? pdfColor.color : pdfColor.color;
+    const pdfHeaderStyle = settings?.pdf_header_style || 'filled';
+    
+    // Header-Farben basierend auf Stil
+    const headerBgColor = pdfHeaderStyle === 'outline' ? '#ffffff' : pdfColor.color;
+    const headerTextColor = pdfHeaderStyle === 'outline' ? pdfColor.color : pdfColor.textColor;
+    const headerBorderStyle = pdfHeaderStyle === 'outline' ? `border: 2px solid ${pdfColor.color};` : '';
     
     // Format date
     const formatDate = (dateStr: string) => {
@@ -991,6 +995,7 @@ export default function ProjectDetailScreen() {
             gap: 6px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            ${headerBorderStyle}
           }
           .header-top {
             display: flex;

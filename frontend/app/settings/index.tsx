@@ -33,6 +33,7 @@ interface CompanySettings {
   bluetooth_mode: boolean;
   pdf_checklist_columns: number; // 1, 2, oder 3 Spalten
   pdf_header_color: string; // Hintergrundfarbe für PDF-Header
+  pdf_header_style: 'filled' | 'outline'; // Voll oder nur Rahmen
 }
 
 // Verfügbare Farboptionen für PDF-Header
@@ -43,8 +44,9 @@ const PDF_COLOR_OPTIONS = [
   { id: 'light_gray', label: 'Hellgrau', color: '#e0e0e0', textColor: '#424242' },
   { id: 'green', label: 'Grün', color: '#388e3c', textColor: '#ffffff' },
   { id: 'light_green', label: 'Hellgrün', color: '#c8e6c9', textColor: '#2e7d32' },
+  { id: 'orange', label: 'Orange', color: '#f57c00', textColor: '#ffffff' },
+  { id: 'red', label: 'Rot', color: '#d32f2f', textColor: '#ffffff' },
   { id: 'black', label: 'Schwarz', color: '#212121', textColor: '#ffffff' },
-  { id: 'white', label: 'Weiß (kein Druck)', color: '#ffffff', textColor: '#333333' },
 ];
 
 export default function SettingsScreen() {
@@ -66,6 +68,7 @@ export default function SettingsScreen() {
     bluetooth_mode: false,
     pdf_checklist_columns: 2, // Standard: 2 Spalten
     pdf_header_color: 'blue', // Standard: Blau
+    pdf_header_style: 'filled', // Standard: Volle Farbe
   });
 
   useEffect(() => {
@@ -358,7 +361,7 @@ export default function SettingsScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>PDF Kopfzeilen-Farbe</Text>
-              <Text style={styles.sublabel}>Wählen Sie eine Farbe für den PDF-Header (hellere Farben sparen Tinte)</Text>
+              <Text style={styles.sublabel}>Wählen Sie eine Farbe für den PDF-Header</Text>
               <View style={styles.colorSelector}>
                 {PDF_COLOR_OPTIONS.map((option) => (
                   <TouchableOpacity
@@ -382,6 +385,38 @@ export default function SettingsScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>PDF Kopfzeilen-Stil</Text>
+              <Text style={styles.sublabel}>Rahmen spart Druckertinte</Text>
+              <View style={styles.styleSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.styleOption,
+                    settings.pdf_header_style === 'filled' && styles.styleOptionActive
+                  ]}
+                  onPress={() => setSettings({ ...settings, pdf_header_style: 'filled' })}
+                >
+                  <View style={[styles.stylePreviewFilled, { backgroundColor: PDF_COLOR_OPTIONS.find(o => o.id === settings.pdf_header_color)?.color || '#1976d2' }]} />
+                  <Text style={[styles.styleLabel, settings.pdf_header_style === 'filled' && styles.styleLabelActive]}>
+                    Volle Farbe
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.styleOption,
+                    settings.pdf_header_style === 'outline' && styles.styleOptionActive
+                  ]}
+                  onPress={() => setSettings({ ...settings, pdf_header_style: 'outline' })}
+                >
+                  <View style={[styles.stylePreviewOutline, { borderColor: PDF_COLOR_OPTIONS.find(o => o.id === settings.pdf_header_color)?.color || '#1976d2' }]} />
+                  <Text style={[styles.styleLabel, settings.pdf_header_style === 'outline' && styles.styleLabelActive]}>
+                    Nur Rahmen
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -419,6 +454,7 @@ export default function SettingsScreen() {
                           bluetooth_mode: false,
                           pdf_checklist_columns: 2,
                           pdf_header_color: 'blue',
+                          pdf_header_style: 'filled',
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },
@@ -716,6 +752,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   colorLabelActive: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  styleSelector: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 8,
+  },
+  styleOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
+  },
+  styleOptionActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  stylePreviewFilled: {
+    width: 60,
+    height: 30,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  stylePreviewOutline: {
+    width: 60,
+    height: 30,
+    borderRadius: 4,
+    borderWidth: 3,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  styleLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  styleLabelActive: {
     color: '#1976d2',
     fontWeight: '600',
   },

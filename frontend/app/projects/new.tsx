@@ -728,9 +728,8 @@ export default function NewProjectScreen() {
                   placeholder="Telefonnummer"
                   value={newCustomerPhone}
                   onChangeText={setNewCustomerPhone}
-                  keyboardType="number-pad"
+                  keyboardType="default"
                   autoCorrect={false}
-                  autoCapitalize="none"
                 />
               </View>
 
@@ -741,9 +740,8 @@ export default function NewProjectScreen() {
                   placeholder="Handynummer"
                   value={newCustomerMobile}
                   onChangeText={setNewCustomerMobile}
-                  keyboardType="number-pad"
+                  keyboardType="default"
                   autoCorrect={false}
-                  autoCapitalize="none"
                 />
               </View>
 

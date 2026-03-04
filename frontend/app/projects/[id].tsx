@@ -822,7 +822,7 @@ export default function ProjectDetailScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           @page {
-            margin: 8mm;
+            margin: 15mm;
             size: A4;
           }
           @media screen {
@@ -834,7 +834,7 @@ export default function ProjectDetailScreen() {
               background: #fff;
               width: 210mm;
               min-height: 297mm;
-              padding: 8mm;
+              padding: 15mm;
               margin: 0 auto 10px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
@@ -847,7 +847,7 @@ export default function ProjectDetailScreen() {
               background: #fff;
               width: 210mm;
               min-height: 297mm;
-              padding: 8mm;
+              padding: 15mm;
               margin: 10px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;

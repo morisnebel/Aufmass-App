@@ -856,6 +856,13 @@ export default function DocumentViewScreen() {
         
         if (clickedPath) {
           const pathIndex = paths.indexOf(clickedPath);
+          // Get first point of path as reference for dragging
+          const coords = clickedPath.path.match(/[\d.]+/g);
+          if (coords && coords.length >= 2) {
+            const firstX = parseFloat(coords[0]);
+            const firstY = parseFloat(coords[1]);
+            setDragOffset({ x: locationX - firstX, y: locationY - firstY });
+          }
           setSelectedElement({ type: 'path', id: `path-${pathIndex}` });
           return;
         }
@@ -961,6 +968,37 @@ export default function DocumentViewScreen() {
             }
             return s;
           }));
+        } else if (selectedElement.type === 'path') {
+          // Move path (pencil drawing)
+          const pathIndex = parseInt(selectedElement.id.replace('path-', ''));
+          const pathObj = paths[pathIndex];
+          if (pathObj) {
+            // Get the bounding box first point as reference
+            const coords = pathObj.path.match(/[\d.]+/g);
+            if (coords && coords.length >= 2) {
+              const firstX = parseFloat(coords[0]);
+              const firstY = parseFloat(coords[1]);
+              
+              // Calculate movement delta from original position
+              const deltaX = dx - firstX;
+              const deltaY = dy - firstY;
+              
+              // Create new path with translated coordinates
+              let coordIndex = 0;
+              const newPathStr = pathObj.path.replace(/([\d.]+)\s+([\d.]+)/g, (match, xStr, yStr) => {
+                const oldX = parseFloat(xStr);
+                const oldY = parseFloat(yStr);
+                return `${oldX + deltaX} ${oldY + deltaY}`;
+              });
+              
+              setPaths(prev => prev.map((p, i) => {
+                if (i === pathIndex) {
+                  return { ...p, path: newPathStr };
+                }
+                return p;
+              }));
+            }
+          }
         }
         return;
       }
@@ -1830,7 +1868,7 @@ export default function DocumentViewScreen() {
                 <>
                   <View style={styles.divider} />
                   <TouchableOpacity 
-                    style={[styles.toolBtn, { backgroundColor: '#4caf50', paddingHorizontal: 12 }]} 
+                    style={styles.actionBtn}
                     onPress={() => {
                       const pointer = shapes.find(s => s.id === selectedElement.id);
                       if (pointer) {
@@ -1839,8 +1877,10 @@ export default function DocumentViewScreen() {
                       }
                     }}
                   >
-                    <Ionicons name="create-outline" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontSize: 12, marginLeft: 4 }}>Text</Text>
+                    <View style={[styles.actionBtnInner, { backgroundColor: '#4caf50' }]}>
+                      <Ionicons name="create-outline" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>Text</Text>
+                    </View>
                   </TouchableOpacity>
                 </>
               )}
@@ -1850,7 +1890,7 @@ export default function DocumentViewScreen() {
                 <>
                   <View style={styles.divider} />
                   <TouchableOpacity 
-                    style={[styles.toolBtn, { backgroundColor: '#f44336', paddingHorizontal: 12 }]} 
+                    style={styles.actionBtn}
                     onPress={() => {
                       if (selectedElement.type === 'path') {
                         const pathIndex = parseInt(selectedElement.id.replace('path-', ''));
@@ -1863,8 +1903,10 @@ export default function DocumentViewScreen() {
                       setSelectedElement(null);
                     }}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontSize: 12, marginLeft: 4 }}>Löschen</Text>
+                    <View style={[styles.actionBtnInner, { backgroundColor: '#f44336' }]}>
+                      <Ionicons name="trash-outline" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>Löschen</Text>
+                    </View>
                   </TouchableOpacity>
                 </>
               )}
@@ -2212,6 +2254,25 @@ const styles = StyleSheet.create({
   },
   toolBtnActive: { backgroundColor: '#1976d2' },
   divider: { width: 1, height: 30, backgroundColor: '#ddd', marginHorizontal: 10 },
+  
+  // Action buttons (Text, Löschen)
+  actionBtn: {
+    marginHorizontal: 4,
+  },
+  actionBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  actionBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
   colorBtn: {
     width: 32,
     height: 32,

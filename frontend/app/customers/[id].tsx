@@ -115,13 +115,17 @@ export default function EditCustomerScreen() {
     }
     
     try {
+      console.log('Loading customer with ID:', customerId);
       const customer = await CustomerService.getById(customerId);
+      console.log('Loaded customer:', customer);
       
       if (customer && !isImportingRef.current) {
         setName(customer.name || '');
         setEmail(customer.email || '');
         setPhone(customer.phone || '');
         setAddress(customer.address || '');
+      } else {
+        console.log('Customer not found or importing');
       }
     } catch (error) {
       console.error('Error loading customer:', error);

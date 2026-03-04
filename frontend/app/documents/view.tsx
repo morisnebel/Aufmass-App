@@ -653,12 +653,22 @@ export default function DocumentViewScreen() {
       } else {
         // We're in preview mode - share directly
         console.log('Sharing directly from preview mode');
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'application/pdf',
-            UTI: 'com.adobe.pdf',
-          });
-          console.log('Share dialog closed');
+        
+        // Small delay to ensure UI is ready
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        try {
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, {
+              mimeType: 'application/pdf',
+              UTI: 'com.adobe.pdf',
+            });
+            console.log('Share dialog closed');
+          } else {
+            Alert.alert('Fehler', 'Teilen nicht verfügbar');
+          }
+        } catch (shareError) {
+          console.log('Share error:', shareError);
         }
         isPrintingRef.current = false;
       }

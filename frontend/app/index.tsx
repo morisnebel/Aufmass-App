@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
 
   const loadData = async () => {
     try {
@@ -250,7 +251,39 @@ export default function HomeScreen() {
     Alert.alert('Status ändern', 'Wählen Sie den neuen Status:', buttons);
   };
 
-  // Gefilterte Projekte
+  // Sortierung ändern
+  const changeSortOrder = () => {
+    const sortOptions = [
+      { key: 'date_desc', label: 'Neueste zuerst' },
+      { key: 'date_asc', label: 'Älteste zuerst' },
+      { key: 'name_asc', label: 'Name A-Z' },
+      { key: 'name_desc', label: 'Name Z-A' },
+      { key: 'status', label: 'Nach Status' },
+    ];
+    
+    const buttons = sortOptions.map(option => ({
+      text: option.label + (sortBy === option.key ? ' ✓' : ''),
+      onPress: () => setSortBy(option.key as typeof sortBy),
+      style: sortBy === option.key ? 'cancel' : 'default' as const,
+    }));
+    buttons.push({ text: 'Abbrechen', onPress: () => {}, style: 'cancel' as const });
+    
+    Alert.alert('Sortieren nach', 'Wählen Sie die Sortierung:', buttons);
+  };
+
+  // Sortier-Label
+  const getSortLabel = () => {
+    switch (sortBy) {
+      case 'date_desc': return 'Neueste';
+      case 'date_asc': return 'Älteste';
+      case 'name_asc': return 'A-Z';
+      case 'name_desc': return 'Z-A';
+      case 'status': return 'Status';
+      default: return 'Sortieren';
+    }
+  };
+
+  // Gefilterte und sortierte Projekte
   const filteredProjects = projects.filter(project => {
     // Status-Filter
     if (activeFilter !== 'all' && project.status !== activeFilter) {
@@ -271,6 +304,22 @@ export default function HomeScreen() {
     }
     
     return true;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'date_desc':
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      case 'date_asc':
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      case 'name_asc':
+        return a.name.localeCompare(b.name, 'de');
+      case 'name_desc':
+        return b.name.localeCompare(a.name, 'de');
+      case 'status':
+        const statusOrder = { 'aktiv': 0, 'abgeschlossen': 1, 'abgebrochen': 2 };
+        return (statusOrder[a.status as keyof typeof statusOrder] || 3) - (statusOrder[b.status as keyof typeof statusOrder] || 3);
+      default:
+        return 0;
+    }
   });
 
   // Status-Farbe ermitteln
@@ -426,14 +475,24 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Import Button */}
-        <TouchableOpacity
-          style={styles.importButtonContainer}
-          onPress={importProjectFile}
-        >
-          <Ionicons name="cloud-download" size={22} color="#2e7d32" />
-          <Text style={styles.importButtonText}>Projekt aus Datei importieren</Text>
-        </TouchableOpacity>
+        {/* Import and Sort Buttons */}
+        <View style={styles.importSortRow}>
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={changeSortOrder}
+          >
+            <Ionicons name="swap-vertical" size={20} color="#1976d2" />
+            <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={importProjectFile}
+          >
+            <Ionicons name="cloud-download" size={20} color="#2e7d32" />
+            <Text style={styles.importButtonText}>Importieren</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {filteredProjects.length === 0 ? (
@@ -573,24 +632,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  importButtonContainer: {
+  importSortRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  sortButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  sortButtonText: {
+    color: '#1976d2',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  importButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#e8f5e9',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#4caf50',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginHorizontal: 16,
-    gap: 10,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 8,
   },
   importButtonText: {
     color: '#2e7d32',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   projectList: {
     padding: 16,

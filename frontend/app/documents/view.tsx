@@ -386,9 +386,15 @@ export default function DocumentViewScreen() {
   const [allPageImages, setAllPageImages] = useState<{[page: number]: string}>({});
   const [renderAllPagesMode, setRenderAllPagesMode] = useState(false);
   const [renderingForExport, setRenderingForExport] = useState(0);
+  const isPrintingRef = useRef(false);
 
   // Share/Print all pages with annotations as PDF
   const shareAllPagesAnnotated = async () => {
+    if (isPrintingRef.current) {
+      console.log('Print already in progress, ignoring');
+      return;
+    }
+    
     // Save current page annotations first
     pageAnnotationsRef.current[currentPage] = { 
       paths: [...paths], 
@@ -397,6 +403,7 @@ export default function DocumentViewScreen() {
     };
     await saveAllAnnotations();
 
+    isPrintingRef.current = true;
     setIsExporting(true);
     setExportProgress(10);
     
@@ -569,22 +576,40 @@ export default function DocumentViewScreen() {
     `;
 
     setExportProgress(100);
+    
+    // Don't close editing mode - print directly
     setIsExporting(false);
     setAllPageImages({});
+    setRenderAllPagesMode(false);
 
-    // Close editing mode first
-    setIsEditing(false);
-    
-    // Small delay to let modal close, then print
-    setTimeout(async () => {
-      try {
-        console.log('Opening print dialog');
-        await Print.printAsync({ html: htmlContent });
-        console.log('Print completed');
-      } catch (e) {
-        console.log('Print cancelled or error:', e);
+    try {
+      console.log('Creating PDF file');
+      
+      // First create a PDF file
+      const { uri } = await Print.printToFileAsync({ 
+        html: htmlContent,
+        width: 595, // A4 width in points
+        height: 842, // A4 height in points
+      });
+      
+      console.log('PDF created at:', uri);
+      
+      // Then share it (this will show print option on iOS)
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+        });
+        console.log('Share dialog closed');
+      } else {
+        Alert.alert('Fehler', 'Teilen nicht verfügbar');
       }
-    }, 400);
+    } catch (e) {
+      console.log('PDF export error:', e);
+      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+    } finally {
+      isPrintingRef.current = false;
+    }
   };
 
   // Ref for export WebView

@@ -251,28 +251,46 @@ export default function DocumentViewScreen() {
     setIsEditing(true);
     setRenderingPage(true);
     
-    // Load existing annotations for this page if available
+    // Load ALL existing annotations from document into pageAnnotationsRef
     if (document) {
-      const page = document.pages?.find(p => p.pageNumber === currentPage);
-      if (page?.annotations) {
-        try {
-          const saved: SavedAnnotations = JSON.parse(page.annotations);
-          setPaths(saved.paths || []);
-          setShapes(saved.shapes || []);
-          setTextAnnotations(saved.texts || []);
-          // Rebuild undo history
-          const history: Array<{type: 'path' | 'shape' | 'text', id: string}> = [];
-          (saved.paths || []).forEach((_, i) => history.push({ type: 'path', id: `path-${i}` }));
-          (saved.shapes || []).forEach(s => history.push({ type: 'shape', id: s.id }));
-          (saved.texts || []).forEach(t => history.push({ type: 'text', id: t.id }));
-          setUndoHistory(history);
-        } catch (e) {
-          console.log('Error parsing annotations:', e);
-          setPaths([]);
-          setShapes([]);
-          setTextAnnotations([]);
-          setUndoHistory([]);
+      const loadedAnnotations: {[page: number]: {paths: DrawPath[], shapes: Shape[], texts: TextAnnotation[]}} = {};
+      
+      // Load annotations for all pages
+      if (document.pages) {
+        for (const page of document.pages) {
+          if (page.annotations) {
+            try {
+              const saved: SavedAnnotations = JSON.parse(page.annotations);
+              loadedAnnotations[page.pageNumber] = {
+                paths: saved.paths || [],
+                shapes: saved.shapes || [],
+                texts: saved.texts || [],
+              };
+              console.log(`Loaded annotations for page ${page.pageNumber}: ${saved.paths?.length || 0} paths, ${saved.shapes?.length || 0} shapes, ${saved.texts?.length || 0} texts`);
+            } catch (e) {
+              console.log(`Error parsing annotations for page ${page.pageNumber}:`, e);
+              loadedAnnotations[page.pageNumber] = { paths: [], shapes: [], texts: [] };
+            }
+          }
         }
+      }
+      
+      // Store in ref
+      pageAnnotationsRef.current = loadedAnnotations;
+      setPageAnnotations(loadedAnnotations);
+      
+      // Load current page into state
+      const currentPageAnnotations = loadedAnnotations[currentPage];
+      if (currentPageAnnotations) {
+        setPaths(currentPageAnnotations.paths || []);
+        setShapes(currentPageAnnotations.shapes || []);
+        setTextAnnotations(currentPageAnnotations.texts || []);
+        // Rebuild undo history
+        const history: Array<{type: 'path' | 'shape' | 'text', id: string}> = [];
+        (currentPageAnnotations.paths || []).forEach((_, i) => history.push({ type: 'path', id: `path-${i}` }));
+        (currentPageAnnotations.shapes || []).forEach(s => history.push({ type: 'shape', id: s.id }));
+        (currentPageAnnotations.texts || []).forEach(t => history.push({ type: 'text', id: t.id }));
+        setUndoHistory(history);
       } else {
         setPaths([]);
         setShapes([]);

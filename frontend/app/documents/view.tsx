@@ -514,7 +514,8 @@ export default function DocumentViewScreen() {
           svgContent += `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="${s.color}" stroke-width="${sw}" fill="none"/>`;
         } else if (s.type === 'line') {
           svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s.color}" stroke-width="${sw}"/>`;
-        } else if (s.type === 'arrow' || s.type === 'pointer') {
+        } else if (s.type === 'arrow') {
+          // Regular arrow
           const angle = Math.atan2(y2-y1, x2-x1);
           const headLen = 15;
           const ax1 = x2 - headLen * Math.cos(angle - Math.PI/6);
@@ -523,8 +524,34 @@ export default function DocumentViewScreen() {
           const ay2 = y2 - headLen * Math.sin(angle + Math.PI/6);
           svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s.color}" stroke-width="${sw}"/>`;
           svgContent += `<polygon points="${x2},${y2} ${ax1},${ay1} ${ax2},${ay2}" fill="${s.color}"/>`;
-          if (s.text) {
-            svgContent += `<text x="${x1}" y="${y1 - 10}" fill="${s.color}" font-size="14" font-weight="bold" text-anchor="middle">${s.text}</text>`;
+        } else if (s.type === 'pointer') {
+          // Note annotation with connecting line
+          const noteText = s.text || '';
+          const textLength = noteText.length;
+          const noteWidth = Math.max(textLength * 9 + 20, 80);
+          const noteHeight = 32;
+          const noteX = x1 - noteWidth / 2;
+          const noteY = y1 - noteHeight - 5;
+          const cornerRadius = 6;
+          
+          // Connecting dashed line
+          svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${s.color}" stroke-width="2" stroke-dasharray="5,3"/>`;
+          
+          // Target circle
+          svgContent += `<circle cx="${x2}" cy="${y2}" r="6" fill="${s.color}" stroke="white" stroke-width="2"/>`;
+          
+          // Note box shadow
+          svgContent += `<rect x="${noteX + 2}" y="${noteY + 2}" width="${noteWidth}" height="${noteHeight}" fill="rgba(0,0,0,0.15)" rx="${cornerRadius}"/>`;
+          
+          // Note box background
+          svgContent += `<rect x="${noteX}" y="${noteY}" width="${noteWidth}" height="${noteHeight}" fill="#FFFDE7" stroke="${s.color}" stroke-width="2" rx="${cornerRadius}"/>`;
+          
+          // Triangle pointer
+          svgContent += `<path d="M ${x1 - 6} ${noteY + noteHeight} L ${x1} ${noteY + noteHeight + 8} L ${x1 + 6} ${noteY + noteHeight} Z" fill="#FFFDE7" stroke="${s.color}" stroke-width="2"/>`;
+          
+          // Note text
+          if (noteText) {
+            svgContent += `<text x="${x1}" y="${noteY + noteHeight / 2 + 5}" fill="#333" font-size="14" font-weight="600" text-anchor="middle">${noteText}</text>`;
           }
         }
       });
@@ -984,33 +1011,96 @@ export default function DocumentViewScreen() {
     return 'pen';
   };
 
-  // Render pointer/memo arrow
+  // Render pointer/memo arrow - NEW DESIGN: Note with connecting line
   const renderPointer = (pointer: any, isPreview = false) => {
     const { x1, y1, x2, y2, text, color: pColor } = pointer;
     const key = isPreview ? 'preview-pointer' : pointer.id;
     const col = pColor || drawColor;
     
-    // Calculate arrow angle
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    const arrowLength = 15;
-    const arrowAngle = Math.PI / 6;
-    
-    // Arrow head points
-    const ax1 = x2 - arrowLength * Math.cos(angle - arrowAngle);
-    const ay1 = y2 - arrowLength * Math.sin(angle - arrowAngle);
-    const ax2 = x2 - arrowLength * Math.cos(angle + arrowAngle);
-    const ay2 = y2 - arrowLength * Math.sin(angle + arrowAngle);
-    
-    // Text position (middle of line, offset)
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2 - 10;
+    const noteText = text || '';
+    const textLength = noteText.length;
+    const noteWidth = Math.max(textLength * 9 + 20, 80);
+    const noteHeight = 32;
+    const noteX = x1 - noteWidth / 2;
+    const noteY = y1 - noteHeight - 5;
+    const cornerRadius = 6;
+    const targetRadius = 6;
     
     return (
       <G key={key}>
-        <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={3} />
-        <Line x1={x2} y1={y2} x2={ax1} y2={ay1} stroke={col} strokeWidth={3} />
-        <Line x1={x2} y1={y2} x2={ax2} y2={ay2} stroke={col} strokeWidth={3} />
-        {text && <SvgText x={midX} y={midY} fill={col} fontSize={14} fontWeight="bold" textAnchor="middle">{text}</SvgText>}
+        {/* Connecting line from note to target */}
+        <Line 
+          x1={x1} 
+          y1={y1} 
+          x2={x2} 
+          y2={y2} 
+          stroke={col} 
+          strokeWidth={2}
+          strokeDasharray="5,3"
+        />
+        
+        {/* Target indicator - filled circle */}
+        <Circle 
+          cx={x2} 
+          cy={y2} 
+          r={targetRadius} 
+          fill={col}
+          stroke="white"
+          strokeWidth={2}
+        />
+        
+        {/* Note box shadow */}
+        <Rect 
+          x={noteX + 2} 
+          y={noteY + 2} 
+          width={noteWidth} 
+          height={noteHeight} 
+          fill="rgba(0,0,0,0.15)" 
+          rx={cornerRadius}
+        />
+        
+        {/* Note box background */}
+        <Rect 
+          x={noteX} 
+          y={noteY} 
+          width={noteWidth} 
+          height={noteHeight} 
+          fill="#FFFDE7"
+          stroke={col} 
+          strokeWidth={2} 
+          rx={cornerRadius}
+        />
+        
+        {/* Small triangle/pointer from box to line */}
+        <Path 
+          d={`M ${x1 - 6} ${noteY + noteHeight} L ${x1} ${noteY + noteHeight + 8} L ${x1 + 6} ${noteY + noteHeight} Z`}
+          fill="#FFFDE7"
+          stroke={col}
+          strokeWidth={2}
+        />
+        {/* Cover the bottom stroke where triangle meets box */}
+        <Line 
+          x1={x1 - 5} 
+          y1={noteY + noteHeight} 
+          x2={x1 + 5} 
+          y2={noteY + noteHeight} 
+          stroke="#FFFDE7" 
+          strokeWidth={3}
+        />
+        
+        {/* Note text */}
+        {noteText && (
+          <SvgText 
+            x={x1} 
+            y={noteY + noteHeight / 2 + 5} 
+            fill="#333" 
+            fontSize={14} 
+            fontWeight="600" 
+            textAnchor="middle"
+          >
+            {noteText}
+          </SvgText>
+        )}
       </G>
     );
   };
@@ -1069,60 +1159,101 @@ export default function DocumentViewScreen() {
           </G>
         );
       case 'pointer':
-        const pAngle = Math.atan2(y2 - y1, x2 - x1);
-        const pHeadLength = 18;
-        const pAngleOffset = Math.PI / 7;
         const col = color || drawColor;
         
-        // Calculate text box position - at the start of the arrow
-        const textBoxX = x1;
-        const textBoxY = y1 - 25;
-        const textWidth = shape.text ? Math.max(shape.text.length * 8, 60) : 0;
-        const textHeight = 22;
+        // New design: Note box with connecting line
+        // x1,y1 = where the note box is (start of drag)
+        // x2,y2 = where it points to (end of drag)
         
-        // Filled arrow head points for polygon
-        const ax1 = x2 - pHeadLength * Math.cos(pAngle - pAngleOffset);
-        const ay1 = y2 - pHeadLength * Math.sin(pAngle - pAngleOffset);
-        const ax2 = x2 - pHeadLength * Math.cos(pAngle + pAngleOffset);
-        const ay2 = y2 - pHeadLength * Math.sin(pAngle + pAngleOffset);
+        const noteText = shape.text || '';
+        const textLength = noteText.length;
+        const noteWidth = Math.max(textLength * 9 + 20, 80);
+        const noteHeight = 32;
+        const noteX = x1 - noteWidth / 2;
+        const noteY = y1 - noteHeight - 5;
+        const cornerRadius = 6;
+        
+        // Connection point from note to target
+        const noteBottomCenterX = x1;
+        const noteBottomCenterY = y1;
+        
+        // Small circle at target point
+        const targetRadius = 6;
         
         return (
           <G key={key}>
-            {/* Main line */}
-            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={3} />
-            
-            {/* Filled arrow head */}
-            <Path 
-              d={`M ${x2} ${y2} L ${ax1} ${ay1} L ${ax2} ${ay2} Z`} 
-              fill={col} 
+            {/* Connecting line from note to target */}
+            <Line 
+              x1={noteBottomCenterX} 
+              y1={noteBottomCenterY} 
+              x2={x2} 
+              y2={y2} 
               stroke={col} 
-              strokeWidth={1} 
+              strokeWidth={2}
+              strokeDasharray="5,3"
             />
             
-            {/* Text box with background */}
-            {shape.text && (
-              <G>
-                <Rect 
-                  x={textBoxX - textWidth/2 - 5} 
-                  y={textBoxY - textHeight + 5} 
-                  width={textWidth + 10} 
-                  height={textHeight} 
-                  fill="white" 
-                  stroke={col} 
-                  strokeWidth={2} 
-                  rx={4}
-                />
-                <SvgText 
-                  x={textBoxX} 
-                  y={textBoxY} 
-                  fill={col} 
-                  fontSize={14} 
-                  fontWeight="bold" 
-                  textAnchor="middle"
-                >
-                  {shape.text}
-                </SvgText>
-              </G>
+            {/* Target indicator - filled circle */}
+            <Circle 
+              cx={x2} 
+              cy={y2} 
+              r={targetRadius} 
+              fill={col}
+              stroke="white"
+              strokeWidth={2}
+            />
+            
+            {/* Note box shadow */}
+            <Rect 
+              x={noteX + 2} 
+              y={noteY + 2} 
+              width={noteWidth} 
+              height={noteHeight} 
+              fill="rgba(0,0,0,0.15)" 
+              rx={cornerRadius}
+            />
+            
+            {/* Note box background */}
+            <Rect 
+              x={noteX} 
+              y={noteY} 
+              width={noteWidth} 
+              height={noteHeight} 
+              fill="#FFFDE7"
+              stroke={col} 
+              strokeWidth={2} 
+              rx={cornerRadius}
+            />
+            
+            {/* Small triangle/pointer from box to line */}
+            <Path 
+              d={`M ${x1 - 6} ${noteY + noteHeight} L ${x1} ${noteY + noteHeight + 8} L ${x1 + 6} ${noteY + noteHeight} Z`}
+              fill="#FFFDE7"
+              stroke={col}
+              strokeWidth={2}
+            />
+            {/* Cover the bottom stroke where triangle meets box */}
+            <Line 
+              x1={x1 - 5} 
+              y1={noteY + noteHeight} 
+              x2={x1 + 5} 
+              y2={noteY + noteHeight} 
+              stroke="#FFFDE7" 
+              strokeWidth={3}
+            />
+            
+            {/* Note text */}
+            {noteText && (
+              <SvgText 
+                x={x1} 
+                y={noteY + noteHeight / 2 + 5} 
+                fill="#333" 
+                fontSize={14} 
+                fontWeight="600" 
+                textAnchor="middle"
+              >
+                {noteText}
+              </SvgText>
             )}
           </G>
         );

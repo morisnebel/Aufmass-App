@@ -1841,6 +1841,10 @@ export default function ProjectDetailScreen() {
         base64: false,
       });
       
+      // Hide loader BEFORE opening share dialog to prevent stuck overlay
+      // Share dialog may not always resolve properly when user interacts with sub-dialogs (like Print)
+      setIsGeneratingPdf(false);
+      
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(uri, {
@@ -1854,7 +1858,6 @@ export default function ProjectDetailScreen() {
     } catch (error) {
       console.error('Error sharing PDF:', error);
       Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
-    } finally {
       setIsGeneratingPdf(false);
     }
   };
@@ -1870,6 +1873,10 @@ export default function ProjectDetailScreen() {
         base64: false,
       });
       
+      // Hide loader BEFORE opening share dialog to prevent stuck overlay
+      // Share dialog may not always resolve properly when user interacts with sub-dialogs (like Print)
+      setIsGeneratingPdf(false);
+      
       // Share the file directly - iOS will show "Save to Files" option
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
@@ -1884,7 +1891,6 @@ export default function ProjectDetailScreen() {
     } catch (error) {
       console.error('Error saving PDF:', error);
       Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
-    } finally {
       setIsGeneratingPdf(false);
     }
   };
@@ -2079,6 +2085,9 @@ export default function ProjectDetailScreen() {
       
       await writeAsStringAsync(fileUri, jsonString);
       
+      // Hide loader BEFORE opening share dialog to prevent stuck overlay
+      setIsGeneratingPdf(false);
+      
       // Share the file
       await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
@@ -2087,6 +2096,7 @@ export default function ProjectDetailScreen() {
       
     } catch (error: any) {
       console.error('Export error:', error);
+      setIsGeneratingPdf(false);
       // Fallback: Share as text
       try {
         const exportData = {
@@ -2107,8 +2117,6 @@ export default function ProjectDetailScreen() {
       } catch (shareError) {
         Alert.alert('Export Fehler', 'Export nicht möglich');
       }
-    } finally {
-      setIsGeneratingPdf(false);
     }
   };
 

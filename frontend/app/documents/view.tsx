@@ -14,6 +14,8 @@ import {
   ScrollView,
   Dimensions,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -1754,27 +1756,42 @@ export default function DocumentViewScreen() {
 
           {/* Pointer Text Modal */}
           <Modal visible={showPointerModal} transparent animationType="fade">
-            <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { marginBottom: 200 }]}>
-                <Text style={styles.modalTitle}>Memo-Pfeil Text</Text>
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.pointerModalContainer}
+            >
+              {/* Semi-transparent background - tap to see note position */}
+              <View style={styles.pointerModalBackdrop}>
+                <Text style={styles.pointerHintText}>Notiz-Position wird angezeigt</Text>
+              </View>
+              
+              {/* Input card at top */}
+              <View style={styles.pointerInputCard}>
+                <Text style={styles.pointerInputTitle}>Notiz-Text eingeben</Text>
                 <TextInput
-                  style={[styles.textInput, { color: drawColor }]}
+                  style={[styles.pointerTextInput, { borderColor: drawColor }]}
                   value={pointerText}
                   onChangeText={setPointerText}
-                  placeholder="Text für Pfeil (optional)..."
+                  placeholder="Text für Notiz..."
                   placeholderTextColor="#999"
                   autoFocus
                 />
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setPointerText(''); setPendingPointer(null); setShowPointerModal(false); }}>
-                    <Text>Abbrechen</Text>
+                <View style={styles.pointerInputButtons}>
+                  <TouchableOpacity 
+                    style={styles.pointerBtnCancel} 
+                    onPress={() => { setPointerText(''); setPendingPointer(null); setShowPointerModal(false); }}
+                  >
+                    <Text style={styles.pointerBtnCancelText}>Abbrechen</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.modalBtnOk} onPress={addPointerElement}>
-                    <Text style={{ color: '#fff' }}>OK</Text>
+                  <TouchableOpacity 
+                    style={[styles.pointerBtnOk, { backgroundColor: drawColor }]} 
+                    onPress={addPointerElement}
+                  >
+                    <Text style={styles.pointerBtnOkText}>Hinzufügen</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           </Modal>
         </View>
       </Modal>
@@ -2005,5 +2022,80 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     textAlign: 'center',
+  },
+  
+  // Pointer/Note input modal styles
+  pointerModalContainer: {
+    flex: 1,
+  },
+  pointerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pointerHintText: {
+    color: 'white',
+    fontSize: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  pointerInputCard: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  pointerInputTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  pointerTextInput: {
+    borderWidth: 2,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#FFFDE7',
+  },
+  pointerInputButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15,
+  },
+  pointerBtnCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    marginRight: 10,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  pointerBtnCancelText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  pointerBtnOk: {
+    flex: 1,
+    paddingVertical: 12,
+    marginLeft: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  pointerBtnOkText: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: '600',
   },
 });

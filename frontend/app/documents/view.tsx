@@ -24,7 +24,7 @@ import { WebView } from 'react-native-webview';
 import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { captureRef } from 'react-native-view-shot';
 
@@ -1483,35 +1483,25 @@ export default function DocumentViewScreen() {
   const shareOriginalPdf = async () => {
     if (!document?.originalPdfData) return;
     try {
-      const base64 = document.originalPdfData.includes(',') 
+      const base64Data = document.originalPdfData.includes(',') 
         ? document.originalPdfData.split(',')[1] 
         : document.originalPdfData;
       
-      // Create a proper filename
       const fileName = document.name.endsWith('.pdf') ? document.name : `${document.name}.pdf`;
-      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      const fileUri = FileSystem.cacheDirectory + fileName;
       
-      // Write file - use string 'base64' for encoding
-      await FileSystem.writeAsStringAsync(fileUri, base64, { 
-        encoding: 'base64' 
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64
       });
-      
-      // Check if file exists
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (!fileInfo.exists) {
-        throw new Error('File was not created');
-      }
       
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, { 
           mimeType: 'application/pdf',
           UTI: 'com.adobe.pdf'
         });
-      } else {
-        Alert.alert('Fehler', 'Teilen nicht verfügbar auf diesem Gerät');
       }
     } catch (error) {
-      console.log('Share error:', error);
+      console.log('Share original error:', error);
       Alert.alert('Fehler', 'Konnte nicht geteilt werden');
     }
   };

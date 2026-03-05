@@ -3120,7 +3120,7 @@ export default function DrawSketchScreen() {
           placeholder="Skizzen-Titel"
           placeholderTextColor="#ccc"
         />
-        {/* PDF-Größe Button */}
+        {/* PDF-Größe Button mit Label */}
         <TouchableOpacity 
           onPress={() => {
             const sizes = ['small', 'medium', 'large', 'full'];
@@ -3130,13 +3130,14 @@ export default function DrawSketchScreen() {
             setPdfSize(sizes[nextIndex]);
             showAlert('PDF-Größe', labels[nextIndex]);
           }} 
-          style={styles.headerButton}
+          style={styles.pdfSizeHeaderButton}
         >
           <Ionicons 
             name={pdfSize === 'small' ? 'apps-outline' : pdfSize === 'medium' ? 'grid-outline' : pdfSize === 'large' ? 'square-outline' : 'expand-outline'} 
-            size={22} 
+            size={20} 
             color="#fff" 
           />
+          <Text style={styles.pdfSizeHeaderLabel}>PDF</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={saveSketch} style={styles.headerButton} disabled={loading}>
           <Ionicons name="checkmark" size={24} color={loading ? '#888' : '#fff'} />
@@ -4556,6 +4557,18 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+  },
+  pdfSizeHeaderButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  pdfSizeHeaderLabel: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 2,
   },
   titleInput: {
     flex: 1,

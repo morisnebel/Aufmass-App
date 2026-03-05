@@ -125,7 +125,7 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 
 ## Was wurde implementiert (Dezember 2025)
 
-### Session: Konditionelle Notizen für Skizzen (NEU - ABGESCHLOSSEN)
+### Session: Konditionelle Notizen für Skizzen (ABGESCHLOSSEN - Dezember 2025)
 - **Notizen-Feature für Skizzen implementiert**:
   - Neuer "Notizen"-Button in der Toolbar (Dokument-Symbol)
   - Modal für Notizen-Eingabe mit mehrzeiligem Textfeld
@@ -136,6 +136,10 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
   - Notizen werden nur angezeigt, wenn vorhanden (keine leeren Linien mehr)
   - Notizen erscheinen unter der Skizze mit gelbem Hintergrund
   - Zeilenumbrüche werden korrekt dargestellt
+- **Bug-Fixes (Session 2)**:
+  - Notes-Feld im Sketch Interface hinzugefügt (projects/[id].tsx) - Fix für fehlende Notes in PDF
+  - Fehlende Button-Styles für Notes-Modal hinzugefügt (draw.tsx) - Fix für Button-Text-Umbruch
+  - Buttons mit flex: 1 und minWidth: 80 für gleichmäßige Breite
 
 ## Technische Details
 

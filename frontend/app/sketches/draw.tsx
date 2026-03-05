@@ -771,6 +771,7 @@ export default function DrawSketchScreen() {
   const [showEditArrowModal, setShowEditArrowModal] = useState(false);
   const [showEditTextModal, setShowEditTextModal] = useState(false);
   const [showEditPointerModal, setShowEditPointerModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
@@ -888,6 +889,11 @@ export default function DrawSketchScreen() {
       
       if (sketch) {
         setTitle(sketch.title || 'Skizze');
+        
+        // Load notes if available
+        if (sketch.notes) {
+          setNotes(sketch.notes);
+        }
         
         // Load PDF size if available
         if ((sketch as any).pdf_size) {
@@ -1008,10 +1014,12 @@ export default function DrawSketchScreen() {
           lineSegmentMeasurements,
           totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
           legendPosition, // Speichere Position der Übersicht-Legend
+          notes, // Speichere die Notizen auch in metadata
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
         console.log('Saving legendPosition:', legendPosition);
+        console.log('Saving notes:', notes);
 
         // Generate preview image
         let sketchData = '';
@@ -1053,6 +1061,7 @@ export default function DrawSketchScreen() {
           await SketchService.update(sketchId, {
             project_id: projectId,
             title,
+            notes, // Speichere die Notizen direkt in der Skizze
             sketch_data: sketchData,
             metadata: JSON.stringify(metadata),
             pdf_size: pdfSize,
@@ -1063,6 +1072,7 @@ export default function DrawSketchScreen() {
           await SketchService.create({
             project_id: projectId,
             title,
+            notes, // Speichere die Notizen direkt in der Skizze
             sketch_data: sketchData,
             metadata: JSON.stringify(metadata),
             pdf_size: pdfSize,
@@ -3000,6 +3010,7 @@ export default function DrawSketchScreen() {
         lineSegmentMeasurements, // Speichere die Linien-Maße
         totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
         legendPosition, // Speichere Position der Übersicht-Legend
+        notes, // Speichere die Notizen
       };
 
       console.log('Saving sketch with', elements.length, 'elements');
@@ -3055,6 +3066,7 @@ export default function DrawSketchScreen() {
         await SketchService.update(sketchId, {
           project_id: projectId,
           title,
+          notes, // Speichere die Notizen direkt in der Skizze
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
           pdf_size: pdfSize,
@@ -3067,6 +3079,7 @@ export default function DrawSketchScreen() {
         await SketchService.create({
           project_id: projectId,
           title,
+          notes, // Speichere die Notizen direkt in der Skizze
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
           pdf_size: pdfSize,
@@ -3391,6 +3404,21 @@ export default function DrawSketchScreen() {
             size={18} 
             color={backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333')} 
           />
+        </TouchableOpacity>
+
+        {/* Notes Button */}
+        <TouchableOpacity
+          style={[styles.toolButton, notes.trim() && styles.toolButtonWithBadge]}
+          onPress={() => setShowNotesModal(true)}
+        >
+          <View style={styles.notesButtonContainer}>
+            <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
+            {notes.trim() && (
+              <View style={styles.notesBadge}>
+                <Ionicons name="checkmark" size={8} color="#fff" />
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
@@ -4464,6 +4492,51 @@ export default function DrawSketchScreen() {
           {renderInModalNumpad()}
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Notes Modal */}
+      <Modal visible={showNotesModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Notizen zur Skizze</Text>
+            <Text style={styles.modalSubtitle}>Diese Notizen werden im PDF unter der Skizze angezeigt</Text>
+            <TextInput
+              style={[styles.modalInput, styles.notesInput]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Notizen hier eingeben..."
+              placeholderTextColor="#999"
+              multiline
+              autoFocus
+              textAlignVertical="top"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowNotesModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Schließen</Text>
+              </TouchableOpacity>
+              {notes.trim() && (
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+                  onPress={() => {
+                    setNotes('');
+                    setShowNotesModal(false);
+                  }}
+                >
+                  <Text style={styles.confirmButtonText}>Löschen</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => setShowNotesModal(false)}
+              >
+                <Text style={styles.confirmButtonText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -4645,6 +4718,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     minHeight: 50,
+  },
+  notesInput: {
+    minHeight: 150,
+    maxHeight: 250,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 16,
+  },
+  notesButtonContainer: {
+    position: 'relative',
+  },
+  notesBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#4caf50',
+    borderRadius: 6,
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolButtonWithBadge: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: 4,
   },
   arrowHeadsContainer: {
     marginBottom: 16,

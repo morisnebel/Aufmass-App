@@ -848,12 +848,17 @@ export default function ProjectDetailScreen() {
     const sketchItems = sketches.map((sketch, index) => {
       // Read pdf_size from sketch object or metadata
       let size = (sketch as any).pdf_size || 'large';
+      let sketchNotes = (sketch as any).notes || '';
       if (!size || size === 'large') {
         // Try to read from metadata
         try {
           const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
           if (metadata.pdf_size) {
             size = metadata.pdf_size;
+          }
+          // Also check for notes in metadata as fallback
+          if (!sketchNotes && metadata.notes) {
+            sketchNotes = metadata.notes;
           }
         } catch (e) {}
       }
@@ -870,18 +875,19 @@ export default function ProjectDetailScreen() {
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
       
+      // Notizen nur anzeigen wenn vorhanden
+      const notesHtml = sketchNotes.trim() 
+        ? `<div class="sketch-notes sketch-notes-filled">
+            <p class="sketch-notes-label">Notizen:</p>
+            <p class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</p>
+          </div>`
+        : '';
+      
       return `
         <div class="sketch-item ${sizeClass}">
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-          <div class="sketch-notes">
-            <p class="sketch-notes-label">Notizen:</p>
-            <div class="sketch-notes-lines">
-              <div class="sketch-note-line"></div>
-              <div class="sketch-note-line"></div>
-              <div class="sketch-note-line"></div>
-            </div>
-          </div>
+          ${notesHtml}
         </div>
       `;
     });
@@ -1652,11 +1658,21 @@ export default function ProjectDetailScreen() {
             background: #fafafa;
             border-top: 1px solid #e0e0e0;
           }
+          .sketch-notes-filled {
+            background: #fff8e1;
+            border-top: 1px solid #ffe082;
+          }
           .sketch-notes-label {
             margin: 0 0 6px 0;
             font-size: 9px;
             font-weight: 600;
             color: #666;
+          }
+          .sketch-notes-text {
+            margin: 0;
+            font-size: 9px;
+            color: #333;
+            line-height: 1.4;
           }
           .sketch-notes-lines {
             display: flex;

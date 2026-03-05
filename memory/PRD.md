@@ -123,6 +123,20 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 - [ ] iCloud Sync
 - [ ] Gestrichelte Linien in PDF-Vorschau beheben
 
+## Was wurde implementiert (Dezember 2025)
+
+### Session: Konditionelle Notizen für Skizzen (NEU - ABGESCHLOSSEN)
+- **Notizen-Feature für Skizzen implementiert**:
+  - Neuer "Notizen"-Button in der Toolbar (Dokument-Symbol)
+  - Modal für Notizen-Eingabe mit mehrzeiligem Textfeld
+  - Grünes Häkchen-Badge wenn Notizen vorhanden
+  - Notizen werden beim Speichern und Auto-Save gespeichert
+  - Notizen werden beim Laden der Skizze wiederhergestellt
+- **PDF-Export angepasst**:
+  - Notizen werden nur angezeigt, wenn vorhanden (keine leeren Linien mehr)
+  - Notizen erscheinen unter der Skizze mit gelbem Hintergrund
+  - Zeilenumbrüche werden korrekt dargestellt
+
 ## Technische Details
 
 ### Key Patterns

@@ -3133,7 +3133,7 @@ export default function DrawSketchScreen() {
           style={styles.headerButton}
         >
           <Ionicons 
-            name={pdfSize === 'small' ? 'grid-outline' : pdfSize === 'medium' ? 'apps-outline' : pdfSize === 'large' ? 'square-outline' : 'expand-outline'} 
+            name={pdfSize === 'small' ? 'apps-outline' : pdfSize === 'medium' ? 'grid-outline' : pdfSize === 'large' ? 'square-outline' : 'expand-outline'} 
             size={22} 
             color="#fff" 
           />

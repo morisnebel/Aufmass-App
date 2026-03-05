@@ -32,8 +32,8 @@ interface DrawPath {
 
 // PDF-Größen Optionen
 const PDF_SIZES = [
-  { value: 'small', label: 'Klein', icon: 'grid-outline', description: '3 pro Zeile' },
-  { value: 'medium', label: 'Mittel', icon: 'apps-outline', description: '2 pro Zeile' },
+  { value: 'small', label: 'Klein', icon: 'apps-outline', description: '3 pro Zeile' },
+  { value: 'medium', label: 'Mittel', icon: 'grid-outline', description: '2 pro Zeile' },
   { value: 'large', label: 'Groß', icon: 'square-outline', description: '1 pro Zeile' },
 ];
 

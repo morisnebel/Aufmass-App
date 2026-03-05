@@ -325,9 +325,12 @@ export const ProjectService = {
 export interface Sketch {
   id: string;
   project_id: string;
-  name: string;
+  name?: string;
   title?: string;
   notes?: string;
+  sketch_data?: string;
+  metadata?: string;
+  pdf_size?: string;
   data?: any;
   thumbnail?: string;
   created_at: string;

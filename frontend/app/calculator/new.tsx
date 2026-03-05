@@ -53,8 +53,20 @@ export default function AreaCalculatorEditor() {
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(1); // 1 Meter pro Rasterfeld
   
+  // Hilfslinien
+  interface GuideLine {
+    id: string;
+    start: AreaPoint;
+    end: AreaPoint;
+    isParallel?: boolean;
+    parentId?: string;
+  }
+  const [guideLines, setGuideLines] = useState<GuideLine[]>([]);
+  const [guideLinesVisible, setGuideLinesVisible] = useState(true);
+  const [selectedGuideLineId, setSelectedGuideLineId] = useState<string | null>(null);
+  
   // Drawing state
-  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale'>('select');
+  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel'>('select');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
@@ -73,6 +85,8 @@ export default function AreaCalculatorEditor() {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showPolygonNameModal, setShowPolygonNameModal] = useState(false);
   const [showGridSizeModal, setShowGridSizeModal] = useState(false);
+  const [showParallelModal, setShowParallelModal] = useState(false);
+  const [parallelDistance, setParallelDistance] = useState('');
   const [scaleInputValue, setScaleInputValue] = useState('');
   const [polygonNameInput, setPolygonNameInput] = useState('');
   
@@ -236,15 +250,142 @@ export default function AreaCalculatorEditor() {
     }
   };
 
+  // Calculate intersections of guide lines
+  const calculateGuideLineIntersections = (): AreaPoint[] => {
+    const intersections: AreaPoint[] = [];
+    
+    for (let i = 0; i < guideLines.length; i++) {
+      for (let j = i + 1; j < guideLines.length; j++) {
+        const intersection = getLineIntersection(
+          guideLines[i].start, guideLines[i].end,
+          guideLines[j].start, guideLines[j].end
+        );
+        if (intersection) {
+          // Check if intersection is within canvas bounds
+          if (intersection.x >= 0 && intersection.x <= canvasWidth &&
+              intersection.y >= 0 && intersection.y <= canvasHeight) {
+            intersections.push(intersection);
+          }
+        }
+      }
+    }
+    
+    return intersections;
+  };
+
+  // Get line intersection point
+  const getLineIntersection = (
+    p1: AreaPoint, p2: AreaPoint,
+    p3: AreaPoint, p4: AreaPoint
+  ): AreaPoint | null => {
+    const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y;
+    
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (Math.abs(denom) < 0.0001) return null; // Lines are parallel
+    
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    
+    return {
+      x: x1 + t * (x2 - x1),
+      y: y1 + t * (y2 - y1)
+    };
+  };
+
+  // Snap to nearest point (grid, guide line intersections, guide line points)
+  const snapToNearestPoint = (x: number, y: number): AreaPoint => {
+    const snapTolerance = 15;
+    let bestPoint = { x, y };
+    let bestDistance = Infinity;
+    
+    // 1. Check guide line intersections
+    if (guideLinesVisible && guideLines.length > 0) {
+      const intersections = calculateGuideLineIntersections();
+      for (const intersection of intersections) {
+        const dist = Math.sqrt(Math.pow(x - intersection.x, 2) + Math.pow(y - intersection.y, 2));
+        if (dist < snapTolerance && dist < bestDistance) {
+          bestDistance = dist;
+          bestPoint = intersection;
+        }
+      }
+      
+      // 2. Check guide line endpoints
+      for (const guide of guideLines) {
+        for (const point of [guide.start, guide.end]) {
+          const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+          if (dist < snapTolerance && dist < bestDistance) {
+            bestDistance = dist;
+            bestPoint = point;
+          }
+        }
+      }
+    }
+    
+    // 3. Snap to grid if enabled and no better snap point found
+    if (gridEnabled && bestDistance === Infinity) {
+      bestPoint = {
+        x: Math.round(x / (gridSize * scale)) * (gridSize * scale),
+        y: Math.round(y / (gridSize * scale)) * (gridSize * scale)
+      };
+    }
+    
+    return bestPoint;
+  };
+
+  // Create parallel guide line
+  const createParallelGuideLine = (sourceId: string, distance: number) => {
+    const source = guideLines.find(g => g.id === sourceId);
+    if (!source) return;
+    
+    // Calculate perpendicular direction
+    const dx = source.end.x - source.start.x;
+    const dy = source.end.y - source.start.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    // Normalize and get perpendicular
+    const perpX = -dy / length;
+    const perpY = dx / length;
+    
+    // Convert distance from meters to pixels
+    const pixelDistance = distance * scale;
+    
+    // Create offset points
+    const newStart = {
+      x: source.start.x + perpX * pixelDistance,
+      y: source.start.y + perpY * pixelDistance
+    };
+    const newEnd = {
+      x: source.end.x + perpX * pixelDistance,
+      y: source.end.y + perpY * pixelDistance
+    };
+    
+    const newGuideLine = {
+      id: Date.now().toString(),
+      start: newStart,
+      end: newEnd,
+      isParallel: true,
+      parentId: sourceId
+    };
+    
+    setGuideLines([...guideLines, newGuideLine]);
+  };
+
+  // Delete guide line
+  const deleteGuideLine = (id: string) => {
+    setGuideLines(guideLines.filter(g => g.id !== id && g.parentId !== id));
+    setSelectedGuideLineId(null);
+  };
+
   // Touch handlers
   const handleCanvasTouch = (event: any) => {
     const touch = event.nativeEvent;
     const x = touch.locationX;
     const y = touch.locationY;
     
-    // Snap to grid if enabled
-    const snappedX = gridEnabled ? Math.round(x / (gridSize * scale)) * (gridSize * scale) : x;
-    const snappedY = gridEnabled ? Math.round(y / (gridSize * scale)) * (gridSize * scale) : y;
+    // Use smart snapping
+    const snapped = snapToNearestPoint(x, y);
+    const snappedX = snapped.x;
+    const snappedY = snapped.y;
     
     if (mode === 'scale') {
       if (!scaleReference.startPoint) {
@@ -252,6 +393,27 @@ export default function AreaCalculatorEditor() {
       } else if (!scaleReference.endPoint) {
         setScaleReference({ ...scaleReference, endPoint: { x: snappedX, y: snappedY } });
         setShowScaleModal(true);
+      }
+    } else if (mode === 'guideline') {
+      // Drawing guide line
+      if (currentPoints.length === 0) {
+        setCurrentPoints([{ x: snappedX, y: snappedY }]);
+      } else {
+        // Complete guide line
+        const newGuideLine = {
+          id: Date.now().toString(),
+          start: currentPoints[0],
+          end: { x: snappedX, y: snappedY }
+        };
+        setGuideLines([...guideLines, newGuideLine]);
+        setCurrentPoints([]);
+      }
+    } else if (mode === 'parallel') {
+      // Select guide line for parallel
+      const clickedGuide = findGuideLineAtPoint(x, y);
+      if (clickedGuide) {
+        setSelectedGuideLineId(clickedGuide.id);
+        setShowParallelModal(true);
       }
     } else if (mode === 'polygon' || mode === 'deduction') {
       // Check if close to first point (to close polygon)
@@ -268,6 +430,14 @@ export default function AreaCalculatorEditor() {
       
       setCurrentPoints([...currentPoints, { x: snappedX, y: snappedY }]);
     } else if (mode === 'select') {
+      // Check if clicking on a guide line
+      const clickedGuide = findGuideLineAtPoint(x, y);
+      if (clickedGuide) {
+        setSelectedGuideLineId(clickedGuide.id);
+        setSelectedPolygonId(null);
+        return;
+      }
+      
       // Check if clicking on a line
       const clickedLine = findLineAtPoint(x, y);
       if (clickedLine) {
@@ -280,10 +450,25 @@ export default function AreaCalculatorEditor() {
       const clickedPolygon = findPolygonAtPoint(x, y);
       if (clickedPolygon) {
         setSelectedPolygonId(clickedPolygon.id);
+        setSelectedGuideLineId(null);
       } else {
         setSelectedPolygonId(null);
+        setSelectedGuideLineId(null);
       }
     }
+  };
+
+  // Find guide line at point
+  const findGuideLineAtPoint = (x: number, y: number): { id: string } | null => {
+    const tolerance = 10;
+    
+    for (const guide of guideLines) {
+      const dist = pointToLineDistance({ x, y }, guide.start, guide.end);
+      if (dist < tolerance) {
+        return { id: guide.id };
+      }
+    }
+    return null;
   };
 
   // Find polygon at point
@@ -594,6 +779,34 @@ export default function AreaCalculatorEditor() {
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
+          style={[styles.toolButton, mode === 'guideline' && styles.toolButtonActive, { backgroundColor: mode === 'guideline' ? '#FF9800' : '#f5f5f5' }]}
+          onPress={() => { setMode('guideline'); setCurrentPoints([]); }}
+        >
+          <Ionicons name="remove-outline" size={20} color={mode === 'guideline' ? '#fff' : '#FF9800'} />
+          <Text style={[styles.toolLabel, mode === 'guideline' && styles.toolLabelActive]}>Hilfslinie</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'parallel' && styles.toolButtonActive, { backgroundColor: mode === 'parallel' ? '#9C27B0' : '#f5f5f5' }]}
+          onPress={() => { setMode('parallel'); setCurrentPoints([]); }}
+        >
+          <Ionicons name="git-compare-outline" size={20} color={mode === 'parallel' ? '#fff' : '#9C27B0'} />
+          <Text style={[styles.toolLabel, mode === 'parallel' && styles.toolLabelActive]}>Parallel</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, guideLinesVisible && guideLines.length > 0 && styles.toolButtonActive]}
+          onPress={() => setGuideLinesVisible(!guideLinesVisible)}
+        >
+          <Ionicons name="eye-outline" size={20} color={guideLinesVisible ? (guideLines.length > 0 ? '#fff' : '#666') : '#999'} />
+          <Text style={[styles.toolLabel, guideLinesVisible && guideLines.length > 0 && styles.toolLabelActive]}>
+            {guideLines.length > 0 ? guideLines.length : '-'}
+          </Text>
+        </TouchableOpacity>
+        
+        <View style={styles.toolSeparator} />
+        
+        <TouchableOpacity
           style={[styles.toolButton, gridEnabled && styles.toolButtonActive]}
           onPress={() => setGridEnabled(!gridEnabled)}
           onLongPress={() => setShowGridSizeModal(true)}
@@ -632,6 +845,16 @@ export default function AreaCalculatorEditor() {
             <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
           </TouchableOpacity>
         )}
+        
+        {selectedGuideLineId && mode === 'select' && (
+          <TouchableOpacity 
+            style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
+            onPress={() => deleteGuideLine(selectedGuideLineId)}
+          >
+            <Ionicons name="trash" size={20} color="#fff" />
+            <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Canvas */}
@@ -642,6 +865,56 @@ export default function AreaCalculatorEditor() {
         <Svg width={canvasWidth} height={canvasHeight}>
           {/* Grid */}
           {renderGrid()}
+          
+          {/* Guide Lines */}
+          {guideLinesVisible && guideLines.map((guide) => {
+            const isSelected = selectedGuideLineId === guide.id;
+            return (
+              <G key={guide.id}>
+                <Line
+                  x1={guide.start.x}
+                  y1={guide.start.y}
+                  x2={guide.end.x}
+                  y2={guide.end.y}
+                  stroke={isSelected ? '#1976d2' : (guide.isParallel ? '#9C27B0' : '#FF9800')}
+                  strokeWidth={isSelected ? 3 : 1.5}
+                  strokeDasharray="8,4"
+                />
+                <Circle cx={guide.start.x} cy={guide.start.y} r={4} fill={guide.isParallel ? '#9C27B0' : '#FF9800'} />
+                <Circle cx={guide.end.x} cy={guide.end.y} r={4} fill={guide.isParallel ? '#9C27B0' : '#FF9800'} />
+              </G>
+            );
+          })}
+          
+          {/* Guide Line Intersections */}
+          {guideLinesVisible && guideLines.length > 1 && calculateGuideLineIntersections().map((intersection, idx) => (
+            <G key={`intersection-${idx}`}>
+              <Circle
+                cx={intersection.x}
+                cy={intersection.y}
+                r={6}
+                fill="rgba(255,152,0,0.3)"
+                stroke="#FF9800"
+                strokeWidth={2}
+              />
+              <Circle
+                cx={intersection.x}
+                cy={intersection.y}
+                r={2}
+                fill="#FF9800"
+              />
+            </G>
+          ))}
+          
+          {/* Current guide line being drawn */}
+          {mode === 'guideline' && currentPoints.length === 1 && (
+            <Circle
+              cx={currentPoints[0].x}
+              cy={currentPoints[0].y}
+              r={8}
+              fill="#FF9800"
+            />
+          )}
           
           {/* Scale reference line */}
           {scaleReference.startPoint && (
@@ -839,7 +1112,12 @@ export default function AreaCalculatorEditor() {
         <View style={styles.statusItem}>
           <Text style={styles.statusLabel}>Modus</Text>
           <Text style={styles.statusValue}>
-            {mode === 'select' ? 'Auswahl' : mode === 'scale' ? 'Maßstab' : mode === 'polygon' ? 'Fläche' : 'Abzug'}
+            {mode === 'select' ? 'Auswahl' : 
+             mode === 'scale' ? 'Maßstab' : 
+             mode === 'polygon' ? 'Fläche' : 
+             mode === 'deduction' ? 'Abzug' :
+             mode === 'guideline' ? 'Hilfslinie' :
+             mode === 'parallel' ? 'Parallel' : 'Auswahl'}
           </Text>
         </View>
       </View>
@@ -1091,6 +1369,58 @@ export default function AreaCalculatorEditor() {
                 onPress={() => setShowGridSizeModal(false)}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Parallel Guide Line Modal */}
+      <Modal visible={showParallelModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Parallele Hilfslinie</Text>
+            <Text style={styles.modalText}>
+              Geben Sie den Abstand zur ausgewählten Hilfslinie ein:
+            </Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.modalInput}
+                value={parallelDistance}
+                onChangeText={setParallelDistance}
+                placeholder="z.B. 0.5"
+                keyboardType="decimal-pad"
+                autoFocus
+              />
+              <Text style={styles.inputUnit}>Meter</Text>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowParallelModal(false);
+                  setSelectedGuideLineId(null);
+                  setParallelDistance('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => {
+                  const distance = parseFloat(parallelDistance.replace(',', '.'));
+                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                    createParallelGuideLine(selectedGuideLineId, distance);
+                    // Also create in negative direction
+                    createParallelGuideLine(selectedGuideLineId, -distance);
+                  }
+                  setShowParallelModal(false);
+                  setSelectedGuideLineId(null);
+                  setParallelDistance('');
+                  setMode('select');
+                }}
+              >
+                <Text style={styles.confirmButtonText}>Erstellen (±)</Text>
               </TouchableOpacity>
             </View>
           </View>

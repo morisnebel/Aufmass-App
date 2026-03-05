@@ -326,6 +326,8 @@ export interface Sketch {
   id: string;
   project_id: string;
   name: string;
+  title?: string;
+  notes?: string;
   data?: any;
   thumbnail?: string;
   created_at: string;

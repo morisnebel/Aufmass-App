@@ -271,6 +271,7 @@ export default function DrawSketchScreen() {
   
   // State
   const [title, setTitle] = useState('Neue Skizze');
+  const [notes, setNotes] = useState('');
   const [elements, setElements] = useState<DrawElement[]>([]);
   const [history, setHistory] = useState<DrawElement[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);

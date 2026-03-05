@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation } from '../../services/LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -119,11 +119,12 @@ export default function ProjectDetailScreen() {
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Determine initial tab from URL parameter
-  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents') ? tab : 'overview';
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents'>(initialTab);
+  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' || tab === 'calculator') ? tab : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents' | 'calculator'>(initialTab);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -185,7 +186,7 @@ export default function ProjectDetailScreen() {
 
   // Update active tab when URL parameter changes (e.g., when navigating back from sketch editor)
   useEffect(() => {
-    if (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents') {
+    if (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' || tab === 'calculator') {
       setActiveTab(tab);
     }
   }, [tab]);
@@ -200,13 +201,14 @@ export default function ProjectDetailScreen() {
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
-      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData] = await Promise.all([
+      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData] = await Promise.all([
         ProjectService.getById(projectId),
         RoofService.getByProjectId(projectId),
         PhotoService.getByProjectId(projectId),
         SketchService.getByProjectId(projectId),
         ChecklistService.getByProjectId(projectId),
         DocumentService.getByProjectId(projectId),
+        AreaCalculationService.getByProjectId(projectId),
       ]);
 
       if (projectData) {
@@ -226,6 +228,7 @@ export default function ProjectDetailScreen() {
       setSketches(sketchesData);
       setChecklists(checklistsData);
       setDocuments(documentsData);
+      setAreaCalculations(areaCalcsData);
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');
@@ -2361,6 +2364,17 @@ export default function ProjectDetailScreen() {
             {documents.length}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'calculator' && styles.tabActive]}
+          onPress={() => setActiveTab('calculator')}
+        >
+          <Text style={[styles.tabText, activeTab === 'calculator' && styles.tabTextActive]}>
+            Flächen
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'calculator' && styles.tabCountActive]}>
+            {areaCalculations.length}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -3487,6 +3501,85 @@ export default function ProjectDetailScreen() {
                                 } catch (error) {
                                   console.error('Error deleting document:', error);
                                   Alert.alert('Fehler', 'Dokument konnte nicht gelöscht werden');
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#f44336" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'calculator' && (
+          <View style={styles.documentsSection}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push({
+                pathname: '/calculator/new',
+                params: { projectId: Array.isArray(id) ? id[0] : id },
+              })}
+            >
+              <Ionicons name="add-circle" size={24} color="#fff" />
+              <Text style={styles.addButtonText}>Neue Flächenberechnung</Text>
+            </TouchableOpacity>
+
+            {areaCalculations.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="calculator-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Keine Flächenberechnungen</Text>
+                <Text style={styles.emptySubtext}>
+                  Berechnen Sie Flächen und Linien mit Polygonen für Giebel, Dächer und Fassaden.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.documentsGrid}>
+                {areaCalculations.map((calc) => (
+                  <TouchableOpacity
+                    key={calc.id}
+                    style={styles.documentCard}
+                    onPress={() => router.push({
+                      pathname: '/calculator/edit',
+                      params: { id: calc.id, projectId: Array.isArray(id) ? id[0] : id },
+                    })}
+                  >
+                    <View style={styles.documentIcon}>
+                      <Ionicons name="shapes" size={40} color="#1976d2" />
+                    </View>
+                    <Text style={styles.documentName} numberOfLines={2}>{calc.name}</Text>
+                    {calc.results && (
+                      <Text style={styles.calculatorResultText}>
+                        {calc.results.netArea.toFixed(2).replace('.', ',')} m²
+                      </Text>
+                    )}
+                    <Text style={styles.documentDate}>
+                      {new Date(calc.updated_at).toLocaleDateString('de-DE')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.deleteDocButton}
+                      onPress={() => {
+                        Alert.alert(
+                          'Berechnung löschen',
+                          `Möchten Sie "${calc.name}" wirklich löschen?`,
+                          [
+                            { text: 'Abbrechen', style: 'cancel' },
+                            {
+                              text: 'Löschen',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await AreaCalculationService.delete(calc.id);
+                                  await loadProjectData();
+                                  Alert.alert('Erfolg', 'Berechnung wurde gelöscht');
+                                } catch (error) {
+                                  console.error('Error deleting calculation:', error);
+                                  Alert.alert('Fehler', 'Berechnung konnte nicht gelöscht werden');
                                 }
                               },
                             },
@@ -5274,5 +5367,12 @@ const styles = StyleSheet.create({
     top: 8,
     right: 8,
     padding: 4,
+  },
+  calculatorResultText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976d2',
+    textAlign: 'center',
+    marginBottom: 2,
   },
 });

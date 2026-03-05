@@ -41,8 +41,10 @@ export default function AreaCalculatorEditor() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const calculationId = params.id as string | undefined;
+  const projectIdParam = params.projectId as string | undefined;
   
   // State
+  const [projectId, setProjectId] = useState<string | undefined>(projectIdParam);
   const [name, setName] = useState('Neue Berechnung');
   const [scale, setScale] = useState(100); // 100 Pixel = 1 Meter
   const [polygons, setPolygons] = useState<AreaPolygon[]>([]);
@@ -106,6 +108,10 @@ export default function AreaCalculatorEditor() {
         setLines(calc.lines || []);
         setGridEnabled(calc.gridEnabled);
         setGridSize(calc.gridSize);
+        // Set projectId from calculation if not from params
+        if (calc.project_id) {
+          setProjectId(calc.project_id);
+        }
         if (calc.scaleReference) {
           setScaleReference({
             startPoint: calc.scaleReference.startPoint,
@@ -179,11 +185,17 @@ export default function AreaCalculatorEditor() {
 
   // Save calculation
   const saveCalculation = async () => {
+    if (!projectId) {
+      Alert.alert('Fehler', 'Kein Projekt zugeordnet');
+      return;
+    }
+    
     setSaving(true);
     try {
       const results = calculateResults();
       
       const data = {
+        project_id: projectId,
         name,
         scale,
         scaleReference: scaleReference.startPoint && scaleReference.endPoint ? {

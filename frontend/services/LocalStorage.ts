@@ -818,6 +818,7 @@ export interface AreaLine {
 
 export interface AreaCalculation {
   id: string;
+  project_id: string; // Zugehöriges Projekt
   name: string;
   // Maßstab
   scale: number; // Pixel pro Meter (z.B. 100 = 100px entspricht 1m)
@@ -916,6 +917,11 @@ export const LineCategoryService = {
 export const AreaCalculationService = {
   getAll: async (): Promise<AreaCalculation[]> => {
     return getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+  },
+
+  getByProjectId: async (projectId: string): Promise<AreaCalculation[]> => {
+    const calculations = await getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+    return calculations.filter((c) => c.project_id === projectId);
   },
 
   getById: async (id: string): Promise<AreaCalculation | null> => {

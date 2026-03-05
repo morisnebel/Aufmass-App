@@ -872,8 +872,16 @@ export default function ProjectDetailScreen() {
       
       return `
         <div class="sketch-item ${sizeClass}">
+          <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
-          <p>${sketchTitle}</p>
+          <div class="sketch-notes">
+            <p class="sketch-notes-label">Notizen:</p>
+            <div class="sketch-notes-lines">
+              <div class="sketch-note-line"></div>
+              <div class="sketch-note-line"></div>
+              <div class="sketch-note-line"></div>
+            </div>
+          </div>
         </div>
       `;
     });
@@ -1629,6 +1637,36 @@ export default function ProjectDetailScreen() {
             font-size: 10px;
             color: #666;
             background: #f8f9fa;
+          }
+          .sketch-title {
+            margin: 0;
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: ${accentColor};
+            background: #f0f4f8;
+            border-bottom: 1px solid ${accentColor};
+          }
+          .sketch-notes {
+            padding: 8px 10px;
+            background: #fafafa;
+            border-top: 1px solid #e0e0e0;
+          }
+          .sketch-notes-label {
+            margin: 0 0 6px 0;
+            font-size: 9px;
+            font-weight: 600;
+            color: #666;
+          }
+          .sketch-notes-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+          }
+          .sketch-note-line {
+            height: 1px;
+            background: #ccc;
+            width: 100%;
           }
           .sketch-placeholder {
             height: 150px;

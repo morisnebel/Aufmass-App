@@ -1394,6 +1394,60 @@ export default function AreaCalculatorEditor() {
               />
               <Text style={styles.inputUnit}>Meter</Text>
             </View>
+            <Text style={styles.modalText}>Richtung wählen:</Text>
+            <View style={styles.directionButtons}>
+              <TouchableOpacity
+                style={[styles.directionButton, { backgroundColor: '#4CAF50' }]}
+                onPress={() => {
+                  const distance = parseFloat(parallelDistance.replace(',', '.'));
+                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                    createParallelGuideLine(selectedGuideLineId, distance);
+                  }
+                  setShowParallelModal(false);
+                  setSelectedGuideLineId(null);
+                  setParallelDistance('');
+                  setMode('select');
+                }}
+              >
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Text style={styles.directionButtonText}>Rechts / Oben</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.directionButton, { backgroundColor: '#2196F3' }]}
+                onPress={() => {
+                  const distance = parseFloat(parallelDistance.replace(',', '.'));
+                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                    createParallelGuideLine(selectedGuideLineId, -distance);
+                  }
+                  setShowParallelModal(false);
+                  setSelectedGuideLineId(null);
+                  setParallelDistance('');
+                  setMode('select');
+                }}
+              >
+                <Ionicons name="arrow-back" size={20} color="#fff" />
+                <Text style={styles.directionButtonText}>Links / Unten</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.directionButton, { backgroundColor: '#9C27B0' }]}
+                onPress={() => {
+                  const distance = parseFloat(parallelDistance.replace(',', '.'));
+                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                    createParallelGuideLine(selectedGuideLineId, distance);
+                    createParallelGuideLine(selectedGuideLineId, -distance);
+                  }
+                  setShowParallelModal(false);
+                  setSelectedGuideLineId(null);
+                  setParallelDistance('');
+                  setMode('select');
+                }}
+              >
+                <Ionicons name="swap-horizontal" size={20} color="#fff" />
+                <Text style={styles.directionButtonText}>Beidseitig</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -1404,23 +1458,6 @@ export default function AreaCalculatorEditor() {
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => {
-                  const distance = parseFloat(parallelDistance.replace(',', '.'));
-                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, distance);
-                    // Also create in negative direction
-                    createParallelGuideLine(selectedGuideLineId, -distance);
-                  }
-                  setShowParallelModal(false);
-                  setSelectedGuideLineId(null);
-                  setParallelDistance('');
-                  setMode('select');
-                }}
-              >
-                <Text style={styles.confirmButtonText}>Erstellen (±)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1708,5 +1745,25 @@ const styles = StyleSheet.create({
   },
   gridSizeOptionTextActive: {
     color: '#1976d2',
+  },
+  directionButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  directionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  directionButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

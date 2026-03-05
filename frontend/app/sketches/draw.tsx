@@ -5432,18 +5432,19 @@ const styles = StyleSheet.create({
   notesModalButtons: {
     flexDirection: 'row',
     gap: 10,
+    justifyContent: 'center',
+    flexWrap: 'nowrap',
   },
   notesModalButton: {
-    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderRadius: 8,
     backgroundColor: '#f5f5f5',
     borderWidth: 1,
     borderColor: '#ddd',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 80,
+    flexShrink: 0,
   },
   notesModalButtonSave: {
     backgroundColor: '#4caf50',

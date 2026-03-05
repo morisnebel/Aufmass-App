@@ -114,6 +114,7 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 ### P2 (Mittel)
 - [ ] Texteingabefeld im Editor verschiebbar machen
 - [ ] Neuer TestFlight Build
+- [ ] Skizzen-Vorschau Ausrichtung untersuchen (rechts verschoben, PDF korrekt)
 
 ### P3 (Niedrig)
 - [ ] Pro/Base Version mit In-App-Käufen
@@ -139,7 +140,10 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 - **Bug-Fixes (Session 2)**:
   - Notes-Feld im Sketch Interface hinzugefügt (projects/[id].tsx) - Fix für fehlende Notes in PDF
   - Fehlende Button-Styles für Notes-Modal hinzugefügt (draw.tsx) - Fix für Button-Text-Umbruch
-  - Buttons mit flex: 1 und minWidth: 80 für gleichmäßige Breite
+- **Bug-Fixes (Session 3 - Dezember 2025)**:
+  - Button-Text-Umbruch im Notes-Modal behoben: `flex: 1` entfernt, `flexShrink: 0` und `paddingHorizontal: 20` hinzugefügt
+  - Buttons zentriert mit `justifyContent: 'center'` im Container
+  - PDF-Notizen bereits kompakt inline formatiert (keine Änderung nötig)
 
 ## Technische Details
 

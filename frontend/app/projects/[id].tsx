@@ -880,11 +880,10 @@ export default function ProjectDetailScreen() {
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
       
-      // Notizen nur anzeigen wenn vorhanden
+      // Notizen nur anzeigen wenn vorhanden - kompakt inline
       const notesHtml = sketchNotes.trim() 
         ? `<div class="sketch-notes sketch-notes-filled">
-            <p class="sketch-notes-label">Notizen:</p>
-            <p class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</p>
+            <span class="sketch-notes-label">Notizen: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>
           </div>`
         : '';
       
@@ -1668,13 +1667,11 @@ export default function ProjectDetailScreen() {
             border-top: 1px solid #ffe082;
           }
           .sketch-notes-label {
-            margin: 0 0 6px 0;
             font-size: 9px;
             font-weight: 600;
             color: #666;
           }
           .sketch-notes-text {
-            margin: 0;
             font-size: 9px;
             color: #333;
             line-height: 1.4;

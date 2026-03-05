@@ -1401,7 +1401,7 @@ export default function AreaCalculatorEditor() {
                 onPress={() => {
                   const distance = parseFloat(parallelDistance.replace(',', '.'));
                   if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, distance);
+                    createParallelGuideLine(selectedGuideLineId, -distance);
                   }
                   setShowParallelModal(false);
                   setSelectedGuideLineId(null);
@@ -1418,7 +1418,7 @@ export default function AreaCalculatorEditor() {
                 onPress={() => {
                   const distance = parseFloat(parallelDistance.replace(',', '.'));
                   if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, -distance);
+                    createParallelGuideLine(selectedGuideLineId, distance);
                   }
                   setShowParallelModal(false);
                   setSelectedGuideLineId(null);

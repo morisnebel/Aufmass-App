@@ -72,6 +72,7 @@ export default function AreaCalculatorEditor() {
   const [showLineCategoryModal, setShowLineCategoryModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [showPolygonNameModal, setShowPolygonNameModal] = useState(false);
+  const [showGridSizeModal, setShowGridSizeModal] = useState(false);
   const [scaleInputValue, setScaleInputValue] = useState('');
   const [polygonNameInput, setPolygonNameInput] = useState('');
   
@@ -595,9 +596,20 @@ export default function AreaCalculatorEditor() {
         <TouchableOpacity
           style={[styles.toolButton, gridEnabled && styles.toolButtonActive]}
           onPress={() => setGridEnabled(!gridEnabled)}
+          onLongPress={() => setShowGridSizeModal(true)}
         >
           <Ionicons name="grid" size={20} color={gridEnabled ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, gridEnabled && styles.toolLabelActive]}>Raster</Text>
+          <Text style={[styles.toolLabel, gridEnabled && styles.toolLabelActive]}>
+            {gridSize < 1 ? `${(gridSize * 100).toFixed(0)}cm` : `${gridSize}m`}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={() => setShowGridSizeModal(true)}
+        >
+          <Ionicons name="options" size={20} color="#666" />
+          <Text style={styles.toolLabel}>Größe</Text>
         </TouchableOpacity>
         
         {currentPoints.length > 0 && (
@@ -1036,6 +1048,54 @@ export default function AreaCalculatorEditor() {
           </View>
         </View>
       </Modal>
+
+      {/* Grid Size Modal */}
+      <Modal visible={showGridSizeModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Rastergröße</Text>
+            <Text style={styles.modalText}>Wählen Sie die Größe eines Rasterfelds:</Text>
+            
+            <View style={styles.gridSizeOptions}>
+              {[
+                { value: 0.1, label: '10 cm' },
+                { value: 0.25, label: '25 cm' },
+                { value: 0.5, label: '50 cm' },
+                { value: 1, label: '1 m' },
+                { value: 2, label: '2 m' },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.gridSizeOption,
+                    gridSize === option.value && styles.gridSizeOptionActive
+                  ]}
+                  onPress={() => {
+                    setGridSize(option.value);
+                    setShowGridSizeModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.gridSizeOptionText,
+                    gridSize === option.value && styles.gridSizeOptionTextActive
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowGridSizeModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1288,6 +1348,35 @@ const styles = StyleSheet.create({
   resultValueBold: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#1976d2',
+  },
+  gridSizeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  gridSizeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  gridSizeOptionActive: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  gridSizeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  gridSizeOptionTextActive: {
     color: '#1976d2',
   },
 });

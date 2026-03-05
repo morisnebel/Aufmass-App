@@ -17,6 +17,8 @@ const KEYS = {
   SETTINGS: 'aufmassprofi_settings',
   SYNC_TIMESTAMP: 'aufmassprofi_sync_timestamp',
   DOCUMENTS: 'aufmassprofi_documents',
+  AREA_CALCULATIONS: 'aufmassprofi_area_calculations',
+  LINE_CATEGORIES: 'aufmassprofi_line_categories',
 };
 
 // Helper to generate unique IDs
@@ -791,6 +793,171 @@ export const DocumentService = {
   },
 };
 
+// ============ AREA CALCULATION (Flächen-Kalkulator) ============
+
+export interface AreaPoint {
+  x: number;
+  y: number;
+}
+
+export interface AreaPolygon {
+  id: string;
+  points: AreaPoint[];
+  type: 'main' | 'deduction'; // Hauptfläche oder Abzug (Fenster/Tür)
+  name?: string; // z.B. "Giebel", "Fenster 1"
+  color?: string;
+}
+
+export interface AreaLine {
+  id: string;
+  polygonId: string;
+  pointIndex: number; // Index des Startpunkts der Linie im Polygon
+  category: string; // z.B. "Traufe", "Ortgang", "Fensterumfang"
+  length: number; // Berechnete Länge in Realmaßen
+}
+
+export interface AreaCalculation {
+  id: string;
+  name: string;
+  // Maßstab
+  scale: number; // Pixel pro Meter (z.B. 100 = 100px entspricht 1m)
+  scaleReference?: {
+    startPoint: AreaPoint;
+    endPoint: AreaPoint;
+    realLength: number; // Echte Länge in Metern
+  };
+  // Gezeichnete Elemente
+  polygons: AreaPolygon[];
+  lines: AreaLine[];
+  // Hintergrundbild (optional)
+  backgroundImage?: string;
+  // Raster-Einstellungen
+  gridEnabled: boolean;
+  gridSize: number; // Größe eines Rasterfelds in Metern
+  // Ergebnisse (berechnet)
+  results?: {
+    totalArea: number;
+    deductionArea: number;
+    netArea: number;
+    linesByCategory: { [category: string]: number };
+  };
+  // Metadaten
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LineCategory {
+  id: string;
+  name: string;
+  color: string;
+  order: number;
+}
+
+// Default-Linien-Kategorien
+const DEFAULT_LINE_CATEGORIES: Omit<LineCategory, 'id'>[] = [
+  { name: 'Traufe', color: '#2196F3', order: 1 },
+  { name: 'Ortgang', color: '#4CAF50', order: 2 },
+  { name: 'First', color: '#FF9800', order: 3 },
+  { name: 'Kehle', color: '#9C27B0', order: 4 },
+  { name: 'Grat', color: '#E91E63', order: 5 },
+  { name: 'Fensterumfang', color: '#00BCD4', order: 6 },
+  { name: 'Türumfang', color: '#795548', order: 7 },
+  { name: 'Rinne', color: '#607D8B', order: 8 },
+  { name: 'Fallrohr', color: '#3F51B5', order: 9 },
+];
+
+export const LineCategoryService = {
+  getAll: async (): Promise<LineCategory[]> => {
+    let categories = await getItems<LineCategory>(KEYS.LINE_CATEGORIES);
+    // Wenn leer, Default-Kategorien erstellen
+    if (categories.length === 0) {
+      categories = DEFAULT_LINE_CATEGORIES.map((cat, index) => ({
+        ...cat,
+        id: generateId(),
+      }));
+      await setItems(KEYS.LINE_CATEGORIES, categories);
+    }
+    return categories.sort((a, b) => a.order - b.order);
+  },
+
+  create: async (data: Omit<LineCategory, 'id'>): Promise<LineCategory> => {
+    const categories = await getItems<LineCategory>(KEYS.LINE_CATEGORIES);
+    const newCategory: LineCategory = {
+      ...data,
+      id: generateId(),
+    };
+    categories.push(newCategory);
+    await setItems(KEYS.LINE_CATEGORIES, categories);
+    return newCategory;
+  },
+
+  update: async (id: string, data: Partial<LineCategory>): Promise<LineCategory | null> => {
+    const categories = await getItems<LineCategory>(KEYS.LINE_CATEGORIES);
+    const index = categories.findIndex((c) => c.id === id);
+    if (index !== -1) {
+      categories[index] = { ...categories[index], ...data };
+      await setItems(KEYS.LINE_CATEGORIES, categories);
+      return categories[index];
+    }
+    return null;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const categories = await getItems<LineCategory>(KEYS.LINE_CATEGORIES);
+    const filtered = categories.filter((c) => c.id !== id);
+    await setItems(KEYS.LINE_CATEGORIES, filtered);
+  },
+
+  saveAll: async (categories: LineCategory[]): Promise<void> => {
+    await setItems(KEYS.LINE_CATEGORIES, categories);
+  },
+};
+
+export const AreaCalculationService = {
+  getAll: async (): Promise<AreaCalculation[]> => {
+    return getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+  },
+
+  getById: async (id: string): Promise<AreaCalculation | null> => {
+    const calculations = await getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+    return calculations.find((c) => c.id === id) || null;
+  },
+
+  create: async (data: Omit<AreaCalculation, 'id' | 'created_at' | 'updated_at'>): Promise<AreaCalculation> => {
+    const calculations = await getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+    const newCalculation: AreaCalculation = {
+      ...data,
+      id: generateId(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    calculations.push(newCalculation);
+    await setItems(KEYS.AREA_CALCULATIONS, calculations);
+    return newCalculation;
+  },
+
+  update: async (id: string, data: Partial<AreaCalculation>): Promise<AreaCalculation | null> => {
+    const calculations = await getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+    const index = calculations.findIndex((c) => c.id === id);
+    if (index !== -1) {
+      calculations[index] = {
+        ...calculations[index],
+        ...data,
+        updated_at: new Date().toISOString(),
+      };
+      await setItems(KEYS.AREA_CALCULATIONS, calculations);
+      return calculations[index];
+    }
+    return null;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const calculations = await getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
+    const filtered = calculations.filter((c) => c.id !== id);
+    await setItems(KEYS.AREA_CALCULATIONS, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -803,6 +970,8 @@ export const LocalStorage = {
   Settings: SettingsService,
   Sync: SyncService,
   Documents: DocumentService,
+  AreaCalculations: AreaCalculationService,
+  LineCategories: LineCategoryService,
 };
 
 export default LocalStorage;

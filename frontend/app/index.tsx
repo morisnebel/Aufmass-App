@@ -481,6 +481,16 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/calculator')}
+          >
+            <Ionicons name="calculator" size={24} color="#1976d2" />
+            <Text style={styles.secondaryButtonText}>Flächen</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
             onPress={() => router.push('/settings')}
           >
             <Ionicons name="settings-outline" size={24} color="#1976d2" />

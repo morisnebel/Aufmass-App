@@ -4509,29 +4509,29 @@ export default function DrawSketchScreen() {
               autoFocus
               textAlignVertical="top"
             />
-            <View style={styles.modalButtons}>
+            <View style={styles.notesModalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={styles.notesModalButton}
                 onPress={() => setShowNotesModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Schließen</Text>
+                <Text style={styles.notesModalButtonText}>Schließen</Text>
               </TouchableOpacity>
               {notes.trim() && (
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#f44336' }]}
+                  style={[styles.notesModalButton, styles.notesModalButtonDelete]}
                   onPress={() => {
                     setNotes('');
                     setShowNotesModal(false);
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>Löschen</Text>
+                  <Text style={styles.notesModalButtonTextWhite}>Löschen</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
+                style={[styles.notesModalButton, styles.notesModalButtonSave]}
                 onPress={() => setShowNotesModal(false)}
               >
-                <Text style={styles.confirmButtonText}>Speichern</Text>
+                <Text style={styles.notesModalButtonTextWhite}>Speichern</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -5427,5 +5427,40 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  // Notes Modal Styles
+  notesModalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  notesModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  notesModalButtonSave: {
+    backgroundColor: '#4caf50',
+    borderColor: '#4caf50',
+  },
+  notesModalButtonDelete: {
+    backgroundColor: '#f44336',
+    borderColor: '#f44336',
+  },
+  notesModalButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  notesModalButtonTextWhite: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

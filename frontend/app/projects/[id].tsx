@@ -80,6 +80,8 @@ interface Sketch {
   sketch_data: string;
   title?: string;
   metadata?: string;
+  notes?: string;
+  pdf_size?: string;
 }
 
 interface SubItem {
@@ -846,21 +848,24 @@ export default function ProjectDetailScreen() {
     const isIpad = Platform.OS === 'ios' && Platform.isPad;
     
     const sketchItems = sketches.map((sketch, index) => {
-      // Read pdf_size from sketch object or metadata
-      let size = (sketch as any).pdf_size || 'large';
-      let sketchNotes = (sketch as any).notes || '';
-      if (!size || size === 'large') {
-        // Try to read from metadata
-        try {
-          const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
+      // Read pdf_size and notes from sketch object or metadata
+      let size = sketch.pdf_size || 'large';
+      let sketchNotes = sketch.notes || '';
+      
+      // Also try to read from metadata as fallback
+      try {
+        const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
+        if (!size || size === 'large') {
           if (metadata.pdf_size) {
             size = metadata.pdf_size;
           }
-          // Also check for notes in metadata as fallback
-          if (!sketchNotes && metadata.notes) {
-            sketchNotes = metadata.notes;
-          }
-        } catch (e) {}
+        }
+        // Notes aus metadata als Fallback
+        if (!sketchNotes && metadata.notes) {
+          sketchNotes = metadata.notes;
+        }
+      } catch (e) {
+        console.log('Error parsing sketch metadata:', e);
       }
       
       // iPhone: Alle Skizzen werden als Grid-Items behandelt (immer 2 pro Zeile)

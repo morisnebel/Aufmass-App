@@ -53,6 +53,15 @@ export default function AreaCalculatorEditor() {
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(1); // 1 Meter pro Rasterfeld
   
+  // Undo/Redo History
+  interface HistoryState {
+    polygons: AreaPolygon[];
+    guideLines: GuideLine[];
+    lines: AreaLine[];
+  }
+  const [undoStack, setUndoStack] = useState<HistoryState[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
+  
   // Hilfslinien
   interface GuideLine {
     id: string;
@@ -99,6 +108,65 @@ export default function AreaCalculatorEditor() {
   // Canvas dimensions
   const canvasWidth = SCREEN_WIDTH;
   const canvasHeight = SCREEN_HEIGHT - 200;
+
+  // Save state for undo
+  const saveStateForUndo = () => {
+    const currentState: HistoryState = {
+      polygons: JSON.parse(JSON.stringify(polygons)),
+      guideLines: JSON.parse(JSON.stringify(guideLines)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    setUndoStack(prev => [...prev.slice(-19), currentState]); // Keep last 20 states
+    setRedoStack([]); // Clear redo stack when new action is performed
+  };
+
+  // Undo
+  const undo = () => {
+    if (undoStack.length === 0) return;
+    
+    // Save current state to redo stack
+    const currentState: HistoryState = {
+      polygons: JSON.parse(JSON.stringify(polygons)),
+      guideLines: JSON.parse(JSON.stringify(guideLines)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    setRedoStack(prev => [...prev, currentState]);
+    
+    // Restore previous state
+    const previousState = undoStack[undoStack.length - 1];
+    setPolygons(previousState.polygons);
+    setGuideLines(previousState.guideLines);
+    setLines(previousState.lines);
+    setUndoStack(prev => prev.slice(0, -1));
+    
+    // Clear selections
+    setSelectedPolygonId(null);
+    setSelectedGuideLineId(null);
+  };
+
+  // Redo
+  const redo = () => {
+    if (redoStack.length === 0) return;
+    
+    // Save current state to undo stack
+    const currentState: HistoryState = {
+      polygons: JSON.parse(JSON.stringify(polygons)),
+      guideLines: JSON.parse(JSON.stringify(guideLines)),
+      lines: JSON.parse(JSON.stringify(lines)),
+    };
+    setUndoStack(prev => [...prev, currentState]);
+    
+    // Restore next state
+    const nextState = redoStack[redoStack.length - 1];
+    setPolygons(nextState.polygons);
+    setGuideLines(nextState.guideLines);
+    setLines(nextState.lines);
+    setRedoStack(prev => prev.slice(0, -1));
+    
+    // Clear selections
+    setSelectedPolygonId(null);
+    setSelectedGuideLineId(null);
+  };
 
   // Load data
   useEffect(() => {
@@ -339,6 +407,8 @@ export default function AreaCalculatorEditor() {
     const source = guideLines.find(g => g.id === sourceId);
     if (!source) return;
     
+    saveStateForUndo();
+    
     // Calculate perpendicular direction
     const dx = source.end.x - source.start.x;
     const dy = source.end.y - source.start.y;
@@ -374,12 +444,14 @@ export default function AreaCalculatorEditor() {
 
   // Delete guide line
   const deleteGuideLine = (id: string) => {
+    saveStateForUndo();
     setGuideLines(guideLines.filter(g => g.id !== id && g.parentId !== id));
     setSelectedGuideLineId(null);
   };
 
   // Delete all guide lines
   const deleteAllGuideLines = () => {
+    saveStateForUndo();
     setGuideLines([]);
     setSelectedGuideLineId(null);
   };
@@ -389,6 +461,7 @@ export default function AreaCalculatorEditor() {
     const source = guideLines.find(g => g.id === id);
     if (!source) return;
     
+    saveStateForUndo();
     // Offset by 20 pixels
     const newGuideLine: GuideLine = {
       id: Date.now().toString(),
@@ -407,6 +480,8 @@ export default function AreaCalculatorEditor() {
     const dy = guide.end.y - guide.start.y;
     
     if (dx === 0 && dy === 0) return;
+    
+    saveStateForUndo();
     
     // Calculate line equation: y = mx + b or x = constant for vertical
     let newStart: AreaPoint;
@@ -577,10 +652,11 @@ export default function AreaCalculatorEditor() {
         setCurrentPoints([{ x: snappedX, y: snappedY }]);
       } else {
         // Complete guide line
+        saveStateForUndo();
         const newGuideLine = {
           id: Date.now().toString(),
           start: currentPoints[0],
-          end: { x: snappedX, y: snappedY }
+          end: snapToAngles ? snapAngle(currentPoints[0], { x: snappedX, y: snappedY }) : { x: snappedX, y: snappedY }
         };
         setGuideLines([...guideLines, newGuideLine]);
         setCurrentPoints([]);
@@ -731,6 +807,8 @@ export default function AreaCalculatorEditor() {
   const finishPolygon = () => {
     if (currentPoints.length < 3) return;
     
+    saveStateForUndo();
+    
     const newPolygon: AreaPolygon = {
       id: Date.now().toString(),
       points: [...currentPoints],
@@ -823,6 +901,7 @@ export default function AreaCalculatorEditor() {
   const deleteSelectedPolygon = () => {
     if (!selectedPolygonId) return;
     
+    saveStateForUndo();
     setPolygons(polygons.filter(p => p.id !== selectedPolygonId));
     setLines(lines.filter(l => l.polygonId !== selectedPolygonId));
     setSelectedPolygonId(null);
@@ -907,6 +986,23 @@ export default function AreaCalculatorEditor() {
           <Text style={styles.headerTitle} numberOfLines={1}>{name}</Text>
           <Ionicons name="pencil" size={14} color="#fff" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
+        
+        {/* Undo/Redo Buttons */}
+        <TouchableOpacity 
+          onPress={undo} 
+          style={styles.headerButton} 
+          disabled={undoStack.length === 0}
+        >
+          <Ionicons name="arrow-undo" size={22} color={undoStack.length > 0 ? '#fff' : '#888'} />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={redo} 
+          style={styles.headerButton}
+          disabled={redoStack.length === 0}
+        >
+          <Ionicons name="arrow-redo" size={22} color={redoStack.length > 0 ? '#fff' : '#888'} />
+        </TouchableOpacity>
+        
         <TouchableOpacity onPress={() => setShowResultsModal(true)} style={styles.headerButton}>
           <Ionicons name="calculator" size={22} color="#fff" />
         </TouchableOpacity>
@@ -1084,6 +1180,7 @@ export default function AreaCalculatorEditor() {
           if (mode === 'select' && guideLinesVisible) {
             const guidePoint = findGuideLinePointAtPosition(x, y);
             if (guidePoint) {
+              saveStateForUndo(); // Save state before dragging
               setDraggingGuidePoint(guidePoint);
               setSelectedGuideLineId(guidePoint.guideId);
             }

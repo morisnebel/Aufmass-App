@@ -2064,12 +2064,44 @@ export default function AreaCalculatorEditor() {
             return;
           }
           
-          // Dragging whole polygon
+          // Dragging whole polygon - with snapping
           if (draggingWholePolygon) {
+            const polygon = polygons.find(p => p.id === draggingWholePolygon.polygonId);
+            if (!polygon) return;
+            
             const dx = x - draggingWholePolygon.startPos.x;
             const dy = y - draggingWholePolygon.startPos.y;
-            moveWholePolygon(draggingWholePolygon.polygonId, dx, dy);
-            setDraggingWholePolygon({ ...draggingWholePolygon, startPos: { x, y } });
+            
+            // Check if any corner of the polygon can snap to an existing point
+            let snapOffset = { x: 0, y: 0 };
+            let foundSnap = false;
+            
+            for (const point of polygon.points) {
+              const movedPoint = { x: point.x + dx, y: point.y + dy };
+              const snapResult = snapToNearestPoint(movedPoint.x, movedPoint.y);
+              
+              if (snapResult.snapped) {
+                // Calculate the offset needed to snap this corner
+                snapOffset = {
+                  x: snapResult.point.x - movedPoint.x,
+                  y: snapResult.point.y - movedPoint.y
+                };
+                setCurrentSnapPoint({ point: snapResult.point, isSnapped: true });
+                foundSnap = true;
+                break;
+              }
+            }
+            
+            if (!foundSnap) {
+              setCurrentSnapPoint(null);
+            }
+            
+            // Apply movement with snap offset
+            moveWholePolygon(draggingWholePolygon.polygonId, dx + snapOffset.x, dy + snapOffset.y);
+            setDraggingWholePolygon({ 
+              ...draggingWholePolygon, 
+              startPos: { x: x + snapOffset.x, y: y + snapOffset.y } 
+            });
             return;
           }
           

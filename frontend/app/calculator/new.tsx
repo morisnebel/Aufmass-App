@@ -792,8 +792,12 @@ export default function AreaCalculatorEditor() {
     // Find all deduction polygons that might intersect this line
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
-    // Collect all intersection points
-    const intersections: { point: AreaPoint; t: number }[] = [];
+    if (deductionPolygons.length === 0) {
+      return [{ start: p1, end: p2, isInterrupted: false }];
+    }
+    
+    // Collect all intersection points with info about which deduction they belong to
+    const intersections: { point: AreaPoint; t: number; deductionId: string }[] = [];
     
     for (const deduction of deductionPolygons) {
       // Check each edge of the deduction polygon
@@ -804,7 +808,7 @@ export default function AreaCalculatorEditor() {
         // Find intersection between main line and deduction edge
         const intersection = getLineSegmentIntersection(p1, p2, d1, d2);
         if (intersection) {
-          intersections.push(intersection);
+          intersections.push({ ...intersection, deductionId: deduction.id });
         }
       }
     }
@@ -812,33 +816,57 @@ export default function AreaCalculatorEditor() {
     // Sort intersections by t value (position along the line)
     intersections.sort((a, b) => a.t - b.t);
     
-    if (intersections.length < 2) {
-      // No interruption or only one intersection - return whole line
+    // If no intersections, check if line is entirely inside a deduction
+    if (intersections.length === 0) {
+      // Check if midpoint of line is inside any deduction
+      const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      for (const deduction of deductionPolygons) {
+        if (isPointInPolygon(midPoint, deduction.points)) {
+          // Entire line is inside deduction - return as interrupted
+          return [{ start: p1, end: p2, isInterrupted: true }];
+        }
+      }
       return [{ start: p1, end: p2, isInterrupted: false }];
     }
     
-    // Create segments
+    // Build segments by walking along the line
     const segments: { start: AreaPoint; end: AreaPoint; isInterrupted: boolean }[] = [];
-    let lastPoint = p1;
-    let insideDeduction = false;
+    let currentPoint = p1;
     
+    // Determine initial state - is start point inside any deduction?
+    let insideDeduction = false;
+    for (const deduction of deductionPolygons) {
+      if (isPointInPolygon(p1, deduction.points)) {
+        insideDeduction = true;
+        break;
+      }
+    }
+    
+    // Process each intersection point
     for (let i = 0; i < intersections.length; i++) {
       const intersection = intersections[i];
       
-      if (!insideDeduction) {
-        // We're outside deduction, this segment is visible
-        segments.push({ start: lastPoint, end: intersection.point, isInterrupted: false });
-        insideDeduction = true;
-      } else {
-        // We're inside deduction, this segment is interrupted (not drawn)
-        insideDeduction = false;
+      // Add segment from current point to intersection
+      if (currentPoint.x !== intersection.point.x || currentPoint.y !== intersection.point.y) {
+        segments.push({ 
+          start: currentPoint, 
+          end: intersection.point, 
+          isInterrupted: insideDeduction 
+        });
       }
-      lastPoint = intersection.point;
+      
+      // Toggle state - crossing a boundary means switching in/out
+      insideDeduction = !insideDeduction;
+      currentPoint = intersection.point;
     }
     
-    // Add final segment if we're outside deduction
-    if (!insideDeduction) {
-      segments.push({ start: lastPoint, end: p2, isInterrupted: false });
+    // Add final segment from last intersection to end point
+    if (currentPoint.x !== p2.x || currentPoint.y !== p2.y) {
+      segments.push({ 
+        start: currentPoint, 
+        end: p2, 
+        isInterrupted: insideDeduction 
+      });
     }
     
     return segments;

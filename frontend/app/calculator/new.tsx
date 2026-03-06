@@ -2325,7 +2325,8 @@ export default function AreaCalculatorEditor() {
           {polygons.map((polygon) => {
             const pointsString = polygon.points.map(p => `${p.x},${p.y}`).join(' ');
             const isSelected = selectedPolygonId === polygon.id;
-            const fillColor = polygon.type === 'deduction' ? 'rgba(244,67,54,0.3)' : 'rgba(76,175,80,0.3)';
+            // Abzugsflächen nicht mehr transparent - solide weiße Füllung
+            const fillColor = polygon.type === 'deduction' ? '#fff' : 'rgba(76,175,80,0.3)';
             const strokeColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
             
             return (
@@ -2455,19 +2456,21 @@ export default function AreaCalculatorEditor() {
                   // Skip if this edge has a category (already shown with category styling)
                   if (category) return null;
                   
-                  // Calculate position along the line (offset from center to avoid overlaps)
+                  // Calculate midpoint and length
+                  const midX = (point.x + nextPoint.x) / 2;
+                  const midY = (point.y + nextPoint.y) / 2;
+                  const length = calculateLineLength(point, nextPoint);
+                  
+                  // Calculate line direction and perpendicular
                   const dx = nextPoint.x - point.x;
                   const dy = nextPoint.y - point.y;
                   const lineLen = Math.sqrt(dx * dx + dy * dy);
                   
-                  // Position label at 40% along the line, offset perpendicular to avoid polygon overlap
-                  const t = 0.4;
-                  const midX = point.x + dx * t;
-                  const midY = point.y + dy * t;
+                  if (lineLen < 1) return null;
                   
                   // Perpendicular offset (outward from polygon center)
-                  const perpX = -dy / lineLen * 15;
-                  const perpY = dx / lineLen * 15;
+                  const perpX = -dy / lineLen * 20;
+                  const perpY = dx / lineLen * 20;
                   
                   // Determine which side is "outside" the polygon
                   const centerX = polygon.points.reduce((s, p) => s + p.x, 0) / polygon.points.length;
@@ -2479,23 +2482,26 @@ export default function AreaCalculatorEditor() {
                   const offsetX = perpDot > 0 ? -perpX : perpX;
                   const offsetY = perpDot > 0 ? -perpY : perpY;
                   
-                  const labelX = midX + offsetX;
-                  const labelY = midY + offsetY;
-                  const length = calculateLineLength(point, nextPoint);
+                  let labelX = midX + offsetX;
+                  let labelY = midY + offsetY;
+                  
+                  // Clamp label position to stay within canvas bounds
+                  const labelWidth = 52;
+                  const labelHeight = 18;
+                  labelX = Math.max(labelWidth / 2 + 5, Math.min(SCREEN_WIDTH - labelWidth / 2 - 5, labelX));
+                  labelY = Math.max(labelHeight / 2 + 5, Math.min(SCREEN_HEIGHT - 200, labelY));
                   
                   return (
                     <G key={`edge-length-${polygon.id}-${index}`}>
                       <Rect 
-                        x={labelX - 28} 
-                        y={labelY - 11} 
-                        width={56} 
-                        height={22} 
-                        rx={4} 
-                        fill={polygon.type === 'deduction' ? 'rgba(244,67,54,0.95)' : 'rgba(76,175,80,0.95)'} 
-                        stroke={polygon.type === 'deduction' ? '#c62828' : '#2e7d32'}
-                        strokeWidth={1}
+                        x={labelX - labelWidth / 2} 
+                        y={labelY - labelHeight / 2} 
+                        width={labelWidth} 
+                        height={labelHeight} 
+                        rx={3} 
+                        fill={polygon.type === 'deduction' ? '#f44336' : '#4CAF50'} 
                       />
-                      <SvgText x={labelX} y={labelY + 5} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#fff">
+                      <SvgText x={labelX} y={labelY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
                         {length.toFixed(2)} m
                       </SvgText>
                     </G>

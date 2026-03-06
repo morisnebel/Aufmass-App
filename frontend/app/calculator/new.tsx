@@ -84,6 +84,7 @@ export default function AreaCalculatorEditor() {
   
   // Polygon editing
   const [draggingPolygonPoint, setDraggingPolygonPoint] = useState<{ polygonId: string; pointIndex: number } | null>(null);
+  const [draggingWholePolygon, setDraggingWholePolygon] = useState<{ polygonId: string; startPos: AreaPoint } | null>(null);
   const [addPointMode, setAddPointMode] = useState(false); // "Punkt auf Linie" Modus
   
   // Drawing state
@@ -271,11 +272,25 @@ export default function AreaCalculatorEditor() {
     const deductionArea = deductionPolygons.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
     const netArea = totalArea - deductionArea;
     
-    // Calculate lines by category
+    // Calculate lines by category (with deduction interruptions)
     const linesByCategory: { [category: string]: number } = {};
     lines.forEach(line => {
       const polygon = polygons.find(p => p.id === line.polygonId);
-      if (polygon) {
+      if (polygon && polygon.type === 'main') {
+        // Get line segments after deduction interruptions
+        const segments = calculateLineSegmentsWithDeductions(polygon, line.pointIndex);
+        
+        // Sum up lengths of non-interrupted segments
+        const totalLength = segments
+          .filter(s => !s.isInterrupted)
+          .reduce((sum, s) => sum + calculateLineLength(s.start, s.end), 0);
+        
+        if (!linesByCategory[line.category]) {
+          linesByCategory[line.category] = 0;
+        }
+        linesByCategory[line.category] += totalLength;
+      } else if (polygon) {
+        // For deduction polygons, calculate full line length
         const p1 = polygon.points[line.pointIndex];
         const p2 = polygon.points[(line.pointIndex + 1) % polygon.points.length];
         const length = calculateLineLength(p1, p2);
@@ -754,6 +769,100 @@ export default function AreaCalculatorEditor() {
       newPoints[pointIndex] = newPos;
       return { ...polygon, points: newPoints };
     }));
+  };
+
+  // Move entire polygon
+  const moveWholePolygon = (polygonId: string, dx: number, dy: number) => {
+    setPolygons(polygons.map(polygon => {
+      if (polygon.id !== polygonId) return polygon;
+      
+      const newPoints = polygon.points.map(p => ({
+        x: p.x + dx,
+        y: p.y + dy
+      }));
+      return { ...polygon, points: newPoints };
+    }));
+  };
+
+  // Calculate line segments after deduction intersections
+  const calculateLineSegmentsWithDeductions = (mainPolygon: AreaPolygon, lineIndex: number): { start: AreaPoint; end: AreaPoint; isInterrupted: boolean }[] => {
+    const p1 = mainPolygon.points[lineIndex];
+    const p2 = mainPolygon.points[(lineIndex + 1) % mainPolygon.points.length];
+    
+    // Find all deduction polygons that might intersect this line
+    const deductionPolygons = polygons.filter(p => p.type === 'deduction');
+    
+    // Collect all intersection points
+    const intersections: { point: AreaPoint; t: number }[] = [];
+    
+    for (const deduction of deductionPolygons) {
+      // Check each edge of the deduction polygon
+      for (let i = 0; i < deduction.points.length; i++) {
+        const d1 = deduction.points[i];
+        const d2 = deduction.points[(i + 1) % deduction.points.length];
+        
+        // Find intersection between main line and deduction edge
+        const intersection = getLineSegmentIntersection(p1, p2, d1, d2);
+        if (intersection) {
+          intersections.push(intersection);
+        }
+      }
+    }
+    
+    // Sort intersections by t value (position along the line)
+    intersections.sort((a, b) => a.t - b.t);
+    
+    if (intersections.length < 2) {
+      // No interruption or only one intersection - return whole line
+      return [{ start: p1, end: p2, isInterrupted: false }];
+    }
+    
+    // Create segments
+    const segments: { start: AreaPoint; end: AreaPoint; isInterrupted: boolean }[] = [];
+    let lastPoint = p1;
+    let insideDeduction = false;
+    
+    for (let i = 0; i < intersections.length; i++) {
+      const intersection = intersections[i];
+      
+      if (!insideDeduction) {
+        // We're outside deduction, this segment is visible
+        segments.push({ start: lastPoint, end: intersection.point, isInterrupted: false });
+        insideDeduction = true;
+      } else {
+        // We're inside deduction, this segment is interrupted (not drawn)
+        insideDeduction = false;
+      }
+      lastPoint = intersection.point;
+    }
+    
+    // Add final segment if we're outside deduction
+    if (!insideDeduction) {
+      segments.push({ start: lastPoint, end: p2, isInterrupted: false });
+    }
+    
+    return segments;
+  };
+
+  // Get intersection of two line segments
+  const getLineSegmentIntersection = (p1: AreaPoint, p2: AreaPoint, p3: AreaPoint, p4: AreaPoint): { point: AreaPoint; t: number } | null => {
+    const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y;
+    
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (Math.abs(denom) < 0.0001) return null;
+    
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+    
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+      return {
+        point: { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) },
+        t
+      };
+    }
+    
+    return null;
   };
 
   // Calculate angle from horizontal (for live angle display)
@@ -1346,7 +1455,25 @@ export default function AreaCalculatorEditor() {
               saveStateForUndo();
               setDraggingPolygonPoint(polygonPoint);
               setSelectedPolygonId(polygonPoint.polygonId);
+              setCurrentTouchPosition({ x, y }); // For live length display
               return;
+            }
+          }
+          
+          // Check if touching polygon center for moving whole polygon
+          if (mode === 'select' && !addPointMode && selectedPolygonId) {
+            const polygon = polygons.find(p => p.id === selectedPolygonId);
+            if (polygon) {
+              const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
+              const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
+              const distToCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+              
+              // If touch is near center (move handle), start dragging whole polygon
+              if (distToCenter < 25) {
+                saveStateForUndo();
+                setDraggingWholePolygon({ polygonId: polygon.id, startPos: { x, y } });
+                return;
+              }
             }
           }
           
@@ -1391,6 +1518,16 @@ export default function AreaCalculatorEditor() {
           if (draggingPolygonPoint) {
             const snapped = snapToNearestPoint(x, y);
             updatePolygonPoint(draggingPolygonPoint.polygonId, draggingPolygonPoint.pointIndex, snapped);
+            setCurrentTouchPosition({ x, y }); // For live length display
+            return;
+          }
+          
+          // Dragging whole polygon
+          if (draggingWholePolygon) {
+            const dx = x - draggingWholePolygon.startPos.x;
+            const dy = y - draggingWholePolygon.startPos.y;
+            moveWholePolygon(draggingWholePolygon.polygonId, dx, dy);
+            setDraggingWholePolygon({ ...draggingWholePolygon, startPos: { x, y } });
             return;
           }
           
@@ -1419,6 +1556,11 @@ export default function AreaCalculatorEditor() {
           
           if (draggingPolygonPoint) {
             setDraggingPolygonPoint(null);
+            return;
+          }
+          
+          if (draggingWholePolygon) {
+            setDraggingWholePolygon(null);
             return;
           }
           
@@ -1583,8 +1725,64 @@ export default function AreaCalculatorEditor() {
                   strokeWidth={isSelected ? 3 : 2}
                 />
                 
-                {/* Line categories */}
-                {polygon.points.map((point, index) => {
+                {/* Line categories - with interruption by deductions */}
+                {polygon.type === 'main' && polygon.points.map((point, index) => {
+                  const nextPoint = polygon.points[(index + 1) % polygon.points.length];
+                  const category = getLineCategory(polygon.id, index);
+                  
+                  if (category) {
+                    // Get segments after deduction interruptions
+                    const segments = calculateLineSegmentsWithDeductions(polygon, index);
+                    const color = getCategoryColor(category);
+                    
+                    // Calculate total visible length
+                    const totalLength = segments
+                      .filter(s => !s.isInterrupted)
+                      .reduce((sum, s) => sum + calculateLineLength(s.start, s.end), 0);
+                    
+                    return (
+                      <G key={`line-${polygon.id}-${index}`}>
+                        {/* Draw each visible segment */}
+                        {segments.filter(s => !s.isInterrupted).map((segment, segIdx) => (
+                          <Line
+                            key={`seg-${segIdx}`}
+                            x1={segment.start.x}
+                            y1={segment.start.y}
+                            x2={segment.end.x}
+                            y2={segment.end.y}
+                            stroke={color}
+                            strokeWidth={4}
+                          />
+                        ))}
+                        {/* Show total length at midpoint of original line */}
+                        {(() => {
+                          const midX = (point.x + nextPoint.x) / 2;
+                          const midY = (point.y + nextPoint.y) / 2;
+                          const fullLength = calculateLineLength(point, nextPoint);
+                          const hasInterruption = segments.length > 1 || totalLength < fullLength - 0.01;
+                          
+                          return (
+                            <G>
+                              <Circle cx={midX} cy={midY} r={hasInterruption ? 22 : 18} fill={color} />
+                              {hasInterruption && (
+                                <SvgText x={midX} y={midY - 5} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.8)">
+                                  ({fullLength.toFixed(2)})
+                                </SvgText>
+                              )}
+                              <SvgText x={midX} y={midY + (hasInterruption ? 8 : 4)} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
+                                {totalLength.toFixed(2)}m
+                              </SvgText>
+                            </G>
+                          );
+                        })()}
+                      </G>
+                    );
+                  }
+                  return null;
+                })}
+                
+                {/* Line categories for deduction polygons (no interruption) */}
+                {polygon.type === 'deduction' && polygon.points.map((point, index) => {
                   const nextPoint = polygon.points[(index + 1) % polygon.points.length];
                   const category = getLineCategory(polygon.id, index);
                   
@@ -1603,20 +1801,8 @@ export default function AreaCalculatorEditor() {
                           stroke={getCategoryColor(category)}
                           strokeWidth={4}
                         />
-                        <Circle
-                          cx={midX}
-                          cy={midY}
-                          r={18}
-                          fill={getCategoryColor(category)}
-                        />
-                        <SvgText
-                          x={midX}
-                          y={midY + 4}
-                          textAnchor="middle"
-                          fontSize={10}
-                          fontWeight="bold"
-                          fill="#fff"
-                        >
+                        <Circle cx={midX} cy={midY} r={18} fill={getCategoryColor(category)} />
+                        <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
                           {length.toFixed(2)}m
                         </SvgText>
                       </G>
@@ -1626,37 +1812,92 @@ export default function AreaCalculatorEditor() {
                 })}
                 
                 {/* Polygon points - draggable when selected */}
-                {polygon.points.map((point, index) => (
-                  <G key={`point-${polygon.id}-${index}`}>
-                    {/* Outer circle (grab indicator) */}
-                    {isSelected && (
+                {polygon.points.map((point, index) => {
+                  const prevIndex = (index - 1 + polygon.points.length) % polygon.points.length;
+                  const nextIndex = (index + 1) % polygon.points.length;
+                  const prevPoint = polygon.points[prevIndex];
+                  const nextPoint = polygon.points[nextIndex];
+                  const isDragging = draggingPolygonPoint?.polygonId === polygon.id && draggingPolygonPoint?.pointIndex === index;
+                  
+                  return (
+                    <G key={`point-${polygon.id}-${index}`}>
+                      {/* Live length display when dragging this point */}
+                      {isDragging && currentTouchPosition && (
+                        <>
+                          {/* Length to previous point */}
+                          {(() => {
+                            const length = calculateLineLength(prevPoint, point);
+                            const midX = (prevPoint.x + point.x) / 2;
+                            const midY = (prevPoint.y + point.y) / 2;
+                            return (
+                              <G>
+                                <Rect x={midX - 28} y={midY - 11} width={56} height={22} rx={4} fill="#1976d2" />
+                                <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#fff">
+                                  {length.toFixed(2)}m
+                                </SvgText>
+                              </G>
+                            );
+                          })()}
+                          {/* Length to next point */}
+                          {(() => {
+                            const length = calculateLineLength(point, nextPoint);
+                            const midX = (point.x + nextPoint.x) / 2;
+                            const midY = (point.y + nextPoint.y) / 2;
+                            return (
+                              <G>
+                                <Rect x={midX - 28} y={midY - 11} width={56} height={22} rx={4} fill="#1976d2" />
+                                <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#fff">
+                                  {length.toFixed(2)}m
+                                </SvgText>
+                              </G>
+                            );
+                          })()}
+                        </>
+                      )}
+                      
+                      {/* Outer circle (grab indicator) */}
+                      {isSelected && (
+                        <Circle
+                          cx={point.x}
+                          cy={point.y}
+                          r={14}
+                          fill="rgba(25,118,210,0.2)"
+                          stroke="#1976d2"
+                          strokeWidth={1}
+                        />
+                      )}
+                      {/* Inner circle */}
                       <Circle
                         cx={point.x}
                         cy={point.y}
-                        r={14}
-                        fill="rgba(25,118,210,0.2)"
-                        stroke="#1976d2"
-                        strokeWidth={1}
+                        r={isSelected ? 8 : 5}
+                        fill={isSelected ? '#1976d2' : strokeColor}
                       />
-                    )}
-                    {/* Inner circle */}
-                    <Circle
-                      cx={point.x}
-                      cy={point.y}
-                      r={isSelected ? 8 : 5}
-                      fill={isSelected ? '#1976d2' : strokeColor}
-                    />
-                    {/* White dot center for better visibility */}
-                    {isSelected && (
-                      <Circle
-                        cx={point.x}
-                        cy={point.y}
-                        r={3}
-                        fill="#fff"
-                      />
-                    )}
-                  </G>
-                ))}
+                      {/* White dot center for better visibility */}
+                      {isSelected && (
+                        <Circle
+                          cx={point.x}
+                          cy={point.y}
+                          r={3}
+                          fill="#fff"
+                        />
+                      )}
+                    </G>
+                  );
+                })}
+                
+                {/* Move handle in center of polygon - for moving whole polygon */}
+                {isSelected && (() => {
+                  const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
+                  const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
+                  return (
+                    <G>
+                      <Circle cx={centerX} cy={centerY} r={20} fill="rgba(76,175,80,0.3)" stroke="#4CAF50" strokeWidth={2} />
+                      <Circle cx={centerX} cy={centerY} r={10} fill="#4CAF50" />
+                      <SvgText x={centerX} y={centerY + 3} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">⇄</SvgText>
+                    </G>
+                  );
+                })()}
                 
                 {/* Angle display at vertices */}
                 {showPolygonAngles && polygon.points.length >= 3 && polygon.points.map((vertex, index) => {

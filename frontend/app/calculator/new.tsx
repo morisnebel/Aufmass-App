@@ -1716,45 +1716,44 @@ export default function AreaCalculatorEditor() {
                   const deduction = polygons.find(p => p.id === selectedPolygonId);
                   if (!deduction) return;
                   
-                  // Find the main polygon that this deduction intersects with
-                  const mainPolygon = polygons.find(p => {
+                  // Find all main polygons that this deduction intersects with
+                  const mainPolygons = polygons.filter(p => {
                     if (p.type !== 'main') return false;
-                    // Check if any point of the deduction is inside the main polygon
-                    // or if there's any intersection
-                    return deduction.points.some(dp => isPointInPolygon(dp, p.points)) ||
-                           p.points.some(mp => isPointInPolygon(mp, deduction.points));
+                    // Check if any edge of the deduction intersects with any edge of the main polygon
+                    for (let i = 0; i < deduction.points.length; i++) {
+                      const d1 = deduction.points[i];
+                      const d2 = deduction.points[(i + 1) % deduction.points.length];
+                      for (let j = 0; j < p.points.length; j++) {
+                        const m1 = p.points[j];
+                        const m2 = p.points[(j + 1) % p.points.length];
+                        if (getLineSegmentIntersection(d1, d2, m1, m2)) {
+                          return true;
+                        }
+                      }
+                    }
+                    return false;
                   });
                   
-                  if (!mainPolygon) {
-                    Alert.alert('Hinweis', 'Die Abzugsfläche überlappt keine Hauptfläche.');
+                  if (mainPolygons.length === 0) {
+                    Alert.alert('Hinweis', 'Die Abzugsfläche schneidet keine Hauptfläche.');
                     return;
                   }
                   
                   saveStateForUndo();
                   
-                  // Clip the deduction to the main polygon
-                  const clippedPoints = clipPolygonToPolygon(deduction.points, mainPolygon.points);
+                  // Insert intersection points into all affected main polygons
+                  // WITHOUT modifying the deduction polygon
+                  const updatedMainPolygons = insertDeductionIntersections(deduction, mainPolygons);
                   
-                  if (clippedPoints.length < 3) {
-                    Alert.alert('Hinweis', 'Die Abzugsfläche liegt außerhalb der Hauptfläche.');
-                    return;
-                  }
+                  // Build new polygon list - keep deduction unchanged
+                  const otherPolygons = polygons.filter(p => !mainPolygons.some(mp => mp.id === p.id));
+                  setPolygons([...updatedMainPolygons, ...otherPolygons]);
                   
-                  // Update the deduction polygon with the clipped points
-                  const updatedDeduction = { ...deduction, points: clippedPoints };
-                  
-                  // Also insert intersection points into the main polygon
-                  const updatedMainPolygons = insertDeductionIntersections(updatedDeduction, [mainPolygon]);
-                  
-                  // Build new polygon list
-                  const otherPolygons = polygons.filter(p => p.id !== deduction.id && p.id !== mainPolygon.id);
-                  setPolygons([...updatedMainPolygons, ...otherPolygons, updatedDeduction]);
-                  
-                  Alert.alert('Fertig', 'Abzugsfläche wurde eingepasst und Schnittpunkte eingefügt.');
+                  Alert.alert('Fertig', 'Schnittpunkte wurden in die Hauptfläche(n) eingefügt.');
                 }}
               >
-                <Ionicons name="cut" size={20} color="#fff" />
-                <Text style={[styles.toolLabel, { color: '#fff' }]}>Einpassen</Text>
+                <Ionicons name="git-branch" size={20} color="#fff" />
+                <Text style={[styles.toolLabel, { color: '#fff' }]}>Schnitt</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.toolButton, { backgroundColor: '#f44336' }]} onPress={deleteSelectedPolygon}>

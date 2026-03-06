@@ -76,7 +76,16 @@ export default function AreaCalculatorEditor() {
   const [draggingGuidePoint, setDraggingGuidePoint] = useState<{ guideId: string; point: 'start' | 'end' | 'middle' } | null>(null);
   const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
+  const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
+  
+  // Dimensioning (Vermaßung)
+  interface DimensionLine {
+    id: string;
+    start: AreaPoint;
+    end: AreaPoint;
+  }
+  const [dimensionLines, setDimensionLines] = useState<DimensionLine[]>([]);
   
   // Label-Positionen (Offset vom Polygon-Zentrum)
   const [labelOffsets, setLabelOffsets] = useState<{ [polygonId: string]: AreaPoint }>({});
@@ -86,9 +95,10 @@ export default function AreaCalculatorEditor() {
   const [draggingPolygonPoint, setDraggingPolygonPoint] = useState<{ polygonId: string; pointIndex: number } | null>(null);
   const [draggingWholePolygon, setDraggingWholePolygon] = useState<{ polygonId: string; startPos: AreaPoint } | null>(null);
   const [addPointMode, setAddPointMode] = useState(false); // "Punkt auf Linie" Modus
+  const [deletePointMode, setDeletePointMode] = useState(false); // "Punkt löschen" Modus
   
   // Drawing state
-  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel'>('select');
+  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension'>('select');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
@@ -792,97 +802,77 @@ export default function AreaCalculatorEditor() {
     // Find all deduction polygons that might intersect this line
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
-    console.log('[DEBUG] calculateLineSegmentsWithDeductions called');
-    console.log('[DEBUG] Line from', p1, 'to', p2);
-    console.log('[DEBUG] Deduction polygons count:', deductionPolygons.length);
-    
     if (deductionPolygons.length === 0) {
       return [{ start: p1, end: p2, isInterrupted: false }];
     }
     
-    // Collect all intersection points with info about which deduction they belong to
+    // Collect all intersection points
     const intersections: { point: AreaPoint; t: number; deductionId: string }[] = [];
     
     for (const deduction of deductionPolygons) {
-      console.log('[DEBUG] Checking deduction polygon:', deduction.id, 'with points:', deduction.points);
-      // Check each edge of the deduction polygon
       for (let i = 0; i < deduction.points.length; i++) {
         const d1 = deduction.points[i];
         const d2 = deduction.points[(i + 1) % deduction.points.length];
         
-        // Find intersection between main line and deduction edge
         const intersection = getLineSegmentIntersection(p1, p2, d1, d2);
-        console.log('[DEBUG] Edge', i, 'from', d1, 'to', d2, '-> intersection:', intersection);
         if (intersection) {
           intersections.push({ ...intersection, deductionId: deduction.id });
         }
       }
     }
     
-    console.log('[DEBUG] Total intersections found:', intersections.length);
-    
-    // Sort intersections by t value (position along the line)
+    // Sort by position along the line
     intersections.sort((a, b) => a.t - b.t);
     
-    // If no intersections, check if line is entirely inside a deduction
+    // No intersections - check if entire line is inside a deduction
     if (intersections.length === 0) {
-      // Check if midpoint of line is inside any deduction
       const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
       for (const deduction of deductionPolygons) {
         if (isPointInPolygon(midPoint, deduction.points)) {
-          // Entire line is inside deduction - return as interrupted
-          console.log('[DEBUG] Line is entirely inside deduction');
           return [{ start: p1, end: p2, isInterrupted: true }];
         }
       }
-      console.log('[DEBUG] No intersections, returning full line');
       return [{ start: p1, end: p2, isInterrupted: false }];
     }
     
-    // Build segments by walking along the line
+    // Build segments
     const segments: { start: AreaPoint; end: AreaPoint; isInterrupted: boolean }[] = [];
     let currentPoint = p1;
     
-    // Determine initial state - is start point inside any deduction?
+    // Check if start point is inside any deduction
     let insideDeduction = false;
     for (const deduction of deductionPolygons) {
       if (isPointInPolygon(p1, deduction.points)) {
         insideDeduction = true;
-        console.log('[DEBUG] Start point is inside deduction');
         break;
       }
     }
     
-    // Process each intersection point
+    // Process each intersection
     for (let i = 0; i < intersections.length; i++) {
       const intersection = intersections[i];
       
-      // Add segment from current point to intersection
       if (currentPoint.x !== intersection.point.x || currentPoint.y !== intersection.point.y) {
         segments.push({ 
           start: currentPoint, 
           end: intersection.point, 
           isInterrupted: insideDeduction 
         });
-        console.log('[DEBUG] Added segment:', { start: currentPoint, end: intersection.point, isInterrupted: insideDeduction });
       }
       
-      // Toggle state - crossing a boundary means switching in/out
       insideDeduction = !insideDeduction;
       currentPoint = intersection.point;
     }
     
-    // Add final segment from last intersection to end point
+    // Add final segment
     if (currentPoint.x !== p2.x || currentPoint.y !== p2.y) {
       segments.push({ 
         start: currentPoint, 
         end: p2, 
         isInterrupted: insideDeduction 
       });
-      console.log('[DEBUG] Added final segment:', { start: currentPoint, end: p2, isInterrupted: insideDeduction });
     }
     
-    console.log('[DEBUG] Final segments:', segments);
     return segments;
   };
 
@@ -955,6 +945,21 @@ export default function AreaCalculatorEditor() {
       if (clickedGuide) {
         setSelectedGuideLineId(clickedGuide.id);
         setShowParallelModal(true);
+      }
+    } else if (mode === 'dimension') {
+      // Drawing dimension line
+      if (currentPoints.length === 0) {
+        setCurrentPoints([{ x: snappedX, y: snappedY }]);
+      } else {
+        // Complete dimension line
+        saveStateForUndo();
+        const newDimensionLine: DimensionLine = {
+          id: Date.now().toString(),
+          start: currentPoints[0],
+          end: { x: snappedX, y: snappedY }
+        };
+        setDimensionLines([...dimensionLines, newDimensionLine]);
+        setCurrentPoints([]);
       }
     } else if (mode === 'polygon' || mode === 'deduction') {
       // Check if close to first point (to close polygon)
@@ -1193,6 +1198,34 @@ export default function AreaCalculatorEditor() {
     setPolygons(polygons.filter(p => p.id !== selectedPolygonId));
     setLines(lines.filter(l => l.polygonId !== selectedPolygonId));
     setSelectedPolygonId(null);
+  };
+
+  // Delete a single polygon point
+  const deletePolygonPoint = (polygonId: string, pointIndex: number) => {
+    const polygon = polygons.find(p => p.id === polygonId);
+    if (!polygon) return;
+    
+    // Can't delete if polygon would have less than 3 points
+    if (polygon.points.length <= 3) {
+      Alert.alert('Hinweis', 'Ein Polygon muss mindestens 3 Punkte haben. Löschen Sie stattdessen das ganze Polygon.');
+      return;
+    }
+    
+    saveStateForUndo();
+    
+    // Remove the point
+    const newPoints = polygon.points.filter((_, idx) => idx !== pointIndex);
+    setPolygons(polygons.map(p => 
+      p.id === polygonId ? { ...p, points: newPoints } : p
+    ));
+    
+    // Update line categories (shift indices after deleted point)
+    setLines(lines.map(line => {
+      if (line.polygonId !== polygonId) return line;
+      if (line.pointIndex === pointIndex) return null; // Remove this line category
+      if (line.pointIndex > pointIndex) return { ...line, pointIndex: line.pointIndex - 1 };
+      return line;
+    }).filter(Boolean) as AreaLine[]);
   };
 
   // Undo last point
@@ -1465,10 +1498,43 @@ export default function AreaCalculatorEditor() {
         
         <TouchableOpacity
           style={[styles.toolButton, addPointMode && styles.toolButtonActive, { backgroundColor: addPointMode ? '#E91E63' : '#f5f5f5' }]}
-          onPress={() => setAddPointMode(!addPointMode)}
+          onPress={() => {
+            setAddPointMode(!addPointMode);
+            setDeletePointMode(false);
+          }}
         >
           <Ionicons name="add-circle" size={20} color={addPointMode ? '#fff' : '#E91E63'} />
           <Text style={[styles.toolLabel, addPointMode && styles.toolLabelActive]}>+Punkt</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, deletePointMode && styles.toolButtonActive, { backgroundColor: deletePointMode ? '#f44336' : '#f5f5f5' }]}
+          onPress={() => {
+            setDeletePointMode(!deletePointMode);
+            setAddPointMode(false);
+          }}
+        >
+          <Ionicons name="remove-circle" size={20} color={deletePointMode ? '#fff' : '#f44336'} />
+          <Text style={[styles.toolLabel, deletePointMode && styles.toolLabelActive]}>-Punkt</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, showEdgeLengths && styles.toolButtonActive]}
+          onPress={() => setShowEdgeLengths(!showEdgeLengths)}
+        >
+          <Ionicons name="resize" size={20} color={showEdgeLengths ? '#fff' : '#666'} />
+          <Text style={[styles.toolLabel, showEdgeLengths && styles.toolLabelActive]}>Maße</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'dimension' && styles.toolButtonActive, { backgroundColor: mode === 'dimension' ? '#9C27B0' : '#f5f5f5' }]}
+          onPress={() => {
+            setMode(mode === 'dimension' ? 'select' : 'dimension');
+            setCurrentPoints([]);
+          }}
+        >
+          <Ionicons name="code-working" size={20} color={mode === 'dimension' ? '#fff' : '#9C27B0'} />
+          <Text style={[styles.toolLabel, mode === 'dimension' && styles.toolLabelActive]}>Vermaß</Text>
         </TouchableOpacity>
       </View>
 
@@ -1486,6 +1552,15 @@ export default function AreaCalculatorEditor() {
             if (linePoint) {
               addPointToPolygonLine(linePoint.polygonId, linePoint.lineIndex, linePoint.point);
               setSelectedPolygonId(linePoint.polygonId);
+            }
+            return;
+          }
+          
+          // "Punkt löschen" mode
+          if (deletePointMode && mode === 'select') {
+            const polygonPoint = findPolygonPointAtPosition(x, y);
+            if (polygonPoint) {
+              deletePolygonPoint(polygonPoint.polygonId, polygonPoint.pointIndex);
             }
             return;
           }
@@ -1552,7 +1627,7 @@ export default function AreaCalculatorEditor() {
           const y = touch.locationY;
           
           // Update current touch position for live length display
-          if ((mode === 'polygon' || mode === 'deduction' || mode === 'guideline') && currentPoints.length > 0) {
+          if ((mode === 'polygon' || mode === 'deduction' || mode === 'guideline' || mode === 'dimension') && currentPoints.length > 0) {
             setCurrentTouchPosition({ x, y });
           }
           
@@ -1751,6 +1826,96 @@ export default function AreaCalculatorEditor() {
             </>
           )}
           
+          {/* Dimension lines (Vermaßung) */}
+          {dimensionLines.map((dim) => {
+            const length = calculateLineLength(dim.start, dim.end);
+            const midX = (dim.start.x + dim.end.x) / 2;
+            const midY = (dim.start.y + dim.end.y) / 2;
+            
+            // Calculate perpendicular direction for extension lines
+            const dx = dim.end.x - dim.start.x;
+            const dy = dim.end.y - dim.start.y;
+            const lineLength = Math.sqrt(dx * dx + dy * dy);
+            const perpX = -dy / lineLength * 15; // 15px extension line length
+            const perpY = dx / lineLength * 15;
+            
+            return (
+              <G key={dim.id}>
+                {/* Extension lines at start */}
+                <Line
+                  x1={dim.start.x - perpX}
+                  y1={dim.start.y - perpY}
+                  x2={dim.start.x + perpX}
+                  y2={dim.start.y + perpY}
+                  stroke="#9C27B0"
+                  strokeWidth={1.5}
+                />
+                {/* Extension lines at end */}
+                <Line
+                  x1={dim.end.x - perpX}
+                  y1={dim.end.y - perpY}
+                  x2={dim.end.x + perpX}
+                  y2={dim.end.y + perpY}
+                  stroke="#9C27B0"
+                  strokeWidth={1.5}
+                />
+                {/* Main dimension line */}
+                <Line
+                  x1={dim.start.x}
+                  y1={dim.start.y}
+                  x2={dim.end.x}
+                  y2={dim.end.y}
+                  stroke="#9C27B0"
+                  strokeWidth={1.5}
+                />
+                {/* Arrowheads */}
+                <Circle cx={dim.start.x} cy={dim.start.y} r={3} fill="#9C27B0" />
+                <Circle cx={dim.end.x} cy={dim.end.y} r={3} fill="#9C27B0" />
+                {/* Length label */}
+                <Rect 
+                  x={midX - 30} 
+                  y={midY - 12} 
+                  width={60} 
+                  height={24} 
+                  rx={4} 
+                  fill="rgba(156,39,176,0.95)" 
+                />
+                <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#fff">
+                  {length.toFixed(2)}m
+                </SvgText>
+              </G>
+            );
+          })}
+          
+          {/* Current dimension line being drawn */}
+          {mode === 'dimension' && currentPoints.length === 1 && currentTouchPosition && (
+            (() => {
+              const length = calculateLineLength(currentPoints[0], currentTouchPosition);
+              const midX = (currentPoints[0].x + currentTouchPosition.x) / 2;
+              const midY = (currentPoints[0].y + currentTouchPosition.y) / 2;
+              
+              return (
+                <G>
+                  <Line
+                    x1={currentPoints[0].x}
+                    y1={currentPoints[0].y}
+                    x2={currentTouchPosition.x}
+                    y2={currentTouchPosition.y}
+                    stroke="#9C27B0"
+                    strokeWidth={2}
+                    strokeDasharray="5,5"
+                  />
+                  <Circle cx={currentPoints[0].x} cy={currentPoints[0].y} r={5} fill="#9C27B0" />
+                  <Circle cx={currentTouchPosition.x} cy={currentTouchPosition.y} r={5} fill="#9C27B0" />
+                  <Rect x={midX - 30} y={midY - 12} width={60} height={24} rx={4} fill="rgba(156,39,176,0.9)" />
+                  <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#fff">
+                    {length.toFixed(2)}m
+                  </SvgText>
+                </G>
+              );
+            })()
+          )}
+          
           {/* Existing polygons */}
           {polygons.map((polygon) => {
             const pointsString = polygon.points.map(p => `${p.x},${p.y}`).join(' ');
@@ -1851,6 +2016,35 @@ export default function AreaCalculatorEditor() {
                     );
                   }
                   return null;
+                })}
+                
+                {/* Edge lengths display (all edges without category) */}
+                {showEdgeLengths && polygon.points.map((point, index) => {
+                  const nextPoint = polygon.points[(index + 1) % polygon.points.length];
+                  const category = getLineCategory(polygon.id, index);
+                  
+                  // Skip if this edge has a category (already shown with category styling)
+                  if (category) return null;
+                  
+                  const midX = (point.x + nextPoint.x) / 2;
+                  const midY = (point.y + nextPoint.y) / 2;
+                  const length = calculateLineLength(point, nextPoint);
+                  
+                  return (
+                    <G key={`edge-length-${polygon.id}-${index}`}>
+                      <Rect 
+                        x={midX - 28} 
+                        y={midY - 11} 
+                        width={56} 
+                        height={22} 
+                        rx={4} 
+                        fill={polygon.type === 'deduction' ? 'rgba(244,67,54,0.9)' : 'rgba(76,175,80,0.9)'} 
+                      />
+                      <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#fff">
+                        {length.toFixed(2)}m
+                      </SvgText>
+                    </G>
+                  );
                 })}
                 
                 {/* Polygon points - draggable when selected */}
@@ -2306,7 +2500,8 @@ export default function AreaCalculatorEditor() {
              mode === 'polygon' ? 'Fläche' : 
              mode === 'deduction' ? 'Abzug' :
              mode === 'guideline' ? 'Hilfslinie' :
-             mode === 'parallel' ? 'Parallel' : 'Auswahl'}
+             mode === 'parallel' ? 'Parallel' : 
+             mode === 'dimension' ? 'Vermaßung' : 'Auswahl'}
           </Text>
         </View>
       </View>

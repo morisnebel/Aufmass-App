@@ -1251,6 +1251,26 @@ export default function AreaCalculatorEditor() {
     setNumpadInput('');
   };
 
+  // Apply numpad input as label only (don't change line geometry)
+  const applyNumpadInputAsLabel = () => {
+    if (!editingEdge) return;
+    
+    const value = evaluateExpression(numpadInput);
+    if (value === null || value <= 0) {
+      Alert.alert('Ungültige Eingabe', 'Bitte geben Sie eine gültige Zahl oder Formel ein.');
+      return;
+    }
+    
+    // Save custom length label (doesn't change polygon)
+    const edgeKey = `${editingEdge.polygonId}-${editingEdge.edgeIndex}`;
+    setCustomEdgeLengths(prev => ({ ...prev, [edgeKey]: value }));
+    
+    // Close numpad
+    setShowNumpad(false);
+    setEditingEdge(null);
+    setNumpadInput('');
+  };
+
   const openNumpadForEdge = (polygonId: string, edgeIndex: number, currentLength: number) => {
     setEditingEdge({ polygonId, edgeIndex });
     setNumpadInput(currentLength.toFixed(2));
@@ -3597,10 +3617,19 @@ export default function AreaCalculatorEditor() {
               <Ionicons name="backspace-outline" size={18} color="#f44336" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.modalNumpadKey, styles.modalNumpadKey, { flex: 2, backgroundColor: '#4CAF50' }]} 
+              style={[styles.modalNumpadKey, { flex: 2, backgroundColor: '#2196F3' }]} 
+              onPress={() => applyNumpadInputAsLabel()}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Nur Maß</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.modalNumpadRow, { marginTop: 4 }]}>
+            <TouchableOpacity 
+              style={[styles.modalNumpadKey, { flex: 1, backgroundColor: '#4CAF50', aspectRatio: undefined, paddingVertical: 12 }]} 
               onPress={() => handleNumpadPress('OK')}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>OK</Text>
+              <Ionicons name="resize" size={16} color="#fff" style={{ marginBottom: 2 }} />
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Linie ändern</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

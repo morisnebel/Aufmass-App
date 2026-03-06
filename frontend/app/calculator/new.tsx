@@ -386,7 +386,6 @@ export default function AreaCalculatorEditor() {
       }
     }
     
-    console.log('[CLIP] Subject:', subject.length, 'Clip:', clip.length, 'Result:', outputList.length);
     return outputList;
   };
 
@@ -2347,8 +2346,8 @@ export default function AreaCalculatorEditor() {
           {polygons.map((polygon) => {
             const pointsString = polygon.points.map(p => `${p.x},${p.y}`).join(' ');
             const isSelected = selectedPolygonId === polygon.id;
-            // Abzugsflächen halbtransparent rot, Grundflächen halbtransparent grün
-            const fillColor = polygon.type === 'deduction' ? 'rgba(244,67,54,0.4)' : 'rgba(76,175,80,0.3)';
+            // Abzugsflächen weiß (nicht transparent), Grundflächen halbtransparent grün
+            const fillColor = polygon.type === 'deduction' ? '#ffffff' : 'rgba(76,175,80,0.3)';
             const strokeColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
             
             return (
@@ -2485,30 +2484,50 @@ export default function AreaCalculatorEditor() {
                   const midX = (point.x + nextPoint.x) / 2;
                   const midY = (point.y + nextPoint.y) / 2;
                   
-                  // Calculate rotation angle for the label to align with the line
+                  // Offset the label perpendicular to the line (outside the polygon)
                   const dx = nextPoint.x - point.x;
                   const dy = nextPoint.y - point.y;
-                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                  const lineLen = Math.sqrt(dx * dx + dy * dy);
                   
-                  // Keep text readable (not upside down)
-                  if (angle > 90 || angle < -90) {
-                    angle += 180;
-                  }
+                  // Perpendicular direction
+                  const perpX = -dy / lineLen;
+                  const perpY = dx / lineLen;
                   
-                  const labelWidth = 50;
-                  const labelHeight = 16;
+                  // Determine which side is "outside" the polygon
+                  const centerX = polygon.points.reduce((s, p) => s + p.x, 0) / polygon.points.length;
+                  const centerY = polygon.points.reduce((s, p) => s + p.y, 0) / polygon.points.length;
+                  const toCenter = { x: centerX - midX, y: centerY - midY };
+                  const perpDot = perpX * toCenter.x + perpY * toCenter.y;
+                  
+                  // Position on the outside of the polygon, with larger offset
+                  const offset = 25;
+                  const labelX = midX + (perpDot > 0 ? -perpX : perpX) * offset;
+                  const labelY = midY + (perpDot > 0 ? -perpY : perpY) * offset;
+                  
+                  const labelWidth = 60;
+                  const labelHeight = 22;
+                  const bgColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
                   
                   return (
-                    <G key={`edge-length-${polygon.id}-${index}`} transform={`rotate(${angle}, ${midX}, ${midY})`}>
+                    <G key={`edge-length-${polygon.id}-${index}`}>
                       <Rect 
-                        x={midX - labelWidth / 2} 
-                        y={midY - labelHeight / 2} 
+                        x={labelX - labelWidth / 2} 
+                        y={labelY - labelHeight / 2} 
                         width={labelWidth} 
                         height={labelHeight} 
-                        rx={3} 
-                        fill={polygon.type === 'deduction' ? '#f44336' : '#4CAF50'} 
+                        rx={4} 
+                        fill={bgColor}
+                        stroke="#fff"
+                        strokeWidth={1}
                       />
-                      <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={9} fontWeight="bold" fill="#fff">
+                      <SvgText 
+                        x={labelX} 
+                        y={labelY + 5} 
+                        textAnchor="middle" 
+                        fontSize={12} 
+                        fontWeight="bold" 
+                        fill="#fff"
+                      >
                         {length.toFixed(2)} m
                       </SvgText>
                     </G>

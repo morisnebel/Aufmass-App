@@ -78,6 +78,7 @@ export default function AreaCalculatorEditor() {
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
+  const [currentSnapPoint, setCurrentSnapPoint] = useState<{ point: AreaPoint; isSnapped: boolean } | null>(null); // Visuelles Feedback für Einrasten
   
   // Dimensioning (Vermaßung)
   interface DimensionLine {
@@ -532,7 +533,7 @@ export default function AreaCalculatorEditor() {
   };
 
   // Snap to nearest point (grid, guide line intersections, guide line points)
-  const snapToNearestPoint = (x: number, y: number): AreaPoint => {
+  const snapToNearestPoint = (x: number, y: number): { point: AreaPoint; snapped: boolean } => {
     const snapTolerance = 25; // Increased for better touch experience
     let bestPoint = { x, y };
     let bestDistance = Infinity;
@@ -601,15 +602,18 @@ export default function AreaCalculatorEditor() {
       }
     }
     
+    // Check if we found a snap point
+    const snapped = bestDistance < snapTolerance;
+    
     // 5. Snap to grid if enabled and no better snap point found
-    if (gridEnabled && bestDistance === Infinity) {
+    if (gridEnabled && !snapped) {
       bestPoint = {
         x: Math.round(x / (gridSize * scale)) * (gridSize * scale),
         y: Math.round(y / (gridSize * scale)) * (gridSize * scale)
       };
     }
     
-    return bestPoint;
+    return { point: bestPoint, snapped };
   };
 
   // Create parallel guide line
@@ -1138,9 +1142,12 @@ export default function AreaCalculatorEditor() {
     const y = touch.locationY;
     
     // Use smart snapping
-    const snapped = snapToNearestPoint(x, y);
-    const snappedX = snapped.x;
-    const snappedY = snapped.y;
+    const snapResult = snapToNearestPoint(x, y);
+    const snappedX = snapResult.point.x;
+    const snappedY = snapResult.point.y;
+    
+    // Update visual snap indicator
+    setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
     
     if (mode === 'scale') {
       if (!scaleReference.startPoint) {
@@ -2044,9 +2051,10 @@ export default function AreaCalculatorEditor() {
           
           // Dragging polygon point
           if (draggingPolygonPoint) {
-            const snapped = snapToNearestPoint(x, y);
-            updatePolygonPoint(draggingPolygonPoint.polygonId, draggingPolygonPoint.pointIndex, snapped);
+            const snapResult = snapToNearestPoint(x, y);
+            updatePolygonPoint(draggingPolygonPoint.polygonId, draggingPolygonPoint.pointIndex, snapResult.point);
             setCurrentTouchPosition({ x, y }); // For live length display
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
             return;
           }
           
@@ -2075,18 +2083,21 @@ export default function AreaCalculatorEditor() {
           
           if (draggingGuidePoint) {
             // Snap to grid if enabled
-            const snapped = snapToNearestPoint(x, y);
-            updateGuideLinePoint(draggingGuidePoint.guideId, draggingGuidePoint.point, snapped);
+            const snapResult = snapToNearestPoint(x, y);
+            updateGuideLinePoint(draggingGuidePoint.guideId, draggingGuidePoint.point, snapResult.point);
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
           }
           
           // Dragging dimension line point
           if (draggingDimensionPoint) {
-            const snapped = snapToNearestPoint(x, y);
-            updateDimensionLinePoint(draggingDimensionPoint.dimId, draggingDimensionPoint.point, snapped);
+            const snapResult = snapToNearestPoint(x, y);
+            updateDimensionLinePoint(draggingDimensionPoint.dimId, draggingDimensionPoint.point, snapResult.point);
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
           }
         }}
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
+          setCurrentSnapPoint(null); // Clear snap indicator
           
           if (draggingPolygonPoint) {
             setDraggingPolygonPoint(null);
@@ -2123,6 +2134,26 @@ export default function AreaCalculatorEditor() {
         <Svg width={canvasWidth} height={canvasHeight}>
           {/* Grid */}
           {renderGrid()}
+          
+          {/* Snap indicator - shows where the point will snap to */}
+          {currentSnapPoint && currentSnapPoint.isSnapped && (mode === 'polygon' || mode === 'deduction' || mode === 'guideline') && (
+            <G>
+              <Circle
+                cx={currentSnapPoint.point.x}
+                cy={currentSnapPoint.point.y}
+                r={20}
+                fill="rgba(33, 150, 243, 0.2)"
+                stroke="#2196F3"
+                strokeWidth={2}
+              />
+              <Circle
+                cx={currentSnapPoint.point.x}
+                cy={currentSnapPoint.point.y}
+                r={6}
+                fill="#2196F3"
+              />
+            </G>
+          )}
           
           {/* Guide Lines */}
           {guideLinesVisible && guideLines.map((guide) => {

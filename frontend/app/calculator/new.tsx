@@ -1616,10 +1616,32 @@ export default function AreaCalculatorEditor() {
         )}
         
         {selectedPolygonId && mode === 'select' && (
-          <TouchableOpacity style={[styles.toolButton, { backgroundColor: '#f44336' }]} onPress={deleteSelectedPolygon}>
-            <Ionicons name="trash" size={20} color="#fff" />
-            <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
-          </TouchableOpacity>
+          <>
+            {/* Show "Apply Snip" button if this is a deduction polygon */}
+            {polygons.find(p => p.id === selectedPolygonId)?.type === 'deduction' && (
+              <TouchableOpacity 
+                style={[styles.toolButton, { backgroundColor: '#ff9800' }]} 
+                onPress={() => {
+                  const deduction = polygons.find(p => p.id === selectedPolygonId);
+                  if (deduction) {
+                    saveStateForUndo();
+                    const mainPolygons = polygons.filter(p => p.type === 'main');
+                    const otherPolygons = polygons.filter(p => p.type !== 'main' && p.id !== deduction.id);
+                    const updatedMainPolygons = insertDeductionIntersections(deduction, mainPolygons);
+                    setPolygons([...updatedMainPolygons, ...otherPolygons, deduction]);
+                    Alert.alert('Fertig', 'Schnittpunkte wurden in die Hauptflächen eingefügt.');
+                  }
+                }}
+              >
+                <Ionicons name="cut" size={20} color="#fff" />
+                <Text style={[styles.toolLabel, { color: '#fff' }]}>Schneiden</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[styles.toolButton, { backgroundColor: '#f44336' }]} onPress={deleteSelectedPolygon}>
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+            </TouchableOpacity>
+          </>
         )}
         
         {selectedGuideLineId && mode === 'select' && (
@@ -2334,22 +2356,48 @@ export default function AreaCalculatorEditor() {
                   // Skip if this edge has a category (already shown with category styling)
                   if (category) return null;
                   
-                  const midX = (point.x + nextPoint.x) / 2;
-                  const midY = (point.y + nextPoint.y) / 2;
+                  // Calculate position along the line (offset from center to avoid overlaps)
+                  const dx = nextPoint.x - point.x;
+                  const dy = nextPoint.y - point.y;
+                  const lineLen = Math.sqrt(dx * dx + dy * dy);
+                  
+                  // Position label at 40% along the line, offset perpendicular to avoid polygon overlap
+                  const t = 0.4;
+                  const midX = point.x + dx * t;
+                  const midY = point.y + dy * t;
+                  
+                  // Perpendicular offset (outward from polygon center)
+                  const perpX = -dy / lineLen * 15;
+                  const perpY = dx / lineLen * 15;
+                  
+                  // Determine which side is "outside" the polygon
+                  const centerX = polygon.points.reduce((s, p) => s + p.x, 0) / polygon.points.length;
+                  const centerY = polygon.points.reduce((s, p) => s + p.y, 0) / polygon.points.length;
+                  const toCenter = { x: centerX - midX, y: centerY - midY };
+                  const perpDot = perpX * toCenter.x + perpY * toCenter.y;
+                  
+                  // Position on the outside of the polygon
+                  const offsetX = perpDot > 0 ? -perpX : perpX;
+                  const offsetY = perpDot > 0 ? -perpY : perpY;
+                  
+                  const labelX = midX + offsetX;
+                  const labelY = midY + offsetY;
                   const length = calculateLineLength(point, nextPoint);
                   
                   return (
                     <G key={`edge-length-${polygon.id}-${index}`}>
                       <Rect 
-                        x={midX - 28} 
-                        y={midY - 11} 
+                        x={labelX - 28} 
+                        y={labelY - 11} 
                         width={56} 
                         height={22} 
                         rx={4} 
-                        fill={polygon.type === 'deduction' ? 'rgba(244,67,54,0.9)' : 'rgba(76,175,80,0.9)'} 
+                        fill={polygon.type === 'deduction' ? 'rgba(244,67,54,0.95)' : 'rgba(76,175,80,0.95)'} 
+                        stroke={polygon.type === 'deduction' ? '#c62828' : '#2e7d32'}
+                        strokeWidth={1}
                       />
-                      <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#fff">
-                        {length.toFixed(2)}m
+                      <SvgText x={labelX} y={labelY + 5} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#fff">
+                        {length.toFixed(2)} m
                       </SvgText>
                     </G>
                   );

@@ -82,6 +82,10 @@ export default function AreaCalculatorEditor() {
   const [labelOffsets, setLabelOffsets] = useState<{ [polygonId: string]: AreaPoint }>({});
   const [draggingLabel, setDraggingLabel] = useState<string | null>(null);
   
+  // Polygon editing
+  const [draggingPolygonPoint, setDraggingPolygonPoint] = useState<{ polygonId: string; pointIndex: number } | null>(null);
+  const [addPointMode, setAddPointMode] = useState(false); // "Punkt auf Linie" Modus
+  
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel'>('select');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
@@ -669,6 +673,98 @@ export default function AreaCalculatorEditor() {
     return null;
   };
 
+  // Check if point is near a polygon vertex
+  const findPolygonPointAtPosition = (x: number, y: number): { polygonId: string; pointIndex: number } | null => {
+    const tolerance = 20;
+    
+    for (const polygon of polygons) {
+      for (let i = 0; i < polygon.points.length; i++) {
+        const point = polygon.points[i];
+        const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+        if (dist < tolerance) {
+          return { polygonId: polygon.id, pointIndex: i };
+        }
+      }
+    }
+    return null;
+  };
+
+  // Find closest point on a polygon line (for "Punkt auf Linie" feature)
+  const findClosestPointOnPolygonLine = (x: number, y: number): { polygonId: string; lineIndex: number; point: AreaPoint } | null => {
+    const tolerance = 15;
+    let closest: { polygonId: string; lineIndex: number; point: AreaPoint; distance: number } | null = null;
+    
+    for (const polygon of polygons) {
+      for (let i = 0; i < polygon.points.length; i++) {
+        const p1 = polygon.points[i];
+        const p2 = polygon.points[(i + 1) % polygon.points.length];
+        
+        // Calculate closest point on line segment
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const lengthSq = dx * dx + dy * dy;
+        
+        if (lengthSq === 0) continue;
+        
+        let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
+        t = Math.max(0, Math.min(1, t));
+        
+        const closestX = p1.x + t * dx;
+        const closestY = p1.y + t * dy;
+        const distance = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
+        
+        // Don't add point too close to existing vertices
+        const distToP1 = Math.sqrt(Math.pow(closestX - p1.x, 2) + Math.pow(closestY - p1.y, 2));
+        const distToP2 = Math.sqrt(Math.pow(closestX - p2.x, 2) + Math.pow(closestY - p2.y, 2));
+        
+        if (distance < tolerance && distToP1 > 20 && distToP2 > 20) {
+          if (!closest || distance < closest.distance) {
+            closest = {
+              polygonId: polygon.id,
+              lineIndex: i,
+              point: { x: closestX, y: closestY },
+              distance
+            };
+          }
+        }
+      }
+    }
+    
+    return closest ? { polygonId: closest.polygonId, lineIndex: closest.lineIndex, point: closest.point } : null;
+  };
+
+  // Add point to polygon line
+  const addPointToPolygonLine = (polygonId: string, lineIndex: number, newPoint: AreaPoint) => {
+    saveStateForUndo();
+    setPolygons(polygons.map(polygon => {
+      if (polygon.id !== polygonId) return polygon;
+      
+      const newPoints = [...polygon.points];
+      newPoints.splice(lineIndex + 1, 0, newPoint);
+      return { ...polygon, points: newPoints };
+    }));
+  };
+
+  // Update polygon point position
+  const updatePolygonPoint = (polygonId: string, pointIndex: number, newPos: AreaPoint) => {
+    setPolygons(polygons.map(polygon => {
+      if (polygon.id !== polygonId) return polygon;
+      
+      const newPoints = [...polygon.points];
+      newPoints[pointIndex] = newPos;
+      return { ...polygon, points: newPoints };
+    }));
+  };
+
+  // Calculate angle from horizontal (for live angle display)
+  const calculateAngleFromHorizontal = (p1: AreaPoint, p2: AreaPoint): number => {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    let angle = Math.atan2(-dy, dx) * (180 / Math.PI); // Negative dy because Y is inverted
+    if (angle < 0) angle += 360;
+    return angle;
+  };
+
   // Touch handlers
   const handleCanvasTouch = (event: any) => {
     const touch = event.nativeEvent;
@@ -1215,6 +1311,14 @@ export default function AreaCalculatorEditor() {
           <Ionicons name="analytics" size={20} color={showPolygonAngles ? '#fff' : '#666'} />
           <Text style={[styles.toolLabel, showPolygonAngles && styles.toolLabelActive]}>Winkel</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, addPointMode && styles.toolButtonActive, { backgroundColor: addPointMode ? '#E91E63' : '#f5f5f5' }]}
+          onPress={() => setAddPointMode(!addPointMode)}
+        >
+          <Ionicons name="add-circle" size={20} color={addPointMode ? '#fff' : '#E91E63'} />
+          <Text style={[styles.toolLabel, addPointMode && styles.toolLabelActive]}>+Punkt</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Canvas */}
@@ -1224,6 +1328,27 @@ export default function AreaCalculatorEditor() {
           const touch = event.nativeEvent;
           const x = touch.locationX;
           const y = touch.locationY;
+          
+          // "Punkt auf Linie" mode
+          if (addPointMode && mode === 'select') {
+            const linePoint = findClosestPointOnPolygonLine(x, y);
+            if (linePoint) {
+              addPointToPolygonLine(linePoint.polygonId, linePoint.lineIndex, linePoint.point);
+              setSelectedPolygonId(linePoint.polygonId);
+            }
+            return;
+          }
+          
+          // Check if touching a polygon point for dragging
+          if (mode === 'select' && !addPointMode) {
+            const polygonPoint = findPolygonPointAtPosition(x, y);
+            if (polygonPoint) {
+              saveStateForUndo();
+              setDraggingPolygonPoint(polygonPoint);
+              setSelectedPolygonId(polygonPoint.polygonId);
+              return;
+            }
+          }
           
           // Check if touching a label for dragging
           if (mode === 'select') {
@@ -1262,6 +1387,13 @@ export default function AreaCalculatorEditor() {
             setCurrentTouchPosition({ x, y });
           }
           
+          // Dragging polygon point
+          if (draggingPolygonPoint) {
+            const snapped = snapToNearestPoint(x, y);
+            updatePolygonPoint(draggingPolygonPoint.polygonId, draggingPolygonPoint.pointIndex, snapped);
+            return;
+          }
+          
           // Dragging label
           if (draggingLabel) {
             const polygon = polygons.find(p => p.id === draggingLabel);
@@ -1285,6 +1417,11 @@ export default function AreaCalculatorEditor() {
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
           
+          if (draggingPolygonPoint) {
+            setDraggingPolygonPoint(null);
+            return;
+          }
+          
           if (draggingLabel) {
             setDraggingLabel(null);
             return;
@@ -1294,6 +1431,11 @@ export default function AreaCalculatorEditor() {
             setDraggingGuidePoint(null);
             return;
           }
+          
+          if (addPointMode) {
+            return; // Already handled in onTouchStart
+          }
+          
           handleCanvasTouch(event);
         }}
       >
@@ -1483,15 +1625,37 @@ export default function AreaCalculatorEditor() {
                   return null;
                 })}
                 
-                {/* Polygon points */}
+                {/* Polygon points - draggable when selected */}
                 {polygon.points.map((point, index) => (
-                  <Circle
-                    key={`point-${polygon.id}-${index}`}
-                    cx={point.x}
-                    cy={point.y}
-                    r={isSelected ? 8 : 5}
-                    fill={isSelected ? '#1976d2' : strokeColor}
-                  />
+                  <G key={`point-${polygon.id}-${index}`}>
+                    {/* Outer circle (grab indicator) */}
+                    {isSelected && (
+                      <Circle
+                        cx={point.x}
+                        cy={point.y}
+                        r={14}
+                        fill="rgba(25,118,210,0.2)"
+                        stroke="#1976d2"
+                        strokeWidth={1}
+                      />
+                    )}
+                    {/* Inner circle */}
+                    <Circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={isSelected ? 8 : 5}
+                      fill={isSelected ? '#1976d2' : strokeColor}
+                    />
+                    {/* White dot center for better visibility */}
+                    {isSelected && (
+                      <Circle
+                        cx={point.x}
+                        cy={point.y}
+                        r={3}
+                        fill="#fff"
+                      />
+                    )}
+                  </G>
                 ))}
                 
                 {/* Angle display at vertices */}
@@ -1709,14 +1873,16 @@ export default function AreaCalculatorEditor() {
                     strokeWidth={2}
                     strokeDasharray="5,5"
                   />
-                  {/* Live length display */}
+                  {/* Live length and angle display */}
                   {(() => {
                     const lastPoint = currentPoints[currentPoints.length - 1];
                     const length = calculateLineLength(lastPoint, currentTouchPosition);
+                    const angle = calculateAngleFromHorizontal(lastPoint, currentTouchPosition);
                     const midX = (lastPoint.x + currentTouchPosition.x) / 2;
                     const midY = (lastPoint.y + currentTouchPosition.y) / 2;
                     return (
                       <G>
+                        {/* Length label */}
                         <Rect
                           x={midX - 30}
                           y={midY - 12}
@@ -1734,6 +1900,25 @@ export default function AreaCalculatorEditor() {
                           fill="#fff"
                         >
                           {length.toFixed(2)}m
+                        </SvgText>
+                        {/* Angle label at end point */}
+                        <Rect
+                          x={currentTouchPosition.x + 10}
+                          y={currentTouchPosition.y - 12}
+                          width={45}
+                          height={24}
+                          rx={4}
+                          fill="#E91E63"
+                        />
+                        <SvgText
+                          x={currentTouchPosition.x + 32}
+                          y={currentTouchPosition.y + 6}
+                          textAnchor="middle"
+                          fontSize={12}
+                          fontWeight="bold"
+                          fill="#fff"
+                        >
+                          {angle.toFixed(0)}°
                         </SvgText>
                       </G>
                     );

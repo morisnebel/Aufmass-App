@@ -84,8 +84,16 @@ export default function AreaCalculatorEditor() {
     id: string;
     start: AreaPoint;
     end: AreaPoint;
+    customLength?: number; // Manuell eingegebene Länge
   }
   const [dimensionLines, setDimensionLines] = useState<DimensionLine[]>([]);
+  const [selectedDimensionId, setSelectedDimensionId] = useState<string | null>(null);
+  const [draggingDimensionPoint, setDraggingDimensionPoint] = useState<{ dimId: string; point: 'start' | 'end' | 'middle' } | null>(null);
+  
+  // Editable measurement modal
+  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
+  const [editingMeasurement, setEditingMeasurement] = useState<{ type: 'dimension' | 'edge'; id: string; currentValue: number } | null>(null);
+  const [measurementInputValue, setMeasurementInputValue] = useState('');
   
   // Label-Positionen (Offset vom Polygon-Zentrum)
   const [labelOffsets, setLabelOffsets] = useState<{ [polygonId: string]: AreaPoint }>({});
@@ -524,6 +532,83 @@ export default function AreaCalculatorEditor() {
     saveStateForUndo();
     setGuideLines([]);
     setSelectedGuideLineId(null);
+  };
+
+  // Delete dimension line
+  const deleteDimensionLine = (id: string) => {
+    saveStateForUndo();
+    setDimensionLines(dimensionLines.filter(d => d.id !== id));
+    setSelectedDimensionId(null);
+  };
+
+  // Find dimension line point at position
+  const findDimensionLinePointAtPosition = (x: number, y: number): { dimId: string; point: 'start' | 'end' | 'middle' } | null => {
+    const tolerance = 20;
+    
+    for (const dim of dimensionLines) {
+      // Check start point
+      const startDist = Math.sqrt(Math.pow(x - dim.start.x, 2) + Math.pow(y - dim.start.y, 2));
+      if (startDist < tolerance) {
+        return { dimId: dim.id, point: 'start' };
+      }
+      
+      // Check end point
+      const endDist = Math.sqrt(Math.pow(x - dim.end.x, 2) + Math.pow(y - dim.end.y, 2));
+      if (endDist < tolerance) {
+        return { dimId: dim.id, point: 'end' };
+      }
+      
+      // Check middle point
+      const midX = (dim.start.x + dim.end.x) / 2;
+      const midY = (dim.start.y + dim.end.y) / 2;
+      const midDist = Math.sqrt(Math.pow(x - midX, 2) + Math.pow(y - midY, 2));
+      if (midDist < tolerance) {
+        return { dimId: dim.id, point: 'middle' };
+      }
+    }
+    return null;
+  };
+
+  // Find dimension line at point (for selection)
+  const findDimensionLineAtPoint = (x: number, y: number): { id: string } | null => {
+    const tolerance = 15;
+    
+    for (const dim of dimensionLines) {
+      const dist = pointToLineDistance({ x, y }, dim.start, dim.end);
+      if (dist < tolerance) {
+        return { id: dim.id };
+      }
+    }
+    return null;
+  };
+
+  // Update dimension line point position
+  const updateDimensionLinePoint = (dimId: string, point: 'start' | 'end' | 'middle', newPos: AreaPoint) => {
+    setDimensionLines(dimensionLines.map(d => {
+      if (d.id !== dimId) return d;
+      
+      if (point === 'start') {
+        return { ...d, start: newPos };
+      } else if (point === 'end') {
+        return { ...d, end: newPos };
+      } else {
+        // Move middle - move entire line
+        const dx = newPos.x - (d.start.x + d.end.x) / 2;
+        const dy = newPos.y - (d.start.y + d.end.y) / 2;
+        return {
+          ...d,
+          start: { x: d.start.x + dx, y: d.start.y + dy },
+          end: { x: d.end.x + dx, y: d.end.y + dy }
+        };
+      }
+    }));
+  };
+
+  // Update dimension line custom length
+  const updateDimensionLineLength = (dimId: string, newLength: number) => {
+    setDimensionLines(dimensionLines.map(d => 
+      d.id === dimId ? { ...d, customLength: newLength } : d
+    ));
   };
 
   // Duplicate guide line
@@ -1478,6 +1563,35 @@ export default function AreaCalculatorEditor() {
           </TouchableOpacity>
         )}
         
+        {/* Dimension line selected */}
+        {selectedDimensionId && mode === 'select' && (
+          <>
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#9C27B0' }]} 
+              onPress={() => {
+                const dim = dimensionLines.find(d => d.id === selectedDimensionId);
+                if (dim) {
+                  const currentLength = dim.customLength ?? calculateLineLength(dim.start, dim.end);
+                  setEditingMeasurement({ type: 'dimension', id: dim.id, currentValue: currentLength });
+                  setMeasurementInputValue(currentLength.toFixed(2));
+                  setShowMeasurementModal(true);
+                }
+              }}
+            >
+              <Ionicons name="create" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Bearbeiten</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
+              onPress={() => deleteDimensionLine(selectedDimensionId)}
+            >
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
@@ -1620,6 +1734,28 @@ export default function AreaCalculatorEditor() {
               setSelectedGuideLineId(guidePoint.guideId);
             }
           }
+          
+          // Check if touching a dimension line point for dragging
+          if (mode === 'select') {
+            const dimPoint = findDimensionLinePointAtPosition(x, y);
+            if (dimPoint) {
+              saveStateForUndo();
+              setDraggingDimensionPoint(dimPoint);
+              setSelectedDimensionId(dimPoint.dimId);
+              setSelectedPolygonId(null);
+              setSelectedGuideLineId(null);
+              return;
+            }
+            
+            // Check if clicking on a dimension line (for selection)
+            const clickedDim = findDimensionLineAtPoint(x, y);
+            if (clickedDim) {
+              setSelectedDimensionId(clickedDim.id);
+              setSelectedPolygonId(null);
+              setSelectedGuideLineId(null);
+              return;
+            }
+          }
         }}
         onTouchMove={(event) => {
           const touch = event.nativeEvent;
@@ -1667,6 +1803,12 @@ export default function AreaCalculatorEditor() {
             const snapped = snapToNearestPoint(x, y);
             updateGuideLinePoint(draggingGuidePoint.guideId, draggingGuidePoint.point, snapped);
           }
+          
+          // Dragging dimension line point
+          if (draggingDimensionPoint) {
+            const snapped = snapToNearestPoint(x, y);
+            updateDimensionLinePoint(draggingDimensionPoint.dimId, draggingDimensionPoint.point, snapped);
+          }
         }}
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
@@ -1688,6 +1830,11 @@ export default function AreaCalculatorEditor() {
           
           if (draggingGuidePoint) {
             setDraggingGuidePoint(null);
+            return;
+          }
+          
+          if (draggingDimensionPoint) {
+            setDraggingDimensionPoint(null);
             return;
           }
           
@@ -1828,16 +1975,21 @@ export default function AreaCalculatorEditor() {
           
           {/* Dimension lines (Vermaßung) */}
           {dimensionLines.map((dim) => {
-            const length = calculateLineLength(dim.start, dim.end);
+            const calculatedLength = calculateLineLength(dim.start, dim.end);
+            const displayLength = dim.customLength ?? calculatedLength;
             const midX = (dim.start.x + dim.end.x) / 2;
             const midY = (dim.start.y + dim.end.y) / 2;
+            const isSelected = selectedDimensionId === dim.id;
             
             // Calculate perpendicular direction for extension lines
             const dx = dim.end.x - dim.start.x;
             const dy = dim.end.y - dim.start.y;
             const lineLength = Math.sqrt(dx * dx + dy * dy);
-            const perpX = -dy / lineLength * 15; // 15px extension line length
-            const perpY = dx / lineLength * 15;
+            const perpX = lineLength > 0 ? -dy / lineLength * 15 : 0;
+            const perpY = lineLength > 0 ? dx / lineLength * 15 : 0;
+            
+            const strokeColor = isSelected ? '#1976d2' : '#9C27B0';
+            const fillColor = isSelected ? 'rgba(25,118,210,0.95)' : 'rgba(156,39,176,0.95)';
             
             return (
               <G key={dim.id}>
@@ -1847,8 +1999,8 @@ export default function AreaCalculatorEditor() {
                   y1={dim.start.y - perpY}
                   x2={dim.start.x + perpX}
                   y2={dim.start.y + perpY}
-                  stroke="#9C27B0"
-                  strokeWidth={1.5}
+                  stroke={strokeColor}
+                  strokeWidth={isSelected ? 2 : 1.5}
                 />
                 {/* Extension lines at end */}
                 <Line
@@ -1856,8 +2008,8 @@ export default function AreaCalculatorEditor() {
                   y1={dim.end.y - perpY}
                   x2={dim.end.x + perpX}
                   y2={dim.end.y + perpY}
-                  stroke="#9C27B0"
-                  strokeWidth={1.5}
+                  stroke={strokeColor}
+                  strokeWidth={isSelected ? 2 : 1.5}
                 />
                 {/* Main dimension line */}
                 <Line
@@ -1865,12 +2017,36 @@ export default function AreaCalculatorEditor() {
                   y1={dim.start.y}
                   x2={dim.end.x}
                   y2={dim.end.y}
-                  stroke="#9C27B0"
-                  strokeWidth={1.5}
+                  stroke={strokeColor}
+                  strokeWidth={isSelected ? 2 : 1.5}
                 />
-                {/* Arrowheads */}
-                <Circle cx={dim.start.x} cy={dim.start.y} r={3} fill="#9C27B0" />
-                <Circle cx={dim.end.x} cy={dim.end.y} r={3} fill="#9C27B0" />
+                {/* Start point (draggable when selected) */}
+                <Circle 
+                  cx={dim.start.x} 
+                  cy={dim.start.y} 
+                  r={isSelected ? 10 : 3} 
+                  fill={strokeColor} 
+                />
+                {isSelected && (
+                  <Circle cx={dim.start.x} cy={dim.start.y} r={5} fill="#fff" />
+                )}
+                {/* End point (draggable when selected) */}
+                <Circle 
+                  cx={dim.end.x} 
+                  cy={dim.end.y} 
+                  r={isSelected ? 10 : 3} 
+                  fill={strokeColor} 
+                />
+                {isSelected && (
+                  <Circle cx={dim.end.x} cy={dim.end.y} r={5} fill="#fff" />
+                )}
+                {/* Middle point (for moving entire line when selected) */}
+                {isSelected && (
+                  <>
+                    <Circle cx={midX} cy={midY} r={10} fill="#4CAF50" />
+                    <Circle cx={midX} cy={midY} r={5} fill="#fff" />
+                  </>
+                )}
                 {/* Length label */}
                 <Rect 
                   x={midX - 30} 
@@ -1878,11 +2054,15 @@ export default function AreaCalculatorEditor() {
                   width={60} 
                   height={24} 
                   rx={4} 
-                  fill="rgba(156,39,176,0.95)" 
+                  fill={fillColor} 
                 />
                 <SvgText x={midX} y={midY + 5} textAnchor="middle" fontSize={12} fontWeight="bold" fill="#fff">
-                  {length.toFixed(2)}m
+                  {displayLength.toFixed(2)}m
                 </SvgText>
+                {/* Custom length indicator */}
+                {dim.customLength !== undefined && (
+                  <SvgText x={midX + 35} y={midY} textAnchor="start" fontSize={8} fill={strokeColor}>*</SvgText>
+                )}
               </G>
             );
           })}
@@ -1949,38 +2129,62 @@ export default function AreaCalculatorEditor() {
                     
                     return (
                       <G key={`line-${polygon.id}-${index}`}>
-                        {/* Draw each visible segment */}
-                        {segments.filter(s => !s.isInterrupted).map((segment, segIdx) => (
-                          <Line
-                            key={`seg-${segIdx}`}
-                            x1={segment.start.x}
-                            y1={segment.start.y}
-                            x2={segment.end.x}
-                            y2={segment.end.y}
-                            stroke={color}
-                            strokeWidth={4}
-                          />
-                        ))}
-                        {/* Show total length at midpoint of original line */}
-                        {(() => {
-                          const midX = (point.x + nextPoint.x) / 2;
-                          const midY = (point.y + nextPoint.y) / 2;
-                          const fullLength = calculateLineLength(point, nextPoint);
-                          const hasInterruption = segments.length > 1 || totalLength < fullLength - 0.01;
+                        {/* Draw each visible segment with its own measurement */}
+                        {segments.filter(s => !s.isInterrupted).map((segment, segIdx) => {
+                          const segMidX = (segment.start.x + segment.end.x) / 2;
+                          const segMidY = (segment.start.y + segment.end.y) / 2;
+                          const segLength = calculateLineLength(segment.start, segment.end);
                           
                           return (
-                            <G>
-                              <Circle cx={midX} cy={midY} r={hasInterruption ? 22 : 18} fill={color} />
-                              {hasInterruption && (
-                                <SvgText x={midX} y={midY - 5} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.8)">
-                                  ({fullLength.toFixed(2)})
-                                </SvgText>
-                              )}
-                              <SvgText x={midX} y={midY + (hasInterruption ? 8 : 4)} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                                {totalLength.toFixed(2)}m
+                            <G key={`seg-${segIdx}`}>
+                              <Line
+                                x1={segment.start.x}
+                                y1={segment.start.y}
+                                x2={segment.end.x}
+                                y2={segment.end.y}
+                                stroke={color}
+                                strokeWidth={4}
+                              />
+                              {/* Segment measurement */}
+                              <Rect 
+                                x={segMidX - 25} 
+                                y={segMidY - 10} 
+                                width={50} 
+                                height={20} 
+                                rx={4} 
+                                fill={color} 
+                              />
+                              <SvgText x={segMidX} y={segMidY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
+                                {segLength.toFixed(2)}m
                               </SvgText>
                             </G>
                           );
+                        })}
+                        {/* Show total summary if there are interruptions */}
+                        {(() => {
+                          const visibleSegments = segments.filter(s => !s.isInterrupted);
+                          const fullLength = calculateLineLength(point, nextPoint);
+                          const hasInterruption = segments.length > 1 || totalLength < fullLength - 0.01;
+                          
+                          // Only show summary if there are multiple segments
+                          if (hasInterruption && visibleSegments.length > 1) {
+                            // Position summary above/below the line
+                            const midX = (point.x + nextPoint.x) / 2;
+                            const midY = (point.y + nextPoint.y) / 2 - 30;
+                            
+                            return (
+                              <G>
+                                <Rect x={midX - 35} y={midY - 12} width={70} height={24} rx={4} fill="rgba(0,0,0,0.7)" />
+                                <SvgText x={midX} y={midY - 1} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.7)">
+                                  Summe:
+                                </SvgText>
+                                <SvgText x={midX} y={midY + 9} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
+                                  {totalLength.toFixed(2)}m
+                                </SvgText>
+                              </G>
+                            );
+                          }
+                          return null;
                         })()}
                       </G>
                     );
@@ -2640,6 +2844,72 @@ export default function AreaCalculatorEditor() {
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Measurement Edit Modal */}
+      <Modal visible={showMeasurementModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Maß bearbeiten</Text>
+            <Text style={styles.modalText}>
+              Geben Sie den gewünschten Wert ein:
+            </Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.modalInput}
+                value={measurementInputValue}
+                onChangeText={setMeasurementInputValue}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                autoFocus
+              />
+              <Text style={styles.inputUnit}>m</Text>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowMeasurementModal(false);
+                  setEditingMeasurement(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              {editingMeasurement?.type === 'dimension' && (
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#ff9800' }]}
+                  onPress={() => {
+                    if (editingMeasurement) {
+                      // Reset to calculated value
+                      setDimensionLines(dimensionLines.map(d => 
+                        d.id === editingMeasurement.id ? { ...d, customLength: undefined } : d
+                      ));
+                    }
+                    setShowMeasurementModal(false);
+                    setEditingMeasurement(null);
+                  }}
+                >
+                  <Text style={styles.confirmButtonText}>Zurücksetzen</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => {
+                  const newValue = parseFloat(measurementInputValue.replace(',', '.'));
+                  if (!isNaN(newValue) && newValue > 0 && editingMeasurement) {
+                    if (editingMeasurement.type === 'dimension') {
+                      updateDimensionLineLength(editingMeasurement.id, newValue);
+                    }
+                  }
+                  setShowMeasurementModal(false);
+                  setEditingMeasurement(null);
+                }}
+              >
+                <Text style={styles.confirmButtonText}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>

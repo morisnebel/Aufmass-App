@@ -784,10 +784,15 @@ export default function AreaCalculatorEditor() {
   };
 
   // Check if point is near a polygon vertex
-  const findPolygonPointAtPosition = (x: number, y: number): { polygonId: string; pointIndex: number } | null => {
+  const findPolygonPointAtPosition = (x: number, y: number, onlySelected: boolean = false): { polygonId: string; pointIndex: number } | null => {
     const tolerance = 20;
     
-    for (const polygon of polygons) {
+    // If onlySelected is true, only check the selected polygon
+    const polygonsToCheck = onlySelected && selectedPolygonId 
+      ? polygons.filter(p => p.id === selectedPolygonId)
+      : polygons;
+    
+    for (const polygon of polygonsToCheck) {
       for (let i = 0; i < polygon.points.length; i++) {
         const point = polygon.points[i];
         const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
@@ -801,46 +806,49 @@ export default function AreaCalculatorEditor() {
 
   // Find closest point on a polygon line (for "Punkt auf Linie" feature)
   const findClosestPointOnPolygonLine = (x: number, y: number): { polygonId: string; lineIndex: number; point: AreaPoint } | null => {
-    const tolerance = 15;
-    let closest: { polygonId: string; lineIndex: number; point: AreaPoint; distance: number } | null = null;
+    // Only work on selected polygon
+    if (!selectedPolygonId) return null;
     
-    for (const polygon of polygons) {
-      for (let i = 0; i < polygon.points.length; i++) {
-        const p1 = polygon.points[i];
-        const p2 = polygon.points[(i + 1) % polygon.points.length];
-        
-        // Calculate closest point on line segment
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const lengthSq = dx * dx + dy * dy;
-        
-        if (lengthSq === 0) continue;
-        
-        let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
-        t = Math.max(0, Math.min(1, t));
-        
-        const closestX = p1.x + t * dx;
-        const closestY = p1.y + t * dy;
-        const distance = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
-        
-        // Don't add point too close to existing vertices
-        const distToP1 = Math.sqrt(Math.pow(closestX - p1.x, 2) + Math.pow(closestY - p1.y, 2));
-        const distToP2 = Math.sqrt(Math.pow(closestX - p2.x, 2) + Math.pow(closestY - p2.y, 2));
-        
-        if (distance < tolerance && distToP1 > 20 && distToP2 > 20) {
-          if (!closest || distance < closest.distance) {
-            closest = {
-              polygonId: polygon.id,
-              lineIndex: i,
-              point: { x: closestX, y: closestY },
-              distance
-            };
-          }
+    const polygon = polygons.find(p => p.id === selectedPolygonId);
+    if (!polygon) return null;
+    
+    const tolerance = 15;
+    let closest: { lineIndex: number; point: AreaPoint; distance: number } | null = null;
+    
+    for (let i = 0; i < polygon.points.length; i++) {
+      const p1 = polygon.points[i];
+      const p2 = polygon.points[(i + 1) % polygon.points.length];
+      
+      // Calculate closest point on line segment
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const lengthSq = dx * dx + dy * dy;
+      
+      if (lengthSq === 0) continue;
+      
+      let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
+      t = Math.max(0, Math.min(1, t));
+      
+      const closestX = p1.x + t * dx;
+      const closestY = p1.y + t * dy;
+      const distance = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
+      
+      // Don't add point too close to existing vertices
+      const distToP1 = Math.sqrt(Math.pow(closestX - p1.x, 2) + Math.pow(closestY - p1.y, 2));
+      const distToP2 = Math.sqrt(Math.pow(closestX - p2.x, 2) + Math.pow(closestY - p2.y, 2));
+      
+      if (distance < tolerance && distToP1 > 20 && distToP2 > 20) {
+        if (!closest || distance < closest.distance) {
+          closest = {
+            lineIndex: i,
+            point: { x: closestX, y: closestY },
+            distance
+          };
         }
       }
     }
     
-    return closest ? { polygonId: closest.polygonId, lineIndex: closest.lineIndex, point: closest.point } : null;
+    return closest ? { polygonId: selectedPolygonId, lineIndex: closest.lineIndex, point: closest.point } : null;
   };
 
   // Add point to polygon line
@@ -1660,19 +1668,26 @@ export default function AreaCalculatorEditor() {
           const x = touch.locationX;
           const y = touch.locationY;
           
-          // "Punkt auf Linie" mode
+          // "Punkt auf Linie" mode - only on selected polygon
           if (addPointMode && mode === 'select') {
+            if (!selectedPolygonId) {
+              Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Polygon aus.');
+              return;
+            }
             const linePoint = findClosestPointOnPolygonLine(x, y);
             if (linePoint) {
               addPointToPolygonLine(linePoint.polygonId, linePoint.lineIndex, linePoint.point);
-              setSelectedPolygonId(linePoint.polygonId);
             }
             return;
           }
           
-          // "Punkt löschen" mode
+          // "Punkt löschen" mode - only on selected polygon
           if (deletePointMode && mode === 'select') {
-            const polygonPoint = findPolygonPointAtPosition(x, y);
+            if (!selectedPolygonId) {
+              Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Polygon aus.');
+              return;
+            }
+            const polygonPoint = findPolygonPointAtPosition(x, y, true);
             if (polygonPoint) {
               deletePolygonPoint(polygonPoint.polygonId, polygonPoint.pointIndex);
             }

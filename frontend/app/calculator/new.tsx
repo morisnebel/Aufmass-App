@@ -792,6 +792,10 @@ export default function AreaCalculatorEditor() {
     // Find all deduction polygons that might intersect this line
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
+    console.log('[DEBUG] calculateLineSegmentsWithDeductions called');
+    console.log('[DEBUG] Line from', p1, 'to', p2);
+    console.log('[DEBUG] Deduction polygons count:', deductionPolygons.length);
+    
     if (deductionPolygons.length === 0) {
       return [{ start: p1, end: p2, isInterrupted: false }];
     }
@@ -800,6 +804,7 @@ export default function AreaCalculatorEditor() {
     const intersections: { point: AreaPoint; t: number; deductionId: string }[] = [];
     
     for (const deduction of deductionPolygons) {
+      console.log('[DEBUG] Checking deduction polygon:', deduction.id, 'with points:', deduction.points);
       // Check each edge of the deduction polygon
       for (let i = 0; i < deduction.points.length; i++) {
         const d1 = deduction.points[i];
@@ -807,11 +812,14 @@ export default function AreaCalculatorEditor() {
         
         // Find intersection between main line and deduction edge
         const intersection = getLineSegmentIntersection(p1, p2, d1, d2);
+        console.log('[DEBUG] Edge', i, 'from', d1, 'to', d2, '-> intersection:', intersection);
         if (intersection) {
           intersections.push({ ...intersection, deductionId: deduction.id });
         }
       }
     }
+    
+    console.log('[DEBUG] Total intersections found:', intersections.length);
     
     // Sort intersections by t value (position along the line)
     intersections.sort((a, b) => a.t - b.t);
@@ -823,9 +831,11 @@ export default function AreaCalculatorEditor() {
       for (const deduction of deductionPolygons) {
         if (isPointInPolygon(midPoint, deduction.points)) {
           // Entire line is inside deduction - return as interrupted
+          console.log('[DEBUG] Line is entirely inside deduction');
           return [{ start: p1, end: p2, isInterrupted: true }];
         }
       }
+      console.log('[DEBUG] No intersections, returning full line');
       return [{ start: p1, end: p2, isInterrupted: false }];
     }
     
@@ -838,6 +848,7 @@ export default function AreaCalculatorEditor() {
     for (const deduction of deductionPolygons) {
       if (isPointInPolygon(p1, deduction.points)) {
         insideDeduction = true;
+        console.log('[DEBUG] Start point is inside deduction');
         break;
       }
     }
@@ -853,6 +864,7 @@ export default function AreaCalculatorEditor() {
           end: intersection.point, 
           isInterrupted: insideDeduction 
         });
+        console.log('[DEBUG] Added segment:', { start: currentPoint, end: intersection.point, isInterrupted: insideDeduction });
       }
       
       // Toggle state - crossing a boundary means switching in/out
@@ -867,8 +879,10 @@ export default function AreaCalculatorEditor() {
         end: p2, 
         isInterrupted: insideDeduction 
       });
+      console.log('[DEBUG] Added final segment:', { start: currentPoint, end: p2, isInterrupted: insideDeduction });
     }
     
+    console.log('[DEBUG] Final segments:', segments);
     return segments;
   };
 

@@ -533,13 +533,16 @@ export default function AreaCalculatorEditor() {
   };
 
   // Snap to nearest point (grid, guide line intersections, guide line points)
-  const snapToNearestPoint = (x: number, y: number): { point: AreaPoint; snapped: boolean } => {
-    const snapTolerance = 25; // Increased for better touch experience
+  const snapToNearestPoint = (x: number, y: number, excludePolygonId?: string): { point: AreaPoint; snapped: boolean } => {
+    const snapTolerance = 30; // Increased for better touch experience
     let bestPoint = { x, y };
     let bestDistance = Infinity;
     
     // 1. HIGHEST PRIORITY: Snap to existing polygon points (corners)
     for (const polygon of polygons) {
+      // Skip the polygon being moved
+      if (excludePolygonId && polygon.id === excludePolygonId) continue;
+      
       for (const point of polygon.points) {
         const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
         if (dist < snapTolerance && dist < bestDistance) {
@@ -576,6 +579,9 @@ export default function AreaCalculatorEditor() {
     // Only if no corner point was found
     if (bestDistance > snapTolerance / 2) {
       for (const polygon of polygons) {
+        // Skip the polygon being moved
+        if (excludePolygonId && polygon.id === excludePolygonId) continue;
+        
         for (let i = 0; i < polygon.points.length; i++) {
           const p1 = polygon.points[i];
           const p2 = polygon.points[(i + 1) % polygon.points.length];
@@ -2078,7 +2084,8 @@ export default function AreaCalculatorEditor() {
             
             for (const point of polygon.points) {
               const movedPoint = { x: point.x + dx, y: point.y + dy };
-              const snapResult = snapToNearestPoint(movedPoint.x, movedPoint.y);
+              // Exclude the polygon being moved from snap targets
+              const snapResult = snapToNearestPoint(movedPoint.x, movedPoint.y, draggingWholePolygon.polygonId);
               
               if (snapResult.snapped) {
                 // Calculate the offset needed to snap this corner

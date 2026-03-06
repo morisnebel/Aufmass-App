@@ -1182,18 +1182,68 @@ export default function AreaCalculatorEditor() {
     }
   };
 
+  // Evaluate mathematical expression (supports +, -, *, /)
+  const evaluateExpression = (expr: string): number | null => {
+    try {
+      // Replace , with . for decimals
+      let cleanExpr = expr.replace(/,/g, '.');
+      // Only allow numbers and basic operators
+      if (!/^[\d\.\+\-\*\/\(\)\s]+$/.test(cleanExpr)) return null;
+      // Evaluate
+      const result = Function('"use strict"; return (' + cleanExpr + ')')();
+      return isNaN(result) ? null : result;
+    } catch {
+      return null;
+    }
+  };
+
   const applyNumpadInput = () => {
     if (!editingEdge) return;
     
-    const value = parseFloat(numpadInput.replace(',', '.'));
-    if (isNaN(value) || value <= 0) {
-      Alert.alert('Ungültige Eingabe', 'Bitte geben Sie eine gültige Zahl ein.');
+    const value = evaluateExpression(numpadInput);
+    if (value === null || value <= 0) {
+      Alert.alert('Ungültige Eingabe', 'Bitte geben Sie eine gültige Zahl oder Formel ein.');
       return;
     }
     
-    // Save custom length
-    const edgeKey = `${editingEdge.polygonId}-${editingEdge.edgeIndex}`;
-    setCustomEdgeLengths(prev => ({ ...prev, [edgeKey]: value }));
+    // Get the polygon and the edge
+    const polygon = polygons.find(p => p.id === editingEdge.polygonId);
+    if (!polygon) return;
+    
+    const edgeIndex = editingEdge.edgeIndex;
+    const p1 = polygon.points[edgeIndex];
+    const p2 = polygon.points[(edgeIndex + 1) % polygon.points.length];
+    
+    // Calculate current length and the scale factor
+    const currentLength = calculateLineLength(p1, p2);
+    const targetLengthInPixels = value * scale;
+    const currentLengthInPixels = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+    
+    // Calculate the direction vector
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    if (length === 0) return;
+    
+    // Normalize and scale to new length
+    const unitX = dx / length;
+    const unitY = dy / length;
+    
+    // Move p2 to the new position (keeping p1 fixed)
+    const newP2 = {
+      x: p1.x + unitX * targetLengthInPixels,
+      y: p1.y + unitY * targetLengthInPixels
+    };
+    
+    // Update polygon
+    saveStateForUndo();
+    const newPoints = [...polygon.points];
+    newPoints[(edgeIndex + 1) % polygon.points.length] = newP2;
+    
+    setPolygons(polygons.map(p => 
+      p.id === editingEdge.polygonId ? { ...p, points: newPoints } : p
+    ));
     
     // Close numpad
     setShowNumpad(false);
@@ -3460,44 +3510,97 @@ export default function AreaCalculatorEditor() {
             styles.numpadContainer,
             { transform: numpadPosition.getTranslateTransform() }
           ]}
-          {...numpadPanResponder.panHandlers}
         >
-          <View style={styles.numpadHeader}>
-            <Text style={styles.numpadTitle}>Maß eingeben</Text>
-            <TouchableOpacity onPress={() => { setShowNumpad(false); setEditingEdge(null); setNumpadInput(''); }}>
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
+          {/* Close button */}
+          <TouchableOpacity 
+            style={styles.numpadCloseBtn}
+            onPress={() => { setShowNumpad(false); setEditingEdge(null); setNumpadInput(''); }}
+          >
+            <Ionicons name="close-circle" size={22} color="#999" />
+          </TouchableOpacity>
+          
+          {/* Drag handle */}
+          <View {...numpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
+            <Ionicons name="move" size={14} color="#999" />
+            <Text style={styles.numpadDragText}>Verschieben</Text>
           </View>
           
+          {/* Display */}
           <View style={styles.numpadDisplay}>
-            <Text style={styles.numpadDisplayText}>{numpadInput || '0'}</Text>
+            <TextInput
+              style={styles.numpadDisplayInput}
+              value={numpadInput}
+              onChangeText={setNumpadInput}
+              keyboardType="decimal-pad"
+              placeholder="0"
+              placeholderTextColor="#999"
+            />
             <Text style={styles.numpadUnit}>m</Text>
           </View>
           
-          <View style={styles.numpadGrid}>
-            {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
-              <TouchableOpacity
-                key={key}
-                style={styles.numpadButton}
-                onPress={() => handleNumpadPress(key)}
+          {/* Number grid with operators */}
+          <View style={styles.modalNumpadRow}>
+            {['7','8','9','+'].map(k => (
+              <TouchableOpacity 
+                key={k} 
+                style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} 
+                onPress={() => handleNumpadPress(k)}
               >
-                <Text style={styles.numpadButtonText}>{key}</Text>
+                <Text style={k==='+' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          
-          <View style={styles.numpadActions}>
+          <View style={styles.modalNumpadRow}>
+            {['4','5','6','-'].map(k => (
+              <TouchableOpacity 
+                key={k} 
+                style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} 
+                onPress={() => handleNumpadPress(k)}
+              >
+                <Text style={k==='-' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.modalNumpadRow}>
+            {['1','2','3','*'].map(k => (
+              <TouchableOpacity 
+                key={k} 
+                style={[styles.modalNumpadKey, k==='*' && styles.modalNumpadOp]} 
+                onPress={() => handleNumpadPress(k)}
+              >
+                <Text style={k==='*' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '*' ? '×' : k}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.modalNumpadRow}>
+            {[',','0','.','/'].map(k => (
+              <TouchableOpacity 
+                key={k} 
+                style={[styles.modalNumpadKey, k==='/' && styles.modalNumpadOp]} 
+                onPress={() => handleNumpadPress(k)}
+              >
+                <Text style={k==='/' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '/' ? '÷' : k}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.modalNumpadRow}>
             <TouchableOpacity 
-              style={[styles.numpadActionButton, { backgroundColor: '#f44336' }]}
+              style={[styles.modalNumpadKey, styles.modalNumpadClear]} 
               onPress={() => handleNumpadPress('C')}
             >
-              <Text style={styles.numpadActionText}>Löschen</Text>
+              <Text style={styles.modalNumpadClearText}>C</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.numpadActionButton, { backgroundColor: '#4CAF50' }]}
+              style={[styles.modalNumpadKey, styles.modalNumpadDel]} 
+              onPress={() => handleNumpadPress('⌫')}
+            >
+              <Ionicons name="backspace-outline" size={18} color="#f44336" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modalNumpadKey, styles.modalNumpadKey, { flex: 2, backgroundColor: '#4CAF50' }]} 
               onPress={() => handleNumpadPress('OK')}
             >
-              <Text style={styles.numpadActionText}>OK</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>OK</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -4007,88 +4110,99 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  // Numpad styles
+  // Numpad styles (like sketches)
   numpadContainer: {
     position: 'absolute',
-    bottom: 150,
-    right: 20,
+    bottom: 120,
+    right: 10,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-    width: 220,
+    width: 200,
   },
-  numpadHeader: {
+  numpadCloseBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 10,
+  },
+  numpadDragHandle: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-    paddingBottom: 8,
+    justifyContent: 'center',
+    paddingVertical: 4,
+    marginBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  numpadTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  numpadDragText: {
+    fontSize: 10,
+    color: '#999',
+    marginLeft: 4,
   },
   numpadDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     backgroundColor: '#f5f5f5',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8,
   },
-  numpadDisplayText: {
-    fontSize: 24,
+  numpadDisplayInput: {
+    flex: 1,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginRight: 4,
+    textAlign: 'right',
+    padding: 0,
   },
   numpadUnit: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
+    marginLeft: 4,
   },
-  numpadGrid: {
+  modalNumpadRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 6,
+    marginBottom: 4,
+    gap: 4,
   },
-  numpadButton: {
-    width: '30%',
-    aspectRatio: 1.5,
+  modalNumpadKey: {
+    flex: 1,
+    aspectRatio: 1.3,
     backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  numpadButtonText: {
-    fontSize: 20,
+  modalNumpadKeyText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
-  numpadActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 8,
+  modalNumpadOp: {
+    backgroundColor: '#e3f2fd',
   },
-  numpadActionButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  modalNumpadOpText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976d2',
   },
-  numpadActionText: {
-    color: '#fff',
+  modalNumpadClear: {
+    backgroundColor: '#fff3e0',
+  },
+  modalNumpadClearText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: '#ff9800',
+  },
+  modalNumpadDel: {
+    backgroundColor: '#ffebee',
   },
 });

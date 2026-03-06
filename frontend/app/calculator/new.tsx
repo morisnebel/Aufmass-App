@@ -2044,9 +2044,15 @@ export default function AreaCalculatorEditor() {
           const x = touch.locationX;
           const y = touch.locationY;
           
-          // Update current touch position for live length display
-          if ((mode === 'polygon' || mode === 'deduction' || mode === 'guideline' || mode === 'dimension') && currentPoints.length > 0) {
-            setCurrentTouchPosition({ x, y });
+          // Update snap indicator for all polygon/deduction/guideline modes
+          if (mode === 'polygon' || mode === 'deduction' || mode === 'guideline') {
+            const snapResult = snapToNearestPoint(x, y);
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
+            
+            // Update current touch position for live length display
+            if (currentPoints.length > 0) {
+              setCurrentTouchPosition({ x, y });
+            }
           }
           
           // Dragging polygon point

@@ -86,6 +86,9 @@ export default function AreaCalculatorEditor() {
     polygons: AreaPolygon[];
     guideLines: GuideLine[];
     lines: AreaLine[];
+    annotationShapes: AnnotationShape[];
+    textAnnotations: TextAnnotation[];
+    memoPointers: MemoPointer[];
   }
   const [undoStack, setUndoStack] = useState<HistoryState[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
@@ -134,8 +137,60 @@ export default function AreaCalculatorEditor() {
   const [addPointMode, setAddPointMode] = useState(false); // "Punkt auf Linie" Modus
   const [deletePointMode, setDeletePointMode] = useState(false); // "Punkt löschen" Modus
   
+  // === ANNOTATION FEATURES (from PDF Editor) ===
+  // Shape annotations
+  interface AnnotationShape {
+    id: string;
+    type: 'rectangle' | 'circle' | 'arrow' | 'line';
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    color: string;
+    strokeWidth: number;
+  }
+  const [annotationShapes, setAnnotationShapes] = useState<AnnotationShape[]>([]);
+  const [currentAnnotationShape, setCurrentAnnotationShape] = useState<AnnotationShape | null>(null);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  
+  // Text annotations
+  interface TextAnnotation {
+    id: string;
+    text: string;
+    x: number;
+    y: number;
+    color: string;
+    fontSize: number;
+  }
+  const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [newTextInput, setNewTextInput] = useState('');
+  const [textPosition, setTextPosition] = useState<AreaPoint>({ x: 0, y: 0 });
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [draggingText, setDraggingText] = useState<{ id: string; offset: AreaPoint } | null>(null);
+  
+  // Memo pointer annotations
+  interface MemoPointer {
+    id: string;
+    x1: number; // Note box position
+    y1: number;
+    x2: number; // Target point
+    y2: number;
+    text: string;
+    color: string;
+  }
+  const [memoPointers, setMemoPointers] = useState<MemoPointer[]>([]);
+  const [pendingMemoPointer, setPendingMemoPointer] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [memoText, setMemoText] = useState('');
+  const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
+  const [draggingMemo, setDraggingMemo] = useState<{ id: string; part: 'note' | 'target'; offset: AreaPoint } | null>(null);
+  
+  // Annotation drawing color
+  const [annotationColor, setAnnotationColor] = useState('#FF0000');
+  
   // Drawing state
-  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension'>('select');
+  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
@@ -173,6 +228,9 @@ export default function AreaCalculatorEditor() {
       polygons: JSON.parse(JSON.stringify(polygons)),
       guideLines: JSON.parse(JSON.stringify(guideLines)),
       lines: JSON.parse(JSON.stringify(lines)),
+      annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
+      textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
+      memoPointers: JSON.parse(JSON.stringify(memoPointers)),
     };
     setUndoStack(prev => [...prev.slice(-19), currentState]); // Keep last 20 states
     setRedoStack([]); // Clear redo stack when new action is performed
@@ -187,6 +245,9 @@ export default function AreaCalculatorEditor() {
       polygons: JSON.parse(JSON.stringify(polygons)),
       guideLines: JSON.parse(JSON.stringify(guideLines)),
       lines: JSON.parse(JSON.stringify(lines)),
+      annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
+      textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
+      memoPointers: JSON.parse(JSON.stringify(memoPointers)),
     };
     setRedoStack(prev => [...prev, currentState]);
     
@@ -195,11 +256,17 @@ export default function AreaCalculatorEditor() {
     setPolygons(previousState.polygons);
     setGuideLines(previousState.guideLines);
     setLines(previousState.lines);
+    setAnnotationShapes(previousState.annotationShapes || []);
+    setTextAnnotations(previousState.textAnnotations || []);
+    setMemoPointers(previousState.memoPointers || []);
     setUndoStack(prev => prev.slice(0, -1));
     
     // Clear selections
     setSelectedPolygonId(null);
     setSelectedGuideLineId(null);
+    setSelectedAnnotationId(null);
+    setSelectedTextId(null);
+    setSelectedMemoId(null);
   };
 
   // Redo
@@ -211,6 +278,9 @@ export default function AreaCalculatorEditor() {
       polygons: JSON.parse(JSON.stringify(polygons)),
       guideLines: JSON.parse(JSON.stringify(guideLines)),
       lines: JSON.parse(JSON.stringify(lines)),
+      annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
+      textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
+      memoPointers: JSON.parse(JSON.stringify(memoPointers)),
     };
     setUndoStack(prev => [...prev, currentState]);
     
@@ -219,11 +289,17 @@ export default function AreaCalculatorEditor() {
     setPolygons(nextState.polygons);
     setGuideLines(nextState.guideLines);
     setLines(nextState.lines);
+    setAnnotationShapes(nextState.annotationShapes || []);
+    setTextAnnotations(nextState.textAnnotations || []);
+    setMemoPointers(nextState.memoPointers || []);
     setRedoStack(prev => prev.slice(0, -1));
     
     // Clear selections
     setSelectedPolygonId(null);
     setSelectedGuideLineId(null);
+    setSelectedAnnotationId(null);
+    setSelectedTextId(null);
+    setSelectedMemoId(null);
   };
 
   // Load data
@@ -1414,7 +1490,59 @@ export default function AreaCalculatorEditor() {
       }
       
       setCurrentPoints([...currentPoints, { x: snappedX, y: snappedY }]);
+    } else if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
+      // Start drawing annotation shape
+      if (!currentAnnotationShape) {
+        const shapeType = mode.replace('annotation_', '') as 'rectangle' | 'circle' | 'arrow' | 'line';
+        setCurrentAnnotationShape({
+          id: Date.now().toString(),
+          type: shapeType,
+          x1: x,
+          y1: y,
+          x2: x,
+          y2: y,
+          color: annotationColor,
+          strokeWidth: 3,
+        });
+      }
+    } else if (mode === 'annotation_text') {
+      // Place text annotation
+      setTextPosition({ x, y });
+      setShowTextModal(true);
+    } else if (mode === 'annotation_memo') {
+      // Start memo pointer - tap on target point first
+      if (!pendingMemoPointer) {
+        setPendingMemoPointer({ x1: x, y1: y - 50, x2: x, y2: y });
+      }
     } else if (mode === 'select') {
+      // First check if clicking on an annotation
+      const clickedAnnotation = findAnnotationAtPosition(x, y);
+      if (clickedAnnotation) {
+        // Clear other selections
+        setSelectedPolygonId(null);
+        setSelectedGuideLineId(null);
+        
+        if (clickedAnnotation.type === 'shape') {
+          setSelectedAnnotationId(clickedAnnotation.id);
+          setSelectedTextId(null);
+          setSelectedMemoId(null);
+        } else if (clickedAnnotation.type === 'text') {
+          setSelectedTextId(clickedAnnotation.id);
+          setSelectedAnnotationId(null);
+          setSelectedMemoId(null);
+        } else if (clickedAnnotation.type === 'memo') {
+          setSelectedMemoId(clickedAnnotation.id);
+          setSelectedAnnotationId(null);
+          setSelectedTextId(null);
+        }
+        return;
+      }
+      
+      // Clear annotation selections
+      setSelectedAnnotationId(null);
+      setSelectedTextId(null);
+      setSelectedMemoId(null);
+      
       // Check if clicking on a guide line
       const clickedGuide = findGuideLineAtPoint(x, y);
       if (clickedGuide) {
@@ -1781,6 +1909,354 @@ export default function AreaCalculatorEditor() {
     return cat?.color || '#666';
   };
 
+  // === ANNOTATION RENDER FUNCTIONS ===
+  
+  // Render annotation shape (rectangle, circle, arrow, line)
+  const renderAnnotationShape = (shape: AnnotationShape, isPreview = false) => {
+    const { id, type, x1, y1, x2, y2, color, strokeWidth: sw } = shape;
+    const key = isPreview ? 'preview-shape' : id;
+    const isSelected = selectedAnnotationId === id;
+
+    switch (type) {
+      case 'rectangle':
+        return (
+          <G key={key}>
+            <Rect
+              x={Math.min(x1, x2)}
+              y={Math.min(y1, y2)}
+              width={Math.abs(x2 - x1)}
+              height={Math.abs(y2 - y1)}
+              stroke={color}
+              strokeWidth={sw}
+              fill="none"
+            />
+            {isSelected && (
+              <>
+                <Circle cx={Math.min(x1, x2)} cy={Math.min(y1, y2)} r={6} fill="#2196F3" />
+                <Circle cx={Math.max(x1, x2)} cy={Math.min(y1, y2)} r={6} fill="#2196F3" />
+                <Circle cx={Math.min(x1, x2)} cy={Math.max(y1, y2)} r={6} fill="#2196F3" />
+                <Circle cx={Math.max(x1, x2)} cy={Math.max(y1, y2)} r={6} fill="#2196F3" />
+              </>
+            )}
+          </G>
+        );
+      case 'circle':
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const r = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+        return (
+          <G key={key}>
+            <Circle cx={cx} cy={cy} r={r} stroke={color} strokeWidth={sw} fill="none" />
+            {isSelected && <Circle cx={cx} cy={cy} r={6} fill="#2196F3" />}
+          </G>
+        );
+      case 'line':
+        return (
+          <G key={key}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={sw} />
+            {isSelected && (
+              <>
+                <Circle cx={x1} cy={y1} r={6} fill="#2196F3" />
+                <Circle cx={x2} cy={y2} r={6} fill="#2196F3" />
+              </>
+            )}
+          </G>
+        );
+      case 'arrow':
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const headLength = 15;
+        return (
+          <G key={key}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={sw} />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle - Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle - Math.PI / 6)}
+              stroke={color}
+              strokeWidth={sw}
+            />
+            <Line
+              x1={x2}
+              y1={y2}
+              x2={x2 - headLength * Math.cos(angle + Math.PI / 6)}
+              y2={y2 - headLength * Math.sin(angle + Math.PI / 6)}
+              stroke={color}
+              strokeWidth={sw}
+            />
+            {isSelected && (
+              <>
+                <Circle cx={x1} cy={y1} r={6} fill="#2196F3" />
+                <Circle cx={x2} cy={y2} r={6} fill="#2196F3" />
+              </>
+            )}
+          </G>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Render text annotation
+  const renderTextAnnotation = (annotation: TextAnnotation) => {
+    const { id, text, x, y, color, fontSize } = annotation;
+    const isSelected = selectedTextId === id;
+    
+    return (
+      <G key={id}>
+        {isSelected && (
+          <Rect
+            x={x - 5}
+            y={y - fontSize}
+            width={text.length * fontSize * 0.6 + 10}
+            height={fontSize + 10}
+            fill="rgba(33, 150, 243, 0.2)"
+            stroke="#2196F3"
+            strokeWidth={1}
+            strokeDasharray="4,2"
+          />
+        )}
+        <SvgText
+          x={x}
+          y={y}
+          fill={color}
+          fontSize={fontSize}
+          fontWeight="600"
+        >
+          {text}
+        </SvgText>
+      </G>
+    );
+  };
+
+  // Render memo pointer
+  const renderMemoPointer = (memo: MemoPointer, isPreview = false) => {
+    const { id, x1, y1, x2, y2, text, color } = memo;
+    const key = isPreview ? 'preview-memo' : id;
+    const isSelected = selectedMemoId === id;
+    
+    const noteText = text || '';
+    const textLength = noteText.length;
+    const noteWidth = Math.max(textLength * 9 + 20, 80);
+    const noteHeight = 32;
+    const noteX = x1 - noteWidth / 2;
+    const noteY = y1 - noteHeight - 5;
+    const cornerRadius = 6;
+    const targetRadius = 6;
+    
+    return (
+      <G key={key}>
+        {/* Connecting line from note to target */}
+        <Line 
+          x1={x1} 
+          y1={y1} 
+          x2={x2} 
+          y2={y2} 
+          stroke={color} 
+          strokeWidth={2}
+          strokeDasharray="5,3"
+        />
+        
+        {/* Target indicator - filled circle */}
+        <Circle 
+          cx={x2} 
+          cy={y2} 
+          r={targetRadius} 
+          fill={color}
+          stroke="white"
+          strokeWidth={2}
+        />
+        
+        {/* Note box shadow */}
+        <Rect 
+          x={noteX + 2} 
+          y={noteY + 2} 
+          width={noteWidth} 
+          height={noteHeight} 
+          fill="rgba(0,0,0,0.15)" 
+          rx={cornerRadius}
+        />
+        
+        {/* Note box background */}
+        <Rect 
+          x={noteX} 
+          y={noteY} 
+          width={noteWidth} 
+          height={noteHeight} 
+          fill="#FFFDE7"
+          stroke={color} 
+          strokeWidth={isSelected ? 3 : 2} 
+          rx={cornerRadius}
+        />
+        
+        {/* Small triangle/pointer from box to line */}
+        <Path 
+          d={`M ${x1 - 6} ${noteY + noteHeight} L ${x1} ${noteY + noteHeight + 8} L ${x1 + 6} ${noteY + noteHeight} Z`}
+          fill="#FFFDE7"
+          stroke={color}
+          strokeWidth={2}
+        />
+        {/* Cover the bottom stroke where triangle meets box */}
+        <Line 
+          x1={x1 - 5} 
+          y1={noteY + noteHeight} 
+          x2={x1 + 5} 
+          y2={noteY + noteHeight} 
+          stroke="#FFFDE7" 
+          strokeWidth={3}
+        />
+        
+        {/* Note text */}
+        {noteText && (
+          <SvgText 
+            x={x1} 
+            y={noteY + noteHeight / 2 + 5} 
+            fill="#333" 
+            fontSize={14} 
+            fontWeight="600" 
+            textAnchor="middle"
+          >
+            {noteText}
+          </SvgText>
+        )}
+        
+        {/* Selection indicators */}
+        {isSelected && (
+          <>
+            <Circle cx={x1} cy={y1 - noteHeight / 2} r={6} fill="#2196F3" />
+            <Circle cx={x2} cy={y2} r={10} fill="none" stroke="#2196F3" strokeWidth={2} />
+          </>
+        )}
+      </G>
+    );
+  };
+
+  // Find annotation at position
+  const findAnnotationAtPosition = (x: number, y: number): { type: 'shape' | 'text' | 'memo'; id: string } | null => {
+    const tolerance = 15;
+    
+    // Check memo pointers first (they have larger hit areas)
+    for (const memo of memoPointers) {
+      const noteWidth = Math.max((memo.text?.length || 0) * 9 + 20, 80);
+      const noteHeight = 32;
+      const noteX = memo.x1 - noteWidth / 2;
+      const noteY = memo.y1 - noteHeight - 5;
+      
+      // Check if in note box
+      if (x >= noteX && x <= noteX + noteWidth && y >= noteY && y <= noteY + noteHeight + 8) {
+        return { type: 'memo', id: memo.id };
+      }
+      
+      // Check if near target point
+      const targetDist = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
+      if (targetDist < 20) {
+        return { type: 'memo', id: memo.id };
+      }
+    }
+    
+    // Check text annotations
+    for (const text of textAnnotations) {
+      const textWidth = text.text.length * text.fontSize * 0.6;
+      if (x >= text.x - 5 && x <= text.x + textWidth + 5 && 
+          y >= text.y - text.fontSize && y <= text.y + 5) {
+        return { type: 'text', id: text.id };
+      }
+    }
+    
+    // Check shapes
+    for (const shape of annotationShapes) {
+      const { type, x1, y1, x2, y2 } = shape;
+      
+      if (type === 'rectangle') {
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        
+        // Check if near any edge
+        const nearTop = Math.abs(y - minY) < tolerance && x >= minX - tolerance && x <= maxX + tolerance;
+        const nearBottom = Math.abs(y - maxY) < tolerance && x >= minX - tolerance && x <= maxX + tolerance;
+        const nearLeft = Math.abs(x - minX) < tolerance && y >= minY - tolerance && y <= maxY + tolerance;
+        const nearRight = Math.abs(x - maxX) < tolerance && y >= minY - tolerance && y <= maxY + tolerance;
+        
+        if (nearTop || nearBottom || nearLeft || nearRight) {
+          return { type: 'shape', id: shape.id };
+        }
+      } else if (type === 'circle') {
+        const cx = (x1 + x2) / 2;
+        const cy = (y1 + y2) / 2;
+        const r = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+        const dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+        if (Math.abs(dist - r) < tolerance) {
+          return { type: 'shape', id: shape.id };
+        }
+      } else if (type === 'line' || type === 'arrow') {
+        const dist = pointToLineDistance({ x, y }, { x: x1, y: y1 }, { x: x2, y: y2 });
+        if (dist < tolerance) {
+          return { type: 'shape', id: shape.id };
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // Delete selected annotation
+  const deleteSelectedAnnotation = () => {
+    if (selectedAnnotationId) {
+      saveStateForUndo();
+      setAnnotationShapes(prev => prev.filter(s => s.id !== selectedAnnotationId));
+      setSelectedAnnotationId(null);
+    } else if (selectedTextId) {
+      saveStateForUndo();
+      setTextAnnotations(prev => prev.filter(t => t.id !== selectedTextId));
+      setSelectedTextId(null);
+    } else if (selectedMemoId) {
+      saveStateForUndo();
+      setMemoPointers(prev => prev.filter(m => m.id !== selectedMemoId));
+      setSelectedMemoId(null);
+    }
+  };
+
+  // Add text annotation
+  const addTextAnnotation = () => {
+    if (!newTextInput.trim()) return;
+    
+    saveStateForUndo();
+    const newAnnotation: TextAnnotation = {
+      id: Date.now().toString(),
+      text: newTextInput.trim(),
+      x: textPosition.x,
+      y: textPosition.y,
+      color: annotationColor,
+      fontSize: 16,
+    };
+    setTextAnnotations(prev => [...prev, newAnnotation]);
+    setNewTextInput('');
+    setShowTextModal(false);
+    setMode('select');
+  };
+
+  // Add memo pointer
+  const addMemoPointer = () => {
+    if (!pendingMemoPointer) return;
+    
+    saveStateForUndo();
+    const newMemo: MemoPointer = {
+      id: Date.now().toString(),
+      x1: pendingMemoPointer.x1,
+      y1: pendingMemoPointer.y1,
+      x2: pendingMemoPointer.x2,
+      y2: pendingMemoPointer.y2,
+      text: memoText,
+      color: annotationColor,
+    };
+    setMemoPointers(prev => [...prev, newMemo]);
+    setMemoText('');
+    setPendingMemoPointer(null);
+    setShowMemoModal(false);
+  };
+
   // Render grid
   const renderGrid = () => {
     if (!gridEnabled) return null;
@@ -1946,6 +2422,52 @@ export default function AreaCalculatorEditor() {
           <Ionicons name="options" size={20} color="#666" />
           <Text style={styles.toolLabel}>Größe</Text>
         </TouchableOpacity>
+        
+        <View style={styles.toolSeparator} />
+        
+        {/* === ANNOTATION TOOLS === */}
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'annotation_text' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_text' ? '#E91E63' : '#f5f5f5' }]}
+          onPress={() => { setMode('annotation_text'); setCurrentPoints([]); }}
+        >
+          <Ionicons name="text" size={20} color={mode === 'annotation_text' ? '#fff' : '#E91E63'} />
+          <Text style={[styles.toolLabel, mode === 'annotation_text' && styles.toolLabelActive]}>Text</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'annotation_memo' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_memo' ? '#FF5722' : '#f5f5f5' }]}
+          onPress={() => { setMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
+        >
+          <Ionicons name="chatbubble-ellipses" size={20} color={mode === 'annotation_memo' ? '#fff' : '#FF5722'} />
+          <Text style={[styles.toolLabel, mode === 'annotation_memo' && styles.toolLabelActive]}>Notiz</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'annotation_rect' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_rect' ? '#673AB7' : '#f5f5f5' }]}
+          onPress={() => { setMode('annotation_rect'); setCurrentPoints([]); }}
+        >
+          <Ionicons name="square-outline" size={20} color={mode === 'annotation_rect' ? '#fff' : '#673AB7'} />
+          <Text style={[styles.toolLabel, mode === 'annotation_rect' && styles.toolLabelActive]}>Rahmen</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'annotation_arrow' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_arrow' ? '#009688' : '#f5f5f5' }]}
+          onPress={() => { setMode('annotation_arrow'); setCurrentPoints([]); }}
+        >
+          <Ionicons name="arrow-forward" size={20} color={mode === 'annotation_arrow' ? '#fff' : '#009688'} />
+          <Text style={[styles.toolLabel, mode === 'annotation_arrow' && styles.toolLabelActive]}>Pfeil</Text>
+        </TouchableOpacity>
+        
+        {/* Delete selected annotation */}
+        {(selectedAnnotationId || selectedTextId || selectedMemoId) && (
+          <TouchableOpacity 
+            style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
+            onPress={deleteSelectedAnnotation}
+          >
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+            <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+          </TouchableOpacity>
+        )}
         
         {currentPoints.length > 0 && (
           <>
@@ -2340,6 +2862,41 @@ export default function AreaCalculatorEditor() {
             updateDimensionLinePoint(draggingDimensionPoint.dimId, draggingDimensionPoint.point, snapResult.point);
             setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
           }
+          
+          // Drawing annotation shape
+          if (currentAnnotationShape) {
+            setCurrentAnnotationShape({
+              ...currentAnnotationShape,
+              x2: x,
+              y2: y,
+            });
+          }
+          
+          // Dragging memo pointer note position
+          if (pendingMemoPointer) {
+            setPendingMemoPointer({ ...pendingMemoPointer, x1: x, y1: y });
+          }
+          
+          // Dragging text annotation
+          if (draggingText) {
+            setTextAnnotations(prev => prev.map(t => 
+              t.id === draggingText.id 
+                ? { ...t, x: x - draggingText.offset.x, y: y - draggingText.offset.y }
+                : t
+            ));
+          }
+          
+          // Dragging memo pointer
+          if (draggingMemo) {
+            setMemoPointers(prev => prev.map(m => {
+              if (m.id !== draggingMemo.id) return m;
+              if (draggingMemo.part === 'note') {
+                return { ...m, x1: x - draggingMemo.offset.x, y1: y - draggingMemo.offset.y };
+              } else {
+                return { ...m, x2: x - draggingMemo.offset.x, y2: y - draggingMemo.offset.y };
+              }
+            }));
+          }
         }}
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
@@ -2367,6 +2924,38 @@ export default function AreaCalculatorEditor() {
           
           if (draggingDimensionPoint) {
             setDraggingDimensionPoint(null);
+            return;
+          }
+          
+          // Finish drawing annotation shape
+          if (currentAnnotationShape) {
+            // Only add if shape has some size
+            const minSize = 10;
+            const width = Math.abs(currentAnnotationShape.x2 - currentAnnotationShape.x1);
+            const height = Math.abs(currentAnnotationShape.y2 - currentAnnotationShape.y1);
+            if (width > minSize || height > minSize) {
+              saveStateForUndo();
+              setAnnotationShapes(prev => [...prev, currentAnnotationShape]);
+            }
+            setCurrentAnnotationShape(null);
+            return;
+          }
+          
+          // Finish memo pointer drawing
+          if (pendingMemoPointer) {
+            setShowMemoModal(true);
+            return;
+          }
+          
+          // Stop dragging text
+          if (draggingText) {
+            setDraggingText(null);
+            return;
+          }
+          
+          // Stop dragging memo
+          if (draggingMemo) {
+            setDraggingMemo(null);
             return;
           }
           
@@ -3290,6 +3879,23 @@ export default function AreaCalculatorEditor() {
               )}
             </G>
           )}
+          
+          {/* === ANNOTATION LAYERS === */}
+          {/* Annotation Shapes */}
+          {annotationShapes.map(shape => renderAnnotationShape(shape))}
+          
+          {/* Current shape being drawn */}
+          {currentAnnotationShape && renderAnnotationShape(currentAnnotationShape, true)}
+          
+          {/* Text Annotations */}
+          {textAnnotations.map(annotation => renderTextAnnotation(annotation))}
+          
+          {/* Memo Pointers */}
+          {memoPointers.map(memo => renderMemoPointer(memo))}
+          
+          {/* Preview memo pointer while drawing */}
+          {pendingMemoPointer && renderMemoPointer({ ...pendingMemoPointer, id: 'preview', text: '', color: annotationColor }, true)}
+          
         </Svg>
       </View>
 
@@ -3312,7 +3918,13 @@ export default function AreaCalculatorEditor() {
              mode === 'deduction' ? 'Abzug' :
              mode === 'guideline' ? 'Hilfslinie' :
              mode === 'parallel' ? 'Parallel' : 
-             mode === 'dimension' ? 'Vermaßung' : 'Auswahl'}
+             mode === 'dimension' ? 'Vermaßung' :
+             mode === 'annotation_text' ? 'Text' :
+             mode === 'annotation_memo' ? 'Notiz' :
+             mode === 'annotation_rect' ? 'Rahmen' :
+             mode === 'annotation_arrow' ? 'Pfeil' :
+             mode === 'annotation_circle' ? 'Kreis' :
+             mode === 'annotation_line' ? 'Linie' : 'Auswahl'}
           </Text>
         </View>
       </View>
@@ -3634,6 +4246,105 @@ export default function AreaCalculatorEditor() {
           </View>
         </Animated.View>
       )}
+
+      {/* Text Annotation Modal */}
+      <Modal visible={showTextModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Text hinzufügen</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={newTextInput}
+              onChangeText={setNewTextInput}
+              placeholder="Text eingeben..."
+              placeholderTextColor="#999"
+              autoFocus
+              multiline
+            />
+            {/* Color picker */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
+              {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAnnotationColor(color)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: color,
+                    marginHorizontal: 5,
+                    borderWidth: annotationColor === color ? 3 : 1,
+                    borderColor: annotationColor === color ? '#fff' : '#ccc',
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => { setShowTextModal(false); setNewTextInput(''); setMode('select'); }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addTextAnnotation}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Memo Pointer Modal */}
+      <Modal visible={showMemoModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={memoText}
+              onChangeText={setMemoText}
+              placeholder="Notiztext eingeben..."
+              placeholderTextColor="#999"
+              autoFocus
+            />
+            {/* Color picker */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
+              {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAnnotationColor(color)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: color,
+                    marginHorizontal: 5,
+                    borderWidth: annotationColor === color ? 3 : 1,
+                    borderColor: annotationColor === color ? '#fff' : '#ccc',
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => { setShowMemoModal(false); setMemoText(''); setPendingMemoPointer(null); setMode('select'); }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addMemoPointer}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Results Modal */}
       <Modal visible={showResultsModal} transparent animationType="slide">

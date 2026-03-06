@@ -5,6 +5,19 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 
 ## Kernfunktionen
 
+### Flächen-Kalkulator (AKTIV IN ENTWICKLUNG)
+- Haupt- und Abzugspolygone zeichnen
+- Netto-Flächenberechnung mit Polygon-Clipping
+- "Schnitt" (Snipping) Tool für Schnittpunkte
+- Snapping zu Gittern, Ecken, Kanten
+- Maßstab-Kalibrierung
+- Hilfslinien mit Parallelfunktion
+- Numpad für manuelle Maßeingabe (Geometrie ODER Label)
+- **NEU (Dezember 2025)**: Annotations-Tools aus PDF-Editor übernommen:
+  - Textanmerkungen (frei platzierbar, farbwählbar)
+  - Notiz-Memo mit Zeiger auf Zielpunkt
+  - Formen: Rechteck, Pfeil
+
 ### PDF Annotations-Feature (ABGESCHLOSSEN)
 - "Dokumente"-Tab in Projektdetails
 - PDF-Import vom Gerät

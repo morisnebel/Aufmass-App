@@ -331,19 +331,89 @@ export default function AreaCalculatorEditor() {
     return isPointInPolygon({ x: centerX, y: centerY }, outerPolygon.points);
   };
 
-  // Calculate net area for a main polygon (gross area minus deductions inside it)
+  // Sutherland-Hodgman polygon clipping algorithm
+  // Clips 'subjectPolygon' to 'clipPolygon' and returns the intersection
+  const clipPolygonToPolygon = (subjectPoints: AreaPoint[], clipPoints: AreaPoint[]): AreaPoint[] => {
+    let outputList = [...subjectPoints];
+    
+    for (let i = 0; i < clipPoints.length; i++) {
+      if (outputList.length === 0) return [];
+      
+      const clipEdgeStart = clipPoints[i];
+      const clipEdgeEnd = clipPoints[(i + 1) % clipPoints.length];
+      
+      const inputList = [...outputList];
+      outputList = [];
+      
+      for (let j = 0; j < inputList.length; j++) {
+        const current = inputList[j];
+        const previous = inputList[(j + inputList.length - 1) % inputList.length];
+        
+        const currentInside = isPointOnLeftSide(current, clipEdgeStart, clipEdgeEnd);
+        const previousInside = isPointOnLeftSide(previous, clipEdgeStart, clipEdgeEnd);
+        
+        if (currentInside) {
+          if (!previousInside) {
+            const intersection = lineIntersection(previous, current, clipEdgeStart, clipEdgeEnd);
+            if (intersection) outputList.push(intersection);
+          }
+          outputList.push(current);
+        } else if (previousInside) {
+          const intersection = lineIntersection(previous, current, clipEdgeStart, clipEdgeEnd);
+          if (intersection) outputList.push(intersection);
+        }
+      }
+    }
+    
+    return outputList;
+  };
+
+  // Check if point is on the left side of a directed edge (inside for clockwise polygon)
+  const isPointOnLeftSide = (point: AreaPoint, edgeStart: AreaPoint, edgeEnd: AreaPoint): boolean => {
+    return ((edgeEnd.x - edgeStart.x) * (point.y - edgeStart.y) - 
+            (edgeEnd.y - edgeStart.y) * (point.x - edgeStart.x)) >= 0;
+  };
+
+  // Find intersection point of two lines
+  const lineIntersection = (p1: AreaPoint, p2: AreaPoint, p3: AreaPoint, p4: AreaPoint): AreaPoint | null => {
+    const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+    const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y;
+    
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (Math.abs(denom) < 0.0001) return null;
+    
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    
+    return {
+      x: x1 + t * (x2 - x1),
+      y: y1 + t * (y2 - y1)
+    };
+  };
+
+  // Calculate the intersection area between a deduction and a main polygon
+  const calculateIntersectionArea = (deductionPolygon: AreaPolygon, mainPolygon: AreaPolygon): number => {
+    const clippedPoints = clipPolygonToPolygon(deductionPolygon.points, mainPolygon.points);
+    if (clippedPoints.length < 3) return 0;
+    return calculatePolygonArea(clippedPoints);
+  };
+
+  // Calculate net area for a main polygon (gross area minus ACTUAL overlap with deductions)
   const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number } => {
     const grossArea = calculatePolygonArea(mainPolygon.points);
     
-    // Find all deduction polygons that are inside this main polygon
-    const deductionPolygons = polygons.filter(p => 
-      p.type === 'deduction' && isPolygonInsidePolygon(p, mainPolygon)
-    );
+    // Find all deduction polygons and calculate their actual intersection with this main polygon
+    const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
-    const deductions = deductionPolygons.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
-    const netArea = grossArea - deductions;
+    let totalDeductions = 0;
+    for (const deduction of deductionPolygons) {
+      // Calculate the actual overlapping area (not the full deduction)
+      const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+      totalDeductions += intersectionArea;
+    }
     
-    return { grossArea, deductions, netArea };
+    const netArea = grossArea - totalDeductions;
+    
+    return { grossArea, deductions: totalDeductions, netArea };
   };
 
   // Save calculation
@@ -1617,24 +1687,53 @@ export default function AreaCalculatorEditor() {
         
         {selectedPolygonId && mode === 'select' && (
           <>
-            {/* Show "Apply Snip" button if this is a deduction polygon */}
+            {/* Show "Einpassen" button if this is a deduction polygon */}
             {polygons.find(p => p.id === selectedPolygonId)?.type === 'deduction' && (
               <TouchableOpacity 
                 style={[styles.toolButton, { backgroundColor: '#ff9800' }]} 
                 onPress={() => {
                   const deduction = polygons.find(p => p.id === selectedPolygonId);
-                  if (deduction) {
-                    saveStateForUndo();
-                    const mainPolygons = polygons.filter(p => p.type === 'main');
-                    const otherPolygons = polygons.filter(p => p.type !== 'main' && p.id !== deduction.id);
-                    const updatedMainPolygons = insertDeductionIntersections(deduction, mainPolygons);
-                    setPolygons([...updatedMainPolygons, ...otherPolygons, deduction]);
-                    Alert.alert('Fertig', 'Schnittpunkte wurden in die Hauptflächen eingefügt.');
+                  if (!deduction) return;
+                  
+                  // Find the main polygon that this deduction intersects with
+                  const mainPolygon = polygons.find(p => {
+                    if (p.type !== 'main') return false;
+                    // Check if any point of the deduction is inside the main polygon
+                    // or if there's any intersection
+                    return deduction.points.some(dp => isPointInPolygon(dp, p.points)) ||
+                           p.points.some(mp => isPointInPolygon(mp, deduction.points));
+                  });
+                  
+                  if (!mainPolygon) {
+                    Alert.alert('Hinweis', 'Die Abzugsfläche überlappt keine Hauptfläche.');
+                    return;
                   }
+                  
+                  saveStateForUndo();
+                  
+                  // Clip the deduction to the main polygon
+                  const clippedPoints = clipPolygonToPolygon(deduction.points, mainPolygon.points);
+                  
+                  if (clippedPoints.length < 3) {
+                    Alert.alert('Hinweis', 'Die Abzugsfläche liegt außerhalb der Hauptfläche.');
+                    return;
+                  }
+                  
+                  // Update the deduction polygon with the clipped points
+                  const updatedDeduction = { ...deduction, points: clippedPoints };
+                  
+                  // Also insert intersection points into the main polygon
+                  const updatedMainPolygons = insertDeductionIntersections(updatedDeduction, [mainPolygon]);
+                  
+                  // Build new polygon list
+                  const otherPolygons = polygons.filter(p => p.id !== deduction.id && p.id !== mainPolygon.id);
+                  setPolygons([...updatedMainPolygons, ...otherPolygons, updatedDeduction]);
+                  
+                  Alert.alert('Fertig', 'Abzugsfläche wurde eingepasst und Schnittpunkte eingefügt.');
                 }}
               >
                 <Ionicons name="cut" size={20} color="#fff" />
-                <Text style={[styles.toolLabel, { color: '#fff' }]}>Schneiden</Text>
+                <Text style={[styles.toolLabel, { color: '#fff' }]}>Einpassen</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.toolButton, { backgroundColor: '#f44336' }]} onPress={deleteSelectedPolygon}>

@@ -11,6 +11,7 @@ import {
   TextInput,
   ScrollView,
   PanResponder,
+  Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +53,33 @@ export default function AreaCalculatorEditor() {
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(1); // 1 Meter pro Rasterfeld
+  
+  // Custom edge lengths (user can override calculated values)
+  const [customEdgeLengths, setCustomEdgeLengths] = useState<{ [key: string]: number }>({});
+  
+  // Numpad state
+  const [showNumpad, setShowNumpad] = useState(false);
+  const [numpadInput, setNumpadInput] = useState('');
+  const [editingEdge, setEditingEdge] = useState<{ polygonId: string; edgeIndex: number } | null>(null);
+  const numpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const numpadPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        numpadPosition.setOffset({
+          x: (numpadPosition.x as any)._value || 0,
+          y: (numpadPosition.y as any)._value || 0,
+        });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: numpadPosition.x, dy: numpadPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        numpadPosition.flattenOffset();
+      },
+    })
+  ).current;
   
   // Undo/Redo History
   interface HistoryState {
@@ -1141,11 +1169,114 @@ export default function AreaCalculatorEditor() {
     return angle;
   };
 
+  // Numpad functions
+  const handleNumpadPress = (key: string) => {
+    if (key === 'C') {
+      setNumpadInput('');
+    } else if (key === '⌫') {
+      setNumpadInput(prev => prev.slice(0, -1));
+    } else if (key === 'OK') {
+      applyNumpadInput();
+    } else {
+      setNumpadInput(prev => prev + key);
+    }
+  };
+
+  const applyNumpadInput = () => {
+    if (!editingEdge) return;
+    
+    const value = parseFloat(numpadInput.replace(',', '.'));
+    if (isNaN(value) || value <= 0) {
+      Alert.alert('Ungültige Eingabe', 'Bitte geben Sie eine gültige Zahl ein.');
+      return;
+    }
+    
+    // Save custom length
+    const edgeKey = `${editingEdge.polygonId}-${editingEdge.edgeIndex}`;
+    setCustomEdgeLengths(prev => ({ ...prev, [edgeKey]: value }));
+    
+    // Close numpad
+    setShowNumpad(false);
+    setEditingEdge(null);
+    setNumpadInput('');
+  };
+
+  const openNumpadForEdge = (polygonId: string, edgeIndex: number, currentLength: number) => {
+    setEditingEdge({ polygonId, edgeIndex });
+    setNumpadInput(currentLength.toFixed(2));
+    setShowNumpad(true);
+  };
+
+  const getEdgeLength = (polygonId: string, edgeIndex: number, calculatedLength: number): number => {
+    const edgeKey = `${polygonId}-${edgeIndex}`;
+    return customEdgeLengths[edgeKey] ?? calculatedLength;
+  };
+
+  const hasCustomLength = (polygonId: string, edgeIndex: number): boolean => {
+    const edgeKey = `${polygonId}-${edgeIndex}`;
+    return customEdgeLengths[edgeKey] !== undefined;
+  };
+
+  // Check if a touch point is on any edge label
+  const findEdgeLabelAtPosition = (x: number, y: number): { polygonId: string; edgeIndex: number; length: number } | null => {
+    const tolerance = 30;
+    
+    for (const polygon of polygons) {
+      for (let i = 0; i < polygon.points.length; i++) {
+        const point = polygon.points[i];
+        const nextPoint = polygon.points[(i + 1) % polygon.points.length];
+        
+        // Calculate label position (same logic as in rendering)
+        const midX = (point.x + nextPoint.x) / 2;
+        const midY = (point.y + nextPoint.y) / 2;
+        
+        const dx = nextPoint.x - point.x;
+        const dy = nextPoint.y - point.y;
+        const lineLen = Math.sqrt(dx * dx + dy * dy);
+        
+        if (lineLen < 1) continue;
+        
+        const perpX = -dy / lineLen;
+        const perpY = dx / lineLen;
+        
+        const centerX = polygon.points.reduce((s, p) => s + p.x, 0) / polygon.points.length;
+        const centerY = polygon.points.reduce((s, p) => s + p.y, 0) / polygon.points.length;
+        const toCenter = { x: centerX - midX, y: centerY - midY };
+        const perpDot = perpX * toCenter.x + perpY * toCenter.y;
+        
+        const offset = 25;
+        const labelX = midX + (perpDot > 0 ? -perpX : perpX) * offset;
+        const labelY = midY + (perpDot > 0 ? -perpY : perpY) * offset;
+        
+        // Check if touch is near this label
+        const dist = Math.sqrt(Math.pow(x - labelX, 2) + Math.pow(y - labelY, 2));
+        if (dist < tolerance) {
+          const calculatedLength = calculateLineLength(point, nextPoint);
+          return { 
+            polygonId: polygon.id, 
+            edgeIndex: i, 
+            length: getEdgeLength(polygon.id, i, calculatedLength)
+          };
+        }
+      }
+    }
+    return null;
+  };
+
   // Touch handlers
   const handleCanvasTouch = (event: any) => {
     const touch = event.nativeEvent;
     const x = touch.locationX;
     const y = touch.locationY;
+    
+    // Check if clicking on an edge measurement label to edit it
+    if (mode === 'select' && showEdgeLengths) {
+      const edgeLabel = findEdgeLabelAtPosition(x, y);
+      if (edgeLabel) {
+        openNumpadForEdge(edgeLabel.polygonId, edgeLabel.edgeIndex, edgeLabel.length);
+        return;
+      }
+    }
     
     // Use smart snapping
     const snapResult = snapToNearestPoint(x, y);
@@ -2582,8 +2713,11 @@ export default function AreaCalculatorEditor() {
                   // Skip if this edge has a category (already shown with category styling)
                   if (category) return null;
                   
-                  const length = calculateLineLength(point, nextPoint);
-                  if (length < 0.1) return null; // Skip very short edges
+                  const calculatedLength = calculateLineLength(point, nextPoint);
+                  if (calculatedLength < 0.1) return null; // Skip very short edges
+                  
+                  const displayLength = getEdgeLength(polygon.id, index, calculatedLength);
+                  const isCustom = hasCustomLength(polygon.id, index);
                   
                   // Position label at the midpoint of the line
                   const midX = (point.x + nextPoint.x) / 2;
@@ -2611,8 +2745,9 @@ export default function AreaCalculatorEditor() {
                   
                   const labelWidth = 55;
                   const labelHeight = 20;
-                  const bgColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
-                  const displayText = `${length.toFixed(2)}m`;
+                  // Custom values shown in blue, normal in green/red
+                  const bgColor = isCustom ? '#2196F3' : (polygon.type === 'deduction' ? '#f44336' : '#4CAF50');
+                  const displayText = `${displayLength.toFixed(2)}m`;
                   
                   return (
                     <G key={`edge-length-${polygon.id}-${index}`}>
@@ -2623,6 +2758,8 @@ export default function AreaCalculatorEditor() {
                         height={labelHeight} 
                         rx={3} 
                         fill={bgColor}
+                        stroke={isCustom ? '#1565C0' : undefined}
+                        strokeWidth={isCustom ? 2 : 0}
                       />
                       <SvgText 
                         x={labelX - labelWidth / 2 + 4} 
@@ -2634,6 +2771,17 @@ export default function AreaCalculatorEditor() {
                       >
                         {displayText}
                       </SvgText>
+                      {isCustom && (
+                        <SvgText 
+                          x={labelX + labelWidth / 2 - 4} 
+                          y={labelY - 2} 
+                          textAnchor="end" 
+                          fontSize={8} 
+                          fill="#fff"
+                        >
+                          ✎
+                        </SvgText>
+                      )}
                     </G>
                   );
                 })}
@@ -3305,6 +3453,56 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
+      {/* Numpad for edge length input */}
+      {showNumpad && (
+        <Animated.View 
+          style={[
+            styles.numpadContainer,
+            { transform: numpadPosition.getTranslateTransform() }
+          ]}
+          {...numpadPanResponder.panHandlers}
+        >
+          <View style={styles.numpadHeader}>
+            <Text style={styles.numpadTitle}>Maß eingeben</Text>
+            <TouchableOpacity onPress={() => { setShowNumpad(false); setEditingEdge(null); setNumpadInput(''); }}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.numpadDisplay}>
+            <Text style={styles.numpadDisplayText}>{numpadInput || '0'}</Text>
+            <Text style={styles.numpadUnit}>m</Text>
+          </View>
+          
+          <View style={styles.numpadGrid}>
+            {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
+              <TouchableOpacity
+                key={key}
+                style={styles.numpadButton}
+                onPress={() => handleNumpadPress(key)}
+              >
+                <Text style={styles.numpadButtonText}>{key}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          <View style={styles.numpadActions}>
+            <TouchableOpacity 
+              style={[styles.numpadActionButton, { backgroundColor: '#f44336' }]}
+              onPress={() => handleNumpadPress('C')}
+            >
+              <Text style={styles.numpadActionText}>Löschen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.numpadActionButton, { backgroundColor: '#4CAF50' }]}
+              onPress={() => handleNumpadPress('OK')}
+            >
+              <Text style={styles.numpadActionText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
       {/* Results Modal */}
       <Modal visible={showResultsModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -3807,6 +4005,90 @@ const styles = StyleSheet.create({
   directionButtonText: {
     color: '#fff',
     fontSize: 13,
+    fontWeight: '600',
+  },
+  // Numpad styles
+  numpadContainer: {
+    position: 'absolute',
+    bottom: 150,
+    right: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: 220,
+  },
+  numpadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  numpadTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  numpadDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  numpadDisplayText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 4,
+  },
+  numpadUnit: {
+    fontSize: 16,
+    color: '#666',
+  },
+  numpadGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  numpadButton: {
+    width: '30%',
+    aspectRatio: 1.5,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  numpadButtonText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  numpadActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    gap: 8,
+  },
+  numpadActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  numpadActionText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

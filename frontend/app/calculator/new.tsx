@@ -560,7 +560,45 @@ export default function AreaCalculatorEditor() {
       }
     }
     
-    // 3. Snap to grid if enabled and no better snap point found
+    // 3. Snap to existing polygon points (all polygons)
+    for (const polygon of polygons) {
+      for (const point of polygon.points) {
+        const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+        if (dist < snapTolerance && dist < bestDistance) {
+          bestDistance = dist;
+          bestPoint = { x: point.x, y: point.y };
+        }
+      }
+    }
+    
+    // 4. Snap to polygon edges (line segments) - useful for aligning
+    for (const polygon of polygons) {
+      for (let i = 0; i < polygon.points.length; i++) {
+        const p1 = polygon.points[i];
+        const p2 = polygon.points[(i + 1) % polygon.points.length];
+        
+        // Find closest point on this edge
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const lengthSq = dx * dx + dy * dy;
+        
+        if (lengthSq > 0) {
+          let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
+          t = Math.max(0, Math.min(1, t));
+          
+          const closestX = p1.x + t * dx;
+          const closestY = p1.y + t * dy;
+          const dist = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
+          
+          if (dist < snapTolerance && dist < bestDistance) {
+            bestDistance = dist;
+            bestPoint = { x: closestX, y: closestY };
+          }
+        }
+      }
+    }
+    
+    // 5. Snap to grid if enabled and no better snap point found
     if (gridEnabled && bestDistance === Infinity) {
       bestPoint = {
         x: Math.round(x / (gridSize * scale)) * (gridSize * scale),
@@ -2503,9 +2541,10 @@ export default function AreaCalculatorEditor() {
                   const labelX = midX + (perpDot > 0 ? -perpX : perpX) * offset;
                   const labelY = midY + (perpDot > 0 ? -perpY : perpY) * offset;
                   
-                  const labelWidth = 60;
-                  const labelHeight = 22;
+                  const labelWidth = 55;
+                  const labelHeight = 20;
                   const bgColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
+                  const displayText = `${length.toFixed(2)}m`;
                   
                   return (
                     <G key={`edge-length-${polygon.id}-${index}`}>
@@ -2514,20 +2553,18 @@ export default function AreaCalculatorEditor() {
                         y={labelY - labelHeight / 2} 
                         width={labelWidth} 
                         height={labelHeight} 
-                        rx={4} 
+                        rx={3} 
                         fill={bgColor}
-                        stroke="#fff"
-                        strokeWidth={1}
                       />
                       <SvgText 
-                        x={labelX} 
-                        y={labelY + 5} 
-                        textAnchor="middle" 
-                        fontSize={12} 
+                        x={labelX - labelWidth / 2 + 4} 
+                        y={labelY + 4} 
+                        textAnchor="start" 
+                        fontSize={11} 
                         fontWeight="bold" 
                         fill="#fff"
                       >
-                        {length.toFixed(2)} m
+                        {displayText}
                       </SvgText>
                     </G>
                   );

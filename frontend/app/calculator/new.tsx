@@ -268,6 +268,29 @@ export default function AreaCalculatorEditor() {
     return { totalArea, deductionArea, netArea, linesByCategory };
   };
 
+  // Check if a polygon (deduction) is inside another polygon (main area)
+  const isPolygonInsidePolygon = (innerPolygon: AreaPolygon, outerPolygon: AreaPolygon): boolean => {
+    // Check if the center of the inner polygon is inside the outer polygon
+    const centerX = innerPolygon.points.reduce((sum, p) => sum + p.x, 0) / innerPolygon.points.length;
+    const centerY = innerPolygon.points.reduce((sum, p) => sum + p.y, 0) / innerPolygon.points.length;
+    return isPointInPolygon({ x: centerX, y: centerY }, outerPolygon.points);
+  };
+
+  // Calculate net area for a main polygon (gross area minus deductions inside it)
+  const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number } => {
+    const grossArea = calculatePolygonArea(mainPolygon.points);
+    
+    // Find all deduction polygons that are inside this main polygon
+    const deductionPolygons = polygons.filter(p => 
+      p.type === 'deduction' && isPolygonInsidePolygon(p, mainPolygon)
+    );
+    
+    const deductions = deductionPolygons.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
+    const netArea = grossArea - deductions;
+    
+    return { grossArea, deductions, netArea };
+  };
+
   // Save calculation
   const saveCalculation = async () => {
     if (!projectId) {
@@ -1416,41 +1439,97 @@ export default function AreaCalculatorEditor() {
                 {polygon.points.length > 0 && (() => {
                   const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
                   const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
-                  const area = calculatePolygonArea(polygon.points);
                   
-                  return (
-                    <G>
-                      <Rect
-                        x={centerX - 45}
-                        y={centerY - 22}
-                        width={90}
-                        height={44}
-                        rx={6}
-                        fill="rgba(255,255,255,0.95)"
-                        stroke={strokeColor}
-                        strokeWidth={1}
-                      />
-                      <SvgText
-                        x={centerX}
-                        y={centerY - 6}
-                        textAnchor="middle"
-                        fontSize={10}
-                        fill="#666"
-                      >
-                        {polygon.name}
-                      </SvgText>
-                      <SvgText
-                        x={centerX}
-                        y={centerY + 12}
-                        textAnchor="middle"
-                        fontSize={14}
-                        fontWeight="bold"
-                        fill={strokeColor}
-                      >
-                        {area.toFixed(2)} m²
-                      </SvgText>
-                    </G>
-                  );
+                  // For main polygons, show net area (after deductions)
+                  // For deduction polygons, show their area
+                  if (polygon.type === 'main') {
+                    const { grossArea, deductions, netArea } = calculateNetAreaForPolygon(polygon);
+                    const hasDeductions = deductions > 0;
+                    
+                    return (
+                      <G>
+                        <Rect
+                          x={centerX - 50}
+                          y={centerY - (hasDeductions ? 32 : 22)}
+                          width={100}
+                          height={hasDeductions ? 64 : 44}
+                          rx={6}
+                          fill="rgba(255,255,255,0.95)"
+                          stroke={strokeColor}
+                          strokeWidth={1}
+                        />
+                        <SvgText
+                          x={centerX}
+                          y={centerY - (hasDeductions ? 18 : 6)}
+                          textAnchor="middle"
+                          fontSize={10}
+                          fill="#666"
+                        >
+                          {polygon.name}
+                        </SvgText>
+                        {hasDeductions && (
+                          <>
+                            <SvgText
+                              x={centerX}
+                              y={centerY}
+                              textAnchor="middle"
+                              fontSize={10}
+                              fill="#999"
+                            >
+                              {grossArea.toFixed(2)} - {deductions.toFixed(2)}
+                            </SvgText>
+                          </>
+                        )}
+                        <SvgText
+                          x={centerX}
+                          y={centerY + (hasDeductions ? 18 : 12)}
+                          textAnchor="middle"
+                          fontSize={14}
+                          fontWeight="bold"
+                          fill={strokeColor}
+                        >
+                          {netArea.toFixed(2)} m²
+                        </SvgText>
+                      </G>
+                    );
+                  } else {
+                    // Deduction polygon - show negative area
+                    const area = calculatePolygonArea(polygon.points);
+                    
+                    return (
+                      <G>
+                        <Rect
+                          x={centerX - 45}
+                          y={centerY - 22}
+                          width={90}
+                          height={44}
+                          rx={6}
+                          fill="rgba(255,255,255,0.95)"
+                          stroke={strokeColor}
+                          strokeWidth={1}
+                        />
+                        <SvgText
+                          x={centerX}
+                          y={centerY - 6}
+                          textAnchor="middle"
+                          fontSize={10}
+                          fill="#666"
+                        >
+                          {polygon.name}
+                        </SvgText>
+                        <SvgText
+                          x={centerX}
+                          y={centerY + 12}
+                          textAnchor="middle"
+                          fontSize={14}
+                          fontWeight="bold"
+                          fill={strokeColor}
+                        >
+                          -{area.toFixed(2)} m²
+                        </SvgText>
+                      </G>
+                    );
+                  }
                 })()}
               </G>
             );

@@ -75,6 +75,12 @@ export default function AreaCalculatorEditor() {
   const [selectedGuideLineId, setSelectedGuideLineId] = useState<string | null>(null);
   const [draggingGuidePoint, setDraggingGuidePoint] = useState<{ guideId: string; point: 'start' | 'end' | 'middle' } | null>(null);
   const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
+  const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
+  const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
+  
+  // Label-Positionen (Offset vom Polygon-Zentrum)
+  const [labelOffsets, setLabelOffsets] = useState<{ [polygonId: string]: AreaPoint }>({});
+  const [draggingLabel, setDraggingLabel] = useState<string | null>(null);
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel'>('select');
@@ -238,6 +244,18 @@ export default function AreaCalculatorEditor() {
     const dy = p2.y - p1.y;
     const pixelLength = Math.sqrt(dx * dx + dy * dy);
     return pixelLength / scale; // Convert to meters
+  };
+
+  // Calculate angle between three points (in degrees)
+  const calculateAngle = (p1: AreaPoint, vertex: AreaPoint, p2: AreaPoint): number => {
+    const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
+    const v2 = { x: p2.x - vertex.x, y: p2.y - vertex.y };
+    
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const cross = v1.x * v2.y - v1.y * v2.x;
+    
+    let angle = Math.atan2(Math.abs(cross), dot) * (180 / Math.PI);
+    return angle;
   };
 
   // Calculate results
@@ -1189,6 +1207,14 @@ export default function AreaCalculatorEditor() {
           <Ionicons name="compass" size={20} color={snapToAngles ? '#fff' : '#666'} />
           <Text style={[styles.toolLabel, snapToAngles && styles.toolLabelActive]}>45°</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, showPolygonAngles && styles.toolButtonActive]}
+          onPress={() => setShowPolygonAngles(!showPolygonAngles)}
+        >
+          <Ionicons name="analytics" size={20} color={showPolygonAngles ? '#fff' : '#666'} />
+          <Text style={[styles.toolLabel, showPolygonAngles && styles.toolLabelActive]}>Winkel</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Canvas */}
@@ -1198,6 +1224,23 @@ export default function AreaCalculatorEditor() {
           const touch = event.nativeEvent;
           const x = touch.locationX;
           const y = touch.locationY;
+          
+          // Check if touching a label for dragging
+          if (mode === 'select') {
+            for (const polygon of polygons) {
+              const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
+              const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
+              const offset = labelOffsets[polygon.id] || { x: 0, y: 0 };
+              const labelX = centerX + offset.x;
+              const labelY = centerY + offset.y;
+              
+              // Check if touch is on label (approximate box)
+              if (Math.abs(x - labelX) < 55 && Math.abs(y - labelY) < 35) {
+                setDraggingLabel(polygon.id);
+                return;
+              }
+            }
+          }
           
           // Check if touching a guide line point for dragging
           if (mode === 'select' && guideLinesVisible) {
@@ -1210,17 +1253,43 @@ export default function AreaCalculatorEditor() {
           }
         }}
         onTouchMove={(event) => {
+          const touch = event.nativeEvent;
+          const x = touch.locationX;
+          const y = touch.locationY;
+          
+          // Update current touch position for live length display
+          if ((mode === 'polygon' || mode === 'deduction' || mode === 'guideline') && currentPoints.length > 0) {
+            setCurrentTouchPosition({ x, y });
+          }
+          
+          // Dragging label
+          if (draggingLabel) {
+            const polygon = polygons.find(p => p.id === draggingLabel);
+            if (polygon) {
+              const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
+              const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
+              setLabelOffsets({
+                ...labelOffsets,
+                [draggingLabel]: { x: x - centerX, y: y - centerY }
+              });
+            }
+            return;
+          }
+          
           if (draggingGuidePoint) {
-            const touch = event.nativeEvent;
-            const x = touch.locationX;
-            const y = touch.locationY;
-            
             // Snap to grid if enabled
             const snapped = snapToNearestPoint(x, y);
             updateGuideLinePoint(draggingGuidePoint.guideId, draggingGuidePoint.point, snapped);
           }
         }}
         onTouchEnd={(event) => {
+          setCurrentTouchPosition(null);
+          
+          if (draggingLabel) {
+            setDraggingLabel(null);
+            return;
+          }
+          
           if (draggingGuidePoint) {
             setDraggingGuidePoint(null);
             return;
@@ -1325,16 +1394,6 @@ export default function AreaCalculatorEditor() {
             </G>
           ))}
           
-          {/* Current guide line being drawn */}
-          {mode === 'guideline' && currentPoints.length === 1 && (
-            <Circle
-              cx={currentPoints[0].x}
-              cy={currentPoints[0].y}
-              r={8}
-              fill="#FF9800"
-            />
-          )}
-          
           {/* Scale reference line */}
           {scaleReference.startPoint && (
             <>
@@ -1435,10 +1494,44 @@ export default function AreaCalculatorEditor() {
                   />
                 ))}
                 
-                {/* Area label */}
+                {/* Angle display at vertices */}
+                {showPolygonAngles && polygon.points.length >= 3 && polygon.points.map((vertex, index) => {
+                  const prevIndex = (index - 1 + polygon.points.length) % polygon.points.length;
+                  const nextIndex = (index + 1) % polygon.points.length;
+                  const prevPoint = polygon.points[prevIndex];
+                  const nextPoint = polygon.points[nextIndex];
+                  const angle = calculateAngle(prevPoint, vertex, nextPoint);
+                  
+                  return (
+                    <G key={`angle-${polygon.id}-${index}`}>
+                      <Circle
+                        cx={vertex.x}
+                        cy={vertex.y}
+                        r={16}
+                        fill="rgba(33,150,243,0.9)"
+                      />
+                      <SvgText
+                        x={vertex.x}
+                        y={vertex.y + 4}
+                        textAnchor="middle"
+                        fontSize={9}
+                        fontWeight="bold"
+                        fill="#fff"
+                      >
+                        {angle.toFixed(0)}°
+                      </SvgText>
+                    </G>
+                  );
+                })}
+                
+                {/* Area label - draggable */}
                 {polygon.points.length > 0 && (() => {
                   const centerX = polygon.points.reduce((sum, p) => sum + p.x, 0) / polygon.points.length;
                   const centerY = polygon.points.reduce((sum, p) => sum + p.y, 0) / polygon.points.length;
+                  const offset = labelOffsets[polygon.id] || { x: 0, y: 0 };
+                  const labelX = centerX + offset.x;
+                  const labelY = centerY + offset.y;
+                  const hasOffset = offset.x !== 0 || offset.y !== 0;
                   
                   // For main polygons, show net area (after deductions)
                   // For deduction polygons, show their area
@@ -1448,9 +1541,21 @@ export default function AreaCalculatorEditor() {
                     
                     return (
                       <G>
+                        {/* Leader line from center to label */}
+                        {hasOffset && (
+                          <Line
+                            x1={centerX}
+                            y1={centerY}
+                            x2={labelX}
+                            y2={labelY}
+                            stroke={strokeColor}
+                            strokeWidth={1}
+                            strokeDasharray="4,4"
+                          />
+                        )}
                         <Rect
-                          x={centerX - 50}
-                          y={centerY - (hasDeductions ? 32 : 22)}
+                          x={labelX - 50}
+                          y={labelY - (hasDeductions ? 32 : 22)}
                           width={100}
                           height={hasDeductions ? 64 : 44}
                           rx={6}
@@ -1459,8 +1564,8 @@ export default function AreaCalculatorEditor() {
                           strokeWidth={1}
                         />
                         <SvgText
-                          x={centerX}
-                          y={centerY - (hasDeductions ? 18 : 6)}
+                          x={labelX}
+                          y={labelY - (hasDeductions ? 18 : 6)}
                           textAnchor="middle"
                           fontSize={10}
                           fill="#666"
@@ -1470,8 +1575,8 @@ export default function AreaCalculatorEditor() {
                         {hasDeductions && (
                           <>
                             <SvgText
-                              x={centerX}
-                              y={centerY}
+                              x={labelX}
+                              y={labelY}
                               textAnchor="middle"
                               fontSize={10}
                               fill="#999"
@@ -1481,8 +1586,8 @@ export default function AreaCalculatorEditor() {
                           </>
                         )}
                         <SvgText
-                          x={centerX}
-                          y={centerY + (hasDeductions ? 18 : 12)}
+                          x={labelX}
+                          y={labelY + (hasDeductions ? 18 : 12)}
                           textAnchor="middle"
                           fontSize={14}
                           fontWeight="bold"
@@ -1498,9 +1603,21 @@ export default function AreaCalculatorEditor() {
                     
                     return (
                       <G>
+                        {/* Leader line from center to label */}
+                        {hasOffset && (
+                          <Line
+                            x1={centerX}
+                            y1={centerY}
+                            x2={labelX}
+                            y2={labelY}
+                            stroke={strokeColor}
+                            strokeWidth={1}
+                            strokeDasharray="4,4"
+                          />
+                        )}
                         <Rect
-                          x={centerX - 45}
-                          y={centerY - 22}
+                          x={labelX - 45}
+                          y={labelY - 22}
                           width={90}
                           height={44}
                           rx={6}
@@ -1509,8 +1626,8 @@ export default function AreaCalculatorEditor() {
                           strokeWidth={1}
                         />
                         <SvgText
-                          x={centerX}
-                          y={centerY - 6}
+                          x={labelX}
+                          y={labelY - 6}
                           textAnchor="middle"
                           fontSize={10}
                           fill="#666"
@@ -1518,8 +1635,8 @@ export default function AreaCalculatorEditor() {
                           {polygon.name}
                         </SvgText>
                         <SvgText
-                          x={centerX}
-                          y={centerY + 12}
+                          x={labelX}
+                          y={labelY + 12}
                           textAnchor="middle"
                           fontSize={14}
                           fontWeight="bold"
@@ -1536,7 +1653,7 @@ export default function AreaCalculatorEditor() {
           })}
           
           {/* Current drawing polygon */}
-          {currentPoints.length > 0 && (
+          {currentPoints.length > 0 && (mode === 'polygon' || mode === 'deduction') && (
             <G>
               {currentPoints.length > 1 && (
                 <SvgPolygon
@@ -1546,6 +1663,82 @@ export default function AreaCalculatorEditor() {
                   strokeWidth={2}
                   strokeDasharray="5,5"
                 />
+              )}
+              
+              {/* Line lengths for drawn segments */}
+              {currentPoints.map((point, index) => {
+                if (index === 0) return null;
+                const prevPoint = currentPoints[index - 1];
+                const length = calculateLineLength(prevPoint, point);
+                const midX = (prevPoint.x + point.x) / 2;
+                const midY = (prevPoint.y + point.y) / 2;
+                
+                return (
+                  <G key={`length-${index}`}>
+                    <Rect
+                      x={midX - 25}
+                      y={midY - 10}
+                      width={50}
+                      height={20}
+                      rx={4}
+                      fill="rgba(0,0,0,0.7)"
+                    />
+                    <SvgText
+                      x={midX}
+                      y={midY + 5}
+                      textAnchor="middle"
+                      fontSize={12}
+                      fontWeight="bold"
+                      fill="#fff"
+                    >
+                      {length.toFixed(2)}m
+                    </SvgText>
+                  </G>
+                );
+              })}
+              
+              {/* Live preview line to current touch position */}
+              {currentTouchPosition && currentPoints.length > 0 && (
+                <G>
+                  <Line
+                    x1={currentPoints[currentPoints.length - 1].x}
+                    y1={currentPoints[currentPoints.length - 1].y}
+                    x2={currentTouchPosition.x}
+                    y2={currentTouchPosition.y}
+                    stroke={mode === 'deduction' ? '#f44336' : '#4CAF50'}
+                    strokeWidth={2}
+                    strokeDasharray="5,5"
+                  />
+                  {/* Live length display */}
+                  {(() => {
+                    const lastPoint = currentPoints[currentPoints.length - 1];
+                    const length = calculateLineLength(lastPoint, currentTouchPosition);
+                    const midX = (lastPoint.x + currentTouchPosition.x) / 2;
+                    const midY = (lastPoint.y + currentTouchPosition.y) / 2;
+                    return (
+                      <G>
+                        <Rect
+                          x={midX - 30}
+                          y={midY - 12}
+                          width={60}
+                          height={24}
+                          rx={4}
+                          fill="#1976d2"
+                        />
+                        <SvgText
+                          x={midX}
+                          y={midY + 6}
+                          textAnchor="middle"
+                          fontSize={14}
+                          fontWeight="bold"
+                          fill="#fff"
+                        >
+                          {length.toFixed(2)}m
+                        </SvgText>
+                      </G>
+                    );
+                  })()}
+                </G>
               )}
               
               {currentPoints.map((point, index) => (
@@ -1569,6 +1762,59 @@ export default function AreaCalculatorEditor() {
                   )}
                 </G>
               ))}
+            </G>
+          )}
+          
+          {/* Current guide line being drawn - with live length */}
+          {mode === 'guideline' && currentPoints.length === 1 && (
+            <G>
+              <Circle
+                cx={currentPoints[0].x}
+                cy={currentPoints[0].y}
+                r={8}
+                fill="#FF9800"
+              />
+              {currentTouchPosition && (
+                <G>
+                  <Line
+                    x1={currentPoints[0].x}
+                    y1={currentPoints[0].y}
+                    x2={currentTouchPosition.x}
+                    y2={currentTouchPosition.y}
+                    stroke="#FF9800"
+                    strokeWidth={2}
+                    strokeDasharray="5,5"
+                  />
+                  {/* Live length display */}
+                  {(() => {
+                    const length = calculateLineLength(currentPoints[0], currentTouchPosition);
+                    const midX = (currentPoints[0].x + currentTouchPosition.x) / 2;
+                    const midY = (currentPoints[0].y + currentTouchPosition.y) / 2;
+                    return (
+                      <G>
+                        <Rect
+                          x={midX - 30}
+                          y={midY - 12}
+                          width={60}
+                          height={24}
+                          rx={4}
+                          fill="#FF9800"
+                        />
+                        <SvgText
+                          x={midX}
+                          y={midY + 6}
+                          textAnchor="middle"
+                          fontSize={14}
+                          fontWeight="bold"
+                          fill="#fff"
+                        >
+                          {length.toFixed(2)}m
+                        </SvgText>
+                      </G>
+                    );
+                  })()}
+                </G>
+              )}
             </G>
           )}
         </Svg>

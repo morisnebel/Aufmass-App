@@ -386,11 +386,11 @@ export default function AreaCalculatorEditor() {
       }
     }
     
-    console.log('[CLIP] Subject points:', subject.length, 'Clip points:', clip.length, 'Result:', outputList.length);
+    console.log('[CLIP] Subject:', subject.length, 'Clip:', clip.length, 'Result:', outputList.length);
     return outputList;
   };
 
-  // Check if point is on the left side of a directed edge (inside for clockwise polygon)
+  // Check if point is on the left side of a directed edge (inside for counter-clockwise polygon)
   const isPointOnLeftSide = (point: AreaPoint, edgeStart: AreaPoint, edgeEnd: AreaPoint): boolean => {
     return ((edgeEnd.x - edgeStart.x) * (point.y - edgeStart.y) - 
             (edgeEnd.y - edgeStart.y) * (point.x - edgeStart.x)) >= 0;
@@ -415,32 +415,25 @@ export default function AreaCalculatorEditor() {
   // Calculate the intersection area between a deduction and a main polygon
   const calculateIntersectionArea = (deductionPolygon: AreaPolygon, mainPolygon: AreaPolygon): number => {
     const clippedPoints = clipPolygonToPolygon(deductionPolygon.points, mainPolygon.points);
-    console.log('[AREA] Clipped points:', clippedPoints.length);
     if (clippedPoints.length < 3) return 0;
-    const area = calculatePolygonArea(clippedPoints);
-    console.log('[AREA] Intersection area:', area);
-    return area;
+    return calculatePolygonArea(clippedPoints);
   };
 
   // Calculate net area for a main polygon (gross area minus ACTUAL overlap with deductions)
   const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number } => {
     const grossArea = calculatePolygonArea(mainPolygon.points);
-    console.log('[NET] Gross area:', grossArea);
     
     // Find all deduction polygons and calculate their actual intersection with this main polygon
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
-    console.log('[NET] Deduction polygons count:', deductionPolygons.length);
     
     let totalDeductions = 0;
     for (const deduction of deductionPolygons) {
       // Calculate the actual overlapping area (not the full deduction)
       const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
-      console.log('[NET] Deduction intersection:', intersectionArea);
       totalDeductions += intersectionArea;
     }
     
     const netArea = grossArea - totalDeductions;
-    console.log('[NET] Total deductions:', totalDeductions, 'Net area:', netArea);
     
     return { grossArea, deductions: totalDeductions, netArea };
   };
@@ -2354,8 +2347,8 @@ export default function AreaCalculatorEditor() {
           {polygons.map((polygon) => {
             const pointsString = polygon.points.map(p => `${p.x},${p.y}`).join(' ');
             const isSelected = selectedPolygonId === polygon.id;
-            // Abzugsflächen nicht mehr transparent - solide weiße Füllung
-            const fillColor = polygon.type === 'deduction' ? '#fff' : 'rgba(76,175,80,0.3)';
+            // Abzugsflächen halbtransparent rot, Grundflächen halbtransparent grün
+            const fillColor = polygon.type === 'deduction' ? 'rgba(244,67,54,0.4)' : 'rgba(76,175,80,0.3)';
             const strokeColor = polygon.type === 'deduction' ? '#f44336' : '#4CAF50';
             
             return (
@@ -2485,52 +2478,37 @@ export default function AreaCalculatorEditor() {
                   // Skip if this edge has a category (already shown with category styling)
                   if (category) return null;
                   
-                  // Calculate midpoint and length
+                  const length = calculateLineLength(point, nextPoint);
+                  if (length < 0.1) return null; // Skip very short edges
+                  
+                  // Position label at the midpoint of the line
                   const midX = (point.x + nextPoint.x) / 2;
                   const midY = (point.y + nextPoint.y) / 2;
-                  const length = calculateLineLength(point, nextPoint);
                   
-                  // Calculate line direction and perpendicular
+                  // Calculate rotation angle for the label to align with the line
                   const dx = nextPoint.x - point.x;
                   const dy = nextPoint.y - point.y;
-                  const lineLen = Math.sqrt(dx * dx + dy * dy);
+                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                   
-                  if (lineLen < 1) return null;
+                  // Keep text readable (not upside down)
+                  if (angle > 90 || angle < -90) {
+                    angle += 180;
+                  }
                   
-                  // Perpendicular offset (outward from polygon center)
-                  const perpX = -dy / lineLen * 20;
-                  const perpY = dx / lineLen * 20;
-                  
-                  // Determine which side is "outside" the polygon
-                  const centerX = polygon.points.reduce((s, p) => s + p.x, 0) / polygon.points.length;
-                  const centerY = polygon.points.reduce((s, p) => s + p.y, 0) / polygon.points.length;
-                  const toCenter = { x: centerX - midX, y: centerY - midY };
-                  const perpDot = perpX * toCenter.x + perpY * toCenter.y;
-                  
-                  // Position on the outside of the polygon
-                  const offsetX = perpDot > 0 ? -perpX : perpX;
-                  const offsetY = perpDot > 0 ? -perpY : perpY;
-                  
-                  let labelX = midX + offsetX;
-                  let labelY = midY + offsetY;
-                  
-                  // Clamp label position to stay within canvas bounds
-                  const labelWidth = 52;
-                  const labelHeight = 18;
-                  labelX = Math.max(labelWidth / 2 + 5, Math.min(SCREEN_WIDTH - labelWidth / 2 - 5, labelX));
-                  labelY = Math.max(labelHeight / 2 + 5, Math.min(SCREEN_HEIGHT - 200, labelY));
+                  const labelWidth = 50;
+                  const labelHeight = 16;
                   
                   return (
-                    <G key={`edge-length-${polygon.id}-${index}`}>
+                    <G key={`edge-length-${polygon.id}-${index}`} transform={`rotate(${angle}, ${midX}, ${midY})`}>
                       <Rect 
-                        x={labelX - labelWidth / 2} 
-                        y={labelY - labelHeight / 2} 
+                        x={midX - labelWidth / 2} 
+                        y={midY - labelHeight / 2} 
                         width={labelWidth} 
                         height={labelHeight} 
                         rx={3} 
                         fill={polygon.type === 'deduction' ? '#f44336' : '#4CAF50'} 
                       />
-                      <SvgText x={labelX} y={labelY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
+                      <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={9} fontWeight="bold" fill="#fff">
                         {length.toFixed(2)} m
                       </SvgText>
                     </G>

@@ -1203,11 +1203,100 @@ export default function AreaCalculatorEditor() {
       color: mode === 'deduction' ? '#f44336' : '#4CAF50',
     };
     
-    setPolygons([...polygons, newPolygon]);
+    // If this is a deduction polygon, insert intersection points into main polygons
+    if (mode === 'deduction') {
+      const updatedMainPolygons = insertDeductionIntersections(newPolygon, polygons);
+      setPolygons([...updatedMainPolygons, newPolygon]);
+    } else {
+      setPolygons([...polygons, newPolygon]);
+    }
+    
     setCurrentPoints([]);
     setPolygonNameInput(newPolygon.name);
     setSelectedPolygonId(newPolygon.id);
     setShowPolygonNameModal(true);
+  };
+
+  // Insert intersection points from deduction into main polygons (snipping tool effect)
+  const insertDeductionIntersections = (deduction: AreaPolygon, existingPolygons: AreaPolygon[]): AreaPolygon[] => {
+    return existingPolygons.map(polygon => {
+      if (polygon.type !== 'main') return polygon;
+      
+      // Collect all intersection points for this main polygon
+      const intersections: { edgeIndex: number; t: number; point: AreaPoint }[] = [];
+      
+      // Check each edge of the main polygon against each edge of the deduction
+      for (let mainIdx = 0; mainIdx < polygon.points.length; mainIdx++) {
+        const mainP1 = polygon.points[mainIdx];
+        const mainP2 = polygon.points[(mainIdx + 1) % polygon.points.length];
+        
+        for (let dedIdx = 0; dedIdx < deduction.points.length; dedIdx++) {
+          const dedP1 = deduction.points[dedIdx];
+          const dedP2 = deduction.points[(dedIdx + 1) % deduction.points.length];
+          
+          const intersection = getLineSegmentIntersection(mainP1, mainP2, dedP1, dedP2);
+          if (intersection) {
+            // Check if this intersection point is not too close to existing points
+            const minDist = 10;
+            const tooClose = polygon.points.some(p => 
+              Math.sqrt(Math.pow(p.x - intersection.point.x, 2) + Math.pow(p.y - intersection.point.y, 2)) < minDist
+            ) || intersections.some(i => 
+              i.edgeIndex === mainIdx && Math.abs(i.t - intersection.t) < 0.05
+            );
+            
+            if (!tooClose) {
+              intersections.push({
+                edgeIndex: mainIdx,
+                t: intersection.t,
+                point: intersection.point
+              });
+            }
+          }
+        }
+      }
+      
+      if (intersections.length === 0) return polygon;
+      
+      // Sort intersections by edge index, then by t value (position along edge)
+      intersections.sort((a, b) => {
+        if (a.edgeIndex !== b.edgeIndex) return a.edgeIndex - b.edgeIndex;
+        return a.t - b.t;
+      });
+      
+      // Build new points array with intersection points inserted
+      const newPoints: AreaPoint[] = [];
+      let intersectionIdx = 0;
+      
+      for (let i = 0; i < polygon.points.length; i++) {
+        newPoints.push(polygon.points[i]);
+        
+        // Insert any intersection points for this edge
+        while (intersectionIdx < intersections.length && intersections[intersectionIdx].edgeIndex === i) {
+          newPoints.push(intersections[intersectionIdx].point);
+          intersectionIdx++;
+        }
+      }
+      
+      // Update line categories to reflect new indices
+      const updatedLines = lines.map(line => {
+        if (line.polygonId !== polygon.id) return line;
+        
+        // Count how many intersection points were added before this line's index
+        let offset = 0;
+        for (const inter of intersections) {
+          if (inter.edgeIndex < line.pointIndex) {
+            offset++;
+          }
+        }
+        
+        return { ...line, pointIndex: line.pointIndex + offset };
+      });
+      
+      // Update the lines state
+      setTimeout(() => setLines(updatedLines), 0);
+      
+      return { ...polygon, points: newPoints };
+    });
   };
 
   // Apply scale from reference line

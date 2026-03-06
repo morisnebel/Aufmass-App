@@ -333,14 +333,35 @@ export default function AreaCalculatorEditor() {
 
   // Sutherland-Hodgman polygon clipping algorithm
   // Clips 'subjectPolygon' to 'clipPolygon' and returns the intersection
+  // Ensure polygon points are in counter-clockwise order
+  const ensureCounterClockwise = (points: AreaPoint[]): AreaPoint[] => {
+    // Calculate signed area (positive = counter-clockwise, negative = clockwise)
+    let signedArea = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      signedArea += points[i].x * points[j].y;
+      signedArea -= points[j].x * points[i].y;
+    }
+    // If clockwise (negative), reverse the order
+    if (signedArea < 0) {
+      return [...points].reverse();
+    }
+    return points;
+  };
+
+  // Sutherland-Hodgman polygon clipping algorithm
   const clipPolygonToPolygon = (subjectPoints: AreaPoint[], clipPoints: AreaPoint[]): AreaPoint[] => {
-    let outputList = [...subjectPoints];
+    // Ensure both polygons are counter-clockwise
+    const subject = ensureCounterClockwise(subjectPoints);
+    const clip = ensureCounterClockwise(clipPoints);
     
-    for (let i = 0; i < clipPoints.length; i++) {
+    let outputList = [...subject];
+    
+    for (let i = 0; i < clip.length; i++) {
       if (outputList.length === 0) return [];
       
-      const clipEdgeStart = clipPoints[i];
-      const clipEdgeEnd = clipPoints[(i + 1) % clipPoints.length];
+      const clipEdgeStart = clip[i];
+      const clipEdgeEnd = clip[(i + 1) % clip.length];
       
       const inputList = [...outputList];
       outputList = [];
@@ -365,6 +386,7 @@ export default function AreaCalculatorEditor() {
       }
     }
     
+    console.log('[CLIP] Subject points:', subject.length, 'Clip points:', clip.length, 'Result:', outputList.length);
     return outputList;
   };
 
@@ -393,25 +415,32 @@ export default function AreaCalculatorEditor() {
   // Calculate the intersection area between a deduction and a main polygon
   const calculateIntersectionArea = (deductionPolygon: AreaPolygon, mainPolygon: AreaPolygon): number => {
     const clippedPoints = clipPolygonToPolygon(deductionPolygon.points, mainPolygon.points);
+    console.log('[AREA] Clipped points:', clippedPoints.length);
     if (clippedPoints.length < 3) return 0;
-    return calculatePolygonArea(clippedPoints);
+    const area = calculatePolygonArea(clippedPoints);
+    console.log('[AREA] Intersection area:', area);
+    return area;
   };
 
   // Calculate net area for a main polygon (gross area minus ACTUAL overlap with deductions)
   const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number } => {
     const grossArea = calculatePolygonArea(mainPolygon.points);
+    console.log('[NET] Gross area:', grossArea);
     
     // Find all deduction polygons and calculate their actual intersection with this main polygon
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
+    console.log('[NET] Deduction polygons count:', deductionPolygons.length);
     
     let totalDeductions = 0;
     for (const deduction of deductionPolygons) {
       // Calculate the actual overlapping area (not the full deduction)
       const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+      console.log('[NET] Deduction intersection:', intersectionArea);
       totalDeductions += intersectionArea;
     }
     
     const netArea = grossArea - totalDeductions;
+    console.log('[NET] Total deductions:', totalDeductions, 'Net area:', netArea);
     
     return { grossArea, deductions: totalDeductions, netArea };
   };

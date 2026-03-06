@@ -64,6 +64,8 @@ export default function AreaCalculatorEditor() {
   const [guideLines, setGuideLines] = useState<GuideLine[]>([]);
   const [guideLinesVisible, setGuideLinesVisible] = useState(true);
   const [selectedGuideLineId, setSelectedGuideLineId] = useState<string | null>(null);
+  const [draggingGuidePoint, setDraggingGuidePoint] = useState<{ guideId: string; point: 'start' | 'end' | 'middle' } | null>(null);
+  const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel'>('select');
@@ -374,6 +376,181 @@ export default function AreaCalculatorEditor() {
   const deleteGuideLine = (id: string) => {
     setGuideLines(guideLines.filter(g => g.id !== id && g.parentId !== id));
     setSelectedGuideLineId(null);
+  };
+
+  // Delete all guide lines
+  const deleteAllGuideLines = () => {
+    setGuideLines([]);
+    setSelectedGuideLineId(null);
+  };
+
+  // Duplicate guide line
+  const duplicateGuideLine = (id: string) => {
+    const source = guideLines.find(g => g.id === id);
+    if (!source) return;
+    
+    // Offset by 20 pixels
+    const newGuideLine: GuideLine = {
+      id: Date.now().toString(),
+      start: { x: source.start.x + 20, y: source.start.y + 20 },
+      end: { x: source.end.x + 20, y: source.end.y + 20 },
+    };
+    setGuideLines([...guideLines, newGuideLine]);
+  };
+
+  // Extend guide line to canvas edges
+  const extendGuideLineToEdges = (id: string) => {
+    const guide = guideLines.find(g => g.id === id);
+    if (!guide) return;
+    
+    const dx = guide.end.x - guide.start.x;
+    const dy = guide.end.y - guide.start.y;
+    
+    if (dx === 0 && dy === 0) return;
+    
+    // Calculate line equation: y = mx + b or x = constant for vertical
+    let newStart: AreaPoint;
+    let newEnd: AreaPoint;
+    
+    if (Math.abs(dx) < 0.001) {
+      // Vertical line
+      newStart = { x: guide.start.x, y: 0 };
+      newEnd = { x: guide.start.x, y: canvasHeight };
+    } else if (Math.abs(dy) < 0.001) {
+      // Horizontal line
+      newStart = { x: 0, y: guide.start.y };
+      newEnd = { x: canvasWidth, y: guide.start.y };
+    } else {
+      // Diagonal line
+      const m = dy / dx;
+      const b = guide.start.y - m * guide.start.x;
+      
+      // Find intersections with canvas edges
+      const intersections: AreaPoint[] = [];
+      
+      // Left edge (x = 0)
+      const yLeft = b;
+      if (yLeft >= 0 && yLeft <= canvasHeight) {
+        intersections.push({ x: 0, y: yLeft });
+      }
+      
+      // Right edge (x = canvasWidth)
+      const yRight = m * canvasWidth + b;
+      if (yRight >= 0 && yRight <= canvasHeight) {
+        intersections.push({ x: canvasWidth, y: yRight });
+      }
+      
+      // Top edge (y = 0)
+      const xTop = -b / m;
+      if (xTop >= 0 && xTop <= canvasWidth) {
+        intersections.push({ x: xTop, y: 0 });
+      }
+      
+      // Bottom edge (y = canvasHeight)
+      const xBottom = (canvasHeight - b) / m;
+      if (xBottom >= 0 && xBottom <= canvasWidth) {
+        intersections.push({ x: xBottom, y: canvasHeight });
+      }
+      
+      if (intersections.length >= 2) {
+        newStart = intersections[0];
+        newEnd = intersections[1];
+      } else {
+        return;
+      }
+    }
+    
+    setGuideLines(guideLines.map(g => 
+      g.id === id ? { ...g, start: newStart, end: newEnd } : g
+    ));
+  };
+
+  // Snap angle to 0°, 45°, 90° etc.
+  const snapAngle = (start: AreaPoint, end: AreaPoint): AreaPoint => {
+    if (!snapToAngles) return end;
+    
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    if (length < 10) return end;
+    
+    // Calculate current angle
+    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    
+    // Snap to nearest 45°
+    const snapAngles = [0, 45, 90, 135, 180, -45, -90, -135, -180];
+    let nearestAngle = snapAngles[0];
+    let minDiff = Math.abs(angle - snapAngles[0]);
+    
+    for (const snapAngle of snapAngles) {
+      const diff = Math.abs(angle - snapAngle);
+      if (diff < minDiff) {
+        minDiff = diff;
+        nearestAngle = snapAngle;
+      }
+    }
+    
+    // Only snap if within 5 degrees
+    if (minDiff > 5) return end;
+    
+    const radians = nearestAngle * (Math.PI / 180);
+    return {
+      x: start.x + length * Math.cos(radians),
+      y: start.y + length * Math.sin(radians)
+    };
+  };
+
+  // Update guide line point (for dragging)
+  const updateGuideLinePoint = (guideId: string, point: 'start' | 'end' | 'middle', newPos: AreaPoint) => {
+    setGuideLines(guideLines.map(g => {
+      if (g.id !== guideId) return g;
+      
+      if (point === 'start') {
+        const snappedPos = snapToAngles ? snapAngle(g.end, newPos) : newPos;
+        return { ...g, start: snappedPos };
+      } else if (point === 'end') {
+        const snappedPos = snapToAngles ? snapAngle(g.start, newPos) : newPos;
+        return { ...g, end: snappedPos };
+      } else {
+        // Move entire line (middle)
+        const dx = newPos.x - (g.start.x + g.end.x) / 2;
+        const dy = newPos.y - (g.start.y + g.end.y) / 2;
+        return {
+          ...g,
+          start: { x: g.start.x + dx, y: g.start.y + dy },
+          end: { x: g.end.x + dx, y: g.end.y + dy }
+        };
+      }
+    }));
+  };
+
+  // Check if point is near guide line endpoint
+  const findGuideLinePointAtPosition = (x: number, y: number): { guideId: string; point: 'start' | 'end' | 'middle' } | null => {
+    const tolerance = 20;
+    
+    for (const guide of guideLines) {
+      // Check start point
+      const distStart = Math.sqrt(Math.pow(x - guide.start.x, 2) + Math.pow(y - guide.start.y, 2));
+      if (distStart < tolerance) {
+        return { guideId: guide.id, point: 'start' };
+      }
+      
+      // Check end point
+      const distEnd = Math.sqrt(Math.pow(x - guide.end.x, 2) + Math.pow(y - guide.end.y, 2));
+      if (distEnd < tolerance) {
+        return { guideId: guide.id, point: 'end' };
+      }
+      
+      // Check middle (for moving entire line)
+      const midX = (guide.start.x + guide.end.x) / 2;
+      const midY = (guide.start.y + guide.end.y) / 2;
+      const distMid = Math.sqrt(Math.pow(x - midX, 2) + Math.pow(y - midY, 2));
+      if (distMid < tolerance) {
+        return { guideId: guide.id, point: 'middle' };
+      }
+    }
+    return null;
   };
 
   // Touch handlers
@@ -847,20 +1024,89 @@ export default function AreaCalculatorEditor() {
         )}
         
         {selectedGuideLineId && mode === 'select' && (
+          <>
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#2196F3' }]} 
+              onPress={() => duplicateGuideLine(selectedGuideLineId)}
+            >
+              <Ionicons name="copy" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Kopie</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#4CAF50' }]} 
+              onPress={() => extendGuideLineToEdges(selectedGuideLineId)}
+            >
+              <Ionicons name="expand" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Rand</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
+              onPress={() => deleteGuideLine(selectedGuideLineId)}
+            >
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {guideLines.length > 0 && mode === 'select' && !selectedGuideLineId && (
           <TouchableOpacity 
-            style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
-            onPress={() => deleteGuideLine(selectedGuideLineId)}
+            style={[styles.toolButton, { backgroundColor: '#ff5722' }]} 
+            onPress={deleteAllGuideLines}
           >
-            <Ionicons name="trash" size={20} color="#fff" />
-            <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+            <Ionicons name="trash-bin" size={20} color="#fff" />
+            <Text style={[styles.toolLabel, { color: '#fff' }]}>Alle HL</Text>
           </TouchableOpacity>
         )}
+        
+        <View style={styles.toolSeparator} />
+        
+        <TouchableOpacity
+          style={[styles.toolButton, snapToAngles && styles.toolButtonActive]}
+          onPress={() => setSnapToAngles(!snapToAngles)}
+        >
+          <Ionicons name="compass" size={20} color={snapToAngles ? '#fff' : '#666'} />
+          <Text style={[styles.toolLabel, snapToAngles && styles.toolLabelActive]}>45°</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Canvas */}
       <View 
         style={styles.canvas}
-        onTouchEnd={handleCanvasTouch}
+        onTouchStart={(event) => {
+          const touch = event.nativeEvent;
+          const x = touch.locationX;
+          const y = touch.locationY;
+          
+          // Check if touching a guide line point for dragging
+          if (mode === 'select' && guideLinesVisible) {
+            const guidePoint = findGuideLinePointAtPosition(x, y);
+            if (guidePoint) {
+              setDraggingGuidePoint(guidePoint);
+              setSelectedGuideLineId(guidePoint.guideId);
+            }
+          }
+        }}
+        onTouchMove={(event) => {
+          if (draggingGuidePoint) {
+            const touch = event.nativeEvent;
+            const x = touch.locationX;
+            const y = touch.locationY;
+            
+            // Snap to grid if enabled
+            const snapped = snapToNearestPoint(x, y);
+            updateGuideLinePoint(draggingGuidePoint.guideId, draggingGuidePoint.point, snapped);
+          }
+        }}
+        onTouchEnd={(event) => {
+          if (draggingGuidePoint) {
+            setDraggingGuidePoint(null);
+            return;
+          }
+          handleCanvasTouch(event);
+        }}
       >
         <Svg width={canvasWidth} height={canvasHeight}>
           {/* Grid */}
@@ -869,19 +1115,72 @@ export default function AreaCalculatorEditor() {
           {/* Guide Lines */}
           {guideLinesVisible && guideLines.map((guide) => {
             const isSelected = selectedGuideLineId === guide.id;
+            const midX = (guide.start.x + guide.end.x) / 2;
+            const midY = (guide.start.y + guide.end.y) / 2;
+            const baseColor = guide.isParallel ? '#9C27B0' : '#FF9800';
+            
             return (
               <G key={guide.id}>
+                {/* Line */}
                 <Line
                   x1={guide.start.x}
                   y1={guide.start.y}
                   x2={guide.end.x}
                   y2={guide.end.y}
-                  stroke={isSelected ? '#1976d2' : (guide.isParallel ? '#9C27B0' : '#FF9800')}
+                  stroke={isSelected ? '#1976d2' : baseColor}
                   strokeWidth={isSelected ? 3 : 1.5}
                   strokeDasharray="8,4"
                 />
-                <Circle cx={guide.start.x} cy={guide.start.y} r={4} fill={guide.isParallel ? '#9C27B0' : '#FF9800'} />
-                <Circle cx={guide.end.x} cy={guide.end.y} r={4} fill={guide.isParallel ? '#9C27B0' : '#FF9800'} />
+                
+                {/* Start point (draggable) */}
+                <Circle 
+                  cx={guide.start.x} 
+                  cy={guide.start.y} 
+                  r={isSelected ? 12 : 4} 
+                  fill={isSelected ? '#1976d2' : baseColor} 
+                />
+                {isSelected && (
+                  <Circle 
+                    cx={guide.start.x} 
+                    cy={guide.start.y} 
+                    r={6} 
+                    fill="#fff" 
+                  />
+                )}
+                
+                {/* End point (draggable) */}
+                <Circle 
+                  cx={guide.end.x} 
+                  cy={guide.end.y} 
+                  r={isSelected ? 12 : 4} 
+                  fill={isSelected ? '#1976d2' : baseColor} 
+                />
+                {isSelected && (
+                  <Circle 
+                    cx={guide.end.x} 
+                    cy={guide.end.y} 
+                    r={6} 
+                    fill="#fff" 
+                  />
+                )}
+                
+                {/* Middle point (for moving entire line) */}
+                {isSelected && (
+                  <>
+                    <Circle 
+                      cx={midX} 
+                      cy={midY} 
+                      r={10} 
+                      fill="#4CAF50" 
+                    />
+                    <Circle 
+                      cx={midX} 
+                      cy={midY} 
+                      r={5} 
+                      fill="#fff" 
+                    />
+                  </>
+                )}
               </G>
             );
           })}

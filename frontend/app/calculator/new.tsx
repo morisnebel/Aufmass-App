@@ -533,11 +533,22 @@ export default function AreaCalculatorEditor() {
 
   // Snap to nearest point (grid, guide line intersections, guide line points)
   const snapToNearestPoint = (x: number, y: number): AreaPoint => {
-    const snapTolerance = 15;
+    const snapTolerance = 25; // Increased for better touch experience
     let bestPoint = { x, y };
     let bestDistance = Infinity;
     
-    // 1. Check guide line intersections
+    // 1. HIGHEST PRIORITY: Snap to existing polygon points (corners)
+    for (const polygon of polygons) {
+      for (const point of polygon.points) {
+        const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+        if (dist < snapTolerance && dist < bestDistance) {
+          bestDistance = dist;
+          bestPoint = { x: point.x, y: point.y };
+        }
+      }
+    }
+    
+    // 2. Check guide line intersections
     if (guideLinesVisible && guideLines.length > 0) {
       const intersections = calculateGuideLineIntersections();
       for (const intersection of intersections) {
@@ -548,7 +559,7 @@ export default function AreaCalculatorEditor() {
         }
       }
       
-      // 2. Check guide line endpoints
+      // 3. Check guide line endpoints
       for (const guide of guideLines) {
         for (const point of [guide.start, guide.end]) {
           const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
@@ -560,39 +571,31 @@ export default function AreaCalculatorEditor() {
       }
     }
     
-    // 3. Snap to existing polygon points (all polygons)
-    for (const polygon of polygons) {
-      for (const point of polygon.points) {
-        const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
-        if (dist < snapTolerance && dist < bestDistance) {
-          bestDistance = dist;
-          bestPoint = { x: point.x, y: point.y };
-        }
-      }
-    }
-    
     // 4. Snap to polygon edges (line segments) - useful for aligning
-    for (const polygon of polygons) {
-      for (let i = 0; i < polygon.points.length; i++) {
-        const p1 = polygon.points[i];
-        const p2 = polygon.points[(i + 1) % polygon.points.length];
-        
-        // Find closest point on this edge
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const lengthSq = dx * dx + dy * dy;
-        
-        if (lengthSq > 0) {
-          let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
-          t = Math.max(0, Math.min(1, t));
+    // Only if no corner point was found
+    if (bestDistance > snapTolerance / 2) {
+      for (const polygon of polygons) {
+        for (let i = 0; i < polygon.points.length; i++) {
+          const p1 = polygon.points[i];
+          const p2 = polygon.points[(i + 1) % polygon.points.length];
           
-          const closestX = p1.x + t * dx;
-          const closestY = p1.y + t * dy;
-          const dist = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
+          // Find closest point on this edge
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const lengthSq = dx * dx + dy * dy;
           
-          if (dist < snapTolerance && dist < bestDistance) {
-            bestDistance = dist;
-            bestPoint = { x: closestX, y: closestY };
+          if (lengthSq > 0) {
+            let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSq;
+            t = Math.max(0, Math.min(1, t));
+            
+            const closestX = p1.x + t * dx;
+            const closestY = p1.y + t * dy;
+            const dist = Math.sqrt(Math.pow(x - closestX, 2) + Math.pow(y - closestY, 2));
+            
+            if (dist < snapTolerance && dist < bestDistance) {
+              bestDistance = dist;
+              bestPoint = { x: closestX, y: closestY };
+            }
           }
         }
       }
@@ -1915,17 +1918,6 @@ export default function AreaCalculatorEditor() {
           <Ionicons name="resize" size={20} color={showEdgeLengths ? '#fff' : '#666'} />
           <Text style={[styles.toolLabel, showEdgeLengths && styles.toolLabelActive]}>Maße</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'dimension' && styles.toolButtonActive, { backgroundColor: mode === 'dimension' ? '#9C27B0' : '#f5f5f5' }]}
-          onPress={() => {
-            setMode(mode === 'dimension' ? 'select' : 'dimension');
-            setCurrentPoints([]);
-          }}
-        >
-          <Ionicons name="code-working" size={20} color={mode === 'dimension' ? '#fff' : '#9C27B0'} />
-          <Text style={[styles.toolLabel, mode === 'dimension' && styles.toolLabelActive]}>Vermaß</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Canvas */}
@@ -2702,6 +2694,8 @@ export default function AreaCalculatorEditor() {
                   if (polygon.type === 'main') {
                     const { grossArea, deductions, netArea } = calculateNetAreaForPolygon(polygon);
                     const hasDeductions = deductions > 0;
+                    const boxHeight = hasDeductions ? 52 : 36;
+                    const boxWidth = 90;
                     
                     return (
                       <G>
@@ -2718,52 +2712,52 @@ export default function AreaCalculatorEditor() {
                           />
                         )}
                         <Rect
-                          x={labelX - 50}
-                          y={labelY - (hasDeductions ? 32 : 22)}
-                          width={100}
-                          height={hasDeductions ? 64 : 44}
-                          rx={6}
+                          x={labelX - boxWidth / 2}
+                          y={labelY - boxHeight / 2}
+                          width={boxWidth}
+                          height={boxHeight}
+                          rx={4}
                           fill="rgba(255,255,255,0.95)"
                           stroke={strokeColor}
-                          strokeWidth={1}
+                          strokeWidth={1.5}
                         />
                         <SvgText
-                          x={labelX}
-                          y={labelY - (hasDeductions ? 18 : 6)}
-                          textAnchor="middle"
-                          fontSize={10}
+                          x={labelX - boxWidth / 2 + 5}
+                          y={labelY - boxHeight / 2 + 14}
+                          textAnchor="start"
+                          fontSize={9}
                           fill="#666"
                         >
                           {polygon.name}
                         </SvgText>
                         {hasDeductions && (
-                          <>
-                            <SvgText
-                              x={labelX}
-                              y={labelY}
-                              textAnchor="middle"
-                              fontSize={10}
-                              fill="#999"
-                            >
-                              {grossArea.toFixed(2)} - {deductions.toFixed(2)}
-                            </SvgText>
-                          </>
+                          <SvgText
+                            x={labelX - boxWidth / 2 + 5}
+                            y={labelY - boxHeight / 2 + 26}
+                            textAnchor="start"
+                            fontSize={8}
+                            fill="#999"
+                          >
+                            {grossArea.toFixed(2)}-{deductions.toFixed(2)}
+                          </SvgText>
                         )}
                         <SvgText
-                          x={labelX}
-                          y={labelY + (hasDeductions ? 18 : 12)}
-                          textAnchor="middle"
-                          fontSize={14}
+                          x={labelX - boxWidth / 2 + 5}
+                          y={labelY + boxHeight / 2 - 6}
+                          textAnchor="start"
+                          fontSize={13}
                           fontWeight="bold"
                           fill={strokeColor}
                         >
-                          {netArea.toFixed(2)} m²
+                          {netArea.toFixed(2)}m²
                         </SvgText>
                       </G>
                     );
                   } else {
                     // Deduction polygon - show negative area
                     const area = calculatePolygonArea(polygon.points);
+                    const boxWidth = 80;
+                    const boxHeight = 36;
                     
                     return (
                       <G>
@@ -2780,33 +2774,33 @@ export default function AreaCalculatorEditor() {
                           />
                         )}
                         <Rect
-                          x={labelX - 45}
-                          y={labelY - 22}
-                          width={90}
-                          height={44}
-                          rx={6}
+                          x={labelX - boxWidth / 2}
+                          y={labelY - boxHeight / 2}
+                          width={boxWidth}
+                          height={boxHeight}
+                          rx={4}
                           fill="rgba(255,255,255,0.95)"
                           stroke={strokeColor}
-                          strokeWidth={1}
+                          strokeWidth={1.5}
                         />
                         <SvgText
-                          x={labelX}
-                          y={labelY - 6}
-                          textAnchor="middle"
-                          fontSize={10}
+                          x={labelX - boxWidth / 2 + 5}
+                          y={labelY - boxHeight / 2 + 13}
+                          textAnchor="start"
+                          fontSize={9}
                           fill="#666"
                         >
                           {polygon.name}
                         </SvgText>
                         <SvgText
-                          x={labelX}
-                          y={labelY + 12}
-                          textAnchor="middle"
-                          fontSize={14}
+                          x={labelX - boxWidth / 2 + 5}
+                          y={labelY + boxHeight / 2 - 6}
+                          textAnchor="start"
+                          fontSize={13}
                           fontWeight="bold"
                           fill={strokeColor}
                         >
-                          -{area.toFixed(2)} m²
+                          -{area.toFixed(2)}m²
                         </SvgText>
                       </G>
                     );

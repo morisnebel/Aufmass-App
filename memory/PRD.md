@@ -17,6 +17,11 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
   - Textanmerkungen (frei platzierbar, farbwählbar)
   - Notiz-Memo mit Zeiger auf Zielpunkt
   - Formen: Rechteck, Pfeil
+- **NEU (Dezember 2025)**: Manuelle Flächenberechnung:
+  - Umschalter "Auto/Manuell" in Toolbar
+  - Bei "Manuell": Fläche wird anhand der manuell eingegebenen Maße skaliert
+  - Visuelle Kennzeichnung: Orange Rahmen + 📐 Icon + "(manuell)" Text
+  - StatusBar zeigt auch den Berechnungsmodus an
 
 ### PDF Annotations-Feature (ABGESCHLOSSEN)
 - "Dokumente"-Tab in Projektdetails

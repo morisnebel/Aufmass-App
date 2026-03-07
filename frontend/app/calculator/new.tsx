@@ -57,6 +57,9 @@ export default function AreaCalculatorEditor() {
   // Custom edge lengths (user can override calculated values)
   const [customEdgeLengths, setCustomEdgeLengths] = useState<{ [key: string]: number }>({});
   
+  // Manual area calculation mode
+  const [useManualAreaCalc, setUseManualAreaCalc] = useState(false);
+  
   // Numpad state
   const [showNumpad, setShowNumpad] = useState(false);
   const [numpadInput, setNumpadInput] = useState('');
@@ -391,9 +394,17 @@ export default function AreaCalculatorEditor() {
     const mainPolygons = polygons.filter(p => p.type === 'main');
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
-    const totalArea = mainPolygons.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
-    const deductionArea = deductionPolygons.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
-    const netArea = totalArea - deductionArea;
+    // Calculate areas using manual calculation if enabled
+    let totalArea = 0;
+    let totalDeductions = 0;
+    
+    for (const mainPoly of mainPolygons) {
+      const result = calculateNetAreaForPolygon(mainPoly);
+      totalArea += result.grossArea;
+      totalDeductions += result.deductions;
+    }
+    
+    const netArea = totalArea - totalDeductions;
     
     // Calculate lines by category (with deduction interruptions)
     const linesByCategory: { [category: string]: number } = {};
@@ -404,9 +415,17 @@ export default function AreaCalculatorEditor() {
         const segments = calculateLineSegmentsWithDeductions(polygon, line.pointIndex);
         
         // Sum up lengths of non-interrupted segments
-        const totalLength = segments
-          .filter(s => !s.isInterrupted)
-          .reduce((sum, s) => sum + calculateLineLength(s.start, s.end), 0);
+        // Use custom lengths if available
+        let totalLength = 0;
+        const edgeKey = `${polygon.id}-${line.pointIndex}`;
+        if (customEdgeLengths[edgeKey] !== undefined) {
+          // Use custom length
+          totalLength = customEdgeLengths[edgeKey];
+        } else {
+          totalLength = segments
+            .filter(s => !s.isInterrupted)
+            .reduce((sum, s) => sum + calculateLineLength(s.start, s.end), 0);
+        }
         
         if (!linesByCategory[line.category]) {
           linesByCategory[line.category] = 0;
@@ -425,7 +444,7 @@ export default function AreaCalculatorEditor() {
       }
     });
     
-    return { totalArea, deductionArea, netArea, linesByCategory };
+    return { totalArea, deductionArea: totalDeductions, netArea, linesByCategory };
   };
 
   // Check if a polygon (deduction) is inside another polygon (main area)
@@ -524,8 +543,22 @@ export default function AreaCalculatorEditor() {
   };
 
   // Calculate net area for a main polygon (gross area minus ACTUAL overlap with deductions)
-  const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number } => {
-    const grossArea = calculatePolygonArea(mainPolygon.points);
+  const calculateNetAreaForPolygon = (mainPolygon: AreaPolygon): { grossArea: number; deductions: number; netArea: number; isManual: boolean } => {
+    let grossArea: number;
+    let isManual = false;
+    
+    // Check if we should use manual calculation
+    if (useManualAreaCalc) {
+      const manualResult = calculateManualAreaForPolygon(mainPolygon);
+      if (manualResult.hasManualValues) {
+        grossArea = manualResult.area;
+        isManual = true;
+      } else {
+        grossArea = calculatePolygonArea(mainPolygon.points);
+      }
+    } else {
+      grossArea = calculatePolygonArea(mainPolygon.points);
+    }
     
     // Find all deduction polygons and calculate their actual intersection with this main polygon
     const deductionPolygons = polygons.filter(p => p.type === 'deduction');
@@ -533,13 +566,77 @@ export default function AreaCalculatorEditor() {
     let totalDeductions = 0;
     for (const deduction of deductionPolygons) {
       // Calculate the actual overlapping area (not the full deduction)
-      const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
-      totalDeductions += intersectionArea;
+      // For manual mode, scale the deduction proportionally
+      if (isManual) {
+        const autoArea = calculatePolygonArea(mainPolygon.points);
+        const scaleFactor = grossArea / autoArea;
+        const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+        totalDeductions += intersectionArea * scaleFactor;
+      } else {
+        const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+        totalDeductions += intersectionArea;
+      }
     }
     
     const netArea = grossArea - totalDeductions;
     
-    return { grossArea, deductions: totalDeductions, netArea };
+    return { grossArea, deductions: totalDeductions, netArea, isManual };
+  };
+
+  // Calculate area for polygon using manual edge lengths
+  // Uses proportional scaling: if manual lengths are X% different from actual, scale area by X²
+  const calculateManualAreaForPolygon = (polygon: AreaPolygon): { area: number; hasManualValues: boolean; scaleFactor: number } => {
+    const points = polygon.points;
+    if (points.length < 3) return { area: 0, hasManualValues: false, scaleFactor: 1 };
+    
+    // Check if any edges have custom lengths
+    let hasManualValues = false;
+    let totalActualLength = 0;
+    let totalManualLength = 0;
+    let edgesWithManualLength = 0;
+    
+    for (let i = 0; i < points.length; i++) {
+      const p1 = points[i];
+      const p2 = points[(i + 1) % points.length];
+      const actualLength = calculateLineLength(p1, p2);
+      const edgeKey = `${polygon.id}-${i}`;
+      
+      totalActualLength += actualLength;
+      
+      if (customEdgeLengths[edgeKey] !== undefined) {
+        hasManualValues = true;
+        totalManualLength += customEdgeLengths[edgeKey];
+        edgesWithManualLength++;
+      } else {
+        totalManualLength += actualLength;
+      }
+    }
+    
+    if (!hasManualValues) {
+      return { area: calculatePolygonArea(points), hasManualValues: false, scaleFactor: 1 };
+    }
+    
+    // Calculate scale factor based on perimeter ratio
+    // Area scales with the square of linear dimensions
+    const perimeterRatio = totalManualLength / totalActualLength;
+    const areaScaleFactor = perimeterRatio * perimeterRatio;
+    
+    // Apply scale factor to the automatically calculated area
+    const autoArea = calculatePolygonArea(points);
+    const manualArea = autoArea * areaScaleFactor;
+    
+    return { area: manualArea, hasManualValues: true, scaleFactor: areaScaleFactor };
+  };
+
+  // Check if a polygon has any manual edge lengths
+  const polygonHasManualLengths = (polygonId: string, pointsLength: number): boolean => {
+    for (let i = 0; i < pointsLength; i++) {
+      const edgeKey = `${polygonId}-${i}`;
+      if (customEdgeLengths[edgeKey] !== undefined) {
+        return true;
+      }
+    }
+    return false;
   };
 
   // Save calculation
@@ -2425,6 +2522,19 @@ export default function AreaCalculatorEditor() {
         
         <View style={styles.toolSeparator} />
         
+        {/* Manual Area Calculation Toggle */}
+        <TouchableOpacity
+          style={[styles.toolButton, useManualAreaCalc && styles.toolButtonActive, { backgroundColor: useManualAreaCalc ? '#FF9800' : '#f5f5f5' }]}
+          onPress={() => setUseManualAreaCalc(!useManualAreaCalc)}
+        >
+          <Ionicons name="calculator" size={20} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+          <Text style={[styles.toolLabel, useManualAreaCalc && styles.toolLabelActive]}>
+            {useManualAreaCalc ? 'Manuell' : 'Auto'}
+          </Text>
+        </TouchableOpacity>
+        
+        <View style={styles.toolSeparator} />
+        
         {/* === ANNOTATION TOOLS === */}
         <TouchableOpacity
           style={[styles.toolButton, mode === 'annotation_text' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_text' ? '#E91E63' : '#f5f5f5' }]}
@@ -3575,10 +3685,11 @@ export default function AreaCalculatorEditor() {
                   // For main polygons, show net area (after deductions)
                   // For deduction polygons, show their area
                   if (polygon.type === 'main') {
-                    const { grossArea, deductions, netArea } = calculateNetAreaForPolygon(polygon);
+                    const { grossArea, deductions, netArea, isManual } = calculateNetAreaForPolygon(polygon);
                     const hasDeductions = deductions > 0;
-                    const boxHeight = hasDeductions ? 52 : 36;
-                    const boxWidth = 90;
+                    const hasManualLabel = isManual && useManualAreaCalc;
+                    const boxHeight = hasDeductions ? (hasManualLabel ? 66 : 52) : (hasManualLabel ? 50 : 36);
+                    const boxWidth = hasManualLabel ? 100 : 90;
                     
                     return (
                       <G>
@@ -3600,13 +3711,26 @@ export default function AreaCalculatorEditor() {
                           width={boxWidth}
                           height={boxHeight}
                           rx={4}
-                          fill="rgba(255,255,255,0.95)"
-                          stroke={strokeColor}
-                          strokeWidth={1.5}
+                          fill={hasManualLabel ? "rgba(255,248,225,0.98)" : "rgba(255,255,255,0.95)"}
+                          stroke={hasManualLabel ? "#FF9800" : strokeColor}
+                          strokeWidth={hasManualLabel ? 2 : 1.5}
                         />
+                        {/* Manual indicator */}
+                        {hasManualLabel && (
+                          <SvgText
+                            x={labelX - boxWidth / 2 + 5}
+                            y={labelY - boxHeight / 2 + 12}
+                            textAnchor="start"
+                            fontSize={8}
+                            fill="#FF9800"
+                            fontWeight="bold"
+                          >
+                            📐 (manuell)
+                          </SvgText>
+                        )}
                         <SvgText
                           x={labelX - boxWidth / 2 + 5}
-                          y={labelY - boxHeight / 2 + 14}
+                          y={labelY - boxHeight / 2 + (hasManualLabel ? 26 : 14)}
                           textAnchor="start"
                           fontSize={9}
                           fill="#666"
@@ -3616,7 +3740,7 @@ export default function AreaCalculatorEditor() {
                         {hasDeductions && (
                           <SvgText
                             x={labelX - boxWidth / 2 + 5}
-                            y={labelY - boxHeight / 2 + 26}
+                            y={labelY - boxHeight / 2 + (hasManualLabel ? 38 : 26)}
                             textAnchor="start"
                             fontSize={8}
                             fill="#999"
@@ -3630,7 +3754,7 @@ export default function AreaCalculatorEditor() {
                           textAnchor="start"
                           fontSize={13}
                           fontWeight="bold"
-                          fill={strokeColor}
+                          fill={hasManualLabel ? "#FF9800" : strokeColor}
                         >
                           {netArea.toFixed(2)}m²
                         </SvgText>
@@ -3902,8 +4026,12 @@ export default function AreaCalculatorEditor() {
       {/* Status Bar */}
       <View style={styles.statusBar}>
         <View style={styles.statusItem}>
-          <Text style={styles.statusLabel}>Netto</Text>
-          <Text style={styles.statusValue}>{results.netArea.toFixed(2)} m²</Text>
+          <Text style={styles.statusLabel}>
+            Netto {useManualAreaCalc ? '📐' : ''}
+          </Text>
+          <Text style={[styles.statusValue, useManualAreaCalc && { color: '#FF9800' }]}>
+            {results.netArea.toFixed(2)} m²
+          </Text>
         </View>
         <View style={styles.statusItem}>
           <Text style={styles.statusLabel}>Maßstab</Text>

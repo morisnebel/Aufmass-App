@@ -1292,7 +1292,7 @@ export default function ProjectDetailScreen() {
         });
         
         return `
-          <div class="new-page" style="page-break-before: always; position: relative; min-height: 260mm;">
+          <div class="new-page" style="page-break-before: always;">
             <h2 style="color: #1976d2; font-size: 16px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #1976d2;">
               Berechnungsdetails: ${calc.name || `Berechnung ${calcIndex + 1}`}
             </h2>
@@ -1374,8 +1374,8 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Footer -->
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; color: #999; padding-top: 20px; border-top: 1px solid #eee;">
+            <!-- Footer - direkt unter den Berechnungsdetails -->
+            <div style="text-align: center; font-size: 10px; color: #999; margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee;">
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>

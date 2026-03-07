@@ -668,7 +668,7 @@ export default function AreaCalculatorEditor() {
     return pixelLength / scale; // Convert to meters
   };
 
-  // Calculate angle between three points (in degrees)
+  // Calculate interior angle between three points (in degrees)
   const calculateAngle = (p1: AreaPoint, vertex: AreaPoint, p2: AreaPoint): number => {
     const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
     const v2 = { x: p2.x - vertex.x, y: p2.y - vertex.y };
@@ -677,6 +677,13 @@ export default function AreaCalculatorEditor() {
     const cross = v1.x * v2.y - v1.y * v2.x;
     
     let angle = Math.atan2(Math.abs(cross), dot) * (180 / Math.PI);
+    
+    // Convert to interior angle: if angle > 180, use 360 - angle
+    // This ensures we always show the interior angle of the polygon
+    if (angle > 180) {
+      angle = 360 - angle;
+    }
+    
     return angle;
   };
 

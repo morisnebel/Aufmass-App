@@ -63,6 +63,8 @@ export default function AreaCalculatorEditor() {
   const [isPanning, setIsPanning] = useState(false);
   const lastPanPosition = useRef({ x: 0, y: 0 });
   const lastPinchDistance = useRef<number | null>(null);
+  const lastPinchCenter = useRef({ x: 0, y: 0 });
+  const isPinching = useRef(false);
   
   // === BACKGROUND IMAGE ===
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
@@ -76,6 +78,7 @@ export default function AreaCalculatorEditor() {
   const [resizingBgImage, setResizingBgImage] = useState<'none' | 'nw' | 'ne' | 'sw' | 'se'>('none');
   const bgImageDragStart = useRef({ x: 0, y: 0 });
   const bgImageOriginalSize = useRef({ width: 500, height: 400 });
+  const [projectPhotos, setProjectPhotos] = useState<{ id: string; uri: string }[]>([]);
   
   // Custom edge lengths (user can override calculated values)
   const [customEdgeLengths, setCustomEdgeLengths] = useState<{ [key: string]: number }>({});
@@ -233,6 +236,10 @@ export default function AreaCalculatorEditor() {
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
+  
+  // Resizing deduction rectangles (keeping 90° corners)
+  const [resizingDeductionRect, setResizingDeductionRect] = useState<{ polygonId: string; handle: 'nw' | 'ne' | 'sw' | 'se' } | null>(null);
+  const deductionRectOriginal = useRef<{ minX: number; minY: number; maxX: number; maxY: number }>({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
   
   // Scale reference
   const [scaleReference, setScaleReference] = useState<{
@@ -512,6 +519,54 @@ export default function AreaCalculatorEditor() {
       return [...points].reverse();
     }
     return points;
+  };
+
+  // Check if a polygon is a rectangle (4 points forming 90° angles)
+  const isPolygonRectangle = (polygon: AreaPolygon): boolean => {
+    if (polygon.points.length !== 4) return false;
+    // A rectangle has all right angles - check by verifying dot products are ~0
+    // Also check if sides are axis-aligned or at least perpendicular
+    const pts = polygon.points;
+    for (let i = 0; i < 4; i++) {
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % 4];
+      const p3 = pts[(i + 2) % 4];
+      // Vectors from p2 to p1 and p2 to p3
+      const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+      // Dot product should be ~0 for 90° angle
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      if (Math.abs(dot) > 10) return false; // Allow small tolerance
+    }
+    return true;
+  };
+
+  // Get bounding box of a rectangle polygon
+  const getRectangleBounds = (polygon: AreaPolygon): { minX: number; minY: number; maxX: number; maxY: number } => {
+    const xs = polygon.points.map(p => p.x);
+    const ys = polygon.points.map(p => p.y);
+    return {
+      minX: Math.min(...xs),
+      minY: Math.min(...ys),
+      maxX: Math.max(...xs),
+      maxY: Math.max(...ys),
+    };
+  };
+
+  // Update rectangle polygon points from bounds (keeping 90° corners)
+  const updateRectangleFromBounds = (polygonId: string, bounds: { minX: number; minY: number; maxX: number; maxY: number }) => {
+    setPolygons(prev => prev.map(p => {
+      if (p.id !== polygonId) return p;
+      return {
+        ...p,
+        points: [
+          { x: bounds.minX, y: bounds.minY }, // Top-left
+          { x: bounds.maxX, y: bounds.minY }, // Top-right
+          { x: bounds.maxX, y: bounds.maxY }, // Bottom-right
+          { x: bounds.minX, y: bounds.maxY }, // Bottom-left
+        ],
+      };
+    }));
   };
 
   // Sutherland-Hodgman polygon clipping algorithm
@@ -2555,6 +2610,40 @@ export default function AreaCalculatorEditor() {
     setBgImageEditMode(false);
   };
 
+  // Load project photos
+  const loadProjectPhotos = async () => {
+    try {
+      const projectId = params.project_id;
+      if (projectId) {
+        const { PhotoAnnotationService } = await import('@/services/LocalStorage');
+        const photos = await PhotoAnnotationService.getAll();
+        const projectPhotosFiltered = photos.filter((p: any) => p.project_id === projectId);
+        setProjectPhotos(projectPhotosFiltered.map((p: any) => ({ id: p.id, uri: p.photoUri })));
+      }
+    } catch (error) {
+      console.error('Error loading project photos:', error);
+    }
+  };
+
+  // Use project photo as background
+  const useProjectPhotoAsBackground = (photoUri: string) => {
+    setBackgroundImage(photoUri);
+    // Use default size for project photos
+    const maxDim = Math.min(canvasWidth * 0.8, canvasHeight * 0.8);
+    setBgImageSize({ width: maxDim, height: maxDim * 0.75 });
+    bgImageOriginalSize.current = { width: maxDim, height: maxDim * 0.75 };
+    setBgImagePosition({ x: (canvasWidth - maxDim) / 2, y: (canvasHeight - maxDim * 0.75) / 2 });
+    setShowBgImageModal(false);
+    setBgImageEditMode(true);
+  };
+
+  // Load project photos when modal opens
+  useEffect(() => {
+    if (showBgImageModal) {
+      loadProjectPhotos();
+    }
+  }, [showBgImageModal]);
+
   // Handle zoom
   const handleZoom = (delta: number) => {
     setZoomLevel(prev => {
@@ -3069,7 +3158,7 @@ export default function AreaCalculatorEditor() {
           const x = transformed.x;
           const y = transformed.y;
           
-          // Background image edit mode
+          // Background image edit mode - only block if touching handles or dragging image
           if (bgImageEditMode && backgroundImage) {
             const handleRadius = 20;
             
@@ -3090,12 +3179,39 @@ export default function AreaCalculatorEditor() {
               }
             }
             
-            // Check if inside image for dragging
-            if (x >= bgImagePosition.x && x <= bgImagePosition.x + bgImageSize.width &&
-                y >= bgImagePosition.y && y <= bgImagePosition.y + bgImageSize.height) {
+            // Check center move handle only (not the whole image)
+            const centerX = bgImagePosition.x + bgImageSize.width / 2;
+            const centerY = bgImagePosition.y + bgImageSize.height / 2;
+            if (Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)) < 25) {
               setDraggingBgImage(true);
               bgImageDragStart.current = { x: x - bgImagePosition.x, y: y - bgImagePosition.y };
               return;
+            }
+            // Don't block other touch events - allow drawing on top of image
+          }
+          
+          // Check for resizing selected rectangle deduction polygons
+          if (mode === 'select' && selectedPolygonId) {
+            const selectedPoly = polygons.find(p => p.id === selectedPolygonId);
+            if (selectedPoly && selectedPoly.type === 'deduction' && isPolygonRectangle(selectedPoly)) {
+              const bounds = getRectangleBounds(selectedPoly);
+              const handleRadius = 15;
+              
+              const corners = {
+                nw: { x: bounds.minX, y: bounds.minY },
+                ne: { x: bounds.maxX, y: bounds.minY },
+                sw: { x: bounds.minX, y: bounds.maxY },
+                se: { x: bounds.maxX, y: bounds.maxY },
+              };
+              
+              for (const [corner, pos] of Object.entries(corners)) {
+                if (Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2)) < handleRadius) {
+                  saveStateForUndo();
+                  setResizingDeductionRect({ polygonId: selectedPolygonId, handle: corner as 'nw' | 'ne' | 'sw' | 'se' });
+                  deductionRectOriginal.current = bounds;
+                  return;
+                }
+              }
             }
           }
           
@@ -3331,6 +3447,50 @@ export default function AreaCalculatorEditor() {
           }
         }}
         onTouchMove={(event) => {
+          const touches = event.nativeEvent.touches;
+          
+          // Handle pinch-to-zoom with two fingers
+          if (touches && touches.length === 2) {
+            const touch1 = touches[0];
+            const touch2 = touches[1];
+            
+            // Calculate distance between two fingers
+            const dx = touch2.pageX - touch1.pageX;
+            const dy = touch2.pageY - touch1.pageY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Calculate center point between fingers
+            const centerX = (touch1.pageX + touch2.pageX) / 2;
+            const centerY = (touch1.pageY + touch2.pageY) / 2;
+            
+            if (lastPinchDistance.current !== null) {
+              // Calculate zoom change
+              const scale = distance / lastPinchDistance.current;
+              const newZoom = Math.max(0.25, Math.min(4, zoomLevel * scale));
+              
+              // Adjust pan offset to zoom towards the pinch center
+              if (newZoom !== zoomLevel) {
+                const zoomRatio = newZoom / zoomLevel;
+                setPanOffset(prev => ({
+                  x: centerX - (centerX - prev.x) * zoomRatio,
+                  y: centerY - (centerY - prev.y) * zoomRatio,
+                }));
+                setZoomLevel(newZoom);
+              }
+            }
+            
+            lastPinchDistance.current = distance;
+            lastPinchCenter.current = { x: centerX, y: centerY };
+            isPinching.current = true;
+            return;
+          }
+          
+          // Reset pinch tracking when not using two fingers
+          if (isPinching.current && (!touches || touches.length < 2)) {
+            lastPinchDistance.current = null;
+            isPinching.current = false;
+          }
+          
           const touch = event.nativeEvent;
           const rawX = touch.locationX;
           const rawY = touch.locationY;
@@ -3400,6 +3560,34 @@ export default function AreaCalculatorEditor() {
             
             setBgImageSize({ width: newWidth, height: newHeight });
             setBgImagePosition({ x: newX, y: newY });
+            return;
+          }
+          
+          // Resizing deduction rectangle (keeping 90° corners)
+          if (resizingDeductionRect) {
+            const orig = deductionRectOriginal.current;
+            let newBounds = { ...orig };
+            
+            switch (resizingDeductionRect.handle) {
+              case 'se':
+                newBounds.maxX = Math.max(orig.minX + 20, x);
+                newBounds.maxY = Math.max(orig.minY + 20, y);
+                break;
+              case 'sw':
+                newBounds.minX = Math.min(orig.maxX - 20, x);
+                newBounds.maxY = Math.max(orig.minY + 20, y);
+                break;
+              case 'ne':
+                newBounds.maxX = Math.max(orig.minX + 20, x);
+                newBounds.minY = Math.min(orig.maxY - 20, y);
+                break;
+              case 'nw':
+                newBounds.minX = Math.min(orig.maxX - 20, x);
+                newBounds.minY = Math.min(orig.maxY - 20, y);
+                break;
+            }
+            
+            updateRectangleFromBounds(resizingDeductionRect.polygonId, newBounds);
             return;
           }
           
@@ -3581,6 +3769,12 @@ export default function AreaCalculatorEditor() {
           }
           if (resizingBgImage !== 'none') {
             setResizingBgImage('none');
+            return;
+          }
+          
+          // Stop resizing deduction rectangle
+          if (resizingDeductionRect) {
+            setResizingDeductionRect(null);
             return;
           }
           
@@ -4026,6 +4220,19 @@ export default function AreaCalculatorEditor() {
                   stroke={isSelected ? '#1976d2' : strokeColor}
                   strokeWidth={isSelected ? 3 : 2}
                 />
+                
+                {/* Resize handles for selected rectangle deductions */}
+                {isSelected && polygon.type === 'deduction' && isPolygonRectangle(polygon) && (() => {
+                  const bounds = getRectangleBounds(polygon);
+                  return (
+                    <>
+                      <Circle cx={bounds.minX} cy={bounds.minY} r={10} fill="#1976d2" />
+                      <Circle cx={bounds.maxX} cy={bounds.minY} r={10} fill="#1976d2" />
+                      <Circle cx={bounds.minX} cy={bounds.maxY} r={10} fill="#1976d2" />
+                      <Circle cx={bounds.maxX} cy={bounds.maxY} r={10} fill="#1976d2" />
+                    </>
+                  );
+                })()}
                 
                 {/* Line categories - with interruption by deductions */}
                 {polygon.type === 'main' && polygon.points.map((point, index) => {
@@ -5180,40 +5387,73 @@ export default function AreaCalculatorEditor() {
       {/* Background Image Modal */}
       <Modal visible={showBgImageModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
             <Text style={styles.modalTitle}>Hintergrundbild</Text>
             
-            <View style={{ marginVertical: 20 }}>
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
-                onPress={pickBackgroundImage}
-              >
-                <Ionicons name="images" size={24} color="#8BC34A" />
-                <Text style={{ marginLeft: 15, fontSize: 16 }}>Aus Galerie wählen</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
-                onPress={takeBackgroundPhoto}
-              >
-                <Ionicons name="camera" size={24} color="#2196F3" />
-                <Text style={{ marginLeft: 15, fontSize: 16 }}>Foto aufnehmen</Text>
-              </TouchableOpacity>
-              
-              {backgroundImage && (
+            <ScrollView style={{ maxHeight: 400 }}>
+              <View style={{ marginVertical: 10 }}>
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#ffebee', borderRadius: 12 }}
-                  onPress={removeBackgroundImage}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
+                  onPress={pickBackgroundImage}
                 >
-                  <Ionicons name="trash" size={24} color="#f44336" />
-                  <Text style={{ marginLeft: 15, fontSize: 16, color: '#f44336' }}>Bild entfernen</Text>
+                  <Ionicons name="images" size={24} color="#8BC34A" />
+                  <Text style={{ marginLeft: 15, fontSize: 16 }}>Aus Galerie wählen</Text>
                 </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
+                  onPress={takeBackgroundPhoto}
+                >
+                  <Ionicons name="camera" size={24} color="#2196F3" />
+                  <Text style={{ marginLeft: 15, fontSize: 16 }}>Foto aufnehmen</Text>
+                </TouchableOpacity>
+                
+                {backgroundImage && (
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#ffebee', borderRadius: 12, marginBottom: 10 }}
+                    onPress={removeBackgroundImage}
+                  >
+                    <Ionicons name="trash" size={24} color="#f44336" />
+                    <Text style={{ marginLeft: 15, fontSize: 16, color: '#f44336' }}>Bild entfernen</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              {/* Project Photos */}
+              {projectPhotos.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 10, color: '#333' }}>
+                    Projektfotos ({projectPhotos.length})
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    {projectPhotos.map((photo) => (
+                      <TouchableOpacity
+                        key={photo.id}
+                        style={{ 
+                          width: 80, 
+                          height: 80, 
+                          borderRadius: 8, 
+                          overflow: 'hidden',
+                          borderWidth: 2,
+                          borderColor: '#ddd',
+                        }}
+                        onPress={() => useProjectPhotoAsBackground(photo.uri)}
+                      >
+                        <Image
+                          source={{ uri: photo.uri }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               )}
-            </View>
+            </ScrollView>
             
             {backgroundImage && (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
+              <View style={{ marginTop: 15 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                   <TouchableOpacity
                     style={{ padding: 10, backgroundColor: bgLockAspectRatio ? '#4CAF50' : '#f5f5f5', borderRadius: 8, marginRight: 10 }}
                     onPress={() => setBgLockAspectRatio(!bgLockAspectRatio)}
@@ -5225,14 +5465,14 @@ export default function AreaCalculatorEditor() {
                   </Text>
                 </View>
                 
-                <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
                   Tipp: Aktiviere "Anpassen" um das Bild zu verschieben und zu skalieren
                 </Text>
-              </>
+              </View>
             )}
             
             <TouchableOpacity
-              style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30 }]}
+              style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30, marginTop: 15 }]}
               onPress={() => setShowBgImageModal(false)}
             >
               <Text style={styles.modalButtonText}>Schließen</Text>

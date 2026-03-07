@@ -4250,9 +4250,9 @@ export default function AreaCalculatorEditor() {
                   const labelY = midY + (perpDot > 0 ? -perpY : perpY) * offset;
                   
                   // Dynamic width based on text length
-                  const displayText = displayLength.toFixed(2);
-                  const labelWidth = Math.max(45, displayText.length * 8 + 24);
-                  const labelHeight = 22;
+                  const displayText = `${displayLength.toFixed(2)}m`;
+                  const labelWidth = Math.max(50, displayText.length * 7 + 10);
+                  const labelHeight = 20;
                   // Custom values shown in blue, normal in green/red
                   const bgColor = isCustom ? '#2196F3' : (polygon.type === 'deduction' ? '#f44336' : '#4CAF50');
                   
@@ -4269,29 +4269,20 @@ export default function AreaCalculatorEditor() {
                         strokeWidth={isCustom ? 2 : 0}
                       />
                       <SvgText 
-                        x={labelX} 
-                        y={labelY + 5} 
-                        textAnchor="middle" 
-                        fontSize={12} 
+                        x={labelX - labelWidth / 2 + 5} 
+                        y={labelY + 4} 
+                        textAnchor="start" 
+                        fontSize={11} 
                         fontWeight="bold" 
                         fill="#fff"
                       >
                         {displayText}
                       </SvgText>
-                      <SvgText 
-                        x={labelX + labelWidth / 2 - 8} 
-                        y={labelY + 5} 
-                        textAnchor="middle" 
-                        fontSize={10} 
-                        fill="rgba(255,255,255,0.8)"
-                      >
-                        m
-                      </SvgText>
                       {isCustom && (
                         <SvgText 
-                          x={labelX - labelWidth / 2 + 8} 
-                          y={labelY - 4} 
-                          textAnchor="start" 
+                          x={labelX + labelWidth / 2 - 6} 
+                          y={labelY + 4} 
+                          textAnchor="end" 
                           fontSize={8} 
                           fill="#fff"
                         >
@@ -5744,6 +5735,9 @@ export default function AreaCalculatorEditor() {
                       }
                     });
                     
+                    // Show calculation breakdown when there are 2 or more lines of same category
+                    const showBreakdown = individualLengths.length >= 2;
+                    
                     return (
                       <View key={category} style={[styles.resultCard, { borderLeftColor: getCategoryColor(category) }]}>
                         <View style={styles.resultCardHeader}>
@@ -5755,8 +5749,8 @@ export default function AreaCalculatorEditor() {
                             {(totalLength as number).toFixed(2)} m
                           </Text>
                         </View>
-                        {individualLengths.length > 1 && (
-                          <View style={{ paddingTop: 4 }}>
+                        {showBreakdown && (
+                          <View style={{ paddingTop: 6, borderTopWidth: 1, borderTopColor: '#eee', marginTop: 6 }}>
                             <Text style={styles.resultCardDetail}>
                               {individualLengths.map(l => l.toFixed(2)).join(' + ')} = {(totalLength as number).toFixed(2)} m
                             </Text>

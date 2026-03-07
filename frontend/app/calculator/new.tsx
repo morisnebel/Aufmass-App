@@ -193,8 +193,12 @@ export default function AreaCalculatorEditor() {
   
   // Annotation drawing color
   const [annotationColor, setAnnotationColor] = useState('#FF0000');
+  const [annotationStrokeWidth, setAnnotationStrokeWidth] = useState(3);
   const [showShapesModal, setShowShapesModal] = useState(false);
   const [textFontSize, setTextFontSize] = useState(16); // For text annotation size
+  const [showEditTextModal, setShowEditTextModal] = useState(false); // For editing existing text
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editTextInput, setEditTextInput] = useState('');
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
@@ -2366,6 +2370,21 @@ export default function AreaCalculatorEditor() {
     setMode('select');
   };
 
+  // Update existing text annotation
+  const updateTextAnnotation = () => {
+    if (!editingTextId || !editTextInput.trim()) return;
+    
+    saveStateForUndo();
+    setTextAnnotations(prev => prev.map(t => 
+      t.id === editingTextId 
+        ? { ...t, text: editTextInput.trim(), fontSize: textFontSize, color: annotationColor }
+        : t
+    ));
+    setEditingTextId(null);
+    setEditTextInput('');
+    setShowEditTextModal(false);
+  };
+
   // Add memo pointer
   const addMemoPointer = () => {
     if (!pendingMemoPointer) return;
@@ -2594,13 +2613,32 @@ export default function AreaCalculatorEditor() {
         
         {/* Delete selected annotation */}
         {(selectedAnnotationId || selectedTextId || selectedMemoId) && (
-          <TouchableOpacity 
-            style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
-            onPress={deleteSelectedAnnotation}
-          >
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-            <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
-          </TouchableOpacity>
+          <>
+            {/* Edit button for shapes */}
+            {selectedAnnotationId && (
+              <TouchableOpacity 
+                style={[styles.toolButton, { backgroundColor: '#2196F3' }]} 
+                onPress={() => {
+                  const shape = annotationShapes.find(s => s.id === selectedAnnotationId);
+                  if (shape) {
+                    setAnnotationColor(shape.color);
+                    setAnnotationStrokeWidth(shape.strokeWidth);
+                    setShowShapesModal(true);
+                  }
+                }}
+              >
+                <Ionicons name="color-palette-outline" size={20} color="#fff" />
+                <Text style={[styles.toolLabel, { color: '#fff' }]}>Stil</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
+              onPress={deleteSelectedAnnotation}
+            >
+              <Ionicons name="trash-outline" size={20} color="#fff" />
+              <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
+            </TouchableOpacity>
+          </>
         )}
         
         {currentPoints.length > 0 && (
@@ -2921,8 +2959,12 @@ export default function AreaCalculatorEditor() {
               } else if (annotation.type === 'text') {
                 const text = textAnnotations.find(t => t.id === annotation.id);
                 if (text && selectedTextId === annotation.id) {
-                  // Already selected - start dragging
-                  setDraggingText({ id: annotation.id, offset: { x: x - text.x, y: y - text.y } });
+                  // Already selected - open edit modal
+                  setEditingTextId(annotation.id);
+                  setEditTextInput(text.text);
+                  setTextFontSize(text.fontSize);
+                  setAnnotationColor(text.color);
+                  setShowEditTextModal(true);
                 } else {
                   // Just select
                   setSelectedTextId(annotation.id);
@@ -2946,6 +2988,24 @@ export default function AreaCalculatorEditor() {
               }
               return;
             }
+          }
+          
+          // Start drawing annotation shapes
+          if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
+            if (!currentAnnotationShape) {
+              const shapeType = mode.replace('annotation_', '') as 'rectangle' | 'circle' | 'arrow' | 'line';
+              setCurrentAnnotationShape({
+                id: Date.now().toString(),
+                type: shapeType,
+                x1: x,
+                y1: y,
+                x2: x,
+                y2: y,
+                color: annotationColor,
+                strokeWidth: annotationStrokeWidth,
+              });
+            }
+            return;
           }
         }}
         onTouchMove={(event) => {
@@ -4509,6 +4569,76 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
+      {/* Edit Text Annotation Modal */}
+      <Modal visible={showEditTextModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Text bearbeiten</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editTextInput}
+              onChangeText={setEditTextInput}
+              placeholder="Text eingeben..."
+              placeholderTextColor="#999"
+              autoFocus
+              multiline
+            />
+            {/* Font size selector */}
+            <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
+              {[12, 16, 20, 24, 32].map(size => (
+                <TouchableOpacity
+                  key={size}
+                  onPress={() => setTextFontSize(size)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    marginHorizontal: 4,
+                    borderRadius: 8,
+                    backgroundColor: textFontSize === size ? '#2196F3' : '#f0f0f0',
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: textFontSize === size ? 'bold' : 'normal', color: textFontSize === size ? '#fff' : '#333' }}>{size}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Color picker */}
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>Farbe:</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
+              {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAnnotationColor(color)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: color,
+                    marginHorizontal: 5,
+                    borderWidth: annotationColor === color ? 3 : 1,
+                    borderColor: annotationColor === color ? '#fff' : '#ccc',
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => { setShowEditTextModal(false); setEditTextInput(''); setEditingTextId(null); }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updateTextAnnotation}
+              >
+                <Text style={styles.confirmButtonText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Shapes Selection Modal */}
       <Modal visible={showShapesModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -4567,6 +4697,46 @@ export default function AreaCalculatorEditor() {
                 />
               ))}
             </View>
+            
+            {/* Stroke width picker */}
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Linienstärke:</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 15 }}>
+              {[1, 2, 3, 5, 8].map(width => (
+                <TouchableOpacity
+                  key={width}
+                  onPress={() => setAnnotationStrokeWidth(width)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    backgroundColor: annotationStrokeWidth === width ? '#673AB7' : '#f0f0f0',
+                    marginHorizontal: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ width: 24, height: width, backgroundColor: annotationStrokeWidth === width ? '#fff' : '#333', borderRadius: width / 2 }} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            {/* Apply style to selected shape */}
+            {selectedAnnotationId && (
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, { alignSelf: 'center', paddingHorizontal: 30, marginBottom: 10 }]}
+                onPress={() => {
+                  saveStateForUndo();
+                  setAnnotationShapes(prev => prev.map(s => 
+                    s.id === selectedAnnotationId 
+                      ? { ...s, color: annotationColor, strokeWidth: annotationStrokeWidth }
+                      : s
+                  ));
+                  setShowShapesModal(false);
+                }}
+              >
+                <Text style={styles.confirmButtonText}>Stil übernehmen</Text>
+              </TouchableOpacity>
+            )}
             
             <TouchableOpacity
               style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30 }]}

@@ -5754,6 +5754,67 @@ export default function AreaCalculatorEditor() {
                 </View>
               </View>
               
+              {/* Lines per Deduction Area */}
+              {polygons.filter(p => p.type === 'deduction').some(polygon => 
+                lines.some(l => l.polygonId === polygon.id)
+              ) && (
+                <View style={styles.resultsSection}>
+                  <Text style={styles.resultsSectionTitle}>Linien pro Abzugsfläche</Text>
+                  
+                  {polygons.filter(p => p.type === 'deduction').map((polygon) => {
+                    // Get all lines for this deduction polygon
+                    const polygonLines = lines.filter(l => l.polygonId === polygon.id);
+                    if (polygonLines.length === 0) return null;
+                    
+                    // Group lines by category
+                    const categoryGroups: { [key: string]: number[] } = {};
+                    polygonLines.forEach(line => {
+                      const point = polygon.points[line.pointIndex];
+                      const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                      const length = calculateLineLength(point, nextPoint);
+                      if (length > 0.01) {
+                        if (!categoryGroups[line.category]) {
+                          categoryGroups[line.category] = [];
+                        }
+                        categoryGroups[line.category].push(length);
+                      }
+                    });
+                    
+                    if (Object.keys(categoryGroups).length === 0) return null;
+                    
+                    return (
+                      <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
+                        <Text style={[styles.resultCardTitle, { marginBottom: 8 }]}>{polygon.name}</Text>
+                        
+                        {Object.entries(categoryGroups).map(([category, lengths]) => {
+                          const total = lengths.reduce((sum, l) => sum + l, 0);
+                          const showBreakdown = lengths.length >= 2;
+                          
+                          return (
+                            <View key={category} style={{ marginBottom: 4 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
+                                  <Text style={{ fontSize: 12, color: '#333' }}>{category}</Text>
+                                </View>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
+                                  {total.toFixed(2)} m
+                                </Text>
+                              </View>
+                              {showBreakdown && (
+                                <Text style={{ fontSize: 11, color: '#666', marginLeft: 14, marginTop: 2 }}>
+                                  {lengths.map(l => l.toFixed(2)).join(' + ')} = {total.toFixed(2)} m
+                                </Text>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+              
               {/* Line Results with calculation breakdown */}
               {Object.keys(results.linesByCategory).length > 0 && (
                 <View style={styles.resultsSection}>

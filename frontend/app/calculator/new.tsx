@@ -141,6 +141,7 @@ export default function AreaCalculatorEditor() {
   const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
   const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
   const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
+  const [fixedLength, setFixedLength] = useState<string>(''); // Feste Länge für nächste Linie
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
@@ -1852,18 +1853,41 @@ export default function AreaCalculatorEditor() {
       if (currentPoints.length > 0) {
         const lastPoint = currentPoints[currentPoints.length - 1];
         
+        // Calculate direction and apply fixed angle/length
+        let dx = snappedX - lastPoint.x;
+        let dy = snappedY - lastPoint.y;
+        let length = Math.sqrt(dx * dx + dy * dy);
+        
+        // If fixed length is set, parse and use it
+        let targetLength: number | null = null;
+        if (fixedLength !== '') {
+          try {
+            let cleanExpr = fixedLength.replace(/,/g, '.');
+            if (/^[\d\.\+\-\*\/\(\)\s]+$/.test(cleanExpr)) {
+              targetLength = Function('"use strict"; return (' + cleanExpr + ')')();
+              if (isNaN(targetLength) || targetLength <= 0) targetLength = null;
+            }
+          } catch {
+            targetLength = null;
+          }
+        }
+        
         // If fixed angle is set, use that exact angle (mathematical coordinates: 0°=right, 90°=up)
         if (fixedAngle !== null) {
-          const dx = snappedX - lastPoint.x;
-          const dy = snappedY - lastPoint.y;
-          const length = Math.sqrt(dx * dx + dy * dy);
-          
+          const radians = fixedAngle * (Math.PI / 180);
+          const useLength = targetLength !== null ? targetLength * scale : length;
+          finalPoint = {
+            x: lastPoint.x + useLength * Math.cos(radians),
+            y: lastPoint.y - useLength * Math.sin(radians)  // Negative because screen Y is inverted
+          };
+        } else if (targetLength !== null) {
+          // Only fixed length, use the direction from touch
           if (length > 10) {
-            // Convert to mathematical coordinates (Y is inverted on screen)
-            const radians = fixedAngle * (Math.PI / 180);
+            const unitX = dx / length;
+            const unitY = dy / length;
             finalPoint = {
-              x: lastPoint.x + length * Math.cos(radians),
-              y: lastPoint.y - length * Math.sin(radians)  // Negative because screen Y is inverted
+              x: lastPoint.x + unitX * targetLength * scale,
+              y: lastPoint.y + unitY * targetLength * scale
             };
           }
         } else if (snapToAngles) {
@@ -3569,12 +3593,12 @@ export default function AreaCalculatorEditor() {
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
-          style={[styles.toolButton, (snapToAngles || fixedAngle !== null) && styles.toolButtonActive, { backgroundColor: fixedAngle !== null ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
+          style={[styles.toolButton, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
           onPress={() => setShowAngleModal(true)}
         >
-          <Ionicons name="compass" size={20} color={(snapToAngles || fixedAngle !== null) ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null) && styles.toolLabelActive]}>
-            {fixedAngle !== null ? `${fixedAngle}°` : '45°'}
+          <Ionicons name="compass" size={20} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#666'} />
+          <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive]}>
+            {fixedAngle !== null ? `${fixedAngle}°` : (fixedLength !== '' ? `${fixedLength}m` : '45°')}
           </Text>
         </TouchableOpacity>
         
@@ -6755,6 +6779,75 @@ export default function AreaCalculatorEditor() {
               </View>
             )}
             
+            {/* Length Input Section */}
+            <View style={{ marginTop: 8, marginBottom: 16 }}>
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+                Feste Länge (optional):
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TextInput
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: fixedLength ? '#4CAF50' : '#ddd',
+                    borderRadius: 8,
+                    padding: 10,
+                    fontSize: 16,
+                    backgroundColor: fixedLength ? '#e8f5e9' : '#fff',
+                  }}
+                  placeholder="z.B. 2.5 oder 1+0.5"
+                  keyboardType="decimal-pad"
+                  value={fixedLength}
+                  onChangeText={setFixedLength}
+                />
+                <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>m</Text>
+                {fixedLength !== '' && (
+                  <TouchableOpacity 
+                    style={{ marginLeft: 8, padding: 4 }}
+                    onPress={() => setFixedLength('')}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#999" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {fixedLength !== '' && (
+                <View style={{ 
+                  backgroundColor: '#e8f5e9', 
+                  padding: 8, 
+                  borderRadius: 6, 
+                  marginTop: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  <Text style={{ marginLeft: 6, fontSize: 11, color: '#4CAF50' }}>
+                    Nächste Linie: {fixedLength}m Länge
+                  </Text>
+                </View>
+              )}
+            </View>
+            
+            {/* Status Summary */}
+            {(fixedAngle !== null || fixedLength !== '') && (
+              <View style={{ 
+                backgroundColor: '#e3f2fd', 
+                padding: 10, 
+                borderRadius: 8, 
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: '#2196F3',
+              }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#1976d2', marginBottom: 4 }}>
+                  Nächste Linie:
+                </Text>
+                <Text style={{ fontSize: 11, color: '#333' }}>
+                  {fixedAngle !== null ? `Winkel: ${fixedAngle}°` : 'Winkel: frei'}
+                  {' • '}
+                  {fixedLength !== '' ? `Länge: ${fixedLength}m` : 'Länge: frei'}
+                </Text>
+              </View>
+            )}
+            
             {/* Buttons */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
@@ -6767,6 +6860,7 @@ export default function AreaCalculatorEditor() {
                 }}
                 onPress={() => {
                   setFixedAngle(null);
+                  setFixedLength('');
                   setSnapToAngles(false);
                 }}
               >

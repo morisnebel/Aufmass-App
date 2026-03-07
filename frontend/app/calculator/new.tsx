@@ -4163,12 +4163,31 @@ export default function AreaCalculatorEditor() {
                           
                           // Show manual value if custom, otherwise show auto-calculated visible length
                           const displayValue = isCustom ? displayTotalLength : totalAutoLength;
+                          const displayText = `${displayValue.toFixed(2)}m`;
+                          const labelWidth = Math.max(58, displayText.length * 8 + 18);
+                          const labelHeight = 28;
+                          const cornerRadius = labelHeight / 2;
                           
                           return (
                             <G>
-                              <Circle cx={midX} cy={midY} r={20} fill={bgColor} />
-                              <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                                {displayValue.toFixed(2)}m
+                              <Rect
+                                x={midX - labelWidth / 2}
+                                y={midY - labelHeight / 2}
+                                width={labelWidth}
+                                height={labelHeight}
+                                rx={cornerRadius}
+                                ry={cornerRadius}
+                                fill={bgColor}
+                              />
+                              <SvgText 
+                                x={midX - labelWidth / 2 + 10} 
+                                y={midY + 5} 
+                                textAnchor="start" 
+                                fontSize={12} 
+                                fontWeight="bold" 
+                                fill="#fff"
+                              >
+                                {displayText}
                               </SvgText>
                             </G>
                           );

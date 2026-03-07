@@ -344,6 +344,9 @@ export default function AreaCalculatorEditor() {
   const [memoText, setMemoText] = useState('');
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
   const [draggingMemo, setDraggingMemo] = useState<{ id: string; part: 'note' | 'target'; offset: AreaPoint } | null>(null);
+  const [showEditMemoModal, setShowEditMemoModal] = useState(false);
+  const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [editMemoText, setEditMemoText] = useState('');
   
   // Annotation drawing color
   const [annotationColor, setAnnotationColor] = useState('#FF0000');
@@ -2887,6 +2890,21 @@ export default function AreaCalculatorEditor() {
     setShowMemoModal(false);
   };
 
+  // Update existing memo annotation
+  const updateMemoAnnotation = () => {
+    if (!editingMemoId || !editMemoText.trim()) return;
+    
+    saveStateForUndo();
+    setMemoPointers(prev => prev.map(m => 
+      m.id === editingMemoId 
+        ? { ...m, text: editMemoText.trim(), color: annotationColor }
+        : m
+    ));
+    setEditingMemoId(null);
+    setEditMemoText('');
+    setShowEditMemoModal(false);
+  };
+
   // === BACKGROUND IMAGE FUNCTIONS ===
   
   // Pick background image from library
@@ -4043,11 +4061,25 @@ export default function AreaCalculatorEditor() {
               } else if (annotation.type === 'memo') {
                 const memo = memoPointers.find(m => m.id === annotation.id);
                 if (memo && selectedMemoId === annotation.id) {
-                  // Already selected - determine which part to drag
-                  const distToNote = Math.sqrt(Math.pow(x - memo.x1, 2) + Math.pow(y - (memo.y1 - 20), 2));
-                  const distToTarget = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
-                  const part = distToTarget < distToNote ? 'target' : 'note';
-                  setDraggingMemo({ id: annotation.id, part, offset: { x: part === 'note' ? x - memo.x1 : x - memo.x2, y: part === 'note' ? y - memo.y1 : y - memo.y2 } });
+                  // Already selected - check if double-tap to edit or tap on specific part
+                  const noteWidth = Math.max((memo.text?.length || 0) * 9 + 20, 80);
+                  const noteHeight = 32;
+                  const noteX = memo.x1 - noteWidth / 2;
+                  const noteY = memo.y1 - noteHeight - 5;
+                  
+                  // Check if tapped on note box - open edit modal
+                  if (x >= noteX && x <= noteX + noteWidth && y >= noteY && y <= noteY + noteHeight) {
+                    setEditingMemoId(annotation.id);
+                    setEditMemoText(memo.text);
+                    setAnnotationColor(memo.color);
+                    setShowEditMemoModal(true);
+                  } else {
+                    // Tap on target area - start dragging
+                    const distToNote = Math.sqrt(Math.pow(x - memo.x1, 2) + Math.pow(y - (memo.y1 - 20), 2));
+                    const distToTarget = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
+                    const part = distToTarget < distToNote ? 'target' : 'note';
+                    setDraggingMemo({ id: annotation.id, part, offset: { x: part === 'note' ? x - memo.x1 : x - memo.x2, y: part === 'note' ? y - memo.y1 : y - memo.y2 } });
+                  }
                 } else {
                   // Just select
                   setSelectedMemoId(annotation.id);
@@ -6795,6 +6827,189 @@ export default function AreaCalculatorEditor() {
                 onPress={addMemoPointer}
               >
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Edit Memo Annotation Modal */}
+      <Modal visible={showEditMemoModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.draggableModalContent, { transform: textModalPosition.getTranslateTransform() }]}>
+            {/* Drag Handle */}
+            <View {...textModalPanResponder.panHandlers} style={styles.modalDragHandle}>
+              <Ionicons name="move" size={18} color="#666" />
+              <Text style={{ marginLeft: 6, fontSize: 11, color: '#666' }}>Verschieben</Text>
+            </View>
+            
+            <Text style={styles.modalTitle}>Notiz bearbeiten</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <TextInput
+                style={[styles.modalInput, { flex: 1 }]}
+                value={editMemoText}
+                onChangeText={setEditMemoText}
+                placeholder="Notiztext eingeben..."
+                placeholderTextColor="#999"
+                multiline
+              />
+              <TouchableOpacity
+                style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad && textNumpadTarget === 'memo' ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
+                onPress={() => { 
+                  setTextNumpadTarget('memo'); 
+                  setShowTextNumpad(!(showTextNumpad && textNumpadTarget === 'memo')); 
+                }}
+              >
+                <Ionicons name="keypad" size={24} color={showTextNumpad && textNumpadTarget === 'memo' ? '#fff' : '#3949ab'} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Eingebettetes Numpad für Edit Memo */}
+            {showTextNumpad && textNumpadTarget === 'memo' && (
+              <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 10, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e0e0e0', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 }}
+                    onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#333' }}>
+                      {textNumpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
+                    <Ionicons name="close-circle" size={24} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {textNumpadMode === 'numbers' ? (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.largeNumpadKey, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditMemoText(prev => prev + k)}>
+                          <Text style={[styles.largeNumpadKeyText, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.largeNumpadKey, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditMemoText(prev => prev + k)}>
+                          <Text style={[styles.largeNumpadKeyText, k==='-' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['1','2','3','*'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.largeNumpadKey, k==='*' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditMemoText(prev => prev + k)}>
+                          <Text style={[styles.largeNumpadKeyText, k==='*' && { color: '#1976d2' }]}>{k === '*' ? '×' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                      {[',','0','.','/'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.largeNumpadKey, k==='/' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditMemoText(prev => prev + k)}>
+                          <Text style={[styles.largeNumpadKeyText, k==='/' && { color: '#1976d2' }]}>{k === '/' ? '÷' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['m','m²','m³','lfm','Stk'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.largeNumpadKey, { backgroundColor: '#e8f5e9' }]} 
+                          onPress={() => setEditMemoText(prev => prev + k)}>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['a','b','c','d','e','f','g','h'].map(k => (
+                        <TouchableOpacity key={k} style={styles.largeNumpadKey} 
+                          onPress={() => setEditMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.largeNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['i','j','k','l','m','n','o','p'].map(k => (
+                        <TouchableOpacity key={k} style={styles.largeNumpadKey} 
+                          onPress={() => setEditMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.largeNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['q','r','s','t','u','v','w','x'].map(k => (
+                        <TouchableOpacity key={k} style={styles.largeNumpadKey} 
+                          onPress={() => setEditMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.largeNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      <TouchableOpacity style={[styles.largeNumpadKey, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
+                        onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                        <Ionicons name="arrow-up" size={18} color={textNumpadCaps ? '#fff' : '#666'} />
+                      </TouchableOpacity>
+                      {['y','z','ä','ö','ü','ß',' '].map(k => (
+                        <TouchableOpacity key={k} style={styles.largeNumpadKey} 
+                          onPress={() => setEditMemoText(prev => prev + (k === ' ' ? ' ' : (textNumpadCaps ? k.toUpperCase() : k)))}>
+                          <Text style={styles.largeNumpadKeyText}>{k === ' ' ? '␣' : (textNumpadCaps ? k.toUpperCase() : k)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                  <TouchableOpacity style={[styles.largeNumpadKey, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setEditMemoText('')}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.largeNumpadKey, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setEditMemoText(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={20} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.largeNumpadKey, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
+            {/* Color picker */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
+              {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAnnotationColor(color)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: color,
+                    marginHorizontal: 5,
+                    borderWidth: annotationColor === color ? 3 : 1,
+                    borderColor: annotationColor === color ? '#fff' : '#ccc',
+                  }}
+                />
+              ))}
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => { setShowEditMemoModal(false); setEditMemoText(''); setEditingMemoId(null); }}
+              >
+                <Text style={styles.modalButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updateMemoAnnotation}
+              >
+                <Text style={styles.confirmButtonText}>Speichern</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

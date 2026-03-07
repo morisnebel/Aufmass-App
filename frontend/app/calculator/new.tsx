@@ -3075,13 +3075,6 @@ export default function AreaCalculatorEditor() {
         <TouchableOpacity onPress={() => setShowResultsModal(true)} style={styles.headerButton}>
           <Ionicons name="calculator" size={22} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={exportToPdf} 
-          style={styles.headerButton} 
-          disabled={isExportingPdf}
-        >
-          <Ionicons name="document-text" size={22} color={isExportingPdf ? '#888' : '#fff'} />
-        </TouchableOpacity>
         <TouchableOpacity onPress={saveCalculation} style={styles.headerButton} disabled={saving}>
           <Ionicons name="checkmark" size={24} color={saving ? '#888' : '#fff'} />
         </TouchableOpacity>

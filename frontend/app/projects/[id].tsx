@@ -1043,14 +1043,6 @@ export default function ProjectDetailScreen() {
         }
       });
       
-      // Add calculation result overlay (bottom right corner)
-      const overlayX = svgWidth - 95;
-      const overlayY = svgHeight - 55;
-      svgContent += `<rect x="${overlayX}" y="${overlayY}" width="90" height="50" rx="6" fill="white" fill-opacity="0.95" stroke="#2196F3" stroke-width="1.5"/>`;
-      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 14}" text-anchor="middle" font-size="8" fill="#666">Ergebnis</text>`;
-      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 32}" text-anchor="middle" font-size="14" font-weight="bold" fill="#4CAF50">${netArea.toFixed(2)}</text>`;
-      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 44}" text-anchor="middle" font-size="10" fill="#333">m²</text>`;
-      
       // Render annotations (shapes, texts, memos)
       const calcAnnotations = calc.annotations || {};
       
@@ -1124,13 +1116,15 @@ export default function ProjectDetailScreen() {
       
       svgContent += '</svg>';
       
-      // If there's a background image, show it above the drawing (right aligned)
+      // If there's a background image, show it ABOVE the drawing (not overlapping)
       if (calcBackgroundImage) {
         return `
-          <div style="position: relative;">
-            <div style="position: absolute; top: 0; right: 0; width: 100px; z-index: 1;">
-              <div style="font-size: 7px; color: #666; margin-bottom: 2px; text-align: center;">Referenzbild</div>
-              <img src="${calcBackgroundImage}" style="width: 100%; max-height: 80px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; background: #fff;" />
+          <div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
+              <div style="text-align: center;">
+                <div style="font-size: 7px; color: #666; margin-bottom: 2px;">Referenzbild</div>
+                <img src="${calcBackgroundImage}" style="width: 80px; max-height: 60px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; background: #fff;" />
+              </div>
             </div>
             <div>${svgContent}</div>
           </div>

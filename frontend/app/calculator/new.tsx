@@ -55,7 +55,7 @@ export default function AreaCalculatorEditor() {
   const [lines, setLines] = useState<AreaLine[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
-  const [gridSize, setGridSize] = useState(0.25); // 0.25 Meter (25cm) pro Rasterfeld
+  const [gridSize, setGridSize] = useState(0.5); // 0.5 Meter (50cm) pro Rasterfeld
   
   // === ZOOM & PAN ===
   const [zoomLevel, setZoomLevel] = useState(1);

@@ -2642,11 +2642,21 @@ export default function AreaCalculatorEditor() {
         const { PhotoService } = await import('@/services/LocalStorage');
         const photos = await PhotoService.getByProjectId(projectId);
         
+        console.log('Raw photos loaded:', photos.length);
+        if (photos.length > 0) {
+          console.log('First photo keys:', Object.keys(photos[0]));
+        }
+        
         // Map photos - photos might have uri in different properties depending on how they were saved
-        const mappedPhotos = photos.map((p: any) => ({ 
-          id: p.id, 
-          uri: p.image_data || p.uri // image_data is used when photo is saved from camera
-        })).filter((p: any) => p.uri); // Only include photos with valid URIs
+        // Check: image_data (from camera), uri, photoUri, or base64 data
+        const mappedPhotos = photos.map((p: any) => {
+          const photoUri = p.image_data || p.uri || p.photoUri || p.base64;
+          console.log('Photo', p.id, 'has URI:', photoUri ? 'YES (' + photoUri.substring(0, 30) + '...)' : 'NO');
+          return { 
+            id: p.id, 
+            uri: photoUri
+          };
+        });
         
         setProjectPhotos(mappedPhotos);
       }
@@ -5335,15 +5345,30 @@ export default function AreaCalculatorEditor() {
                           borderRadius: 8, 
                           overflow: 'hidden',
                           borderWidth: 2,
-                          borderColor: '#ddd',
+                          borderColor: photo.uri ? '#4CAF50' : '#f44336',
+                          backgroundColor: '#f0f0f0',
                         }}
-                        onPress={() => useProjectPhotoAsBackground(photo.uri)}
+                        onPress={() => {
+                          console.log('Photo selected:', photo.id, 'URI length:', photo.uri?.length);
+                          if (photo.uri) {
+                            useProjectPhotoAsBackground(photo.uri);
+                          } else {
+                            Alert.alert('Fehler', 'Dieses Foto hat keine gültige URI');
+                          }
+                        }}
                       >
-                        <Image
-                          source={{ uri: photo.uri }}
-                          style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
+                        {photo.uri ? (
+                          <Image
+                            source={{ uri: photo.uri }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                          />
+                        ) : (
+                          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="image-outline" size={30} color="#999" />
+                          </View>
+                        )}
                       </TouchableOpacity>
                     ))}
                   </View>

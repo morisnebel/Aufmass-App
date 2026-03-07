@@ -200,6 +200,44 @@ export default function AreaCalculatorEditor() {
     textModalPosition.setValue({ x: 0, y: 0 });
     textModalPosition.setOffset({ x: 0, y: 0 });
   };
+
+  // Parallel Modal - Draggable Position & Numpad
+  const [showParallelNumpad, setShowParallelNumpad] = useState(false);
+  const parallelModalPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const parallelModalPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        parallelModalPosition.setOffset({
+          x: (parallelModalPosition.x as any)._value || 0,
+          y: (parallelModalPosition.y as any)._value || 0,
+        });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: parallelModalPosition.x, dy: parallelModalPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        parallelModalPosition.flattenOffset();
+      },
+    })
+  ).current;
+
+  const resetParallelModalPosition = () => {
+    parallelModalPosition.setValue({ x: 0, y: 0 });
+    parallelModalPosition.setOffset({ x: 0, y: 0 });
+  };
+
+  // Handler für Parallel-Modal Numpad
+  const handleParallelNumpadPress = (key: string) => {
+    if (key === 'C') {
+      setParallelDistance('');
+    } else if (key === '⌫') {
+      setParallelDistance(prev => prev.slice(0, -1));
+    } else {
+      setParallelDistance(prev => prev + key);
+    }
+  };
   
   // Öffne Text-Numpad für bestimmtes Ziel
 
@@ -630,7 +668,8 @@ export default function AreaCalculatorEditor() {
     return pixelLength / scale; // Convert to meters
   };
 
-  // Calculate angle between three points (in degrees)
+  // Calculate interior angle at a vertex (in degrees)
+  // Always returns the interior angle of the polygon
   const calculateAngle = (p1: AreaPoint, vertex: AreaPoint, p2: AreaPoint): number => {
     const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
     const v2 = { x: p2.x - vertex.x, y: p2.y - vertex.y };
@@ -638,7 +677,66 @@ export default function AreaCalculatorEditor() {
     const dot = v1.x * v2.x + v1.y * v2.y;
     const cross = v1.x * v2.y - v1.y * v2.x;
     
-    let angle = Math.atan2(Math.abs(cross), dot) * (180 / Math.PI);
+    // Calculate the signed angle using atan2
+    let angle = Math.atan2(cross, dot) * (180 / Math.PI);
+    
+    // Convert to interior angle (0-360 range)
+    // For clockwise polygons (negative cross product indicates concave vertex)
+    if (angle < 0) {
+      angle = 360 + angle;
+    }
+    
+    return angle;
+  };
+  
+  // Calculate interior angle considering polygon orientation
+  const calculateInteriorAngle = (polygon: AreaPolygon, vertexIndex: number): number => {
+    const points = polygon.points;
+    const n = points.length;
+    if (n < 3) return 0;
+    
+    const prevIndex = (vertexIndex - 1 + n) % n;
+    const nextIndex = (vertexIndex + 1) % n;
+    const prevPoint = points[prevIndex];
+    const vertex = points[vertexIndex];
+    const nextPoint = points[nextIndex];
+    
+    const v1 = { x: prevPoint.x - vertex.x, y: prevPoint.y - vertex.y };
+    const v2 = { x: nextPoint.x - vertex.x, y: nextPoint.y - vertex.y };
+    
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const cross = v1.x * v2.y - v1.y * v2.x;
+    
+    // Check polygon orientation (clockwise or counter-clockwise)
+    // using signed area formula
+    let signedArea = 0;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      signedArea += points[i].x * points[j].y;
+      signedArea -= points[j].x * points[i].y;
+    }
+    const isClockwise = signedArea < 0;
+    
+    // Calculate angle using atan2
+    let angle = Math.atan2(cross, dot) * (180 / Math.PI);
+    
+    // Adjust based on polygon orientation to get interior angle
+    if (isClockwise) {
+      // For clockwise polygon
+      if (angle <= 0) {
+        angle = -angle;
+      } else {
+        angle = 360 - angle;
+      }
+    } else {
+      // For counter-clockwise polygon
+      if (angle >= 0) {
+        angle = angle;
+      } else {
+        angle = 360 + angle;
+      }
+    }
+    
     return angle;
   };
 
@@ -2012,6 +2110,7 @@ export default function AreaCalculatorEditor() {
       const clickedGuide = findGuideLineAtPoint(x, y);
       if (clickedGuide) {
         setSelectedGuideLineId(clickedGuide.id);
+        resetParallelModalPosition();
         setShowParallelModal(true);
       }
     } else if (mode === 'dimension') {
@@ -5118,11 +5217,7 @@ export default function AreaCalculatorEditor() {
                 
                 {/* Angle display at vertices */}
                 {showPolygonAngles && polygon.points.length >= 3 && polygon.points.map((vertex, index) => {
-                  const prevIndex = (index - 1 + polygon.points.length) % polygon.points.length;
-                  const nextIndex = (index + 1) % polygon.points.length;
-                  const prevPoint = polygon.points[prevIndex];
-                  const nextPoint = polygon.points[nextIndex];
-                  const angle = calculateAngle(prevPoint, vertex, nextPoint);
+                  const angle = calculateInteriorAngle(polygon, index);
                   
                   return (
                     <G key={`angle-${polygon.id}-${index}`}>
@@ -7428,92 +7523,182 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
-      {/* Parallel Guide Line Modal */}
+      {/* Parallel Guide Line Modal - Draggable with Numpad */}
       <Modal visible={showParallelModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Parallele Hilfslinie</Text>
-            <Text style={styles.modalText}>
-              Geben Sie den Abstand zur ausgewählten Hilfslinie ein:
-            </Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.modalInput}
-                value={parallelDistance}
-                onChangeText={setParallelDistance}
-                placeholder="z.B. 0.5"
-                keyboardType="decimal-pad"
-                autoFocus
-              />
-              <Text style={styles.inputUnit}>Meter</Text>
-            </View>
-            <Text style={styles.modalText}>Richtung wählen:</Text>
-            <View style={styles.directionButtons}>
-              <TouchableOpacity
-                style={[styles.directionButton, { backgroundColor: '#4CAF50' }]}
-                onPress={() => {
-                  const distance = parseFloat(parallelDistance.replace(',', '.'));
-                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, -distance);
-                  }
-                  setShowParallelModal(false);
-                  setSelectedGuideLineId(null);
-                  setParallelDistance('');
-                  setMode('select');
-                }}
-              >
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-                <Text style={styles.directionButtonText}>Rechts / Oben</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.directionButton, { backgroundColor: '#2196F3' }]}
-                onPress={() => {
-                  const distance = parseFloat(parallelDistance.replace(',', '.'));
-                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, distance);
-                  }
-                  setShowParallelModal(false);
-                  setSelectedGuideLineId(null);
-                  setParallelDistance('');
-                  setMode('select');
-                }}
-              >
-                <Ionicons name="arrow-back" size={20} color="#fff" />
-                <Text style={styles.directionButtonText}>Links / Unten</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.directionButton, { backgroundColor: '#9C27B0' }]}
-                onPress={() => {
-                  const distance = parseFloat(parallelDistance.replace(',', '.'));
-                  if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
-                    createParallelGuideLine(selectedGuideLineId, distance);
-                    createParallelGuideLine(selectedGuideLineId, -distance);
-                  }
-                  setShowParallelModal(false);
-                  setSelectedGuideLineId(null);
-                  setParallelDistance('');
-                  setMode('select');
-                }}
-              >
-                <Ionicons name="swap-horizontal" size={20} color="#fff" />
-                <Text style={styles.directionButtonText}>Beidseitig</Text>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-start', paddingTop: 80 }]}>
+          <Animated.View 
+            style={[
+              styles.modalContent, 
+              { maxWidth: 360, transform: parallelModalPosition.getTranslateTransform() }
+            ]}
+          >
+            {/* Drag Handle */}
+            <View {...parallelModalPanResponder.panHandlers} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="move" size={16} color="#999" />
+                <Text style={{ fontSize: 10, color: '#999', marginLeft: 4 }}>Ziehen</Text>
+              </View>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Parallele Hilfslinie</Text>
+              <TouchableOpacity onPress={() => {
+                setShowParallelModal(false);
+                setSelectedGuideLineId(null);
+                setParallelDistance('');
+                setShowParallelNumpad(false);
+              }}>
+                <Ionicons name="close-circle" size={24} color="#999" />
               </TouchableOpacity>
             </View>
-            <View style={styles.modalButtons}>
+            
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalText}>
+                Abstand zur ausgewählten Hilfslinie:
+              </Text>
+              <View style={[styles.inputRow, { marginBottom: 10 }]}>
+                <TextInput
+                  style={[styles.modalInput, { 
+                    flex: 1, 
+                    borderColor: showParallelNumpad ? '#9C27B0' : '#ddd',
+                    borderWidth: 2,
+                    backgroundColor: showParallelNumpad ? '#f3e5f5' : '#fff'
+                  }]}
+                  value={parallelDistance}
+                  onChangeText={setParallelDistance}
+                  placeholder="z.B. 0.5"
+                  keyboardType="decimal-pad"
+                  onFocus={() => setShowParallelNumpad(true)}
+                />
+                <Text style={styles.inputUnit}>Meter</Text>
+                <TouchableOpacity
+                  style={{ 
+                    marginLeft: 8, 
+                    padding: 8, 
+                    backgroundColor: showParallelNumpad ? '#9C27B0' : '#e8eaf6', 
+                    borderRadius: 8 
+                  }}
+                  onPress={() => setShowParallelNumpad(!showParallelNumpad)}
+                >
+                  <Ionicons name="keypad" size={22} color={showParallelNumpad ? '#fff' : '#3949ab'} />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Embedded Numpad */}
+              {showParallelNumpad && (
+                <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
+                    {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={{
+                          width: 52,
+                          height: 44,
+                          backgroundColor: key === '⌫' ? '#ff5722' : '#fff',
+                          borderRadius: 8,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: '#ddd',
+                        }}
+                        onPress={() => handleParallelNumpadPress(key)}
+                      >
+                        <Text style={{ 
+                          fontSize: 20, 
+                          fontWeight: '600', 
+                          color: key === '⌫' ? '#fff' : '#333' 
+                        }}>
+                          {key}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={{
+                        width: 110,
+                        height: 44,
+                        backgroundColor: '#ef5350',
+                        borderRadius: 8,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                      onPress={() => handleParallelNumpadPress('C')}
+                    >
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Löschen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              
+              <Text style={[styles.modalText, { marginBottom: 8 }]}>Richtung wählen:</Text>
+              <View style={[styles.directionButtons, { gap: 8 }]}>
+                <TouchableOpacity
+                  style={[styles.directionButton, { backgroundColor: '#4CAF50', flex: 1 }]}
+                  onPress={() => {
+                    const distance = parseFloat(parallelDistance.replace(',', '.'));
+                    if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                      createParallelGuideLine(selectedGuideLineId, -distance);
+                    }
+                    setShowParallelModal(false);
+                    setSelectedGuideLineId(null);
+                    setParallelDistance('');
+                    setShowParallelNumpad(false);
+                    setMode('select');
+                  }}
+                >
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                  <Text style={styles.directionButtonText}>Rechts / Oben</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.directionButton, { backgroundColor: '#2196F3', flex: 1 }]}
+                  onPress={() => {
+                    const distance = parseFloat(parallelDistance.replace(',', '.'));
+                    if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                      createParallelGuideLine(selectedGuideLineId, distance);
+                    }
+                    setShowParallelModal(false);
+                    setSelectedGuideLineId(null);
+                    setParallelDistance('');
+                    setShowParallelNumpad(false);
+                    setMode('select');
+                  }}
+                >
+                  <Ionicons name="arrow-back" size={20} color="#fff" />
+                  <Text style={styles.directionButtonText}>Links / Unten</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.directionButton, { backgroundColor: '#9C27B0', flex: 1 }]}
+                  onPress={() => {
+                    const distance = parseFloat(parallelDistance.replace(',', '.'));
+                    if (!isNaN(distance) && distance > 0 && selectedGuideLineId) {
+                      createParallelGuideLine(selectedGuideLineId, distance);
+                      createParallelGuideLine(selectedGuideLineId, -distance);
+                    }
+                    setShowParallelModal(false);
+                    setSelectedGuideLineId(null);
+                    setParallelDistance('');
+                    setShowParallelNumpad(false);
+                    setMode('select');
+                  }}
+                >
+                  <Ionicons name="swap-horizontal" size={20} color="#fff" />
+                  <Text style={styles.directionButtonText}>Beidseitig</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            
+            <View style={[styles.modalButtons, { marginTop: 12 }]}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowParallelModal(false);
                   setSelectedGuideLineId(null);
                   setParallelDistance('');
+                  setShowParallelNumpad(false);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 

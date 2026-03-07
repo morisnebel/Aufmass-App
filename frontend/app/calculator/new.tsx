@@ -4191,6 +4191,11 @@ export default function AreaCalculatorEditor() {
                     const displayLength = getEdgeLength(polygon.id, index, calculatedLength);
                     const isCustom = hasCustomLength(polygon.id, index);
                     
+                    // Calculate label dimensions
+                    const displayText = `${displayLength.toFixed(2)}m`;
+                    const labelWidth = Math.max(50, displayText.length * 7 + 12);
+                    const labelHeight = 22;
+                    
                     return (
                       <G key={`line-${polygon.id}-${index}`}>
                         <Line
@@ -4201,9 +4206,23 @@ export default function AreaCalculatorEditor() {
                           stroke={getCategoryColor(category)}
                           strokeWidth={4}
                         />
-                        <Circle cx={midX} cy={midY} r={18} fill={isCustom ? '#2196F3' : getCategoryColor(category)} />
-                        <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                          {displayLength.toFixed(2)}m
+                        <Rect
+                          x={midX - labelWidth / 2}
+                          y={midY - labelHeight / 2}
+                          width={labelWidth}
+                          height={labelHeight}
+                          rx={11}
+                          fill={isCustom ? '#2196F3' : getCategoryColor(category)}
+                        />
+                        <SvgText 
+                          x={midX - labelWidth / 2 + 6} 
+                          y={midY + 4} 
+                          textAnchor="start" 
+                          fontSize={11} 
+                          fontWeight="bold" 
+                          fill="#fff"
+                        >
+                          {displayText}
                         </SvgText>
                       </G>
                     );

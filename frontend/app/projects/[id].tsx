@@ -1337,7 +1337,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             
-            <!-- Final Calculation + Lines Summary - Side by Side -->
+            <!-- Final Calculation + Lines Summary - Side by Side 50/50 -->
             <div style="display: flex; gap: 16px; margin-top: 20px;">
               <!-- Flächenberechnung -->
               <div style="flex: 1; background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #1976d2;">
@@ -1351,24 +1351,24 @@ export default function ProjectDetailScreen() {
                 </div>
               </div>
               
-              <!-- Linien Zusammenfassung -->
+              <!-- Linien Zusammenfassung - 50% Breite -->
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="background: #f8f8f8; padding: 6px 8px; border-radius: 4px; border: 1px solid #e0e0e0; min-width: 140px;">
-                  <div style="font-weight: 600; color: #1976d2; font-size: 9px; margin-bottom: 4px;">Linien:</div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;">
+                <div style="flex: 1; background: linear-gradient(135deg, #fff3e0, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #FF9800;">
+                  <h3 style="font-size: 13px; color: #FF9800; margin-bottom: 12px;">Linien Zusammenfassung</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px;">
                     ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
-                      <div style="display: flex; justify-content: space-between; font-size: 8px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 12px;">
                         <span style="display: flex; align-items: center;">
-                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
+                          <span style="width: 8px; height: 8px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 6px; display: inline-block;"></span>
                           ${cat}
                         </span>
-                        <span style="margin-left: 4px;">${(length as number).toFixed(2)}m</span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)};">${(length as number).toFixed(2)} m</span>
                       </div>
                     `).join('')}
                   </div>
-                  <div style="border-top: 1px solid #333; margin-top: 4px; padding-top: 3px; display: flex; justify-content: space-between; font-weight: 700; font-size: 9px;">
+                  <div style="border-top: 2px solid #333; margin-top: 10px; padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
                     <span>Gesamt:</span>
-                    <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)}m</span>
+                    <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
                   </div>
                 </div>
               ` : ''}

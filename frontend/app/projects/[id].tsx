@@ -936,9 +936,11 @@ export default function ProjectDetailScreen() {
       return colors[category] || '#9e9e9e';
     };
     
-    // Generate SVG drawing for a calculation
-    const generateCalcSvg = (calc: any) => {
+    // Generate FULL SVG drawing for a calculation (large, with all details)
+    const generateFullCalcSvg = (calc: any) => {
       const polygons = calc.polygons || [];
+      const calcLines = calc.lines || [];
+      const calcScale = calc.scale || 100;
       if (polygons.length === 0) return '';
       
       // Find bounding box
@@ -952,19 +954,29 @@ export default function ProjectDetailScreen() {
         });
       });
       
-      const padding = 20;
+      const padding = 60;
       const width = maxX - minX + padding * 2;
       const height = maxY - minY + padding * 2;
-      const svgWidth = 200;
-      const svgHeight = (height / width) * svgWidth;
-      const scaleRatio = svgWidth / width;
+      
+      // Scale to fit on page (max 500px width)
+      const maxWidth = 500;
+      const scaleRatio = Math.min(maxWidth / width, 400 / height);
+      const svgWidth = width * scaleRatio;
+      const svgHeight = height * scaleRatio;
       
       const transformPoint = (pt: any) => ({
         x: (pt.x - minX + padding) * scaleRatio,
         y: (pt.y - minY + padding) * scaleRatio
       });
       
-      let svgContent = `<svg width="${svgWidth}" height="${Math.min(svgHeight, 150)}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="background: #f9f9f9; border-radius: 6px;">`;
+      let svgContent = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;">`;
+      
+      // Draw grid
+      const gridSize = 25 * scaleRatio;
+      svgContent += `<defs><pattern id="grid" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
+        <path d="M ${gridSize} 0 L 0 0 0 ${gridSize}" fill="none" stroke="#f0f0f0" stroke-width="0.5"/>
+      </pattern></defs>`;
+      svgContent += `<rect width="100%" height="100%" fill="url(#grid)"/>`;
       
       // Draw polygons
       polygons.forEach((polygon: any) => {
@@ -973,109 +985,140 @@ export default function ProjectDetailScreen() {
           return `${tp.x},${tp.y}`;
         }).join(' ');
         
-        const fillColor = polygon.type === 'main' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
+        const fillColor = polygon.type === 'main' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)';
         const strokeColor = polygon.type === 'main' ? '#4CAF50' : '#f44336';
         
         svgContent += `<polygon points="${points}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2"/>`;
+        
+        // Draw edge lengths
+        polygon.points.forEach((point: any, index: number) => {
+          const nextPoint = polygon.points[(index + 1) % polygon.points.length];
+          const tp1 = transformPoint(point);
+          const tp2 = transformPoint(nextPoint);
+          
+          const midX = (tp1.x + tp2.x) / 2;
+          const midY = (tp1.y + tp2.y) / 2;
+          
+          const length = calculateLineLength(point, nextPoint, calcScale);
+          if (length < 0.1) return;
+          
+          // Check if this edge has a category
+          const lineCategory = calcLines.find((l: any) => l.polygonId === polygon.id && l.pointIndex === index);
+          const bgColor = lineCategory ? getCategoryColor(lineCategory.category) : (polygon.type === 'main' ? '#4CAF50' : '#f44336');
+          
+          // Draw label background
+          const labelWidth = 45;
+          const labelHeight = 16;
+          svgContent += `<rect x="${midX - labelWidth/2}" y="${midY - labelHeight/2}" width="${labelWidth}" height="${labelHeight}" rx="3" fill="${bgColor}"/>`;
+          svgContent += `<text x="${midX}" y="${midY + 4}" text-anchor="middle" font-size="10" font-weight="bold" fill="white">${length.toFixed(2)}m</text>`;
+        });
+        
+        // Draw corner points
+        polygon.points.forEach((point: any) => {
+          const tp = transformPoint(point);
+          svgContent += `<circle cx="${tp.x}" cy="${tp.y}" r="4" fill="${polygon.type === 'main' ? '#4CAF50' : '#f44336'}" stroke="white" stroke-width="1"/>`;
+        });
       });
       
       svgContent += '</svg>';
       return svgContent;
     };
     
-    // Generate Area Calculations HTML - Two columns, compact
-    const areaCalcsHtml = areaCalculations.length > 0 ? `
-      <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-        ${areaCalculations.map((calc, index) => {
-          const polygons = calc.polygons || [];
-          const calcLines = calc.lines || [];
-          const calcScale = calc.scale || 100;
-          const mainAreas = polygons.filter((p: any) => p.type === 'main');
-          const deductionAreas = polygons.filter((p: any) => p.type === 'deduction');
+    // Generate Area Calculations HTML - Details with two-column positions
+    const areaCalcsHtml = areaCalculations.length > 0 ? areaCalculations.map((calc, index) => {
+      const polygons = calc.polygons || [];
+      const calcLines = calc.lines || [];
+      const calcScale = calc.scale || 100;
+      const mainAreas = polygons.filter((p: any) => p.type === 'main');
+      const deductionAreas = polygons.filter((p: any) => p.type === 'deduction');
+      
+      const grossArea = mainAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+      const deductionsTotal = deductionAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+      const netArea = grossArea - deductionsTotal;
+      
+      // Group lines by category
+      const linesByCategory: { [key: string]: number } = {};
+      calcLines.forEach((line: any) => {
+        const polygon = polygons.find((p: any) => p.id === line.polygonId);
+        if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
+          const point = polygon.points[line.pointIndex];
+          const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+          const length = calculateLineLength(point, nextPoint, calcScale);
+          if (!linesByCategory[line.category]) linesByCategory[line.category] = 0;
+          linesByCategory[line.category] += length;
+        }
+      });
+      
+      return `
+        <div style="margin-bottom: 30px; page-break-inside: avoid;">
+          <!-- Header with name and result -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #4CAF50;">
+            <span style="font-size: 18px; font-weight: bold;">${calc.name || `Berechnung ${index + 1}`}</span>
+            <span style="font-size: 28px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</span>
+          </div>
           
-          const grossArea = mainAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
-          const deductionsTotal = deductionAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
-          const netArea = grossArea - deductionsTotal;
+          <!-- Drawing - Full width -->
+          <div style="text-align: center; margin-bottom: 20px;">
+            ${generateFullCalcSvg(calc)}
+          </div>
           
-          // Group lines by category
-          const linesByCategory: { [key: string]: number } = {};
-          calcLines.forEach((line: any) => {
-            const polygon = polygons.find((p: any) => p.id === line.polygonId);
-            if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
-              const point = polygon.points[line.pointIndex];
-              const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
-              const length = calculateLineLength(point, nextPoint, calcScale);
-              if (!linesByCategory[line.category]) linesByCategory[line.category] = 0;
-              linesByCategory[line.category] += length;
-            }
-          });
+          <!-- Calculation summary -->
+          <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-family: monospace; font-size: 13px;">
+            <div>Brutto-Fläche: ${grossArea.toFixed(2)} m²</div>
+            ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+            <div style="border-top: 2px solid #333; margin-top: 8px; padding-top: 8px; font-weight: bold; font-size: 15px;">= Netto-Fläche: ${netArea.toFixed(2)} m²</div>
+          </div>
           
-          return `
-            <div style="width: calc(50% - 8px); border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; page-break-inside: avoid; font-size: 11px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #4CAF50;">
-                <span style="font-size: 13px; font-weight: bold;">${calc.name || `Berechnung ${index + 1}`}</span>
-                <span style="font-size: 16px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</span>
-              </div>
+          <!-- Two-column layout for positions -->
+          <div style="display: flex; gap: 20px;">
+            <!-- Left column: Areas -->
+            <div style="flex: 1;">
+              ${mainAreas.length > 0 ? `
+                <div style="margin-bottom: 12px;">
+                  <div style="font-weight: 600; margin-bottom: 6px; color: #4CAF50; font-size: 13px;">Grundflächen:</div>
+                  ${mainAreas.map((p: any) => `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #eee;">
+                      <span>${p.name}</span>
+                      <span style="color: #4CAF50; font-weight: 600;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
               
-              <div style="display: flex; gap: 10px;">
-                <!-- Drawing -->
-                <div style="flex-shrink: 0;">
-                  ${generateCalcSvg(calc)}
+              ${deductionAreas.length > 0 ? `
+                <div>
+                  <div style="font-weight: 600; margin-bottom: 6px; color: #f44336; font-size: 13px;">Abzüge:</div>
+                  ${deductionAreas.map((p: any) => `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #eee;">
+                      <span>${p.name}</span>
+                      <span style="color: #f44336; font-weight: 600;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                    </div>
+                  `).join('')}
                 </div>
-                
-                <!-- Details -->
-                <div style="flex: 1; min-width: 0;">
-                  <div style="background: #f5f5f5; padding: 6px; border-radius: 4px; margin-bottom: 8px; font-family: monospace; font-size: 10px;">
-                    <div>Brutto: ${grossArea.toFixed(2)} m²</div>
-                    ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                    <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; font-weight: bold;">= ${netArea.toFixed(2)} m²</div>
-                  </div>
-                  
-                  ${mainAreas.length > 0 ? `
-                    <div style="margin-bottom: 6px;">
-                      <div style="font-weight: 600; font-size: 10px; color: #4CAF50; margin-bottom: 2px;">Grundflächen:</div>
-                      ${mainAreas.map((p: any) => `
-                        <div style="display: flex; justify-content: space-between; font-size: 10px;">
-                          <span>${p.name}</span>
-                          <span style="color: #4CAF50;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
-                        </div>
-                      `).join('')}
-                    </div>
-                  ` : ''}
-                  
-                  ${deductionAreas.length > 0 ? `
-                    <div style="margin-bottom: 6px;">
-                      <div style="font-weight: 600; font-size: 10px; color: #f44336; margin-bottom: 2px;">Abzüge:</div>
-                      ${deductionAreas.map((p: any) => `
-                        <div style="display: flex; justify-content: space-between; font-size: 10px;">
-                          <span>${p.name}</span>
-                          <span style="color: #f44336;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
-                        </div>
-                      `).join('')}
-                    </div>
-                  ` : ''}
-                  
-                  ${Object.keys(linesByCategory).length > 0 ? `
-                    <div>
-                      <div style="font-weight: 600; font-size: 10px; color: #1976d2; margin-bottom: 2px;">Linien:</div>
-                      ${Object.entries(linesByCategory).map(([cat, length]) => `
-                        <div style="display: flex; justify-content: space-between; font-size: 10px;">
-                          <span style="display: flex; align-items: center;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 5px; display: inline-block;"></span>
-                            ${cat}
-                          </span>
-                          <span>${(length as number).toFixed(2)} m</span>
-                        </div>
-                      `).join('')}
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
+              ` : ''}
             </div>
-          `;
-        }).join('')}
-      </div>
-    ` : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
+            
+            <!-- Right column: Lines -->
+            <div style="flex: 1;">
+              ${Object.keys(linesByCategory).length > 0 ? `
+                <div>
+                  <div style="font-weight: 600; margin-bottom: 6px; color: #1976d2; font-size: 13px;">Linien:</div>
+                  ${Object.entries(linesByCategory).map(([cat, length]) => `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #eee;">
+                      <span style="display: flex; align-items: center;">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 8px; display: inline-block;"></span>
+                        ${cat}
+                      </span>
+                      <span style="font-weight: 600;">${(length as number).toFixed(2)} m</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : '<p style="color: #999; font-style: italic; font-size: 12px;">Keine Linien-Kategorien</p>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('<hr style="border: none; border-top: 1px dashed #ccc; margin: 25px 0;"/>') : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
 
     // Build complete HTML
     const html = `

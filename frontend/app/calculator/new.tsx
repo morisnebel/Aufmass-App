@@ -4844,12 +4844,12 @@ export default function AreaCalculatorEditor() {
             </View>
           )}
           
-          {/* Line Categories */}
+          {/* Line Categories - grows with each category */}
           {Object.keys(results.linesByCategory).length > 0 && (
             <View style={styles.calculationsLines}>
-              {Object.entries(results.linesByCategory).slice(0, 3).map(([category, length]) => (
+              {Object.entries(results.linesByCategory).map(([category, length]) => (
                 <View key={category} style={styles.calculationsRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <View style={[styles.categoryDotSmall, { backgroundColor: getCategoryColor(category) }]} />
                     <Text style={styles.calculationsLabel} numberOfLines={1}>{category}</Text>
                   </View>
@@ -5647,45 +5647,19 @@ export default function AreaCalculatorEditor() {
             <Text style={styles.modalTitle}>Berechnungsdetails</Text>
             
             <ScrollView style={styles.resultsScroll}>
-              {/* Main Areas with calculation steps */}
+              {/* Main Areas - simplified without edge lengths */}
               {polygons.filter(p => p.type === 'main').length > 0 && (
                 <View style={styles.resultsSection}>
                   <Text style={styles.resultsSectionTitle}>Hauptflächen</Text>
                   
                   {polygons.filter(p => p.type === 'main').map((polygon) => {
                     const area = calculatePolygonArea(polygon.points);
-                    const perimeter = polygon.points.reduce((sum, point, i) => {
-                      const nextPoint = polygon.points[(i + 1) % polygon.points.length];
-                      return sum + calculateLineLength(point, nextPoint);
-                    }, 0);
                     
                     return (
                       <View key={polygon.id} style={styles.resultCard}>
                         <View style={styles.resultCardHeader}>
                           <Text style={styles.resultCardTitle}>{polygon.name}</Text>
                           <Text style={styles.resultCardValue}>+{area.toFixed(2)} m²</Text>
-                        </View>
-                        <View style={styles.resultCardDetails}>
-                          <Text style={styles.resultCardDetail}>
-                            Umfang: {perimeter.toFixed(2)} m
-                          </Text>
-                          <Text style={styles.resultCardDetail}>
-                            Ecken: {polygon.points.length}
-                          </Text>
-                        </View>
-                        {/* Edge lengths */}
-                        <View style={styles.resultCardEdges}>
-                          <Text style={styles.resultCardSubtitle}>Kantenlängen:</Text>
-                          {polygon.points.map((point, i) => {
-                            const nextPoint = polygon.points[(i + 1) % polygon.points.length];
-                            const length = calculateLineLength(point, nextPoint);
-                            if (length < 0.05) return null;
-                            return (
-                              <Text key={i} style={styles.resultCardEdge}>
-                                Kante {i + 1}: {length.toFixed(2)} m
-                              </Text>
-                            );
-                          })}
                         </View>
                       </View>
                     );
@@ -5701,28 +5675,19 @@ export default function AreaCalculatorEditor() {
                 </View>
               )}
               
-              {/* Deduction Areas with calculation steps */}
+              {/* Deduction Areas - simplified */}
               {polygons.filter(p => p.type === 'deduction').length > 0 && (
                 <View style={styles.resultsSection}>
                   <Text style={[styles.resultsSectionTitle, { color: '#f44336' }]}>Abzüge</Text>
                   
                   {polygons.filter(p => p.type === 'deduction').map((polygon) => {
                     const area = calculatePolygonArea(polygon.points);
-                    const perimeter = polygon.points.reduce((sum, point, i) => {
-                      const nextPoint = polygon.points[(i + 1) % polygon.points.length];
-                      return sum + calculateLineLength(point, nextPoint);
-                    }, 0);
                     
                     return (
                       <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
                         <View style={styles.resultCardHeader}>
                           <Text style={styles.resultCardTitle}>{polygon.name}</Text>
                           <Text style={[styles.resultCardValue, { color: '#f44336' }]}>-{area.toFixed(2)} m²</Text>
-                        </View>
-                        <View style={styles.resultCardDetails}>
-                          <Text style={styles.resultCardDetail}>
-                            Umfang: {perimeter.toFixed(2)} m
-                          </Text>
                         </View>
                       </View>
                     );
@@ -5740,7 +5705,7 @@ export default function AreaCalculatorEditor() {
               
               {/* Final Calculation */}
               <View style={styles.resultsSection}>
-                <Text style={styles.resultsSectionTitle}>Rechenweg</Text>
+                <Text style={styles.resultsSectionTitle}>Flächenberechnung</Text>
                 <View style={styles.calculationSteps}>
                   <Text style={styles.calculationStep}>
                     Brutto: {polygons.filter(p => p.type === 'main').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
@@ -5757,20 +5722,49 @@ export default function AreaCalculatorEditor() {
                 </View>
               </View>
               
-              {/* Line Results */}
+              {/* Line Results with calculation breakdown */}
               {Object.keys(results.linesByCategory).length > 0 && (
                 <View style={styles.resultsSection}>
                   <Text style={styles.resultsSectionTitle}>Linien nach Kategorie</Text>
                   
-                  {Object.entries(results.linesByCategory).map(([category, length]) => (
-                    <View key={category} style={styles.resultRow}>
-                      <View style={styles.resultNameWithColor}>
-                        <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
-                        <Text style={styles.resultName}>{category}</Text>
+                  {Object.entries(results.linesByCategory).map(([category, totalLength]) => {
+                    // Find all individual line segments for this category
+                    const categoryLines = lineCategories.filter(lc => lc.category === category);
+                    const individualLengths: number[] = [];
+                    
+                    categoryLines.forEach(lc => {
+                      const polygon = polygons.find(p => p.id === lc.polygonId);
+                      if (polygon && polygon.points.length > lc.edgeIndex) {
+                        const point = polygon.points[lc.edgeIndex];
+                        const nextPoint = polygon.points[(lc.edgeIndex + 1) % polygon.points.length];
+                        const length = calculateLineLength(point, nextPoint);
+                        if (length > 0.01) {
+                          individualLengths.push(length);
+                        }
+                      }
+                    });
+                    
+                    return (
+                      <View key={category} style={[styles.resultCard, { borderLeftColor: getCategoryColor(category) }]}>
+                        <View style={styles.resultCardHeader}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
+                            <Text style={styles.resultCardTitle}>{category}</Text>
+                          </View>
+                          <Text style={[styles.resultCardValue, { color: getCategoryColor(category) }]}>
+                            {(totalLength as number).toFixed(2)} m
+                          </Text>
+                        </View>
+                        {individualLengths.length > 1 && (
+                          <View style={{ paddingTop: 4 }}>
+                            <Text style={styles.resultCardDetail}>
+                              {individualLengths.map(l => l.toFixed(2)).join(' + ')} = {(totalLength as number).toFixed(2)} m
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      <Text style={styles.resultValue}>{(length as number).toFixed(2)} m</Text>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </ScrollView>

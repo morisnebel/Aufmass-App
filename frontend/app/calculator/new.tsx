@@ -4191,10 +4191,11 @@ export default function AreaCalculatorEditor() {
                     const displayLength = getEdgeLength(polygon.id, index, calculatedLength);
                     const isCustom = hasCustomLength(polygon.id, index);
                     
-                    // Calculate label dimensions
+                    // Calculate oval/pill label dimensions
                     const displayText = `${displayLength.toFixed(2)}m`;
-                    const labelWidth = Math.max(50, displayText.length * 7 + 12);
-                    const labelHeight = 22;
+                    const labelWidth = Math.max(55, displayText.length * 8 + 16);
+                    const labelHeight = 26;
+                    const cornerRadius = labelHeight / 2; // Full pill shape
                     
                     return (
                       <G key={`line-${polygon.id}-${index}`}>
@@ -4206,19 +4207,21 @@ export default function AreaCalculatorEditor() {
                           stroke={getCategoryColor(category)}
                           strokeWidth={4}
                         />
+                        {/* Oval/Pill shaped background */}
                         <Rect
                           x={midX - labelWidth / 2}
                           y={midY - labelHeight / 2}
                           width={labelWidth}
                           height={labelHeight}
-                          rx={11}
+                          rx={cornerRadius}
+                          ry={cornerRadius}
                           fill={isCustom ? '#2196F3' : getCategoryColor(category)}
                         />
                         <SvgText 
-                          x={midX - labelWidth / 2 + 6} 
-                          y={midY + 4} 
+                          x={midX - labelWidth / 2 + 8} 
+                          y={midY + 5} 
                           textAnchor="start" 
-                          fontSize={11} 
+                          fontSize={12} 
                           fontWeight="bold" 
                           fill="#fff"
                         >

@@ -167,6 +167,7 @@ export default function ProjectDetailScreen() {
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSharingImage, setIsSharingImage] = useState(false);
+  const [showCalcDetails, setShowCalcDetails] = useState(true); // Toggle for calculation details in PDF
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -1172,7 +1173,8 @@ export default function ProjectDetailScreen() {
             ${generateFullCalcSvg(calc)}
           </div>
           
-          <!-- Compact calculation summary with frames -->
+          <!-- Compact calculation summary with frames - CONDITIONAL -->
+          ${showCalcDetails ? `
           <div style="display: flex; gap: 8px; font-size: 9px; line-height: 1.3;">
             <!-- Rechenweg - framed -->
             <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; min-width: 100px;">
@@ -1216,6 +1218,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
           </div>
+          ` : ''}
         </div>
       `;
     }).join('<hr style="border: none; border-top: 1px dashed #ddd; margin: 8px 0;"/>') : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
@@ -4286,6 +4289,43 @@ export default function ProjectDetailScreen() {
             <Text style={styles.pdfPreviewTitle}>PDF Vorschau</Text>
             <View style={{ width: 40 }} />
           </View>
+          
+          {/* Toggle for calculation details */}
+          <TouchableOpacity 
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              backgroundColor: showCalcDetails ? '#4CAF50' : '#e0e0e0',
+              marginHorizontal: 16,
+              marginBottom: 8,
+              borderRadius: 20,
+            }}
+            onPress={async () => {
+              setShowCalcDetails(!showCalcDetails);
+              // Regenerate PDF with new setting
+              setTimeout(async () => {
+                const html = await generatePdfHtml();
+                setPdfHtmlContent(html);
+              }, 100);
+            }}
+          >
+            <Ionicons 
+              name={showCalcDetails ? "checkbox" : "square-outline"} 
+              size={20} 
+              color={showCalcDetails ? "#fff" : "#666"} 
+            />
+            <Text style={{ 
+              marginLeft: 8, 
+              color: showCalcDetails ? '#fff' : '#666',
+              fontWeight: '600',
+              fontSize: 14,
+            }}>
+              Details drucken
+            </Text>
+          </TouchableOpacity>
           
           <ViewShot 
             ref={viewShotRef} 

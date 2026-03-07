@@ -6149,6 +6149,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>
             </View>
+          </View>
           </ScrollView>
         </View>
       </Modal>
@@ -6349,6 +6350,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Speichern</Text>
               </TouchableOpacity>
             </View>
+          </View>
           </ScrollView>
         </View>
       </Modal>
@@ -6756,6 +6758,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>
             </View>
+          </View>
           </ScrollView>
         </View>
       </Modal>

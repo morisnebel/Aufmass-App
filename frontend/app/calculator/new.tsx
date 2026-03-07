@@ -193,6 +193,8 @@ export default function AreaCalculatorEditor() {
   
   // Annotation drawing color
   const [annotationColor, setAnnotationColor] = useState('#FF0000');
+  const [showShapesModal, setShowShapesModal] = useState(false);
+  const [textFontSize, setTextFontSize] = useState(16); // For text annotation size
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
@@ -1638,10 +1640,9 @@ export default function AreaCalculatorEditor() {
       setTextPosition({ x, y });
       setShowTextModal(true);
     } else if (mode === 'annotation_memo') {
-      // Start memo pointer - tap on target point first
-      if (!pendingMemoPointer) {
-        setPendingMemoPointer({ x1: x, y1: y - 50, x2: x, y2: y });
-      }
+      // Tap to place memo - open modal immediately
+      setPendingMemoPointer({ x1: x, y1: y - 50, x2: x, y2: y });
+      setShowMemoModal(true);
     } else if (mode === 'select') {
       // First check if clicking on an annotation
       const clickedAnnotation = findAnnotationAtPosition(x, y);
@@ -2357,7 +2358,7 @@ export default function AreaCalculatorEditor() {
       x: textPosition.x,
       y: textPosition.y,
       color: annotationColor,
-      fontSize: 16,
+      fontSize: textFontSize,
     };
     setTextAnnotations(prev => [...prev, newAnnotation]);
     setNewTextInput('');
@@ -2564,26 +2565,6 @@ export default function AreaCalculatorEditor() {
           </Text>
         </TouchableOpacity>
         
-        {/* Undo button */}
-        <TouchableOpacity
-          style={[styles.toolButton, { opacity: undoStack.length === 0 ? 0.4 : 1 }]}
-          onPress={undo}
-          disabled={undoStack.length === 0}
-        >
-          <Ionicons name="arrow-undo" size={20} color="#666" />
-          <Text style={styles.toolLabel}>Zurück</Text>
-        </TouchableOpacity>
-        
-        {/* Redo button */}
-        <TouchableOpacity
-          style={[styles.toolButton, { opacity: redoStack.length === 0 ? 0.4 : 1 }]}
-          onPress={redo}
-          disabled={redoStack.length === 0}
-        >
-          <Ionicons name="arrow-redo" size={20} color="#666" />
-          <Text style={styles.toolLabel}>Vor</Text>
-        </TouchableOpacity>
-        
         <View style={styles.toolSeparator} />
         
         {/* === ANNOTATION TOOLS === */}
@@ -2604,19 +2585,11 @@ export default function AreaCalculatorEditor() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.toolButton, mode === 'annotation_rect' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_rect' ? '#673AB7' : '#f5f5f5' }]}
-          onPress={() => { setMode('annotation_rect'); setCurrentPoints([]); }}
+          style={[styles.toolButton, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolButtonActive, { backgroundColor: (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#673AB7' : '#f5f5f5' }]}
+          onPress={() => setShowShapesModal(true)}
         >
-          <Ionicons name="square-outline" size={20} color={mode === 'annotation_rect' ? '#fff' : '#673AB7'} />
-          <Text style={[styles.toolLabel, mode === 'annotation_rect' && styles.toolLabelActive]}>Rahmen</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'annotation_arrow' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_arrow' ? '#009688' : '#f5f5f5' }]}
-          onPress={() => { setMode('annotation_arrow'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="arrow-forward" size={20} color={mode === 'annotation_arrow' ? '#fff' : '#009688'} />
-          <Text style={[styles.toolLabel, mode === 'annotation_arrow' && styles.toolLabelActive]}>Pfeil</Text>
+          <Ionicons name="shapes" size={20} color={(mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#fff' : '#673AB7'} />
+          <Text style={[styles.toolLabel, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolLabelActive]}>Formen</Text>
         </TouchableOpacity>
         
         {/* Delete selected annotation */}
@@ -3156,12 +3129,6 @@ export default function AreaCalculatorEditor() {
               setAnnotationShapes(prev => [...prev, currentAnnotationShape]);
             }
             setCurrentAnnotationShape(null);
-            return;
-          }
-          
-          // Finish memo pointer drawing
-          if (pendingMemoPointer) {
-            setShowMemoModal(true);
             return;
           }
           
@@ -4486,7 +4453,27 @@ export default function AreaCalculatorEditor() {
               autoFocus
               multiline
             />
+            {/* Font size selector */}
+            <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
+              {[12, 16, 20, 24, 32].map(size => (
+                <TouchableOpacity
+                  key={size}
+                  onPress={() => setTextFontSize(size)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    marginHorizontal: 4,
+                    borderRadius: 8,
+                    backgroundColor: textFontSize === size ? '#2196F3' : '#f0f0f0',
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: textFontSize === size ? 'bold' : 'normal', color: textFontSize === size ? '#fff' : '#333' }}>{size}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             {/* Color picker */}
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>Farbe:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
               {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
                 <TouchableOpacity
@@ -4518,6 +4505,75 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Shapes Selection Modal */}
+      <Modal visible={showShapesModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { padding: 20 }]}>
+            <Text style={styles.modalTitle}>Form auswählen</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 15, marginVertical: 15 }}>
+              <TouchableOpacity
+                style={{ alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, width: 80 }}
+                onPress={() => { setMode('annotation_rect'); setShowShapesModal(false); setCurrentPoints([]); }}
+              >
+                <Ionicons name="square-outline" size={32} color="#673AB7" />
+                <Text style={{ marginTop: 5, fontSize: 12 }}>Rechteck</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{ alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, width: 80 }}
+                onPress={() => { setMode('annotation_circle'); setShowShapesModal(false); setCurrentPoints([]); }}
+              >
+                <Ionicons name="ellipse-outline" size={32} color="#673AB7" />
+                <Text style={{ marginTop: 5, fontSize: 12 }}>Kreis</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{ alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, width: 80 }}
+                onPress={() => { setMode('annotation_arrow'); setShowShapesModal(false); setCurrentPoints([]); }}
+              >
+                <Ionicons name="arrow-forward" size={32} color="#673AB7" />
+                <Text style={{ marginTop: 5, fontSize: 12 }}>Pfeil</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{ alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, width: 80 }}
+                onPress={() => { setMode('annotation_line'); setShowShapesModal(false); setCurrentPoints([]); }}
+              >
+                <Ionicons name="remove-outline" size={32} color="#673AB7" />
+                <Text style={{ marginTop: 5, fontSize: 12 }}>Linie</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Color picker */}
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Farbe:</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 15 }}>
+              {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAnnotationColor(color)}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: color,
+                    marginHorizontal: 5,
+                    borderWidth: annotationColor === color ? 3 : 1,
+                    borderColor: annotationColor === color ? '#fff' : '#ccc',
+                  }}
+                />
+              ))}
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30 }]}
+              onPress={() => setShowShapesModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Schließen</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

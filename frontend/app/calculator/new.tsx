@@ -2084,10 +2084,22 @@ export default function AreaCalculatorEditor() {
         const cx = (x1 + x2) / 2;
         const cy = (y1 + y2) / 2;
         const r = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2;
+        const minCX = Math.min(x1, x2);
+        const maxCX = Math.max(x1, x2);
+        const minCY = Math.min(y1, y2);
+        const maxCY = Math.max(y1, y2);
         return (
           <G key={key}>
             <Circle cx={cx} cy={cy} r={r} stroke={color} strokeWidth={sw} fill="none" />
-            {isSelected && <Circle cx={cx} cy={cy} r={6} fill="#2196F3" />}
+            {isSelected && (
+              <>
+                {/* Corner handles for resizing */}
+                <Circle cx={minCX} cy={minCY} r={8} fill="#2196F3" />
+                <Circle cx={maxCX} cy={minCY} r={8} fill="#2196F3" />
+                <Circle cx={minCX} cy={maxCY} r={8} fill="#2196F3" />
+                <Circle cx={maxCX} cy={maxCY} r={8} fill="#2196F3" />
+              </>
+            )}
           </G>
         );
       case 'line':

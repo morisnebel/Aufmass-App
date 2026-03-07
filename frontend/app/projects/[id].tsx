@@ -1051,17 +1051,81 @@ export default function ProjectDetailScreen() {
       svgContent += `<text x="${overlayX + 45}" y="${overlayY + 32}" text-anchor="middle" font-size="14" font-weight="bold" fill="#4CAF50">${netArea.toFixed(2)}</text>`;
       svgContent += `<text x="${overlayX + 45}" y="${overlayY + 44}" text-anchor="middle" font-size="10" fill="#333">m²</text>`;
       
+      // Render annotations (shapes, texts, memos)
+      const calcAnnotations = calc.annotations || {};
+      
+      // Render shapes
+      if (calcAnnotations.shapes && calcAnnotations.shapes.length > 0) {
+        calcAnnotations.shapes.forEach((shape: any) => {
+          const tp1 = transformPoint(shape.startPoint);
+          const tp2 = transformPoint(shape.endPoint);
+          const color = shape.color || '#FF0000';
+          const sw = Math.max(1, shape.strokeWidth * scaleRatio * 0.5);
+          
+          if (shape.type === 'rectangle' || shape.type === 'rect') {
+            const x = Math.min(tp1.x, tp2.x);
+            const y = Math.min(tp1.y, tp2.y);
+            const w = Math.abs(tp2.x - tp1.x);
+            const h = Math.abs(tp2.y - tp1.y);
+            svgContent += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+          } else if (shape.type === 'circle') {
+            const cx = (tp1.x + tp2.x) / 2;
+            const cy = (tp1.y + tp2.y) / 2;
+            const rx = Math.abs(tp2.x - tp1.x) / 2;
+            const ry = Math.abs(tp2.y - tp1.y) / 2;
+            svgContent += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+          } else if (shape.type === 'arrow') {
+            const angle = Math.atan2(tp2.y - tp1.y, tp2.x - tp1.x);
+            const headLen = 10;
+            svgContent += `<line x1="${tp1.x}" y1="${tp1.y}" x2="${tp2.x}" y2="${tp2.y}" stroke="${color}" stroke-width="${sw}"/>`;
+            svgContent += `<polygon points="${tp2.x},${tp2.y} ${tp2.x - headLen * Math.cos(angle - Math.PI/6)},${tp2.y - headLen * Math.sin(angle - Math.PI/6)} ${tp2.x - headLen * Math.cos(angle + Math.PI/6)},${tp2.y - headLen * Math.sin(angle + Math.PI/6)}" fill="${color}"/>`;
+          } else if (shape.type === 'line') {
+            svgContent += `<line x1="${tp1.x}" y1="${tp1.y}" x2="${tp2.x}" y2="${tp2.y}" stroke="${color}" stroke-width="${sw}"/>`;
+          }
+        });
+      }
+      
+      // Render text annotations
+      if (calcAnnotations.texts && calcAnnotations.texts.length > 0) {
+        calcAnnotations.texts.forEach((text: any) => {
+          const tp = transformPoint(text.position);
+          const fontSize = Math.max(8, text.fontSize * scaleRatio * 0.4);
+          svgContent += `<text x="${tp.x}" y="${tp.y}" font-size="${fontSize}" fill="${text.color || '#333'}">${text.text}</text>`;
+        });
+      }
+      
+      // Render memo pointers
+      if (calcAnnotations.memos && calcAnnotations.memos.length > 0) {
+        calcAnnotations.memos.forEach((memo: any) => {
+          const anchor = transformPoint(memo.anchorPoint);
+          const label = transformPoint({
+            x: memo.anchorPoint.x + memo.labelOffset.x,
+            y: memo.anchorPoint.y + memo.labelOffset.y
+          });
+          const color = memo.color || '#FF9800';
+          
+          // Line from anchor to label
+          svgContent += `<line x1="${anchor.x}" y1="${anchor.y}" x2="${label.x}" y2="${label.y}" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+          // Anchor dot
+          svgContent += `<circle cx="${anchor.x}" cy="${anchor.y}" r="4" fill="${color}"/>`;
+          // Label background and text
+          const textWidth = memo.text.length * 5 + 10;
+          svgContent += `<rect x="${label.x - 3}" y="${label.y - 10}" width="${textWidth}" height="16" rx="3" fill="white" stroke="${color}" stroke-width="1"/>`;
+          svgContent += `<text x="${label.x + 2}" y="${label.y + 2}" font-size="9" fill="${color}">${memo.text}</text>`;
+        });
+      }
+      
       svgContent += '</svg>';
       
-      // If there's a background image, wrap everything with the image shown separately
+      // If there's a background image, show it above the drawing (right aligned)
       if (calcBackgroundImage) {
         return `
-          <div style="display: flex; gap: 10px; align-items: flex-start;">
-            <div style="flex: 1;">${svgContent}</div>
-            <div style="width: 120px; flex-shrink: 0;">
-              <div style="font-size: 8px; color: #666; margin-bottom: 4px; text-align: center;">Referenzbild</div>
-              <img src="${calcBackgroundImage}" style="width: 100%; border-radius: 6px; border: 1px solid #ddd;" />
+          <div style="position: relative;">
+            <div style="position: absolute; top: 0; right: 0; width: 100px; z-index: 1;">
+              <div style="font-size: 7px; color: #666; margin-bottom: 2px; text-align: center;">Referenzbild</div>
+              <img src="${calcBackgroundImage}" style="width: 100%; max-height: 80px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; background: #fff;" />
             </div>
+            <div>${svgContent}</div>
           </div>
         `;
       }

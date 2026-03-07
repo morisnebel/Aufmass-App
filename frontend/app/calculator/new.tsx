@@ -402,6 +402,28 @@ export default function AreaCalculatorEditor() {
             setBackgroundImage(calc.backgroundImage);
           }, 100);
         }
+        // Load annotations (shapes, texts, memos)
+        if (calc.annotations) {
+          if (calc.annotations.shapes && calc.annotations.shapes.length > 0) {
+            const loadedShapes = calc.annotations.shapes.map((s: any) => ({
+              id: s.id,
+              type: s.type,
+              x1: s.startPoint.x,
+              y1: s.startPoint.y,
+              x2: s.endPoint.x,
+              y2: s.endPoint.y,
+              color: s.color,
+              strokeWidth: s.strokeWidth,
+            }));
+            setAnnotationShapes(loadedShapes);
+          }
+          if (calc.annotations.texts && calc.annotations.texts.length > 0) {
+            setTextAnnotations(calc.annotations.texts);
+          }
+          if (calc.annotations.memos && calc.annotations.memos.length > 0) {
+            setMemoPointers(calc.annotations.memos);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading calculation:', error);
@@ -776,6 +798,32 @@ export default function AreaCalculatorEditor() {
     try {
       const results = calculateResults();
       
+      // Prepare annotations for saving
+      const annotations = {
+        shapes: annotationShapes.map(s => ({
+          id: s.id,
+          type: s.type,
+          startPoint: { x: s.x1, y: s.y1 },
+          endPoint: { x: s.x2, y: s.y2 },
+          color: s.color,
+          strokeWidth: s.strokeWidth,
+        })),
+        texts: textAnnotations.map(t => ({
+          id: t.id,
+          position: t.position,
+          text: t.text,
+          color: t.color,
+          fontSize: t.fontSize,
+        })),
+        memos: memoPointers.map(m => ({
+          id: m.id,
+          anchorPoint: m.anchorPoint,
+          labelOffset: m.labelOffset,
+          text: m.text,
+          color: m.color,
+        })),
+      };
+      
       const data = {
         project_id: projectId,
         name,
@@ -791,6 +839,7 @@ export default function AreaCalculatorEditor() {
         gridSize,
         results,
         backgroundImage: backgroundImage || undefined,
+        annotations: (annotations.shapes.length > 0 || annotations.texts.length > 0 || annotations.memos.length > 0) ? annotations : undefined,
       };
       
       if (calculationId) {

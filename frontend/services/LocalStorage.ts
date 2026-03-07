@@ -832,6 +832,31 @@ export interface AreaCalculation {
   lines: AreaLine[];
   // Hintergrundbild (optional)
   backgroundImage?: string;
+  // Annotationen (Texte, Notizen, Formen)
+  annotations?: {
+    shapes?: Array<{
+      id: string;
+      type: 'rect' | 'circle' | 'arrow' | 'line';
+      startPoint: AreaPoint;
+      endPoint: AreaPoint;
+      color: string;
+      strokeWidth: number;
+    }>;
+    texts?: Array<{
+      id: string;
+      position: AreaPoint;
+      text: string;
+      color: string;
+      fontSize: number;
+    }>;
+    memos?: Array<{
+      id: string;
+      anchorPoint: AreaPoint;
+      labelOffset: AreaPoint;
+      text: string;
+      color: string;
+    }>;
+  };
   // Raster-Einstellungen
   gridEnabled: boolean;
   gridSize: number; // Größe eines Rasterfelds in Metern

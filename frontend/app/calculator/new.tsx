@@ -3542,7 +3542,7 @@ export default function AreaCalculatorEditor() {
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
-          style={[styles.toolButton, snapToAngles && styles.toolButtonActive]}
+          style={[styles.toolButton, snapToAngles && styles.toolButtonActive, { backgroundColor: snapToAngles ? '#2196F3' : '#f5f5f5' }]}
           onPress={() => setSnapToAngles(!snapToAngles)}
         >
           <Ionicons name="compass" size={20} color={snapToAngles ? '#fff' : '#666'} />

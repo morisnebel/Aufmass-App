@@ -7783,7 +7783,7 @@ export default function AreaCalculatorEditor() {
                   backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#fce4ec' : '#fff',
                 }}
                 placeholder="Eigener Winkel (z.B. -90)"
-                keyboardType="numbers-and-punctuation"
+                keyboardType="default"
                 value={fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle) ? fixedAngle.toString() : ''}
                 onChangeText={(text) => {
                   // Filter: nur Zahlen und Minus behalten
@@ -7792,10 +7792,6 @@ export default function AreaCalculatorEditor() {
                   const cleanFiltered = filtered.replace(/(?!^)-/g, '');
                   
                   if (cleanFiltered === '' || cleanFiltered === '-') {
-                    if (cleanFiltered === '-') {
-                      // Zeige das Minus, aber setze noch keinen Winkel
-                      return;
-                    }
                     setFixedAngle(null);
                     return;
                   }

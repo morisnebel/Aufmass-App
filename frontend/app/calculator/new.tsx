@@ -92,6 +92,7 @@ export default function AreaCalculatorEditor() {
     annotationShapes: AnnotationShape[];
     textAnnotations: TextAnnotation[];
     memoPointers: MemoPointer[];
+    customEdgeLengths: { [key: string]: number };
   }
   const [undoStack, setUndoStack] = useState<HistoryState[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
@@ -234,6 +235,7 @@ export default function AreaCalculatorEditor() {
       annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
       textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
       memoPointers: JSON.parse(JSON.stringify(memoPointers)),
+      customEdgeLengths: JSON.parse(JSON.stringify(customEdgeLengths)),
     };
     setUndoStack(prev => [...prev.slice(-19), currentState]); // Keep last 20 states
     setRedoStack([]); // Clear redo stack when new action is performed
@@ -251,6 +253,7 @@ export default function AreaCalculatorEditor() {
       annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
       textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
       memoPointers: JSON.parse(JSON.stringify(memoPointers)),
+      customEdgeLengths: JSON.parse(JSON.stringify(customEdgeLengths)),
     };
     setRedoStack(prev => [...prev, currentState]);
     
@@ -262,6 +265,7 @@ export default function AreaCalculatorEditor() {
     setAnnotationShapes(previousState.annotationShapes || []);
     setTextAnnotations(previousState.textAnnotations || []);
     setMemoPointers(previousState.memoPointers || []);
+    setCustomEdgeLengths(previousState.customEdgeLengths || {});
     setUndoStack(prev => prev.slice(0, -1));
     
     // Clear selections
@@ -284,6 +288,7 @@ export default function AreaCalculatorEditor() {
       annotationShapes: JSON.parse(JSON.stringify(annotationShapes)),
       textAnnotations: JSON.parse(JSON.stringify(textAnnotations)),
       memoPointers: JSON.parse(JSON.stringify(memoPointers)),
+      customEdgeLengths: JSON.parse(JSON.stringify(customEdgeLengths)),
     };
     setUndoStack(prev => [...prev, currentState]);
     
@@ -295,6 +300,7 @@ export default function AreaCalculatorEditor() {
     setAnnotationShapes(nextState.annotationShapes || []);
     setTextAnnotations(nextState.textAnnotations || []);
     setMemoPointers(nextState.memoPointers || []);
+    setCustomEdgeLengths(nextState.customEdgeLengths || {});
     setRedoStack(prev => prev.slice(0, -1));
     
     // Clear selections
@@ -1451,20 +1457,12 @@ export default function AreaCalculatorEditor() {
   };
 
   const getEdgeLength = (polygonId: string, edgeIndex: number, calculatedLength: number): number => {
-    // In Auto mode, always return calculated length
-    if (!useManualAreaCalc) {
-      return calculatedLength;
-    }
-    // In Manual mode, use custom length if available
+    // Always show custom length if available (on the line labels)
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] ?? calculatedLength;
   };
 
   const hasCustomLength = (polygonId: string, edgeIndex: number): boolean => {
-    // Only show as custom if we're in manual mode AND there's a custom value
-    if (!useManualAreaCalc) {
-      return false;
-    }
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] !== undefined;
   };
@@ -2542,20 +2540,25 @@ export default function AreaCalculatorEditor() {
           </Text>
         </TouchableOpacity>
         
-        {/* Reset manual measurements button - only show when there are custom lengths */}
-        {Object.keys(customEdgeLengths).length > 0 && (
-          <TouchableOpacity
-            style={[styles.toolButton, { backgroundColor: '#f44336' }]}
-            onPress={() => {
-              saveStateForUndo();
-              setCustomEdgeLengths({});
-              setUseManualAreaCalc(false);
-            }}
-          >
-            <Ionicons name="refresh" size={20} color="#fff" />
-            <Text style={[styles.toolLabel, { color: '#fff' }]}>Zurück</Text>
-          </TouchableOpacity>
-        )}
+        {/* Undo button */}
+        <TouchableOpacity
+          style={[styles.toolButton, { opacity: undoStack.length === 0 ? 0.4 : 1 }]}
+          onPress={undo}
+          disabled={undoStack.length === 0}
+        >
+          <Ionicons name="arrow-undo" size={20} color="#666" />
+          <Text style={styles.toolLabel}>Zurück</Text>
+        </TouchableOpacity>
+        
+        {/* Redo button */}
+        <TouchableOpacity
+          style={[styles.toolButton, { opacity: redoStack.length === 0 ? 0.4 : 1 }]}
+          onPress={redo}
+          disabled={redoStack.length === 0}
+        >
+          <Ionicons name="arrow-redo" size={20} color="#666" />
+          <Text style={styles.toolLabel}>Vor</Text>
+        </TouchableOpacity>
         
         <View style={styles.toolSeparator} />
         

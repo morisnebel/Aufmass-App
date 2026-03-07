@@ -941,6 +941,7 @@ export default function ProjectDetailScreen() {
       const polygons = calc.polygons || [];
       const calcLines = calc.lines || [];
       const calcScale = calc.scale || 100;
+      const calcBackgroundImage = calc.backgroundImage || null;
       if (polygons.length === 0) return '';
       
       // Find bounding box
@@ -969,14 +970,21 @@ export default function ProjectDetailScreen() {
         y: (pt.y - minY + padding) * scaleRatio
       });
       
+      // Calculate areas for overlay
+      const mainAreas = polygons.filter((p: any) => p.type === 'main');
+      const deductionAreas = polygons.filter((p: any) => p.type === 'deduction');
+      const grossArea = mainAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+      const deductionsTotal = deductionAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+      const netArea = grossArea - deductionsTotal;
+      
       let svgContent = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" style="background: #fff; border: 1px solid #ddd; border-radius: 6px;">`;
       
       // Draw light grid
       const gridSize = 25 * scaleRatio;
-      svgContent += `<defs><pattern id="grid" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
+      svgContent += `<defs><pattern id="grid-${calc.id || 'default'}" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
         <path d="M ${gridSize} 0 L 0 0 0 ${gridSize}" fill="none" stroke="#f5f5f5" stroke-width="0.5"/>
       </pattern></defs>`;
-      svgContent += `<rect width="100%" height="100%" fill="url(#grid)"/>`;
+      svgContent += `<rect width="100%" height="100%" fill="url(#grid-${calc.id || 'default'})"/>`;
       
       // Draw polygons - NO FILL for printing (save ink)
       polygons.forEach((polygon: any) => {
@@ -1018,9 +1026,46 @@ export default function ProjectDetailScreen() {
           const tp = transformPoint(point);
           svgContent += `<circle cx="${tp.x}" cy="${tp.y}" r="3" fill="${polygon.type === 'main' ? '#4CAF50' : '#f44336'}" stroke="white" stroke-width="1"/>`;
         });
+        
+        // Draw area label in center of polygon
+        if (polygon.points.length >= 3) {
+          const centerX = polygon.points.reduce((sum: number, p: any) => sum + p.x, 0) / polygon.points.length;
+          const centerY = polygon.points.reduce((sum: number, p: any) => sum + p.y, 0) / polygon.points.length;
+          const tc = transformPoint({ x: centerX, y: centerY });
+          const polyArea = calculatePolygonArea(polygon.points, calcScale);
+          const areaSign = polygon.type === 'main' ? '+' : '-';
+          const areaColor = polygon.type === 'main' ? '#4CAF50' : '#f44336';
+          
+          // Draw area name and value
+          svgContent += `<rect x="${tc.x - 35}" y="${tc.y - 18}" width="70" height="36" rx="4" fill="white" fill-opacity="0.9" stroke="${areaColor}" stroke-width="1"/>`;
+          svgContent += `<text x="${tc.x}" y="${tc.y - 4}" text-anchor="middle" font-size="9" font-weight="bold" fill="#333">${polygon.name || (polygon.type === 'main' ? 'Fläche' : 'Abzug')}</text>`;
+          svgContent += `<text x="${tc.x}" y="${tc.y + 10}" text-anchor="middle" font-size="10" font-weight="bold" fill="${areaColor}">${areaSign}${polyArea.toFixed(2)}m²</text>`;
+        }
       });
       
+      // Add calculation result overlay (bottom right corner)
+      const overlayX = svgWidth - 95;
+      const overlayY = svgHeight - 55;
+      svgContent += `<rect x="${overlayX}" y="${overlayY}" width="90" height="50" rx="6" fill="white" fill-opacity="0.95" stroke="#2196F3" stroke-width="1.5"/>`;
+      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 14}" text-anchor="middle" font-size="8" fill="#666">Ergebnis</text>`;
+      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 32}" text-anchor="middle" font-size="14" font-weight="bold" fill="#4CAF50">${netArea.toFixed(2)}</text>`;
+      svgContent += `<text x="${overlayX + 45}" y="${overlayY + 44}" text-anchor="middle" font-size="10" fill="#333">m²</text>`;
+      
       svgContent += '</svg>';
+      
+      // If there's a background image, wrap everything with the image shown separately
+      if (calcBackgroundImage) {
+        return `
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <div style="flex: 1;">${svgContent}</div>
+            <div style="width: 120px; flex-shrink: 0;">
+              <div style="font-size: 8px; color: #666; margin-bottom: 4px; text-align: center;">Referenzbild</div>
+              <img src="${calcBackgroundImage}" style="width: 100%; border-radius: 6px; border: 1px solid #ddd;" />
+            </div>
+          </div>
+        `;
+      }
+      
       return svgContent;
     };
     

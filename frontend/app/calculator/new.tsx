@@ -764,10 +764,12 @@ export default function AreaCalculatorEditor() {
   };
 
   // Save calculation
-  const saveCalculation = async () => {
+  const saveCalculation = async (showAlert: boolean = true) => {
     if (!projectId) {
-      Alert.alert('Fehler', 'Kein Projekt zugeordnet');
-      return;
+      if (showAlert) {
+        Alert.alert('Fehler', 'Kein Projekt zugeordnet');
+      }
+      return false;
     }
     
     setSaving(true);
@@ -797,13 +799,38 @@ export default function AreaCalculatorEditor() {
         await AreaCalculationService.create(data);
       }
       
-      if (Platform.OS === 'web') {
-        alert('Berechnung gespeichert');
-      } else {
-        Alert.alert('Erfolg', 'Berechnung wurde gespeichert');
+      if (showAlert) {
+        if (Platform.OS === 'web') {
+          alert('Berechnung gespeichert');
+        } else {
+          Alert.alert('Erfolg', 'Berechnung wurde gespeichert');
+        }
       }
       
-      router.back();
+      return true;
+    } catch (error) {
+      console.error('Error saving calculation:', error);
+      if (showAlert) {
+        if (Platform.OS === 'web') {
+          alert('Fehler beim Speichern');
+        } else {
+          Alert.alert('Fehler', 'Berechnung konnte nicht gespeichert werden');
+        }
+      }
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Auto-save and go back
+  const handleBackWithSave = async () => {
+    // Only auto-save if there's something to save (polygons exist or it's an existing calculation)
+    if (polygons.length > 0 || calculationId) {
+      await saveCalculation(false); // Save silently without alert
+    }
+    router.back();
+  };
     } catch (error) {
       console.error('Error saving calculation:', error);
       if (Platform.OS === 'web') {
@@ -3056,7 +3083,7 @@ export default function AreaCalculatorEditor() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+        <TouchableOpacity onPress={handleBackWithSave} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowNameModal(true)} style={styles.titleContainer}>

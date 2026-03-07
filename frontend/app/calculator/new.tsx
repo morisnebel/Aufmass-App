@@ -3440,28 +3440,28 @@ export default function AreaCalculatorEditor() {
             const centerY = (touch1.pageY + touch2.pageY) / 2;
             
             if (lastPinchDistance.current !== null && lastPinchCenter.current) {
-              // Calculate pan delta (how much the center moved)
+              // 1. Apply panning (how much the center point moved)
               const panDeltaX = centerX - lastPinchCenter.current.x;
               const panDeltaY = centerY - lastPinchCenter.current.y;
               
-              // Calculate zoom scale
+              // 2. Calculate zoom
               const rawScale = distance / lastPinchDistance.current;
               const newZoom = Math.max(0.25, Math.min(4, zoomLevel * rawScale));
+              const zoomChanged = Math.abs(newZoom - zoomLevel) > 0.002;
               
-              // Apply both pan and zoom together
-              if (Math.abs(rawScale - 1) > 0.005 || Math.abs(panDeltaX) > 2 || Math.abs(panDeltaY) > 2) {
+              // Apply pan offset
+              let newPanX = panOffset.x + panDeltaX;
+              let newPanY = panOffset.y + panDeltaY;
+              
+              // If zooming, also adjust pan to zoom towards center
+              if (zoomChanged) {
                 const zoomRatio = newZoom / zoomLevel;
-                
-                setPanOffset(prev => ({
-                  // Combine pan movement with zoom adjustment
-                  x: prev.x + panDeltaX + (centerX - prev.x) * (1 - zoomRatio),
-                  y: prev.y + panDeltaY + (centerY - prev.y) * (1 - zoomRatio),
-                }));
-                
-                if (Math.abs(newZoom - zoomLevel) > 0.005) {
-                  setZoomLevel(newZoom);
-                }
+                newPanX = centerX - (centerX - newPanX) * zoomRatio;
+                newPanY = centerY - (centerY - newPanY) * zoomRatio;
+                setZoomLevel(newZoom);
               }
+              
+              setPanOffset({ x: newPanX, y: newPanY });
             }
             
             lastPinchDistance.current = distance;

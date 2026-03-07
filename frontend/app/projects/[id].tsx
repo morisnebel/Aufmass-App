@@ -1337,36 +1337,36 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             
-            <!-- Final Calculation + Lines Summary - Side by Side 50/50 -->
-            <div style="display: flex; gap: 16px; margin-top: 20px;">
-              <!-- Flächenberechnung -->
-              <div style="flex: 1; background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #1976d2;">
-                <h3 style="font-size: 13px; color: #1976d2; margin-bottom: 12px;">Flächenberechnung</h3>
-                <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+            <!-- Final Calculation + Lines Summary - Side by Side -->
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+              <!-- Flächenberechnung - etwas schmaler -->
+              <div style="flex: 0.9; background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 14px; border-radius: 8px; border: 2px solid #1976d2;">
+                <h3 style="font-size: 12px; color: #1976d2; margin-bottom: 10px;">Flächenberechnung</h3>
+                <div style="font-family: monospace; font-size: 12px; line-height: 1.8;">
                   <div>Brutto: ${grossArea.toFixed(2)} m²</div>
                   ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                  <div style="border-top: 2px solid #333; margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 16px; color: #4CAF50;">
+                  <div style="border-top: 2px solid #333; margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 14px; color: #4CAF50;">
                     = Netto: ${netArea.toFixed(2)} m²
                   </div>
                 </div>
               </div>
               
-              <!-- Linien Zusammenfassung - 50% Breite -->
+              <!-- Linien Zusammenfassung - etwas breiter -->
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="flex: 1; background: linear-gradient(135deg, #fff3e0, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #FF9800;">
-                  <h3 style="font-size: 13px; color: #FF9800; margin-bottom: 12px;">Linien Zusammenfassung</h3>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px;">
+                <div style="flex: 1.1; background: linear-gradient(135deg, #fff3e0, #f5f5f5); padding: 14px; border-radius: 8px; border: 2px solid #FF9800;">
+                  <h3 style="font-size: 11px; color: #FF9800; margin-bottom: 8px;">Linien Zusammenfassung</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px;">
                     ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
-                      <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 9px; white-space: nowrap;">
                         <span style="display: flex; align-items: center;">
-                          <span style="width: 8px; height: 8px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 6px; display: inline-block;"></span>
+                          <span style="width: 6px; height: 6px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 4px; display: inline-block;"></span>
                           ${cat}
                         </span>
-                        <span style="font-weight: 600; color: ${getCategoryColor(cat)};">${(length as number).toFixed(2)} m</span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 4px;">${(length as number).toFixed(2)}m</span>
                       </div>
                     `).join('')}
                   </div>
-                  <div style="border-top: 2px solid #333; margin-top: 10px; padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">
+                  <div style="border-top: 1px solid #333; margin-top: 8px; padding-top: 6px; display: flex; justify-content: space-between; font-weight: 700; font-size: 11px;">
                     <span>Gesamt:</span>
                     <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
                   </div>

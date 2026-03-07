@@ -831,17 +831,6 @@ export default function AreaCalculatorEditor() {
     }
     router.back();
   };
-    } catch (error) {
-      console.error('Error saving calculation:', error);
-      if (Platform.OS === 'web') {
-        alert('Fehler beim Speichern');
-      } else {
-        Alert.alert('Fehler', 'Berechnung konnte nicht gespeichert werden');
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Calculate intersections of guide lines
   const calculateGuideLineIntersections = (): AreaPoint[] => {

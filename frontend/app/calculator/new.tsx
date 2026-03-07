@@ -55,7 +55,7 @@ export default function AreaCalculatorEditor() {
   const [lines, setLines] = useState<AreaLine[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
-  const [gridSize, setGridSize] = useState(0.5); // 0.5 Meter (50cm) pro Rasterfeld
+  const [gridSize, setGridSize] = useState(0.25); // 0.25 Meter (25cm) pro Rasterfeld
   
   // === ZOOM & PAN ===
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -74,6 +74,7 @@ export default function AreaCalculatorEditor() {
   const [bgLockAspectRatio, setBgLockAspectRatio] = useState(true);
   const [bgImageEditMode, setBgImageEditMode] = useState(false);
   const [showBgImageModal, setShowBgImageModal] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
   const [draggingBgImage, setDraggingBgImage] = useState(false);
   const [resizingBgImage, setResizingBgImage] = useState<'none' | 'nw' | 'ne' | 'sw' | 'se'>('none');
   const bgImageDragStart = useRef({ x: 0, y: 0 });
@@ -1641,8 +1642,13 @@ export default function AreaCalculatorEditor() {
   // Touch handlers
   const handleCanvasTouch = (event: any) => {
     const touch = event.nativeEvent;
-    const x = touch.locationX;
-    const y = touch.locationY;
+    const rawX = touch.locationX;
+    const rawY = touch.locationY;
+    
+    // Transform coordinates based on zoom and pan
+    const transformed = transformCoordinates(rawX, rawY);
+    const x = transformed.x;
+    const y = transformed.y;
     
     // Check if clicking on an edge measurement label to edit it
     if (mode === 'select' && showEdgeLengths) {
@@ -4763,11 +4769,13 @@ export default function AreaCalculatorEditor() {
                 <Ionicons name="close-circle" size={18} color="#f44336" />
               </TouchableOpacity>
             </View>
-            <Image 
-              source={{ uri: backgroundImage }} 
-              style={styles.referenceImageSmall}
-              resizeMode="contain"
-            />
+            <TouchableOpacity onPress={() => setShowImagePreview(true)}>
+              <Image 
+                source={{ uri: backgroundImage }} 
+                style={styles.referenceImageSmall}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -5346,6 +5354,29 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
+      {/* Image Preview Modal */}
+      <Modal visible={showImagePreview} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', maxWidth: '95%', maxHeight: '85%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>Referenzbild</Text>
+                <TouchableOpacity onPress={() => setShowImagePreview(false)}>
+                  <Ionicons name="close" size={28} color="#333" />
+                </TouchableOpacity>
+              </View>
+              {backgroundImage && (
+                <Image
+                  source={{ uri: backgroundImage }}
+                  style={{ width: 350, height: 450 }}
+                  resizeMode="contain"
+                />
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Shapes Selection Modal */}
       <Modal visible={showShapesModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -5778,22 +5809,22 @@ const styles = StyleSheet.create({
     right: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 8,
-    padding: 6,
+    padding: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    maxWidth: 120,
+    maxWidth: 200,
   },
   referenceImageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   referenceImageTitle: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: '#8BC34A',
   },
@@ -5801,9 +5832,9 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   referenceImageSmall: {
-    width: 100,
-    height: 75,
-    borderRadius: 4,
+    width: 180,
+    height: 135,
+    borderRadius: 6,
     backgroundColor: '#f0f0f0',
   },
   canvas: {

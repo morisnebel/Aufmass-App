@@ -1457,12 +1457,20 @@ export default function AreaCalculatorEditor() {
   };
 
   const getEdgeLength = (polygonId: string, edgeIndex: number, calculatedLength: number): number => {
-    // Always show custom length if available (on the line labels)
+    // In Auto mode (Manuell AUS), always show original calculated length
+    if (!useManualAreaCalc) {
+      return calculatedLength;
+    }
+    // In Manual mode (Manuell AN), show custom length if available
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] ?? calculatedLength;
   };
 
   const hasCustomLength = (polygonId: string, edgeIndex: number): boolean => {
+    // Only show as custom (with visual indicator) if Manuell is ON and there's a custom value
+    if (!useManualAreaCalc) {
+      return false;
+    }
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] !== undefined;
   };

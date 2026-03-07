@@ -5754,6 +5754,112 @@ export default function AreaCalculatorEditor() {
                 </View>
               </View>
               
+              {/* Lines per Main Area */}
+              {polygons.filter(p => p.type === 'main').length > 0 && (
+                <View style={styles.resultsSection}>
+                  <Text style={styles.resultsSectionTitle}>Linien pro Grundfläche</Text>
+                  
+                  {polygons.filter(p => p.type === 'main').map((polygon) => {
+                    // Get all lines for this main polygon
+                    const polygonLines = lines.filter(l => l.polygonId === polygon.id);
+                    
+                    // Group lines by category
+                    const categoryGroups: { [key: string]: number[] } = {};
+                    polygonLines.forEach(line => {
+                      if (polygon.points.length > line.pointIndex) {
+                        const point = polygon.points[line.pointIndex];
+                        const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                        const length = calculateLineLength(point, nextPoint);
+                        if (length > 0.01) {
+                          if (!categoryGroups[line.category]) {
+                            categoryGroups[line.category] = [];
+                          }
+                          categoryGroups[line.category].push(length);
+                        }
+                      }
+                    });
+                    
+                    // If no categories assigned, show message
+                    if (Object.keys(categoryGroups).length === 0) {
+                      return (
+                        <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#4CAF50' }]}>
+                          <TouchableOpacity 
+                            onPress={() => {
+                              Alert.prompt(
+                                'Name ändern',
+                                'Neuer Name für diese Grundfläche:',
+                                (newName) => {
+                                  if (newName && newName.trim()) {
+                                    setPolygons(polygons.map(p => 
+                                      p.id === polygon.id ? { ...p, name: newName.trim() } : p
+                                    ));
+                                  }
+                                },
+                                'plain-text',
+                                polygon.name
+                              );
+                            }}
+                          >
+                            <Text style={[styles.resultCardTitle, { marginBottom: 4, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
+                          </TouchableOpacity>
+                          <Text style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>
+                            Keine Linien-Kategorien zugewiesen
+                          </Text>
+                        </View>
+                      );
+                    }
+                    
+                    return (
+                      <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#4CAF50' }]}>
+                        <TouchableOpacity 
+                          onPress={() => {
+                            Alert.prompt(
+                              'Name ändern',
+                              'Neuer Name für diese Grundfläche:',
+                              (newName) => {
+                                if (newName && newName.trim()) {
+                                  setPolygons(polygons.map(p => 
+                                    p.id === polygon.id ? { ...p, name: newName.trim() } : p
+                                  ));
+                                }
+                              },
+                              'plain-text',
+                              polygon.name
+                            );
+                          }}
+                        >
+                          <Text style={[styles.resultCardTitle, { marginBottom: 8, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
+                        </TouchableOpacity>
+                        
+                        {Object.entries(categoryGroups).map(([category, lengths]) => {
+                          const total = lengths.reduce((sum, l) => sum + l, 0);
+                          const showBreakdown = lengths.length >= 2;
+                          
+                          return (
+                            <View key={category} style={{ marginBottom: 4 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
+                                  <Text style={{ fontSize: 12, color: '#333' }}>{category}</Text>
+                                </View>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
+                                  {total.toFixed(2)} m
+                                </Text>
+                              </View>
+                              {showBreakdown && (
+                                <Text style={{ fontSize: 11, color: '#666', marginLeft: 14, marginTop: 2 }}>
+                                  {lengths.map(l => l.toFixed(2)).join(' + ')} = {total.toFixed(2)} m
+                                </Text>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+              
               {/* Lines per Deduction Area */}
               {polygons.filter(p => p.type === 'deduction').length > 0 && (
                 <View style={styles.resultsSection}>
@@ -5783,7 +5889,25 @@ export default function AreaCalculatorEditor() {
                     if (Object.keys(categoryGroups).length === 0) {
                       return (
                         <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
-                          <Text style={[styles.resultCardTitle, { marginBottom: 4 }]}>{polygon.name}</Text>
+                          <TouchableOpacity 
+                            onPress={() => {
+                              Alert.prompt(
+                                'Name ändern',
+                                'Neuer Name für diese Abzugsfläche:',
+                                (newName) => {
+                                  if (newName && newName.trim()) {
+                                    setPolygons(polygons.map(p => 
+                                      p.id === polygon.id ? { ...p, name: newName.trim() } : p
+                                    ));
+                                  }
+                                },
+                                'plain-text',
+                                polygon.name
+                              );
+                            }}
+                          >
+                            <Text style={[styles.resultCardTitle, { marginBottom: 4, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
+                          </TouchableOpacity>
                           <Text style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>
                             Keine Linien-Kategorien zugewiesen
                           </Text>
@@ -5793,7 +5917,25 @@ export default function AreaCalculatorEditor() {
                     
                     return (
                       <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
-                        <Text style={[styles.resultCardTitle, { marginBottom: 8 }]}>{polygon.name}</Text>
+                        <TouchableOpacity 
+                          onPress={() => {
+                            Alert.prompt(
+                              'Name ändern',
+                              'Neuer Name für diese Abzugsfläche:',
+                              (newName) => {
+                                if (newName && newName.trim()) {
+                                  setPolygons(polygons.map(p => 
+                                    p.id === polygon.id ? { ...p, name: newName.trim() } : p
+                                  ));
+                                }
+                              },
+                              'plain-text',
+                              polygon.name
+                            );
+                          }}
+                        >
+                          <Text style={[styles.resultCardTitle, { marginBottom: 8, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
+                        </TouchableOpacity>
                         
                         {Object.entries(categoryGroups).map(([category, lengths]) => {
                           const total = lengths.reduce((sum, l) => sum + l, 0);

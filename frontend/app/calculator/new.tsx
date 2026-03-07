@@ -156,6 +156,7 @@ export default function AreaCalculatorEditor() {
   const [annotationShapes, setAnnotationShapes] = useState<AnnotationShape[]>([]);
   const [currentAnnotationShape, setCurrentAnnotationShape] = useState<AnnotationShape | null>(null);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  const [draggingAnnotationShape, setDraggingAnnotationShape] = useState<{ id: string; startX: number; startY: number; origX1: number; origY1: number; origX2: number; origY2: number } | null>(null);
   
   // Text annotations
   interface TextAnnotation {
@@ -2927,6 +2928,52 @@ export default function AreaCalculatorEditor() {
               return;
             }
           }
+          
+          // Check if touching an annotation for dragging/selecting
+          if (mode === 'select') {
+            const annotation = findAnnotationAtPosition(x, y);
+            if (annotation) {
+              saveStateForUndo();
+              if (annotation.type === 'shape') {
+                const shape = annotationShapes.find(s => s.id === annotation.id);
+                if (shape && selectedAnnotationId === annotation.id) {
+                  // Already selected - start dragging
+                  setDraggingAnnotationShape({ id: annotation.id, startX: x, startY: y, origX1: shape.x1, origY1: shape.y1, origX2: shape.x2, origY2: shape.y2 });
+                } else {
+                  // Just select
+                  setSelectedAnnotationId(annotation.id);
+                  setSelectedTextId(null);
+                  setSelectedMemoId(null);
+                }
+              } else if (annotation.type === 'text') {
+                const text = textAnnotations.find(t => t.id === annotation.id);
+                if (text && selectedTextId === annotation.id) {
+                  // Already selected - start dragging
+                  setDraggingText({ id: annotation.id, offset: { x: x - text.x, y: y - text.y } });
+                } else {
+                  // Just select
+                  setSelectedTextId(annotation.id);
+                  setSelectedAnnotationId(null);
+                  setSelectedMemoId(null);
+                }
+              } else if (annotation.type === 'memo') {
+                const memo = memoPointers.find(m => m.id === annotation.id);
+                if (memo && selectedMemoId === annotation.id) {
+                  // Already selected - determine which part to drag
+                  const distToNote = Math.sqrt(Math.pow(x - memo.x1, 2) + Math.pow(y - (memo.y1 - 20), 2));
+                  const distToTarget = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
+                  const part = distToTarget < distToNote ? 'target' : 'note';
+                  setDraggingMemo({ id: annotation.id, part, offset: { x: part === 'note' ? x - memo.x1 : x - memo.x2, y: part === 'note' ? y - memo.y1 : y - memo.y2 } });
+                } else {
+                  // Just select
+                  setSelectedMemoId(annotation.id);
+                  setSelectedAnnotationId(null);
+                  setSelectedTextId(null);
+                }
+              }
+              return;
+            }
+          }
         }}
         onTouchMove={(event) => {
           const touch = event.nativeEvent;
@@ -3057,6 +3104,17 @@ export default function AreaCalculatorEditor() {
               }
             }));
           }
+          
+          // Dragging annotation shape
+          if (draggingAnnotationShape) {
+            const dx = x - draggingAnnotationShape.startX;
+            const dy = y - draggingAnnotationShape.startY;
+            setAnnotationShapes(prev => prev.map(s => 
+              s.id === draggingAnnotationShape.id
+                ? { ...s, x1: draggingAnnotationShape.origX1 + dx, y1: draggingAnnotationShape.origY1 + dy, x2: draggingAnnotationShape.origX2 + dx, y2: draggingAnnotationShape.origY2 + dy }
+                : s
+            ));
+          }
         }}
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
@@ -3116,6 +3174,12 @@ export default function AreaCalculatorEditor() {
           // Stop dragging memo
           if (draggingMemo) {
             setDraggingMemo(null);
+            return;
+          }
+          
+          // Stop dragging annotation shape
+          if (draggingAnnotationShape) {
+            setDraggingAnnotationShape(null);
             return;
           }
           

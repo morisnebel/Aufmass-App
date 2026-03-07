@@ -1088,8 +1088,11 @@ export default function ProjectDetailScreen() {
       // Render text annotations
       if (calcAnnotations.texts && calcAnnotations.texts.length > 0) {
         calcAnnotations.texts.forEach((text: any) => {
-          const tp = transformPoint(text.position);
-          const fontSize = Math.max(8, text.fontSize * scaleRatio * 0.4);
+          // Handle both old format (position.x/y) and new format (x/y directly)
+          const textX = text.x ?? text.position?.x ?? 0;
+          const textY = text.y ?? text.position?.y ?? 0;
+          const tp = transformPoint({ x: textX, y: textY });
+          const fontSize = Math.max(8, (text.fontSize || 16) * scaleRatio * 0.4);
           svgContent += `<text x="${tp.x}" y="${tp.y}" font-size="${fontSize}" fill="${text.color || '#333'}">${text.text}</text>`;
         });
       }
@@ -1097,11 +1100,14 @@ export default function ProjectDetailScreen() {
       // Render memo pointers
       if (calcAnnotations.memos && calcAnnotations.memos.length > 0) {
         calcAnnotations.memos.forEach((memo: any) => {
-          const anchor = transformPoint(memo.anchorPoint);
-          const label = transformPoint({
-            x: memo.anchorPoint.x + memo.labelOffset.x,
-            y: memo.anchorPoint.y + memo.labelOffset.y
-          });
+          // Handle both old format (anchorPoint/labelOffset) and new format (x1/y1/x2/y2)
+          const anchorX = memo.x2 ?? memo.anchorPoint?.x ?? 0;
+          const anchorY = memo.y2 ?? memo.anchorPoint?.y ?? 0;
+          const labelX = memo.x1 ?? (memo.anchorPoint?.x + memo.labelOffset?.x) ?? 0;
+          const labelY = memo.y1 ?? (memo.anchorPoint?.y + memo.labelOffset?.y) ?? 0;
+          
+          const anchor = transformPoint({ x: anchorX, y: anchorY });
+          const label = transformPoint({ x: labelX, y: labelY });
           const color = memo.color || '#FF9800';
           
           // Line from anchor to label
@@ -1109,9 +1115,10 @@ export default function ProjectDetailScreen() {
           // Anchor dot
           svgContent += `<circle cx="${anchor.x}" cy="${anchor.y}" r="4" fill="${color}"/>`;
           // Label background and text
-          const textWidth = memo.text.length * 5 + 10;
+          const memoText = memo.text || '';
+          const textWidth = memoText.length * 5 + 10;
           svgContent += `<rect x="${label.x - 3}" y="${label.y - 10}" width="${textWidth}" height="16" rx="3" fill="white" stroke="${color}" stroke-width="1"/>`;
-          svgContent += `<text x="${label.x + 2}" y="${label.y + 2}" font-size="9" fill="${color}">${memo.text}</text>`;
+          svgContent += `<text x="${label.x + 2}" y="${label.y + 2}" font-size="9" fill="${color}">${memoText}</text>`;
         });
       }
       

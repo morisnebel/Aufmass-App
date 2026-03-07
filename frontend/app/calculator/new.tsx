@@ -423,13 +423,32 @@ export default function AreaCalculatorEditor() {
               }
             }
             if (calc.annotations.texts && Array.isArray(calc.annotations.texts) && calc.annotations.texts.length > 0) {
-              const validTexts = calc.annotations.texts.filter((t: any) => t && t.position && t.text);
+              const validTexts = calc.annotations.texts
+                .filter((t: any) => t && typeof t.x === 'number' && typeof t.y === 'number' && t.text)
+                .map((t: any) => ({
+                  id: t.id || `text_${Date.now()}_${Math.random()}`,
+                  x: t.x,
+                  y: t.y,
+                  text: t.text,
+                  color: t.color || '#333333',
+                  fontSize: t.fontSize || 16,
+                }));
               if (validTexts.length > 0) {
                 setTextAnnotations(validTexts);
               }
             }
             if (calc.annotations.memos && Array.isArray(calc.annotations.memos) && calc.annotations.memos.length > 0) {
-              const validMemos = calc.annotations.memos.filter((m: any) => m && m.anchorPoint && m.labelOffset);
+              const validMemos = calc.annotations.memos
+                .filter((m: any) => m && typeof m.x1 === 'number' && typeof m.x2 === 'number')
+                .map((m: any) => ({
+                  id: m.id || `memo_${Date.now()}_${Math.random()}`,
+                  x1: m.x1,
+                  y1: m.y1,
+                  x2: m.x2,
+                  y2: m.y2,
+                  text: m.text || '',
+                  color: m.color || '#FF9800',
+                }));
               if (validMemos.length > 0) {
                 setMemoPointers(validMemos);
               }
@@ -826,20 +845,23 @@ export default function AreaCalculatorEditor() {
             strokeWidth: s.strokeWidth || 2,
           })),
         texts: textAnnotations
-          .filter(t => t && t.position && typeof t.position.x === 'number' && typeof t.position.y === 'number' && t.text)
+          .filter(t => t && typeof t.x === 'number' && typeof t.y === 'number' && t.text)
           .map(t => ({
             id: t.id,
-            position: { x: t.position.x, y: t.position.y },
+            x: t.x,
+            y: t.y,
             text: t.text,
             color: t.color || '#333333',
             fontSize: t.fontSize || 16,
           })),
         memos: memoPointers
-          .filter(m => m && m.anchorPoint && m.labelOffset && typeof m.anchorPoint.x === 'number')
+          .filter(m => m && typeof m.x1 === 'number' && typeof m.x2 === 'number')
           .map(m => ({
             id: m.id,
-            anchorPoint: { x: m.anchorPoint.x, y: m.anchorPoint.y },
-            labelOffset: { x: m.labelOffset.x, y: m.labelOffset.y },
+            x1: m.x1,
+            y1: m.y1,
+            x2: m.x2,
+            y2: m.y2,
             text: m.text || '',
             color: m.color || '#FF9800',
           })),

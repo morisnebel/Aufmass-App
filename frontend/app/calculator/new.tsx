@@ -201,8 +201,12 @@ export default function AreaCalculatorEditor() {
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editTextInput, setEditTextInput] = useState('');
   
+  // Deduction rectangle drawing state
+  const [deductionRectStart, setDeductionRectStart] = useState<AreaPoint | null>(null);
+  const [deductionRectEnd, setDeductionRectEnd] = useState<AreaPoint | null>(null);
+  
   // Drawing state
-  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
+  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'deduction_rect' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
@@ -2541,6 +2545,14 @@ export default function AreaCalculatorEditor() {
           <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive]}>Abzug</Text>
         </TouchableOpacity>
         
+        <TouchableOpacity
+          style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#E91E63' : '#f5f5f5' }]}
+          onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
+        >
+          <Ionicons name="square" size={20} color={mode === 'deduction_rect' ? '#fff' : '#E91E63'} />
+          <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
+        </TouchableOpacity>
+        
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
@@ -3052,6 +3064,15 @@ export default function AreaCalculatorEditor() {
             }
           }
           
+          // Start drawing deduction rectangle
+          if (mode === 'deduction_rect') {
+            const snapResult = snapToNearestPoint(x, y);
+            setDeductionRectStart(snapResult.point);
+            setDeductionRectEnd(snapResult.point);
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
+            return;
+          }
+          
           // Start drawing annotation shapes
           if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
             if (!currentAnnotationShape) {
@@ -3172,6 +3193,13 @@ export default function AreaCalculatorEditor() {
             setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
           }
           
+          // Drawing deduction rectangle
+          if (mode === 'deduction_rect' && deductionRectStart) {
+            const snapResult = snapToNearestPoint(x, y);
+            setDeductionRectEnd(snapResult.point);
+            setCurrentSnapPoint({ point: snapResult.point, isSnapped: snapResult.snapped });
+          }
+          
           // Drawing annotation shape
           if (currentAnnotationShape) {
             setCurrentAnnotationShape({
@@ -3268,6 +3296,42 @@ export default function AreaCalculatorEditor() {
           
           if (draggingDimensionPoint) {
             setDraggingDimensionPoint(null);
+            return;
+          }
+          
+          // Finish drawing deduction rectangle - convert to polygon
+          if (mode === 'deduction_rect' && deductionRectStart && deductionRectEnd) {
+            const minX = Math.min(deductionRectStart.x, deductionRectEnd.x);
+            const maxX = Math.max(deductionRectStart.x, deductionRectEnd.x);
+            const minY = Math.min(deductionRectStart.y, deductionRectEnd.y);
+            const maxY = Math.max(deductionRectStart.y, deductionRectEnd.y);
+            
+            const width = maxX - minX;
+            const height = maxY - minY;
+            
+            // Only create if rectangle has some size
+            if (width > 10 || height > 10) {
+              saveStateForUndo();
+              
+              // Create polygon with 4 corners (clockwise)
+              const newPolygon: AreaPolygon = {
+                id: Date.now().toString(),
+                points: [
+                  { x: minX, y: minY },  // Top-left
+                  { x: maxX, y: minY },  // Top-right
+                  { x: maxX, y: maxY },  // Bottom-right
+                  { x: minX, y: maxY },  // Bottom-left
+                ],
+                type: 'deduction',
+                name: 'Abzug',
+                color: '#f44336',
+              };
+              
+              setPolygons([...polygons, newPolygon]);
+            }
+            
+            setDeductionRectStart(null);
+            setDeductionRectEnd(null);
             return;
           }
           
@@ -4227,6 +4291,20 @@ export default function AreaCalculatorEditor() {
             </G>
           )}
           
+          {/* Deduction Rectangle Preview */}
+          {mode === 'deduction_rect' && deductionRectStart && deductionRectEnd && (
+            <Rect
+              x={Math.min(deductionRectStart.x, deductionRectEnd.x)}
+              y={Math.min(deductionRectStart.y, deductionRectEnd.y)}
+              width={Math.abs(deductionRectEnd.x - deductionRectStart.x)}
+              height={Math.abs(deductionRectEnd.y - deductionRectStart.y)}
+              fill="rgba(244, 67, 54, 0.3)"
+              stroke="#f44336"
+              strokeWidth={2}
+              strokeDasharray="8,4"
+            />
+          )}
+          
           {/* === ANNOTATION LAYERS === */}
           {/* Annotation Shapes */}
           {annotationShapes.map(shape => renderAnnotationShape(shape))}
@@ -4267,6 +4345,7 @@ export default function AreaCalculatorEditor() {
              mode === 'scale' ? 'Maßstab' : 
              mode === 'polygon' ? 'Fläche' : 
              mode === 'deduction' ? 'Abzug' :
+             mode === 'deduction_rect' ? 'Rechteck-Abzug' :
              mode === 'guideline' ? 'Hilfslinie' :
              mode === 'parallel' ? 'Parallel' : 
              mode === 'dimension' ? 'Vermaßung' :

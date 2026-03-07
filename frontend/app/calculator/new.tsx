@@ -2353,13 +2353,6 @@ export default function AreaCalculatorEditor() {
     }).filter(Boolean) as AreaLine[]);
   };
 
-  // Undo last point
-  const undoLastPoint = () => {
-    if (currentPoints.length > 0) {
-      setCurrentPoints(currentPoints.slice(0, -1));
-    }
-  };
-
   // Cancel current polygon
   const cancelCurrentPolygon = () => {
     setCurrentPoints([]);

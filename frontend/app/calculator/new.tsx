@@ -1852,17 +1852,18 @@ export default function AreaCalculatorEditor() {
       if (currentPoints.length > 0) {
         const lastPoint = currentPoints[currentPoints.length - 1];
         
-        // If fixed angle is set, use that exact angle
+        // If fixed angle is set, use that exact angle (mathematical coordinates: 0°=right, 90°=up)
         if (fixedAngle !== null) {
           const dx = snappedX - lastPoint.x;
           const dy = snappedY - lastPoint.y;
           const length = Math.sqrt(dx * dx + dy * dy);
           
           if (length > 10) {
+            // Convert to mathematical coordinates (Y is inverted on screen)
             const radians = fixedAngle * (Math.PI / 180);
             finalPoint = {
               x: lastPoint.x + length * Math.cos(radians),
-              y: lastPoint.y + length * Math.sin(radians)
+              y: lastPoint.y - length * Math.sin(radians)  // Negative because screen Y is inverted
             };
           }
         } else if (snapToAngles) {
@@ -6649,24 +6650,24 @@ export default function AreaCalculatorEditor() {
               Fester Winkel (nächste Linie wird exakt in diesem Winkel gezeichnet):
             </Text>
             
-            {/* Angle Direction Preview */}
+            {/* Angle Direction Preview - Mathematical coordinate system */}
             <View style={{ alignItems: 'center', marginBottom: 12 }}>
               <Svg width={120} height={120} viewBox="0 0 120 120">
                 {/* Outer circle */}
                 <Circle cx="60" cy="60" r="50" fill="#f5f5f5" stroke="#ddd" strokeWidth="2" />
                 
-                {/* Degree markers */}
-                <SvgText x="60" y="18" textAnchor="middle" fontSize="10" fill="#999">0°</SvgText>
-                <SvgText x="105" y="64" textAnchor="middle" fontSize="10" fill="#999">90°</SvgText>
-                <SvgText x="60" y="112" textAnchor="middle" fontSize="10" fill="#999">180°</SvgText>
-                <SvgText x="15" y="64" textAnchor="middle" fontSize="10" fill="#999">270°</SvgText>
+                {/* Degree markers - Mathematical system: 0°=right, 90°=up, 180°=left, 270°=down */}
+                <SvgText x="60" y="18" textAnchor="middle" fontSize="10" fill="#999">90°</SvgText>
+                <SvgText x="105" y="64" textAnchor="middle" fontSize="10" fill="#999">0°</SvgText>
+                <SvgText x="60" y="112" textAnchor="middle" fontSize="10" fill="#999">270°</SvgText>
+                <SvgText x="15" y="64" textAnchor="middle" fontSize="10" fill="#999">180°</SvgText>
                 
                 {/* Center point */}
                 <Circle cx="60" cy="60" r="4" fill="#1976d2" />
                 
-                {/* Direction arrow */}
+                {/* Direction arrow - adjusted for mathematical coordinates */}
                 {fixedAngle !== null && (
-                  <G rotation={fixedAngle} origin="60, 60">
+                  <G rotation={-fixedAngle + 90} origin="60, 60">
                     <Line x1="60" y1="60" x2="60" y2="18" stroke="#E91E63" strokeWidth="3" />
                     <SvgPolygon points="60,12 54,24 66,24" fill="#E91E63" />
                   </G>

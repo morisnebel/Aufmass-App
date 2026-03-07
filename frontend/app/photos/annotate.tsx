@@ -52,6 +52,10 @@ export default function AnnotatePhotoScreen() {
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
   const [pdfSize, setPdfSize] = useState<string>('medium');
   const [description, setDescription] = useState<string>('');
+  
+  // Zoom & Pan
+  const [scale, setScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     loadPhoto();
@@ -305,6 +309,30 @@ export default function AnnotatePhotoScreen() {
         ))}
       </View>
 
+      {/* Zoom Controls */}
+      <View style={styles.zoomContainer}>
+        <TouchableOpacity
+          style={styles.zoomButton}
+          onPress={() => setScale(prev => Math.min(4, prev + 0.25))}
+        >
+          <Ionicons name="add-circle-outline" size={24} color="#333" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.zoomButton}
+          onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{Math.round(scale * 100)}%</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.zoomButton}
+          onPress={() => setScale(prev => Math.max(0.25, prev - 0.25))}
+        >
+          <Ionicons name="remove-circle-outline" size={24} color="#333" />
+        </TouchableOpacity>
+      </View>
+
       {/* PDF-Größen Auswahl */}
       <View style={styles.pdfSizeContainer}>
         <Text style={styles.pdfSizeLabel}>PDF-Größe:</Text>
@@ -448,6 +476,24 @@ const styles = StyleSheet.create({
   colorButtonActive: {
     borderWidth: 4,
     borderColor: '#1976d2',
+  },
+  // Zoom Controls
+  zoomContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 15,
+  },
+  zoomButton: {
+    padding: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    minWidth: 50,
+    alignItems: 'center',
   },
   // PDF-Größen Auswahl Styles
   pdfSizeContainer: {

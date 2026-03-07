@@ -126,17 +126,18 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 
 ## Offene Aufgaben
 
-### P0 (Nächste Session - vom User angefragt)
-- [ ] **Hintergrundbild im Flächen-Kalkulator**: 
-  - Bild als Hintergrund einfügen können
+### P0 (Nächste Session - vom User angefragt) ✅ IMPLEMENTIERT
+- [x] **Hintergrundbild im Flächen-Kalkulator**: 
+  - Bild als Hintergrund einfügen können (aus Galerie oder Kamera)
   - Bearbeitbar wie in Skizzen (Größenanpassung mit Feststellbutton)
-- [ ] **ZOOM-Funktion für Bearbeitungsmodi**:
-  - Flächen-Kalkulator: Zoomen zum besseren Zeichnen
-  - Foto-Annotation: Zoomen für Details
-  - Skizzen: Zoomen für präzises Zeichnen
+  - "Anpassen" Modus zum Verschieben und Skalieren
+- [x] **ZOOM-Funktion für Bearbeitungsmodi**:
+  - Flächen-Kalkulator: Zoom+/Zoom-/Reset Buttons mit % Anzeige
+  - Foto-Annotation: Zoom+/Zoom-/Reset Buttons
+  - Skizzen: Zoom+/Zoom-/Reset Buttons
 
 ### P1 (Hoch)
-- [ ] Text-Annotationen in der Größe veränderbar machen
+- [ ] Zoom auch für Documents/View (PDF Editor) implementieren
 
 ### P2 (Mittel)
 - [ ] Texteingabefeld im Editor verschiebbar machen

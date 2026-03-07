@@ -3421,6 +3421,29 @@ export default function DrawSketchScreen() {
             )}
           </View>
         </TouchableOpacity>
+        
+        {/* Zoom Controls */}
+        <View style={styles.toolSeparator} />
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={() => setScale(prev => Math.min(4, prev + 0.25))}
+        >
+          <Ionicons name="add-circle-outline" size={18} color="#333" />
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, { minWidth: 40 }]}
+          onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
+        >
+          <Text style={{ fontSize: 10, fontWeight: 'bold' }}>{Math.round(scale * 100)}%</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={() => setScale(prev => Math.max(0.25, prev - 0.25))}
+        >
+          <Ionicons name="remove-circle-outline" size={18} color="#333" />
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {

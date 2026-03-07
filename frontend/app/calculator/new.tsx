@@ -12,9 +12,11 @@ import {
   ScrollView,
   PanResponder,
   Animated,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import Svg, { 
   Path, 
   Circle, 
@@ -25,6 +27,7 @@ import Svg, {
   Polygon as SvgPolygon,
   Defs,
   Pattern,
+  Image as SvgImage,
 } from 'react-native-svg';
 import { 
   AreaCalculationService, 
@@ -53,6 +56,26 @@ export default function AreaCalculatorEditor() {
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(1); // 1 Meter pro Rasterfeld
+  
+  // === ZOOM & PAN ===
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const lastPanPosition = useRef({ x: 0, y: 0 });
+  const lastPinchDistance = useRef<number | null>(null);
+  
+  // === BACKGROUND IMAGE ===
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [bgImageSize, setBgImageSize] = useState({ width: 500, height: 400 });
+  const [bgImagePosition, setBgImagePosition] = useState({ x: 0, y: 0 });
+  const [bgImageScale, setBgImageScale] = useState(1);
+  const [bgLockAspectRatio, setBgLockAspectRatio] = useState(true);
+  const [bgImageEditMode, setBgImageEditMode] = useState(false);
+  const [showBgImageModal, setShowBgImageModal] = useState(false);
+  const [draggingBgImage, setDraggingBgImage] = useState(false);
+  const [resizingBgImage, setResizingBgImage] = useState<'none' | 'nw' | 'ne' | 'sw' | 'se'>('none');
+  const bgImageDragStart = useRef({ x: 0, y: 0 });
+  const bgImageOriginalSize = useRef({ width: 500, height: 400 });
   
   // Custom edge lengths (user can override calculated values)
   const [customEdgeLengths, setCustomEdgeLengths] = useState<{ [key: string]: number }>({});
@@ -2428,6 +2451,132 @@ export default function AreaCalculatorEditor() {
     setShowMemoModal(false);
   };
 
+  // === BACKGROUND IMAGE FUNCTIONS ===
+  
+  // Pick background image from library
+  const pickBackgroundImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64Image = asset.base64 
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        
+        setBackgroundImage(base64Image);
+        
+        // Set initial size based on image dimensions
+        if (asset.width && asset.height) {
+          const maxDim = Math.min(canvasWidth * 0.8, canvasHeight * 0.8);
+          const imgRatio = asset.width / asset.height;
+          let newWidth, newHeight;
+          
+          if (imgRatio > 1) {
+            newWidth = maxDim;
+            newHeight = maxDim / imgRatio;
+          } else {
+            newHeight = maxDim;
+            newWidth = maxDim * imgRatio;
+          }
+          
+          setBgImageSize({ width: newWidth, height: newHeight });
+          bgImageOriginalSize.current = { width: newWidth, height: newHeight };
+          setBgImagePosition({ x: (canvasWidth - newWidth) / 2, y: (canvasHeight - newHeight) / 2 });
+        }
+        
+        setShowBgImageModal(false);
+        setBgImageEditMode(true);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Fehler', 'Bild konnte nicht geladen werden');
+    }
+  };
+
+  // Take photo for background
+  const takeBackgroundPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Kamera-Zugriff wird benötigt');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64Image = asset.base64 
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        
+        setBackgroundImage(base64Image);
+        
+        if (asset.width && asset.height) {
+          const maxDim = Math.min(canvasWidth * 0.8, canvasHeight * 0.8);
+          const imgRatio = asset.width / asset.height;
+          let newWidth, newHeight;
+          
+          if (imgRatio > 1) {
+            newWidth = maxDim;
+            newHeight = maxDim / imgRatio;
+          } else {
+            newHeight = maxDim;
+            newWidth = maxDim * imgRatio;
+          }
+          
+          setBgImageSize({ width: newWidth, height: newHeight });
+          bgImageOriginalSize.current = { width: newWidth, height: newHeight };
+          setBgImagePosition({ x: (canvasWidth - newWidth) / 2, y: (canvasHeight - newHeight) / 2 });
+        }
+        
+        setShowBgImageModal(false);
+        setBgImageEditMode(true);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Fehler', 'Foto konnte nicht aufgenommen werden');
+    }
+  };
+
+  // Remove background image
+  const removeBackgroundImage = () => {
+    setBackgroundImage(null);
+    setBgImageEditMode(false);
+  };
+
+  // Handle zoom
+  const handleZoom = (delta: number) => {
+    setZoomLevel(prev => {
+      const newZoom = Math.max(0.25, Math.min(4, prev + delta));
+      return newZoom;
+    });
+  };
+
+  // Reset zoom and pan
+  const resetView = () => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  // Transform touch coordinates based on zoom and pan
+  const transformCoordinates = (x: number, y: number): { x: number; y: number } => {
+    return {
+      x: (x - panOffset.x) / zoomLevel,
+      y: (y - panOffset.y) / zoomLevel,
+    };
+  };
+
   // Render grid
   const renderGrid = () => {
     if (!gridEnabled) return null;
@@ -2640,6 +2789,55 @@ export default function AreaCalculatorEditor() {
         >
           <Ionicons name="shapes" size={20} color={(mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#fff' : '#673AB7'} />
           <Text style={[styles.toolLabel, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolLabelActive]}>Formen</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.toolSeparator} />
+        
+        {/* Background Image Button */}
+        <TouchableOpacity
+          style={[styles.toolButton, backgroundImage && { backgroundColor: '#8BC34A' }]}
+          onPress={() => setShowBgImageModal(true)}
+        >
+          <Ionicons name="image" size={20} color={backgroundImage ? '#fff' : '#8BC34A'} />
+          <Text style={[styles.toolLabel, backgroundImage && { color: '#fff' }]}>Bild</Text>
+        </TouchableOpacity>
+        
+        {/* Background Image Edit Mode Toggle */}
+        {backgroundImage && (
+          <TouchableOpacity
+            style={[styles.toolButton, bgImageEditMode && styles.toolButtonActive, { backgroundColor: bgImageEditMode ? '#FF9800' : '#f5f5f5' }]}
+            onPress={() => setBgImageEditMode(!bgImageEditMode)}
+          >
+            <Ionicons name="move" size={20} color={bgImageEditMode ? '#fff' : '#FF9800'} />
+            <Text style={[styles.toolLabel, bgImageEditMode && styles.toolLabelActive]}>Anpassen</Text>
+          </TouchableOpacity>
+        )}
+        
+        <View style={styles.toolSeparator} />
+        
+        {/* Zoom Controls */}
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={() => handleZoom(0.25)}
+        >
+          <Ionicons name="add-circle-outline" size={20} color="#666" />
+          <Text style={styles.toolLabel}>Zoom+</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={() => handleZoom(-0.25)}
+        >
+          <Ionicons name="remove-circle-outline" size={20} color="#666" />
+          <Text style={styles.toolLabel}>Zoom-</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.toolButton}
+          onPress={resetView}
+        >
+          <Ionicons name="contract-outline" size={20} color="#666" />
+          <Text style={styles.toolLabel}>{Math.round(zoomLevel * 100)}%</Text>
         </TouchableOpacity>
         
         {/* Delete selected annotation */}
@@ -2864,8 +3062,42 @@ export default function AreaCalculatorEditor() {
         style={styles.canvas}
         onTouchStart={(event) => {
           const touch = event.nativeEvent;
-          const x = touch.locationX;
-          const y = touch.locationY;
+          // Transform coordinates based on zoom/pan
+          const rawX = touch.locationX;
+          const rawY = touch.locationY;
+          const transformed = transformCoordinates(rawX, rawY);
+          const x = transformed.x;
+          const y = transformed.y;
+          
+          // Background image edit mode
+          if (bgImageEditMode && backgroundImage) {
+            const handleRadius = 20;
+            
+            // Check corner handles for resizing
+            const corners = {
+              nw: { x: bgImagePosition.x, y: bgImagePosition.y },
+              ne: { x: bgImagePosition.x + bgImageSize.width, y: bgImagePosition.y },
+              sw: { x: bgImagePosition.x, y: bgImagePosition.y + bgImageSize.height },
+              se: { x: bgImagePosition.x + bgImageSize.width, y: bgImagePosition.y + bgImageSize.height },
+            };
+            
+            for (const [corner, pos] of Object.entries(corners)) {
+              if (Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2)) < handleRadius) {
+                setResizingBgImage(corner as 'nw' | 'ne' | 'sw' | 'se');
+                bgImageDragStart.current = { x, y };
+                bgImageOriginalSize.current = { ...bgImageSize };
+                return;
+              }
+            }
+            
+            // Check if inside image for dragging
+            if (x >= bgImagePosition.x && x <= bgImagePosition.x + bgImageSize.width &&
+                y >= bgImagePosition.y && y <= bgImagePosition.y + bgImageSize.height) {
+              setDraggingBgImage(true);
+              bgImageDragStart.current = { x: x - bgImagePosition.x, y: y - bgImagePosition.y };
+              return;
+            }
+          }
           
           // "Punkt auf Linie" mode - only on selected polygon
           if (addPointMode && mode === 'select') {
@@ -3100,8 +3332,76 @@ export default function AreaCalculatorEditor() {
         }}
         onTouchMove={(event) => {
           const touch = event.nativeEvent;
-          const x = touch.locationX;
-          const y = touch.locationY;
+          const rawX = touch.locationX;
+          const rawY = touch.locationY;
+          const transformed = transformCoordinates(rawX, rawY);
+          const x = transformed.x;
+          const y = transformed.y;
+          
+          // Background image dragging/resizing
+          if (draggingBgImage) {
+            setBgImagePosition({
+              x: x - bgImageDragStart.current.x,
+              y: y - bgImageDragStart.current.y,
+            });
+            return;
+          }
+          
+          if (resizingBgImage !== 'none') {
+            const dx = x - bgImageDragStart.current.x;
+            const dy = y - bgImageDragStart.current.y;
+            let newWidth = bgImageOriginalSize.current.width;
+            let newHeight = bgImageOriginalSize.current.height;
+            let newX = bgImagePosition.x;
+            let newY = bgImagePosition.y;
+            
+            const aspectRatio = bgImageOriginalSize.current.width / bgImageOriginalSize.current.height;
+            
+            switch (resizingBgImage) {
+              case 'se':
+                newWidth = Math.max(50, bgImageOriginalSize.current.width + dx);
+                if (bgLockAspectRatio) {
+                  newHeight = newWidth / aspectRatio;
+                } else {
+                  newHeight = Math.max(50, bgImageOriginalSize.current.height + dy);
+                }
+                break;
+              case 'sw':
+                newWidth = Math.max(50, bgImageOriginalSize.current.width - dx);
+                newX = bgImagePosition.x + (bgImageSize.width - newWidth);
+                if (bgLockAspectRatio) {
+                  newHeight = newWidth / aspectRatio;
+                } else {
+                  newHeight = Math.max(50, bgImageOriginalSize.current.height + dy);
+                }
+                break;
+              case 'ne':
+                newWidth = Math.max(50, bgImageOriginalSize.current.width + dx);
+                if (bgLockAspectRatio) {
+                  newHeight = newWidth / aspectRatio;
+                  newY = bgImagePosition.y - (newHeight - bgImageSize.height);
+                } else {
+                  newHeight = Math.max(50, bgImageOriginalSize.current.height - dy);
+                  newY = bgImagePosition.y + (bgImageSize.height - newHeight);
+                }
+                break;
+              case 'nw':
+                newWidth = Math.max(50, bgImageOriginalSize.current.width - dx);
+                newX = bgImagePosition.x + (bgImageSize.width - newWidth);
+                if (bgLockAspectRatio) {
+                  newHeight = newWidth / aspectRatio;
+                  newY = bgImagePosition.y - (newHeight - bgImageSize.height);
+                } else {
+                  newHeight = Math.max(50, bgImageOriginalSize.current.height - dy);
+                  newY = bgImagePosition.y + (bgImageSize.height - newHeight);
+                }
+                break;
+            }
+            
+            setBgImageSize({ width: newWidth, height: newHeight });
+            setBgImagePosition({ x: newX, y: newY });
+            return;
+          }
           
           // Update snap indicator for all polygon/deduction/guideline modes
           if (mode === 'polygon' || mode === 'deduction' || mode === 'guideline') {
@@ -3274,6 +3574,16 @@ export default function AreaCalculatorEditor() {
           setCurrentTouchPosition(null);
           setCurrentSnapPoint(null); // Clear snap indicator
           
+          // Stop background image manipulation
+          if (draggingBgImage) {
+            setDraggingBgImage(false);
+            return;
+          }
+          if (resizingBgImage !== 'none') {
+            setResizingBgImage('none');
+            return;
+          }
+          
           if (draggingPolygonPoint) {
             setDraggingPolygonPoint(null);
             return;
@@ -3381,8 +3691,57 @@ export default function AreaCalculatorEditor() {
         }}
       >
         <Svg width={canvasWidth} height={canvasHeight}>
-          {/* Grid */}
-          {renderGrid()}
+          {/* Zoom/Pan transformation group */}
+          <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}>
+            
+            {/* Background Image */}
+            {backgroundImage && (
+              <G>
+                <SvgImage
+                  x={bgImagePosition.x}
+                  y={bgImagePosition.y}
+                  width={bgImageSize.width}
+                  height={bgImageSize.height}
+                  href={backgroundImage}
+                  opacity={0.7}
+                  preserveAspectRatio="none"
+                />
+                {/* Edit handles when in edit mode */}
+                {bgImageEditMode && (
+                  <>
+                    {/* Border */}
+                    <Rect
+                      x={bgImagePosition.x}
+                      y={bgImagePosition.y}
+                      width={bgImageSize.width}
+                      height={bgImageSize.height}
+                      fill="none"
+                      stroke="#FF9800"
+                      strokeWidth={2}
+                      strokeDasharray="8,4"
+                    />
+                    {/* Corner handles */}
+                    <Circle cx={bgImagePosition.x} cy={bgImagePosition.y} r={10} fill="#FF9800" />
+                    <Circle cx={bgImagePosition.x + bgImageSize.width} cy={bgImagePosition.y} r={10} fill="#FF9800" />
+                    <Circle cx={bgImagePosition.x} cy={bgImagePosition.y + bgImageSize.height} r={10} fill="#FF9800" />
+                    <Circle cx={bgImagePosition.x + bgImageSize.width} cy={bgImagePosition.y + bgImageSize.height} r={10} fill="#FF9800" />
+                    {/* Center move handle */}
+                    <Circle 
+                      cx={bgImagePosition.x + bgImageSize.width / 2} 
+                      cy={bgImagePosition.y + bgImageSize.height / 2} 
+                      r={15} 
+                      fill="rgba(255, 152, 0, 0.5)"
+                      stroke="#FF9800"
+                      strokeWidth={2}
+                    />
+                    <Ionicons name="move" size={16} color="#FF9800" />
+                  </>
+                )}
+              </G>
+            )}
+            
+            {/* Grid */}
+            {renderGrid()}
           
           {/* Snap indicator - shows where the point will snap to */}
           {currentSnapPoint && currentSnapPoint.isSnapped && (mode === 'polygon' || mode === 'deduction' || mode === 'guideline') && (
@@ -4321,6 +4680,7 @@ export default function AreaCalculatorEditor() {
           {/* Preview memo pointer while drawing */}
           {pendingMemoPointer && renderMemoPointer({ ...pendingMemoPointer, id: 'preview', text: '', color: annotationColor }, true)}
           
+          </G>{/* End of zoom/pan transformation group */}
         </Svg>
       </View>
 
@@ -4813,6 +5173,70 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Speichern</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Background Image Modal */}
+      <Modal visible={showBgImageModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Hintergrundbild</Text>
+            
+            <View style={{ marginVertical: 20 }}>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
+                onPress={pickBackgroundImage}
+              >
+                <Ionicons name="images" size={24} color="#8BC34A" />
+                <Text style={{ marginLeft: 15, fontSize: 16 }}>Aus Galerie wählen</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
+                onPress={takeBackgroundPhoto}
+              >
+                <Ionicons name="camera" size={24} color="#2196F3" />
+                <Text style={{ marginLeft: 15, fontSize: 16 }}>Foto aufnehmen</Text>
+              </TouchableOpacity>
+              
+              {backgroundImage && (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#ffebee', borderRadius: 12 }}
+                  onPress={removeBackgroundImage}
+                >
+                  <Ionicons name="trash" size={24} color="#f44336" />
+                  <Text style={{ marginLeft: 15, fontSize: 16, color: '#f44336' }}>Bild entfernen</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {backgroundImage && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
+                  <TouchableOpacity
+                    style={{ padding: 10, backgroundColor: bgLockAspectRatio ? '#4CAF50' : '#f5f5f5', borderRadius: 8, marginRight: 10 }}
+                    onPress={() => setBgLockAspectRatio(!bgLockAspectRatio)}
+                  >
+                    <Ionicons name={bgLockAspectRatio ? "lock-closed" : "lock-open"} size={20} color={bgLockAspectRatio ? '#fff' : '#666'} />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 14, color: '#666' }}>
+                    Seitenverhältnis {bgLockAspectRatio ? 'gesperrt' : 'entsperrt'}
+                  </Text>
+                </View>
+                
+                <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 10 }}>
+                  Tipp: Aktiviere "Anpassen" um das Bild zu verschieben und zu skalieren
+                </Text>
+              </>
+            )}
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30 }]}
+              onPress={() => setShowBgImageModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Schließen</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

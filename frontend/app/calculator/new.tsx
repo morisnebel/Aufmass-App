@@ -2827,7 +2827,7 @@ export default function AreaCalculatorEditor() {
         <body>
           <div class="header">
             <div>
-              <div class="title">${calculationName || 'Flächenberechnung'}</div>
+              <div class="title">${name || 'Flächenberechnung'}</div>
               <div class="subtitle">Aufmaß-Dokumentation</div>
             </div>
             <div class="date">${dateStr}</div>

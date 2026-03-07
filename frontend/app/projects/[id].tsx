@@ -908,6 +908,115 @@ export default function ProjectDetailScreen() {
       </div>
     ` : '<p class="empty">Keine Skizzen erfasst</p>';
     
+    // Helper function to calculate polygon area
+    const calculatePolygonArea = (points: Array<{x: number, y: number}>) => {
+      if (points.length < 3) return 0;
+      let area = 0;
+      for (let i = 0; i < points.length; i++) {
+        const j = (i + 1) % points.length;
+        area += points[i].x * points[j].y;
+        area -= points[j].x * points[i].y;
+      }
+      // Convert from pixels to square meters using scale
+      const scale = 100; // 100 pixels = 1 meter (default)
+      return Math.abs(area / 2) / (scale * scale);
+    };
+    
+    // Helper function to calculate line length
+    const calculateLineLength = (p1: {x: number, y: number}, p2: {x: number, y: number}) => {
+      const scale = 100;
+      return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)) / scale;
+    };
+    
+    // Generate Area Calculations HTML
+    const areaCalcsHtml = areaCalculations.length > 0 ? areaCalculations.map((calc, index) => {
+      const polygons = calc.polygons || [];
+      const calcLines = calc.lines || [];
+      const mainAreas = polygons.filter(p => p.type === 'main');
+      const deductionAreas = polygons.filter(p => p.type === 'deduction');
+      
+      const grossArea = mainAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
+      const deductionsTotal = deductionAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
+      const netArea = grossArea - deductionsTotal;
+      
+      // Group lines by category
+      const linesByCategory: { [key: string]: number } = {};
+      calcLines.forEach((line: any) => {
+        const polygon = polygons.find(p => p.id === line.polygonId);
+        if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
+          const point = polygon.points[line.pointIndex];
+          const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+          const length = calculateLineLength(point, nextPoint);
+          if (!linesByCategory[line.category]) linesByCategory[line.category] = 0;
+          linesByCategory[line.category] += length;
+        }
+      });
+      
+      // Category colors
+      const getCategoryColor = (category: string): string => {
+        const colors: { [key: string]: string } = {
+          'Ortgang': '#4CAF50', 'Traufe': '#2196F3', 'First': '#9C27B0',
+          'Kehle': '#673AB7', 'Grat': '#FF9800', 'Fensterbank': '#795548',
+          'Sturz': '#607D8B', 'Laibung': '#E91E63',
+        };
+        return colors[category] || '#9e9e9e';
+      };
+      
+      return `
+        <div class="area-calc-item" style="margin-bottom: 25px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #4CAF50;">
+            <span style="font-size: 16px; font-weight: bold;">${calc.name || `Berechnung ${index + 1}`}</span>
+            <span style="font-size: 20px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</span>
+          </div>
+          
+          <div style="background: #f5f5f5; padding: 10px; border-radius: 6px; margin-bottom: 12px; font-family: monospace;">
+            <div>Brutto: ${grossArea.toFixed(2)} m²</div>
+            ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+            <div style="border-top: 1px solid #333; margin-top: 5px; padding-top: 5px; font-weight: bold;">= Netto: ${netArea.toFixed(2)} m²</div>
+          </div>
+          
+          ${mainAreas.length > 0 ? `
+            <div style="margin-bottom: 10px;">
+              <div style="font-weight: 600; margin-bottom: 5px; color: #4CAF50;">Grundflächen:</div>
+              ${mainAreas.map(p => `
+                <div style="display: flex; justify-content: space-between; padding: 3px 0; padding-left: 10px;">
+                  <span>${p.name}</span>
+                  <span style="color: #4CAF50;">+${calculatePolygonArea(p.points).toFixed(2)} m²</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          ${deductionAreas.length > 0 ? `
+            <div style="margin-bottom: 10px;">
+              <div style="font-weight: 600; margin-bottom: 5px; color: #f44336;">Abzüge:</div>
+              ${deductionAreas.map(p => `
+                <div style="display: flex; justify-content: space-between; padding: 3px 0; padding-left: 10px;">
+                  <span>${p.name}</span>
+                  <span style="color: #f44336;">-${calculatePolygonArea(p.points).toFixed(2)} m²</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          ${Object.keys(linesByCategory).length > 0 ? `
+            <div>
+              <div style="font-weight: 600; margin-bottom: 5px; color: #1976d2;">Linien:</div>
+              ${Object.entries(linesByCategory).map(([cat, length]) => `
+                <div style="display: flex; justify-content: space-between; padding: 3px 0; padding-left: 10px;">
+                  <span style="display: flex; align-items: center;">
+                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 8px;"></span>
+                    ${cat}
+                  </span>
+                  <span>${(length as number).toFixed(2)} m</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('') : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
+
     // Build complete HTML
     const html = `
       <!DOCTYPE html>
@@ -1896,6 +2005,28 @@ export default function ProjectDetailScreen() {
               <h2>Skizzen</h2>
               ${sketchesHtml}
             </div>
+            ${areaCalculations.length === 0 ? `
+              ${(remarks || project?.remarks) ? `
+                <div class="remarks-section" style="margin-top: 30px;">
+                  <h2>Bemerkungen</h2>
+                  <div class="remarks-box">
+                    ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+                  </div>
+                </div>
+              ` : ''}
+              <div class="footer">
+                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+        
+        ${areaCalculations.length > 0 ? `
+          <div class="new-page">
+            <div class="area-calcs-section">
+              <h2>Flächenberechnungen</h2>
+              ${areaCalcsHtml}
+            </div>
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">
                 <h2>Bemerkungen</h2>
@@ -1910,7 +2041,7 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        ${photos.length === 0 && sketches.length === 0 ? `
+        ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `
           ${(remarks || project?.remarks) ? `
             <div class="remarks-section" style="margin-top: 30px;">
               <h2>Bemerkungen</h2>

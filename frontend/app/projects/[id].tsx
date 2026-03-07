@@ -192,6 +192,17 @@ export default function ProjectDetailScreen() {
     }
   }, [tab]);
 
+  // Auto-regenerate PDF when toggle changes while modal is open
+  useEffect(() => {
+    if (showPdfPreviewModal) {
+      const regeneratePdf = async () => {
+        const html = await generatePdfHtml();
+        setPdfHtmlContent(html);
+      };
+      regeneratePdf();
+    }
+  }, [showCalcDetailsPage]);
+
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -4491,15 +4502,7 @@ export default function ProjectDetailScreen() {
                 marginVertical: 8,
                 borderRadius: 20,
               }}
-              onPress={async () => {
-                const newValue = !showCalcDetailsPage;
-                setShowCalcDetailsPage(newValue);
-                // Regenerate PDF with new setting
-                setTimeout(async () => {
-                  const html = await generatePdfHtml();
-                  setPdfHtmlContent(html);
-                }, 100);
-              }}
+              onPress={() => setShowCalcDetailsPage(!showCalcDetailsPage)}
             >
               <Ionicons 
                 name={showCalcDetailsPage ? "checkbox" : "square-outline"} 

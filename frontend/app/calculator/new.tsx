@@ -1867,8 +1867,9 @@ export default function AreaCalculatorEditor() {
     
     setCurrentPoints([...currentPoints, newPoint]);
     
-    // Längenfeld zurücksetzen für nächste Eingabe
+    // Längenfeld zurücksetzen und Fokus setzen für nächste Eingabe
     setFixedLength('');
+    setTimeout(() => lengthInputRef?.current?.focus(), 100);
   };
 
   // Undo last point
@@ -6911,7 +6912,13 @@ export default function AreaCalculatorEditor() {
                     borderWidth: 1,
                     borderColor: fixedAngle === angle ? '#E91E63' : '#ddd',
                   }}
-                  onPress={() => setFixedAngle(fixedAngle === angle ? null : angle)}
+                  onPress={() => {
+                    setFixedAngle(fixedAngle === angle ? null : angle);
+                    // Nach Winkelauswahl zum Längenfeld springen
+                    if (fixedAngle !== angle) {
+                      setTimeout(() => lengthInputRef?.current?.focus(), 100);
+                    }
+                  }}
                 >
                   <Text style={{ 
                     fontSize: 10, 
@@ -6951,6 +6958,11 @@ export default function AreaCalculatorEditor() {
                   }
                 }}
                 onFocus={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(true); }}
+                onSubmitEditing={() => {
+                  // Nach Winkeleingabe zum Längenfeld springen
+                  setTimeout(() => lengthInputRef?.current?.focus(), 50);
+                }}
+                returnKeyType="next"
               />
               <Text style={{ marginLeft: 6, fontSize: 14, color: '#666' }}>°</Text>
               <TouchableOpacity
@@ -7168,7 +7180,13 @@ export default function AreaCalculatorEditor() {
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
-                    onPress={() => setShowAngleNumpad(false)}
+                    onPress={() => {
+                      setShowAngleNumpad(false);
+                      // Wenn Winkel eingegeben wurde, zum Längenfeld springen
+                      if (angleNumpadTarget === 'angle') {
+                        setTimeout(() => lengthInputRef?.current?.focus(), 100);
+                      }
+                    }}
                   >
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>OK</Text>
                   </TouchableOpacity>

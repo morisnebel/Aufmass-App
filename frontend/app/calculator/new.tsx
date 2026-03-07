@@ -326,7 +326,7 @@ export default function AreaCalculatorEditor() {
   const [newTextInput, setNewTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<AreaPoint>({ x: 0, y: 0 });
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
-  const [draggingText, setDraggingText] = useState<{ id: string; offset: AreaPoint } | null>(null);
+  const [draggingText, setDraggingText] = useState<{ id: string; offset: AreaPoint; startPos: AreaPoint } | null>(null);
   
   // Memo pointer annotations
   interface MemoPointer {
@@ -343,7 +343,7 @@ export default function AreaCalculatorEditor() {
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoText, setMemoText] = useState('');
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
-  const [draggingMemo, setDraggingMemo] = useState<{ id: string; part: 'note' | 'target'; offset: AreaPoint } | null>(null);
+  const [draggingMemo, setDraggingMemo] = useState<{ id: string; part: 'note' | 'target'; offset: AreaPoint; startPos: AreaPoint } | null>(null);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
   const [editMemoText, setEditMemoText] = useState('');
@@ -4046,12 +4046,8 @@ export default function AreaCalculatorEditor() {
               } else if (annotation.type === 'text') {
                 const text = textAnnotations.find(t => t.id === annotation.id);
                 if (text && selectedTextId === annotation.id) {
-                  // Already selected - open edit modal
-                  setEditingTextId(annotation.id);
-                  setEditTextInput(text.text);
-                  setTextFontSize(text.fontSize);
-                  setAnnotationColor(text.color);
-                  setShowEditTextModal(true);
+                  // Already selected - start dragging (edit on release if not moved)
+                  setDraggingText({ id: annotation.id, offset: { x: x - text.x, y: y - text.y }, startPos: { x: text.x, y: text.y } });
                 } else {
                   // Just select
                   setSelectedTextId(annotation.id);
@@ -4061,11 +4057,12 @@ export default function AreaCalculatorEditor() {
               } else if (annotation.type === 'memo') {
                 const memo = memoPointers.find(m => m.id === annotation.id);
                 if (memo && selectedMemoId === annotation.id) {
-                  // Already selected - open edit modal
-                  setEditingMemoId(annotation.id);
-                  setEditMemoText(memo.text);
-                  setAnnotationColor(memo.color);
-                  setShowEditMemoModal(true);
+                  // Already selected - start dragging
+                  const distToNote = Math.sqrt(Math.pow(x - memo.x1, 2) + Math.pow(y - (memo.y1 - 20), 2));
+                  const distToTarget = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
+                  const part = distToTarget < distToNote ? 'target' : 'note';
+                  const startPos = part === 'note' ? { x: memo.x1, y: memo.y1 } : { x: memo.x2, y: memo.y2 };
+                  setDraggingMemo({ id: annotation.id, part, offset: { x: part === 'note' ? x - memo.x1 : x - memo.x2, y: part === 'note' ? y - memo.y1 : y - memo.y2 }, startPos });
                 } else {
                   // Just select
                   setSelectedMemoId(annotation.id);
@@ -4461,12 +4458,37 @@ export default function AreaCalculatorEditor() {
           
           // Stop dragging text
           if (draggingText) {
+            const text = textAnnotations.find(t => t.id === draggingText.id);
+            if (text) {
+              // Check if position changed (moved more than 5px)
+              const moved = Math.abs(text.x - draggingText.startPos.x) > 5 || Math.abs(text.y - draggingText.startPos.y) > 5;
+              if (!moved) {
+                // Didn't move - open edit modal
+                setEditingTextId(draggingText.id);
+                setEditTextInput(text.text);
+                setTextFontSize(text.fontSize);
+                setAnnotationColor(text.color);
+                setShowEditTextModal(true);
+              }
+            }
             setDraggingText(null);
             return;
           }
           
           // Stop dragging memo
           if (draggingMemo) {
+            const memo = memoPointers.find(m => m.id === draggingMemo.id);
+            if (memo) {
+              const currentPos = draggingMemo.part === 'note' ? { x: memo.x1, y: memo.y1 } : { x: memo.x2, y: memo.y2 };
+              const moved = Math.abs(currentPos.x - draggingMemo.startPos.x) > 5 || Math.abs(currentPos.y - draggingMemo.startPos.y) > 5;
+              if (!moved) {
+                // Didn't move - open edit modal
+                setEditingMemoId(draggingMemo.id);
+                setEditMemoText(memo.text);
+                setAnnotationColor(memo.color);
+                setShowEditMemoModal(true);
+              }
+            }
             setDraggingMemo(null);
             return;
           }

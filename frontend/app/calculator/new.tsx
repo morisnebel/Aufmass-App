@@ -1451,11 +1451,20 @@ export default function AreaCalculatorEditor() {
   };
 
   const getEdgeLength = (polygonId: string, edgeIndex: number, calculatedLength: number): number => {
+    // In Auto mode, always return calculated length
+    if (!useManualAreaCalc) {
+      return calculatedLength;
+    }
+    // In Manual mode, use custom length if available
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] ?? calculatedLength;
   };
 
   const hasCustomLength = (polygonId: string, edgeIndex: number): boolean => {
+    // Only show as custom if we're in manual mode AND there's a custom value
+    if (!useManualAreaCalc) {
+      return false;
+    }
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] !== undefined;
   };
@@ -2532,6 +2541,21 @@ export default function AreaCalculatorEditor() {
             {useManualAreaCalc ? 'Manuell' : 'Auto'}
           </Text>
         </TouchableOpacity>
+        
+        {/* Reset manual measurements button - only show when there are custom lengths */}
+        {Object.keys(customEdgeLengths).length > 0 && (
+          <TouchableOpacity
+            style={[styles.toolButton, { backgroundColor: '#f44336' }]}
+            onPress={() => {
+              saveStateForUndo();
+              setCustomEdgeLengths({});
+              setUseManualAreaCalc(false);
+            }}
+          >
+            <Ionicons name="refresh" size={20} color="#fff" />
+            <Text style={[styles.toolLabel, { color: '#fff' }]}>Zurück</Text>
+          </TouchableOpacity>
+        )}
         
         <View style={styles.toolSeparator} />
         

@@ -142,6 +142,7 @@ export default function AreaCalculatorEditor() {
   const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
   const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
   const [fixedLength, setFixedLength] = useState<string>(''); // Feste Länge für nächste Linie
+  const [angleModalPosition, setAngleModalPosition] = useState({ x: 0, y: 0 }); // Position für verschiebares Modal
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
@@ -1713,6 +1714,58 @@ export default function AreaCalculatorEditor() {
     }
     const edgeKey = `${polygonId}-${edgeIndex}`;
     return customEdgeLengths[edgeKey] !== undefined;
+  };
+
+  // Draw line with fixed angle and length from the modal
+  const drawLineFromModal = () => {
+    if (currentPoints.length === 0) {
+      Alert.alert('Kein Startpunkt', 'Bitte setzen Sie zuerst einen Startpunkt auf der Zeichenfläche.');
+      return;
+    }
+    
+    const lastPoint = currentPoints[currentPoints.length - 1];
+    
+    // Parse length
+    let targetLength: number | null = null;
+    if (fixedLength !== '') {
+      try {
+        let cleanExpr = fixedLength.replace(/,/g, '.');
+        if (/^[\d\.\+\-\*\/\(\)\s]+$/.test(cleanExpr)) {
+          targetLength = Function('"use strict"; return (' + cleanExpr + ')')();
+          if (isNaN(targetLength) || targetLength <= 0) {
+            Alert.alert('Ungültige Länge', 'Bitte geben Sie eine gültige Länge ein.');
+            return;
+          }
+        }
+      } catch {
+        Alert.alert('Ungültige Länge', 'Bitte geben Sie eine gültige Länge ein.');
+        return;
+      }
+    }
+    
+    if (targetLength === null) {
+      Alert.alert('Keine Länge', 'Bitte geben Sie eine Länge ein.');
+      return;
+    }
+    
+    // Calculate new point
+    const angle = fixedAngle ?? 0;
+    const radians = angle * (Math.PI / 180);
+    const pixelLength = targetLength * scale;
+    
+    const newPoint = {
+      x: lastPoint.x + pixelLength * Math.cos(radians),
+      y: lastPoint.y - pixelLength * Math.sin(radians) // Negative because screen Y is inverted
+    };
+    
+    setCurrentPoints([...currentPoints, newPoint]);
+  };
+
+  // Undo last point
+  const undoLastPoint = () => {
+    if (currentPoints.length > 0) {
+      setCurrentPoints(currentPoints.slice(0, -1));
+    }
   };
 
   // Check if a touch point is on any edge label
@@ -6710,22 +6763,22 @@ export default function AreaCalculatorEditor() {
             </View>
             
             {/* Preset Angles */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              {[0, 15, 30, 45, 60, 90, 120, 135].map((angle) => (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {[0, 30, 45, 60, 90, 120, 135, 180, 225, 270, 315].map((angle) => (
                 <TouchableOpacity
                   key={angle}
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
                     backgroundColor: fixedAngle === angle ? '#E91E63' : '#f0f0f0',
-                    borderRadius: 20,
+                    borderRadius: 16,
                     borderWidth: 1,
                     borderColor: fixedAngle === angle ? '#E91E63' : '#ddd',
                   }}
                   onPress={() => setFixedAngle(fixedAngle === angle ? null : angle)}
                 >
                   <Text style={{ 
-                    fontSize: 13, 
+                    fontSize: 11, 
                     fontWeight: '600',
                     color: fixedAngle === angle ? '#fff' : '#333' 
                   }}>
@@ -6833,7 +6886,7 @@ export default function AreaCalculatorEditor() {
                 backgroundColor: '#e3f2fd', 
                 padding: 10, 
                 borderRadius: 8, 
-                marginBottom: 16,
+                marginBottom: 12,
                 borderWidth: 1,
                 borderColor: '#2196F3',
               }}>
@@ -6848,7 +6901,59 @@ export default function AreaCalculatorEditor() {
               </View>
             )}
             
-            {/* Buttons */}
+            {/* Action Buttons - Draw Line & Undo */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#4CAF50',
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                }}
+                onPress={drawLineFromModal}
+              >
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Linie zeichnen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#FF9800',
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  paddingHorizontal: 16,
+                }}
+                onPress={undoLastPoint}
+              >
+                <Ionicons name="arrow-undo" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>Zurück</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Current Points Info */}
+            {currentPoints.length > 0 && (
+              <View style={{ 
+                backgroundColor: '#fff3e0', 
+                padding: 8, 
+                borderRadius: 6, 
+                marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
+                <Ionicons name="location" size={16} color="#FF9800" />
+                <Text style={{ marginLeft: 6, fontSize: 11, color: '#e65100' }}>
+                  {currentPoints.length} Punkt{currentPoints.length !== 1 ? 'e' : ''} gesetzt
+                  {currentPoints.length >= 3 && ' (tippen Sie nahe am Startpunkt zum Schließen)'}
+                </Text>
+              </View>
+            )}
+            
+            {/* Close Buttons */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={{
@@ -6869,14 +6974,14 @@ export default function AreaCalculatorEditor() {
               <TouchableOpacity
                 style={{
                   flex: 1,
-                  backgroundColor: '#4CAF50',
+                  backgroundColor: '#666',
                   padding: 12,
                   borderRadius: 8,
                   alignItems: 'center',
                 }}
                 onPress={() => setShowAngleModal(false)}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>OK</Text>
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Schließen</Text>
               </TouchableOpacity>
             </View>
           </View>

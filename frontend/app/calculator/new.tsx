@@ -668,8 +668,7 @@ export default function AreaCalculatorEditor() {
     return pixelLength / scale; // Convert to meters
   };
 
-  // Calculate interior angle at a vertex (in degrees)
-  // Always returns the interior angle of the polygon
+  // Calculate angle between three points (in degrees)
   const calculateAngle = (p1: AreaPoint, vertex: AreaPoint, p2: AreaPoint): number => {
     const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
     const v2 = { x: p2.x - vertex.x, y: p2.y - vertex.y };
@@ -677,54 +676,8 @@ export default function AreaCalculatorEditor() {
     const dot = v1.x * v2.x + v1.y * v2.y;
     const cross = v1.x * v2.y - v1.y * v2.x;
     
-    // Calculate the signed angle using atan2
-    let angle = Math.atan2(cross, dot) * (180 / Math.PI);
-    
-    // Convert to interior angle (0-360 range)
-    // For clockwise polygons (negative cross product indicates concave vertex)
-    if (angle < 0) {
-      angle = 360 + angle;
-    }
-    
+    let angle = Math.atan2(Math.abs(cross), dot) * (180 / Math.PI);
     return angle;
-  };
-  
-  // Calculate interior angle at a vertex of a polygon
-  // Returns the angle INSIDE the polygon at this vertex
-  const calculateInteriorAngle = (polygon: AreaPolygon, vertexIndex: number): number => {
-    const points = polygon.points;
-    const n = points.length;
-    if (n < 3) return 0;
-    
-    const prevIndex = (vertexIndex - 1 + n) % n;
-    const nextIndex = (vertexIndex + 1) % n;
-    const prevPoint = points[prevIndex];
-    const vertex = points[vertexIndex];
-    const nextPoint = points[nextIndex];
-    
-    // Vectors along the edges (direction of travel around polygon)
-    // edge1: from prev to vertex
-    // edge2: from vertex to next
-    const edge1 = { x: vertex.x - prevPoint.x, y: vertex.y - prevPoint.y };
-    const edge2 = { x: nextPoint.x - vertex.x, y: nextPoint.y - vertex.y };
-    
-    // Calculate the turn angle (exterior angle)
-    // Using atan2 to get signed angle
-    const angle1 = Math.atan2(edge1.y, edge1.x);
-    const angle2 = Math.atan2(edge2.y, edge2.x);
-    
-    // The turn angle (how much we turn at this vertex)
-    let turnAngle = angle2 - angle1;
-    
-    // Normalize to -PI to PI
-    while (turnAngle > Math.PI) turnAngle -= 2 * Math.PI;
-    while (turnAngle < -Math.PI) turnAngle += 2 * Math.PI;
-    
-    // Interior angle = 180° - turn angle (for convex vertices)
-    // or 180° + |turn angle| for concave vertices
-    const interiorAngle = 180 - (turnAngle * 180 / Math.PI);
-    
-    return interiorAngle;
   };
 
   // Calculate results
@@ -5204,7 +5157,11 @@ export default function AreaCalculatorEditor() {
                 
                 {/* Angle display at vertices */}
                 {showPolygonAngles && polygon.points.length >= 3 && polygon.points.map((vertex, index) => {
-                  const angle = calculateInteriorAngle(polygon, index);
+                  const prevIndex = (index - 1 + polygon.points.length) % polygon.points.length;
+                  const nextIndex = (index + 1) % polygon.points.length;
+                  const prevPoint = polygon.points[prevIndex];
+                  const nextPoint = polygon.points[nextIndex];
+                  const angle = calculateAngle(prevPoint, vertex, nextPoint);
                   
                   return (
                     <G key={`angle-${polygon.id}-${index}`}>

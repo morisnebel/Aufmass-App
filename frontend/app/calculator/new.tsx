@@ -112,6 +112,27 @@ export default function AreaCalculatorEditor() {
       },
     })
   ).current;
+
+  // Angle Modal Drag Position
+  const angleModalPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const angleModalPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        angleModalPosition.setOffset({
+          x: (angleModalPosition.x as any)._value || 0,
+          y: (angleModalPosition.y as any)._value || 0,
+        });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: angleModalPosition.x, dy: angleModalPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        angleModalPosition.flattenOffset();
+      },
+    })
+  ).current;
   
   // Undo/Redo History
   interface HistoryState {
@@ -142,7 +163,6 @@ export default function AreaCalculatorEditor() {
   const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
   const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
   const [fixedLength, setFixedLength] = useState<string>(''); // Feste Länge für nächste Linie
-  const [angleModalPosition, setAngleModalPosition] = useState({ x: 0, y: 0 }); // Position für verschiebares Modal
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
@@ -5659,115 +5679,106 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
-      {/* Numpad for edge length input */}
+      {/* Numpad for edge length input - COMPACT */}
       {showNumpad && (
         <Animated.View 
           style={[
             styles.numpadContainer,
-            { transform: numpadPosition.getTranslateTransform() }
+            { transform: numpadPosition.getTranslateTransform(), padding: 8, minWidth: 180 }
           ]}
         >
-          {/* Close button */}
-          <TouchableOpacity 
-            style={styles.numpadCloseBtn}
-            onPress={() => { setShowNumpad(false); setEditingEdge(null); setNumpadInput(''); }}
-          >
-            <Ionicons name="close-circle" size={22} color="#999" />
-          </TouchableOpacity>
-          
-          {/* Drag handle */}
-          <View {...numpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
-            <Ionicons name="move" size={14} color="#999" />
-            <Text style={styles.numpadDragText}>Verschieben</Text>
+          {/* Header with close and drag */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <View {...numpadPanResponder.panHandlers} style={{ flexDirection: 'row', alignItems: 'center', padding: 4 }}>
+              <Ionicons name="move" size={12} color="#999" />
+              <Text style={{ fontSize: 9, color: '#999', marginLeft: 4 }}>Ziehen</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => { setShowNumpad(false); setEditingEdge(null); setNumpadInput(''); }}
+            >
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
           </View>
           
-          {/* Display */}
-          <View style={styles.numpadDisplay}>
-            <TextInput
-              style={styles.numpadDisplayInput}
-              value={numpadInput}
-              onChangeText={setNumpadInput}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor="#999"
-            />
-            <Text style={styles.numpadUnit}>m</Text>
+          {/* Display - NO TextInput, just Text */}
+          <View style={{ backgroundColor: '#f5f5f5', borderRadius: 6, padding: 8, marginBottom: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: numpadInput ? '#333' : '#999', flex: 1 }}>
+              {numpadInput || '0'}
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666' }}>m</Text>
           </View>
           
-          {/* Number grid with operators */}
-          <View style={styles.modalNumpadRow}>
+          {/* Compact Number grid */}
+          <View style={{ flexDirection: 'row', marginBottom: 3 }}>
             {['7','8','9','+'].map(k => (
               <TouchableOpacity 
                 key={k} 
-                style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} 
+                style={{ flex: 1, backgroundColor: k==='+' ? '#e3f2fd' : '#fff', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
                 onPress={() => handleNumpadPress(k)}
               >
-                <Text style={k==='+' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: k==='+' ? '#1976d2' : '#333' }}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.modalNumpadRow}>
+          <View style={{ flexDirection: 'row', marginBottom: 3 }}>
             {['4','5','6','-'].map(k => (
               <TouchableOpacity 
                 key={k} 
-                style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} 
+                style={{ flex: 1, backgroundColor: k==='-' ? '#e3f2fd' : '#fff', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
                 onPress={() => handleNumpadPress(k)}
               >
-                <Text style={k==='-' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: k==='-' ? '#1976d2' : '#333' }}>{k === '-' ? '−' : k}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.modalNumpadRow}>
-            {['1','2','3','*'].map(k => (
+          <View style={{ flexDirection: 'row', marginBottom: 3 }}>
+            {['1','2','3','×'].map(k => (
               <TouchableOpacity 
                 key={k} 
-                style={[styles.modalNumpadKey, k==='*' && styles.modalNumpadOp]} 
-                onPress={() => handleNumpadPress(k)}
+                style={{ flex: 1, backgroundColor: k==='×' ? '#e3f2fd' : '#fff', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
+                onPress={() => handleNumpadPress(k === '×' ? '*' : k)}
               >
-                <Text style={k==='*' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '*' ? '×' : k}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: k==='×' ? '#1976d2' : '#333' }}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.modalNumpadRow}>
-            {[',','0','.','/'].map(k => (
+          <View style={{ flexDirection: 'row', marginBottom: 3 }}>
+            {[',','0','.','÷'].map(k => (
               <TouchableOpacity 
                 key={k} 
-                style={[styles.modalNumpadKey, k==='/' && styles.modalNumpadOp]} 
-                onPress={() => handleNumpadPress(k)}
+                style={{ flex: 1, backgroundColor: k==='÷' ? '#e3f2fd' : '#fff', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
+                onPress={() => handleNumpadPress(k === '÷' ? '/' : k)}
               >
-                <Text style={k==='/' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '/' ? '÷' : k}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: k==='÷' ? '#1976d2' : '#333' }}>{k}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.modalNumpadRow}>
+          <View style={{ flexDirection: 'row', marginBottom: 3 }}>
             <TouchableOpacity 
-              style={[styles.modalNumpadKey, styles.modalNumpadClear]} 
+              style={{ flex: 1, backgroundColor: '#ffebee', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
               onPress={() => handleNumpadPress('C')}
             >
-              <Text style={styles.modalNumpadClearText}>C</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#f44336' }}>C</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.modalNumpadKey, styles.modalNumpadDel]} 
+              style={{ flex: 1, backgroundColor: '#fff3e0', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
               onPress={() => handleNumpadPress('⌫')}
             >
-              <Ionicons name="backspace-outline" size={18} color="#f44336" />
+              <Ionicons name="backspace-outline" size={16} color="#ff9800" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.modalNumpadKey, { flex: 2, backgroundColor: '#2196F3' }]} 
+              style={{ flex: 2, backgroundColor: '#2196F3', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
               onPress={() => applyNumpadInputAsLabel()}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Nur Maß</Text>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: '#fff' }}>Nur Maß</Text>
             </TouchableOpacity>
           </View>
-          <View style={[styles.modalNumpadRow, { marginTop: 4 }]}>
-            <TouchableOpacity 
-              style={[styles.modalNumpadKey, { flex: 1, backgroundColor: '#4CAF50', aspectRatio: undefined, paddingVertical: 12 }]} 
-              onPress={() => handleNumpadPress('OK')}
-            >
-              <Ionicons name="resize" size={16} color="#fff" style={{ marginBottom: 2 }} />
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Linie ändern</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#4CAF50', padding: 10, margin: 1, borderRadius: 4, alignItems: 'center' }}
+            onPress={() => handleNumpadPress('OK')}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#fff' }}>Linie ändern</Text>
+          </TouchableOpacity>
         </Animated.View>
       )}
 
@@ -6681,11 +6692,26 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
-      {/* Angle Settings Modal */}
+      {/* Angle Settings Modal - Draggable */}
       <Modal visible={showAngleModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxWidth: 340 }]}>
-            <Text style={styles.modalTitle}>Winkel-Einstellungen</Text>
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-start', paddingTop: 80 }]}>
+          <Animated.View 
+            style={[
+              styles.modalContent, 
+              { maxWidth: 340, transform: angleModalPosition.getTranslateTransform() }
+            ]}
+          >
+            {/* Drag Handle */}
+            <View {...angleModalPanResponder.panHandlers} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="move" size={16} color="#999" />
+                <Text style={{ fontSize: 10, color: '#999', marginLeft: 4 }}>Ziehen</Text>
+              </View>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Winkel & Maß</Text>
+              <TouchableOpacity onPress={() => setShowAngleModal(false)}>
+                <Ionicons name="close-circle" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
             
             {/* Auto-Snap Toggle */}
             <TouchableOpacity
@@ -6977,7 +7003,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={{ color: '#fff', fontWeight: '600' }}>Schließen</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </View>

@@ -5917,12 +5917,136 @@ export default function AreaCalculatorEditor() {
                 multiline
               />
               <TouchableOpacity
-                style={{ marginLeft: 8, padding: 10, backgroundColor: '#e8eaf6', borderRadius: 8 }}
-                onPress={() => openTextNumpad(setNewTextInput, newTextInputRef)}
+                style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
+                onPress={() => setShowTextNumpad(!showTextNumpad)}
               >
-                <Ionicons name="keypad" size={24} color="#3949ab" />
+                <Ionicons name="keypad" size={24} color={showTextNumpad ? '#fff' : '#3949ab'} />
               </TouchableOpacity>
             </View>
+            
+            {/* Eingebettetes Text-Numpad */}
+            {showTextNumpad && (
+              <View style={{ backgroundColor: '#f9f9f9', borderRadius: 8, padding: 8, marginTop: 8, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e8eaf6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 }}
+                    onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#3949ab' }}>
+                      {textNumpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {textNumpadMode === 'numbers' ? (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + (k === '-' ? '−' : k))}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k === '-' ? '−' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['1','2','3','×'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='×' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + (k === '×' ? '*' : k))}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='×' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      {[',','0','.','÷'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='÷' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + (k === '÷' ? '/' : k))}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='÷' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { backgroundColor: '#e8f5e9' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={{ fontSize: 10, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['a','b','c','d','e','f','g'].map(k => (
+                        <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['h','i','j','k','l','m','n'].map(k => (
+                        <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['o','p','q','r','s','t','u'].map(k => (
+                        <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['v','w','x','y','z','ä','ö'].map(k => (
+                        <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
+                        onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                        <Ionicons name="arrow-up" size={14} color={textNumpadCaps ? '#fff' : '#666'} />
+                      </TouchableOpacity>
+                      {['ü','ß','-',' '].map(k => (
+                        <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={styles.angleNumpadKeyTextSmall}>{k === ' ' ? '␣' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setNewTextInput('')}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setNewTextInput(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
             {/* Font size selector */}
             <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
@@ -6858,91 +6982,78 @@ export default function AreaCalculatorEditor() {
               </TouchableOpacity>
             </View>
             
-            {/* Auto-Snap Toggle */}
+            {/* Auto-Snap Toggle - Compact */}
             <TouchableOpacity
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 backgroundColor: snapToAngles ? '#e3f2fd' : '#f5f5f5',
-                padding: 12,
-                borderRadius: 8,
-                marginBottom: 16,
+                padding: 8,
+                borderRadius: 6,
+                marginBottom: 8,
                 borderWidth: 1,
                 borderColor: snapToAngles ? '#2196F3' : '#ddd',
               }}
               onPress={() => setSnapToAngles(!snapToAngles)}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="magnet" size={20} color={snapToAngles ? '#2196F3' : '#666'} />
-                <Text style={{ marginLeft: 8, fontSize: 14, color: snapToAngles ? '#2196F3' : '#666' }}>
+                <Ionicons name="magnet" size={16} color={snapToAngles ? '#2196F3' : '#666'} />
+                <Text style={{ marginLeft: 6, fontSize: 11, color: snapToAngles ? '#2196F3' : '#666' }}>
                   Auto-Einrasten (0°, 45°, 90°...)
                 </Text>
               </View>
               <Ionicons 
                 name={snapToAngles ? "checkbox" : "square-outline"} 
-                size={24} 
+                size={20} 
                 color={snapToAngles ? '#2196F3' : '#999'} 
               />
             </TouchableOpacity>
             
             {/* Fixed Angle Section */}
-            <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
-              Fester Winkel (nächste Linie wird exakt in diesem Winkel gezeichnet):
+            <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>
+              Fester Winkel:
             </Text>
             
-            {/* Angle Direction Preview - Mathematical coordinate system */}
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <Svg width={120} height={120} viewBox="0 0 120 120">
-                {/* Outer circle */}
+            {/* Angle Direction Preview - Compact */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Svg width={70} height={70} viewBox="0 0 120 120">
                 <Circle cx="60" cy="60" r="50" fill="#f5f5f5" stroke="#ddd" strokeWidth="2" />
-                
-                {/* Degree markers - Mathematical system: 0°=right, 90°=up, 180°=left, 270°=down */}
-                <SvgText x="60" y="18" textAnchor="middle" fontSize="10" fill="#999">90°</SvgText>
-                <SvgText x="105" y="64" textAnchor="middle" fontSize="10" fill="#999">0°</SvgText>
-                <SvgText x="60" y="112" textAnchor="middle" fontSize="10" fill="#999">270°</SvgText>
-                <SvgText x="15" y="64" textAnchor="middle" fontSize="10" fill="#999">180°</SvgText>
-                
-                {/* Center point */}
+                <SvgText x="60" y="20" textAnchor="middle" fontSize="12" fill="#999">90°</SvgText>
+                <SvgText x="100" y="64" textAnchor="middle" fontSize="12" fill="#999">0°</SvgText>
                 <Circle cx="60" cy="60" r="4" fill="#1976d2" />
-                
-                {/* Direction arrow - adjusted for mathematical coordinates */}
                 {fixedAngle !== null && (
                   <G rotation={-fixedAngle + 90} origin="60, 60">
-                    <Line x1="60" y1="60" x2="60" y2="18" stroke="#E91E63" strokeWidth="3" />
-                    <SvgPolygon points="60,12 54,24 66,24" fill="#E91E63" />
+                    <Line x1="60" y1="60" x2="60" y2="20" stroke="#E91E63" strokeWidth="3" />
+                    <SvgPolygon points="60,14 54,26 66,26" fill="#E91E63" />
                   </G>
-                )}
-                
-                {/* No angle indicator */}
-                {fixedAngle === null && (
-                  <SvgText x="60" y="64" textAnchor="middle" fontSize="11" fill="#999">Kein Winkel</SvgText>
                 )}
               </Svg>
               {fixedAngle !== null && (
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#E91E63', marginTop: 4 }}>
-                  {fixedAngle}°
-                </Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#E91E63', marginLeft: 8 }}>{fixedAngle}°</Text>
+              )}
+              {fixedAngle === null && (
+                <Text style={{ fontSize: 12, color: '#999', marginLeft: 8 }}>Kein Winkel gewählt</Text>
               )}
             </View>
             
-            {/* Preset Angles */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {/* Preset Angles - Compact */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
               {[0, 30, 45, 60, 90, 120, 135, 180, 225, 270, 315].map((angle) => (
                 <TouchableOpacity
                   key={angle}
                   style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
                     backgroundColor: fixedAngle === angle ? '#E91E63' : '#f0f0f0',
-                    borderRadius: 16,
+                    borderRadius: 12,
                     borderWidth: 1,
                     borderColor: fixedAngle === angle ? '#E91E63' : '#ddd',
                   }}
                   onPress={() => setFixedAngle(fixedAngle === angle ? null : angle)}
                 >
                   <Text style={{ 
-                    fontSize: 11, 
+                    fontSize: 10, 
                     fontWeight: '600',
                     color: fixedAngle === angle ? '#fff' : '#333' 
                   }}>
@@ -6952,17 +7063,17 @@ export default function AreaCalculatorEditor() {
               ))}
             </View>
             
-            {/* Custom Angle Input */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            {/* Custom Angle Input - Compact */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
               <TextInput
                 ref={angleInputRef}
                 style={{
                   flex: 1,
                   borderWidth: 2,
                   borderColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#E91E63' : '#ddd',
-                  borderRadius: 8,
-                  padding: 10,
-                  fontSize: 16,
+                  borderRadius: 6,
+                  padding: 8,
+                  fontSize: 14,
                   backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#fce4ec' : '#fff',
                 }}
                 placeholder="Eigener Winkel"
@@ -6980,7 +7091,7 @@ export default function AreaCalculatorEditor() {
                 }}
                 onFocus={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(true); }}
               />
-              <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>°</Text>
+              <Text style={{ marginLeft: 6, fontSize: 14, color: '#666' }}>°</Text>
               <TouchableOpacity
                 style={{ 
                   marginLeft: 8, 
@@ -6994,28 +7105,9 @@ export default function AreaCalculatorEditor() {
               </TouchableOpacity>
             </View>
             
-            {/* Current Status */}
-            {fixedAngle !== null && (
-              <View style={{ 
-                backgroundColor: '#fce4ec', 
-                padding: 10, 
-                borderRadius: 8, 
-                marginBottom: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}>
-                <Ionicons name="information-circle" size={20} color="#E91E63" />
-                <Text style={{ marginLeft: 8, fontSize: 12, color: '#E91E63', flex: 1 }}>
-                  Die nächste Linie wird im Winkel von {fixedAngle}° gezeichnet
-                </Text>
-              </View>
-            )}
-            
-            {/* Length Input Section */}
-            <View style={{ marginTop: 8, marginBottom: 16 }}>
-              <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
-                Feste Länge (optional):
-              </Text>
+            {/* Length Input Section - Compact */}
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Feste Länge:</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TextInput
                   ref={lengthInputRef}
@@ -7023,236 +7115,214 @@ export default function AreaCalculatorEditor() {
                     flex: 1,
                     borderWidth: 2,
                     borderColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#4CAF50' : (fixedLength ? '#4CAF50' : '#ddd'),
-                    borderRadius: 8,
-                    padding: 10,
-                    fontSize: 16,
+                    borderRadius: 6,
+                    padding: 8,
+                    fontSize: 14,
                     backgroundColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#e8f5e9' : (fixedLength ? '#e8f5e9' : '#fff'),
                   }}
                   placeholder="z.B. 2.5 oder 1+0.5"
                   keyboardType="decimal-pad"
                   value={fixedLength}
                   onChangeText={(text) => {
-                    // Filter: nur Zahlen, Komma, Punkt und Rechenoperatoren behalten
                     const filtered = text.replace(/[^0-9.,+\-*/()]/g, '');
                     setFixedLength(filtered);
                   }}
                   onFocus={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(true); }}
                 />
-                <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>m</Text>
+                <Text style={{ marginLeft: 6, fontSize: 14, color: '#666' }}>m</Text>
                 <TouchableOpacity
                   style={{ 
-                    marginLeft: 8, 
-                    padding: 8, 
+                    marginLeft: 6, 
+                    padding: 6, 
                     backgroundColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#4CAF50' : '#e8eaf6', 
-                    borderRadius: 8 
+                    borderRadius: 6 
                   }}
                   onPress={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'length'); }}
                 >
-                  <Ionicons name="keypad" size={22} color={angleNumpadTarget === 'length' && showAngleNumpad ? '#fff' : '#3949ab'} />
+                  <Ionicons name="keypad" size={20} color={angleNumpadTarget === 'length' && showAngleNumpad ? '#fff' : '#3949ab'} />
                 </TouchableOpacity>
                 {fixedLength !== '' && (
-                  <TouchableOpacity 
-                    style={{ marginLeft: 4, padding: 4 }}
-                    onPress={() => setFixedLength('')}
-                  >
-                    <Ionicons name="close-circle" size={24} color="#999" />
+                  <TouchableOpacity style={{ marginLeft: 2, padding: 2 }} onPress={() => setFixedLength('')}>
+                    <Ionicons name="close-circle" size={22} color="#999" />
                   </TouchableOpacity>
                 )}
               </View>
-              {fixedLength !== '' && (
-                <View style={{ 
-                  backgroundColor: '#e8f5e9', 
-                  padding: 8, 
-                  borderRadius: 6, 
-                  marginTop: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                }}>
-                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
-                  <Text style={{ marginLeft: 6, fontSize: 11, color: '#4CAF50' }}>
-                    Nächste Linie: {fixedLength}m Länge
-                  </Text>
-                </View>
-              )}
             </View>
             
-            {/* Status Summary */}
+            {/* Compact Status Summary */}
             {(fixedAngle !== null || fixedLength !== '') && (
               <View style={{ 
                 backgroundColor: '#e3f2fd', 
-                padding: 10, 
-                borderRadius: 8, 
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: '#2196F3',
+                padding: 6, 
+                borderRadius: 6, 
+                marginBottom: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
               }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#1976d2', marginBottom: 4 }}>
-                  Nächste Linie:
-                </Text>
-                <Text style={{ fontSize: 11, color: '#333' }}>
-                  {fixedAngle !== null ? `Winkel: ${fixedAngle}°` : 'Winkel: frei'}
+                <Ionicons name="information-circle" size={16} color="#1976d2" />
+                <Text style={{ fontSize: 10, color: '#1976d2', marginLeft: 4 }}>
+                  {fixedAngle !== null ? `${fixedAngle}°` : 'frei'}
                   {' • '}
-                  {fixedLength !== '' ? `Länge: ${fixedLength}m` : 'Länge: frei'}
+                  {fixedLength !== '' ? `${fixedLength}m` : 'frei'}
                 </Text>
               </View>
             )}
             
-            {/* Action Buttons - Draw Line & Undo */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            {/* Action Buttons - Compact */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
                   backgroundColor: '#4CAF50',
-                  padding: 12,
-                  borderRadius: 8,
+                  padding: 10,
+                  borderRadius: 6,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
                 }}
                 onPress={drawLineFromModal}
               >
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Linie zeichnen</Text>
+                <Ionicons name="add-circle" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4, fontSize: 12 }}>Linie zeichnen</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
                   backgroundColor: '#FF9800',
-                  padding: 12,
-                  borderRadius: 8,
+                  padding: 10,
+                  borderRadius: 6,
                   alignItems: 'center',
                   flexDirection: 'row',
                   justifyContent: 'center',
-                  paddingHorizontal: 16,
+                  paddingHorizontal: 12,
                 }}
                 onPress={undoLastPoint}
               >
-                <Ionicons name="arrow-undo" size={20} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4 }}>Zurück</Text>
+                <Ionicons name="arrow-undo" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 4, fontSize: 12 }}>Zurück</Text>
               </TouchableOpacity>
             </View>
             
-            {/* Current Points Info */}
+            {/* Current Points Info - Compact */}
             {currentPoints.length > 0 && (
               <View style={{ 
                 backgroundColor: '#fff3e0', 
-                padding: 8, 
-                borderRadius: 6, 
-                marginBottom: 12,
+                padding: 6, 
+                borderRadius: 4, 
+                marginBottom: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
               }}>
-                <Ionicons name="location" size={16} color="#FF9800" />
-                <Text style={{ marginLeft: 6, fontSize: 11, color: '#e65100' }}>
-                  {currentPoints.length} Punkt{currentPoints.length !== 1 ? 'e' : ''} gesetzt
-                  {currentPoints.length >= 3 && ' (tippen Sie nahe am Startpunkt zum Schließen)'}
+                <Ionicons name="location" size={14} color="#FF9800" />
+                <Text style={{ marginLeft: 4, fontSize: 10, color: '#e65100' }}>
+                  {currentPoints.length} Punkt{currentPoints.length !== 1 ? 'e' : ''}
                 </Text>
               </View>
             )}
             
-            {/* Eingebautes Numpad für Winkel & Länge */}
+            {/* Eingebautes Numpad - Kompakt */}
             {showAngleNumpad && (
               <View style={{ 
                 backgroundColor: '#f9f9f9', 
-                borderRadius: 12, 
-                padding: 10, 
-                marginBottom: 16,
+                borderRadius: 8, 
+                padding: 8, 
+                marginBottom: 8,
                 borderWidth: 1,
                 borderColor: angleNumpadTarget === 'angle' ? '#E91E63' : '#4CAF50',
               }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: angleNumpadTarget === 'angle' ? '#E91E63' : '#4CAF50' }}>
-                    {angleNumpadTarget === 'angle' ? 'Winkel eingeben' : 'Länge eingeben'}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: angleNumpadTarget === 'angle' ? '#E91E63' : '#4CAF50' }}>
+                    {angleNumpadTarget === 'angle' ? 'Winkel' : 'Länge'}
                   </Text>
                   <TouchableOpacity onPress={() => setShowAngleNumpad(false)}>
-                    <Ionicons name="close-circle" size={22} color="#999" />
+                    <Ionicons name="close-circle" size={18} color="#999" />
                   </TouchableOpacity>
                 </View>
-                {/* Zahlen-Reihen */}
-                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                {/* Zahlen-Reihen - Kompakt */}
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
                   {['7','8','9'].map(k => (
-                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
-                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyTextSmall}>{k}</Text>
                     </TouchableOpacity>
                   ))}
                   {angleNumpadTarget === 'length' && (
-                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('+')}>
-                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>+</Text>
+                    <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('+')}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>+</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
                   {['4','5','6'].map(k => (
-                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
-                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyTextSmall}>{k}</Text>
                     </TouchableOpacity>
                   ))}
                   {angleNumpadTarget === 'length' && (
-                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('-')}>
-                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>−</Text>
+                    <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('-')}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>−</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
                   {['1','2','3'].map(k => (
-                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
-                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyTextSmall}>{k}</Text>
                     </TouchableOpacity>
                   ))}
                   {angleNumpadTarget === 'length' && (
-                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('*')}>
-                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>×</Text>
+                    <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('*')}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>×</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-                <View style={{ flexDirection: 'row', gap: 4 }}>
+                <View style={{ flexDirection: 'row', gap: 3 }}>
                   {angleNumpadTarget === 'length' ? (
                     <>
-                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(',')}>
-                        <Text style={styles.angleNumpadKeyText}>,</Text>
+                      <TouchableOpacity style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress(',')}>
+                        <Text style={styles.angleNumpadKeyTextSmall}>,</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress('0')}>
-                        <Text style={styles.angleNumpadKeyText}>0</Text>
+                      <TouchableOpacity style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress('0')}>
+                        <Text style={styles.angleNumpadKeyTextSmall}>0</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress('.')}>
-                        <Text style={styles.angleNumpadKeyText}>.</Text>
+                      <TouchableOpacity style={styles.angleNumpadKeySmall} onPress={() => handleAngleNumpadPress('.')}>
+                        <Text style={styles.angleNumpadKeyTextSmall}>.</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('/')}>
-                        <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>÷</Text>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('/')}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>÷</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
                     <>
-                      <TouchableOpacity style={[styles.angleNumpadKey, { flex: 1 }]} onPress={() => handleAngleNumpadPress('0')}>
-                        <Text style={styles.angleNumpadKeyText}>0</Text>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 1 }]} onPress={() => handleAngleNumpadPress('0')}>
+                        <Text style={styles.angleNumpadKeyTextSmall}>0</Text>
                       </TouchableOpacity>
                     </>
                   )}
                 </View>
-                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-                  <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#fff3e0' }]} onPress={() => handleAngleNumpadPress('C')}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} onPress={() => handleAngleNumpadPress('C')}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#f57c00' }}>C</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#ffebee' }]} onPress={() => handleAngleNumpadPress('⌫')}>
-                    <Ionicons name="backspace-outline" size={20} color="#f44336" />
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} onPress={() => handleAngleNumpadPress('⌫')}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
                   </TouchableOpacity>
                   <TouchableOpacity 
-                    style={[styles.angleNumpadKey, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
                     onPress={() => setShowAngleNumpad(false)}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>OK</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>OK</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
 
-            {/* Close Buttons */}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            {/* Close Buttons - Compact */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
                   backgroundColor: '#f44336',
-                  padding: 12,
-                  borderRadius: 8,
+                  padding: 10,
+                  borderRadius: 6,
                   alignItems: 'center',
                 }}
                 onPress={() => {
@@ -7261,164 +7331,24 @@ export default function AreaCalculatorEditor() {
                   setSnapToAngles(false);
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Alles aus</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Alles aus</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
                   flex: 1,
                   backgroundColor: '#666',
-                  padding: 12,
-                  borderRadius: 8,
+                  padding: 10,
+                  borderRadius: 6,
                   alignItems: 'center',
                 }}
                 onPress={() => setShowAngleModal(false)}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Schließen</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>Schließen</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
         </View>
       </Modal>
-
-      {/* Text Numpad Overlay (für alle Texteingaben) */}
-      {showTextNumpad && (
-        <Animated.View 
-          style={[
-            styles.textNumpadOverlay,
-            { transform: textNumpadPosition.getTranslateTransform() }
-          ]}
-        >
-          {/* Schließen-Button */}
-          <TouchableOpacity 
-            style={styles.textNumpadCloseBtn}
-            onPress={closeTextNumpad}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-circle" size={22} color="#999" />
-          </TouchableOpacity>
-          
-          {/* Drag-Handle zum Verschieben */}
-          <View {...textNumpadPanResponder.panHandlers} style={styles.textNumpadDragHandle}>
-            <Ionicons name="move" size={14} color="#999" />
-            <Text style={styles.textNumpadDragText}>Verschieben</Text>
-          </View>
-          
-          {textNumpadMode === 'numbers' ? (
-            <>
-              {/* Zahlen-Modus */}
-              <View style={styles.textNumpadRow}>
-                {['7','8','9','+'].map(k => (
-                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='+' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k)}>
-                    <Text style={k==='+' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['4','5','6','-'].map(k => (
-                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='-' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k)}>
-                    <Text style={k==='-' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k === '-' ? '−' : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['1','2','3','×'].map(k => (
-                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='×' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k === '×' ? '*' : k)}>
-                    <Text style={k==='×' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {[',','0','.','÷'].map(k => (
-                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='÷' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k === '÷' ? '/' : k)}>
-                    <Text style={k==='÷' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadMode]} onPress={() => setTextNumpadMode('letters')}>
-                  <Text style={styles.textNumpadModeText}>ABC</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadClear]} onPress={() => handleTextNumpadPress('C')}>
-                  <Text style={styles.textNumpadClearText}>C</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(' ')}>
-                  <Text style={styles.textNumpadKeyText}>␣</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadDel]} onPress={() => handleTextNumpadPress('⌫')}>
-                  <Ionicons name="backspace-outline" size={18} color="#f44336" />
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Buchstaben-Modus */}
-              <View style={styles.textNumpadRow}>
-                {['m','m²','m³','lfm'].map((k, i) => (
-                  <TouchableOpacity key={`unit-${i}`} style={[styles.textNumpadKey, styles.textNumpadUnit]} onPress={() => handleTextNumpadPress(k)}>
-                    <Text style={styles.textNumpadUnitText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['Stk','Paar','kg','l'].map((k, i) => (
-                  <TouchableOpacity key={`unit2-${i}`} style={[styles.textNumpadKey, styles.textNumpadUnit]} onPress={() => handleTextNumpadPress(k)}>
-                    <Text style={styles.textNumpadUnitText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['a','b','c','d','e','f'].map(k => (
-                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['g','h','i','j','k','l'].map(k => (
-                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['n','o','p','q','r','s'].map(k => (
-                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['t','u','v','w','x','y'].map(k => (
-                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                {['z','ä','ö','ü','ß','-'].map(k => (
-                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.textNumpadRow}>
-                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadMode]} onPress={() => setTextNumpadMode('numbers')}>
-                  <Text style={styles.textNumpadModeText}>123</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.textNumpadKey, textNumpadCaps && styles.textNumpadCapsActive]} onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
-                  <Ionicons name="arrow-up" size={18} color={textNumpadCaps ? '#fff' : '#666'} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(' ')}>
-                  <Text style={styles.textNumpadKeyText}>␣</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadDel]} onPress={() => handleTextNumpadPress('⌫')}>
-                  <Ionicons name="backspace-outline" size={18} color="#f44336" />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </Animated.View>
-      )}
     </View>
   );
 }
@@ -8165,6 +8095,23 @@ const styles = StyleSheet.create({
   },
   angleNumpadKeyText: {
     fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  // Kompakte Variante für Winkel-Numpad
+  angleNumpadKeySmall: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minHeight: 36,
+    paddingVertical: 8,
+  },
+  angleNumpadKeyTextSmall: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
   },

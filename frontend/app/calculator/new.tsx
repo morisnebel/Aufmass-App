@@ -306,6 +306,7 @@ export default function AreaCalculatorEditor() {
   const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
   const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
   const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
+  const [angleInputText, setAngleInputText] = useState(''); // Texteingabe für Winkel (erlaubt Minus)
   const [fixedLength, setFixedLength] = useState<string>(''); // Feste Länge für nächste Linie
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
@@ -7782,37 +7783,56 @@ export default function AreaCalculatorEditor() {
                   fontSize: 14,
                   backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#fce4ec' : '#fff',
                 }}
-                placeholder="Eigener Winkel (z.B. -90)"
+                placeholder="z.B. -90 für 270°"
                 keyboardType="default"
-                value={fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle) ? fixedAngle.toString() : ''}
+                value={angleInputText}
                 onChangeText={(text) => {
-                  // Filter: nur Zahlen und Minus behalten
+                  // Erlaube Zahlen und Minus
                   const filtered = text.replace(/[^0-9\-]/g, '');
-                  // Nur ein Minus am Anfang erlauben
-                  const cleanFiltered = filtered.replace(/(?!^)-/g, '');
-                  
-                  if (cleanFiltered === '' || cleanFiltered === '-') {
+                  setAngleInputText(filtered);
+                }}
+                onEndEditing={() => {
+                  // Beim Verlassen des Felds: Winkel umwandeln
+                  if (angleInputText === '' || angleInputText === '-') {
                     setFixedAngle(null);
+                    setAngleInputText('');
                     return;
                   }
                   
-                  let num = parseInt(cleanFiltered);
+                  let num = parseInt(angleInputText);
                   if (!isNaN(num)) {
                     // Negative Winkel in positive umwandeln: -90 → 270
-                    if (num < 0) {
-                      num = 360 + (num % 360);
-                      if (num === 360) num = 0;
+                    while (num < 0) {
+                      num = 360 + num;
                     }
-                    // Winkel auf 0-360 normalisieren
                     num = num % 360;
-                    if (num >= 0 && num <= 360) {
-                      setFixedAngle(num);
-                    }
+                    setFixedAngle(num);
+                    setAngleInputText(num.toString());
                   }
                 }}
-                onFocus={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(true); }}
+                onFocus={() => { 
+                  setAngleNumpadTarget('angle'); 
+                  setShowAngleNumpad(true);
+                  // Aktuellen Winkel in Textfeld übernehmen
+                  if (fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle)) {
+                    setAngleInputText(fixedAngle.toString());
+                  } else {
+                    setAngleInputText('');
+                  }
+                }}
                 onSubmitEditing={() => {
-                  // Nach Winkeleingabe zum Längenfeld springen
+                  // Winkel umwandeln und zum Längenfeld springen
+                  if (angleInputText !== '' && angleInputText !== '-') {
+                    let num = parseInt(angleInputText);
+                    if (!isNaN(num)) {
+                      while (num < 0) {
+                        num = 360 + num;
+                      }
+                      num = num % 360;
+                      setFixedAngle(num);
+                      setAngleInputText(num.toString());
+                    }
+                  }
                   setTimeout(() => lengthInputRef?.current?.focus(), 50);
                 }}
                 returnKeyType="next"

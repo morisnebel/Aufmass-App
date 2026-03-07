@@ -1625,10 +1625,15 @@ export default function AreaCalculatorEditor() {
   // Evaluate mathematical expression (supports +, -, *, /)
   const evaluateExpression = (expr: string): number | null => {
     try {
+      // First: remove any unit letters/symbols (m, cm, mm, etc.) that laser devices might send
+      let cleanExpr = expr.replace(/[a-zA-Z°'"²³µ\s]/g, '');
       // Replace , with . for decimals
-      let cleanExpr = expr.replace(/,/g, '.');
+      cleanExpr = cleanExpr.replace(/,/g, '.');
+      // Remove any trailing dots
+      cleanExpr = cleanExpr.replace(/\.+$/, '');
       // Only allow numbers and basic operators
-      if (!/^[\d\.\+\-\*\/\(\)\s]+$/.test(cleanExpr)) return null;
+      if (!/^[\d\.\+\-\*\/\(\)]+$/.test(cleanExpr)) return null;
+      if (cleanExpr === '') return null;
       // Evaluate
       const result = Function('"use strict"; return (' + cleanExpr + ')')();
       return isNaN(result) ? null : result;
@@ -5706,8 +5711,8 @@ export default function AreaCalculatorEditor() {
               style={{ flex: 1, fontSize: 18, fontWeight: 'bold', color: '#333', padding: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: '#ddd' }}
               value={numpadInput}
               onChangeText={(text) => {
-                // Filter: nur Zahlen, Komma und Punkt behalten (Maßeinheiten wie m, cm, mm ignorieren)
-                const filtered = text.replace(/[^0-9.,]/g, '');
+                // Filter: Buchstaben und Einheiten entfernen, nur Zahlen, Komma, Punkt und Operatoren behalten
+                const filtered = text.replace(/[a-zA-Z°'"²³µ\s]/g, '');
                 setNumpadInput(filtered);
               }}
               keyboardType="decimal-pad"

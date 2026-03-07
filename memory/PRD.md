@@ -154,6 +154,19 @@ Entwicklung einer umfassenden iOS/iPad-Anwendung für das Management von Dachdec
 
 ## Was wurde implementiert (Dezember 2025)
 
+### Session: Bug-Fixes Flächen-Kalkulator (ABGESCHLOSSEN - Dezember 2025)
+- **Bug 1 - Projektfotos nicht auswählbar**: 
+  - Root cause: Falsche Parameter-Variable (`params.project_id` statt `projectId` State)
+  - Fix: `loadProjectPhotos()` verwendet jetzt korrekt die State-Variable `projectId`
+- **Bug 2 - Polygon-Punkte schwer zu verschieben bei Zoom**:
+  - Root cause: Touch-Toleranz berücksichtigte Zoom-Level nicht
+  - Fix: Alle 9 Touch-Erkennungsfunktionen verwenden nun `tolerance = baseTolerance / zoomLevel`
+  - Betroffene Funktionen: findPolygonPointAtPosition, findDimensionLinePointAtPosition, findDimensionLineAtPoint, findClosestPointOnPolygonLine, findEdgeLabelAtPosition, findGuideLinePointAtPosition, findGuideLineAtPoint, findLineAtPoint, findAnnotationAtPosition
+- **Bug 3 - Pinch-to-Zoom Smoothness**:
+  - Verbesserte Smoothing-Logik mit exponentieller Glättung
+  - Niedrigerer Update-Threshold (0.001 statt 0.005) für flüssigere Reaktion
+  - Doppelte Interpolation für sanftere Übergänge
+
 ### Session: Konditionelle Notizen für Skizzen (ABGESCHLOSSEN - Dezember 2025)
 - **Notizen-Feature für Skizzen implementiert**:
   - Neuer "Notizen"-Button in der Toolbar (Dokument-Symbol)

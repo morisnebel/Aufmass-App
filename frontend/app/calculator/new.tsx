@@ -997,7 +997,9 @@ export default function AreaCalculatorEditor() {
 
   // Find dimension line point at position
   const findDimensionLinePointAtPosition = (x: number, y: number): { dimId: string; point: 'start' | 'end' | 'middle' } | null => {
-    const tolerance = 20;
+    // Adjust tolerance based on zoom level - larger tolerance when zoomed out
+    const baseTolerance = 20;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const dim of dimensionLines) {
       // Check start point
@@ -1025,7 +1027,9 @@ export default function AreaCalculatorEditor() {
 
   // Find dimension line at point (for selection)
   const findDimensionLineAtPoint = (x: number, y: number): { id: string } | null => {
-    const tolerance = 15;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 15;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const dim of dimensionLines) {
       const dist = pointToLineDistance({ x, y }, dim.start, dim.end);
@@ -1211,7 +1215,9 @@ export default function AreaCalculatorEditor() {
 
   // Check if point is near guide line endpoint
   const findGuideLinePointAtPosition = (x: number, y: number): { guideId: string; point: 'start' | 'end' | 'middle' } | null => {
-    const tolerance = 20;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 20;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const guide of guideLines) {
       // Check start point
@@ -1239,7 +1245,9 @@ export default function AreaCalculatorEditor() {
 
   // Check if point is near a polygon vertex
   const findPolygonPointAtPosition = (x: number, y: number, onlySelected: boolean = false): { polygonId: string; pointIndex: number } | null => {
-    const tolerance = 20;
+    // Adjust tolerance based on zoom level - larger tolerance when zoomed out
+    const baseTolerance = 20;
+    const tolerance = baseTolerance / zoomLevel;
     
     // If onlySelected is true, only check the selected polygon
     const polygonsToCheck = onlySelected && selectedPolygonId 
@@ -1266,7 +1274,9 @@ export default function AreaCalculatorEditor() {
     const polygon = polygons.find(p => p.id === selectedPolygonId);
     if (!polygon) return null;
     
-    const tolerance = 15;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 15;
+    const tolerance = baseTolerance / zoomLevel;
     let closest: { lineIndex: number; point: AreaPoint; distance: number } | null = null;
     
     for (let i = 0; i < polygon.points.length; i++) {
@@ -1582,7 +1592,9 @@ export default function AreaCalculatorEditor() {
 
   // Check if a touch point is on any edge label
   const findEdgeLabelAtPosition = (x: number, y: number): { polygonId: string; edgeIndex: number; length: number } | null => {
-    const tolerance = 30;
+    // Adjust tolerance based on zoom level - labels need larger touch target
+    const baseTolerance = 30;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const polygon of polygons) {
       for (let i = 0; i < polygon.points.length; i++) {
@@ -1795,7 +1807,9 @@ export default function AreaCalculatorEditor() {
 
   // Find guide line at point
   const findGuideLineAtPoint = (x: number, y: number): { id: string } | null => {
-    const tolerance = 10;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 10;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const guide of guideLines) {
       const dist = pointToLineDistance({ x, y }, guide.start, guide.end);
@@ -1835,7 +1849,9 @@ export default function AreaCalculatorEditor() {
 
   // Find line at point
   const findLineAtPoint = (x: number, y: number): { polygonId: string; pointIndex: number } | null => {
-    const tolerance = 15;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 15;
+    const tolerance = baseTolerance / zoomLevel;
     
     for (const polygon of polygons) {
       for (let i = 0; i < polygon.points.length; i++) {
@@ -2367,7 +2383,10 @@ export default function AreaCalculatorEditor() {
 
   // Find annotation at position
   const findAnnotationAtPosition = (x: number, y: number): { type: 'shape' | 'text' | 'memo'; id: string } | null => {
-    const tolerance = 15;
+    // Adjust tolerance based on zoom level
+    const baseTolerance = 15;
+    const tolerance = baseTolerance / zoomLevel;
+    const memoTargetTolerance = 20 / zoomLevel;
     
     // Check memo pointers first (they have larger hit areas)
     for (const memo of memoPointers) {
@@ -2383,7 +2402,7 @@ export default function AreaCalculatorEditor() {
       
       // Check if near target point
       const targetDist = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
-      if (targetDist < 20) {
+      if (targetDist < memoTargetTolerance) {
         return { type: 'memo', id: memo.id };
       }
     }
@@ -2613,12 +2632,11 @@ export default function AreaCalculatorEditor() {
   // Load project photos
   const loadProjectPhotos = async () => {
     try {
-      const projectId = params.project_id;
+      // Use the projectId state variable (from params.projectId)
       if (projectId) {
-        const { PhotoAnnotationService } = await import('@/services/LocalStorage');
-        const photos = await PhotoAnnotationService.getAll();
-        const projectPhotosFiltered = photos.filter((p: any) => p.project_id === projectId);
-        setProjectPhotos(projectPhotosFiltered.map((p: any) => ({ id: p.id, uri: p.photoUri })));
+        const { PhotoService } = await import('@/services/LocalStorage');
+        const photos = await PhotoService.getByProjectId(projectId);
+        setProjectPhotos(photos.map((p: any) => ({ id: p.id, uri: p.uri || p.photoUri })));
       }
     } catch (error) {
       console.error('Error loading project photos:', error);
@@ -3463,13 +3481,23 @@ export default function AreaCalculatorEditor() {
             const centerX = (touch1.pageX + touch2.pageX) / 2;
             const centerY = (touch1.pageY + touch2.pageY) / 2;
             
-            if (lastPinchDistance.current !== null) {
-              // Calculate zoom change
-              const scale = distance / lastPinchDistance.current;
-              const newZoom = Math.max(0.25, Math.min(4, zoomLevel * scale));
+            if (lastPinchDistance.current !== null && lastPinchDistance.current > 0) {
+              // Calculate zoom change with improved smoothing
+              const rawScale = distance / lastPinchDistance.current;
               
-              // Adjust pan offset to zoom towards the pinch center
-              if (newZoom !== zoomLevel) {
+              // Improved smoothing: Use interpolation for smoother transitions
+              // Higher factor = more responsive, lower = smoother
+              const smoothingFactor = 0.4;
+              const targetScale = 1 + (rawScale - 1) * smoothingFactor;
+              const targetZoom = Math.max(0.25, Math.min(4, zoomLevel * targetScale));
+              
+              // Apply exponential smoothing for even smoother updates
+              const smoothedZoom = zoomLevel + (targetZoom - zoomLevel) * 0.5;
+              const newZoom = Math.max(0.25, Math.min(4, smoothedZoom));
+              
+              // Lower threshold for more responsive feel
+              if (Math.abs(newZoom - zoomLevel) > 0.001) {
+                // Adjust pan offset to zoom towards the pinch center
                 const zoomRatio = newZoom / zoomLevel;
                 setPanOffset(prev => ({
                   x: centerX - (centerX - prev.x) * zoomRatio,

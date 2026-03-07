@@ -1343,12 +1343,12 @@ export default function ProjectDetailScreen() {
             <!-- Final Calculation + Lines Summary - Side by Side -->
             <div style="display: flex; gap: 10px;">
               <!-- Flächenberechnung -->
-              <div style="flex: 0.9; background: #f0f7ff; padding: 10px; border-radius: 6px; border: 1px solid #1976d2;">
-                <h3 style="font-size: 10px; color: #1976d2; margin-bottom: 6px;">Flächenberechnung</h3>
-                <div style="font-family: monospace; font-size: 10px; line-height: 1.6;">
+              <div style="flex: 0.9; background: #f0f7ff; padding: 6px 10px; border-radius: 6px; border: 1px solid #1976d2;">
+                <h3 style="font-size: 10px; color: #1976d2; margin-bottom: 4px;">Flächenberechnung</h3>
+                <div style="font-family: monospace; font-size: 10px; line-height: 1.4;">
                   <div>Brutto: ${grossArea.toFixed(2)} m²</div>
                   ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                  <div style="border-top: 1px solid #333; margin-top: 4px; padding-top: 4px; font-weight: 700; font-size: 12px; color: #4CAF50;">
+                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; font-weight: 700; font-size: 12px; color: #4CAF50;">
                     = Netto: ${netArea.toFixed(2)} m²
                   </div>
                 </div>
@@ -1356,8 +1356,8 @@ export default function ProjectDetailScreen() {
               
               <!-- Linien Zusammenfassung -->
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="flex: 1.1; background: #fff8f0; padding: 10px; border-radius: 6px; border: 1px solid #FF9800;">
-                  <h3 style="font-size: 10px; color: #FF9800; margin-bottom: 6px;">Linien Zusammenfassung</h3>
+                <div style="flex: 1.1; background: #fff8f0; padding: 6px 10px; border-radius: 6px; border: 1px solid #FF9800;">
+                  <h3 style="font-size: 10px; color: #FF9800; margin-bottom: 4px;">Linien Zusammenfassung</h3>
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;">
                     ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
                       <div style="display: flex; justify-content: space-between; font-size: 8px; white-space: nowrap;">
@@ -1369,7 +1369,7 @@ export default function ProjectDetailScreen() {
                       </div>
                     `).join('')}
                   </div>
-                  <div style="border-top: 1px solid #333; margin-top: 6px; padding-top: 4px; display: flex; justify-content: space-between; font-weight: 700; font-size: 10px;">
+                  <div style="border-top: 1px solid #333; margin-top: 4px; padding-top: 3px; display: flex; justify-content: space-between; font-weight: 700; font-size: 10px;">
                     <span>Gesamt:</span>
                     <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
                   </div>

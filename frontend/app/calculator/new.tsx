@@ -133,6 +133,66 @@ export default function AreaCalculatorEditor() {
       },
     })
   ).current;
+
+  // Text-Numpad für Texteingaben (mit Zahlen/Buchstaben-Umschaltung)
+  const [showTextNumpad, setShowTextNumpad] = useState(false);
+  const [textNumpadMode, setTextNumpadMode] = useState<'numbers' | 'letters'>('letters');
+  const [textNumpadCaps, setTextNumpadCaps] = useState(false);
+  const [activeTextSetter, setActiveTextSetter] = useState<React.Dispatch<React.SetStateAction<string>> | null>(null);
+  const [activeTextRef, setActiveTextRef] = useState<React.RefObject<TextInput | null> | null>(null);
+  const textNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const textNumpadPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        textNumpadPosition.setOffset({
+          x: (textNumpadPosition.x as any)._value || 0,
+          y: (textNumpadPosition.y as any)._value || 0,
+        });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: textNumpadPosition.x, dy: textNumpadPosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        textNumpadPosition.flattenOffset();
+      },
+    })
+  ).current;
+
+  // Öffne Text-Numpad mit bestimmtem Setter und Ref
+  const openTextNumpad = (setter: React.Dispatch<React.SetStateAction<string>>, inputRef: React.RefObject<TextInput | null>) => {
+    setActiveTextSetter(() => setter);
+    setActiveTextRef(inputRef);
+    setShowTextNumpad(true);
+    textNumpadPosition.setValue({ x: 0, y: 0 });
+    textNumpadPosition.setOffset({ x: 0, y: 0 });
+  };
+
+  // Schließe Text-Numpad
+  const closeTextNumpad = () => {
+    setShowTextNumpad(false);
+    setActiveTextSetter(null);
+    setActiveTextRef(null);
+    setTextNumpadMode('letters');
+    textNumpadPosition.setValue({ x: 0, y: 0 });
+    textNumpadPosition.setOffset({ x: 0, y: 0 });
+  };
+
+  // Text-Numpad Taste drücken
+  const handleTextNumpadPress = (key: string) => {
+    if (!activeTextSetter) return;
+    
+    if (key === '⌫') {
+      activeTextSetter(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      activeTextSetter('');
+    } else {
+      activeTextSetter(prev => prev + key);
+    }
+    // Fokus zurücksetzen für Bluetooth-Eingabe
+    setTimeout(() => activeTextRef?.current?.focus(), 10);
+  };
   
   // Undo/Redo History
   interface HistoryState {
@@ -253,6 +313,9 @@ export default function AreaCalculatorEditor() {
   const [showEditTextModal, setShowEditTextModal] = useState(false); // For editing existing text
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [editTextInput, setEditTextInput] = useState('');
+  const newTextInputRef = useRef<TextInput | null>(null);
+  const editTextInputRef = useRef<TextInput | null>(null);
+  const memoTextInputRef = useRef<TextInput | null>(null);
   
   // Deduction rectangle drawing state
   const [deductionRectStart, setDeductionRectStart] = useState<AreaPoint | null>(null);
@@ -5805,15 +5868,24 @@ export default function AreaCalculatorEditor() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Text hinzufügen</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={newTextInput}
-              onChangeText={setNewTextInput}
-              placeholder="Text eingeben..."
-              placeholderTextColor="#999"
-              autoFocus
-              multiline
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <TextInput
+                ref={newTextInputRef}
+                style={[styles.modalInput, { flex: 1 }]}
+                value={newTextInput}
+                onChangeText={setNewTextInput}
+                placeholder="Text eingeben..."
+                placeholderTextColor="#999"
+                autoFocus
+                multiline
+              />
+              <TouchableOpacity
+                style={{ marginLeft: 8, padding: 10, backgroundColor: '#e8eaf6', borderRadius: 8 }}
+                onPress={() => openTextNumpad(setNewTextInput, newTextInputRef)}
+              >
+                <Ionicons name="keypad" size={24} color="#3949ab" />
+              </TouchableOpacity>
+            </View>
             {/* Font size selector */}
             <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
@@ -5875,15 +5947,24 @@ export default function AreaCalculatorEditor() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Text bearbeiten</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={editTextInput}
-              onChangeText={setEditTextInput}
-              placeholder="Text eingeben..."
-              placeholderTextColor="#999"
-              autoFocus
-              multiline
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <TextInput
+                ref={editTextInputRef}
+                style={[styles.modalInput, { flex: 1 }]}
+                value={editTextInput}
+                onChangeText={setEditTextInput}
+                placeholder="Text eingeben..."
+                placeholderTextColor="#999"
+                autoFocus
+                multiline
+              />
+              <TouchableOpacity
+                style={{ marginLeft: 8, padding: 10, backgroundColor: '#e8eaf6', borderRadius: 8 }}
+                onPress={() => openTextNumpad(setEditTextInput, editTextInputRef)}
+              >
+                <Ionicons name="keypad" size={24} color="#3949ab" />
+              </TouchableOpacity>
+            </View>
             {/* Font size selector */}
             <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
@@ -6173,14 +6254,23 @@ export default function AreaCalculatorEditor() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={memoText}
-              onChangeText={setMemoText}
-              placeholder="Notiztext eingeben..."
-              placeholderTextColor="#999"
-              autoFocus
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <TextInput
+                ref={memoTextInputRef}
+                style={[styles.modalInput, { flex: 1 }]}
+                value={memoText}
+                onChangeText={setMemoText}
+                placeholder="Notiztext eingeben..."
+                placeholderTextColor="#999"
+                autoFocus
+              />
+              <TouchableOpacity
+                style={{ marginLeft: 8, padding: 10, backgroundColor: '#e8eaf6', borderRadius: 8 }}
+                onPress={() => openTextNumpad(setMemoText, memoTextInputRef)}
+              >
+                <Ionicons name="keypad" size={24} color="#3949ab" />
+              </TouchableOpacity>
+            </View>
             {/* Color picker */}
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
               {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
@@ -7024,6 +7114,146 @@ export default function AreaCalculatorEditor() {
           </Animated.View>
         </View>
       </Modal>
+
+      {/* Text Numpad Overlay (für alle Texteingaben) */}
+      {showTextNumpad && (
+        <Animated.View 
+          style={[
+            styles.textNumpadOverlay,
+            { transform: textNumpadPosition.getTranslateTransform() }
+          ]}
+        >
+          {/* Schließen-Button */}
+          <TouchableOpacity 
+            style={styles.textNumpadCloseBtn}
+            onPress={closeTextNumpad}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close-circle" size={22} color="#999" />
+          </TouchableOpacity>
+          
+          {/* Drag-Handle zum Verschieben */}
+          <View {...textNumpadPanResponder.panHandlers} style={styles.textNumpadDragHandle}>
+            <Ionicons name="move" size={14} color="#999" />
+            <Text style={styles.textNumpadDragText}>Verschieben</Text>
+          </View>
+          
+          {textNumpadMode === 'numbers' ? (
+            <>
+              {/* Zahlen-Modus */}
+              <View style={styles.textNumpadRow}>
+                {['7','8','9','+'].map(k => (
+                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='+' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k)}>
+                    <Text style={k==='+' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['4','5','6','-'].map(k => (
+                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='-' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k)}>
+                    <Text style={k==='-' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['1','2','3','×'].map(k => (
+                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='×' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k === '×' ? '*' : k)}>
+                    <Text style={k==='×' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {[',','0','.','÷'].map(k => (
+                  <TouchableOpacity key={`num-${k}`} style={[styles.textNumpadKey, k==='÷' && styles.textNumpadOp]} onPress={() => handleTextNumpadPress(k === '÷' ? '/' : k)}>
+                    <Text style={k==='÷' ? styles.textNumpadOpText : styles.textNumpadKeyText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadMode]} onPress={() => setTextNumpadMode('letters')}>
+                  <Text style={styles.textNumpadModeText}>ABC</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadClear]} onPress={() => handleTextNumpadPress('C')}>
+                  <Text style={styles.textNumpadClearText}>C</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(' ')}>
+                  <Text style={styles.textNumpadKeyText}>␣</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadDel]} onPress={() => handleTextNumpadPress('⌫')}>
+                  <Ionicons name="backspace-outline" size={18} color="#f44336" />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Buchstaben-Modus */}
+              <View style={styles.textNumpadRow}>
+                {['m','m²','m³','lfm'].map((k, i) => (
+                  <TouchableOpacity key={`unit-${i}`} style={[styles.textNumpadKey, styles.textNumpadUnit]} onPress={() => handleTextNumpadPress(k)}>
+                    <Text style={styles.textNumpadUnitText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['Stk','Paar','kg','l'].map((k, i) => (
+                  <TouchableOpacity key={`unit2-${i}`} style={[styles.textNumpadKey, styles.textNumpadUnit]} onPress={() => handleTextNumpadPress(k)}>
+                    <Text style={styles.textNumpadUnitText}>{k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['a','b','c','d','e','f'].map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
+                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['g','h','i','j','k','l'].map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
+                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['n','o','p','q','r','s'].map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
+                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['t','u','v','w','x','y'].map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
+                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                {['z','ä','ö','ü','ß','-'].map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(textNumpadCaps ? k.toUpperCase() : k)}>
+                    <Text style={styles.textNumpadKeyText}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.textNumpadRow}>
+                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadMode]} onPress={() => setTextNumpadMode('numbers')}>
+                  <Text style={styles.textNumpadModeText}>123</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.textNumpadKey, textNumpadCaps && styles.textNumpadCapsActive]} onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                  <Ionicons name="arrow-up" size={18} color={textNumpadCaps ? '#fff' : '#666'} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.textNumpadKey} onPress={() => handleTextNumpadPress(' ')}>
+                  <Text style={styles.textNumpadKeyText}>␣</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.textNumpadKey, styles.textNumpadDel]} onPress={() => handleTextNumpadPress('⌫')}>
+                  <Ionicons name="backspace-outline" size={18} color="#f44336" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -7648,5 +7878,112 @@ const styles = StyleSheet.create({
   },
   modalNumpadDel: {
     backgroundColor: '#ffebee',
+  },
+  // Text-Numpad Styles (für Texteingaben mit Buchstaben)
+  textNumpadOverlay: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 80,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 15,
+    zIndex: 9999,
+    maxWidth: 360,
+    alignSelf: 'center',
+  },
+  textNumpadCloseBtn: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    padding: 2,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  textNumpadDragHandle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 6,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+  },
+  textNumpadDragText: {
+    fontSize: 10,
+    color: '#999',
+    fontWeight: '500',
+  },
+  textNumpadRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  textNumpadKey: {
+    flex: 1,
+    aspectRatio: 1.5,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minHeight: 40,
+  },
+  textNumpadKeyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  textNumpadOp: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  textNumpadOpText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976d2',
+  },
+  textNumpadDel: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+  },
+  textNumpadClear: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+  },
+  textNumpadClearText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#f57c00',
+  },
+  textNumpadUnit: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#4caf50',
+  },
+  textNumpadUnitText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#388e3c',
+  },
+  textNumpadMode: {
+    backgroundColor: '#e8eaf6',
+    borderColor: '#5c6bc0',
+  },
+  textNumpadModeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#3949ab',
+  },
+  textNumpadCapsActive: {
+    backgroundColor: '#3949ab',
   },
 });

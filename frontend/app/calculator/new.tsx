@@ -5705,7 +5705,11 @@ export default function AreaCalculatorEditor() {
             <TextInput
               style={{ flex: 1, fontSize: 18, fontWeight: 'bold', color: '#333', padding: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: '#ddd' }}
               value={numpadInput}
-              onChangeText={setNumpadInput}
+              onChangeText={(text) => {
+                // Filter: nur Zahlen, Komma und Punkt behalten (Maßeinheiten wie m, cm, mm ignorieren)
+                const filtered = text.replace(/[^0-9.,]/g, '');
+                setNumpadInput(filtered);
+              }}
               keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor="#999"

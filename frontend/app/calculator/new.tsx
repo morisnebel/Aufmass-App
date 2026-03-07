@@ -193,6 +193,37 @@ export default function AreaCalculatorEditor() {
     // Fokus zurücksetzen für Bluetooth-Eingabe
     setTimeout(() => activeTextRef?.current?.focus(), 10);
   };
+
+  // Handler für Winkel-Modal Numpad
+  const handleAngleNumpadPress = (key: string) => {
+    if (angleNumpadTarget === 'angle') {
+      if (key === 'C') {
+        setFixedAngle(null);
+      } else if (key === '⌫') {
+        if (fixedAngle !== null) {
+          const str = fixedAngle.toString().slice(0, -1);
+          setFixedAngle(str === '' ? null : parseInt(str));
+        }
+      } else if (/^[0-9]$/.test(key)) {
+        const current = fixedAngle !== null ? fixedAngle.toString() : '';
+        const newVal = parseInt(current + key);
+        if (newVal <= 360) {
+          setFixedAngle(newVal);
+        }
+      }
+      setTimeout(() => angleInputRef?.current?.focus(), 10);
+    } else {
+      // Length
+      if (key === 'C') {
+        setFixedLength('');
+      } else if (key === '⌫') {
+        setFixedLength(prev => prev.slice(0, -1));
+      } else {
+        setFixedLength(prev => prev + key);
+      }
+      setTimeout(() => lengthInputRef?.current?.focus(), 10);
+    }
+  };
   
   // Undo/Redo History
   interface HistoryState {
@@ -316,6 +347,12 @@ export default function AreaCalculatorEditor() {
   const newTextInputRef = useRef<TextInput | null>(null);
   const editTextInputRef = useRef<TextInput | null>(null);
   const memoTextInputRef = useRef<TextInput | null>(null);
+  const angleInputRef = useRef<TextInput | null>(null);
+  const lengthInputRef = useRef<TextInput | null>(null);
+  
+  // State für Winkel-Modal Numpad
+  const [showAngleNumpad, setShowAngleNumpad] = useState(false);
+  const [angleNumpadTarget, setAngleNumpadTarget] = useState<'angle' | 'length'>('length');
   
   // Deduction rectangle drawing state
   const [deductionRectStart, setDeductionRectStart] = useState<AreaPoint | null>(null);
@@ -6918,28 +6955,43 @@ export default function AreaCalculatorEditor() {
             {/* Custom Angle Input */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <TextInput
+                ref={angleInputRef}
                 style={{
                   flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#ddd',
+                  borderWidth: 2,
+                  borderColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#E91E63' : '#ddd',
                   borderRadius: 8,
                   padding: 10,
                   fontSize: 16,
-                  backgroundColor: '#fff',
+                  backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#fce4ec' : '#fff',
                 }}
                 placeholder="Eigener Winkel"
                 keyboardType="numeric"
                 value={fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle) ? fixedAngle.toString() : ''}
                 onChangeText={(text) => {
-                  const num = parseInt(text);
+                  // Filter: nur Zahlen behalten
+                  const filtered = text.replace(/[^0-9]/g, '');
+                  const num = parseInt(filtered);
                   if (!isNaN(num) && num >= 0 && num <= 360) {
                     setFixedAngle(num);
-                  } else if (text === '') {
+                  } else if (filtered === '') {
                     setFixedAngle(null);
                   }
                 }}
+                onFocus={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(true); }}
               />
               <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>°</Text>
+              <TouchableOpacity
+                style={{ 
+                  marginLeft: 8, 
+                  padding: 8, 
+                  backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#E91E63' : '#e8eaf6', 
+                  borderRadius: 8 
+                }}
+                onPress={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'angle'); }}
+              >
+                <Ionicons name="keypad" size={22} color={angleNumpadTarget === 'angle' && showAngleNumpad ? '#fff' : '#3949ab'} />
+              </TouchableOpacity>
             </View>
             
             {/* Current Status */}
@@ -6966,24 +7018,41 @@ export default function AreaCalculatorEditor() {
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TextInput
+                  ref={lengthInputRef}
                   style={{
                     flex: 1,
-                    borderWidth: 1,
-                    borderColor: fixedLength ? '#4CAF50' : '#ddd',
+                    borderWidth: 2,
+                    borderColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#4CAF50' : (fixedLength ? '#4CAF50' : '#ddd'),
                     borderRadius: 8,
                     padding: 10,
                     fontSize: 16,
-                    backgroundColor: fixedLength ? '#e8f5e9' : '#fff',
+                    backgroundColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#e8f5e9' : (fixedLength ? '#e8f5e9' : '#fff'),
                   }}
                   placeholder="z.B. 2.5 oder 1+0.5"
                   keyboardType="decimal-pad"
                   value={fixedLength}
-                  onChangeText={setFixedLength}
+                  onChangeText={(text) => {
+                    // Filter: nur Zahlen, Komma, Punkt und Rechenoperatoren behalten
+                    const filtered = text.replace(/[^0-9.,+\-*/()]/g, '');
+                    setFixedLength(filtered);
+                  }}
+                  onFocus={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(true); }}
                 />
                 <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>m</Text>
+                <TouchableOpacity
+                  style={{ 
+                    marginLeft: 8, 
+                    padding: 8, 
+                    backgroundColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#4CAF50' : '#e8eaf6', 
+                    borderRadius: 8 
+                  }}
+                  onPress={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'length'); }}
+                >
+                  <Ionicons name="keypad" size={22} color={angleNumpadTarget === 'length' && showAngleNumpad ? '#fff' : '#3949ab'} />
+                </TouchableOpacity>
                 {fixedLength !== '' && (
                   <TouchableOpacity 
-                    style={{ marginLeft: 8, padding: 4 }}
+                    style={{ marginLeft: 4, padding: 4 }}
                     onPress={() => setFixedLength('')}
                   >
                     <Ionicons name="close-circle" size={24} color="#999" />
@@ -7080,6 +7149,102 @@ export default function AreaCalculatorEditor() {
               </View>
             )}
             
+            {/* Eingebautes Numpad für Winkel & Länge */}
+            {showAngleNumpad && (
+              <View style={{ 
+                backgroundColor: '#f9f9f9', 
+                borderRadius: 12, 
+                padding: 10, 
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: angleNumpadTarget === 'angle' ? '#E91E63' : '#4CAF50',
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: angleNumpadTarget === 'angle' ? '#E91E63' : '#4CAF50' }}>
+                    {angleNumpadTarget === 'angle' ? 'Winkel eingeben' : 'Länge eingeben'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowAngleNumpad(false)}>
+                    <Ionicons name="close-circle" size={22} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {/* Zahlen-Reihen */}
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                  {['7','8','9'].map(k => (
+                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {angleNumpadTarget === 'length' && (
+                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('+')}>
+                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>+</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                  {['4','5','6'].map(k => (
+                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {angleNumpadTarget === 'length' && (
+                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('-')}>
+                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>−</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                  {['1','2','3'].map(k => (
+                    <TouchableOpacity key={k} style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(k)}>
+                      <Text style={styles.angleNumpadKeyText}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {angleNumpadTarget === 'length' && (
+                    <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('*')}>
+                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>×</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {angleNumpadTarget === 'length' ? (
+                    <>
+                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress(',')}>
+                        <Text style={styles.angleNumpadKeyText}>,</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress('0')}>
+                        <Text style={styles.angleNumpadKeyText}>0</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.angleNumpadKey} onPress={() => handleAngleNumpadPress('.')}>
+                        <Text style={styles.angleNumpadKeyText}>.</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('/')}>
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>÷</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity style={[styles.angleNumpadKey, { flex: 1 }]} onPress={() => handleAngleNumpadPress('0')}>
+                        <Text style={styles.angleNumpadKeyText}>0</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#fff3e0' }]} onPress={() => handleAngleNumpadPress('C')}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKey, { backgroundColor: '#ffebee' }]} onPress={() => handleAngleNumpadPress('⌫')}>
+                    <Ionicons name="backspace-outline" size={20} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.angleNumpadKey, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowAngleNumpad(false)}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {/* Close Buttons */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
@@ -7985,5 +8150,22 @@ const styles = StyleSheet.create({
   },
   textNumpadCapsActive: {
     backgroundColor: '#3949ab',
+  },
+  // Winkel-Modal Numpad Styles
+  angleNumpadKey: {
+    flex: 1,
+    aspectRatio: 1.5,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minHeight: 44,
+  },
+  angleNumpadKeyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
 });

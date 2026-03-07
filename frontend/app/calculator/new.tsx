@@ -689,7 +689,8 @@ export default function AreaCalculatorEditor() {
     return angle;
   };
   
-  // Calculate interior angle considering polygon orientation
+  // Calculate interior angle at a vertex of a polygon
+  // Returns the angle INSIDE the polygon at this vertex
   const calculateInteriorAngle = (polygon: AreaPolygon, vertexIndex: number): number => {
     const points = polygon.points;
     const n = points.length;
@@ -701,43 +702,29 @@ export default function AreaCalculatorEditor() {
     const vertex = points[vertexIndex];
     const nextPoint = points[nextIndex];
     
-    const v1 = { x: prevPoint.x - vertex.x, y: prevPoint.y - vertex.y };
-    const v2 = { x: nextPoint.x - vertex.x, y: nextPoint.y - vertex.y };
+    // Vectors along the edges (direction of travel around polygon)
+    // edge1: from prev to vertex
+    // edge2: from vertex to next
+    const edge1 = { x: vertex.x - prevPoint.x, y: vertex.y - prevPoint.y };
+    const edge2 = { x: nextPoint.x - vertex.x, y: nextPoint.y - vertex.y };
     
-    const dot = v1.x * v2.x + v1.y * v2.y;
-    const cross = v1.x * v2.y - v1.y * v2.x;
+    // Calculate the turn angle (exterior angle)
+    // Using atan2 to get signed angle
+    const angle1 = Math.atan2(edge1.y, edge1.x);
+    const angle2 = Math.atan2(edge2.y, edge2.x);
     
-    // Check polygon orientation (clockwise or counter-clockwise)
-    // using signed area formula
-    let signedArea = 0;
-    for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n;
-      signedArea += points[i].x * points[j].y;
-      signedArea -= points[j].x * points[i].y;
-    }
-    const isClockwise = signedArea < 0;
+    // The turn angle (how much we turn at this vertex)
+    let turnAngle = angle2 - angle1;
     
-    // Calculate angle using atan2
-    let angle = Math.atan2(cross, dot) * (180 / Math.PI);
+    // Normalize to -PI to PI
+    while (turnAngle > Math.PI) turnAngle -= 2 * Math.PI;
+    while (turnAngle < -Math.PI) turnAngle += 2 * Math.PI;
     
-    // Adjust based on polygon orientation to get interior angle
-    if (isClockwise) {
-      // For clockwise polygon
-      if (angle <= 0) {
-        angle = -angle;
-      } else {
-        angle = 360 - angle;
-      }
-    } else {
-      // For counter-clockwise polygon
-      if (angle >= 0) {
-        angle = angle;
-      } else {
-        angle = 360 + angle;
-      }
-    }
+    // Interior angle = 180° - turn angle (for convex vertices)
+    // or 180° + |turn angle| for concave vertices
+    const interiorAngle = 180 - (turnAngle * 180 / Math.PI);
     
-    return angle;
+    return interiorAngle;
   };
 
   // Calculate results

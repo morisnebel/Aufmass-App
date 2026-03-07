@@ -251,6 +251,12 @@ export default function AreaCalculatorEditor() {
           const str = fixedAngle.toString().slice(0, -1);
           setFixedAngle(str === '' ? null : parseInt(str));
         }
+      } else if (key === '±') {
+        // Vorzeichen umkehren: 90 → 270, 270 → 90
+        if (fixedAngle !== null) {
+          const newAngle = (360 - fixedAngle) % 360;
+          setFixedAngle(newAngle);
+        }
       } else if (/^[0-9]$/.test(key)) {
         const current = fixedAngle !== null ? fixedAngle.toString() : '';
         const newVal = parseInt(current + key);
@@ -7712,7 +7718,9 @@ export default function AreaCalculatorEditor() {
               <Svg width={70} height={70} viewBox="0 0 120 120">
                 <Circle cx="60" cy="60" r="50" fill="#f5f5f5" stroke="#ddd" strokeWidth="2" />
                 <SvgText x="60" y="20" textAnchor="middle" fontSize="12" fill="#999">90°</SvgText>
-                <SvgText x="100" y="64" textAnchor="middle" fontSize="12" fill="#999">0°</SvgText>
+                <SvgText x="110" y="64" textAnchor="middle" fontSize="12" fill="#999">0°</SvgText>
+                <SvgText x="60" y="108" textAnchor="middle" fontSize="12" fill="#999">270°</SvgText>
+                <SvgText x="12" y="64" textAnchor="middle" fontSize="12" fill="#999">180°</SvgText>
                 <Circle cx="60" cy="60" r="4" fill="#1976d2" />
                 {fixedAngle !== null && (
                   <G rotation={-fixedAngle + 90} origin="60, 60">
@@ -7774,17 +7782,36 @@ export default function AreaCalculatorEditor() {
                   fontSize: 14,
                   backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#fce4ec' : '#fff',
                 }}
-                placeholder="Eigener Winkel"
-                keyboardType="numeric"
+                placeholder="Eigener Winkel (z.B. -90)"
+                keyboardType="numbers-and-punctuation"
                 value={fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle) ? fixedAngle.toString() : ''}
                 onChangeText={(text) => {
-                  // Filter: nur Zahlen behalten
-                  const filtered = text.replace(/[^0-9]/g, '');
-                  const num = parseInt(filtered);
-                  if (!isNaN(num) && num >= 0 && num <= 360) {
-                    setFixedAngle(num);
-                  } else if (filtered === '') {
+                  // Filter: nur Zahlen und Minus behalten
+                  const filtered = text.replace(/[^0-9\-]/g, '');
+                  // Nur ein Minus am Anfang erlauben
+                  const cleanFiltered = filtered.replace(/(?!^)-/g, '');
+                  
+                  if (cleanFiltered === '' || cleanFiltered === '-') {
+                    if (cleanFiltered === '-') {
+                      // Zeige das Minus, aber setze noch keinen Winkel
+                      return;
+                    }
                     setFixedAngle(null);
+                    return;
+                  }
+                  
+                  let num = parseInt(cleanFiltered);
+                  if (!isNaN(num)) {
+                    // Negative Winkel in positive umwandeln: -90 → 270
+                    if (num < 0) {
+                      num = 360 + (num % 360);
+                      if (num === 360) num = 0;
+                    }
+                    // Winkel auf 0-360 normalisieren
+                    num = num % 360;
+                    if (num >= 0 && num <= 360) {
+                      setFixedAngle(num);
+                    }
                   }
                 }}
                 onFocus={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(true); }}
@@ -7995,6 +8022,9 @@ export default function AreaCalculatorEditor() {
                     </>
                   ) : (
                     <>
+                      <TouchableOpacity style={[styles.largeNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('±')}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>±</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={[styles.largeNumpadKey, { flex: 1 }]} onPress={() => handleAngleNumpadPress('0')}>
                         <Text style={styles.largeNumpadKeyText}>0</Text>
                       </TouchableOpacity>

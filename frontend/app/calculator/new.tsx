@@ -2626,7 +2626,6 @@ export default function AreaCalculatorEditor() {
   // Remove background image
   const removeBackgroundImage = () => {
     setBackgroundImage(null);
-    setBgImageEditMode(false);
   };
 
   // Load project photos
@@ -2643,16 +2642,10 @@ export default function AreaCalculatorEditor() {
     }
   };
 
-  // Use project photo as background
+  // Use project photo as background (now as reference image)
   const useProjectPhotoAsBackground = (photoUri: string) => {
     setBackgroundImage(photoUri);
-    // Use default size for project photos
-    const maxDim = Math.min(canvasWidth * 0.8, canvasHeight * 0.8);
-    setBgImageSize({ width: maxDim, height: maxDim * 0.75 });
-    bgImageOriginalSize.current = { width: maxDim, height: maxDim * 0.75 };
-    setBgImagePosition({ x: (canvasWidth - maxDim) / 2, y: (canvasHeight - maxDim * 0.75) / 2 });
     setShowBgImageModal(false);
-    setBgImageEditMode(true);
   };
 
   // Load project photos when modal opens
@@ -2909,16 +2902,7 @@ export default function AreaCalculatorEditor() {
           <Text style={[styles.toolLabel, backgroundImage && { color: '#fff' }]}>Bild</Text>
         </TouchableOpacity>
         
-        {/* Background Image Edit Mode Toggle */}
-        {backgroundImage && (
-          <TouchableOpacity
-            style={[styles.toolButton, bgImageEditMode && styles.toolButtonActive, { backgroundColor: bgImageEditMode ? '#FF9800' : '#f5f5f5' }]}
-            onPress={() => setBgImageEditMode(!bgImageEditMode)}
-          >
-            <Ionicons name="move" size={20} color={bgImageEditMode ? '#fff' : '#FF9800'} />
-            <Text style={[styles.toolLabel, bgImageEditMode && styles.toolLabelActive]}>Anpassen</Text>
-          </TouchableOpacity>
-        )}
+        {/* Background Image Edit Mode Toggle - REMOVED - now using reference image container */}
         
         <View style={styles.toolSeparator} />
         
@@ -3164,6 +3148,43 @@ export default function AreaCalculatorEditor() {
         </TouchableOpacity>
       </View>
 
+      {/* Reference Image Container - Only shown when image is set */}
+      {backgroundImage && (
+        <View style={styles.referenceImageContainer}>
+          <View style={styles.referenceImageHeader}>
+            <Ionicons name="image" size={16} color="#8BC34A" />
+            <Text style={styles.referenceImageTitle}>Bild zur Berechnung</Text>
+            <TouchableOpacity 
+              style={styles.referenceImageRemove}
+              onPress={() => {
+                Alert.alert(
+                  'Bild entfernen',
+                  'Möchten Sie das Referenzbild entfernen?',
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: 'Entfernen', style: 'destructive', onPress: () => setBackgroundImage(null) }
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="close-circle" size={20} color="#f44336" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity 
+            style={styles.referenceImageWrapper}
+            onPress={() => {
+              // Could open full screen preview
+            }}
+          >
+            <Image 
+              source={{ uri: backgroundImage }} 
+              style={styles.referenceImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Canvas */}
       <View 
         style={styles.canvas}
@@ -3175,38 +3196,6 @@ export default function AreaCalculatorEditor() {
           const transformed = transformCoordinates(rawX, rawY);
           const x = transformed.x;
           const y = transformed.y;
-          
-          // Background image edit mode - only block if touching handles or dragging image
-          if (bgImageEditMode && backgroundImage) {
-            const handleRadius = 20;
-            
-            // Check corner handles for resizing
-            const corners = {
-              nw: { x: bgImagePosition.x, y: bgImagePosition.y },
-              ne: { x: bgImagePosition.x + bgImageSize.width, y: bgImagePosition.y },
-              sw: { x: bgImagePosition.x, y: bgImagePosition.y + bgImageSize.height },
-              se: { x: bgImagePosition.x + bgImageSize.width, y: bgImagePosition.y + bgImageSize.height },
-            };
-            
-            for (const [corner, pos] of Object.entries(corners)) {
-              if (Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2)) < handleRadius) {
-                setResizingBgImage(corner as 'nw' | 'ne' | 'sw' | 'se');
-                bgImageDragStart.current = { x, y };
-                bgImageOriginalSize.current = { ...bgImageSize };
-                return;
-              }
-            }
-            
-            // Check center move handle only (not the whole image)
-            const centerX = bgImagePosition.x + bgImageSize.width / 2;
-            const centerY = bgImagePosition.y + bgImageSize.height / 2;
-            if (Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)) < 25) {
-              setDraggingBgImage(true);
-              bgImageDragStart.current = { x: x - bgImagePosition.x, y: y - bgImagePosition.y };
-              return;
-            }
-            // Don't block other touch events - allow drawing on top of image
-          }
           
           // Check for resizing selected rectangle deduction polygons
           if (mode === 'select' && selectedPolygonId) {
@@ -3526,71 +3515,6 @@ export default function AreaCalculatorEditor() {
           const x = transformed.x;
           const y = transformed.y;
           
-          // Background image dragging/resizing
-          if (draggingBgImage) {
-            setBgImagePosition({
-              x: x - bgImageDragStart.current.x,
-              y: y - bgImageDragStart.current.y,
-            });
-            return;
-          }
-          
-          if (resizingBgImage !== 'none') {
-            const dx = x - bgImageDragStart.current.x;
-            const dy = y - bgImageDragStart.current.y;
-            let newWidth = bgImageOriginalSize.current.width;
-            let newHeight = bgImageOriginalSize.current.height;
-            let newX = bgImagePosition.x;
-            let newY = bgImagePosition.y;
-            
-            const aspectRatio = bgImageOriginalSize.current.width / bgImageOriginalSize.current.height;
-            
-            switch (resizingBgImage) {
-              case 'se':
-                newWidth = Math.max(50, bgImageOriginalSize.current.width + dx);
-                if (bgLockAspectRatio) {
-                  newHeight = newWidth / aspectRatio;
-                } else {
-                  newHeight = Math.max(50, bgImageOriginalSize.current.height + dy);
-                }
-                break;
-              case 'sw':
-                newWidth = Math.max(50, bgImageOriginalSize.current.width - dx);
-                newX = bgImagePosition.x + (bgImageSize.width - newWidth);
-                if (bgLockAspectRatio) {
-                  newHeight = newWidth / aspectRatio;
-                } else {
-                  newHeight = Math.max(50, bgImageOriginalSize.current.height + dy);
-                }
-                break;
-              case 'ne':
-                newWidth = Math.max(50, bgImageOriginalSize.current.width + dx);
-                if (bgLockAspectRatio) {
-                  newHeight = newWidth / aspectRatio;
-                  newY = bgImagePosition.y - (newHeight - bgImageSize.height);
-                } else {
-                  newHeight = Math.max(50, bgImageOriginalSize.current.height - dy);
-                  newY = bgImagePosition.y + (bgImageSize.height - newHeight);
-                }
-                break;
-              case 'nw':
-                newWidth = Math.max(50, bgImageOriginalSize.current.width - dx);
-                newX = bgImagePosition.x + (bgImageSize.width - newWidth);
-                if (bgLockAspectRatio) {
-                  newHeight = newWidth / aspectRatio;
-                  newY = bgImagePosition.y - (newHeight - bgImageSize.height);
-                } else {
-                  newHeight = Math.max(50, bgImageOriginalSize.current.height - dy);
-                  newY = bgImagePosition.y + (bgImageSize.height - newHeight);
-                }
-                break;
-            }
-            
-            setBgImageSize({ width: newWidth, height: newHeight });
-            setBgImagePosition({ x: newX, y: newY });
-            return;
-          }
-          
           // Resizing deduction rectangle (keeping 90° corners)
           if (resizingDeductionRect) {
             const orig = deductionRectOriginal.current;
@@ -3790,16 +3714,6 @@ export default function AreaCalculatorEditor() {
           setCurrentTouchPosition(null);
           setCurrentSnapPoint(null); // Clear snap indicator
           
-          // Stop background image manipulation
-          if (draggingBgImage) {
-            setDraggingBgImage(false);
-            return;
-          }
-          if (resizingBgImage !== 'none') {
-            setResizingBgImage('none');
-            return;
-          }
-          
           // Stop resizing deduction rectangle
           if (resizingDeductionRect) {
             setResizingDeductionRect(null);
@@ -3916,51 +3830,7 @@ export default function AreaCalculatorEditor() {
           {/* Zoom/Pan transformation group */}
           <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}>
             
-            {/* Background Image */}
-            {backgroundImage && (
-              <G>
-                <SvgImage
-                  x={bgImagePosition.x}
-                  y={bgImagePosition.y}
-                  width={bgImageSize.width}
-                  height={bgImageSize.height}
-                  href={backgroundImage}
-                  opacity={0.7}
-                  preserveAspectRatio="none"
-                />
-                {/* Edit handles when in edit mode */}
-                {bgImageEditMode && (
-                  <>
-                    {/* Border */}
-                    <Rect
-                      x={bgImagePosition.x}
-                      y={bgImagePosition.y}
-                      width={bgImageSize.width}
-                      height={bgImageSize.height}
-                      fill="none"
-                      stroke="#FF9800"
-                      strokeWidth={2}
-                      strokeDasharray="8,4"
-                    />
-                    {/* Corner handles */}
-                    <Circle cx={bgImagePosition.x} cy={bgImagePosition.y} r={10} fill="#FF9800" />
-                    <Circle cx={bgImagePosition.x + bgImageSize.width} cy={bgImagePosition.y} r={10} fill="#FF9800" />
-                    <Circle cx={bgImagePosition.x} cy={bgImagePosition.y + bgImageSize.height} r={10} fill="#FF9800" />
-                    <Circle cx={bgImagePosition.x + bgImageSize.width} cy={bgImagePosition.y + bgImageSize.height} r={10} fill="#FF9800" />
-                    {/* Center move handle */}
-                    <Circle 
-                      cx={bgImagePosition.x + bgImageSize.width / 2} 
-                      cy={bgImagePosition.y + bgImageSize.height / 2} 
-                      r={15} 
-                      fill="rgba(255, 152, 0, 0.5)"
-                      stroke="#FF9800"
-                      strokeWidth={2}
-                    />
-                    <Ionicons name="move" size={16} color="#FF9800" />
-                  </>
-                )}
-              </G>
-            )}
+            {/* Background Image - REMOVED from canvas, now using reference container above */}
             
             {/* Grid */}
             {renderGrid()}
@@ -5416,9 +5286,13 @@ export default function AreaCalculatorEditor() {
       <Modal visible={showBgImageModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <Text style={styles.modalTitle}>Hintergrundbild</Text>
+            <Text style={styles.modalTitle}>Bild zur Berechnung</Text>
             
             <ScrollView style={{ maxHeight: 400 }}>
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 15, textAlign: 'center' }}>
+                Das Bild wird als Referenz oberhalb der Zeichenfläche angezeigt
+              </Text>
+              
               <View style={{ marginVertical: 10 }}>
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#f5f5f5', borderRadius: 12, marginBottom: 10 }}
@@ -5478,26 +5352,6 @@ export default function AreaCalculatorEditor() {
                 </View>
               )}
             </ScrollView>
-            
-            {backgroundImage && (
-              <View style={{ marginTop: 15 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                  <TouchableOpacity
-                    style={{ padding: 10, backgroundColor: bgLockAspectRatio ? '#4CAF50' : '#f5f5f5', borderRadius: 8, marginRight: 10 }}
-                    onPress={() => setBgLockAspectRatio(!bgLockAspectRatio)}
-                  >
-                    <Ionicons name={bgLockAspectRatio ? "lock-closed" : "lock-open"} size={20} color={bgLockAspectRatio ? '#fff' : '#666'} />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 14, color: '#666' }}>
-                    Seitenverhältnis {bgLockAspectRatio ? 'gesperrt' : 'entsperrt'}
-                  </Text>
-                </View>
-                
-                <Text style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
-                  Tipp: Aktiviere "Anpassen" um das Bild zu verschieben und zu skalieren
-                </Text>
-              </View>
-            )}
             
             <TouchableOpacity
               style={[styles.modalButton, { alignSelf: 'center', paddingHorizontal: 30, marginTop: 15 }]}
@@ -5934,6 +5788,37 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#e0e0e0',
     marginHorizontal: 8,
+  },
+  referenceImageContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    padding: 8,
+  },
+  referenceImageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  referenceImageTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8BC34A',
+    marginLeft: 6,
+  },
+  referenceImageRemove: {
+    padding: 4,
+  },
+  referenceImageWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referenceImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
   },
   canvas: {
     flex: 1,

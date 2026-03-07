@@ -5728,15 +5728,15 @@ export default function AreaCalculatorEditor() {
                   <Text style={styles.resultsSectionTitle}>Linien nach Kategorie</Text>
                   
                   {Object.entries(results.linesByCategory).map(([category, totalLength]) => {
-                    // Find all individual line segments for this category
-                    const categoryLines = lineCategories.filter(lc => lc.category === category);
+                    // Find all individual line segments for this category from the lines array
+                    const categoryLines = lines.filter(l => l.category === category);
                     const individualLengths: number[] = [];
                     
-                    categoryLines.forEach(lc => {
-                      const polygon = polygons.find(p => p.id === lc.polygonId);
-                      if (polygon && polygon.points.length > lc.edgeIndex) {
-                        const point = polygon.points[lc.edgeIndex];
-                        const nextPoint = polygon.points[(lc.edgeIndex + 1) % polygon.points.length];
+                    categoryLines.forEach(line => {
+                      const polygon = polygons.find(p => p.id === line.polygonId);
+                      if (polygon && polygon.points.length > line.pointIndex) {
+                        const point = polygon.points[line.pointIndex];
+                        const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
                         const length = calculateLineLength(point, nextPoint);
                         if (length > 0.01) {
                           individualLengths.push(length);

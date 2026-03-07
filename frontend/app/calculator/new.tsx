@@ -571,13 +571,28 @@ export default function AreaCalculatorEditor() {
     
     let totalDeductions = 0;
     for (const deduction of deductionPolygons) {
-      // Calculate the actual overlapping area (not the full deduction)
-      // For manual mode, scale the deduction proportionally
-      if (isManual) {
-        const autoArea = calculatePolygonArea(mainPolygon.points);
-        const scaleFactor = grossArea / autoArea;
-        const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
-        totalDeductions += intersectionArea * scaleFactor;
+      // Check if this deduction has manual values
+      if (useManualAreaCalc) {
+        const deductionManualResult = calculateManualAreaForPolygon(deduction);
+        if (deductionManualResult.hasManualValues) {
+          // Use the manual area for this deduction (scaled by intersection ratio)
+          const autoDeductionArea = calculatePolygonArea(deduction.points);
+          const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+          // Calculate what percentage of the deduction intersects with main polygon
+          const intersectionRatio = autoDeductionArea > 0 ? intersectionArea / autoDeductionArea : 0;
+          // Apply that ratio to the manual deduction area
+          totalDeductions += deductionManualResult.area * intersectionRatio;
+          isManual = true;
+        } else if (isManual) {
+          // Main polygon is manual, but deduction is not - scale deduction proportionally
+          const mainAutoArea = calculatePolygonArea(mainPolygon.points);
+          const scaleFactor = mainAutoArea > 0 ? grossArea / mainAutoArea : 1;
+          const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+          totalDeductions += intersectionArea * scaleFactor;
+        } else {
+          const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
+          totalDeductions += intersectionArea;
+        }
       } else {
         const intersectionArea = calculateIntersectionArea(deduction, mainPolygon);
         totalDeductions += intersectionArea;
@@ -3409,19 +3424,20 @@ export default function AreaCalculatorEditor() {
                     const segments = calculateLineSegmentsWithDeductions(polygon, index);
                     const color = getCategoryColor(category);
                     
-                    // Calculate total visible length
-                    const totalLength = segments
+                    // Check if there's a custom length for this edge
+                    const calculatedTotalLength = calculateLineLength(point, nextPoint);
+                    const displayTotalLength = getEdgeLength(polygon.id, index, calculatedTotalLength);
+                    const isCustom = hasCustomLength(polygon.id, index);
+                    
+                    // Calculate total visible length (auto-calculated)
+                    const totalAutoLength = segments
                       .filter(s => !s.isInterrupted)
                       .reduce((sum, s) => sum + calculateLineLength(s.start, s.end), 0);
                     
                     return (
                       <G key={`line-${polygon.id}-${index}`}>
-                        {/* Draw each visible segment with its own measurement */}
+                        {/* Draw each visible segment */}
                         {segments.filter(s => !s.isInterrupted).map((segment, segIdx) => {
-                          const segMidX = (segment.start.x + segment.end.x) / 2;
-                          const segMidY = (segment.start.y + segment.end.y) / 2;
-                          const segLength = calculateLineLength(segment.start, segment.end);
-                          
                           return (
                             <G key={`seg-${segIdx}`}>
                               <Line
@@ -3432,46 +3448,26 @@ export default function AreaCalculatorEditor() {
                                 stroke={color}
                                 strokeWidth={4}
                               />
-                              {/* Segment measurement */}
-                              <Rect 
-                                x={segMidX - 25} 
-                                y={segMidY - 10} 
-                                width={50} 
-                                height={20} 
-                                rx={4} 
-                                fill={color} 
-                              />
-                              <SvgText x={segMidX} y={segMidY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                                {segLength.toFixed(2)}m
-                              </SvgText>
                             </G>
                           );
                         })}
-                        {/* Show total summary if there are interruptions */}
+                        {/* Show single total measurement (use manual value if available) */}
                         {(() => {
-                          const visibleSegments = segments.filter(s => !s.isInterrupted);
-                          const fullLength = calculateLineLength(point, nextPoint);
-                          const hasInterruption = segments.length > 1 || totalLength < fullLength - 0.01;
+                          const midX = (point.x + nextPoint.x) / 2;
+                          const midY = (point.y + nextPoint.y) / 2;
+                          const bgColor = isCustom ? '#2196F3' : color;
                           
-                          // Only show summary if there are multiple segments
-                          if (hasInterruption && visibleSegments.length > 1) {
-                            // Position summary above/below the line
-                            const midX = (point.x + nextPoint.x) / 2;
-                            const midY = (point.y + nextPoint.y) / 2 - 30;
-                            
-                            return (
-                              <G>
-                                <Rect x={midX - 35} y={midY - 12} width={70} height={24} rx={4} fill="rgba(0,0,0,0.7)" />
-                                <SvgText x={midX} y={midY - 1} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.7)">
-                                  Summe:
-                                </SvgText>
-                                <SvgText x={midX} y={midY + 9} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                                  {totalLength.toFixed(2)}m
-                                </SvgText>
-                              </G>
-                            );
-                          }
-                          return null;
+                          // Show manual value if custom, otherwise show auto-calculated visible length
+                          const displayValue = isCustom ? displayTotalLength : totalAutoLength;
+                          
+                          return (
+                            <G>
+                              <Circle cx={midX} cy={midY} r={20} fill={bgColor} />
+                              <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
+                                {displayValue.toFixed(2)}m
+                              </SvgText>
+                            </G>
+                          );
                         })()}
                       </G>
                     );
@@ -3487,7 +3483,9 @@ export default function AreaCalculatorEditor() {
                   if (category) {
                     const midX = (point.x + nextPoint.x) / 2;
                     const midY = (point.y + nextPoint.y) / 2;
-                    const length = calculateLineLength(point, nextPoint);
+                    const calculatedLength = calculateLineLength(point, nextPoint);
+                    const displayLength = getEdgeLength(polygon.id, index, calculatedLength);
+                    const isCustom = hasCustomLength(polygon.id, index);
                     
                     return (
                       <G key={`line-${polygon.id}-${index}`}>
@@ -3499,9 +3497,9 @@ export default function AreaCalculatorEditor() {
                           stroke={getCategoryColor(category)}
                           strokeWidth={4}
                         />
-                        <Circle cx={midX} cy={midY} r={18} fill={getCategoryColor(category)} />
+                        <Circle cx={midX} cy={midY} r={18} fill={isCustom ? '#2196F3' : getCategoryColor(category)} />
                         <SvgText x={midX} y={midY + 4} textAnchor="middle" fontSize={10} fontWeight="bold" fill="#fff">
-                          {length.toFixed(2)}m
+                          {displayLength.toFixed(2)}m
                         </SvgText>
                       </G>
                     );

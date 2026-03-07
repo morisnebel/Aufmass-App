@@ -157,6 +157,7 @@ export default function AreaCalculatorEditor() {
   const [currentAnnotationShape, setCurrentAnnotationShape] = useState<AnnotationShape | null>(null);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [draggingAnnotationShape, setDraggingAnnotationShape] = useState<{ id: string; startX: number; startY: number; origX1: number; origY1: number; origX2: number; origY2: number } | null>(null);
+  const [resizingShape, setResizingShape] = useState<{ id: string; handle: 'x1y1' | 'x2y1' | 'x1y2' | 'x2y2' | 'start' | 'end' } | null>(null);
   
   // Text annotations
   interface TextAnnotation {
@@ -1627,7 +1628,13 @@ export default function AreaCalculatorEditor() {
     } else if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
       // Start drawing annotation shape
       if (!currentAnnotationShape) {
-        const shapeType = mode.replace('annotation_', '') as 'rectangle' | 'circle' | 'arrow' | 'line';
+        const shapeTypeMap: { [key: string]: 'rectangle' | 'circle' | 'arrow' | 'line' } = {
+          'annotation_rect': 'rectangle',
+          'annotation_circle': 'circle',
+          'annotation_arrow': 'arrow',
+          'annotation_line': 'line',
+        };
+        const shapeType = shapeTypeMap[mode];
         setCurrentAnnotationShape({
           id: Date.now().toString(),
           type: shapeType,
@@ -1636,7 +1643,7 @@ export default function AreaCalculatorEditor() {
           x2: x,
           y2: y,
           color: annotationColor,
-          strokeWidth: 3,
+          strokeWidth: annotationStrokeWidth,
         });
       }
     } else if (mode === 'annotation_text') {
@@ -2942,13 +2949,56 @@ export default function AreaCalculatorEditor() {
           
           // Check if touching an annotation for dragging/selecting
           if (mode === 'select') {
+            // First check if touching a resize handle on selected shape
+            if (selectedAnnotationId) {
+              const shape = annotationShapes.find(s => s.id === selectedAnnotationId);
+              if (shape) {
+                const handleRadius = 15; // Touch tolerance for handles
+                
+                if (shape.type === 'line' || shape.type === 'arrow') {
+                  // Check start and end points
+                  if (Math.sqrt(Math.pow(x - shape.x1, 2) + Math.pow(y - shape.y1, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'start' });
+                    return;
+                  }
+                  if (Math.sqrt(Math.pow(x - shape.x2, 2) + Math.pow(y - shape.y2, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'end' });
+                    return;
+                  }
+                } else if (shape.type === 'rectangle' || shape.type === 'circle') {
+                  // Check corner handles
+                  const minX = Math.min(shape.x1, shape.x2);
+                  const maxX = Math.max(shape.x1, shape.x2);
+                  const minY = Math.min(shape.y1, shape.y2);
+                  const maxY = Math.max(shape.y1, shape.y2);
+                  
+                  if (Math.sqrt(Math.pow(x - minX, 2) + Math.pow(y - minY, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'x1y1' });
+                    return;
+                  }
+                  if (Math.sqrt(Math.pow(x - maxX, 2) + Math.pow(y - minY, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'x2y1' });
+                    return;
+                  }
+                  if (Math.sqrt(Math.pow(x - minX, 2) + Math.pow(y - maxY, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'x1y2' });
+                    return;
+                  }
+                  if (Math.sqrt(Math.pow(x - maxX, 2) + Math.pow(y - maxY, 2)) < handleRadius) {
+                    setResizingShape({ id: shape.id, handle: 'x2y2' });
+                    return;
+                  }
+                }
+              }
+            }
+            
             const annotation = findAnnotationAtPosition(x, y);
             if (annotation) {
               saveStateForUndo();
               if (annotation.type === 'shape') {
                 const shape = annotationShapes.find(s => s.id === annotation.id);
                 if (shape && selectedAnnotationId === annotation.id) {
-                  // Already selected - start dragging
+                  // Already selected - start dragging the whole shape
                   setDraggingAnnotationShape({ id: annotation.id, startX: x, startY: y, origX1: shape.x1, origY1: shape.y1, origX2: shape.x2, origY2: shape.y2 });
                 } else {
                   // Just select
@@ -2993,7 +3043,14 @@ export default function AreaCalculatorEditor() {
           // Start drawing annotation shapes
           if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
             if (!currentAnnotationShape) {
-              const shapeType = mode.replace('annotation_', '') as 'rectangle' | 'circle' | 'arrow' | 'line';
+              // Map mode to shape type
+              const shapeTypeMap: { [key: string]: 'rectangle' | 'circle' | 'arrow' | 'line' } = {
+                'annotation_rect': 'rectangle',
+                'annotation_circle': 'circle',
+                'annotation_arrow': 'arrow',
+                'annotation_line': 'line',
+              };
+              const shapeType = shapeTypeMap[mode];
               setCurrentAnnotationShape({
                 id: Date.now().toString(),
                 type: shapeType,
@@ -3148,6 +3205,30 @@ export default function AreaCalculatorEditor() {
                 : s
             ));
           }
+          
+          // Resizing annotation shape
+          if (resizingShape) {
+            setAnnotationShapes(prev => prev.map(s => {
+              if (s.id !== resizingShape.id) return s;
+              
+              switch (resizingShape.handle) {
+                case 'start':
+                  return { ...s, x1: x, y1: y };
+                case 'end':
+                  return { ...s, x2: x, y2: y };
+                case 'x1y1':
+                  return { ...s, x1: x, y1: y };
+                case 'x2y1':
+                  return { ...s, x2: x, y1: y };
+                case 'x1y2':
+                  return { ...s, x1: x, y2: y };
+                case 'x2y2':
+                  return { ...s, x2: x, y2: y };
+                default:
+                  return s;
+              }
+            }));
+          }
         }}
         onTouchEnd={(event) => {
           setCurrentTouchPosition(null);
@@ -3189,6 +3270,12 @@ export default function AreaCalculatorEditor() {
               setAnnotationShapes(prev => [...prev, currentAnnotationShape]);
             }
             setCurrentAnnotationShape(null);
+            return;
+          }
+          
+          // Stop resizing shape
+          if (resizingShape) {
+            setResizingShape(null);
             return;
           }
           

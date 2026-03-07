@@ -4061,25 +4061,11 @@ export default function AreaCalculatorEditor() {
               } else if (annotation.type === 'memo') {
                 const memo = memoPointers.find(m => m.id === annotation.id);
                 if (memo && selectedMemoId === annotation.id) {
-                  // Already selected - check if double-tap to edit or tap on specific part
-                  const noteWidth = Math.max((memo.text?.length || 0) * 9 + 20, 80);
-                  const noteHeight = 32;
-                  const noteX = memo.x1 - noteWidth / 2;
-                  const noteY = memo.y1 - noteHeight - 5;
-                  
-                  // Check if tapped on note box - open edit modal
-                  if (x >= noteX && x <= noteX + noteWidth && y >= noteY && y <= noteY + noteHeight) {
-                    setEditingMemoId(annotation.id);
-                    setEditMemoText(memo.text);
-                    setAnnotationColor(memo.color);
-                    setShowEditMemoModal(true);
-                  } else {
-                    // Tap on target area - start dragging
-                    const distToNote = Math.sqrt(Math.pow(x - memo.x1, 2) + Math.pow(y - (memo.y1 - 20), 2));
-                    const distToTarget = Math.sqrt(Math.pow(x - memo.x2, 2) + Math.pow(y - memo.y2, 2));
-                    const part = distToTarget < distToNote ? 'target' : 'note';
-                    setDraggingMemo({ id: annotation.id, part, offset: { x: part === 'note' ? x - memo.x1 : x - memo.x2, y: part === 'note' ? y - memo.y1 : y - memo.y2 } });
-                  }
+                  // Already selected - open edit modal
+                  setEditingMemoId(annotation.id);
+                  setEditMemoText(memo.text);
+                  setAnnotationColor(memo.color);
+                  setShowEditMemoModal(true);
                 } else {
                   // Just select
                   setSelectedMemoId(annotation.id);

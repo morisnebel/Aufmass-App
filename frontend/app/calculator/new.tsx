@@ -5711,8 +5711,8 @@ export default function AreaCalculatorEditor() {
               style={{ flex: 1, fontSize: 18, fontWeight: 'bold', color: '#333', padding: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: '#ddd' }}
               value={numpadInput}
               onChangeText={(text) => {
-                // Filter: Buchstaben und Einheiten entfernen, nur Zahlen, Komma, Punkt und Operatoren behalten
-                const filtered = text.replace(/[a-zA-Z°'"²³µ\s]/g, '');
+                // Filter: NUR Zahlen, Komma, Punkt und Rechenoperatoren behalten - alles andere (inkl. Einheiten) entfernen
+                const filtered = text.replace(/[^0-9.,+\-*/()]/g, '');
                 setNumpadInput(filtered);
               }}
               keyboardType="decimal-pad"

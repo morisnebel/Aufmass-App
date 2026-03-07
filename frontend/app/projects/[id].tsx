@@ -167,6 +167,7 @@ export default function ProjectDetailScreen() {
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSharingImage, setIsSharingImage] = useState(false);
+  const [showCalcDetailsPage, setShowCalcDetailsPage] = useState(false); // Toggle for detailed calculation page
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -1220,6 +1221,127 @@ export default function ProjectDetailScreen() {
       `;
     }).join('<hr style="border: none; border-top: 1px dashed #ddd; margin: 8px 0;"/>') : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
 
+    // Generate detailed calculation pages (optional, controlled by showCalcDetailsPage)
+    const generateDetailedCalcPages = () => {
+      if (!showCalcDetailsPage || areaCalculations.length === 0) return '';
+      
+      return areaCalculations.map((calc, calcIndex) => {
+        const polygons = calc.polygons || [];
+        const calcLines = calc.lines || [];
+        const calcScale = calc.scale || 100;
+        const mainAreas = polygons.filter((p: any) => p.type === 'main');
+        const deductionAreas = polygons.filter((p: any) => p.type === 'deduction');
+        
+        const grossArea = mainAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+        const deductionsTotal = deductionAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+        const netArea = grossArea - deductionsTotal;
+        
+        // Generate lines per polygon
+        const generateLinesForPolygon = (polygon: any) => {
+          const polygonLines = calcLines.filter((l: any) => l.polygonId === polygon.id);
+          const categoryGroups: { [key: string]: number[] } = {};
+          
+          polygonLines.forEach((line: any) => {
+            if (polygon.points && polygon.points.length > line.pointIndex) {
+              const point = polygon.points[line.pointIndex];
+              const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+              const length = calculateLineLength(point, nextPoint, calcScale);
+              if (length > 0.01) {
+                if (!categoryGroups[line.category]) {
+                  categoryGroups[line.category] = [];
+                }
+                categoryGroups[line.category].push(length);
+              }
+            }
+          });
+          
+          if (Object.keys(categoryGroups).length === 0) {
+            return '<div style="font-size: 10px; color: #999; font-style: italic; margin-left: 12px;">Keine Linien-Kategorien zugewiesen</div>';
+          }
+          
+          return Object.entries(categoryGroups).map(([category, lengths]) => {
+            const total = (lengths as number[]).reduce((sum, l) => sum + l, 0);
+            const breakdown = lengths.length >= 2 ? `<div style="font-size: 9px; color: #666; margin-left: 20px;">${(lengths as number[]).map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : '';
+            
+            return `
+              <div style="margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="display: flex; align-items: center;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${getCategoryColor(category)}; margin-right: 6px; display: inline-block;"></span>
+                    <span style="font-size: 11px;">${category}</span>
+                  </span>
+                  <span style="font-size: 11px; font-weight: 600; color: ${getCategoryColor(category)};">${total.toFixed(2)} m</span>
+                </div>
+                ${breakdown}
+              </div>
+            `;
+          }).join('');
+        };
+        
+        return `
+          <div class="new-page" style="page-break-before: always;">
+            <h2 style="color: #1976d2; font-size: 16px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #1976d2;">
+              Berechnungsdetails: ${calc.name || `Berechnung ${calcIndex + 1}`}
+            </h2>
+            
+            <!-- Main Areas Section -->
+            ${mainAreas.length > 0 ? `
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 13px; color: #4CAF50; margin-bottom: 8px;">Hauptflächen</h3>
+                ${mainAreas.map((p: any) => `
+                  <div style="background: #f8f8f8; border-left: 3px solid #4CAF50; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span style="font-weight: 600; font-size: 12px;">${p.name}</span>
+                      <span style="font-weight: 600; color: #4CAF50; font-size: 12px;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                    </div>
+                    ${generateLinesForPolygon(p)}
+                  </div>
+                `).join('')}
+                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between;">
+                  <span style="font-weight: 600; font-size: 12px;">Brutto-Fläche:</span>
+                  <span style="font-weight: 700; font-size: 12px;">${grossArea.toFixed(2)} m²</span>
+                </div>
+              </div>
+            ` : ''}
+            
+            <!-- Deduction Areas Section -->
+            ${deductionAreas.length > 0 ? `
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 13px; color: #f44336; margin-bottom: 8px;">Abzüge</h3>
+                ${deductionAreas.map((p: any) => `
+                  <div style="background: #fff8f8; border-left: 3px solid #f44336; padding: 8px 12px; margin-bottom: 6px; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span style="font-weight: 600; font-size: 12px;">${p.name}</span>
+                      <span style="font-weight: 600; color: #f44336; font-size: 12px;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                    </div>
+                    ${generateLinesForPolygon(p)}
+                  </div>
+                `).join('')}
+                <div style="background: #ffebee; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between;">
+                  <span style="font-weight: 600; font-size: 12px;">Gesamt Abzüge:</span>
+                  <span style="font-weight: 700; color: #f44336; font-size: 12px;">-${deductionsTotal.toFixed(2)} m²</span>
+                </div>
+              </div>
+            ` : ''}
+            
+            <!-- Final Calculation -->
+            <div style="background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #1976d2;">
+              <h3 style="font-size: 13px; color: #1976d2; margin-bottom: 12px;">Flächenberechnung</h3>
+              <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+                <div>Brutto: ${grossArea.toFixed(2)} m²</div>
+                ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+                <div style="border-top: 2px solid #333; margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 16px; color: #4CAF50;">
+                  = Netto: ${netArea.toFixed(2)} m²
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    const detailedCalcPagesHtml = generateDetailedCalcPages();
+
     // Build complete HTML
     const html = `
       <!DOCTYPE html>
@@ -2242,6 +2364,8 @@ export default function ProjectDetailScreen() {
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
+          
+          ${detailedCalcPagesHtml}
         ` : ''}
         
         ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `
@@ -4306,6 +4430,46 @@ export default function ProjectDetailScreen() {
               <Text style={{ color: '#fff', marginLeft: 6, fontWeight: '600', fontSize: 13 }}>Drucken</Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Toggle for detailed calculation pages */}
+          {areaCalculations.length > 0 && (
+            <TouchableOpacity 
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                backgroundColor: showCalcDetailsPage ? '#4CAF50' : '#e0e0e0',
+                marginHorizontal: 16,
+                marginVertical: 8,
+                borderRadius: 20,
+              }}
+              onPress={async () => {
+                const newValue = !showCalcDetailsPage;
+                setShowCalcDetailsPage(newValue);
+                // Regenerate PDF with new setting
+                setTimeout(async () => {
+                  const html = await generatePdfHtml();
+                  setPdfHtmlContent(html);
+                }, 100);
+              }}
+            >
+              <Ionicons 
+                name={showCalcDetailsPage ? "checkbox" : "square-outline"} 
+                size={20} 
+                color={showCalcDetailsPage ? "#fff" : "#666"} 
+              />
+              <Text style={{ 
+                marginLeft: 8, 
+                color: showCalcDetailsPage ? '#fff' : '#666',
+                fontWeight: '600',
+                fontSize: 14,
+              }}>
+                Berechnungsdetails drucken
+              </Text>
+            </TouchableOpacity>
+          )}
           
           <ViewShot 
             ref={viewShotRef} 

@@ -395,6 +395,13 @@ export default function AreaCalculatorEditor() {
             realLength: calc.scaleReference.realLength,
           });
         }
+        // Load background/reference image if saved
+        if (calc.backgroundImage && typeof calc.backgroundImage === 'string' && calc.backgroundImage.length > 0) {
+          // Defer setting the background image to avoid render issues
+          setTimeout(() => {
+            setBackgroundImage(calc.backgroundImage);
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error loading calculation:', error);
@@ -781,6 +788,7 @@ export default function AreaCalculatorEditor() {
         gridEnabled,
         gridSize,
         results,
+        backgroundImage: backgroundImage || undefined,
       };
       
       if (calculationId) {

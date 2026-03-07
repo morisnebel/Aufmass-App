@@ -17,6 +17,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import Svg, { 
   Path, 
   Circle, 
@@ -231,6 +233,9 @@ export default function AreaCalculatorEditor() {
   // Deduction rectangle drawing state
   const [deductionRectStart, setDeductionRectStart] = useState<AreaPoint | null>(null);
   const [deductionRectEnd, setDeductionRectEnd] = useState<AreaPoint | null>(null);
+  
+  // PDF Export state
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'deduction_rect' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
@@ -2692,6 +2697,302 @@ export default function AreaCalculatorEditor() {
     setPanOffset({ x: 0, y: 0 });
   };
 
+  // Generate PDF and share
+  const exportToPdf = async () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+    
+    try {
+      // Calculate totals
+      const mainAreas = polygons.filter(p => p.type === 'main');
+      const deductionAreas = polygons.filter(p => p.type === 'deduction');
+      const grossArea = mainAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
+      const deductionsTotal = deductionAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
+      const netArea = grossArea - deductionsTotal;
+      
+      // Get current date
+      const today = new Date();
+      const dateStr = today.toLocaleDateString('de-DE', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
+      
+      // Generate HTML for PDF
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              padding: 40px;
+              color: #333;
+            }
+            .header { 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: flex-start;
+              margin-bottom: 30px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #4CAF50;
+            }
+            .title { font-size: 24px; font-weight: bold; color: #333; }
+            .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
+            .date { font-size: 12px; color: #888; }
+            
+            .result-box {
+              background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+              border-radius: 12px;
+              padding: 20px;
+              margin-bottom: 25px;
+              text-align: center;
+            }
+            .result-label { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+            .result-value { font-size: 42px; font-weight: bold; color: #2e7d32; margin: 10px 0; }
+            .result-unit { font-size: 18px; color: #4CAF50; }
+            
+            .calculation {
+              background: #f5f5f5;
+              border-radius: 8px;
+              padding: 15px;
+              margin-bottom: 25px;
+              font-family: monospace;
+              font-size: 14px;
+            }
+            .calc-row { margin: 5px 0; }
+            .calc-line { border-top: 1px solid #333; margin: 10px 0; }
+            .calc-result { font-weight: bold; color: #1976d2; }
+            
+            .section { margin-bottom: 25px; }
+            .section-title { 
+              font-size: 16px; 
+              font-weight: bold; 
+              color: #333; 
+              margin-bottom: 12px;
+              padding-bottom: 5px;
+              border-bottom: 1px solid #ddd;
+            }
+            
+            .area-card {
+              background: #fff;
+              border: 1px solid #e0e0e0;
+              border-radius: 8px;
+              padding: 12px;
+              margin-bottom: 10px;
+              border-left: 4px solid #4CAF50;
+            }
+            .area-card.deduction { border-left-color: #f44336; }
+            .area-header { display: flex; justify-content: space-between; }
+            .area-name { font-weight: 600; }
+            .area-value { font-weight: bold; }
+            .area-value.green { color: #4CAF50; }
+            .area-value.red { color: #f44336; }
+            
+            .line-item { 
+              display: flex; 
+              justify-content: space-between; 
+              padding: 5px 0;
+              font-size: 13px;
+            }
+            .line-category { 
+              display: flex; 
+              align-items: center; 
+            }
+            .color-dot {
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              margin-right: 8px;
+            }
+            .line-breakdown {
+              font-size: 11px;
+              color: #888;
+              margin-left: 18px;
+              padding-top: 2px;
+            }
+            
+            .footer {
+              margin-top: 40px;
+              padding-top: 15px;
+              border-top: 1px solid #ddd;
+              font-size: 10px;
+              color: #888;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="title">${calculationName || 'Flächenberechnung'}</div>
+              <div class="subtitle">Aufmaß-Dokumentation</div>
+            </div>
+            <div class="date">${dateStr}</div>
+          </div>
+          
+          <div class="result-box">
+            <div class="result-label">Netto-Fläche</div>
+            <div class="result-value">${netArea.toFixed(2)}</div>
+            <div class="result-unit">m²</div>
+          </div>
+          
+          <div class="calculation">
+            <div class="calc-row">Brutto-Fläche: ${grossArea.toFixed(2)} m²</div>
+            ${deductionsTotal > 0 ? `<div class="calc-row">− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+            <div class="calc-line"></div>
+            <div class="calc-row calc-result">= Netto: ${netArea.toFixed(2)} m²</div>
+          </div>
+          
+          ${mainAreas.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Grundflächen</div>
+            ${mainAreas.map(polygon => {
+              const area = calculatePolygonArea(polygon.points);
+              const polygonLines = lines.filter(l => l.polygonId === polygon.id);
+              const categoryGroups: { [key: string]: number[] } = {};
+              polygonLines.forEach(line => {
+                if (polygon.points.length > line.pointIndex) {
+                  const point = polygon.points[line.pointIndex];
+                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                  const length = calculateLineLength(point, nextPoint);
+                  if (length > 0.01) {
+                    if (!categoryGroups[line.category]) categoryGroups[line.category] = [];
+                    categoryGroups[line.category].push(length);
+                  }
+                }
+              });
+              return `
+              <div class="area-card">
+                <div class="area-header">
+                  <span class="area-name">${polygon.name}</span>
+                  <span class="area-value green">+${area.toFixed(2)} m²</span>
+                </div>
+                ${Object.entries(categoryGroups).map(([cat, lengths]) => {
+                  const total = lengths.reduce((s, l) => s + l, 0);
+                  return `
+                  <div class="line-item">
+                    <span class="line-category">
+                      <span class="color-dot" style="background: ${getCategoryColor(cat)};"></span>
+                      ${cat}
+                    </span>
+                    <span>${total.toFixed(2)} m</span>
+                  </div>
+                  ${lengths.length > 1 ? `<div class="line-breakdown">${lengths.map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+              `;
+            }).join('')}
+          </div>
+          ` : ''}
+          
+          ${deductionAreas.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Abzugsflächen</div>
+            ${deductionAreas.map(polygon => {
+              const area = calculatePolygonArea(polygon.points);
+              const polygonLines = lines.filter(l => l.polygonId === polygon.id);
+              const categoryGroups: { [key: string]: number[] } = {};
+              polygonLines.forEach(line => {
+                if (polygon.points.length > line.pointIndex) {
+                  const point = polygon.points[line.pointIndex];
+                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                  const length = calculateLineLength(point, nextPoint);
+                  if (length > 0.01) {
+                    if (!categoryGroups[line.category]) categoryGroups[line.category] = [];
+                    categoryGroups[line.category].push(length);
+                  }
+                }
+              });
+              return `
+              <div class="area-card deduction">
+                <div class="area-header">
+                  <span class="area-name">${polygon.name}</span>
+                  <span class="area-value red">-${area.toFixed(2)} m²</span>
+                </div>
+                ${Object.entries(categoryGroups).map(([cat, lengths]) => {
+                  const total = lengths.reduce((s, l) => s + l, 0);
+                  return `
+                  <div class="line-item">
+                    <span class="line-category">
+                      <span class="color-dot" style="background: ${getCategoryColor(cat)};"></span>
+                      ${cat}
+                    </span>
+                    <span>${total.toFixed(2)} m</span>
+                  </div>
+                  ${lengths.length > 1 ? `<div class="line-breakdown">${lengths.map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+              `;
+            }).join('')}
+          </div>
+          ` : ''}
+          
+          ${Object.keys(results.linesByCategory).length > 0 ? `
+          <div class="section">
+            <div class="section-title">Linien Gesamt</div>
+            ${Object.entries(results.linesByCategory).map(([category, totalLength]) => {
+              const categoryLines = lines.filter(l => l.category === category);
+              const individualLengths: number[] = [];
+              categoryLines.forEach(line => {
+                const polygon = polygons.find(p => p.id === line.polygonId);
+                if (polygon && polygon.points.length > line.pointIndex) {
+                  const point = polygon.points[line.pointIndex];
+                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                  const length = calculateLineLength(point, nextPoint);
+                  if (length > 0.01) individualLengths.push(length);
+                }
+              });
+              return `
+              <div class="line-item">
+                <span class="line-category">
+                  <span class="color-dot" style="background: ${getCategoryColor(category)};"></span>
+                  ${category}
+                </span>
+                <span>${(totalLength as number).toFixed(2)} m</span>
+              </div>
+              ${individualLengths.length > 1 ? `<div class="line-breakdown">${individualLengths.map(l => l.toFixed(2)).join(' + ')} = ${(totalLength as number).toFixed(2)} m</div>` : ''}
+              `;
+            }).join('')}
+          </div>
+          ` : ''}
+          
+          <div class="footer">
+            Erstellt mit AufmassProfi • ${dateStr}
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Create PDF
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        width: 595,
+        height: 842,
+      });
+      
+      // Share PDF
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('Fehler', 'Teilen nicht verfügbar');
+      }
+      
+    } catch (error) {
+      console.error('PDF Export error:', error);
+      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   // Transform touch coordinates based on zoom and pan
   const transformCoordinates = (x: number, y: number): { x: number; y: number } => {
     return {
@@ -2773,6 +3074,13 @@ export default function AreaCalculatorEditor() {
         
         <TouchableOpacity onPress={() => setShowResultsModal(true)} style={styles.headerButton}>
           <Ionicons name="calculator" size={22} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onPress={exportToPdf} 
+          style={styles.headerButton} 
+          disabled={isExportingPdf}
+        >
+          <Ionicons name="document-text" size={22} color={isExportingPdf ? '#888' : '#fff'} />
         </TouchableOpacity>
         <TouchableOpacity onPress={saveCalculation} style={styles.headerButton} disabled={saving}>
           <Ionicons name="checkmark" size={24} color={saving ? '#888' : '#fff'} />

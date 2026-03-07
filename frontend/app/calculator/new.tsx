@@ -3425,7 +3425,7 @@ export default function AreaCalculatorEditor() {
         onTouchMove={(event) => {
           const touches = event.nativeEvent.touches;
           
-          // Handle pinch-to-zoom and two-finger pan
+          // Handle pinch-to-zoom and two-finger pan simultaneously
           if (touches && touches.length === 2) {
             const touch1 = touches[0];
             const touch2 = touches[1];
@@ -3439,39 +3439,27 @@ export default function AreaCalculatorEditor() {
             const centerX = (touch1.pageX + touch2.pageX) / 2;
             const centerY = (touch1.pageY + touch2.pageY) / 2;
             
-            if (lastPinchDistance.current !== null && lastPinchDistance.current > 0 && lastPinchCenter.current) {
-              // Calculate zoom change
+            if (lastPinchDistance.current !== null && lastPinchCenter.current) {
+              // Calculate pan delta (how much the center moved)
+              const panDeltaX = centerX - lastPinchCenter.current.x;
+              const panDeltaY = centerY - lastPinchCenter.current.y;
+              
+              // Calculate zoom scale
               const rawScale = distance / lastPinchDistance.current;
+              const newZoom = Math.max(0.25, Math.min(4, zoomLevel * rawScale));
               
-              // Check if this is more of a pan gesture (scale close to 1) or zoom gesture
-              const isZoomGesture = Math.abs(rawScale - 1) > 0.02;
-              
-              if (isZoomGesture) {
-                // Zooming
-                const smoothingFactor = 0.4;
-                const targetScale = 1 + (rawScale - 1) * smoothingFactor;
-                const targetZoom = Math.max(0.25, Math.min(4, zoomLevel * targetScale));
-                const smoothedZoom = zoomLevel + (targetZoom - zoomLevel) * 0.5;
-                const newZoom = Math.max(0.25, Math.min(4, smoothedZoom));
+              // Apply both pan and zoom together
+              if (Math.abs(rawScale - 1) > 0.005 || Math.abs(panDeltaX) > 2 || Math.abs(panDeltaY) > 2) {
+                const zoomRatio = newZoom / zoomLevel;
                 
-                if (Math.abs(newZoom - zoomLevel) > 0.001) {
-                  const zoomRatio = newZoom / zoomLevel;
-                  setPanOffset(prev => ({
-                    x: centerX - (centerX - prev.x) * zoomRatio,
-                    y: centerY - (centerY - prev.y) * zoomRatio,
-                  }));
+                setPanOffset(prev => ({
+                  // Combine pan movement with zoom adjustment
+                  x: prev.x + panDeltaX + (centerX - prev.x) * (1 - zoomRatio),
+                  y: prev.y + panDeltaY + (centerY - prev.y) * (1 - zoomRatio),
+                }));
+                
+                if (Math.abs(newZoom - zoomLevel) > 0.005) {
                   setZoomLevel(newZoom);
-                }
-              } else {
-                // Panning - move the canvas with two fingers
-                const panDeltaX = centerX - lastPinchCenter.current.x;
-                const panDeltaY = centerY - lastPinchCenter.current.y;
-                
-                if (Math.abs(panDeltaX) > 1 || Math.abs(panDeltaY) > 1) {
-                  setPanOffset(prev => ({
-                    x: prev.x + panDeltaX,
-                    y: prev.y + panDeltaY,
-                  }));
                 }
               }
             }
@@ -3485,6 +3473,7 @@ export default function AreaCalculatorEditor() {
           // Reset pinch tracking when not using two fingers
           if (isPinching.current && (!touches || touches.length < 2)) {
             lastPinchDistance.current = null;
+            lastPinchCenter.current = null;
             isPinching.current = false;
           }
           

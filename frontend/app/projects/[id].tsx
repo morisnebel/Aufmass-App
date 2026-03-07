@@ -1375,7 +1375,7 @@ export default function ProjectDetailScreen() {
             </div>
             
             <!-- Footer - direkt unter den Berechnungsdetails -->
-            <div style="text-align: center; font-size: 10px; color: #999; margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee;">
+            <div style="text-align: center; font-size: 11px; color: #1976d2; font-weight: 600; margin-top: 30px; padding-top: 12px; border-top: 2px solid #1976d2;">
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>

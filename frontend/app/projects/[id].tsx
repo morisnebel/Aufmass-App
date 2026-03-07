@@ -958,9 +958,9 @@ export default function ProjectDetailScreen() {
       const width = maxX - minX + padding * 2;
       const height = maxY - minY + padding * 2;
       
-      // Scale to fit on page (max 520px width for more space)
-      const maxWidth = 520;
-      const scaleRatio = Math.min(maxWidth / width, 450 / height);
+      // Scale to fit on page - FULL WIDTH for printing (A4 minus margins ~700px)
+      const maxWidth = 700;
+      const scaleRatio = Math.min(maxWidth / width, 550 / height);
       const svgWidth = width * scaleRatio;
       const svgHeight = height * scaleRatio;
       
@@ -1062,18 +1062,18 @@ export default function ProjectDetailScreen() {
             ${generateFullCalcSvg(calc)}
           </div>
           
-          <!-- Compact calculation summary + positions in one row -->
-          <div style="display: flex; gap: 10px; font-size: 9px; line-height: 1.3;">
-            <!-- Rechenweg -->
-            <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; font-family: monospace; min-width: 110px;">
-              <div style="font-size: 8px; color: #666; margin-bottom: 2px;">Rechenweg:</div>
+          <!-- Compact calculation summary with frames -->
+          <div style="display: flex; gap: 8px; font-size: 9px; line-height: 1.3;">
+            <!-- Rechenweg - framed -->
+            <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; min-width: 100px;">
+              <div style="font-size: 8px; color: #666; margin-bottom: 2px; font-weight: 600;">Rechenweg:</div>
               <div>Brutto: ${grossArea.toFixed(2)} m²</div>
               ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
               <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; font-weight: bold;">= ${netArea.toFixed(2)} m²</div>
             </div>
             
-            <!-- Flächen -->
-            <div style="flex: 1;">
+            <!-- Flächen - framed -->
+            <div style="flex: 1; background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0;">
               ${mainAreas.length > 0 ? `
                 <div style="margin-bottom: 3px;">
                   <span style="font-weight: 600; color: #4CAF50; font-size: 8px;">Grundflächen: </span>
@@ -1088,19 +1088,21 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Linien -->
+            <!-- Linien - framed, two columns -->
             ${Object.keys(linesByCategory).length > 0 ? `
-              <div style="min-width: 100px;">
-                <div style="font-weight: 600; color: #1976d2; font-size: 8px; margin-bottom: 1px;">Linien:</div>
-                ${Object.entries(linesByCategory).map(([cat, length]) => `
-                  <div style="display: flex; justify-content: space-between; font-size: 8px;">
-                    <span style="display: flex; align-items: center;">
-                      <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
-                      ${cat}
-                    </span>
-                    <span>${(length as number).toFixed(2)}m</span>
-                  </div>
-                `).join('')}
+              <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; min-width: 180px;">
+                <div style="font-weight: 600; color: #1976d2; font-size: 8px; margin-bottom: 2px;">Linien:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;">
+                  ${Object.entries(linesByCategory).map(([cat, length]) => `
+                    <div style="display: flex; justify-content: space-between; font-size: 8px;">
+                      <span style="display: flex; align-items: center;">
+                        <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
+                        ${cat}
+                      </span>
+                      <span style="margin-left: 4px;">${(length as number).toFixed(2)}m</span>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             ` : ''}
           </div>

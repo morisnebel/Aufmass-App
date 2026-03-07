@@ -5755,32 +5755,41 @@ export default function AreaCalculatorEditor() {
               </View>
               
               {/* Lines per Deduction Area */}
-              {polygons.filter(p => p.type === 'deduction').some(polygon => 
-                lines.some(l => l.polygonId === polygon.id)
-              ) && (
+              {polygons.filter(p => p.type === 'deduction').length > 0 && (
                 <View style={styles.resultsSection}>
                   <Text style={styles.resultsSectionTitle}>Linien pro Abzugsfläche</Text>
                   
                   {polygons.filter(p => p.type === 'deduction').map((polygon) => {
                     // Get all lines for this deduction polygon
                     const polygonLines = lines.filter(l => l.polygonId === polygon.id);
-                    if (polygonLines.length === 0) return null;
                     
                     // Group lines by category
                     const categoryGroups: { [key: string]: number[] } = {};
                     polygonLines.forEach(line => {
-                      const point = polygon.points[line.pointIndex];
-                      const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
-                      const length = calculateLineLength(point, nextPoint);
-                      if (length > 0.01) {
-                        if (!categoryGroups[line.category]) {
-                          categoryGroups[line.category] = [];
+                      if (polygon.points.length > line.pointIndex) {
+                        const point = polygon.points[line.pointIndex];
+                        const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+                        const length = calculateLineLength(point, nextPoint);
+                        if (length > 0.01) {
+                          if (!categoryGroups[line.category]) {
+                            categoryGroups[line.category] = [];
+                          }
+                          categoryGroups[line.category].push(length);
                         }
-                        categoryGroups[line.category].push(length);
                       }
                     });
                     
-                    if (Object.keys(categoryGroups).length === 0) return null;
+                    // If no categories assigned, show message
+                    if (Object.keys(categoryGroups).length === 0) {
+                      return (
+                        <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
+                          <Text style={[styles.resultCardTitle, { marginBottom: 4 }]}>{polygon.name}</Text>
+                          <Text style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>
+                            Keine Linien-Kategorien zugewiesen
+                          </Text>
+                        </View>
+                      );
+                    }
                     
                     return (
                       <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>

@@ -55,7 +55,7 @@ export default function AreaCalculatorEditor() {
   const [lines, setLines] = useState<AreaLine[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
-  const [gridSize, setGridSize] = useState(1); // 1 Meter pro Rasterfeld
+  const [gridSize, setGridSize] = useState(0.25); // 0.25 Meter (25cm) pro Rasterfeld
   
   // === ZOOM & PAN ===
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -3148,43 +3148,6 @@ export default function AreaCalculatorEditor() {
         </TouchableOpacity>
       </View>
 
-      {/* Reference Image Container - Only shown when image is set */}
-      {backgroundImage && (
-        <View style={styles.referenceImageContainer}>
-          <View style={styles.referenceImageHeader}>
-            <Ionicons name="image" size={16} color="#8BC34A" />
-            <Text style={styles.referenceImageTitle}>Bild zur Berechnung</Text>
-            <TouchableOpacity 
-              style={styles.referenceImageRemove}
-              onPress={() => {
-                Alert.alert(
-                  'Bild entfernen',
-                  'Möchten Sie das Referenzbild entfernen?',
-                  [
-                    { text: 'Abbrechen', style: 'cancel' },
-                    { text: 'Entfernen', style: 'destructive', onPress: () => setBackgroundImage(null) }
-                  ]
-                );
-              }}
-            >
-              <Ionicons name="close-circle" size={20} color="#f44336" />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity 
-            style={styles.referenceImageWrapper}
-            onPress={() => {
-              // Could open full screen preview
-            }}
-          >
-            <Image 
-              source={{ uri: backgroundImage }} 
-              style={styles.referenceImage}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Canvas */}
       <View 
         style={styles.canvas}
@@ -4787,6 +4750,26 @@ export default function AreaCalculatorEditor() {
           
           </G>{/* End of zoom/pan transformation group */}
         </Svg>
+        
+        {/* Reference Image Overlay - Top Right Corner */}
+        {backgroundImage && (
+          <View style={styles.referenceImageOverlay}>
+            <View style={styles.referenceImageHeader}>
+              <Text style={styles.referenceImageTitle}>Referenz</Text>
+              <TouchableOpacity 
+                style={styles.referenceImageRemove}
+                onPress={() => setBackgroundImage(null)}
+              >
+                <Ionicons name="close-circle" size={18} color="#f44336" />
+              </TouchableOpacity>
+            </View>
+            <Image 
+              source={{ uri: backgroundImage }} 
+              style={styles.referenceImageSmall}
+              resizeMode="contain"
+            />
+          </View>
+        )}
       </View>
 
       {/* Status Bar */}
@@ -5789,35 +5772,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     marginHorizontal: 8,
   },
-  referenceImageContainer: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    padding: 8,
+  referenceImageOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    maxWidth: 120,
   },
   referenceImageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   referenceImageTitle: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '600',
     color: '#8BC34A',
-    marginLeft: 6,
   },
   referenceImageRemove: {
-    padding: 4,
+    padding: 2,
   },
-  referenceImageWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  referenceImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
+  referenceImageSmall: {
+    width: 100,
+    height: 75,
+    borderRadius: 4,
     backgroundColor: '#f0f0f0',
   },
   canvas: {

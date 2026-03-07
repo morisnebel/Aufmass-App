@@ -246,22 +246,48 @@ export default function AreaCalculatorEditor() {
     if (angleNumpadTarget === 'angle') {
       if (key === 'C') {
         setFixedAngle(null);
+        setAngleInputText('');
       } else if (key === '⌫') {
-        if (fixedAngle !== null) {
+        if (angleInputText.length > 0) {
+          const newText = angleInputText.slice(0, -1);
+          setAngleInputText(newText);
+          if (newText === '' || newText === '-') {
+            setFixedAngle(null);
+          } else {
+            let num = parseInt(newText);
+            if (!isNaN(num)) {
+              while (num < 0) num += 360;
+              num = num % 360;
+              setFixedAngle(num);
+            }
+          }
+        } else if (fixedAngle !== null) {
           const str = fixedAngle.toString().slice(0, -1);
           setFixedAngle(str === '' ? null : parseInt(str));
+          setAngleInputText(str);
         }
       } else if (key === '±') {
         // Vorzeichen umkehren: 90 → 270, 270 → 90
-        if (fixedAngle !== null) {
+        if (fixedAngle !== null && fixedAngle !== 0) {
           const newAngle = (360 - fixedAngle) % 360;
           setFixedAngle(newAngle);
+          setAngleInputText(newAngle.toString());
+        }
+      } else if (key === '-') {
+        // Minus am Anfang hinzufügen
+        if (!angleInputText.startsWith('-')) {
+          setAngleInputText('-' + angleInputText);
         }
       } else if (/^[0-9]$/.test(key)) {
-        const current = fixedAngle !== null ? fixedAngle.toString() : '';
-        const newVal = parseInt(current + key);
-        if (newVal <= 360) {
-          setFixedAngle(newVal);
+        const newText = angleInputText + key;
+        setAngleInputText(newText);
+        let num = parseInt(newText);
+        if (!isNaN(num)) {
+          while (num < 0) num += 360;
+          num = num % 360;
+          if (num <= 360) {
+            setFixedAngle(num);
+          }
         }
       }
       setTimeout(() => angleInputRef?.current?.focus(), 10);
@@ -8038,11 +8064,14 @@ export default function AreaCalculatorEditor() {
                     </>
                   ) : (
                     <>
+                      <TouchableOpacity style={[styles.largeNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('-')}>
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: '#1976d2' }}>−</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.largeNumpadKey]} onPress={() => handleAngleNumpadPress('0')}>
+                        <Text style={styles.largeNumpadKeyText}>0</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={[styles.largeNumpadKey, { backgroundColor: '#e3f2fd' }]} onPress={() => handleAngleNumpadPress('±')}>
                         <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>±</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.largeNumpadKey, { flex: 1 }]} onPress={() => handleAngleNumpadPress('0')}>
-                        <Text style={styles.largeNumpadKeyText}>0</Text>
                       </TouchableOpacity>
                     </>
                   )}

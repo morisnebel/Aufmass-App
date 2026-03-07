@@ -4249,11 +4249,12 @@ export default function AreaCalculatorEditor() {
                   const labelX = midX + (perpDot > 0 ? -perpX : perpX) * offset;
                   const labelY = midY + (perpDot > 0 ? -perpY : perpY) * offset;
                   
-                  const labelWidth = 55;
-                  const labelHeight = 20;
+                  // Dynamic width based on text length
+                  const displayText = displayLength.toFixed(2);
+                  const labelWidth = Math.max(45, displayText.length * 8 + 24);
+                  const labelHeight = 22;
                   // Custom values shown in blue, normal in green/red
                   const bgColor = isCustom ? '#2196F3' : (polygon.type === 'deduction' ? '#f44336' : '#4CAF50');
-                  const displayText = `${displayLength.toFixed(2)}m`;
                   
                   return (
                     <G key={`edge-length-${polygon.id}-${index}`}>
@@ -4262,26 +4263,35 @@ export default function AreaCalculatorEditor() {
                         y={labelY - labelHeight / 2} 
                         width={labelWidth} 
                         height={labelHeight} 
-                        rx={3} 
+                        rx={4} 
                         fill={bgColor}
                         stroke={isCustom ? '#1565C0' : undefined}
                         strokeWidth={isCustom ? 2 : 0}
                       />
                       <SvgText 
-                        x={labelX - labelWidth / 2 + 4} 
-                        y={labelY + 4} 
-                        textAnchor="start" 
-                        fontSize={11} 
+                        x={labelX} 
+                        y={labelY + 5} 
+                        textAnchor="middle" 
+                        fontSize={12} 
                         fontWeight="bold" 
                         fill="#fff"
                       >
                         {displayText}
                       </SvgText>
+                      <SvgText 
+                        x={labelX + labelWidth / 2 - 8} 
+                        y={labelY + 5} 
+                        textAnchor="middle" 
+                        fontSize={10} 
+                        fill="rgba(255,255,255,0.8)"
+                      >
+                        m
+                      </SvgText>
                       {isCustom && (
                         <SvgText 
-                          x={labelX + labelWidth / 2 - 4} 
-                          y={labelY - 2} 
-                          textAnchor="end" 
+                          x={labelX - labelWidth / 2 + 8} 
+                          y={labelY - 4} 
+                          textAnchor="start" 
                           fontSize={8} 
                           fill="#fff"
                         >
@@ -5633,42 +5643,124 @@ export default function AreaCalculatorEditor() {
       {/* Results Modal */}
       <Modal visible={showResultsModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%', width: '90%' }]}>
-            <Text style={styles.modalTitle}>Berechnungsergebnis</Text>
+          <View style={[styles.modalContent, { maxHeight: '85%', width: '92%' }]}>
+            <Text style={styles.modalTitle}>Berechnungsdetails</Text>
             
             <ScrollView style={styles.resultsScroll}>
-              {/* Area Results */}
+              {/* Main Areas with calculation steps */}
+              {polygons.filter(p => p.type === 'main').length > 0 && (
+                <View style={styles.resultsSection}>
+                  <Text style={styles.resultsSectionTitle}>Hauptflächen</Text>
+                  
+                  {polygons.filter(p => p.type === 'main').map((polygon) => {
+                    const area = calculatePolygonArea(polygon.points);
+                    const perimeter = polygon.points.reduce((sum, point, i) => {
+                      const nextPoint = polygon.points[(i + 1) % polygon.points.length];
+                      return sum + calculateLineLength(point, nextPoint);
+                    }, 0);
+                    
+                    return (
+                      <View key={polygon.id} style={styles.resultCard}>
+                        <View style={styles.resultCardHeader}>
+                          <Text style={styles.resultCardTitle}>{polygon.name}</Text>
+                          <Text style={styles.resultCardValue}>+{area.toFixed(2)} m²</Text>
+                        </View>
+                        <View style={styles.resultCardDetails}>
+                          <Text style={styles.resultCardDetail}>
+                            Umfang: {perimeter.toFixed(2)} m
+                          </Text>
+                          <Text style={styles.resultCardDetail}>
+                            Ecken: {polygon.points.length}
+                          </Text>
+                        </View>
+                        {/* Edge lengths */}
+                        <View style={styles.resultCardEdges}>
+                          <Text style={styles.resultCardSubtitle}>Kantenlängen:</Text>
+                          {polygon.points.map((point, i) => {
+                            const nextPoint = polygon.points[(i + 1) % polygon.points.length];
+                            const length = calculateLineLength(point, nextPoint);
+                            if (length < 0.05) return null;
+                            return (
+                              <Text key={i} style={styles.resultCardEdge}>
+                                Kante {i + 1}: {length.toFixed(2)} m
+                              </Text>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    );
+                  })}
+                  
+                  {/* Subtotal for main areas */}
+                  <View style={styles.resultSubtotal}>
+                    <Text style={styles.resultSubtotalLabel}>Brutto-Fläche:</Text>
+                    <Text style={styles.resultSubtotalValue}>
+                      {polygons.filter(p => p.type === 'main').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
+              {/* Deduction Areas with calculation steps */}
+              {polygons.filter(p => p.type === 'deduction').length > 0 && (
+                <View style={styles.resultsSection}>
+                  <Text style={[styles.resultsSectionTitle, { color: '#f44336' }]}>Abzüge</Text>
+                  
+                  {polygons.filter(p => p.type === 'deduction').map((polygon) => {
+                    const area = calculatePolygonArea(polygon.points);
+                    const perimeter = polygon.points.reduce((sum, point, i) => {
+                      const nextPoint = polygon.points[(i + 1) % polygon.points.length];
+                      return sum + calculateLineLength(point, nextPoint);
+                    }, 0);
+                    
+                    return (
+                      <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
+                        <View style={styles.resultCardHeader}>
+                          <Text style={styles.resultCardTitle}>{polygon.name}</Text>
+                          <Text style={[styles.resultCardValue, { color: '#f44336' }]}>-{area.toFixed(2)} m²</Text>
+                        </View>
+                        <View style={styles.resultCardDetails}>
+                          <Text style={styles.resultCardDetail}>
+                            Umfang: {perimeter.toFixed(2)} m
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                  
+                  {/* Subtotal for deductions */}
+                  <View style={[styles.resultSubtotal, { backgroundColor: '#ffebee' }]}>
+                    <Text style={styles.resultSubtotalLabel}>Gesamt Abzüge:</Text>
+                    <Text style={[styles.resultSubtotalValue, { color: '#f44336' }]}>
+                      -{polygons.filter(p => p.type === 'deduction').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
+              {/* Final Calculation */}
               <View style={styles.resultsSection}>
-                <Text style={styles.resultsSectionTitle}>Flächen</Text>
-                
-                {polygons.filter(p => p.type === 'main').map((polygon) => (
-                  <View key={polygon.id} style={styles.resultRow}>
-                    <Text style={styles.resultName}>{polygon.name}</Text>
-                    <Text style={styles.resultValueGreen}>
-                      +{calculatePolygonArea(polygon.points).toFixed(2)} m²
+                <Text style={styles.resultsSectionTitle}>Rechenweg</Text>
+                <View style={styles.calculationSteps}>
+                  <Text style={styles.calculationStep}>
+                    Brutto: {polygons.filter(p => p.type === 'main').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
+                  </Text>
+                  {polygons.filter(p => p.type === 'deduction').length > 0 && (
+                    <Text style={styles.calculationStep}>
+                      − Abzüge: {polygons.filter(p => p.type === 'deduction').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
                     </Text>
-                  </View>
-                ))}
-                
-                {polygons.filter(p => p.type === 'deduction').map((polygon) => (
-                  <View key={polygon.id} style={styles.resultRow}>
-                    <Text style={styles.resultName}>{polygon.name}</Text>
-                    <Text style={styles.resultValueRed}>
-                      -{calculatePolygonArea(polygon.points).toFixed(2)} m²
-                    </Text>
-                  </View>
-                ))}
-                
-                <View style={[styles.resultRow, styles.resultRowTotal]}>
-                  <Text style={styles.resultNameBold}>Netto-Fläche</Text>
-                  <Text style={styles.resultValueBold}>{results.netArea.toFixed(2)} m²</Text>
+                  )}
+                  <View style={styles.calculationLine} />
+                  <Text style={styles.calculationResult}>
+                    = Netto: {results.netArea.toFixed(2)} m²
+                  </Text>
                 </View>
               </View>
               
               {/* Line Results */}
               {Object.keys(results.linesByCategory).length > 0 && (
                 <View style={styles.resultsSection}>
-                  <Text style={styles.resultsSectionTitle}>Linien</Text>
+                  <Text style={styles.resultsSectionTitle}>Linien nach Kategorie</Text>
                   
                   {Object.entries(results.linesByCategory).map(([category, length]) => (
                     <View key={category} style={styles.resultRow}>
@@ -5938,14 +6030,13 @@ const styles = StyleSheet.create({
     right: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 10,
-    padding: 10,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 5,
-    minWidth: 160,
-    maxWidth: 200,
+    minWidth: 140,
   },
   calculationsHeader: {
     flexDirection: 'row',
@@ -5956,80 +6047,84 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e8e8e8',
   },
   calculationsTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#2196F3',
     marginLeft: 5,
   },
   calculationsMainResult: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   calculationsMainLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#666',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   calculationsMainValue: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: '#4CAF50',
+    marginTop: 2,
   },
   calculationsDetails: {
     borderTopWidth: 1,
     borderTopColor: '#e8e8e8',
     paddingTop: 6,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   calculationsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   calculationsLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#666',
-    flex: 1,
   },
   calculationsValue: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#333',
+    marginLeft: 8,
   },
   calculationsValueGreen: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#4CAF50',
+    marginLeft: 8,
   },
   calculationsValueRed: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#f44336',
+    marginLeft: 8,
   },
   calculationsLines: {
     borderTopWidth: 1,
     borderTopColor: '#e8e8e8',
-    paddingTop: 6,
+    paddingTop: 4,
     marginTop: 4,
   },
   categoryDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
   },
   calculationsMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 6,
     paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#e8e8e8',
   },
   calculationsMoreText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#2196F3',
     fontWeight: '500',
   },
@@ -6180,6 +6275,95 @@ const styles = StyleSheet.create({
     borderTopColor: '#ddd',
     marginTop: 8,
     paddingTop: 12,
+  },
+  resultCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  resultCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  resultCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  resultCardValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  resultCardDetails: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 6,
+  },
+  resultCardDetail: {
+    fontSize: 12,
+    color: '#666',
+  },
+  resultCardEdges: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  resultCardSubtitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  resultCardEdge: {
+    fontSize: 11,
+    color: '#888',
+    marginLeft: 8,
+  },
+  resultSubtotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  resultSubtotalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  resultSubtotalValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  calculationSteps: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+  },
+  calculationStep: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  calculationLine: {
+    height: 1,
+    backgroundColor: '#333',
+    marginVertical: 8,
+  },
+  calculationResult: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1976d2',
   },
   resultName: {
     fontSize: 14,

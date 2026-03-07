@@ -5904,11 +5904,131 @@ export default function AreaCalculatorEditor() {
               />
               <TouchableOpacity
                 style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad && textNumpadTarget === 'newText' ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
-                onPress={() => { setTextNumpadTarget('newText'); setShowTextNumpad(true); }}
+                onPress={() => { 
+                  setTextNumpadTarget('newText'); 
+                  setShowTextNumpad(!(showTextNumpad && textNumpadTarget === 'newText')); 
+                }}
               >
                 <Ionicons name="keypad" size={24} color={showTextNumpad && textNumpadTarget === 'newText' ? '#fff' : '#3949ab'} />
               </TouchableOpacity>
             </View>
+            
+            {/* Eingebettetes Numpad für Text */}
+            {showTextNumpad && textNumpadTarget === 'newText' && (
+              <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e0e0e0', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}
+                    onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#333' }}>
+                      {textNumpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {textNumpadMode === 'numbers' ? (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['1','2','3','*'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='*' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='*' && { color: '#1976d2' }]}>{k === '*' ? '×' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      {[',','0','.','/'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='/' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='/' && { color: '#1976d2' }]}>{k === '/' ? '÷' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { backgroundColor: '#e8f5e9' }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={{ fontSize: 9, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['a','b','c','d','e','f','g','h','i'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['j','k','l','m','n','o','p','q','r'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['s','t','u','v','w','x','y','z','ä'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setNewTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2 }}>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, { minHeight: 32 }, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
+                        onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                        <Ionicons name="arrow-up" size={14} color={textNumpadCaps ? '#fff' : '#666'} />
+                      </TouchableOpacity>
+                      {['ö','ü','ß','-',' '].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setNewTextInput(prev => prev + k)}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{k === ' ' ? '␣' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setNewTextInput('')}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setNewTextInput(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
             {/* Font size selector */}
             <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
@@ -5983,11 +6103,131 @@ export default function AreaCalculatorEditor() {
               />
               <TouchableOpacity
                 style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad && textNumpadTarget === 'editText' ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
-                onPress={() => { setTextNumpadTarget('editText'); setShowTextNumpad(true); }}
+                onPress={() => { 
+                  setTextNumpadTarget('editText'); 
+                  setShowTextNumpad(!(showTextNumpad && textNumpadTarget === 'editText')); 
+                }}
               >
                 <Ionicons name="keypad" size={24} color={showTextNumpad && textNumpadTarget === 'editText' ? '#fff' : '#3949ab'} />
               </TouchableOpacity>
             </View>
+            
+            {/* Eingebettetes Numpad für Edit Text */}
+            {showTextNumpad && textNumpadTarget === 'editText' && (
+              <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e0e0e0', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}
+                    onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#333' }}>
+                      {textNumpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {textNumpadMode === 'numbers' ? (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['1','2','3','*'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='*' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='*' && { color: '#1976d2' }]}>{k === '*' ? '×' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      {[',','0','.','/'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='/' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='/' && { color: '#1976d2' }]}>{k === '/' ? '÷' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { backgroundColor: '#e8f5e9' }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={{ fontSize: 9, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['a','b','c','d','e','f','g','h','i'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setEditTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['j','k','l','m','n','o','p','q','r'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setEditTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['s','t','u','v','w','x','y','z','ä'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setEditTextInput(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2 }}>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, { minHeight: 32 }, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
+                        onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                        <Ionicons name="arrow-up" size={14} color={textNumpadCaps ? '#fff' : '#666'} />
+                      </TouchableOpacity>
+                      {['ö','ü','ß','-',' '].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setEditTextInput(prev => prev + k)}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{k === ' ' ? '␣' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setEditTextInput('')}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setEditTextInput(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
             {/* Font size selector */}
             <Text style={{ fontSize: 12, color: '#666', marginTop: 10, marginBottom: 5 }}>Textgröße:</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 10 }}>
@@ -6289,11 +6529,131 @@ export default function AreaCalculatorEditor() {
               />
               <TouchableOpacity
                 style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad && textNumpadTarget === 'memo' ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
-                onPress={() => { setTextNumpadTarget('memo'); setShowTextNumpad(true); }}
+                onPress={() => { 
+                  setTextNumpadTarget('memo'); 
+                  setShowTextNumpad(!(showTextNumpad && textNumpadTarget === 'memo')); 
+                }}
               >
                 <Ionicons name="keypad" size={24} color={showTextNumpad && textNumpadTarget === 'memo' ? '#fff' : '#3949ab'} />
               </TouchableOpacity>
             </View>
+            
+            {/* Eingebettetes Numpad für Memo */}
+            {showTextNumpad && textNumpadTarget === 'memo' && (
+              <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e0e0e0', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4 }}
+                    onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#333' }}>
+                      {textNumpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                {textNumpadMode === 'numbers' ? (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['7','8','9','+'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['4','5','6','-'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['1','2','3','*'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='*' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='*' && { color: '#1976d2' }]}>{k === '*' ? '×' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      {[',','0','.','/'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='/' && { backgroundColor: '#e3f2fd' }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={[styles.angleNumpadKeyTextSmall, k==='/' && { color: '#1976d2' }]}>{k === '/' ? '÷' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { backgroundColor: '#e8f5e9' }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={{ fontSize: 9, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['a','b','c','d','e','f','g','h','i'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['j','k','l','m','n','o','p','q','r'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2, marginBottom: 2 }}>
+                      {['s','t','u','v','w','x','y','z','ä'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setMemoText(prev => prev + (textNumpadCaps ? k.toUpperCase() : k))}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 2 }}>
+                      <TouchableOpacity style={[styles.angleNumpadKeySmall, { minHeight: 32 }, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
+                        onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
+                        <Ionicons name="arrow-up" size={14} color={textNumpadCaps ? '#fff' : '#666'} />
+                      </TouchableOpacity>
+                      {['ö','ü','ß','-',' '].map(k => (
+                        <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { minHeight: 32 }]} 
+                          onPress={() => setMemoText(prev => prev + k)}>
+                          <Text style={{ fontSize: 12, fontWeight: '600' }}>{k === ' ' ? '␣' : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setMemoText('')}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setMemoText(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
             {/* Color picker */}
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 10 }}>
               {['#FF0000', '#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#000000'].map(color => (
@@ -7237,143 +7597,6 @@ export default function AreaCalculatorEditor() {
           </Animated.View>
         </View>
       </Modal>
-
-      {/* Verschiebbares Text-Numpad als Overlay */}
-      {showTextNumpad && (
-        <Animated.View 
-          style={[
-            styles.textNumpadFloating,
-            { transform: textNumpadPosition.getTranslateTransform() }
-          ]}
-        >
-          {/* Header mit Schließen und Mode Toggle */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <TouchableOpacity 
-              style={{ backgroundColor: textNumpadMode === 'numbers' ? '#3949ab' : '#e8eaf6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 }}
-              onPress={() => setTextNumpadMode(textNumpadMode === 'numbers' ? 'letters' : 'numbers')}
-            >
-              <Text style={{ fontSize: 10, fontWeight: '600', color: textNumpadMode === 'numbers' ? '#fff' : '#3949ab' }}>
-                {textNumpadMode === 'numbers' ? 'ABC' : '123'}
-              </Text>
-            </TouchableOpacity>
-            <View {...textNumpadPanResponder.panHandlers} style={styles.textNumpadDragHandle}>
-              <Ionicons name="move" size={14} color="#666" />
-            </View>
-            <TouchableOpacity onPress={() => setShowTextNumpad(false)}>
-              <Ionicons name="close-circle" size={22} color="#999" />
-            </TouchableOpacity>
-          </View>
-          
-          {textNumpadMode === 'numbers' ? (
-            <>
-              {/* Zahlen-Modus */}
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['7','8','9','+'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
-                    onPress={() => handleTextNumpadInput(k)}>
-                    <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['4','5','6','-'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
-                    onPress={() => handleTextNumpadInput(k === '-' ? '−' : k)}>
-                    <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k === '-' ? '−' : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['1','2','3','×'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='×' && { backgroundColor: '#e3f2fd' }]} 
-                    onPress={() => handleTextNumpadInput(k === '×' ? '*' : k)}>
-                    <Text style={[styles.angleNumpadKeyTextSmall, k==='×' && { color: '#1976d2' }]}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3 }}>
-                {[',','0','.','÷'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='÷' && { backgroundColor: '#e3f2fd' }]} 
-                    onPress={() => handleTextNumpadInput(k === '÷' ? '/' : k)}>
-                    <Text style={[styles.angleNumpadKeyTextSmall, k==='÷' && { color: '#1976d2' }]}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Buchstaben-Modus */}
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['m','m²','m³','lfm'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, { backgroundColor: '#e8f5e9' }]} 
-                    onPress={() => handleTextNumpadInput(k)}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: '#388e3c' }}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['a','b','c','d','e','f','g'].map(k => (
-                  <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
-                    onPress={() => handleTextNumpadInput(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['h','i','j','k','l','m','n'].map(k => (
-                  <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
-                    onPress={() => handleTextNumpadInput(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['o','p','q','r','s','t','u'].map(k => (
-                  <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
-                    onPress={() => handleTextNumpadInput(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
-                {['v','w','x','y','z','ä','ö'].map(k => (
-                  <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
-                    onPress={() => handleTextNumpadInput(textNumpadCaps ? k.toUpperCase() : k)}>
-                    <Text style={styles.angleNumpadKeyTextSmall}>{textNumpadCaps ? k.toUpperCase() : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 3 }}>
-                <TouchableOpacity style={[styles.angleNumpadKeySmall, textNumpadCaps && { backgroundColor: '#3949ab' }]} 
-                  onPress={() => setTextNumpadCaps(!textNumpadCaps)}>
-                  <Ionicons name="arrow-up" size={14} color={textNumpadCaps ? '#fff' : '#666'} />
-                </TouchableOpacity>
-                {['ü','ß','-',' '].map(k => (
-                  <TouchableOpacity key={k} style={styles.angleNumpadKeySmall} 
-                    onPress={() => handleTextNumpadInput(k)}>
-                    <Text style={styles.angleNumpadKeyTextSmall}>{k === ' ' ? '␣' : k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-          {/* Bottom row with C, Backspace, OK */}
-          <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
-            <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
-              onPress={() => handleTextNumpadInput('C')}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#f57c00' }}>C</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
-              onPress={() => handleTextNumpadInput('⌫')}>
-              <Ionicons name="backspace-outline" size={16} color="#f44336" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
-              onPress={() => setShowTextNumpad(false)}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      )}
     </View>
   );
 }

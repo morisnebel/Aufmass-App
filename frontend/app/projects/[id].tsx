@@ -167,7 +167,7 @@ export default function ProjectDetailScreen() {
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSharingImage, setIsSharingImage] = useState(false);
-  const [showCalcDetailsPage, setShowCalcDetailsPage] = useState(false); // Toggle for detailed calculation page
+  const [showCalcDetailsPage, setShowCalcDetailsPage] = useState(true); // Toggle for detailed calculation page - default ON
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -1199,18 +1199,18 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Linien - framed, two columns -->
+            <!-- Linien - kompakt, drei Spalten -->
             ${Object.keys(linesByCategory).length > 0 ? `
-              <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; min-width: 180px;">
-                <div style="font-weight: 600; color: #1976d2; font-size: 8px; margin-bottom: 2px;">Linien:</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;">
+              <div style="background: #f8f8f8; padding: 3px 5px; border-radius: 4px; border: 1px solid #e0e0e0;">
+                <div style="font-weight: 600; color: #1976d2; font-size: 7px; margin-bottom: 1px;">Linien:</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px 8px;">
                   ${Object.entries(linesByCategory).map(([cat, length]) => `
-                    <div style="display: flex; justify-content: space-between; font-size: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 7px; white-space: nowrap;">
                       <span style="display: flex; align-items: center;">
-                        <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
+                        <span style="width: 4px; height: 4px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 2px; display: inline-block;"></span>
                         ${cat}
                       </span>
-                      <span style="margin-left: 4px;">${(length as number).toFixed(2)}m</span>
+                      <span style="margin-left: 3px;">${(length as number).toFixed(2)}m</span>
                     </div>
                   `).join('')}
                 </div>

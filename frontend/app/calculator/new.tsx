@@ -402,26 +402,41 @@ export default function AreaCalculatorEditor() {
             setBackgroundImage(calc.backgroundImage);
           }, 100);
         }
-        // Load annotations (shapes, texts, memos)
+        // Load annotations (shapes, texts, memos) with safety checks
         if (calc.annotations) {
-          if (calc.annotations.shapes && calc.annotations.shapes.length > 0) {
-            const loadedShapes = calc.annotations.shapes.map((s: any) => ({
-              id: s.id,
-              type: s.type,
-              x1: s.startPoint.x,
-              y1: s.startPoint.y,
-              x2: s.endPoint.x,
-              y2: s.endPoint.y,
-              color: s.color,
-              strokeWidth: s.strokeWidth,
-            }));
-            setAnnotationShapes(loadedShapes);
-          }
-          if (calc.annotations.texts && calc.annotations.texts.length > 0) {
-            setTextAnnotations(calc.annotations.texts);
-          }
-          if (calc.annotations.memos && calc.annotations.memos.length > 0) {
-            setMemoPointers(calc.annotations.memos);
+          try {
+            if (calc.annotations.shapes && Array.isArray(calc.annotations.shapes) && calc.annotations.shapes.length > 0) {
+              const loadedShapes = calc.annotations.shapes
+                .filter((s: any) => s && s.startPoint && s.endPoint)
+                .map((s: any) => ({
+                  id: s.id || `shape_${Date.now()}_${Math.random()}`,
+                  type: s.type || 'rectangle',
+                  x1: s.startPoint?.x ?? 0,
+                  y1: s.startPoint?.y ?? 0,
+                  x2: s.endPoint?.x ?? 0,
+                  y2: s.endPoint?.y ?? 0,
+                  color: s.color || '#FF0000',
+                  strokeWidth: s.strokeWidth || 2,
+                }));
+              if (loadedShapes.length > 0) {
+                setAnnotationShapes(loadedShapes);
+              }
+            }
+            if (calc.annotations.texts && Array.isArray(calc.annotations.texts) && calc.annotations.texts.length > 0) {
+              const validTexts = calc.annotations.texts.filter((t: any) => t && t.position && t.text);
+              if (validTexts.length > 0) {
+                setTextAnnotations(validTexts);
+              }
+            }
+            if (calc.annotations.memos && Array.isArray(calc.annotations.memos) && calc.annotations.memos.length > 0) {
+              const validMemos = calc.annotations.memos.filter((m: any) => m && m.anchorPoint && m.labelOffset);
+              if (validMemos.length > 0) {
+                setMemoPointers(validMemos);
+              }
+            }
+          } catch (annotationError) {
+            console.error('Error loading annotations:', annotationError);
+            // Continue without annotations if there's an error
           }
         }
       }
@@ -798,30 +813,36 @@ export default function AreaCalculatorEditor() {
     try {
       const results = calculateResults();
       
-      // Prepare annotations for saving
+      // Prepare annotations for saving - with validation
       const annotations = {
-        shapes: annotationShapes.map(s => ({
-          id: s.id,
-          type: s.type,
-          startPoint: { x: s.x1, y: s.y1 },
-          endPoint: { x: s.x2, y: s.y2 },
-          color: s.color,
-          strokeWidth: s.strokeWidth,
-        })),
-        texts: textAnnotations.map(t => ({
-          id: t.id,
-          position: t.position,
-          text: t.text,
-          color: t.color,
-          fontSize: t.fontSize,
-        })),
-        memos: memoPointers.map(m => ({
-          id: m.id,
-          anchorPoint: m.anchorPoint,
-          labelOffset: m.labelOffset,
-          text: m.text,
-          color: m.color,
-        })),
+        shapes: annotationShapes
+          .filter(s => s && typeof s.x1 === 'number' && typeof s.y1 === 'number' && typeof s.x2 === 'number' && typeof s.y2 === 'number')
+          .map(s => ({
+            id: s.id,
+            type: s.type,
+            startPoint: { x: s.x1, y: s.y1 },
+            endPoint: { x: s.x2, y: s.y2 },
+            color: s.color || '#FF0000',
+            strokeWidth: s.strokeWidth || 2,
+          })),
+        texts: textAnnotations
+          .filter(t => t && t.position && typeof t.position.x === 'number' && typeof t.position.y === 'number' && t.text)
+          .map(t => ({
+            id: t.id,
+            position: { x: t.position.x, y: t.position.y },
+            text: t.text,
+            color: t.color || '#333333',
+            fontSize: t.fontSize || 16,
+          })),
+        memos: memoPointers
+          .filter(m => m && m.anchorPoint && m.labelOffset && typeof m.anchorPoint.x === 'number')
+          .map(m => ({
+            id: m.id,
+            anchorPoint: { x: m.anchorPoint.x, y: m.anchorPoint.y },
+            labelOffset: { x: m.labelOffset.x, y: m.labelOffset.y },
+            text: m.text || '',
+            color: m.color || '#FF9800',
+          })),
       };
       
       const data = {

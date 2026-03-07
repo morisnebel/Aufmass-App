@@ -139,6 +139,8 @@ export default function AreaCalculatorEditor() {
   const [selectedGuideLineId, setSelectedGuideLineId] = useState<string | null>(null);
   const [draggingGuidePoint, setDraggingGuidePoint] = useState<{ guideId: string; point: 'start' | 'end' | 'middle' } | null>(null);
   const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
+  const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
+  const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
   const [showPolygonAngles, setShowPolygonAngles] = useState(false); // Winkel zwischen Linien anzeigen
   const [showEdgeLengths, setShowEdgeLengths] = useState(true); // Kantenlängen anzeigen
   const [currentTouchPosition, setCurrentTouchPosition] = useState<AreaPoint | null>(null); // Für Live-Längenanzeige
@@ -1847,9 +1849,26 @@ export default function AreaCalculatorEditor() {
       
       // Apply angle snapping when adding points
       let finalPoint = { x: snappedX, y: snappedY };
-      if (snapToAngles && currentPoints.length > 0) {
+      if (currentPoints.length > 0) {
         const lastPoint = currentPoints[currentPoints.length - 1];
-        finalPoint = snapAngle(lastPoint, finalPoint);
+        
+        // If fixed angle is set, use that exact angle
+        if (fixedAngle !== null) {
+          const dx = snappedX - lastPoint.x;
+          const dy = snappedY - lastPoint.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          
+          if (length > 10) {
+            const radians = fixedAngle * (Math.PI / 180);
+            finalPoint = {
+              x: lastPoint.x + length * Math.cos(radians),
+              y: lastPoint.y + length * Math.sin(radians)
+            };
+          }
+        } else if (snapToAngles) {
+          // Use auto snap to nearest angle
+          finalPoint = snapAngle(lastPoint, finalPoint);
+        }
       }
       
       setCurrentPoints([...currentPoints, finalPoint]);
@@ -3549,11 +3568,13 @@ export default function AreaCalculatorEditor() {
         <View style={styles.toolSeparator} />
         
         <TouchableOpacity
-          style={[styles.toolButton, snapToAngles && styles.toolButtonActive, { backgroundColor: snapToAngles ? '#2196F3' : '#f5f5f5' }]}
-          onPress={() => setSnapToAngles(!snapToAngles)}
+          style={[styles.toolButton, (snapToAngles || fixedAngle !== null) && styles.toolButtonActive, { backgroundColor: fixedAngle !== null ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
+          onPress={() => setShowAngleModal(true)}
         >
-          <Ionicons name="compass" size={20} color={snapToAngles ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, snapToAngles && styles.toolLabelActive]}>45°</Text>
+          <Ionicons name="compass" size={20} color={(snapToAngles || fixedAngle !== null) ? '#fff' : '#666'} />
+          <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null) && styles.toolLabelActive]}>
+            {fixedAngle !== null ? `${fixedAngle}°` : '45°'}
+          </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -6583,6 +6604,149 @@ export default function AreaCalculatorEditor() {
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Angle Settings Modal */}
+      <Modal visible={showAngleModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 340 }]}>
+            <Text style={styles.modalTitle}>Winkel-Einstellungen</Text>
+            
+            {/* Auto-Snap Toggle */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: snapToAngles ? '#e3f2fd' : '#f5f5f5',
+                padding: 12,
+                borderRadius: 8,
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: snapToAngles ? '#2196F3' : '#ddd',
+              }}
+              onPress={() => setSnapToAngles(!snapToAngles)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="magnet" size={20} color={snapToAngles ? '#2196F3' : '#666'} />
+                <Text style={{ marginLeft: 8, fontSize: 14, color: snapToAngles ? '#2196F3' : '#666' }}>
+                  Auto-Einrasten (0°, 45°, 90°...)
+                </Text>
+              </View>
+              <Ionicons 
+                name={snapToAngles ? "checkbox" : "square-outline"} 
+                size={24} 
+                color={snapToAngles ? '#2196F3' : '#999'} 
+              />
+            </TouchableOpacity>
+            
+            {/* Fixed Angle Section */}
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+              Fester Winkel (nächste Linie wird exakt in diesem Winkel gezeichnet):
+            </Text>
+            
+            {/* Preset Angles */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {[0, 15, 30, 45, 60, 90, 120, 135].map((angle) => (
+                <TouchableOpacity
+                  key={angle}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    backgroundColor: fixedAngle === angle ? '#E91E63' : '#f0f0f0',
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: fixedAngle === angle ? '#E91E63' : '#ddd',
+                  }}
+                  onPress={() => setFixedAngle(fixedAngle === angle ? null : angle)}
+                >
+                  <Text style={{ 
+                    fontSize: 13, 
+                    fontWeight: '600',
+                    color: fixedAngle === angle ? '#fff' : '#333' 
+                  }}>
+                    {angle}°
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            {/* Custom Angle Input */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <TextInput
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#ddd',
+                  borderRadius: 8,
+                  padding: 10,
+                  fontSize: 16,
+                  backgroundColor: '#fff',
+                }}
+                placeholder="Eigener Winkel"
+                keyboardType="numeric"
+                value={fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle) ? fixedAngle.toString() : ''}
+                onChangeText={(text) => {
+                  const num = parseInt(text);
+                  if (!isNaN(num) && num >= 0 && num <= 360) {
+                    setFixedAngle(num);
+                  } else if (text === '') {
+                    setFixedAngle(null);
+                  }
+                }}
+              />
+              <Text style={{ marginLeft: 8, fontSize: 16, color: '#666' }}>°</Text>
+            </View>
+            
+            {/* Current Status */}
+            {fixedAngle !== null && (
+              <View style={{ 
+                backgroundColor: '#fce4ec', 
+                padding: 10, 
+                borderRadius: 8, 
+                marginBottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}>
+                <Ionicons name="information-circle" size={20} color="#E91E63" />
+                <Text style={{ marginLeft: 8, fontSize: 12, color: '#E91E63', flex: 1 }}>
+                  Die nächste Linie wird im Winkel von {fixedAngle}° gezeichnet
+                </Text>
+              </View>
+            )}
+            
+            {/* Buttons */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f44336',
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  setFixedAngle(null);
+                  setSnapToAngles(false);
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Alles aus</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#4CAF50',
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                }}
+                onPress={() => setShowAngleModal(false)}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>

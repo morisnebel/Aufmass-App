@@ -1293,16 +1293,16 @@ export default function AreaCalculatorEditor() {
     let nearestAngle = snapAngles[0];
     let minDiff = Math.abs(angle - snapAngles[0]);
     
-    for (const snapAngle of snapAngles) {
-      const diff = Math.abs(angle - snapAngle);
+    for (const sa of snapAngles) {
+      const diff = Math.abs(angle - sa);
       if (diff < minDiff) {
         minDiff = diff;
-        nearestAngle = snapAngle;
+        nearestAngle = sa;
       }
     }
     
-    // Only snap if within 5 degrees
-    if (minDiff > 5) return end;
+    // Only snap if within 15 degrees (increased from 5)
+    if (minDiff > 15) return end;
     
     const radians = nearestAngle * (Math.PI / 180);
     return {
@@ -1845,7 +1845,14 @@ export default function AreaCalculatorEditor() {
         }
       }
       
-      setCurrentPoints([...currentPoints, { x: snappedX, y: snappedY }]);
+      // Apply angle snapping when adding points
+      let finalPoint = { x: snappedX, y: snappedY };
+      if (snapToAngles && currentPoints.length > 0) {
+        const lastPoint = currentPoints[currentPoints.length - 1];
+        finalPoint = snapAngle(lastPoint, finalPoint);
+      }
+      
+      setCurrentPoints([...currentPoints, finalPoint]);
     } else if (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') {
       // Start drawing annotation shape
       if (!currentAnnotationShape) {

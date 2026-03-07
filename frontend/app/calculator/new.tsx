@@ -1713,7 +1713,7 @@ export default function AreaCalculatorEditor() {
 
   const openNumpadForEdge = (polygonId: string, edgeIndex: number, currentLength: number) => {
     setEditingEdge({ polygonId, edgeIndex });
-    setNumpadInput(currentLength.toFixed(2));
+    setNumpadInput(''); // Always start with empty input
     setShowNumpad(true);
   };
 
@@ -5700,12 +5700,21 @@ export default function AreaCalculatorEditor() {
             </TouchableOpacity>
           </View>
           
-          {/* Display - NO TextInput, just Text */}
-          <View style={{ backgroundColor: '#f5f5f5', borderRadius: 6, padding: 8, marginBottom: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: numpadInput ? '#333' : '#999', flex: 1 }}>
-              {numpadInput || '0'}
-            </Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>m</Text>
+          {/* Display - TextInput for laser device compatibility */}
+          <View style={{ backgroundColor: '#f5f5f5', borderRadius: 6, padding: 4, marginBottom: 6, flexDirection: 'row', alignItems: 'center' }}>
+            <TextInput
+              style={{ flex: 1, fontSize: 18, fontWeight: 'bold', color: '#333', padding: 4, backgroundColor: '#fff', borderRadius: 4, borderWidth: 1, borderColor: '#ddd' }}
+              value={numpadInput}
+              onChangeText={setNumpadInput}
+              keyboardType="decimal-pad"
+              placeholder="0"
+              placeholderTextColor="#999"
+              autoFocus={true}
+              blurOnSubmit={false}
+              selectTextOnFocus={true}
+              caretHidden={false}
+            />
+            <Text style={{ fontSize: 14, color: '#666', marginLeft: 6 }}>m</Text>
           </View>
           
           {/* Compact Number grid */}

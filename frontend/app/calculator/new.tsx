@@ -2641,7 +2641,14 @@ export default function AreaCalculatorEditor() {
       if (projectId) {
         const { PhotoService } = await import('@/services/LocalStorage');
         const photos = await PhotoService.getByProjectId(projectId);
-        setProjectPhotos(photos.map((p: any) => ({ id: p.id, uri: p.uri || p.photoUri })));
+        
+        // Map photos - photos might have uri in different properties depending on how they were saved
+        const mappedPhotos = photos.map((p: any) => ({ 
+          id: p.id, 
+          uri: p.image_data || p.uri // image_data is used when photo is saved from camera
+        })).filter((p: any) => p.uri); // Only include photos with valid URIs
+        
+        setProjectPhotos(mappedPhotos);
       }
     } catch (error) {
       console.error('Error loading project photos:', error);

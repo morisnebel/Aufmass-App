@@ -4795,6 +4795,69 @@ export default function AreaCalculatorEditor() {
             </TouchableOpacity>
           </View>
         )}
+        
+        {/* Calculations Overlay - Below Reference Image */}
+        <View style={[styles.calculationsOverlay, backgroundImage && { top: 175 }]}>
+          <View style={styles.calculationsHeader}>
+            <Ionicons name="calculator" size={14} color="#2196F3" />
+            <Text style={styles.calculationsTitle}>Berechnung</Text>
+          </View>
+          
+          {/* Net Area - Main Result */}
+          <View style={styles.calculationsMainResult}>
+            <Text style={styles.calculationsMainLabel}>Netto</Text>
+            <Text style={[styles.calculationsMainValue, useManualAreaCalc && { color: '#FF9800' }]}>
+              {results.netArea.toFixed(2)} m²
+            </Text>
+          </View>
+          
+          {/* Details */}
+          {polygons.filter(p => p.type === 'main').length > 0 && (
+            <View style={styles.calculationsDetails}>
+              {/* Gross Area */}
+              <View style={styles.calculationsRow}>
+                <Text style={styles.calculationsLabel}>Brutto</Text>
+                <Text style={styles.calculationsValueGreen}>
+                  {polygons.filter(p => p.type === 'main').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
+                </Text>
+              </View>
+              
+              {/* Deductions */}
+              {polygons.filter(p => p.type === 'deduction').length > 0 && (
+                <View style={styles.calculationsRow}>
+                  <Text style={styles.calculationsLabel}>Abzüge</Text>
+                  <Text style={styles.calculationsValueRed}>
+                    -{polygons.filter(p => p.type === 'deduction').reduce((sum, p) => sum + calculatePolygonArea(p.points), 0).toFixed(2)} m²
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+          
+          {/* Line Categories */}
+          {Object.keys(results.linesByCategory).length > 0 && (
+            <View style={styles.calculationsLines}>
+              {Object.entries(results.linesByCategory).slice(0, 3).map(([category, length]) => (
+                <View key={category} style={styles.calculationsRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.categoryDotSmall, { backgroundColor: getCategoryColor(category) }]} />
+                    <Text style={styles.calculationsLabel} numberOfLines={1}>{category}</Text>
+                  </View>
+                  <Text style={styles.calculationsValue}>{(length as number).toFixed(2)} m</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          
+          {/* More Details Button */}
+          <TouchableOpacity 
+            style={styles.calculationsMoreButton}
+            onPress={() => setShowResultsModal(true)}
+          >
+            <Text style={styles.calculationsMoreText}>Details</Text>
+            <Ionicons name="chevron-forward" size={14} color="#2196F3" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Status Bar */}
@@ -5868,6 +5931,107 @@ const styles = StyleSheet.create({
     height: 135,
     borderRadius: 6,
     backgroundColor: '#f0f0f0',
+  },
+  calculationsOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 10,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 160,
+    maxWidth: 200,
+  },
+  calculationsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e8e8e8',
+  },
+  calculationsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2196F3',
+    marginLeft: 5,
+  },
+  calculationsMainResult: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  calculationsMainLabel: {
+    fontSize: 10,
+    color: '#666',
+    textTransform: 'uppercase',
+  },
+  calculationsMainValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  calculationsDetails: {
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+    paddingTop: 6,
+    marginBottom: 4,
+  },
+  calculationsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  calculationsLabel: {
+    fontSize: 11,
+    color: '#666',
+    flex: 1,
+  },
+  calculationsValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#333',
+  },
+  calculationsValueGreen: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  calculationsValueRed: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#f44336',
+  },
+  calculationsLines: {
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+    paddingTop: 6,
+    marginTop: 4,
+  },
+  categoryDotSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 5,
+  },
+  calculationsMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
+  },
+  calculationsMoreText: {
+    fontSize: 11,
+    color: '#2196F3',
+    fontWeight: '500',
   },
   canvas: {
     flex: 1,

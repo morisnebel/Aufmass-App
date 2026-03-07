@@ -1278,8 +1278,21 @@ export default function ProjectDetailScreen() {
           }).join('');
         };
         
+        // Calculate total lines by category for this calculation
+        const totalLinesByCategory: { [key: string]: number } = {};
+        calcLines.forEach((line: any) => {
+          const polygon = polygons.find((p: any) => p.id === line.polygonId);
+          if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
+            const point = polygon.points[line.pointIndex];
+            const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+            const length = calculateLineLength(point, nextPoint, calcScale);
+            if (!totalLinesByCategory[line.category]) totalLinesByCategory[line.category] = 0;
+            totalLinesByCategory[line.category] += length;
+          }
+        });
+        
         return `
-          <div class="new-page" style="page-break-before: always;">
+          <div class="new-page" style="page-break-before: always; position: relative; min-height: 260mm;">
             <h2 style="color: #1976d2; font-size: 16px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #1976d2;">
               Berechnungsdetails: ${calc.name || `Berechnung ${calcIndex + 1}`}
             </h2>
@@ -1324,16 +1337,46 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             
-            <!-- Final Calculation -->
-            <div style="background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #1976d2;">
-              <h3 style="font-size: 13px; color: #1976d2; margin-bottom: 12px;">Flächenberechnung</h3>
-              <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
-                <div>Brutto: ${grossArea.toFixed(2)} m²</div>
-                ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                <div style="border-top: 2px solid #333; margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 16px; color: #4CAF50;">
-                  = Netto: ${netArea.toFixed(2)} m²
+            <!-- Final Calculation + Lines Summary - Side by Side -->
+            <div style="display: flex; gap: 16px; margin-top: 20px;">
+              <!-- Flächenberechnung -->
+              <div style="flex: 1; background: linear-gradient(135deg, #e3f2fd, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #1976d2;">
+                <h3 style="font-size: 13px; color: #1976d2; margin-bottom: 12px;">Flächenberechnung</h3>
+                <div style="font-family: monospace; font-size: 13px; line-height: 1.8;">
+                  <div>Brutto: ${grossArea.toFixed(2)} m²</div>
+                  ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+                  <div style="border-top: 2px solid #333; margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 16px; color: #4CAF50;">
+                    = Netto: ${netArea.toFixed(2)} m²
+                  </div>
                 </div>
               </div>
+              
+              <!-- Linien Zusammenfassung -->
+              ${Object.keys(totalLinesByCategory).length > 0 ? `
+                <div style="flex: 1; background: linear-gradient(135deg, #fff3e0, #f5f5f5); padding: 16px; border-radius: 8px; border: 2px solid #FF9800;">
+                  <h3 style="font-size: 13px; color: #FF9800; margin-bottom: 12px;">Linien Zusammenfassung</h3>
+                  <div style="font-size: 12px; line-height: 1.8;">
+                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="display: flex; align-items: center;">
+                          <span style="width: 10px; height: 10px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 8px; display: inline-block;"></span>
+                          ${cat}
+                        </span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)};">${(length as number).toFixed(2)} m</span>
+                      </div>
+                    `).join('')}
+                    <div style="border-top: 2px solid #333; margin-top: 8px; padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700;">
+                      <span>Gesamt:</span>
+                      <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- Footer -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; color: #999; padding-top: 20px; border-top: 1px solid #eee;">
+              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         `;

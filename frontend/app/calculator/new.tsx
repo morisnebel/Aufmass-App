@@ -138,7 +138,7 @@ export default function AreaCalculatorEditor() {
   const [showTextNumpad, setShowTextNumpad] = useState(false);
   const [textNumpadMode, setTextNumpadMode] = useState<'numbers' | 'letters'>('letters');
   const [textNumpadCaps, setTextNumpadCaps] = useState(false);
-  const [textNumpadTarget, setTextNumpadTarget] = useState<'newText' | 'editText' | 'memo'>('newText');
+  const [textNumpadTarget, setTextNumpadTarget] = useState<'newText' | 'editText' | 'memo' | 'scale'>('newText');
   const textNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const textNumpadPanResponder = useRef(
     PanResponder.create({
@@ -5567,6 +5567,7 @@ export default function AreaCalculatorEditor() {
       {/* Scale Modal */}
       <Modal visible={showScaleModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Maßstab festlegen</Text>
             <Text style={styles.modalText}>
@@ -5574,15 +5575,80 @@ export default function AreaCalculatorEditor() {
             </Text>
             <View style={styles.inputRow}>
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, { flex: 1 }]}
                 value={scaleInputValue}
-                onChangeText={setScaleInputValue}
+                onChangeText={(text) => {
+                  const filtered = text.replace(/[^0-9.,+\-*/()]/g, '');
+                  setScaleInputValue(filtered);
+                }}
                 placeholder="z.B. 5"
                 keyboardType="decimal-pad"
                 autoFocus
               />
               <Text style={styles.inputUnit}>Meter</Text>
+              <TouchableOpacity
+                style={{ marginLeft: 8, padding: 10, backgroundColor: showTextNumpad && textNumpadTarget === 'scale' ? '#3949ab' : '#e8eaf6', borderRadius: 8 }}
+                onPress={() => { 
+                  setTextNumpadTarget('scale'); 
+                  setShowTextNumpad(!(showTextNumpad && textNumpadTarget === 'scale')); 
+                }}
+              >
+                <Ionicons name="keypad" size={24} color={showTextNumpad && textNumpadTarget === 'scale' ? '#fff' : '#3949ab'} />
+              </TouchableOpacity>
             </View>
+            
+            {/* Eingebettetes Numpad für Maßstab */}
+            {showTextNumpad && textNumpadTarget === 'scale' && (
+              <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 8, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                  {['7','8','9','+'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='+' && { backgroundColor: '#e3f2fd' }]} 
+                      onPress={() => setScaleInputValue(prev => prev + k)}>
+                      <Text style={[styles.angleNumpadKeyTextSmall, k==='+' && { color: '#1976d2' }]}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                  {['4','5','6','-'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='-' && { backgroundColor: '#e3f2fd' }]} 
+                      onPress={() => setScaleInputValue(prev => prev + k)}>
+                      <Text style={[styles.angleNumpadKeyTextSmall, k==='-' && { color: '#1976d2' }]}>{k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                  {['1','2','3','*'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='*' && { backgroundColor: '#e3f2fd' }]} 
+                      onPress={() => setScaleInputValue(prev => prev + k)}>
+                      <Text style={[styles.angleNumpadKeyTextSmall, k==='*' && { color: '#1976d2' }]}>{k === '*' ? '×' : k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 3 }}>
+                  {[',','0','.','/'].map(k => (
+                    <TouchableOpacity key={k} style={[styles.angleNumpadKeySmall, k==='/' && { backgroundColor: '#e3f2fd' }]} 
+                      onPress={() => setScaleInputValue(prev => prev + k)}>
+                      <Text style={[styles.angleNumpadKeyTextSmall, k==='/' && { color: '#1976d2' }]}>{k === '/' ? '÷' : k}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 3, marginTop: 3 }}>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#fff3e0' }]} 
+                    onPress={() => setScaleInputValue('')}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#f57c00' }}>C</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { backgroundColor: '#ffebee' }]} 
+                    onPress={() => setScaleInputValue(prev => prev.slice(0, -1))}>
+                    <Ionicons name="backspace-outline" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.angleNumpadKeySmall, { flex: 2, backgroundColor: '#4CAF50' }]} 
+                    onPress={() => setShowTextNumpad(false)}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -5602,6 +5668,7 @@ export default function AreaCalculatorEditor() {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -5889,6 +5956,7 @@ export default function AreaCalculatorEditor() {
       {/* Text Annotation Modal */}
       <Modal visible={showTextModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Text hinzufügen</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -6081,13 +6149,14 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
       {/* Edit Text Annotation Modal */}
       <Modal visible={showEditTextModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Text bearbeiten</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -6280,7 +6349,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Speichern</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -6515,6 +6584,7 @@ export default function AreaCalculatorEditor() {
       {/* Memo Pointer Modal */}
       <Modal visible={showMemoModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
+          <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -6686,7 +6756,7 @@ export default function AreaCalculatorEditor() {
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 

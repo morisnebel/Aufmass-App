@@ -4989,10 +4989,15 @@ export default function AreaCalculatorEditor() {
                           const midY = (point.y + nextPoint.y) / 2;
                           const bgColor = isCustom ? '#2196F3' : color;
                           
+                          // Get shortcut for this category
+                          const categoryInfo = lineCategories.find(c => c.name === category);
+                          const shortcut = categoryInfo?.shortcut;
+                          
                           // Show manual value if custom, otherwise show auto-calculated visible length
                           const displayValue = isCustom ? displayTotalLength : totalAutoLength;
-                          const displayText = `${displayValue.toFixed(2)}m`;
-                          const labelWidth = Math.max(58, displayText.length * 8 + 18);
+                          const lengthText = `${displayValue.toFixed(2)}m`;
+                          const displayText = shortcut ? `${shortcut} ${lengthText}` : lengthText;
+                          const labelWidth = Math.max(65, displayText.length * 7.5 + 20);
                           const labelHeight = 28;
                           const cornerRadius = labelHeight / 2;
                           
@@ -5007,15 +5012,27 @@ export default function AreaCalculatorEditor() {
                                 ry={cornerRadius}
                                 fill={bgColor}
                               />
+                              {shortcut && (
+                                <SvgText 
+                                  x={midX - labelWidth / 2 + 8} 
+                                  y={midY + 5} 
+                                  textAnchor="start" 
+                                  fontSize={11} 
+                                  fontWeight="800" 
+                                  fill="#fff"
+                                >
+                                  {shortcut}
+                                </SvgText>
+                              )}
                               <SvgText 
-                                x={midX - labelWidth / 2 + 10} 
+                                x={shortcut ? midX + labelWidth / 2 - 8 : midX} 
                                 y={midY + 5} 
-                                textAnchor="start" 
+                                textAnchor={shortcut ? "end" : "middle"} 
                                 fontSize={12} 
                                 fontWeight="bold" 
                                 fill="#fff"
                               >
-                                {displayText}
+                                {lengthText}
                               </SvgText>
                             </G>
                           );
@@ -5037,10 +5054,16 @@ export default function AreaCalculatorEditor() {
                     const calculatedLength = calculateLineLength(point, nextPoint);
                     const displayLength = getEdgeLength(polygon.id, index, calculatedLength);
                     const isCustom = hasCustomLength(polygon.id, index);
+                    const categoryColor = getCategoryColor(category);
+                    
+                    // Get shortcut for this category
+                    const categoryInfo = lineCategories.find(c => c.name === category);
+                    const shortcut = categoryInfo?.shortcut;
                     
                     // Calculate oval/pill label dimensions
-                    const displayText = `${displayLength.toFixed(2)}m`;
-                    const labelWidth = Math.max(55, displayText.length * 8 + 16);
+                    const lengthText = `${displayLength.toFixed(2)}m`;
+                    const displayText = shortcut ? `${shortcut} ${lengthText}` : lengthText;
+                    const labelWidth = Math.max(60, displayText.length * 7.5 + 18);
                     const labelHeight = 26;
                     const cornerRadius = labelHeight / 2; // Full pill shape
                     
@@ -5051,7 +5074,7 @@ export default function AreaCalculatorEditor() {
                           y1={point.y}
                           x2={nextPoint.x}
                           y2={nextPoint.y}
-                          stroke={getCategoryColor(category)}
+                          stroke={categoryColor}
                           strokeWidth={4}
                         />
                         {/* Oval/Pill shaped background */}
@@ -5062,17 +5085,29 @@ export default function AreaCalculatorEditor() {
                           height={labelHeight}
                           rx={cornerRadius}
                           ry={cornerRadius}
-                          fill={isCustom ? '#2196F3' : getCategoryColor(category)}
+                          fill={isCustom ? '#2196F3' : categoryColor}
                         />
+                        {shortcut && (
+                          <SvgText 
+                            x={midX - labelWidth / 2 + 8} 
+                            y={midY + 5} 
+                            textAnchor="start" 
+                            fontSize={11} 
+                            fontWeight="800" 
+                            fill="#fff"
+                          >
+                            {shortcut}
+                          </SvgText>
+                        )}
                         <SvgText 
-                          x={midX - labelWidth / 2 + 8} 
+                          x={shortcut ? midX + labelWidth / 2 - 8 : midX} 
                           y={midY + 5} 
-                          textAnchor="start" 
+                          textAnchor={shortcut ? "end" : "middle"} 
                           fontSize={12} 
                           fontWeight="bold" 
                           fill="#fff"
                         >
-                          {displayText}
+                          {lengthText}
                         </SvgText>
                       </G>
                     );

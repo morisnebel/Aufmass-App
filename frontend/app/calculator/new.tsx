@@ -8361,8 +8361,15 @@ export default function AreaCalculatorEditor() {
                 <TouchableOpacity 
                   style={{ flex: 1, height: 56, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
-                    const val = parseFloat(calculatorDisplay);
-                    setCalculatorDisplay((val / 100).toString());
+                    const currentVal = parseFloat(calculatorDisplay);
+                    if (calculatorPrevValue !== null && calculatorOperator) {
+                      // Prozent vom vorherigen Wert berechnen: 100 + 10% → 10% von 100 = 10
+                      const percentValue = (calculatorPrevValue * currentVal) / 100;
+                      setCalculatorDisplay(percentValue.toString());
+                    } else {
+                      // Ohne Operator: einfach durch 100 teilen
+                      setCalculatorDisplay((currentVal / 100).toString());
+                    }
                   }}
                 >
                   <Text style={{ fontSize: 22, fontWeight: '500', color: '#666' }}>%</Text>

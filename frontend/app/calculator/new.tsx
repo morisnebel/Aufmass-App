@@ -8598,16 +8598,24 @@ export default function AreaCalculatorEditor() {
             </Text>
             
             <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false}>
-              {textShortcuts.map((shortcut) => (
+              {textShortcuts.map((shortcut) => {
+                // Prüfen ob mit Linienkategorie verknüpft
+                const linkedCategory = lineCategories.find(
+                  cat => cat.shortcut?.toUpperCase() === shortcut.shortcut.toUpperCase()
+                );
+                
+                return (
                 <View 
                   key={shortcut.id} 
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    backgroundColor: '#fff3e0',
+                    backgroundColor: linkedCategory ? '#e3f2fd' : '#fff3e0',
                     padding: 12,
                     borderRadius: 8,
                     marginBottom: 8,
+                    borderLeftWidth: linkedCategory ? 4 : 0,
+                    borderLeftColor: linkedCategory?.color || 'transparent',
                   }}
                 >
                   <View style={{ 
@@ -8621,6 +8629,11 @@ export default function AreaCalculatorEditor() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, color: '#333' }}>{shortcut.fullText}</Text>
+                    {linkedCategory && (
+                      <Text style={{ fontSize: 10, color: '#1976d2', marginTop: 2 }}>
+                        ↔ Verknüpft mit Linie "{linkedCategory.name}"
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity 
                     style={{ padding: 8 }}
@@ -8635,6 +8648,16 @@ export default function AreaCalculatorEditor() {
                   <TouchableOpacity 
                     style={{ padding: 8 }}
                     onPress={async () => {
+                      // Bidirektionale Sync: Kürzel bei verknüpfter Linienkategorie entfernen
+                      const linkedCategory = lineCategories.find(
+                        cat => cat.shortcut?.toUpperCase() === shortcut.shortcut.toUpperCase()
+                      );
+                      if (linkedCategory) {
+                        await LineCategoryService.update(linkedCategory.id, {
+                          shortcut: undefined,
+                        });
+                        loadLineCategories();
+                      }
                       await TextShortcutService.delete(shortcut.id);
                       loadTextShortcuts();
                     }}
@@ -8642,7 +8665,8 @@ export default function AreaCalculatorEditor() {
                     <Ionicons name="trash" size={18} color="#f44336" />
                   </TouchableOpacity>
                 </View>
-              ))}
+              );
+              })}
             </ScrollView>
             
             {/* Neues Kürzel / Bearbeiten */}
@@ -8712,15 +8736,32 @@ export default function AreaCalculatorEditor() {
                   }}
                   onPress={async () => {
                     if (newShortcutCode.trim() && newShortcutText.trim()) {
+                      const shortcutCode = newShortcutCode.trim().toUpperCase();
+                      const fullText = newShortcutText.trim();
+                      
                       if (editingShortcut) {
+                        // Update Kürzel
                         await TextShortcutService.update(editingShortcut.id, {
-                          shortcut: newShortcutCode.trim().toUpperCase(),
-                          fullText: newShortcutText.trim(),
+                          shortcut: shortcutCode,
+                          fullText: fullText,
                         });
+                        
+                        // Bidirektionale Sync: Verknüpfte Linienkategorie aktualisieren
+                        const linkedCategory = lineCategories.find(
+                          cat => cat.shortcut?.toUpperCase() === editingShortcut.shortcut.toUpperCase()
+                        );
+                        if (linkedCategory) {
+                          await LineCategoryService.update(linkedCategory.id, {
+                            name: fullText,
+                            shortcut: shortcutCode,
+                          });
+                          loadLineCategories();
+                        }
                       } else {
+                        // Neues Kürzel erstellen
                         await TextShortcutService.create({
-                          shortcut: newShortcutCode.trim().toUpperCase(),
-                          fullText: newShortcutText.trim(),
+                          shortcut: shortcutCode,
+                          fullText: fullText,
                           order: textShortcuts.length + 1,
                         });
                       }

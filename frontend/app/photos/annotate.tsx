@@ -101,12 +101,22 @@ export default function AnnotatePhotoScreen() {
   // Multi-touch tracking for pinch zoom
   const [touchCount, setTouchCount] = useState(0);
   const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const canvasContainerRef = useRef<View>(null);
 
   const getDistance = (touches: any[]) => {
     if (touches.length < 2) return 0;
     const dx = touches[0].pageX - touches[1].pageX;
     const dy = touches[0].pageY - touches[1].pageY;
     return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const getMidpoint = (touches: any[]) => {
+    if (touches.length < 2) return { x: 0, y: 0 };
+    return {
+      x: (touches[0].pageX + touches[1].pageX) / 2,
+      y: (touches[0].pageY + touches[1].pageY) / 2,
+    };
   };
 
   const onTouchStart = (event: any) => {
@@ -118,14 +128,16 @@ export default function AnnotatePhotoScreen() {
       setIsZooming(true);
       setInitialPinchDistance(getDistance(touches));
       setLastScale(scale);
+      setLastPanOffset({ ...panOffset });
       return;
     }
     
     if (touches.length === 1 && !isZooming && drawingEnabled) {
       // Start drawing only if drawing is enabled
       const touch = touches[0];
-      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      // Koordinaten direkt verwenden - locationX/Y ist relativ zum SVG-Container
+      const locationX = touch.locationX / scale;
+      const locationY = touch.locationY / scale;
       setCurrentPath(`M ${locationX} ${locationY}`);
     }
   };
@@ -144,8 +156,8 @@ export default function AnnotatePhotoScreen() {
     if (touches.length === 1 && !isZooming && currentPath && drawingEnabled) {
       // Continue drawing only if drawing is enabled
       const touch = touches[0];
-      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      const locationX = touch.locationX / scale;
+      const locationY = touch.locationY / scale;
       setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
     }
   };
@@ -370,14 +382,6 @@ export default function AnnotatePhotoScreen() {
         ))}
       </View>
 
-      {/* Reset Zoom Button */}
-      <TouchableOpacity
-        style={styles.resetZoomButton}
-        onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
-      >
-        <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>{Math.round(scale * 100)}%</Text>
-      </TouchableOpacity>
-
       {/* PDF-Größen Auswahl */}
       <View style={styles.pdfSizeContainer}>
         <Text style={styles.pdfSizeLabel}>PDF-Größe:</Text>
@@ -427,29 +431,47 @@ export default function AnnotatePhotoScreen() {
         />
       </View>
 
-      <View 
-        style={styles.canvasContainer} 
-        ref={canvasRef}
+      <ScrollView 
+        style={styles.canvasContainer}
+        contentContainerStyle={{ flexGrow: 1 }}
+        ref={canvasRef as any}
+        minimumZoomScale={0.5}
+        maximumZoomScale={4}
+        bouncesZoom={true}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
         onLayout={(event) => {
           const { width, height } = event.nativeEvent.layout;
           setCanvasDimensions({ width, height });
         }}
       >
-        <View
-          style={{
-            transform: [{ scale: scale }],
-            width: '100%',
-            height: '100%',
-          }}
-        >
+        <View style={{ flex: 1 }}>
           <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
           <View
             style={styles.svgContainer}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-            onResponderGrant={onTouchStart}
-            onResponderMove={onTouchMove}
-            onResponderRelease={onTouchEnd}
+            onStartShouldSetResponder={() => drawingEnabled}
+            onMoveShouldSetResponder={() => drawingEnabled}
+            onResponderGrant={(event) => {
+              if (!drawingEnabled) return;
+              const touch = event.nativeEvent;
+              const locationX = touch.locationX;
+              const locationY = touch.locationY;
+              setCurrentPath(`M ${locationX} ${locationY}`);
+            }}
+            onResponderMove={(event) => {
+              if (!drawingEnabled || !currentPath) return;
+              const touch = event.nativeEvent;
+              const locationX = touch.locationX;
+              const locationY = touch.locationY;
+              setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+            }}
+            onResponderRelease={() => {
+              if (!drawingEnabled) return;
+              if (currentPath && currentPath.length > 0) {
+                setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
+                setCurrentPath('');
+              }
+            }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
               {paths.map((p, index) => (
@@ -457,7 +479,7 @@ export default function AnnotatePhotoScreen() {
                   key={index}
                   d={p.path}
                   stroke={p.color}
-                  strokeWidth={p.strokeWidth / scale}
+                  strokeWidth={p.strokeWidth}
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -467,7 +489,7 @@ export default function AnnotatePhotoScreen() {
                 <Path
                   d={currentPath}
                   stroke={drawColor}
-                  strokeWidth={strokeWidth / scale}
+                  strokeWidth={strokeWidth}
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -476,7 +498,7 @@ export default function AnnotatePhotoScreen() {
             </Svg>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

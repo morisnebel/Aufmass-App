@@ -322,7 +322,57 @@ export default function ProjectDetailScreen() {
         return;
       }
 
+      // Try to find an available directory - try multiple options
+      let baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+      
+      console.log('Available directories:', {
+        cacheDirectory: FileSystem.cacheDirectory,
+        documentDirectory: FileSystem.documentDirectory,
+      });
+      
+      if (!baseDir) {
+        // For Expo Go, we might need to use a different approach
+        // Try using Sharing instead
+        Alert.alert(
+          'Alternative Methode',
+          'Das direkte Speichern ist in Expo Go eingeschränkt. Möchten Sie die Fotos stattdessen teilen?',
+          [
+            { text: 'Abbrechen', style: 'cancel', onPress: () => setIsSavingToGallery(false) },
+            { 
+              text: 'Teilen', 
+              onPress: async () => {
+                try {
+                  for (const photoId of selectedPhotos) {
+                    const photo = photos.find(p => p.id === photoId);
+                    if (photo?.image_data) {
+                      let dataUri = photo.image_data;
+                      if (!dataUri.startsWith('data:')) {
+                        dataUri = `data:image/jpeg;base64,${dataUri}`;
+                      }
+                      // Use Share API as fallback
+                      await Share.share({
+                        url: dataUri,
+                        message: photo.description || 'Foto',
+                      });
+                    }
+                  }
+                  setPhotoSelectMode(false);
+                  setSelectedPhotos([]);
+                } catch (e) {
+                  console.error('Share error:', e);
+                } finally {
+                  setIsSavingToGallery(false);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+
       let savedCount = 0;
+      const errors: string[] = [];
+      
       for (const photoId of selectedPhotos) {
         const photo = photos.find(p => p.id === photoId);
         if (photo?.image_data) {
@@ -333,24 +383,27 @@ export default function ProjectDetailScreen() {
               base64Data = base64Data.split(',')[1];
             }
             
-            // Create temp file path - use documentDirectory (more reliable than cacheDirectory)
-            const baseDir = FileSystem.documentDirectory;
-            if (!baseDir) {
-              console.error('No file system directory available');
-              continue;
-            }
-            
             const filename = `photo_${photoId}_${Date.now()}.jpg`;
             const fileUri = `${baseDir}${filename}`;
             
-            console.log('Writing base64 to:', fileUri);
+            console.log('Attempting to write to:', fileUri);
+            console.log('Base64 length:', base64Data.length);
             
             // Write base64 data directly to file
             await FileSystem.writeAsStringAsync(fileUri, base64Data, {
               encoding: FileSystem.EncodingType.Base64,
             });
             
-            console.log('File written successfully');
+            console.log('File written successfully to:', fileUri);
+            
+            // Verify file exists
+            const fileInfo = await FileSystem.getInfoAsync(fileUri);
+            console.log('File info:', fileInfo);
+            
+            if (!fileInfo.exists) {
+              errors.push(`File not created for ${photoId}`);
+              continue;
+            }
             
             // Save to media library
             const asset = await MediaLibrary.createAssetAsync(fileUri);
@@ -365,7 +418,9 @@ export default function ProjectDetailScreen() {
             
             savedCount++;
           } catch (err: any) {
-            console.error('Error saving photo:', err?.message || err);
+            const errorMsg = err?.message || String(err);
+            console.error('Error saving photo:', errorMsg);
+            errors.push(errorMsg);
           }
         }
       }
@@ -377,7 +432,8 @@ export default function ProjectDetailScreen() {
       if (savedCount > 0) {
         Alert.alert('Erfolg', `${savedCount} Foto(s) wurden in der Galerie gespeichert.`);
       } else {
-        Alert.alert('Fehler', 'Keine Fotos konnten gespeichert werden. Bitte versuchen Sie es erneut.');
+        const errorDetail = errors.length > 0 ? `\n\nDetails: ${errors[0]}` : '';
+        Alert.alert('Fehler', `Keine Fotos konnten gespeichert werden.${errorDetail}`);
       }
     } catch (error: any) {
       console.error('Error saving photos to gallery:', error?.message || error);

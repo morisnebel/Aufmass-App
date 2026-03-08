@@ -96,6 +96,18 @@ export default function RootLayout() {
           name="documents/annotate" 
           options={{ title: 'Dokument bearbeiten', headerShown: false }} 
         />
+        <Stack.Screen 
+          name="calculator/index" 
+          options={{ title: 'Flächenberechnungen' }} 
+        />
+        <Stack.Screen 
+          name="calculator/new" 
+          options={{ title: 'Flächenkalkulator', headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="calculator/edit" 
+          options={{ title: 'Flächenkalkulator', headerShown: false }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

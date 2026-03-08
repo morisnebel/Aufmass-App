@@ -1017,10 +1017,24 @@ export default function ProjectDetailScreen() {
           return `${tp.x},${tp.y}`;
         }).join(' ');
         
-        const strokeColor = polygon.type === 'main' ? '#4CAF50' : '#f44336';
+        const defaultStrokeColor = polygon.type === 'main' ? '#4CAF50' : '#f44336';
         
-        // No fill - just stroke for print
-        svgContent += `<polygon points="${points}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+        // First draw the default polygon outline
+        svgContent += `<polygon points="${points}" fill="none" stroke="${defaultStrokeColor}" stroke-width="2"/>`;
+        
+        // Now overdraw edges that have categories with their category color
+        polygon.points.forEach((point: any, index: number) => {
+          const nextPoint = polygon.points[(index + 1) % polygon.points.length];
+          const lineCategory = calcLines.find((l: any) => l.polygonId === polygon.id && l.pointIndex === index);
+          
+          if (lineCategory) {
+            const tp1 = transformPoint(point);
+            const tp2 = transformPoint(nextPoint);
+            const catColor = getCategoryColor(lineCategory.category);
+            // Draw colored line over the default
+            svgContent += `<line x1="${tp1.x}" y1="${tp1.y}" x2="${tp2.x}" y2="${tp2.y}" stroke="${catColor}" stroke-width="3"/>`;
+          }
+        });
         
         // Draw edge lengths
         polygon.points.forEach((point: any, index: number) => {
@@ -1040,18 +1054,18 @@ export default function ProjectDetailScreen() {
           
           // Get shortcut for category
           let labelText = `${length.toFixed(2)}m`;
-          let labelWidth = 42;
+          let labelWidth = 44;
           if (lineCategory) {
             const catInfo = pdfLineCategories.find(c => c.name === lineCategory.category);
             if (catInfo?.shortcut) {
               labelText = `${catInfo.shortcut} ${length.toFixed(2)}m`;
-              labelWidth = 58;
+              labelWidth = 62;
             }
           }
           
           // Draw label background
           const labelHeight = 14;
-          svgContent += `<rect x="${midX - labelWidth/2}" y="${midY - labelHeight/2}" width="${labelWidth}" height="${labelHeight}" rx="3" fill="${bgColor}"/>`;
+          svgContent += `<rect x="${midX - labelWidth/2}" y="${midY - labelHeight/2}" width="${labelWidth}" height="${labelHeight}" rx="7" fill="${bgColor}"/>`;
           svgContent += `<text x="${midX}" y="${midY + 4}" text-anchor="middle" font-size="9" font-weight="bold" fill="white">${labelText}</text>`;
         });
         

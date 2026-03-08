@@ -1307,17 +1307,18 @@ export default function ProjectDetailScreen() {
           
           return Object.entries(categoryGroups).map(([category, lengths]) => {
             const total = (lengths as number[]).reduce((sum, l) => sum + l, 0);
-            const breakdown = lengths.length >= 2 ? `<div style="font-size: 8px; color: #666; margin-left: 16px;">${(lengths as number[]).map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : '';
+            const catColor = getCategoryColor(category);
+            const breakdown = lengths.length >= 2 ? `<div style="font-size: 8px; color: ${catColor}; margin-left: 16px; opacity: 0.8;">${(lengths as number[]).map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : '';
             const displayName = formatCategoryForPdf(category);
             
             return `
               <div style="margin-bottom: 2px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="display: flex; align-items: center;">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: ${getCategoryColor(category)}; margin-right: 4px; display: inline-block;"></span>
-                    <span style="font-size: 9px;">${displayName}</span>
+                  <span style="display: flex; align-items: center; color: ${catColor};">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: ${catColor}; margin-right: 4px; display: inline-block;"></span>
+                    <span style="font-size: 9px; font-weight: 600;">${displayName}</span>
                   </span>
-                  <span style="font-size: 9px; font-weight: 600; color: ${getCategoryColor(category)};">${total.toFixed(2)} m</span>
+                  <span style="font-size: 9px; font-weight: 700; color: ${catColor};">${total.toFixed(2)} m</span>
                 </div>
                 ${breakdown}
               </div>
@@ -1340,7 +1341,7 @@ export default function ProjectDetailScreen() {
         
         return `
           <!-- Calculation ${calcIndex + 1}: Drawing + Details Together -->
-          <div style="margin-bottom: 20px; ${calcIndex > 0 ? 'page-break-before: always;' : ''}">
+          <div style="margin-bottom: 20px; page-break-inside: avoid;">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 3px solid #4CAF50;">
               <span style="font-size: 14px; font-weight: bold;">${calc.name || `Berechnung ${calcIndex + 1}`}</span>
@@ -1365,15 +1366,17 @@ export default function ProjectDetailScreen() {
                 <div style="flex: 1; background: #fff8f0; padding: 4px 6px; border-radius: 4px; border: 1px solid #FF9800;">
                   <div style="font-weight: 600; color: #FF9800; font-size: 8px; margin-bottom: 2px;">Linien Gesamt:</div>
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px;">
-                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
+                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => {
+                      const catColor = getCategoryColor(cat);
+                      return `
                       <div style="display: flex; justify-content: space-between; font-size: 8px;">
-                        <span style="display: flex; align-items: center;">
-                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px;"></span>
-                          ${formatCategoryForPdf(cat)}
+                        <span style="display: flex; align-items: center; color: ${catColor};">
+                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${catColor}; margin-right: 3px;"></span>
+                          <span style="font-weight: 600;">${formatCategoryForPdf(cat)}</span>
                         </span>
-                        <span style="font-weight: 600; color: ${getCategoryColor(cat)};">${(length as number).toFixed(2)}m</span>
+                        <span style="font-weight: 700; color: ${catColor};">${(length as number).toFixed(2)}m</span>
                       </div>
-                    `).join('')}
+                    `}).join('')}
                   </div>
                 </div>
               ` : ''}
@@ -1381,7 +1384,7 @@ export default function ProjectDetailScreen() {
             
             ${showCalcDetailsPage ? `
             <!-- Detailed Breakdown -->
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; page-break-inside: avoid;">
               <!-- Main Areas Details -->
               ${mainAreas.length > 0 ? `
                 <div style="flex: 1;">
@@ -1416,6 +1419,7 @@ export default function ProjectDetailScreen() {
             </div>
             ` : ''}
           </div>
+          ${calcIndex < areaCalculations.length - 1 ? '<hr style="border: none; border-top: 2px dashed #ccc; margin: 15px 0;"/>' : ''}
         `;
       }).join('');
     };

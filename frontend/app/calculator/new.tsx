@@ -7372,14 +7372,14 @@ export default function AreaCalculatorEditor() {
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                                   <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
-                                  <Text style={{ fontSize: 12, color: '#333' }}>{displayName}</Text>
+                                  <Text style={{ fontSize: 12, color: getCategoryColor(category), fontWeight: '600' }}>{displayName}</Text>
                                 </View>
-                                <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: getCategoryColor(category) }}>
                                   {total.toFixed(2)} m
                                 </Text>
                               </View>
                               {showBreakdown && (
-                                <Text style={{ fontSize: 11, color: '#666', marginLeft: 14, marginTop: 2 }}>
+                                <Text style={{ fontSize: 11, color: getCategoryColor(category), marginLeft: 14, marginTop: 2, opacity: 0.7 }}>
                                   {lengths.map(l => l.toFixed(2)).join(' + ')} = {total.toFixed(2)} m
                                 </Text>
                               )}
@@ -7479,14 +7479,14 @@ export default function AreaCalculatorEditor() {
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                                   <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
-                                  <Text style={{ fontSize: 12, color: '#333' }}>{displayName}</Text>
+                                  <Text style={{ fontSize: 12, color: getCategoryColor(category), fontWeight: '600' }}>{displayName}</Text>
                                 </View>
-                                <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: getCategoryColor(category) }}>
                                   {total.toFixed(2)} m
                                 </Text>
                               </View>
                               {showBreakdown && (
-                                <Text style={{ fontSize: 11, color: '#666', marginLeft: 14, marginTop: 2 }}>
+                                <Text style={{ fontSize: 11, color: getCategoryColor(category), marginLeft: 14, marginTop: 2, opacity: 0.7 }}>
                                   {lengths.map(l => l.toFixed(2)).join(' + ')} = {total.toFixed(2)} m
                                 </Text>
                               )}
@@ -7530,7 +7530,7 @@ export default function AreaCalculatorEditor() {
                         <View style={styles.resultCardHeader}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                             <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
-                            <Text style={styles.resultCardTitle}>{displayName}</Text>
+                            <Text style={[styles.resultCardTitle, { color: getCategoryColor(category) }]}>{displayName}</Text>
                           </View>
                           <Text style={[styles.resultCardValue, { color: getCategoryColor(category) }]}>
                             {(totalLength as number).toFixed(2)} m
@@ -7538,7 +7538,7 @@ export default function AreaCalculatorEditor() {
                         </View>
                         {showBreakdown && (
                           <View style={{ paddingTop: 6, borderTopWidth: 1, borderTopColor: '#eee', marginTop: 6 }}>
-                            <Text style={styles.resultCardDetail}>
+                            <Text style={[styles.resultCardDetail, { color: getCategoryColor(category), opacity: 0.8 }]}>
                               {individualLengths.map(l => l.toFixed(2)).join(' + ')} = {(totalLength as number).toFixed(2)} m
                             </Text>
                           </View>

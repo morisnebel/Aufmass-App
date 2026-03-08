@@ -3040,15 +3040,11 @@ export default function ProjectDetailScreen() {
       <View style={styles.actionBar}>
         <TouchableOpacity style={styles.actionButton} onPress={exportToPDF}>
           <Ionicons name="document-text" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>PDF</Text>
+          <Text style={styles.actionButtonText}>Projekt-PDF</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={exportProjectFile}>
           <Ionicons name="cloud-upload" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>Export</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={shareProject}>
-          <Ionicons name="share-social" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>Teilen</Text>
+          <Text style={styles.actionButtonText}>PDF-Export</Text>
         </TouchableOpacity>
       </View>
 

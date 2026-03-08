@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory } from '../../services/LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -512,6 +512,18 @@ export default function ProjectDetailScreen() {
     
     // Get company settings for header
     const settings = await SettingsService.get();
+    
+    // Load line categories for shortcut display
+    const pdfLineCategories = await LineCategoryService.getAll();
+    
+    // Helper: Format category name with shortcut -> "(TR) Traufe"
+    const formatCategoryForPdf = (categoryName: string): string => {
+      const cat = pdfLineCategories.find(c => c.name === categoryName);
+      if (cat?.shortcut) {
+        return `(${cat.shortcut}) ${categoryName}`;
+      }
+      return categoryName;
+    };
     
     // Calculate total area for PDF
     const pdfTotalArea = roofs.reduce((sum, roof) => sum + (roof.area || 0), 0);
@@ -1219,7 +1231,7 @@ export default function ProjectDetailScreen() {
                     <div style="display: flex; justify-content: space-between; font-size: 8px;">
                       <span style="display: flex; align-items: center;">
                         <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
-                        ${cat}
+                        ${formatCategoryForPdf(cat)}
                       </span>
                       <span style="margin-left: 4px;">${(length as number).toFixed(2)}m</span>
                     </div>
@@ -1273,13 +1285,14 @@ export default function ProjectDetailScreen() {
           return Object.entries(categoryGroups).map(([category, lengths]) => {
             const total = (lengths as number[]).reduce((sum, l) => sum + l, 0);
             const breakdown = lengths.length >= 2 ? `<div style="font-size: 9px; color: #666; margin-left: 20px;">${(lengths as number[]).map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : '';
+            const displayName = formatCategoryForPdf(category);
             
             return `
               <div style="margin-bottom: 4px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="display: flex; align-items: center;">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background: ${getCategoryColor(category)}; margin-right: 6px; display: inline-block;"></span>
-                    <span style="font-size: 11px;">${category}</span>
+                    <span style="font-size: 11px;">${displayName}</span>
                   </span>
                   <span style="font-size: 11px; font-weight: 600; color: ${getCategoryColor(category)};">${total.toFixed(2)} m</span>
                 </div>
@@ -1374,7 +1387,7 @@ export default function ProjectDetailScreen() {
                       <div style="display: flex; justify-content: space-between; font-size: 8px; white-space: nowrap;">
                         <span style="display: flex; align-items: center;">
                           <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
-                          ${cat}
+                          ${formatCategoryForPdf(cat)}
                         </span>
                         <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 3px;">${(length as number).toFixed(2)}m</span>
                       </div>

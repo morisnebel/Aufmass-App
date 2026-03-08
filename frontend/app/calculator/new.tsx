@@ -611,6 +611,15 @@ export default function AreaCalculatorEditor() {
     return { isShortcut: false, display: text };
   };
 
+  // Hilfsfunktion: Kategorie-Name mit Kürzel formatieren -> "(TR) Traufe"
+  const formatCategoryWithShortcut = (categoryName: string): string => {
+    const category = lineCategories.find(c => c.name === categoryName);
+    if (category?.shortcut) {
+      return `(${category.shortcut}) ${categoryName}`;
+    }
+    return categoryName;
+  };
+
   const loadCalculation = async () => {
     if (!calculationId) return;
     setLoading(true);
@@ -7355,13 +7364,14 @@ export default function AreaCalculatorEditor() {
                         {Object.entries(categoryGroups).map(([category, lengths]) => {
                           const total = lengths.reduce((sum, l) => sum + l, 0);
                           const showBreakdown = lengths.length >= 2;
+                          const displayName = formatCategoryWithShortcut(category);
                           
                           return (
                             <View key={category} style={{ marginBottom: 4 }}>
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                                   <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
-                                  <Text style={{ fontSize: 12, color: '#333' }}>{category}</Text>
+                                  <Text style={{ fontSize: 12, color: '#333' }}>{displayName}</Text>
                                 </View>
                                 <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
                                   {total.toFixed(2)} m
@@ -7461,13 +7471,14 @@ export default function AreaCalculatorEditor() {
                         {Object.entries(categoryGroups).map(([category, lengths]) => {
                           const total = lengths.reduce((sum, l) => sum + l, 0);
                           const showBreakdown = lengths.length >= 2;
+                          const displayName = formatCategoryWithShortcut(category);
                           
                           return (
                             <View key={category} style={{ marginBottom: 4 }}>
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                                   <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category), width: 8, height: 8, marginRight: 6 }]} />
-                                  <Text style={{ fontSize: 12, color: '#333' }}>{category}</Text>
+                                  <Text style={{ fontSize: 12, color: '#333' }}>{displayName}</Text>
                                 </View>
                                 <Text style={{ fontSize: 12, fontWeight: '600', color: getCategoryColor(category) }}>
                                   {total.toFixed(2)} m
@@ -7496,6 +7507,7 @@ export default function AreaCalculatorEditor() {
                     // Find all individual line segments for this category from the lines array
                     const categoryLines = lines.filter(l => l.category === category);
                     const individualLengths: number[] = [];
+                    const displayName = formatCategoryWithShortcut(category);
                     
                     categoryLines.forEach(line => {
                       const polygon = polygons.find(p => p.id === line.polygonId);
@@ -7515,9 +7527,9 @@ export default function AreaCalculatorEditor() {
                     return (
                       <View key={category} style={[styles.resultCard, { borderLeftColor: getCategoryColor(category) }]}>
                         <View style={styles.resultCardHeader}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                             <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
-                            <Text style={styles.resultCardTitle}>{category}</Text>
+                            <Text style={styles.resultCardTitle}>{displayName}</Text>
                           </View>
                           <Text style={[styles.resultCardValue, { color: getCategoryColor(category) }]}>
                             {(totalLength as number).toFixed(2)} m

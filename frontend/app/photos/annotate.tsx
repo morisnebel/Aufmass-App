@@ -58,6 +58,9 @@ export default function AnnotatePhotoScreen() {
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [lastScale, setLastScale] = useState(1);
+  const [lastPanOffset, setLastPanOffset] = useState({ x: 0, y: 0 });
+  const [isZooming, setIsZooming] = useState(false);
 
   useEffect(() => {
     loadPhoto();
@@ -92,26 +95,72 @@ export default function AnnotatePhotoScreen() {
     }
   };
 
+  // Multi-touch tracking for pinch zoom
+  const [touchCount, setTouchCount] = useState(0);
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+
+  const getDistance = (touches: any[]) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].pageX - touches[1].pageX;
+    const dy = touches[0].pageY - touches[1].pageY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   const onTouchStart = (event: any) => {
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
-    setCurrentPath(`M ${locationX} ${locationY}`);
+    const touches = event.nativeEvent.touches;
+    setTouchCount(touches.length);
+    
+    if (touches.length === 2) {
+      // Start pinch zoom
+      setIsZooming(true);
+      setInitialPinchDistance(getDistance(touches));
+      setLastScale(scale);
+      return;
+    }
+    
+    if (touches.length === 1 && !isZooming) {
+      // Start drawing
+      const touch = touches[0];
+      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
+      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      setCurrentPath(`M ${locationX} ${locationY}`);
+    }
   };
 
   const onTouchMove = (event: any) => {
-    if (!currentPath) return;
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
-    setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+    const touches = event.nativeEvent.touches;
+    
+    if (touches.length === 2 && initialPinchDistance) {
+      // Handle pinch zoom
+      const currentDistance = getDistance(touches);
+      const newScale = Math.min(Math.max(lastScale * (currentDistance / initialPinchDistance), 0.5), 4);
+      setScale(newScale);
+      return;
+    }
+    
+    if (touches.length === 1 && !isZooming && currentPath) {
+      // Continue drawing
+      const touch = touches[0];
+      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
+      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+    }
   };
 
-  const onTouchEnd = () => {
-    if (currentPath && currentPath.length > 0) {
+  const onTouchEnd = (event: any) => {
+    const touches = event.nativeEvent.touches;
+    
+    if (touches.length < 2) {
+      setIsZooming(false);
+      setInitialPinchDistance(null);
+    }
+    
+    if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming) {
       setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
       setCurrentPath('');
     }
+    
+    setTouchCount(touches.length);
   };
 
   const undo = () => {
@@ -372,38 +421,46 @@ export default function AnnotatePhotoScreen() {
           setCanvasDimensions({ width, height });
         }}
       >
-        <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
         <View
-          style={styles.svgContainer}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={onTouchStart}
-          onResponderMove={onTouchMove}
-          onResponderRelease={onTouchEnd}
+          style={{
+            transform: [{ scale: scale }],
+            width: '100%',
+            height: '100%',
+          }}
         >
-          <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
-            {paths.map((p, index) => (
-              <Path
-                key={index}
-                d={p.path}
-                stroke={p.color}
-                strokeWidth={p.strokeWidth}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {currentPath && currentPath.length > 0 && (
-              <Path
-                d={currentPath}
-                stroke={drawColor}
-                strokeWidth={strokeWidth}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-          </Svg>
+          <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
+          <View
+            style={styles.svgContainer}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={onTouchStart}
+            onResponderMove={onTouchMove}
+            onResponderRelease={onTouchEnd}
+          >
+            <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
+              {paths.map((p, index) => (
+                <Path
+                  key={index}
+                  d={p.path}
+                  stroke={p.color}
+                  strokeWidth={p.strokeWidth / scale}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+              {currentPath && currentPath.length > 0 && (
+                <Path
+                  d={currentPath}
+                  stroke={drawColor}
+                  strokeWidth={strokeWidth / scale}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+            </Svg>
+          </View>
         </View>
       </View>
     </View>

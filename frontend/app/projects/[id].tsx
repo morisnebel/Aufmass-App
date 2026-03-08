@@ -325,9 +325,31 @@ export default function ProjectDetailScreen() {
       let savedCount = 0;
       for (const photoId of selectedPhotos) {
         const photo = photos.find(p => p.id === photoId);
-        if (photo?.uri) {
+        if (photo?.image_data) {
           try {
-            await MediaLibrary.saveToLibraryAsync(photo.uri);
+            // Convert base64 to file
+            let base64Data = photo.image_data;
+            
+            // Remove data URI prefix if present
+            if (base64Data.startsWith('data:')) {
+              base64Data = base64Data.split(',')[1];
+            }
+            
+            // Create temp file path
+            const filename = `photo_${photoId}_${Date.now()}.jpg`;
+            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+            
+            // Write base64 to file
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            
+            // Save to media library
+            await MediaLibrary.saveToLibraryAsync(fileUri);
+            
+            // Clean up temp file
+            await FileSystem.deleteAsync(fileUri, { idempotent: true });
+            
             savedCount++;
           } catch (err) {
             console.error('Error saving photo:', err);

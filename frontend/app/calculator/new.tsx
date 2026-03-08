@@ -30,7 +30,71 @@ import Svg, {
   Defs,
   Pattern,
   Image as SvgImage,
+  Polyline,
 } from 'react-native-svg';
+
+// Custom SVG Icons for Toolbar
+const AreaIcon = ({ size = 24, color = '#4CAF50' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Rect x="3" y="3" width="18" height="18" stroke={color} strokeWidth="1.5" fill="none" />
+    <Path d="M12 3 L12 7 M12 17 L12 21" stroke={color} strokeWidth="1.5" />
+    <Path d="M3 12 L7 12 M17 12 L21 12" stroke={color} strokeWidth="1.5" />
+    <Polyline points="10,5 12,3 14,5" fill="none" stroke={color} strokeWidth="1.5" />
+    <Polyline points="10,19 12,21 14,19" fill="none" stroke={color} strokeWidth="1.5" />
+    <Polyline points="5,10 3,12 5,14" fill="none" stroke={color} strokeWidth="1.5" />
+    <Polyline points="19,10 21,12 19,14" fill="none" stroke={color} strokeWidth="1.5" />
+    <SvgText x="12" y="13" fontSize="6" fontWeight="bold" fill={color} textAnchor="middle">m²</SvgText>
+  </Svg>
+);
+
+const AngleIcon = ({ size = 24, color = '#4CAF50' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Path d="M4 20 L4 6" stroke={color} strokeWidth="1.5" fill="none" />
+    <Path d="M4 20 L20 20" stroke={color} strokeWidth="1.5" fill="none" />
+    <Path d="M4 14 Q8 14 10 20" stroke={color} strokeWidth="1.5" fill="none" />
+    <Polyline points="2,8 4,6 6,8" fill="none" stroke={color} strokeWidth="1.5" />
+    <Polyline points="18,18 20,20 18,22" fill="none" stroke={color} strokeWidth="1.5" />
+    <SvgText x="15" y="12" fontSize="7" fontWeight="bold" fill={color}>90°</SvgText>
+  </Svg>
+);
+
+const ScaleIcon = ({ size = 24, color = '#666' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Line x1="4" y1="8" x2="4" y2="12" stroke={color} strokeWidth="2" />
+    <Line x1="20" y1="8" x2="20" y2="12" stroke={color} strokeWidth="2" />
+    <Line x1="4" y1="10" x2="20" y2="10" stroke={color} strokeWidth="1.5" />
+    <Polyline points="6,8 4,10 6,12" fill="none" stroke={color} strokeWidth="1.5" />
+    <Polyline points="18,8 20,10 18,12" fill="none" stroke={color} strokeWidth="1.5" />
+    <Rect x="2" y="15" width="20" height="5" rx="1" fill={color} />
+    <Line x1="4" y1="15" x2="4" y2="18" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="6" y1="15" x2="6" y2="17" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="8" y1="15" x2="8" y2="18" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="10" y1="15" x2="10" y2="17" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="12" y1="15" x2="12" y2="18" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="14" y1="15" x2="14" y2="17" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="16" y1="15" x2="16" y2="18" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="18" y1="15" x2="18" y2="17" stroke="#fff" strokeWidth="0.5" />
+    <Line x1="20" y1="15" x2="20" y2="18" stroke="#fff" strokeWidth="0.5" />
+  </Svg>
+);
+
+const DeductionAreaIcon = ({ size = 24, color = '#f44336' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Rect x="3" y="3" width="18" height="18" stroke={color} strokeWidth="1.5" strokeDasharray="3,2" fill="none" />
+    <Path d="M5 19 L5 15" stroke={color} strokeWidth="1.5" />
+    <Path d="M5 19 L9 19" stroke={color} strokeWidth="1.5" />
+    <Polyline points="3.5,16.5 5,15 6.5,16.5" fill="none" stroke={color} strokeWidth="1" />
+    <Polyline points="7.5,17.5 9,19 7.5,20.5" fill="none" stroke={color} strokeWidth="1" />
+    <SvgText x="14" y="14" fontSize="7" fontWeight="bold" fill={color}>m²</SvgText>
+  </Svg>
+);
+
+const DeductionRectIcon = ({ size = 24, color = '#f44336' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Rect x="4" y="4" width="16" height="16" stroke={color} strokeWidth="2" fill="none" rx="1" />
+    <Line x1="8" y1="12" x2="16" y2="12" stroke={color} strokeWidth="2.5" />
+  </Svg>
+);
 import { 
   AreaCalculationService, 
   AreaCalculation, 
@@ -3600,10 +3664,10 @@ export default function AreaCalculatorEditor() {
           <Text style={styles.toolbarSectionTitle}>Konstruktion</Text>
           <View style={styles.toolbarSectionButtons}>
             <TouchableOpacity
-              style={[styles.toolButton, mode === 'select' && styles.toolButtonActive]}
+              style={[styles.toolButton, mode === 'select' && styles.toolButtonActive, { backgroundColor: mode === 'select' ? '#2196F3' : '#f5f5f5' }]}
               onPress={() => { setMode('select'); setCurrentPoints([]); }}
             >
-              <Ionicons name="cursor-outline" size={18} color={mode === 'select' ? '#fff' : '#666'} />
+              <Ionicons name="hand-left" size={18} color={mode === 'select' ? '#fff' : '#2196F3'} />
               <Text style={[styles.toolLabel, mode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
             </TouchableOpacity>
             
@@ -3615,26 +3679,24 @@ export default function AreaCalculatorEditor() {
                 setScaleReference({ startPoint: null, endPoint: null, realLength: 1 });
               }}
             >
-              <Ionicons name="swap-horizontal-outline" size={18} color={mode === 'scale' ? '#fff' : '#666'} />
+              <ScaleIcon size={18} color={mode === 'scale' ? '#fff' : '#666'} />
               <Text style={[styles.toolLabel, mode === 'scale' && styles.toolLabelActive]}>Maßstab</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.toolButton, mode === 'polygon' && styles.toolButtonActive, { backgroundColor: mode === 'polygon' ? '#4CAF50' : '#f5f5f5' }]}
+              style={[styles.toolButtonLarge, mode === 'polygon' && styles.toolButtonActive, { backgroundColor: mode === 'polygon' ? '#4CAF50' : '#f5f5f5' }]}
               onPress={() => { setMode('polygon'); setCurrentPoints([]); }}
             >
-              <Ionicons name="pentagon-outline" size={18} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
-              <Text style={[styles.toolLabel, mode === 'polygon' && styles.toolLabelActive]}>Fläche</Text>
+              <AreaIcon size={20} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
+              <Text style={[styles.toolLabel, mode === 'polygon' && styles.toolLabelActive, { fontSize: 7 }]}>Fläche/Poly</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.toolButton, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
+              style={[styles.toolButtonLarge, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#4CAF50' : (snapToAngles ? '#4CAF50' : '#f5f5f5') }]}
               onPress={() => setShowAngleModal(true)}
             >
-              <Ionicons name="compass-outline" size={18} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#666'} />
-              <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive]}>
-                {fixedAngle !== null ? `${fixedAngle}°` : (fixedLength !== '' ? `${fixedLength}m` : '45°')}
-              </Text>
+              <AngleIcon size={20} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#4CAF50'} />
+              <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive, { fontSize: 7 }]}>Fläche/Winkel</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -3660,18 +3722,18 @@ export default function AreaCalculatorEditor() {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.toolButton, mode === 'deduction' && styles.toolButtonActive, { backgroundColor: mode === 'deduction' ? '#f44336' : '#f5f5f5' }]}
+              style={[styles.toolButtonLarge, mode === 'deduction' && styles.toolButtonActive, { backgroundColor: mode === 'deduction' ? '#f44336' : '#f5f5f5' }]}
               onPress={() => { setMode('deduction'); setCurrentPoints([]); }}
             >
-              <Ionicons name="cut-outline" size={18} color={mode === 'deduction' ? '#fff' : '#f44336'} />
-              <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive]}>Abzug</Text>
+              <DeductionAreaIcon size={20} color={mode === 'deduction' ? '#fff' : '#f44336'} />
+              <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive, { fontSize: 7 }]}>Abzug Fläche</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#E91E63' : '#f5f5f5' }]}
+              style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#f44336' : '#f5f5f5' }]}
               onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
             >
-              <Ionicons name="square-outline" size={18} color={mode === 'deduction_rect' ? '#fff' : '#E91E63'} />
+              <DeductionRectIcon size={18} color={mode === 'deduction_rect' ? '#fff' : '#f44336'} />
               <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
             </TouchableOpacity>
           </View>
@@ -3700,12 +3762,12 @@ export default function AreaCalculatorEditor() {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.toolButton, guideLinesVisible && guideLines.length > 0 && styles.toolButtonActive]}
+              style={[styles.toolButtonLarge, guideLinesVisible && guideLines.length > 0 && styles.toolButtonActive]}
               onPress={() => setGuideLinesVisible(!guideLinesVisible)}
             >
               <Ionicons name={guideLinesVisible ? "eye-outline" : "eye-off-outline"} size={18} color={guideLinesVisible ? (guideLines.length > 0 ? '#fff' : '#666') : '#999'} />
-              <Text style={[styles.toolLabel, guideLinesVisible && guideLines.length > 0 && styles.toolLabelActive]}>
-                {guideLines.length > 0 ? guideLines.length : '-'}
+              <Text style={[styles.toolLabel, guideLinesVisible && guideLines.length > 0 && styles.toolLabelActive, { fontSize: 7 }]}>
+                Hilfslinien {guideLines.length > 0 ? `(${guideLines.length})` : ''}
               </Text>
             </TouchableOpacity>
             
@@ -3740,7 +3802,10 @@ export default function AreaCalculatorEditor() {
               style={[styles.toolButton, useManualAreaCalc && styles.toolButtonActive, { backgroundColor: useManualAreaCalc ? '#FF9800' : '#f5f5f5' }]}
               onPress={() => setUseManualAreaCalc(!useManualAreaCalc)}
             >
-              <Ionicons name="keypad-outline" size={18} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+              <View style={{ alignItems: 'center' }}>
+                <Ionicons name={useManualAreaCalc ? "eye-outline" : "eye-off-outline"} size={10} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+                <Ionicons name="keypad-outline" size={14} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+              </View>
               <Text style={[styles.toolLabel, useManualAreaCalc && styles.toolLabelActive]}>Manuell</Text>
             </TouchableOpacity>
             
@@ -8889,6 +8954,17 @@ const styles = StyleSheet.create({
     marginVertical: 1,
     backgroundColor: '#f5f5f5',
     minWidth: 40,
+  },
+  toolButtonLarge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginHorizontal: 1,
+    marginVertical: 1,
+    backgroundColor: '#f5f5f5',
+    minWidth: 52,
   },
   toolButtonActive: {
     backgroundColor: '#1976d2',

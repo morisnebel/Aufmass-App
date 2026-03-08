@@ -1437,13 +1437,41 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Endergebnis - kompakter -->
-            <div style="margin-top: 6px; padding: 4px 8px; border: 1px solid #4CAF50; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; font-size: 9px;">
-              <div>
-                <span style="color: #666;">Ergebnis:</span>
-                <span style="color: #888; margin-left: 4px;">${grossArea.toFixed(2)} m² ${deductionsTotal > 0 ? `− ${deductionsTotal.toFixed(2)} m²` : ''}</span>
+            <!-- Endergebnis - zwei Boxen mit Rahmen wie auf dem Bild -->
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+              <!-- Flächenberechnung Box - blauer Rahmen -->
+              <div style="flex: 0.8; padding: 4px 8px; border: 1px solid #1976d2; border-radius: 3px;">
+                <div style="font-size: 9px; font-weight: 700; color: #1976d2; margin-bottom: 3px;">Flächenberechnung</div>
+                <div style="font-family: monospace; font-size: 9px; line-height: 1.3;">
+                  <div>Brutto: ${grossArea.toFixed(2)} m²</div>
+                  ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; font-weight: 700; font-size: 11px; color: #4CAF50;">
+                    = Netto: ${netArea.toFixed(2)} m²
+                  </div>
+                </div>
               </div>
-              <div style="font-size: 14px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</div>
+              
+              <!-- Linien Zusammenfassung Box - oranger Rahmen, breiter -->
+              ${Object.keys(totalLinesByCategory).length > 0 ? `
+                <div style="flex: 1.2; padding: 4px 8px; border: 1px solid #FF9800; border-radius: 3px;">
+                  <div style="font-size: 9px; font-weight: 700; color: #FF9800; margin-bottom: 3px;">Linien Zusammenfassung</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 6px;">
+                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
+                      <div style="display: flex; justify-content: space-between; font-size: 8px; white-space: nowrap; overflow: hidden;">
+                        <span style="display: flex; align-items: center; min-width: 0; overflow: hidden;">
+                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; flex-shrink: 0;"></span>
+                          <span style="overflow: hidden; text-overflow: ellipsis;">${formatCategoryForPdf(cat)}</span>
+                        </span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 4px; flex-shrink: 0;">${(length as number).toFixed(2)} m</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; display: flex; justify-content: space-between; font-weight: 700; font-size: 9px;">
+                    <span>Gesamt:</span>
+                    <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
+                  </div>
+                </div>
+              ` : ''}
             </div>
           </div>
           ` : ''}
@@ -1571,36 +1599,36 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Final Calculation + Lines Summary - Side by Side, kompakt -->
-            <div style="display: flex; gap: 8px;">
-              <!-- Flächenberechnung -->
-              <div style="flex: 0.9; padding: 4px 8px; border-left: 2px solid #1976d2;">
-                <h3 style="font-size: 9px; color: #1976d2; margin-bottom: 2px;">Berechnung</h3>
+            <!-- Final Calculation + Lines Summary - mit Rahmen wie auf dem Bild -->
+            <div style="display: flex; gap: 6px;">
+              <!-- Flächenberechnung - blauer Rahmen -->
+              <div style="flex: 0.8; padding: 4px 8px; border: 1px solid #1976d2; border-radius: 3px;">
+                <h3 style="font-size: 9px; color: #1976d2; margin-bottom: 3px;">Flächenberechnung</h3>
                 <div style="font-family: monospace; font-size: 9px; line-height: 1.3;">
                   <div>Brutto: ${grossArea.toFixed(2)} m²</div>
                   ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                  <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; font-weight: 700; font-size: 11px; color: #4CAF50;">
-                    = ${netArea.toFixed(2)} m²
+                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; font-weight: 700; font-size: 11px; color: #4CAF50;">
+                    = Netto: ${netArea.toFixed(2)} m²
                   </div>
                 </div>
               </div>
               
-              <!-- Linien Zusammenfassung -->
+              <!-- Linien Zusammenfassung - oranger Rahmen, breiter -->
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="flex: 1.1; padding: 4px 8px; border-left: 2px solid #FF9800;">
-                  <h3 style="font-size: 9px; color: #FF9800; margin-bottom: 2px;">Linien</h3>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px;">
+                <div style="flex: 1.2; padding: 4px 8px; border: 1px solid #FF9800; border-radius: 3px;">
+                  <h3 style="font-size: 9px; color: #FF9800; margin-bottom: 3px;">Linien Zusammenfassung</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 6px;">
                     ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
-                      <div style="display: flex; justify-content: space-between; font-size: 7px; white-space: nowrap;">
-                        <span style="display: flex; align-items: center;">
-                          <span style="width: 4px; height: 4px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 2px; display: inline-block;"></span>
-                          ${formatCategoryForPdf(cat)}
+                      <div style="display: flex; justify-content: space-between; font-size: 8px; white-space: nowrap; overflow: hidden;">
+                        <span style="display: flex; align-items: center; min-width: 0; overflow: hidden;">
+                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; flex-shrink: 0;"></span>
+                          <span style="overflow: hidden; text-overflow: ellipsis;">${formatCategoryForPdf(cat)}</span>
                         </span>
-                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 2px;">${(length as number).toFixed(2)}m</span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 4px; flex-shrink: 0;">${(length as number).toFixed(2)} m</span>
                       </div>
                     `).join('')}
                   </div>
-                  <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; display: flex; justify-content: space-between; font-weight: 700; font-size: 9px;">
+                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; display: flex; justify-content: space-between; font-weight: 700; font-size: 9px;">
                     <span>Gesamt:</span>
                     <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
                   </div>

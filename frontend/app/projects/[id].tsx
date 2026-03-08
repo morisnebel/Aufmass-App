@@ -3050,6 +3050,7 @@ export default function ProjectDetailScreen() {
 
       {/* Tabs */}
       <View style={styles.tabs}>
+        {/* 1. Info */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
           onPress={() => setActiveTab('overview')}
@@ -3058,17 +3059,7 @@ export default function ProjectDetailScreen() {
             Info
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'roofs' && styles.tabActive]}
-          onPress={() => setActiveTab('roofs')}
-        >
-          <Text style={[styles.tabText, activeTab === 'roofs' && styles.tabTextActive]}>
-            Dach
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'roofs' && styles.tabCountActive]}>
-            {roofs.length}
-          </Text>
-        </TouchableOpacity>
+        {/* 2. Foto */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'photos' && styles.tabActive]}
           onPress={() => setActiveTab('photos')}
@@ -3080,6 +3071,7 @@ export default function ProjectDetailScreen() {
             {photos.length}
           </Text>
         </TouchableOpacity>
+        {/* 3. Skizze */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'sketches' && styles.tabActive]}
           onPress={() => setActiveTab('sketches')}
@@ -3091,6 +3083,31 @@ export default function ProjectDetailScreen() {
             {sketches.length}
           </Text>
         </TouchableOpacity>
+        {/* 4. Flächen */}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'calculator' && styles.tabActive]}
+          onPress={() => setActiveTab('calculator')}
+        >
+          <Text style={[styles.tabText, activeTab === 'calculator' && styles.tabTextActive]}>
+            Flächen
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'calculator' && styles.tabCountActive]}>
+            {areaCalculations.length}
+          </Text>
+        </TouchableOpacity>
+        {/* 5. Dach */}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'roofs' && styles.tabActive]}
+          onPress={() => setActiveTab('roofs')}
+        >
+          <Text style={[styles.tabText, activeTab === 'roofs' && styles.tabTextActive]}>
+            Dach
+          </Text>
+          <Text style={[styles.tabCount, activeTab === 'roofs' && styles.tabCountActive]}>
+            {roofs.length}
+          </Text>
+        </TouchableOpacity>
+        {/* 6. Liste */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'checklists' && styles.tabActive]}
           onPress={() => setActiveTab('checklists')}
@@ -3102,6 +3119,7 @@ export default function ProjectDetailScreen() {
             {checklists.length}
           </Text>
         </TouchableOpacity>
+        {/* 7. Notiz */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'remarks' && styles.tabActive]}
           onPress={() => setActiveTab('remarks')}
@@ -3110,6 +3128,7 @@ export default function ProjectDetailScreen() {
             Notiz
           </Text>
         </TouchableOpacity>
+        {/* 8. Doku */}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'documents' && styles.tabActive]}
           onPress={() => setActiveTab('documents')}
@@ -3119,17 +3138,6 @@ export default function ProjectDetailScreen() {
           </Text>
           <Text style={[styles.tabCount, activeTab === 'documents' && styles.tabCountActive]}>
             {documents.length}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'calculator' && styles.tabActive]}
-          onPress={() => setActiveTab('calculator')}
-        >
-          <Text style={[styles.tabText, activeTab === 'calculator' && styles.tabTextActive]}>
-            Flächen
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'calculator' && styles.tabCountActive]}>
-            {areaCalculations.length}
           </Text>
         </TouchableOpacity>
       </View>

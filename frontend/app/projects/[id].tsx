@@ -1227,44 +1227,44 @@ export default function ProjectDetailScreen() {
             ${generateFullCalcSvg(calc)}
           </div>
           
-          <!-- Compact calculation summary with frames -->
-          <div style="display: flex; gap: 8px; font-size: 9px; line-height: 1.3;">
-            <!-- Rechenweg - framed -->
-            <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; min-width: 100px;">
-              <div style="font-size: 8px; color: #666; margin-bottom: 2px; font-weight: 600;">Rechenweg:</div>
+          <!-- Compact calculation summary - ohne Hintergrund, nur border-left -->
+          <div style="display: flex; gap: 6px; font-size: 8px; line-height: 1.2;">
+            <!-- Rechenweg -->
+            <div style="padding: 3px 6px; border-left: 2px solid #4CAF50; font-family: monospace; min-width: 90px;">
+              <div style="font-size: 7px; color: #666; font-weight: 600;">Rechenweg:</div>
               <div>Brutto: ${grossArea.toFixed(2)} m²</div>
-              ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-              <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; font-weight: bold;">= ${netArea.toFixed(2)} m²</div>
+              ${deductionsTotal > 0 ? `<div>− ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+              <div style="border-top: 1px solid #333; margin-top: 1px; padding-top: 1px; font-weight: bold;">= ${netArea.toFixed(2)} m²</div>
             </div>
             
-            <!-- Flächen - framed -->
-            <div style="flex: 1; background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <!-- Flächen -->
+            <div style="flex: 1; padding: 3px 6px; border-left: 2px solid #666;">
               ${mainAreas.length > 0 ? `
-                <div style="margin-bottom: 3px;">
-                  <span style="font-weight: 600; color: #4CAF50; font-size: 8px;">Grundflächen: </span>
-                  ${mainAreas.map((p: any) => `<span style="margin-right: 6px;">${p.name} +${calculatePolygonArea(p.points, calcScale).toFixed(2)}m²</span>`).join('')}
+                <div style="margin-bottom: 2px;">
+                  <span style="font-weight: 600; color: #4CAF50; font-size: 7px;">Flächen: </span>
+                  ${mainAreas.map((p: any) => `<span style="margin-right: 4px;">${p.name} +${calculatePolygonArea(p.points, calcScale).toFixed(2)}m²</span>`).join('')}
                 </div>
               ` : ''}
               ${deductionAreas.length > 0 ? `
                 <div>
-                  <span style="font-weight: 600; color: #f44336; font-size: 8px;">Abzüge: </span>
-                  ${deductionAreas.map((p: any) => `<span style="margin-right: 6px;">${p.name} -${calculatePolygonArea(p.points, calcScale).toFixed(2)}m²</span>`).join('')}
+                  <span style="font-weight: 600; color: #f44336; font-size: 7px;">Abzüge: </span>
+                  ${deductionAreas.map((p: any) => `<span style="margin-right: 4px;">${p.name} -${calculatePolygonArea(p.points, calcScale).toFixed(2)}m²</span>`).join('')}
                 </div>
               ` : ''}
             </div>
             
-            <!-- Linien - framed, two columns -->
+            <!-- Linien -->
             ${Object.keys(linesByCategory).length > 0 ? `
-              <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; min-width: 180px;">
-                <div style="font-weight: 600; color: #1976d2; font-size: 8px; margin-bottom: 2px;">Linien:</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;">
+              <div style="padding: 3px 6px; border-left: 2px solid #FF9800; min-width: 150px;">
+                <div style="font-weight: 600; color: #e65100; font-size: 7px; margin-bottom: 1px;">Linien:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px;">
                   ${Object.entries(linesByCategory).map(([cat, length]) => `
-                    <div style="display: flex; justify-content: space-between; font-size: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 7px;">
                       <span style="display: flex; align-items: center;">
-                        <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
+                        <span style="width: 4px; height: 4px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 2px; display: inline-block;"></span>
                         ${formatCategoryForPdf(cat)}
                       </span>
-                      <span style="margin-left: 4px;">${(length as number).toFixed(2)}m</span>
+                      <span style="margin-left: 2px;">${(length as number).toFixed(2)}m</span>
                     </div>
                   `).join('')}
                 </div>
@@ -1350,50 +1350,39 @@ export default function ProjectDetailScreen() {
         return `
           <!-- ========== BERECHNUNG ${calcIndex + 1}: ZEICHNUNG ========== -->
           <div style="page-break-before: ${calcIndex > 0 ? 'always' : 'auto'}; margin-bottom: 0;">
-            <!-- Überschrift für die Zeichnung -->
-            <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; margin-bottom: 0;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
+            <!-- Überschrift für die Zeichnung (Tinte sparend) -->
+            <div style="border-bottom: 3px solid #4CAF50; padding-bottom: 8px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
                 <div>
-                  <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Flächenberechnung ${calcIndex + 1}</div>
-                  <div style="font-size: 16px; font-weight: bold; margin-top: 2px;">${calc.name || `Berechnung ${calcIndex + 1}`}</div>
+                  <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #666;">Flächenberechnung ${calcIndex + 1}</div>
+                  <div style="font-size: 16px; font-weight: bold; color: #333;">${calc.name || `Berechnung ${calcIndex + 1}`}</div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-size: 10px; opacity: 0.9;">Nettofläche</div>
-                  <div style="font-size: 24px; font-weight: bold;">${netArea.toFixed(2)} m²</div>
+                  <div style="font-size: 9px; color: #666;">Nettofläche</div>
+                  <div style="font-size: 22px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</div>
                 </div>
               </div>
             </div>
             
             <!-- Zeichnung - Mindestens 60% der Seite -->
-            <div style="border: 2px solid #4CAF50; border-top: none; border-radius: 0 0 8px 8px; padding: 15px; background: #fafafa; min-height: 450px; display: flex; align-items: center; justify-content: center;">
+            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #fafafa; min-height: 450px; display: flex; align-items: center; justify-content: center;">
               ${generateFullCalcSvg(calc)}
             </div>
             
-            <!-- Kurzübersicht unter der Zeichnung -->
-            <div style="display: flex; gap: 10px; margin-top: 12px; font-size: 9px;">
-              <div style="background: #f0f0f0; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #4CAF50;">
-                <div style="font-size: 8px; color: #666; font-weight: 600; margin-bottom: 3px;">RECHENWEG</div>
-                <div>Brutto: <strong>${grossArea.toFixed(2)} m²</strong></div>
-                ${deductionsTotal > 0 ? `<div>− Abzüge: <strong>${deductionsTotal.toFixed(2)} m²</strong></div>` : ''}
-                <div style="border-top: 1px solid #999; margin-top: 3px; padding-top: 3px; font-weight: bold; font-size: 11px;">= ${netArea.toFixed(2)} m²</div>
+            <!-- Kurzübersicht unter der Zeichnung - kompakt, kein Hintergrund -->
+            <div style="display: flex; gap: 6px; margin-top: 6px; font-size: 8px;">
+              <div style="padding: 2px 6px; border-left: 2px solid #4CAF50;">
+                <span style="color: #666; font-weight: 600;">Rechenweg: </span>
+                <span>Brutto ${grossArea.toFixed(2)} m²${deductionsTotal > 0 ? ` − ${deductionsTotal.toFixed(2)} m²` : ''} = <strong>${netArea.toFixed(2)} m²</strong></span>
               </div>
               
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="flex: 1; background: #fff8f0; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #FF9800;">
-                  <div style="font-size: 8px; color: #e65100; font-weight: 600; margin-bottom: 3px;">LINIEN GESAMT</div>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 2px 12px;">
-                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => {
-                      const catColor = getCategoryColor(cat);
-                      return `
-                      <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; color: ${catColor};">
-                          <span style="width: 6px; height: 6px; border-radius: 50%; background: ${catColor}; margin-right: 4px;"></span>
-                          <span style="font-weight: 600;">${formatCategoryForPdf(cat)}</span>
-                        </span>
-                        <span style="font-weight: 700; color: ${catColor}; margin-left: 8px;">${(length as number).toFixed(2)} m</span>
-                      </div>
-                    `}).join('')}
-                  </div>
+                <div style="flex: 1; padding: 2px 6px; border-left: 2px solid #FF9800;">
+                  <span style="color: #e65100; font-weight: 600;">Linien: </span>
+                  ${Object.entries(totalLinesByCategory).map(([cat, length]) => {
+                    const catColor = getCategoryColor(cat);
+                    return `<span style="margin-right: 6px;"><span style="display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: ${catColor}; margin-right: 2px; vertical-align: middle;"></span><span style="color: ${catColor};">${formatCategoryForPdf(cat)} ${(length as number).toFixed(2)}m</span></span>`;
+                  }).join('')}
                 </div>
               ` : ''}
             </div>
@@ -1401,74 +1390,60 @@ export default function ProjectDetailScreen() {
           
           ${showCalcDetailsPage ? `
           <!-- ========== BERECHNUNG ${calcIndex + 1}: DETAILBERECHNUNG ========== -->
-          <div style="page-break-before: always; margin-top: 0;">
-            <!-- Überschrift für die Detailberechnung -->
-            <div style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; margin-bottom: 0;">
+          <div style="page-break-before: always;">
+            <!-- Überschrift - schlank, nur border-bottom -->
+            <div style="border-bottom: 2px solid #1976d2; padding-bottom: 4px; margin-bottom: 8px;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Detailberechnung</div>
-                  <div style="font-size: 16px; font-weight: bold; margin-top: 2px;">${calc.name || `Berechnung ${calcIndex + 1}`}</div>
+                  <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Details: </span>
+                  <span style="font-size: 12px; font-weight: bold; color: #333;">${calc.name || `Berechnung ${calcIndex + 1}`}</span>
                 </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 10px; opacity: 0.9;">Nettofläche</div>
-                  <div style="font-size: 24px; font-weight: bold;">${netArea.toFixed(2)} m²</div>
-                </div>
+                <div style="font-size: 14px; font-weight: bold; color: #1976d2;">${netArea.toFixed(2)} m²</div>
               </div>
             </div>
             
-            <!-- Detail-Inhalt -->
-            <div style="border: 2px solid #1976d2; border-top: none; border-radius: 0 0 8px 8px; padding: 15px; background: #fafafa;">
-              <!-- Hauptflächen und Abzüge nebeneinander -->
-              <div style="display: flex; gap: 15px;">
-                <!-- Hauptflächen -->
-                ${mainAreas.length > 0 ? `
-                  <div style="flex: 1;">
-                    <h3 style="font-size: 12px; color: #4CAF50; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #4CAF50; display: flex; align-items: center;">
-                      <span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">+</span>
-                      Hauptflächen
-                    </h3>
-                    ${mainAreas.map((p: any) => `
-                      <div style="background: #fff; border-left: 4px solid #4CAF50; padding: 10px 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                          <span style="font-weight: 700; font-size: 11px; color: #333;">${p.name}</span>
-                          <span style="font-weight: 700; color: #4CAF50; font-size: 12px;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
-                        </div>
-                        <div style="border-top: 1px dashed #ddd; padding-top: 6px;">${generateLinesForPolygon(p)}</div>
+            <!-- Kompakte Detail-Tabelle - ohne Hintergrundfarbe -->
+            <div style="display: flex; gap: 8px; font-size: 8px;">
+              <!-- Hauptflächen -->
+              ${mainAreas.length > 0 ? `
+                <div style="flex: 1;">
+                  <div style="font-size: 9px; font-weight: 700; color: #4CAF50; border-bottom: 1px solid #4CAF50; padding-bottom: 2px; margin-bottom: 4px;">+ Hauptflächen</div>
+                  ${mainAreas.map((p: any) => `
+                    <div style="border-left: 2px solid #4CAF50; padding: 2px 6px; margin-bottom: 3px;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600;">${p.name}</span>
+                        <span style="font-weight: 600; color: #4CAF50;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
                       </div>
-                    `).join('')}
-                  </div>
-                ` : ''}
-                
-                <!-- Abzüge -->
-                ${deductionAreas.length > 0 ? `
-                  <div style="flex: 1;">
-                    <h3 style="font-size: 12px; color: #f44336; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #f44336; display: flex; align-items: center;">
-                      <span style="background: #f44336; color: white; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">−</span>
-                      Abzüge
-                    </h3>
-                    ${deductionAreas.map((p: any) => `
-                      <div style="background: #fff; border-left: 4px solid #f44336; padding: 10px 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                          <span style="font-weight: 700; font-size: 11px; color: #333;">${p.name}</span>
-                          <span style="font-weight: 700; color: #f44336; font-size: 12px;">−${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
-                        </div>
-                        <div style="border-top: 1px dashed #ddd; padding-top: 6px;">${generateLinesForPolygon(p)}</div>
-                      </div>
-                    `).join('')}
-                  </div>
-                ` : ''}
-              </div>
-              
-              <!-- Zusammenfassung am Ende -->
-              <div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 8px; border: 1px solid #4CAF50;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <div style="font-size: 10px; color: #2e7d32; text-transform: uppercase; letter-spacing: 1px;">Endergebnis</div>
-                    <div style="font-size: 11px; color: #666; margin-top: 2px;">${grossArea.toFixed(2)} m² ${deductionsTotal > 0 ? `− ${deductionsTotal.toFixed(2)} m²` : ''}</div>
-                  </div>
-                  <div style="font-size: 28px; font-weight: bold; color: #2e7d32;">${netArea.toFixed(2)} m²</div>
+                      <div style="margin-top: 1px;">${generateLinesForPolygon(p)}</div>
+                    </div>
+                  `).join('')}
                 </div>
+              ` : ''}
+              
+              <!-- Abzüge -->
+              ${deductionAreas.length > 0 ? `
+                <div style="flex: 1;">
+                  <div style="font-size: 9px; font-weight: 700; color: #f44336; border-bottom: 1px solid #f44336; padding-bottom: 2px; margin-bottom: 4px;">− Abzüge</div>
+                  ${deductionAreas.map((p: any) => `
+                    <div style="border-left: 2px solid #f44336; padding: 2px 6px; margin-bottom: 3px;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600;">${p.name}</span>
+                        <span style="font-weight: 600; color: #f44336;">−${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                      </div>
+                      <div style="margin-top: 1px;">${generateLinesForPolygon(p)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- Endergebnis - kompakter -->
+            <div style="margin-top: 6px; padding: 4px 8px; border: 1px solid #4CAF50; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; font-size: 9px;">
+              <div>
+                <span style="color: #666;">Ergebnis:</span>
+                <span style="color: #888; margin-left: 4px;">${grossArea.toFixed(2)} m² ${deductionsTotal > 0 ? `− ${deductionsTotal.toFixed(2)} m²` : ''}</span>
               </div>
+              <div style="font-size: 14px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</div>
             </div>
           </div>
           ` : ''}
@@ -1549,28 +1524,28 @@ export default function ProjectDetailScreen() {
         
         return `
           <div class="new-page" style="page-break-before: always;">
-            <h2 style="color: #1976d2; font-size: 14px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #1976d2;">
-              Berechnungsdetails: ${calc.name || `Berechnung ${calcIndex + 1}`}
+            <h2 style="color: #1976d2; font-size: 12px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 2px solid #1976d2;">
+              Details: ${calc.name || `Berechnung ${calcIndex + 1}`}
             </h2>
             
-            <!-- Main Areas + Deductions Side by Side -->
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <!-- Main Areas + Deductions Side by Side - kompakt -->
+            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
               <!-- Main Areas Section -->
               ${mainAreas.length > 0 ? `
                 <div style="flex: 1;">
-                  <h3 style="font-size: 10px; color: #4CAF50; margin-bottom: 4px;">Hauptflächen</h3>
+                  <h3 style="font-size: 9px; color: #4CAF50; margin-bottom: 3px; border-bottom: 1px solid #4CAF50; padding-bottom: 2px;">Hauptflächen</h3>
                   ${mainAreas.map((p: any) => `
-                    <div style="background: #f8f8f8; border-left: 2px solid #4CAF50; padding: 4px 8px; margin-bottom: 3px; border-radius: 3px;">
+                    <div style="border-left: 2px solid #4CAF50; padding: 2px 6px; margin-bottom: 2px;">
                       <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; font-size: 9px;">${p.name}</span>
-                        <span style="font-weight: 600; color: #4CAF50; font-size: 9px;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                        <span style="font-weight: 600; font-size: 8px;">${p.name}</span>
+                        <span style="font-weight: 600; color: #4CAF50; font-size: 8px;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
                       </div>
-                      <div style="font-size: 8px; margin-top: 2px;">${generateLinesForPolygon(p)}</div>
+                      <div style="font-size: 7px; margin-top: 1px;">${generateLinesForPolygon(p)}</div>
                     </div>
                   `).join('')}
-                  <div style="background: #e8f5e9; padding: 4px 8px; border-radius: 3px; display: flex; justify-content: space-between;">
-                    <span style="font-weight: 600; font-size: 9px;">Brutto-Fläche:</span>
-                    <span style="font-weight: 700; font-size: 9px;">${grossArea.toFixed(2)} m²</span>
+                  <div style="padding: 2px 6px; display: flex; justify-content: space-between; border-top: 1px solid #4CAF50;">
+                    <span style="font-weight: 600; font-size: 8px;">Brutto:</span>
+                    <span style="font-weight: 700; font-size: 8px;">${grossArea.toFixed(2)} m²</span>
                   </div>
                 </div>
               ` : ''}
@@ -1578,54 +1553,54 @@ export default function ProjectDetailScreen() {
               <!-- Deduction Areas Section -->
               ${deductionAreas.length > 0 ? `
                 <div style="flex: 1;">
-                  <h3 style="font-size: 10px; color: #f44336; margin-bottom: 4px;">Abzüge</h3>
+                  <h3 style="font-size: 9px; color: #f44336; margin-bottom: 3px; border-bottom: 1px solid #f44336; padding-bottom: 2px;">Abzüge</h3>
                   ${deductionAreas.map((p: any) => `
-                    <div style="background: #fff8f8; border-left: 2px solid #f44336; padding: 4px 8px; margin-bottom: 3px; border-radius: 3px;">
+                    <div style="border-left: 2px solid #f44336; padding: 2px 6px; margin-bottom: 2px;">
                       <div style="display: flex; justify-content: space-between;">
-                        <span style="font-weight: 600; font-size: 9px;">${p.name}</span>
-                        <span style="font-weight: 600; color: #f44336; font-size: 9px;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                        <span style="font-weight: 600; font-size: 8px;">${p.name}</span>
+                        <span style="font-weight: 600; color: #f44336; font-size: 8px;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
                       </div>
-                      <div style="font-size: 8px; margin-top: 2px;">${generateLinesForPolygon(p)}</div>
+                      <div style="font-size: 7px; margin-top: 1px;">${generateLinesForPolygon(p)}</div>
                     </div>
                   `).join('')}
-                  <div style="background: #ffebee; padding: 4px 8px; border-radius: 3px; display: flex; justify-content: space-between;">
-                    <span style="font-weight: 600; font-size: 9px;">Gesamt Abzüge:</span>
-                    <span style="font-weight: 700; color: #f44336; font-size: 9px;">-${deductionsTotal.toFixed(2)} m²</span>
+                  <div style="padding: 2px 6px; display: flex; justify-content: space-between; border-top: 1px solid #f44336;">
+                    <span style="font-weight: 600; font-size: 8px;">Gesamt:</span>
+                    <span style="font-weight: 700; color: #f44336; font-size: 8px;">-${deductionsTotal.toFixed(2)} m²</span>
                   </div>
                 </div>
               ` : ''}
             </div>
             
-            <!-- Final Calculation + Lines Summary - Side by Side -->
-            <div style="display: flex; gap: 10px;">
+            <!-- Final Calculation + Lines Summary - Side by Side, kompakt -->
+            <div style="display: flex; gap: 8px;">
               <!-- Flächenberechnung -->
-              <div style="flex: 0.9; background: #f0f7ff; padding: 6px 10px; border-radius: 6px; border: 1px solid #1976d2;">
-                <h3 style="font-size: 10px; color: #1976d2; margin-bottom: 4px;">Flächenberechnung</h3>
-                <div style="font-family: monospace; font-size: 10px; line-height: 1.4;">
+              <div style="flex: 0.9; padding: 4px 8px; border-left: 2px solid #1976d2;">
+                <h3 style="font-size: 9px; color: #1976d2; margin-bottom: 2px;">Berechnung</h3>
+                <div style="font-family: monospace; font-size: 9px; line-height: 1.3;">
                   <div>Brutto: ${grossArea.toFixed(2)} m²</div>
                   ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-                  <div style="border-top: 1px solid #333; margin-top: 3px; padding-top: 3px; font-weight: 700; font-size: 12px; color: #4CAF50;">
-                    = Netto: ${netArea.toFixed(2)} m²
+                  <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; font-weight: 700; font-size: 11px; color: #4CAF50;">
+                    = ${netArea.toFixed(2)} m²
                   </div>
                 </div>
               </div>
               
               <!-- Linien Zusammenfassung -->
               ${Object.keys(totalLinesByCategory).length > 0 ? `
-                <div style="flex: 1.1; background: #fff8f0; padding: 6px 10px; border-radius: 6px; border: 1px solid #FF9800;">
-                  <h3 style="font-size: 10px; color: #FF9800; margin-bottom: 4px;">Linien Zusammenfassung</h3>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;">
+                <div style="flex: 1.1; padding: 4px 8px; border-left: 2px solid #FF9800;">
+                  <h3 style="font-size: 9px; color: #FF9800; margin-bottom: 2px;">Linien</h3>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px;">
                     ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
-                      <div style="display: flex; justify-content: space-between; font-size: 8px; white-space: nowrap;">
+                      <div style="display: flex; justify-content: space-between; font-size: 7px; white-space: nowrap;">
                         <span style="display: flex; align-items: center;">
-                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px; display: inline-block;"></span>
+                          <span style="width: 4px; height: 4px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 2px; display: inline-block;"></span>
                           ${formatCategoryForPdf(cat)}
                         </span>
-                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 3px;">${(length as number).toFixed(2)}m</span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)}; margin-left: 2px;">${(length as number).toFixed(2)}m</span>
                       </div>
                     `).join('')}
                   </div>
-                  <div style="border-top: 1px solid #333; margin-top: 4px; padding-top: 3px; display: flex; justify-content: space-between; font-weight: 700; font-size: 10px;">
+                  <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; display: flex; justify-content: space-between; font-weight: 700; font-size: 9px;">
                     <span>Gesamt:</span>
                     <span>${Object.values(totalLinesByCategory).reduce((sum: number, l) => sum + (l as number), 0).toFixed(2)} m</span>
                   </div>
@@ -1633,8 +1608,8 @@ export default function ProjectDetailScreen() {
               ` : ''}
             </div>
             
-            <!-- Footer - direkt unter den Berechnungsdetails -->
-            <div style="text-align: center; font-size: 10px; color: #1976d2; font-weight: 600; margin-top: 20px; padding-top: 10px; border-top: 2px solid #1976d2;">
+            <!-- Footer - kompakt -->
+            <div style="text-align: center; font-size: 8px; color: #1976d2; font-weight: 600; margin-top: 12px; padding-top: 6px; border-top: 1px solid #1976d2;">
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>

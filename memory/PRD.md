@@ -1,93 +1,98 @@
-# Dachhandwerker App - PRD
+# AUFMASSPROFI DACH - Product Requirements Document
 
 ## Original Problem Statement
-Eine umfassende Anwendung zur Verwaltung von Dachdeckerprojekten mit einem leistungsstarken "Flächen-Kalkulator" (Area Calculator) Tool.
+Build a comprehensive roofing project management app with:
+- Checklist template management
+- A powerful "Flächen-Kalkulator" (Area Calculator) tool integrated within projects
+- PDF export with customizable layout
+
+**User's preferred language**: German
 
 ## Core Features
 
-### Flächen-Kalkulator
-- Zeichnen von Hauptpolygonen (Gesamtfläche) und Abzugspolygonen (Fenster/Türen)
-- Maßstab-Einstellung für die Zeichenfläche
-- Automatische Berechnung der Nettofläche
-- Winkel- und Längeneingabe-Modus
-- Linien-/Kantenverwaltung mit Kategorien
-- Zeichenhilfen: Winkeleinrasten, direkte Längeneingabe
-- Verschiebbare Numpads für manuelle Eingabe
-- Annotationswerkzeuge (Rechteck, Kreis, Pfeil, Linie, Text, Memo)
-- Pinch-to-Zoom und Pan-Funktionalität
-- Hintergrundbild-Unterstützung
-- Undo/Redo
-- PDF-Export
+### 1. Flächen-Kalkulator (Area Calculator)
+- Draw main polygons (total area) and subtraction polygons (openings)
+- Scale setting for canvas
+- Automatic net area calculation
+- Edge length input via angle/length modal
+- Line/edge naming with categories
+- Total length calculation grouped by category
+- Drawing aids: angle snapping, direct length input
+- Full shape editability
+- Movable Numpad for dimension input
+- Annotation tools (shapes, text boxes, memo pointers)
+- Pinch-to-zoom and pan
+- Background image support
+- Live feedback and Undo/Redo
 
-### Checklisten-Templates
-- Vordefinierte Checklisten für Dacharbeiten
-- Anpassbare Templates
+### 2. Voreinstellungen (Presets)
+- Line Categories (Linienkategorien) management
+- Text Shortcuts (Textkürzel) management
+- Bidirectional synchronization between linked categories/shortcuts
 
-### Projektverwaltung
-- Kundendaten
-- Dokumentenverwaltung
-- Fotoverwaltung mit Annotationen
+### 3. PDF Export
+- Drawing with annotations and reference image
+- Calculation summary with category colors
+- Layout: [Drawing -> Details] per calculation
+- **Ink-saving design**: No background colors, only border-left/border-bottom for headers
 
-## Implemented Features (December 2024)
+## Tech Stack
+- React Native / Expo
+- TypeScript
+- Local Storage (@react-native-async-storage/async-storage)
+- expo-print for PDF generation
 
-### Session 1 - Numpad & Modal Improvements
-- ✅ Line Edit Numpad: Kompatibilität mit Laser-Messgerät
-- ✅ "Winkel & Maß" Modal: Eingebettetes Numpad, verschiebbar, kompakt
-- ✅ Text & Memo Numpad: Eingebettet in jeweiliges Modal
-- ✅ Annotation Movability: Text und Memo verschiebbar
-- ✅ Annotation Editability: Text und Memo bearbeitbar (Doppel-Tap)
+## Key Files
+- `/app/frontend/app/calculator/new.tsx` - Main calculator component
+- `/app/frontend/app/projects/[id].tsx` - Project detail & PDF export
+- `/app/frontend/app/services/LocalStorage.ts` - Data services
 
-### Session 2 - Current Session
-- ✅ Parallele Hilfslinien Modal: Verschiebbar mit eingebettetem Numpad
-- ✅ Winkel-Anzeige: Korrigiert auf Innenwinkel-Berechnung
-- ✅ Richtungskreis: 180° und 270° Labels hinzugefügt
-- ✅ Winkeleingabe: − und ± Buttons im Numpad für negative Winkel
+## Data Models
 
-## Technical Architecture
-
-```
-/app
-├── frontend/
-│   └── app/
-│       ├── calculator/
-│       │   └── new.tsx           # Hauptkomponente Flächen-Kalkulator
-│       ├── projects/
-│       │   └── [id].tsx          # Projektdetails, PDF-Export
-│       └── services/
-│           └── LocalStorage.ts   # Datenmodelle
-└── backend/
-    └── server.py                 # FastAPI Backend
+### LineCategory
+```typescript
+interface LineCategory {
+  id: string;
+  name: string;
+  color: string;
+  shortcut?: string;
+}
 ```
 
-## Key Technical Concepts
-- **React Native SVG**: Zeichenfläche und Annotationen
-- **PanResponder + Animated.View**: Verschiebbare Modals
-- **AsyncStorage**: Lokale Datenspeicherung
+### TextShortcut
+```typescript
+interface TextShortcut {
+  id: string;
+  shortcut: string;
+  fullName: string;
+  lineCategoryId?: string;
+}
+```
 
-## Prioritized Backlog
+## Completed Features (December 2025)
+- [x] Calculator drawing and polygon management
+- [x] Parallel lines modal with embedded Numpad
+- [x] Angle/direction input with negative angle support
+- [x] Voreinstellungen (Presets) feature with bidirectional sync
+- [x] Shortcut display on canvas next to line lengths
+- [x] Category formatting as "(Kürzel) Name"
+- [x] Category color synchronization in UI and PDF
+- [x] PDF layout refactoring: Drawing -> Details flow
+- [x] **PDF styling optimization**: Ink-saving design (no background colors)
 
-### P0 (Critical)
-- Keine offenen kritischen Issues
+## Backlog
 
-### P1 (High)
-- Keine offenen High-Priority Issues
+### P2 - High Priority
+- [ ] Create new TestFlight build
+- [ ] Pro/Base version split with in-app purchases
 
-### P2 (Medium)
-- TestFlight Build erstellen
-- Pro/Base Version mit In-App-Käufen implementieren
+### P3 - Medium Priority
+- [ ] Price calculation based on areas/lengths
 
-### P3 (Low)
-- Preiskalkulation basierend auf Flächen/Längen
+### P4 - Low Priority
+- [ ] Re-implement iCloud Sync
+- [ ] Fix dashed lines rendering bug in PDF preview
 
-### P4 (Future)
-- iCloud Sync wieder implementieren
-- Visueller Bug bei gestrichelten Linien im PDF-Preview
-
-## Refactoring Needed
-- `/app/frontend/app/calculator/new.tsx`: ~9000 Zeilen, sollte in kleinere Komponenten aufgeteilt werden (AngleModal, TextEditModal, DraggableNumpad, Canvas, etc.)
-
-## 3rd Party Integrations
-- @react-native-async-storage/async-storage
-- expo
-- expo-print
-- react-native-svg
+## Known Issues
+- Caching issues: If changes not visible, restart Expo server and clear Metro cache
+- Visual bug with dashed lines in PDF preview (low priority)

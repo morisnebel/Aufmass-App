@@ -327,44 +327,43 @@ export default function ProjectDetailScreen() {
         const photo = photos.find(p => p.id === photoId);
         if (photo?.image_data) {
           try {
-            // Get base64 data
+            // Get base64 data - remove data URI prefix if present
             let base64Data = photo.image_data;
-            
-            // Remove data URI prefix if present and get the full data URI
-            let dataUri = base64Data;
-            if (!dataUri.startsWith('data:')) {
-              dataUri = `data:image/jpeg;base64,${base64Data}`;
+            if (base64Data.includes(',')) {
+              base64Data = base64Data.split(',')[1];
             }
             
-            // Create temp file path - use documentDirectory as fallback
-            const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
+            // Create temp file path - use documentDirectory (more reliable than cacheDirectory)
+            const baseDir = FileSystem.documentDirectory;
+            if (!baseDir) {
+              console.error('No file system directory available');
+              continue;
+            }
+            
             const filename = `photo_${photoId}_${Date.now()}.jpg`;
-            const fileUri = `${cacheDir}${filename}`;
+            const fileUri = `${baseDir}${filename}`;
             
-            console.log('Saving to:', fileUri);
+            console.log('Writing base64 to:', fileUri);
             
-            // Download from data URI to file
-            const downloadResult = await FileSystem.downloadAsync(
-              dataUri,
-              fileUri
-            );
+            // Write base64 data directly to file
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
             
-            console.log('Download result:', downloadResult.status, downloadResult.uri);
+            console.log('File written successfully');
             
-            if (downloadResult.status === 200) {
-              // Save to media library
-              const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-              console.log('Asset created:', asset.id);
-              
-              // Clean up temp file
-              try {
-                await FileSystem.deleteAsync(downloadResult.uri, { idempotent: true });
-              } catch (e) {
-                // Ignore cleanup errors
-              }
-              
-              savedCount++;
+            // Save to media library
+            const asset = await MediaLibrary.createAssetAsync(fileUri);
+            console.log('Asset created:', asset.id);
+            
+            // Clean up temp file
+            try {
+              await FileSystem.deleteAsync(fileUri, { idempotent: true });
+            } catch (e) {
+              // Ignore cleanup errors
             }
+            
+            savedCount++;
           } catch (err: any) {
             console.error('Error saving photo:', err?.message || err);
           }

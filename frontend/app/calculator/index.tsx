@@ -12,11 +12,12 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { AreaCalculationService, AreaCalculation } from '../../services/LocalStorage';
+import { AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory } from '../../services/LocalStorage';
 
 export default function CalculatorListScreen() {
   const router = useRouter();
   const [calculations, setCalculations] = useState<AreaCalculation[]>([]);
+  const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export default function CalculatorListScreen() {
   useFocusEffect(
     useCallback(() => {
       loadCalculations();
+      loadLineCategories();
     }, [])
   );
 
@@ -38,6 +40,17 @@ export default function CalculatorListScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadLineCategories = async () => {
+    const cats = await LineCategoryService.getAll();
+    setLineCategories(cats);
+  };
+
+  // Format category with shortcut: "Traufe" -> "(TR) Traufe"
+  const formatCat = (categoryName: string): string => {
+    const cat = lineCategories.find(c => c.name === categoryName);
+    return cat?.shortcut ? `(${cat.shortcut}) ${categoryName}` : categoryName;
   };
 
   const handleDelete = async () => {
@@ -166,7 +179,7 @@ export default function CalculatorListScreen() {
                       <Text style={styles.resultLabel}>Linien</Text>
                       <Text style={styles.resultValueSmall}>
                         {Object.entries(calc.results.linesByCategory)
-                          .map(([cat, len]) => `${cat}: ${(len as number).toFixed(2).replace('.', ',')}m`)
+                          .map(([cat, len]) => `${formatCat(cat)}: ${(len as number).toFixed(2).replace('.', ',')}m`)
                           .slice(0, 2)
                           .join(', ')}
                         {Object.keys(calc.results.linesByCategory).length > 2 && '...'}

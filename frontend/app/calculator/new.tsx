@@ -3454,11 +3454,12 @@ export default function AreaCalculatorEditor() {
                   if (length > 0.01) individualLengths.push(length);
                 }
               });
+              const displayName = formatCategoryWithShortcut(category);
               return `
               <div class="line-item">
                 <span class="line-category">
                   <span class="color-dot" style="background: ${getCategoryColor(category)};"></span>
-                  ${category}
+                  ${displayName}
                 </span>
                 <span>${(totalLength as number).toFixed(2)} m</span>
               </div>
@@ -5755,7 +5756,7 @@ export default function AreaCalculatorEditor() {
                 <View key={category} style={styles.calculationsRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <View style={[styles.categoryDotSmall, { backgroundColor: getCategoryColor(category) }]} />
-                    <Text style={styles.calculationsLabel} numberOfLines={1}>{category}</Text>
+                    <Text style={styles.calculationsLabel} numberOfLines={1}>{formatCategoryWithShortcut(category)}</Text>
                   </View>
                   <Text style={styles.calculationsValue}>{(length as number).toFixed(2)} m</Text>
                 </View>

@@ -547,6 +547,7 @@ export default function AreaCalculatorEditor() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState(false);
   const [calculatorDisplay, setCalculatorDisplay] = useState('0');
+  const [calculatorExpression, setCalculatorExpression] = useState('');
   const [calculatorPrevValue, setCalculatorPrevValue] = useState<number | null>(null);
   const [calculatorOperator, setCalculatorOperator] = useState<string | null>(null);
   const [calculatorWaitingForOperand, setCalculatorWaitingForOperand] = useState(false);
@@ -8323,8 +8324,8 @@ export default function AreaCalculatorEditor() {
           >
             {/* Calculator Display */}
             <View style={{ backgroundColor: '#1976d2', padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'right', minHeight: 20 }}>
-                {calculatorPrevValue !== null ? `${calculatorPrevValue} ${calculatorOperator || ''}` : ' '}
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 16, textAlign: 'right', minHeight: 24 }}>
+                {calculatorExpression || ' '}
               </Text>
               <Text style={{ color: '#fff', fontSize: 40, fontWeight: '300', textAlign: 'right' }}>
                 {calculatorDisplay}
@@ -8339,6 +8340,7 @@ export default function AreaCalculatorEditor() {
                   style={{ flex: 1, height: 56, backgroundColor: '#ffebee', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorDisplay('0');
+                    setCalculatorExpression('');
                     setCalculatorPrevValue(null);
                     setCalculatorOperator(null);
                     setCalculatorWaitingForOperand(false);
@@ -8365,9 +8367,11 @@ export default function AreaCalculatorEditor() {
                     if (calculatorPrevValue !== null && calculatorOperator) {
                       // Prozent vom vorherigen Wert berechnen: 100 + 10% → 10% von 100 = 10
                       const percentValue = (calculatorPrevValue * currentVal) / 100;
+                      setCalculatorExpression(calculatorExpression + calculatorDisplay + '%');
                       setCalculatorDisplay(percentValue.toString());
                     } else {
                       // Ohne Operator: einfach durch 100 teilen
+                      setCalculatorExpression(calculatorDisplay + '%');
                       setCalculatorDisplay((currentVal / 100).toString());
                     }
                   }}
@@ -8377,6 +8381,7 @@ export default function AreaCalculatorEditor() {
                 <TouchableOpacity 
                   style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
+                    setCalculatorExpression(calculatorDisplay + ' ÷ ');
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('÷');
                     setCalculatorWaitingForOperand(true);
@@ -8407,6 +8412,7 @@ export default function AreaCalculatorEditor() {
                 <TouchableOpacity 
                   style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
+                    setCalculatorExpression(calculatorDisplay + ' × ');
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('×');
                     setCalculatorWaitingForOperand(true);
@@ -8437,6 +8443,7 @@ export default function AreaCalculatorEditor() {
                 <TouchableOpacity 
                   style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
+                    setCalculatorExpression(calculatorDisplay + ' − ');
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('−');
                     setCalculatorWaitingForOperand(true);
@@ -8467,6 +8474,7 @@ export default function AreaCalculatorEditor() {
                 <TouchableOpacity 
                   style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
+                    setCalculatorExpression(calculatorDisplay + ' + ');
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('+');
                     setCalculatorWaitingForOperand(true);
@@ -8515,6 +8523,9 @@ export default function AreaCalculatorEditor() {
                       }
                       // Round to avoid floating point issues
                       result = Math.round(result * 1000000) / 1000000;
+                      // Zeige die komplette Berechnung
+                      const fullExpression = calculatorExpression + calculatorDisplay + ' =';
+                      setCalculatorExpression(fullExpression);
                       setCalculatorDisplay(result.toString());
                       setCalculatorPrevValue(null);
                       setCalculatorOperator(null);

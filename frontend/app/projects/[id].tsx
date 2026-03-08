@@ -330,46 +330,41 @@ export default function ProjectDetailScreen() {
             // Get base64 data
             let base64Data = photo.image_data;
             
-            // Remove data URI prefix if present
-            if (base64Data.startsWith('data:')) {
-              base64Data = base64Data.split(',')[1];
+            // Remove data URI prefix if present and get the full data URI
+            let dataUri = base64Data;
+            if (!dataUri.startsWith('data:')) {
+              dataUri = `data:image/jpeg;base64,${base64Data}`;
             }
             
-            // Create temp file path
+            // Create temp file path - use documentDirectory as fallback
+            const cacheDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
             const filename = `photo_${photoId}_${Date.now()}.jpg`;
-            const fileUri = FileSystem.cacheDirectory + filename;
+            const fileUri = `${cacheDir}${filename}`;
             
-            // Write base64 to file - try different encoding approaches
-            try {
-              // Method 1: Try with EncodingType enum
-              await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-                encoding: 'base64' as any,
-              });
-            } catch (writeError) {
-              // Method 2: If that fails, write the raw data
-              console.log('Using fallback write method');
-              const response = await fetch(`data:image/jpeg;base64,${base64Data}`);
-              const blob = await response.blob();
-              const reader = new FileReader();
-              await new Promise((resolve, reject) => {
-                reader.onload = resolve;
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
+            console.log('Saving to:', fileUri);
+            
+            // Download from data URI to file
+            const downloadResult = await FileSystem.downloadAsync(
+              dataUri,
+              fileUri
+            );
+            
+            console.log('Download result:', downloadResult.status, downloadResult.uri);
+            
+            if (downloadResult.status === 200) {
+              // Save to media library
+              const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+              console.log('Asset created:', asset.id);
+              
+              // Clean up temp file
+              try {
+                await FileSystem.deleteAsync(downloadResult.uri, { idempotent: true });
+              } catch (e) {
+                // Ignore cleanup errors
+              }
+              
+              savedCount++;
             }
-            
-            // Save to media library
-            const asset = await MediaLibrary.createAssetAsync(fileUri);
-            console.log('Asset created:', asset.id);
-            
-            // Clean up temp file
-            try {
-              await FileSystem.deleteAsync(fileUri, { idempotent: true });
-            } catch (e) {
-              // Ignore cleanup errors
-            }
-            
-            savedCount++;
           } catch (err: any) {
             console.error('Error saving photo:', err?.message || err);
           }

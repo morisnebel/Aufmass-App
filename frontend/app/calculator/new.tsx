@@ -8318,25 +8318,25 @@ export default function AreaCalculatorEditor() {
           onPress={() => setShowCalculatorModal(false)}
         >
           <View 
-            style={[styles.modalContent, { maxWidth: 320, padding: 0 }]}
+            style={[styles.modalContent, { width: 300, padding: 0 }]}
             onStartShouldSetResponder={() => true}
           >
             {/* Calculator Display */}
             <View style={{ backgroundColor: '#1976d2', padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'right' }}>
-                {calculatorPrevValue !== null ? `${calculatorPrevValue} ${calculatorOperator || ''}` : ''}
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'right', minHeight: 20 }}>
+                {calculatorPrevValue !== null ? `${calculatorPrevValue} ${calculatorOperator || ''}` : ' '}
               </Text>
-              <Text style={{ color: '#fff', fontSize: 36, fontWeight: '300', textAlign: 'right' }}>
+              <Text style={{ color: '#fff', fontSize: 40, fontWeight: '300', textAlign: 'right' }}>
                 {calculatorDisplay}
               </Text>
             </View>
             
             {/* Calculator Buttons */}
-            <View style={{ padding: 8 }}>
-              {/* Row 1 */}
+            <View style={{ padding: 10, backgroundColor: '#fff' }}>
+              {/* Row 1: C, ⌫, %, ÷ */}
               <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#ffebee', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorDisplay('0');
                     setCalculatorPrevValue(null);
@@ -8344,10 +8344,10 @@ export default function AreaCalculatorEditor() {
                     setCalculatorWaitingForOperand(false);
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#f44336' }]}>C</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '600', color: '#f44336' }}>C</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     if (calculatorDisplay.length > 1) {
                       setCalculatorDisplay(calculatorDisplay.slice(0, -1));
@@ -8359,32 +8359,32 @@ export default function AreaCalculatorEditor() {
                   <Ionicons name="backspace-outline" size={24} color="#666" />
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     const val = parseFloat(calculatorDisplay);
                     setCalculatorDisplay((val / 100).toString());
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#666' }]}>%</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '500', color: '#666' }}>%</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('÷');
                     setCalculatorWaitingForOperand(true);
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>÷</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '500', color: '#fff' }}>÷</Text>
                 </TouchableOpacity>
               </View>
               
-              {/* Row 2 */}
+              {/* Row 2: 7, 8, 9, × */}
               <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                 {['7', '8', '9'].map(num => (
                   <TouchableOpacity 
                     key={num}
-                    style={styles.calcButton}
+                    style={{ flex: 1, height: 56, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0' }}
                     onPress={() => {
                       if (calculatorWaitingForOperand) {
                         setCalculatorDisplay(num);
@@ -8394,27 +8394,27 @@ export default function AreaCalculatorEditor() {
                       }
                     }}
                   >
-                    <Text style={styles.calcButtonText}>{num}</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '500', color: '#333' }}>{num}</Text>
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('×');
                     setCalculatorWaitingForOperand(true);
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>×</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '500', color: '#fff' }}>×</Text>
                 </TouchableOpacity>
               </View>
               
-              {/* Row 3 */}
+              {/* Row 3: 4, 5, 6, − */}
               <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                 {['4', '5', '6'].map(num => (
                   <TouchableOpacity 
                     key={num}
-                    style={styles.calcButton}
+                    style={{ flex: 1, height: 56, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0' }}
                     onPress={() => {
                       if (calculatorWaitingForOperand) {
                         setCalculatorDisplay(num);
@@ -8424,27 +8424,27 @@ export default function AreaCalculatorEditor() {
                       }
                     }}
                   >
-                    <Text style={styles.calcButtonText}>{num}</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '500', color: '#333' }}>{num}</Text>
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('−');
                     setCalculatorWaitingForOperand(true);
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>−</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '500', color: '#fff' }}>−</Text>
                 </TouchableOpacity>
               </View>
               
-              {/* Row 4 */}
+              {/* Row 4: 1, 2, 3, + */}
               <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                 {['1', '2', '3'].map(num => (
                   <TouchableOpacity 
                     key={num}
-                    style={styles.calcButton}
+                    style={{ flex: 1, height: 56, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0' }}
                     onPress={() => {
                       if (calculatorWaitingForOperand) {
                         setCalculatorDisplay(num);
@@ -8454,25 +8454,25 @@ export default function AreaCalculatorEditor() {
                       }
                     }}
                   >
-                    <Text style={styles.calcButtonText}>{num}</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '500', color: '#333' }}>{num}</Text>
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#FF9800', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     setCalculatorPrevValue(parseFloat(calculatorDisplay));
                     setCalculatorOperator('+');
                     setCalculatorWaitingForOperand(true);
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>+</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '500', color: '#fff' }}>+</Text>
                 </TouchableOpacity>
               </View>
               
-              {/* Row 5 */}
+              {/* Row 5: 0, ,, = */}
               <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { flex: 2 }]}
+                  style={{ flex: 2, height: 56, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0' }}
                   onPress={() => {
                     if (calculatorWaitingForOperand) {
                       setCalculatorDisplay('0');
@@ -8482,20 +8482,20 @@ export default function AreaCalculatorEditor() {
                     }
                   }}
                 >
-                  <Text style={styles.calcButtonText}>0</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '500', color: '#333' }}>0</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={styles.calcButton}
+                  style={{ flex: 1, height: 56, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0' }}
                   onPress={() => {
                     if (!calculatorDisplay.includes('.')) {
                       setCalculatorDisplay(calculatorDisplay + '.');
                     }
                   }}
                 >
-                  <Text style={styles.calcButtonText}>,</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '500', color: '#333' }}>,</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.calcButton, { backgroundColor: '#4CAF50' }]}
+                  style={{ flex: 1, height: 56, backgroundColor: '#4CAF50', borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginHorizontal: 4 }}
                   onPress={() => {
                     if (calculatorPrevValue !== null && calculatorOperator) {
                       const current = parseFloat(calculatorDisplay);
@@ -8506,23 +8506,25 @@ export default function AreaCalculatorEditor() {
                         case '×': result = calculatorPrevValue * current; break;
                         case '÷': result = calculatorPrevValue / current; break;
                       }
+                      // Round to avoid floating point issues
+                      result = Math.round(result * 1000000) / 1000000;
                       setCalculatorDisplay(result.toString());
                       setCalculatorPrevValue(null);
                       setCalculatorOperator(null);
                     }
                   }}
                 >
-                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>=</Text>
+                  <Text style={{ fontSize: 28, fontWeight: '600', color: '#fff' }}>=</Text>
                 </TouchableOpacity>
               </View>
             </View>
             
             {/* Close Button */}
             <TouchableOpacity
-              style={{ backgroundColor: '#f5f5f5', padding: 12, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+              style={{ backgroundColor: '#f5f5f5', padding: 14, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
               onPress={() => setShowCalculatorModal(false)}
             >
-              <Text style={{ textAlign: 'center', color: '#666', fontWeight: '600' }}>Schließen</Text>
+              <Text style={{ textAlign: 'center', color: '#666', fontWeight: '600', fontSize: 16 }}>Schließen</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

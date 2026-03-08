@@ -341,7 +341,7 @@ export default function ProjectDetailScreen() {
             
             // Write base64 to file
             await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: FileSystem.EncodingType.Base64,
+              encoding: 'base64',
             });
             
             // Save to media library

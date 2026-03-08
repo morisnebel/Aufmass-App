@@ -61,6 +61,9 @@ export default function AnnotatePhotoScreen() {
   const [lastScale, setLastScale] = useState(1);
   const [lastPanOffset, setLastPanOffset] = useState({ x: 0, y: 0 });
   const [isZooming, setIsZooming] = useState(false);
+  
+  // Drawing mode toggle
+  const [drawingEnabled, setDrawingEnabled] = useState(false);
 
   useEffect(() => {
     loadPhoto();
@@ -118,8 +121,8 @@ export default function AnnotatePhotoScreen() {
       return;
     }
     
-    if (touches.length === 1 && !isZooming) {
-      // Start drawing
+    if (touches.length === 1 && !isZooming && drawingEnabled) {
+      // Start drawing only if drawing is enabled
       const touch = touches[0];
       const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
       const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
@@ -138,8 +141,8 @@ export default function AnnotatePhotoScreen() {
       return;
     }
     
-    if (touches.length === 1 && !isZooming && currentPath) {
-      // Continue drawing
+    if (touches.length === 1 && !isZooming && currentPath && drawingEnabled) {
+      // Continue drawing only if drawing is enabled
       const touch = touches[0];
       const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
       const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
@@ -155,7 +158,7 @@ export default function AnnotatePhotoScreen() {
       setInitialPinchDistance(null);
     }
     
-    if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming) {
+    if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming && drawingEnabled) {
       setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
       setCurrentPath('');
     }
@@ -298,13 +301,24 @@ export default function AnnotatePhotoScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.toolButton} onPress={undo}>
-          <Ionicons name="arrow-undo" size={24} color="#1976d2" />
-          <Text style={styles.toolText}>Rückgängig</Text>
+        {/* Zeichnen Toggle Button */}
+        <TouchableOpacity 
+          style={[styles.toolButton, drawingEnabled && { backgroundColor: '#4CAF50' }]} 
+          onPress={() => setDrawingEnabled(!drawingEnabled)}
+        >
+          <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={24} color={drawingEnabled ? '#fff' : '#4CAF50'} />
+          <Text style={[styles.toolText, drawingEnabled && { color: '#fff' }]}>
+            {drawingEnabled ? 'Zeichnen AN' : 'Zeichnen AUS'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={clear}>
-          <Ionicons name="trash-outline" size={24} color="#f44336" />
-          <Text style={styles.toolText}>Löschen</Text>
+        
+        <TouchableOpacity style={styles.toolButton} onPress={undo} disabled={!drawingEnabled}>
+          <Ionicons name="arrow-undo" size={24} color={drawingEnabled ? '#1976d2' : '#ccc'} />
+          <Text style={[styles.toolText, !drawingEnabled && { color: '#ccc' }]}>Rückgängig</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.toolButton} onPress={clear} disabled={!drawingEnabled}>
+          <Ionicons name="trash-outline" size={24} color={drawingEnabled ? '#f44336' : '#ccc'} />
+          <Text style={[styles.toolText, !drawingEnabled && { color: '#ccc' }]}>Löschen</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.toolButton, styles.deletePhotoButton]} 

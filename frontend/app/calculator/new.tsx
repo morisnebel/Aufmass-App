@@ -3739,7 +3739,7 @@ export default function AreaCalculatorEditor() {
               onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
             >
               <DeductionRectIcon size={18} color={mode === 'deduction_rect' ? '#fff' : '#f44336'} />
-              <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
+              <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive, { fontSize: 6 }]}>Abzug Rechteck</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -3809,7 +3809,7 @@ export default function AreaCalculatorEditor() {
             >
               <View style={{ alignItems: 'center' }}>
                 <Ionicons name={useManualAreaCalc ? "eye-outline" : "eye-off-outline"} size={10} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
-                <Ionicons name="keypad-outline" size={14} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+                <Ionicons name="calculator-outline" size={14} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
               </View>
               <Text style={[styles.toolLabel, useManualAreaCalc && styles.toolLabelActive]}>Manuell</Text>
             </TouchableOpacity>

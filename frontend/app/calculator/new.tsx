@@ -545,6 +545,11 @@ export default function AreaCalculatorEditor() {
   const [showLineCategoryManager, setShowLineCategoryManager] = useState(false);
   const [showShortcutManager, setShowShortcutManager] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showCalculatorModal, setShowCalculatorModal] = useState(false);
+  const [calculatorDisplay, setCalculatorDisplay] = useState('0');
+  const [calculatorPrevValue, setCalculatorPrevValue] = useState<number | null>(null);
+  const [calculatorOperator, setCalculatorOperator] = useState<string | null>(null);
+  const [calculatorWaitingForOperand, setCalculatorWaitingForOperand] = useState(false);
   const [editingCategory, setEditingCategory] = useState<LineCategory | null>(null);
   const [editingShortcut, setEditingShortcut] = useState<TextShortcut | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -3649,7 +3654,7 @@ export default function AreaCalculatorEditor() {
           <Ionicons name="settings-outline" size={22} color="#fff" />
         </TouchableOpacity>
         
-        <TouchableOpacity onPress={() => setShowResultsModal(true)} style={styles.headerButton}>
+        <TouchableOpacity onPress={() => setShowCalculatorModal(true)} style={styles.headerButton}>
           <Ionicons name="calculator" size={22} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={saveCalculation} style={styles.headerButton} disabled={saving}>
@@ -8305,6 +8310,224 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
+      {/* Taschenrechner Modal */}
+      <Modal visible={showCalculatorModal} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowCalculatorModal(false)}
+        >
+          <View 
+            style={[styles.modalContent, { maxWidth: 320, padding: 0 }]}
+            onStartShouldSetResponder={() => true}
+          >
+            {/* Calculator Display */}
+            <View style={{ backgroundColor: '#1976d2', padding: 20, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textAlign: 'right' }}>
+                {calculatorPrevValue !== null ? `${calculatorPrevValue} ${calculatorOperator || ''}` : ''}
+              </Text>
+              <Text style={{ color: '#fff', fontSize: 36, fontWeight: '300', textAlign: 'right' }}>
+                {calculatorDisplay}
+              </Text>
+            </View>
+            
+            {/* Calculator Buttons */}
+            <View style={{ padding: 8 }}>
+              {/* Row 1 */}
+              <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  onPress={() => {
+                    setCalculatorDisplay('0');
+                    setCalculatorPrevValue(null);
+                    setCalculatorOperator(null);
+                    setCalculatorWaitingForOperand(false);
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#f44336' }]}>C</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  onPress={() => {
+                    if (calculatorDisplay.length > 1) {
+                      setCalculatorDisplay(calculatorDisplay.slice(0, -1));
+                    } else {
+                      setCalculatorDisplay('0');
+                    }
+                  }}
+                >
+                  <Ionicons name="backspace-outline" size={24} color="#666" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#f5f5f5' }]}
+                  onPress={() => {
+                    const val = parseFloat(calculatorDisplay);
+                    setCalculatorDisplay((val / 100).toString());
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#666' }]}>%</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  onPress={() => {
+                    setCalculatorPrevValue(parseFloat(calculatorDisplay));
+                    setCalculatorOperator('÷');
+                    setCalculatorWaitingForOperand(true);
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>÷</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Row 2 */}
+              <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                {['7', '8', '9'].map(num => (
+                  <TouchableOpacity 
+                    key={num}
+                    style={styles.calcButton}
+                    onPress={() => {
+                      if (calculatorWaitingForOperand) {
+                        setCalculatorDisplay(num);
+                        setCalculatorWaitingForOperand(false);
+                      } else {
+                        setCalculatorDisplay(calculatorDisplay === '0' ? num : calculatorDisplay + num);
+                      }
+                    }}
+                  >
+                    <Text style={styles.calcButtonText}>{num}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  onPress={() => {
+                    setCalculatorPrevValue(parseFloat(calculatorDisplay));
+                    setCalculatorOperator('×');
+                    setCalculatorWaitingForOperand(true);
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Row 3 */}
+              <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                {['4', '5', '6'].map(num => (
+                  <TouchableOpacity 
+                    key={num}
+                    style={styles.calcButton}
+                    onPress={() => {
+                      if (calculatorWaitingForOperand) {
+                        setCalculatorDisplay(num);
+                        setCalculatorWaitingForOperand(false);
+                      } else {
+                        setCalculatorDisplay(calculatorDisplay === '0' ? num : calculatorDisplay + num);
+                      }
+                    }}
+                  >
+                    <Text style={styles.calcButtonText}>{num}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  onPress={() => {
+                    setCalculatorPrevValue(parseFloat(calculatorDisplay));
+                    setCalculatorOperator('−');
+                    setCalculatorWaitingForOperand(true);
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>−</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Row 4 */}
+              <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                {['1', '2', '3'].map(num => (
+                  <TouchableOpacity 
+                    key={num}
+                    style={styles.calcButton}
+                    onPress={() => {
+                      if (calculatorWaitingForOperand) {
+                        setCalculatorDisplay(num);
+                        setCalculatorWaitingForOperand(false);
+                      } else {
+                        setCalculatorDisplay(calculatorDisplay === '0' ? num : calculatorDisplay + num);
+                      }
+                    }}
+                  >
+                    <Text style={styles.calcButtonText}>{num}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#FF9800' }]}
+                  onPress={() => {
+                    setCalculatorPrevValue(parseFloat(calculatorDisplay));
+                    setCalculatorOperator('+');
+                    setCalculatorWaitingForOperand(true);
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>+</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Row 5 */}
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { flex: 2 }]}
+                  onPress={() => {
+                    if (calculatorWaitingForOperand) {
+                      setCalculatorDisplay('0');
+                      setCalculatorWaitingForOperand(false);
+                    } else {
+                      setCalculatorDisplay(calculatorDisplay === '0' ? '0' : calculatorDisplay + '0');
+                    }
+                  }}
+                >
+                  <Text style={styles.calcButtonText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.calcButton}
+                  onPress={() => {
+                    if (!calculatorDisplay.includes('.')) {
+                      setCalculatorDisplay(calculatorDisplay + '.');
+                    }
+                  }}
+                >
+                  <Text style={styles.calcButtonText}>,</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.calcButton, { backgroundColor: '#4CAF50' }]}
+                  onPress={() => {
+                    if (calculatorPrevValue !== null && calculatorOperator) {
+                      const current = parseFloat(calculatorDisplay);
+                      let result = 0;
+                      switch (calculatorOperator) {
+                        case '+': result = calculatorPrevValue + current; break;
+                        case '−': result = calculatorPrevValue - current; break;
+                        case '×': result = calculatorPrevValue * current; break;
+                        case '÷': result = calculatorPrevValue / current; break;
+                      }
+                      setCalculatorDisplay(result.toString());
+                      setCalculatorPrevValue(null);
+                      setCalculatorOperator(null);
+                    }
+                  }}
+                >
+                  <Text style={[styles.calcButtonText, { color: '#fff' }]}>=</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Close Button */}
+            <TouchableOpacity
+              style={{ backgroundColor: '#f5f5f5', padding: 12, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+              onPress={() => setShowCalculatorModal(false)}
+            >
+              <Text style={{ textAlign: 'center', color: '#666', fontWeight: '600' }}>Schließen</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Voreinstellungen Menü */}
       <Modal visible={showSettingsMenu} transparent animationType="fade">
         <TouchableOpacity 
@@ -8982,6 +9205,25 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#e0e0e0',
     marginHorizontal: 8,
+  },
+  calcButton: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  calcButtonText: {
+    fontSize: 24,
+    fontWeight: '500',
+    color: '#333',
   },
   referenceImageOverlay: {
     position: 'absolute',

@@ -19,6 +19,7 @@ const KEYS = {
   DOCUMENTS: 'aufmassprofi_documents',
   AREA_CALCULATIONS: 'aufmassprofi_area_calculations',
   LINE_CATEGORIES: 'aufmassprofi_line_categories',
+  TEXT_SHORTCUTS: 'aufmassprofi_text_shortcuts',
 };
 
 // Helper to generate unique IDs
@@ -939,6 +940,83 @@ export const LineCategoryService = {
   },
 };
 
+// ============ TEXT SHORTCUTS (Kürzel) ============
+export interface TextShortcut {
+  id: string;
+  shortcut: string;  // z.B. "DN"
+  fullText: string;  // z.B. "Dachneigung"
+  order: number;
+}
+
+// Default-Kürzel
+const DEFAULT_TEXT_SHORTCUTS: Omit<TextShortcut, 'id'>[] = [
+  { shortcut: 'DN', fullText: 'Dachneigung', order: 1 },
+  { shortcut: 'SL', fullText: 'Sockelleiste', order: 2 },
+  { shortcut: 'TH', fullText: 'Traufhöhe', order: 3 },
+  { shortcut: 'FH', fullText: 'Firsthöhe', order: 4 },
+  { shortcut: 'DL', fullText: 'Dachlänge', order: 5 },
+  { shortcut: 'DB', fullText: 'Dachbreite', order: 6 },
+];
+
+export const TextShortcutService = {
+  getAll: async (): Promise<TextShortcut[]> => {
+    let shortcuts = await getItems<TextShortcut>(KEYS.TEXT_SHORTCUTS);
+    // Wenn leer, Default-Kürzel erstellen
+    if (shortcuts.length === 0) {
+      shortcuts = DEFAULT_TEXT_SHORTCUTS.map((s) => ({
+        ...s,
+        id: generateId(),
+      }));
+      await setItems(KEYS.TEXT_SHORTCUTS, shortcuts);
+    }
+    return shortcuts.sort((a, b) => a.order - b.order);
+  },
+
+  create: async (data: Omit<TextShortcut, 'id'>): Promise<TextShortcut> => {
+    const shortcuts = await getItems<TextShortcut>(KEYS.TEXT_SHORTCUTS);
+    const newShortcut: TextShortcut = {
+      ...data,
+      id: generateId(),
+    };
+    shortcuts.push(newShortcut);
+    await setItems(KEYS.TEXT_SHORTCUTS, shortcuts);
+    return newShortcut;
+  },
+
+  update: async (id: string, data: Partial<TextShortcut>): Promise<TextShortcut | null> => {
+    const shortcuts = await getItems<TextShortcut>(KEYS.TEXT_SHORTCUTS);
+    const index = shortcuts.findIndex((s) => s.id === id);
+    if (index !== -1) {
+      shortcuts[index] = { ...shortcuts[index], ...data };
+      await setItems(KEYS.TEXT_SHORTCUTS, shortcuts);
+      return shortcuts[index];
+    }
+    return null;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const shortcuts = await getItems<TextShortcut>(KEYS.TEXT_SHORTCUTS);
+    const filtered = shortcuts.filter((s) => s.id !== id);
+    await setItems(KEYS.TEXT_SHORTCUTS, filtered);
+  },
+
+  saveAll: async (shortcuts: TextShortcut[]): Promise<void> => {
+    await setItems(KEYS.TEXT_SHORTCUTS, shortcuts);
+  },
+
+  // Hilfsfunktion: Kürzel im Text finden und ersetzen/markieren
+  findShortcut: async (text: string): Promise<TextShortcut | null> => {
+    const shortcuts = await getItems<TextShortcut>(KEYS.TEXT_SHORTCUTS);
+    const upperText = text.toUpperCase();
+    return shortcuts.find(s => s.shortcut.toUpperCase() === upperText) || null;
+  },
+
+  // Formatiere für Anzeige: "DN" -> "(DN) Dachneigung"
+  formatForDisplay: (shortcut: TextShortcut): string => {
+    return `(${shortcut.shortcut}) ${shortcut.fullText}`;
+  },
+};
+
 export const AreaCalculationService = {
   getAll: async (): Promise<AreaCalculation[]> => {
     return getItems<AreaCalculation>(KEYS.AREA_CALCULATIONS);
@@ -1003,6 +1081,7 @@ export const LocalStorage = {
   Documents: DocumentService,
   AreaCalculations: AreaCalculationService,
   LineCategories: LineCategoryService,
+  TextShortcuts: TextShortcutService,
 };
 
 export default LocalStorage;

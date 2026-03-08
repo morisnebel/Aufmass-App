@@ -39,6 +39,8 @@ import {
   AreaLine,
   LineCategoryService,
   LineCategory,
+  TextShortcutService,
+  TextShortcut,
 } from '../../services/LocalStorage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -56,6 +58,7 @@ export default function AreaCalculatorEditor() {
   const [polygons, setPolygons] = useState<AreaPolygon[]>([]);
   const [lines, setLines] = useState<AreaLine[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
+  const [textShortcuts, setTextShortcuts] = useState<TextShortcut[]>([]);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState(0.25); // 0.25 Meter (25cm) pro Rasterfeld
   
@@ -473,6 +476,17 @@ export default function AreaCalculatorEditor() {
   const [scaleInputValue, setScaleInputValue] = useState('');
   const [polygonNameInput, setPolygonNameInput] = useState('');
   
+  // Voreinstellungen Modals
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showLineCategoryManager, setShowLineCategoryManager] = useState(false);
+  const [showShortcutManager, setShowShortcutManager] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<LineCategory | null>(null);
+  const [editingShortcut, setEditingShortcut] = useState<TextShortcut | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('#2196F3');
+  const [newShortcutCode, setNewShortcutCode] = useState('');
+  const [newShortcutText, setNewShortcutText] = useState('');
+  
   // Loading
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -569,6 +583,7 @@ export default function AreaCalculatorEditor() {
   // Load data
   useEffect(() => {
     loadLineCategories();
+    loadTextShortcuts();
     if (calculationId) {
       loadCalculation();
     }
@@ -577,6 +592,21 @@ export default function AreaCalculatorEditor() {
   const loadLineCategories = async () => {
     const categories = await LineCategoryService.getAll();
     setLineCategories(categories);
+  };
+
+  const loadTextShortcuts = async () => {
+    const shortcuts = await TextShortcutService.getAll();
+    setTextShortcuts(shortcuts);
+  };
+
+  // Hilfsfunktion: Prüfen ob Text ein Kürzel ist und formatierte Version zurückgeben
+  const resolveShortcut = (text: string): { isShortcut: boolean; display: string; shortcut?: TextShortcut } => {
+    const upperText = text.toUpperCase().trim();
+    const found = textShortcuts.find(s => s.shortcut.toUpperCase() === upperText);
+    if (found) {
+      return { isShortcut: true, display: `(${found.shortcut}) ${found.fullText}`, shortcut: found };
+    }
+    return { isShortcut: false, display: text };
   };
 
   const loadCalculation = async () => {
@@ -2696,13 +2726,17 @@ export default function AreaCalculatorEditor() {
     const { id, text, x, y, color, fontSize } = annotation;
     const isSelected = selectedTextId === id;
     
+    // Prüfen ob Text ein Kürzel ist
+    const resolved = resolveShortcut(text);
+    const displayText = resolved.isShortcut ? resolved.display : text;
+    
     return (
       <G key={id}>
         {isSelected && (
           <Rect
             x={x - 5}
             y={y - fontSize}
-            width={text.length * fontSize * 0.6 + 10}
+            width={displayText.length * fontSize * 0.55 + 10}
             height={fontSize + 10}
             fill="rgba(33, 150, 243, 0.2)"
             stroke="#2196F3"
@@ -2710,14 +2744,24 @@ export default function AreaCalculatorEditor() {
             strokeDasharray="4,2"
           />
         )}
+        {resolved.isShortcut && (
+          <Rect
+            x={x - 3}
+            y={y - fontSize + 2}
+            width={displayText.length * fontSize * 0.55 + 6}
+            height={fontSize + 4}
+            fill="rgba(255, 152, 0, 0.15)"
+            rx={4}
+          />
+        )}
         <SvgText
           x={x}
           y={y}
-          fill={color}
+          fill={resolved.isShortcut ? '#e65100' : color}
           fontSize={fontSize}
           fontWeight="600"
         >
-          {text}
+          {displayText}
         </SvgText>
       </G>
     );
@@ -2730,8 +2774,12 @@ export default function AreaCalculatorEditor() {
     const isSelected = selectedMemoId === id;
     
     const noteText = text || '';
-    const textLength = noteText.length;
-    const noteWidth = Math.max(textLength * 9 + 20, 80);
+    // Prüfen ob Text ein Kürzel ist
+    const resolved = resolveShortcut(noteText);
+    const displayText = resolved.isShortcut ? resolved.display : noteText;
+    
+    const textLength = displayText.length;
+    const noteWidth = Math.max(textLength * 8 + 20, 80);
     const noteHeight = 32;
     const noteX = x1 - noteWidth / 2;
     const noteY = y1 - noteHeight - 5;
@@ -2801,16 +2849,16 @@ export default function AreaCalculatorEditor() {
         />
         
         {/* Note text */}
-        {noteText && (
+        {displayText && (
           <SvgText 
             x={x1} 
             y={noteY + noteHeight / 2 + 5} 
-            fill="#333" 
-            fontSize={14} 
+            fill={resolved.isShortcut ? '#e65100' : '#333'}
+            fontSize={13} 
             fontWeight="600" 
             textAnchor="middle"
           >
-            {noteText}
+            {displayText}
           </SvgText>
         )}
         
@@ -3518,6 +3566,11 @@ export default function AreaCalculatorEditor() {
           disabled={redoStack.length === 0}
         >
           <Ionicons name="arrow-redo" size={22} color={redoStack.length > 0 ? '#fff' : '#888'} />
+        </TouchableOpacity>
+        
+        {/* Voreinstellungen Button */}
+        <TouchableOpacity onPress={() => setShowSettingsMenu(true)} style={styles.headerButton}>
+          <Ionicons name="settings-outline" size={22} color="#fff" />
         </TouchableOpacity>
         
         <TouchableOpacity onPress={() => setShowResultsModal(true)} style={styles.headerButton}>
@@ -8140,6 +8193,388 @@ export default function AreaCalculatorEditor() {
               </TouchableOpacity>
             </View>
           </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Voreinstellungen Menü */}
+      <Modal visible={showSettingsMenu} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowSettingsMenu(false)}
+        >
+          <View style={[styles.modalContent, { maxWidth: 320 }]}>
+            <Text style={styles.modalTitle}>Voreinstellungen</Text>
+            
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#e3f2fd',
+                padding: 16,
+                borderRadius: 12,
+                marginBottom: 12,
+              }}
+              onPress={() => {
+                setShowSettingsMenu(false);
+                setShowLineCategoryManager(true);
+              }}
+            >
+              <View style={{ backgroundColor: '#2196F3', padding: 10, borderRadius: 10, marginRight: 12 }}>
+                <Ionicons name="pricetag" size={24} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#1976d2' }}>Linien benennen</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Kategorien für Linien verwalten</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#fff3e0',
+                padding: 16,
+                borderRadius: 12,
+                marginBottom: 12,
+              }}
+              onPress={() => {
+                setShowSettingsMenu(false);
+                setShowShortcutManager(true);
+              }}
+            >
+              <View style={{ backgroundColor: '#FF9800', padding: 10, borderRadius: 10, marginRight: 12 }}>
+                <Ionicons name="text" size={24} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#e65100' }}>Kürzel</Text>
+                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Text-Abkürzungen verwalten</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+            
+            {/* Platzhalter für zukünftige Einstellungen */}
+            <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12, marginTop: 4 }}>
+              <Text style={{ fontSize: 11, color: '#999', textAlign: 'center' }}>
+                Weitere Einstellungen folgen...
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton, { marginTop: 16 }]}
+              onPress={() => setShowSettingsMenu(false)}
+            >
+              <Text style={styles.cancelButtonText}>Schließen</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Linien-Kategorien Manager Modal */}
+      <Modal visible={showLineCategoryManager} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 400, maxHeight: '80%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.modalTitle}>Linien benennen</Text>
+              <TouchableOpacity onPress={() => setShowLineCategoryManager(false)}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {lineCategories.map((cat, index) => (
+                <View 
+                  key={cat.id} 
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#f9f9f9',
+                    padding: 12,
+                    borderRadius: 8,
+                    marginBottom: 8,
+                    borderLeftWidth: 4,
+                    borderLeftColor: cat.color,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '500' }}>{cat.name}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={{ padding: 8 }}
+                    onPress={() => {
+                      setEditingCategory(cat);
+                      setNewCategoryName(cat.name);
+                      setNewCategoryColor(cat.color);
+                    }}
+                  >
+                    <Ionicons name="pencil" size={18} color="#2196F3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ padding: 8 }}
+                    onPress={async () => {
+                      await LineCategoryService.delete(cat.id);
+                      loadLineCategories();
+                    }}
+                  >
+                    <Ionicons name="trash" size={18} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+            
+            {/* Neue Kategorie / Bearbeiten */}
+            <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16, marginTop: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 }}>
+                {editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie'}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: '#ddd',
+                    borderRadius: 8,
+                    padding: 10,
+                    fontSize: 14,
+                  }}
+                  placeholder="Name der Kategorie"
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                />
+                <TouchableOpacity
+                  style={{
+                    width: 44,
+                    height: 44,
+                    backgroundColor: newCategoryColor,
+                    borderRadius: 8,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => {
+                    // Einfache Farbauswahl
+                    const colors = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#E91E63', '#00BCD4', '#795548', '#607D8B', '#3F51B5', '#f44336'];
+                    const currentIndex = colors.indexOf(newCategoryColor);
+                    setNewCategoryColor(colors[(currentIndex + 1) % colors.length]);
+                  }}
+                >
+                  <Ionicons name="color-palette" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                {editingCategory && (
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#f5f5f5',
+                      padding: 12,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                    }}
+                    onPress={() => {
+                      setEditingCategory(null);
+                      setNewCategoryName('');
+                      setNewCategoryColor('#2196F3');
+                    }}
+                  >
+                    <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#4CAF50',
+                    padding: 12,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={async () => {
+                    if (newCategoryName.trim()) {
+                      if (editingCategory) {
+                        await LineCategoryService.update(editingCategory.id, {
+                          name: newCategoryName.trim(),
+                          color: newCategoryColor,
+                        });
+                      } else {
+                        await LineCategoryService.create({
+                          name: newCategoryName.trim(),
+                          color: newCategoryColor,
+                          order: lineCategories.length + 1,
+                        });
+                      }
+                      loadLineCategories();
+                      setEditingCategory(null);
+                      setNewCategoryName('');
+                      setNewCategoryColor('#2196F3');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>
+                    {editingCategory ? 'Speichern' : 'Hinzufügen'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Kürzel Manager Modal */}
+      <Modal visible={showShortcutManager} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 400, maxHeight: '80%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.modalTitle}>Kürzel verwalten</Text>
+              <TouchableOpacity onPress={() => setShowShortcutManager(false)}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+              Kürzel werden automatisch erkannt und als "(Kürzel) Volltext" angezeigt.
+            </Text>
+            
+            <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false}>
+              {textShortcuts.map((shortcut) => (
+                <View 
+                  key={shortcut.id} 
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#fff3e0',
+                    padding: 12,
+                    borderRadius: 8,
+                    marginBottom: 8,
+                  }}
+                >
+                  <View style={{ 
+                    backgroundColor: '#FF9800', 
+                    paddingHorizontal: 10, 
+                    paddingVertical: 4, 
+                    borderRadius: 6,
+                    marginRight: 10,
+                  }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>{shortcut.shortcut}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: '#333' }}>{shortcut.fullText}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={{ padding: 8 }}
+                    onPress={() => {
+                      setEditingShortcut(shortcut);
+                      setNewShortcutCode(shortcut.shortcut);
+                      setNewShortcutText(shortcut.fullText);
+                    }}
+                  >
+                    <Ionicons name="pencil" size={18} color="#FF9800" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ padding: 8 }}
+                    onPress={async () => {
+                      await TextShortcutService.delete(shortcut.id);
+                      loadTextShortcuts();
+                    }}
+                  >
+                    <Ionicons name="trash" size={18} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+            
+            {/* Neues Kürzel / Bearbeiten */}
+            <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16, marginTop: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 }}>
+                {editingShortcut ? 'Kürzel bearbeiten' : 'Neues Kürzel'}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <TextInput
+                  style={{
+                    width: 80,
+                    borderWidth: 1,
+                    borderColor: '#FF9800',
+                    borderRadius: 8,
+                    padding: 10,
+                    fontSize: 14,
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    backgroundColor: '#fff3e0',
+                  }}
+                  placeholder="DN"
+                  value={newShortcutCode}
+                  onChangeText={(text) => setNewShortcutCode(text.toUpperCase())}
+                  maxLength={5}
+                  autoCapitalize="characters"
+                />
+                <TextInput
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: '#ddd',
+                    borderRadius: 8,
+                    padding: 10,
+                    fontSize: 14,
+                  }}
+                  placeholder="Dachneigung"
+                  value={newShortcutText}
+                  onChangeText={setNewShortcutText}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {editingShortcut && (
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#f5f5f5',
+                      padding: 12,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                    }}
+                    onPress={() => {
+                      setEditingShortcut(null);
+                      setNewShortcutCode('');
+                      setNewShortcutText('');
+                    }}
+                  >
+                    <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#FF9800',
+                    padding: 12,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={async () => {
+                    if (newShortcutCode.trim() && newShortcutText.trim()) {
+                      if (editingShortcut) {
+                        await TextShortcutService.update(editingShortcut.id, {
+                          shortcut: newShortcutCode.trim().toUpperCase(),
+                          fullText: newShortcutText.trim(),
+                        });
+                      } else {
+                        await TextShortcutService.create({
+                          shortcut: newShortcutCode.trim().toUpperCase(),
+                          fullText: newShortcutText.trim(),
+                          order: textShortcuts.length + 1,
+                        });
+                      }
+                      loadTextShortcuts();
+                      setEditingShortcut(null);
+                      setNewShortcutCode('');
+                      setNewShortcutText('');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>
+                    {editingShortcut ? 'Speichern' : 'Hinzufügen'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>

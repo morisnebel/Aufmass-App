@@ -3593,184 +3593,228 @@ export default function AreaCalculatorEditor() {
         </TouchableOpacity>
       </View>
 
-      {/* Toolbar */}
+      {/* Toolbar - Neu organisiert mit Spalten */}
       <View style={styles.toolbar}>
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'select' && styles.toolButtonActive]}
-          onPress={() => { setMode('select'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="hand-left" size={20} color={mode === 'select' ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, mode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'scale' && styles.toolButtonActive]}
-          onPress={() => { 
-            setMode('scale'); 
-            setCurrentPoints([]); 
-            setScaleReference({ startPoint: null, endPoint: null, realLength: 1 });
-          }}
-        >
-          <Ionicons name="resize" size={20} color={mode === 'scale' ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, mode === 'scale' && styles.toolLabelActive]}>Maßstab</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'polygon' && styles.toolButtonActive, { backgroundColor: mode === 'polygon' ? '#4CAF50' : '#f5f5f5' }]}
-          onPress={() => { setMode('polygon'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="shapes" size={20} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
-          <Text style={[styles.toolLabel, mode === 'polygon' && styles.toolLabelActive]}>Fläche</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'deduction' && styles.toolButtonActive, { backgroundColor: mode === 'deduction' ? '#f44336' : '#f5f5f5' }]}
-          onPress={() => { setMode('deduction'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="remove-circle" size={20} color={mode === 'deduction' ? '#fff' : '#f44336'} />
-          <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive]}>Abzug</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#E91E63' : '#f5f5f5' }]}
-          onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
-        >
-          <Ionicons name="square" size={20} color={mode === 'deduction_rect' ? '#fff' : '#E91E63'} />
-          <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.toolSeparator} />
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'guideline' && styles.toolButtonActive, { backgroundColor: mode === 'guideline' ? '#FF9800' : '#f5f5f5' }]}
-          onPress={() => { setMode('guideline'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="remove-outline" size={20} color={mode === 'guideline' ? '#fff' : '#FF9800'} />
-          <Text style={[styles.toolLabel, mode === 'guideline' && styles.toolLabelActive]}>Hilfslinie</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'parallel' && styles.toolButtonActive, { backgroundColor: mode === 'parallel' ? '#9C27B0' : '#f5f5f5' }]}
-          onPress={() => { setMode('parallel'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="git-compare-outline" size={20} color={mode === 'parallel' ? '#fff' : '#9C27B0'} />
-          <Text style={[styles.toolLabel, mode === 'parallel' && styles.toolLabelActive]}>Parallel</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, guideLinesVisible && guideLines.length > 0 && styles.toolButtonActive]}
-          onPress={() => setGuideLinesVisible(!guideLinesVisible)}
-        >
-          <Ionicons name="eye-outline" size={20} color={guideLinesVisible ? (guideLines.length > 0 ? '#fff' : '#666') : '#999'} />
-          <Text style={[styles.toolLabel, guideLinesVisible && guideLines.length > 0 && styles.toolLabelActive]}>
-            {guideLines.length > 0 ? guideLines.length : '-'}
-          </Text>
-        </TouchableOpacity>
-        
-        <View style={styles.toolSeparator} />
-        
-        <TouchableOpacity
-          style={[styles.toolButton, gridEnabled && styles.toolButtonActive]}
-          onPress={() => setGridEnabled(!gridEnabled)}
-          onLongPress={() => setShowGridSizeModal(true)}
-        >
-          <Ionicons name="grid" size={20} color={gridEnabled ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, gridEnabled && styles.toolLabelActive]}>
-            {gridSize < 1 ? `${(gridSize * 100).toFixed(0)}cm` : `${gridSize}m`}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={() => setShowGridSizeModal(true)}
-        >
-          <Ionicons name="options" size={20} color="#666" />
-          <Text style={styles.toolLabel}>Größe</Text>
-        </TouchableOpacity>
+        {/* Spalte 1: Konstruktion */}
+        <View style={styles.toolbarSection}>
+          <Text style={styles.toolbarSectionTitle}>Konstruktion</Text>
+          <View style={styles.toolbarSectionButtons}>
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'select' && styles.toolButtonActive]}
+              onPress={() => { setMode('select'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="hand-left" size={18} color={mode === 'select' ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, mode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'scale' && styles.toolButtonActive]}
+              onPress={() => { 
+                setMode('scale'); 
+                setCurrentPoints([]); 
+                setScaleReference({ startPoint: null, endPoint: null, realLength: 1 });
+              }}
+            >
+              <Ionicons name="resize" size={18} color={mode === 'scale' ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, mode === 'scale' && styles.toolLabelActive]}>Maßstab</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'polygon' && styles.toolButtonActive, { backgroundColor: mode === 'polygon' ? '#4CAF50' : '#f5f5f5' }]}
+              onPress={() => { setMode('polygon'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="shapes" size={18} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
+              <Text style={[styles.toolLabel, mode === 'polygon' && styles.toolLabelActive]}>Fläche</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
+              onPress={() => setShowAngleModal(true)}
+            >
+              <Ionicons name="compass" size={18} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive]}>
+                {fixedAngle !== null ? `${fixedAngle}°` : (fixedLength !== '' ? `${fixedLength}m` : '45°')}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, addPointMode && styles.toolButtonActive, { backgroundColor: addPointMode ? '#E91E63' : '#f5f5f5' }]}
+              onPress={() => {
+                setAddPointMode(!addPointMode);
+                setDeletePointMode(false);
+              }}
+            >
+              <Ionicons name="add-circle" size={18} color={addPointMode ? '#fff' : '#E91E63'} />
+              <Text style={[styles.toolLabel, addPointMode && styles.toolLabelActive]}>+Punkt</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, deletePointMode && styles.toolButtonActive, { backgroundColor: deletePointMode ? '#f44336' : '#f5f5f5' }]}
+              onPress={() => {
+                setDeletePointMode(!deletePointMode);
+                setAddPointMode(false);
+              }}
+            >
+              <Ionicons name="remove-circle" size={18} color={deletePointMode ? '#fff' : '#f44336'} />
+              <Text style={[styles.toolLabel, deletePointMode && styles.toolLabelActive]}>-Punkt</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'deduction' && styles.toolButtonActive, { backgroundColor: mode === 'deduction' ? '#f44336' : '#f5f5f5' }]}
+              onPress={() => { setMode('deduction'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="remove-circle" size={18} color={mode === 'deduction' ? '#fff' : '#f44336'} />
+              <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive]}>Abzug</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#E91E63' : '#f5f5f5' }]}
+              onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
+            >
+              <Ionicons name="square" size={18} color={mode === 'deduction_rect' ? '#fff' : '#E91E63'} />
+              <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         
         <View style={styles.toolSeparator} />
         
-        {/* Manual Area Calculation Toggle */}
-        <TouchableOpacity
-          style={[styles.toolButton, useManualAreaCalc && styles.toolButtonActive, { backgroundColor: useManualAreaCalc ? '#FF9800' : '#f5f5f5' }]}
-          onPress={() => setUseManualAreaCalc(!useManualAreaCalc)}
-        >
-          <Ionicons name="calculator" size={20} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
-          <Text style={[styles.toolLabel, useManualAreaCalc && styles.toolLabelActive]}>
-            {useManualAreaCalc ? 'Manuell' : 'Auto'}
-          </Text>
-        </TouchableOpacity>
+        {/* Spalte 2: Hilfslinien */}
+        <View style={styles.toolbarSection}>
+          <Text style={styles.toolbarSectionTitle}>Hilfslinien</Text>
+          <View style={styles.toolbarSectionButtons}>
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'guideline' && styles.toolButtonActive, { backgroundColor: mode === 'guideline' ? '#FF9800' : '#f5f5f5' }]}
+              onPress={() => { setMode('guideline'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="remove-outline" size={18} color={mode === 'guideline' ? '#fff' : '#FF9800'} />
+              <Text style={[styles.toolLabel, mode === 'guideline' && styles.toolLabelActive]}>Hilfslinie</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'parallel' && styles.toolButtonActive, { backgroundColor: mode === 'parallel' ? '#9C27B0' : '#f5f5f5' }]}
+              onPress={() => { setMode('parallel'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="git-compare-outline" size={18} color={mode === 'parallel' ? '#fff' : '#9C27B0'} />
+              <Text style={[styles.toolLabel, mode === 'parallel' && styles.toolLabelActive]}>Parallel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, guideLinesVisible && guideLines.length > 0 && styles.toolButtonActive]}
+              onPress={() => setGuideLinesVisible(!guideLinesVisible)}
+            >
+              <Ionicons name="eye-outline" size={18} color={guideLinesVisible ? (guideLines.length > 0 ? '#fff' : '#666') : '#999'} />
+              <Text style={[styles.toolLabel, guideLinesVisible && guideLines.length > 0 && styles.toolLabelActive]}>
+                {guideLines.length > 0 ? guideLines.length : '-'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, gridEnabled && styles.toolButtonActive]}
+              onPress={() => setGridEnabled(!gridEnabled)}
+              onLongPress={() => setShowGridSizeModal(true)}
+            >
+              <Ionicons name="grid" size={18} color={gridEnabled ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, gridEnabled && styles.toolLabelActive]}>
+                {gridSize < 1 ? `${(gridSize * 100).toFixed(0)}cm` : `${gridSize}m`}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={() => setShowGridSizeModal(true)}
+            >
+              <Ionicons name="options" size={18} color="#666" />
+              <Text style={styles.toolLabel}>Größe</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         
         <View style={styles.toolSeparator} />
         
-        {/* === ANNOTATION TOOLS === */}
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'annotation_text' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_text' ? '#E91E63' : '#f5f5f5' }]}
-          onPress={() => { setMode('annotation_text'); setCurrentPoints([]); }}
-        >
-          <Ionicons name="text" size={20} color={mode === 'annotation_text' ? '#fff' : '#E91E63'} />
-          <Text style={[styles.toolLabel, mode === 'annotation_text' && styles.toolLabelActive]}>Text</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, mode === 'annotation_memo' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_memo' ? '#FF5722' : '#f5f5f5' }]}
-          onPress={() => { setMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
-        >
-          <Ionicons name="chatbubble-ellipses" size={20} color={mode === 'annotation_memo' ? '#fff' : '#FF5722'} />
-          <Text style={[styles.toolLabel, mode === 'annotation_memo' && styles.toolLabelActive]}>Notiz</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolButtonActive, { backgroundColor: (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#673AB7' : '#f5f5f5' }]}
-          onPress={() => setShowShapesModal(true)}
-        >
-          <Ionicons name="shapes" size={20} color={(mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#fff' : '#673AB7'} />
-          <Text style={[styles.toolLabel, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolLabelActive]}>Formen</Text>
-        </TouchableOpacity>
+        {/* Spalte 3: Ein/Ausblenden */}
+        <View style={styles.toolbarSection}>
+          <Text style={styles.toolbarSectionTitle}>Ein/Ausblenden</Text>
+          <View style={styles.toolbarSectionButtons}>
+            <TouchableOpacity
+              style={[styles.toolButton, useManualAreaCalc && styles.toolButtonActive, { backgroundColor: useManualAreaCalc ? '#FF9800' : '#f5f5f5' }]}
+              onPress={() => setUseManualAreaCalc(!useManualAreaCalc)}
+            >
+              <Ionicons name="calculator" size={18} color={useManualAreaCalc ? '#fff' : '#FF9800'} />
+              <Text style={[styles.toolLabel, useManualAreaCalc && styles.toolLabelActive]}>Manuell</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, showEdgeLengths && styles.toolButtonActive]}
+              onPress={() => setShowEdgeLengths(!showEdgeLengths)}
+            >
+              <Ionicons name="resize" size={18} color={showEdgeLengths ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, showEdgeLengths && styles.toolLabelActive]}>Maße</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, showPolygonAngles && styles.toolButtonActive]}
+              onPress={() => setShowPolygonAngles(!showPolygonAngles)}
+            >
+              <Ionicons name="analytics" size={18} color={showPolygonAngles ? '#fff' : '#666'} />
+              <Text style={[styles.toolLabel, showPolygonAngles && styles.toolLabelActive]}>Winkel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.toolButton}
+              onPress={resetView}
+            >
+              <Ionicons name="contract-outline" size={18} color="#666" />
+              <Text style={styles.toolLabel}>{Math.round(zoomLevel * 100)}%</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         
         <View style={styles.toolSeparator} />
         
-        {/* Background Image Button */}
-        <TouchableOpacity
-          style={[styles.toolButton, backgroundImage && { backgroundColor: '#8BC34A' }]}
-          onPress={() => setShowBgImageModal(true)}
-        >
-          <Ionicons name="image" size={20} color={backgroundImage ? '#fff' : '#8BC34A'} />
-          <Text style={[styles.toolLabel, backgroundImage && { color: '#fff' }]}>Bild</Text>
-        </TouchableOpacity>
+        {/* Spalte 4: Elemente */}
+        <View style={styles.toolbarSection}>
+          <Text style={styles.toolbarSectionTitle}>Elemente</Text>
+          <View style={styles.toolbarSectionButtons}>
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'annotation_text' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_text' ? '#E91E63' : '#f5f5f5' }]}
+              onPress={() => { setMode('annotation_text'); setCurrentPoints([]); }}
+            >
+              <Ionicons name="text" size={18} color={mode === 'annotation_text' ? '#fff' : '#E91E63'} />
+              <Text style={[styles.toolLabel, mode === 'annotation_text' && styles.toolLabelActive]}>Text</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, mode === 'annotation_memo' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_memo' ? '#FF5722' : '#f5f5f5' }]}
+              onPress={() => { setMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
+            >
+              <Ionicons name="chatbubble-ellipses" size={18} color={mode === 'annotation_memo' ? '#fff' : '#FF5722'} />
+              <Text style={[styles.toolLabel, mode === 'annotation_memo' && styles.toolLabelActive]}>Notiz</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolButtonActive, { backgroundColor: (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#673AB7' : '#f5f5f5' }]}
+              onPress={() => setShowShapesModal(true)}
+            >
+              <Ionicons name="shapes" size={18} color={(mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#fff' : '#673AB7'} />
+              <Text style={[styles.toolLabel, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolLabelActive]}>Formen</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButton, backgroundImage && { backgroundColor: '#8BC34A' }]}
+              onPress={() => setShowBgImageModal(true)}
+            >
+              <Ionicons name="image" size={18} color={backgroundImage ? '#fff' : '#8BC34A'} />
+              <Text style={[styles.toolLabel, backgroundImage && { color: '#fff' }]}>Bild</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         
-        {/* Background Image Edit Mode Toggle - REMOVED - now using reference image container */}
-        
-        <View style={styles.toolSeparator} />
-        
-        {/* Zoom Controls */}
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={() => handleZoom(0.25)}
-        >
-          <Ionicons name="add-circle-outline" size={20} color="#666" />
-          <Text style={styles.toolLabel}>Zoom+</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={() => handleZoom(-0.25)}
-        >
-          <Ionicons name="remove-circle-outline" size={20} color="#666" />
-          <Text style={styles.toolLabel}>Zoom-</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={resetView}
-        >
-          <Ionicons name="contract-outline" size={20} color="#666" />
-          <Text style={styles.toolLabel}>{Math.round(zoomLevel * 100)}%</Text>
-        </TouchableOpacity>
-        
+        {/* Kontextuelle Buttons (erscheinen nur wenn benötigt) */}
         {/* Delete selected annotation */}
         {(selectedAnnotationId || selectedTextId || selectedMemoId) && (
           <>
+            <View style={styles.toolSeparator} />
             {/* Edit button for shapes */}
             {selectedAnnotationId && (
               <TouchableOpacity 
@@ -3784,7 +3828,7 @@ export default function AreaCalculatorEditor() {
                   }
                 }}
               >
-                <Ionicons name="color-palette-outline" size={20} color="#fff" />
+                <Ionicons name="color-palette-outline" size={18} color="#fff" />
                 <Text style={[styles.toolLabel, { color: '#fff' }]}>Stil</Text>
               </TouchableOpacity>
             )}
@@ -3792,7 +3836,7 @@ export default function AreaCalculatorEditor() {
               style={[styles.toolButton, { backgroundColor: '#f44336' }]} 
               onPress={deleteSelectedAnnotation}
             >
-              <Ionicons name="trash-outline" size={20} color="#fff" />
+              <Ionicons name="trash-outline" size={18} color="#fff" />
               <Text style={[styles.toolLabel, { color: '#fff' }]}>Löschen</Text>
             </TouchableOpacity>
           </>
@@ -3935,56 +3979,6 @@ export default function AreaCalculatorEditor() {
             </TouchableOpacity>
           </>
         )}
-        
-        <View style={styles.toolSeparator} />
-        
-        <TouchableOpacity
-          style={[styles.toolButton, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#E91E63' : (snapToAngles ? '#2196F3' : '#f5f5f5') }]}
-          onPress={() => setShowAngleModal(true)}
-        >
-          <Ionicons name="compass" size={20} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive]}>
-            {fixedAngle !== null ? `${fixedAngle}°` : (fixedLength !== '' ? `${fixedLength}m` : '45°')}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, showPolygonAngles && styles.toolButtonActive]}
-          onPress={() => setShowPolygonAngles(!showPolygonAngles)}
-        >
-          <Ionicons name="analytics" size={20} color={showPolygonAngles ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, showPolygonAngles && styles.toolLabelActive]}>Winkel</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, addPointMode && styles.toolButtonActive, { backgroundColor: addPointMode ? '#E91E63' : '#f5f5f5' }]}
-          onPress={() => {
-            setAddPointMode(!addPointMode);
-            setDeletePointMode(false);
-          }}
-        >
-          <Ionicons name="add-circle" size={20} color={addPointMode ? '#fff' : '#E91E63'} />
-          <Text style={[styles.toolLabel, addPointMode && styles.toolLabelActive]}>+Punkt</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, deletePointMode && styles.toolButtonActive, { backgroundColor: deletePointMode ? '#f44336' : '#f5f5f5' }]}
-          onPress={() => {
-            setDeletePointMode(!deletePointMode);
-            setAddPointMode(false);
-          }}
-        >
-          <Ionicons name="remove-circle" size={20} color={deletePointMode ? '#fff' : '#f44336'} />
-          <Text style={[styles.toolLabel, deletePointMode && styles.toolLabelActive]}>-Punkt</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, showEdgeLengths && styles.toolButtonActive]}
-          onPress={() => setShowEdgeLengths(!showEdgeLengths)}
-        >
-          <Ionicons name="resize" size={20} color={showEdgeLengths ? '#fff' : '#666'} />
-          <Text style={[styles.toolLabel, showEdgeLengths && styles.toolLabelActive]}>Maße</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Canvas */}
@@ -8863,29 +8857,46 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
+    alignItems: 'flex-start',
+  },
+  toolbarSection: {
     alignItems: 'center',
+  },
+  toolbarSectionTitle: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: '#999',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  toolbarSectionButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   toolButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginHorizontal: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginHorizontal: 1,
+    marginVertical: 1,
     backgroundColor: '#f5f5f5',
+    minWidth: 40,
   },
   toolButtonActive: {
     backgroundColor: '#1976d2',
   },
   toolLabel: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#666',
-    marginTop: 2,
+    marginTop: 1,
   },
   toolLabelActive: {
     color: '#fff',

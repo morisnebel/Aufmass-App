@@ -1038,11 +1038,21 @@ export default function ProjectDetailScreen() {
           const lineCategory = calcLines.find((l: any) => l.polygonId === polygon.id && l.pointIndex === index);
           const bgColor = lineCategory ? getCategoryColor(lineCategory.category) : (polygon.type === 'main' ? '#4CAF50' : '#f44336');
           
+          // Get shortcut for category
+          let labelText = `${length.toFixed(2)}m`;
+          let labelWidth = 42;
+          if (lineCategory) {
+            const catInfo = pdfLineCategories.find(c => c.name === lineCategory.category);
+            if (catInfo?.shortcut) {
+              labelText = `${catInfo.shortcut} ${length.toFixed(2)}m`;
+              labelWidth = 58;
+            }
+          }
+          
           // Draw label background
-          const labelWidth = 42;
           const labelHeight = 14;
           svgContent += `<rect x="${midX - labelWidth/2}" y="${midY - labelHeight/2}" width="${labelWidth}" height="${labelHeight}" rx="3" fill="${bgColor}"/>`;
-          svgContent += `<text x="${midX}" y="${midY + 4}" text-anchor="middle" font-size="9" font-weight="bold" fill="white">${length.toFixed(2)}m</text>`;
+          svgContent += `<text x="${midX}" y="${midY + 4}" text-anchor="middle" font-size="9" font-weight="bold" fill="white">${labelText}</text>`;
         });
         
         // Draw corner points (smaller)
@@ -1243,6 +1253,172 @@ export default function ProjectDetailScreen() {
         </div>
       `;
     }).join('<hr style="border: none; border-top: 1px dashed #ddd; margin: 8px 0;"/>') : '<p class="empty">Keine Flächenberechnungen erfasst</p>';
+
+    // Generate combined area calculations (Drawing + Details together for each calculation)
+    const generateCombinedAreaCalcs = () => {
+      if (areaCalculations.length === 0) return '<p class="empty">Keine Flächenberechnungen erfasst</p>';
+      
+      return areaCalculations.map((calc, calcIndex) => {
+        const polygons = calc.polygons || [];
+        const calcLines = calc.lines || [];
+        const calcScale = calc.scale || 100;
+        const mainAreas = polygons.filter((p: any) => p.type === 'main');
+        const deductionAreas = polygons.filter((p: any) => p.type === 'deduction');
+        
+        const grossArea = mainAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+        const deductionsTotal = deductionAreas.reduce((sum: number, p: any) => sum + calculatePolygonArea(p.points, calcScale), 0);
+        const netArea = grossArea - deductionsTotal;
+        
+        // Group lines by category for summary
+        const linesByCategory: { [key: string]: number } = {};
+        calcLines.forEach((line: any) => {
+          const polygon = polygons.find((p: any) => p.id === line.polygonId);
+          if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
+            const point = polygon.points[line.pointIndex];
+            const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+            const length = calculateLineLength(point, nextPoint, calcScale);
+            if (!linesByCategory[line.category]) linesByCategory[line.category] = 0;
+            linesByCategory[line.category] += length;
+          }
+        });
+        
+        // Generate lines per polygon for details
+        const generateLinesForPolygon = (polygon: any) => {
+          const polygonLines = calcLines.filter((l: any) => l.polygonId === polygon.id);
+          const categoryGroups: { [key: string]: number[] } = {};
+          
+          polygonLines.forEach((line: any) => {
+            if (polygon.points && polygon.points.length > line.pointIndex) {
+              const point = polygon.points[line.pointIndex];
+              const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+              const length = calculateLineLength(point, nextPoint, calcScale);
+              if (length > 0.01) {
+                if (!categoryGroups[line.category]) {
+                  categoryGroups[line.category] = [];
+                }
+                categoryGroups[line.category].push(length);
+              }
+            }
+          });
+          
+          if (Object.keys(categoryGroups).length === 0) {
+            return '<div style="font-size: 9px; color: #999; font-style: italic; margin-left: 8px;">Keine Kategorien</div>';
+          }
+          
+          return Object.entries(categoryGroups).map(([category, lengths]) => {
+            const total = (lengths as number[]).reduce((sum, l) => sum + l, 0);
+            const breakdown = lengths.length >= 2 ? `<div style="font-size: 8px; color: #666; margin-left: 16px;">${(lengths as number[]).map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : '';
+            const displayName = formatCategoryForPdf(category);
+            
+            return `
+              <div style="margin-bottom: 2px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="display: flex; align-items: center;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: ${getCategoryColor(category)}; margin-right: 4px; display: inline-block;"></span>
+                    <span style="font-size: 9px;">${displayName}</span>
+                  </span>
+                  <span style="font-size: 9px; font-weight: 600; color: ${getCategoryColor(category)};">${total.toFixed(2)} m</span>
+                </div>
+                ${breakdown}
+              </div>
+            `;
+          }).join('');
+        };
+        
+        // Calculate total lines by category
+        const totalLinesByCategory: { [key: string]: number } = {};
+        calcLines.forEach((line: any) => {
+          const polygon = polygons.find((p: any) => p.id === line.polygonId);
+          if (polygon && polygon.points && polygon.points.length > line.pointIndex) {
+            const point = polygon.points[line.pointIndex];
+            const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
+            const length = calculateLineLength(point, nextPoint, calcScale);
+            if (!totalLinesByCategory[line.category]) totalLinesByCategory[line.category] = 0;
+            totalLinesByCategory[line.category] += length;
+          }
+        });
+        
+        return `
+          <!-- Calculation ${calcIndex + 1}: Drawing + Details Together -->
+          <div style="margin-bottom: 20px; ${calcIndex > 0 ? 'page-break-before: always;' : ''}">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 3px solid #4CAF50;">
+              <span style="font-size: 14px; font-weight: bold;">${calc.name || `Berechnung ${calcIndex + 1}`}</span>
+              <span style="font-size: 18px; font-weight: bold; color: #4CAF50;">${netArea.toFixed(2)} m²</span>
+            </div>
+            
+            <!-- Drawing -->
+            <div style="text-align: center; margin-bottom: 12px;">
+              ${generateFullCalcSvg(calc)}
+            </div>
+            
+            <!-- Quick Summary -->
+            <div style="display: flex; gap: 8px; font-size: 9px; line-height: 1.3; margin-bottom: 12px;">
+              <div style="background: #f8f8f8; padding: 4px 6px; border-radius: 4px; border: 1px solid #e0e0e0; font-family: monospace; min-width: 100px;">
+                <div style="font-size: 8px; color: #666; margin-bottom: 2px; font-weight: 600;">Rechenweg:</div>
+                <div>Brutto: ${grossArea.toFixed(2)} m²</div>
+                ${deductionsTotal > 0 ? `<div>− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
+                <div style="border-top: 1px solid #333; margin-top: 2px; padding-top: 2px; font-weight: bold;">= ${netArea.toFixed(2)} m²</div>
+              </div>
+              
+              ${Object.keys(totalLinesByCategory).length > 0 ? `
+                <div style="flex: 1; background: #fff8f0; padding: 4px 6px; border-radius: 4px; border: 1px solid #FF9800;">
+                  <div style="font-weight: 600; color: #FF9800; font-size: 8px; margin-bottom: 2px;">Linien Gesamt:</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px;">
+                    ${Object.entries(totalLinesByCategory).map(([cat, length]) => `
+                      <div style="display: flex; justify-content: space-between; font-size: 8px;">
+                        <span style="display: flex; align-items: center;">
+                          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${getCategoryColor(cat)}; margin-right: 3px;"></span>
+                          ${formatCategoryForPdf(cat)}
+                        </span>
+                        <span style="font-weight: 600; color: ${getCategoryColor(cat)};">${(length as number).toFixed(2)}m</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+            
+            ${showCalcDetailsPage ? `
+            <!-- Detailed Breakdown -->
+            <div style="display: flex; gap: 10px;">
+              <!-- Main Areas Details -->
+              ${mainAreas.length > 0 ? `
+                <div style="flex: 1;">
+                  <h3 style="font-size: 10px; color: #4CAF50; margin-bottom: 4px; border-bottom: 1px solid #4CAF50; padding-bottom: 2px;">Hauptflächen</h3>
+                  ${mainAreas.map((p: any) => `
+                    <div style="background: #f9f9f9; border-left: 3px solid #4CAF50; padding: 4px 8px; margin-bottom: 4px; border-radius: 3px;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600; font-size: 10px;">${p.name}</span>
+                        <span style="font-weight: 600; color: #4CAF50; font-size: 10px;">+${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                      </div>
+                      <div style="margin-top: 3px;">${generateLinesForPolygon(p)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+              
+              <!-- Deduction Areas Details -->
+              ${deductionAreas.length > 0 ? `
+                <div style="flex: 1;">
+                  <h3 style="font-size: 10px; color: #f44336; margin-bottom: 4px; border-bottom: 1px solid #f44336; padding-bottom: 2px;">Abzüge</h3>
+                  ${deductionAreas.map((p: any) => `
+                    <div style="background: #fef9f9; border-left: 3px solid #f44336; padding: 4px 8px; margin-bottom: 4px; border-radius: 3px;">
+                      <div style="display: flex; justify-content: space-between;">
+                        <span style="font-weight: 600; font-size: 10px;">${p.name}</span>
+                        <span style="font-weight: 600; color: #f44336; font-size: 10px;">-${calculatePolygonArea(p.points, calcScale).toFixed(2)} m²</span>
+                      </div>
+                      <div style="margin-top: 3px;">${generateLinesForPolygon(p)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    };
 
     // Generate detailed calculation pages (optional, controlled by showCalcDetailsPage)
     const generateDetailedCalcPages = () => {
@@ -2420,7 +2596,7 @@ export default function ProjectDetailScreen() {
           <div class="new-page">
             <div class="area-calcs-section">
               <h2>Flächenberechnungen</h2>
-              ${areaCalcsHtml}
+              ${generateCombinedAreaCalcs()}
             </div>
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">
@@ -2434,8 +2610,6 @@ export default function ProjectDetailScreen() {
               Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
             </div>
           </div>
-          
-          ${detailedCalcPagesHtml}
         ` : ''}
         
         ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `

@@ -480,10 +480,12 @@ export default function AreaCalculatorEditor() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showLineCategoryManager, setShowLineCategoryManager] = useState(false);
   const [showShortcutManager, setShowShortcutManager] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [editingCategory, setEditingCategory] = useState<LineCategory | null>(null);
   const [editingShortcut, setEditingShortcut] = useState<TextShortcut | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#2196F3');
+  const [newCategoryShortcut, setNewCategoryShortcut] = useState('');
   const [newShortcutCode, setNewShortcutCode] = useState('');
   const [newShortcutText, setNewShortcutText] = useState('');
   
@@ -8274,16 +8276,23 @@ export default function AreaCalculatorEditor() {
       {/* Linien-Kategorien Manager Modal */}
       <Modal visible={showLineCategoryManager} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxWidth: 400, maxHeight: '80%' }]}>
+          <View style={[styles.modalContent, { maxWidth: 420, maxHeight: '85%' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={styles.modalTitle}>Linien benennen</Text>
-              <TouchableOpacity onPress={() => setShowLineCategoryManager(false)}>
+              <TouchableOpacity onPress={() => {
+                setShowLineCategoryManager(false);
+                setEditingCategory(null);
+                setNewCategoryName('');
+                setNewCategoryColor('#2196F3');
+                setNewCategoryShortcut('');
+                setShowColorPicker(false);
+              }}>
                 <Ionicons name="close-circle" size={28} color="#999" />
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-              {lineCategories.map((cat, index) => (
+            <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+              {lineCategories.map((cat) => (
                 <View 
                   key={cat.id} 
                   style={{
@@ -8291,14 +8300,22 @@ export default function AreaCalculatorEditor() {
                     alignItems: 'center',
                     backgroundColor: '#f9f9f9',
                     padding: 12,
-                    borderRadius: 8,
+                    borderRadius: 10,
                     marginBottom: 8,
-                    borderLeftWidth: 4,
+                    borderLeftWidth: 5,
                     borderLeftColor: cat.color,
                   }}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '500' }}>{cat.name}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{cat.name}</Text>
+                    {cat.shortcut && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{cat.shortcut}</Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: '#666', marginLeft: 6 }}>→ Kürzel</Text>
+                      </View>
+                    )}
                   </View>
                   <TouchableOpacity 
                     style={{ padding: 8 }}
@@ -8306,6 +8323,8 @@ export default function AreaCalculatorEditor() {
                       setEditingCategory(cat);
                       setNewCategoryName(cat.name);
                       setNewCategoryColor(cat.color);
+                      setNewCategoryShortcut(cat.shortcut || '');
+                      setShowColorPicker(false);
                     }}
                   >
                     <Ionicons name="pencil" size={18} color="#2196F3" />
@@ -8313,8 +8332,16 @@ export default function AreaCalculatorEditor() {
                   <TouchableOpacity 
                     style={{ padding: 8 }}
                     onPress={async () => {
+                      // Auch das verknüpfte Kürzel löschen
+                      if (cat.shortcut) {
+                        const shortcut = textShortcuts.find(s => s.shortcut.toUpperCase() === cat.shortcut?.toUpperCase());
+                        if (shortcut) {
+                          await TextShortcutService.delete(shortcut.id);
+                        }
+                      }
                       await LineCategoryService.delete(cat.id);
                       loadLineCategories();
+                      loadTextShortcuts();
                     }}
                   >
                     <Ionicons name="trash" size={18} color="#f44336" />
@@ -8325,49 +8352,142 @@ export default function AreaCalculatorEditor() {
             
             {/* Neue Kategorie / Bearbeiten */}
             <View style={{ borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16, marginTop: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>
                 {editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie'}
               </Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              
+              {/* Name */}
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Name</Text>
                 <TextInput
                   style={{
-                    flex: 1,
                     borderWidth: 1,
                     borderColor: '#ddd',
                     borderRadius: 8,
-                    padding: 10,
-                    fontSize: 14,
+                    padding: 12,
+                    fontSize: 15,
+                    backgroundColor: '#fafafa',
                   }}
-                  placeholder="Name der Kategorie"
+                  placeholder="z.B. Traufe"
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                 />
+              </View>
+              
+              {/* Kürzel */}
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Kürzel (optional)</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    style={{
+                      width: 80,
+                      borderWidth: 2,
+                      borderColor: '#FF9800',
+                      borderRadius: 8,
+                      padding: 10,
+                      fontSize: 15,
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      backgroundColor: '#fff3e0',
+                    }}
+                    placeholder="TR"
+                    value={newCategoryShortcut}
+                    onChangeText={(text) => setNewCategoryShortcut(text.toUpperCase())}
+                    maxLength={4}
+                    autoCapitalize="characters"
+                  />
+                  <Text style={{ flex: 1, fontSize: 12, color: '#666' }}>
+                    Wird automatisch mit Kürzel-Liste synchronisiert
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Farbe */}
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Farbe</Text>
                 <TouchableOpacity
                   style={{
-                    width: 44,
-                    height: 44,
-                    backgroundColor: newCategoryColor,
-                    borderRadius: 8,
-                    justifyContent: 'center',
+                    flexDirection: 'row',
                     alignItems: 'center',
+                    backgroundColor: '#f5f5f5',
+                    padding: 10,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#ddd',
                   }}
-                  onPress={() => {
-                    // Einfache Farbauswahl
-                    const colors = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#E91E63', '#00BCD4', '#795548', '#607D8B', '#3F51B5', '#f44336'];
-                    const currentIndex = colors.indexOf(newCategoryColor);
-                    setNewCategoryColor(colors[(currentIndex + 1) % colors.length]);
-                  }}
+                  onPress={() => setShowColorPicker(!showColorPicker)}
                 >
-                  <Ionicons name="color-palette" size={20} color="#fff" />
+                  <View style={{
+                    width: 32,
+                    height: 32,
+                    backgroundColor: newCategoryColor,
+                    borderRadius: 6,
+                    marginRight: 12,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                  }} />
+                  <Text style={{ flex: 1, fontSize: 14, color: '#333' }}>
+                    {showColorPicker ? 'Farbauswahl schließen' : 'Farbe wählen'}
+                  </Text>
+                  <Ionicons name={showColorPicker ? 'chevron-up' : 'chevron-down'} size={20} color="#666" />
                 </TouchableOpacity>
+                
+                {/* Große Farbpalette */}
+                {showColorPicker && (
+                  <View style={{ marginTop: 10, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#eee' }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                      {[
+                        // Rot-Töne
+                        '#FFEBEE', '#FFCDD2', '#EF9A9A', '#E57373', '#EF5350', '#F44336', '#E53935', '#D32F2F', '#C62828', '#B71C1C',
+                        // Pink-Töne
+                        '#FCE4EC', '#F8BBD9', '#F48FB1', '#F06292', '#EC407A', '#E91E63', '#D81B60', '#C2185B', '#AD1457', '#880E4F',
+                        // Lila-Töne
+                        '#F3E5F5', '#E1BEE7', '#CE93D8', '#BA68C8', '#AB47BC', '#9C27B0', '#8E24AA', '#7B1FA2', '#6A1B9A', '#4A148C',
+                        // Blau-Töne
+                        '#E3F2FD', '#BBDEFB', '#90CAF9', '#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1976D2', '#1565C0', '#0D47A1',
+                        // Cyan-Töne
+                        '#E0F7FA', '#B2EBF2', '#80DEEA', '#4DD0E1', '#26C6DA', '#00BCD4', '#00ACC1', '#0097A7', '#00838F', '#006064',
+                        // Grün-Töne
+                        '#E8F5E9', '#C8E6C9', '#A5D6A7', '#81C784', '#66BB6A', '#4CAF50', '#43A047', '#388E3C', '#2E7D32', '#1B5E20',
+                        // Gelb-Töne
+                        '#FFFDE7', '#FFF9C4', '#FFF59D', '#FFF176', '#FFEE58', '#FFEB3B', '#FDD835', '#FBC02D', '#F9A825', '#F57F17',
+                        // Orange-Töne
+                        '#FFF3E0', '#FFE0B2', '#FFCC80', '#FFB74D', '#FFA726', '#FF9800', '#FB8C00', '#F57C00', '#EF6C00', '#E65100',
+                        // Braun-Töne
+                        '#EFEBE9', '#D7CCC8', '#BCAAA4', '#A1887F', '#8D6E63', '#795548', '#6D4C41', '#5D4037', '#4E342E', '#3E2723',
+                        // Grau-Töne
+                        '#FAFAFA', '#F5F5F5', '#EEEEEE', '#E0E0E0', '#BDBDBD', '#9E9E9E', '#757575', '#616161', '#424242', '#212121',
+                      ].map((color) => (
+                        <TouchableOpacity
+                          key={color}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            backgroundColor: color,
+                            borderRadius: 6,
+                            borderWidth: newCategoryColor === color ? 3 : 1,
+                            borderColor: newCategoryColor === color ? '#000' : '#ddd',
+                          }}
+                          onPress={() => setNewCategoryColor(color)}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                )}
               </View>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              
+              {/* Buttons */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
                 {editingCategory && (
                   <TouchableOpacity
                     style={{
                       flex: 1,
                       backgroundColor: '#f5f5f5',
-                      padding: 12,
+                      padding: 14,
                       borderRadius: 8,
                       alignItems: 'center',
                     }}
@@ -8375,6 +8495,8 @@ export default function AreaCalculatorEditor() {
                       setEditingCategory(null);
                       setNewCategoryName('');
                       setNewCategoryColor('#2196F3');
+                      setNewCategoryShortcut('');
+                      setShowColorPicker(false);
                     }}
                   >
                     <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
@@ -8384,32 +8506,73 @@ export default function AreaCalculatorEditor() {
                   style={{
                     flex: 1,
                     backgroundColor: '#4CAF50',
-                    padding: 12,
+                    padding: 14,
                     borderRadius: 8,
                     alignItems: 'center',
                   }}
                   onPress={async () => {
                     if (newCategoryName.trim()) {
+                      const categoryData = {
+                        name: newCategoryName.trim(),
+                        color: newCategoryColor,
+                        shortcut: newCategoryShortcut.trim().toUpperCase() || undefined,
+                        order: editingCategory ? editingCategory.order : lineCategories.length + 1,
+                      };
+                      
                       if (editingCategory) {
-                        await LineCategoryService.update(editingCategory.id, {
-                          name: newCategoryName.trim(),
-                          color: newCategoryColor,
-                        });
+                        // Update Kategorie
+                        await LineCategoryService.update(editingCategory.id, categoryData);
+                        
+                        // Kürzel synchronisieren
+                        if (newCategoryShortcut.trim()) {
+                          // Prüfen ob das Kürzel schon existiert
+                          const existingShortcut = textShortcuts.find(
+                            s => s.shortcut.toUpperCase() === newCategoryShortcut.trim().toUpperCase()
+                          );
+                          if (existingShortcut) {
+                            // Update existierendes Kürzel
+                            await TextShortcutService.update(existingShortcut.id, {
+                              fullText: newCategoryName.trim(),
+                            });
+                          } else {
+                            // Neues Kürzel erstellen
+                            await TextShortcutService.create({
+                              shortcut: newCategoryShortcut.trim().toUpperCase(),
+                              fullText: newCategoryName.trim(),
+                              order: textShortcuts.length + 1,
+                            });
+                          }
+                        }
                       } else {
-                        await LineCategoryService.create({
-                          name: newCategoryName.trim(),
-                          color: newCategoryColor,
-                          order: lineCategories.length + 1,
-                        });
+                        // Neue Kategorie
+                        await LineCategoryService.create(categoryData);
+                        
+                        // Kürzel erstellen wenn angegeben
+                        if (newCategoryShortcut.trim()) {
+                          const existingShortcut = textShortcuts.find(
+                            s => s.shortcut.toUpperCase() === newCategoryShortcut.trim().toUpperCase()
+                          );
+                          if (!existingShortcut) {
+                            await TextShortcutService.create({
+                              shortcut: newCategoryShortcut.trim().toUpperCase(),
+                              fullText: newCategoryName.trim(),
+                              order: textShortcuts.length + 1,
+                            });
+                          }
+                        }
                       }
+                      
                       loadLineCategories();
+                      loadTextShortcuts();
                       setEditingCategory(null);
                       setNewCategoryName('');
                       setNewCategoryColor('#2196F3');
+                      setNewCategoryShortcut('');
+                      setShowColorPicker(false);
                     }
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
                     {editingCategory ? 'Speichern' : 'Hinzufügen'}
                   </Text>
                 </TouchableOpacity>

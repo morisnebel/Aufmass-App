@@ -878,19 +878,20 @@ export interface LineCategory {
   name: string;
   color: string;
   order: number;
+  shortcut?: string;  // Optionales Kürzel, z.B. "TR" für Traufe
 }
 
-// Default-Linien-Kategorien
+// Default-Linien-Kategorien mit Kürzeln
 const DEFAULT_LINE_CATEGORIES: Omit<LineCategory, 'id'>[] = [
-  { name: 'Traufe', color: '#2196F3', order: 1 },
-  { name: 'Ortgang', color: '#4CAF50', order: 2 },
-  { name: 'First', color: '#FF9800', order: 3 },
-  { name: 'Kehle', color: '#9C27B0', order: 4 },
-  { name: 'Grat', color: '#E91E63', order: 5 },
-  { name: 'Fensterumfang', color: '#00BCD4', order: 6 },
-  { name: 'Türumfang', color: '#795548', order: 7 },
-  { name: 'Rinne', color: '#607D8B', order: 8 },
-  { name: 'Fallrohr', color: '#3F51B5', order: 9 },
+  { name: 'Traufe', color: '#2196F3', order: 1, shortcut: 'TR' },
+  { name: 'Ortgang', color: '#4CAF50', order: 2, shortcut: 'OG' },
+  { name: 'First', color: '#FF9800', order: 3, shortcut: 'FI' },
+  { name: 'Kehle', color: '#9C27B0', order: 4, shortcut: 'KE' },
+  { name: 'Grat', color: '#E91E63', order: 5, shortcut: 'GR' },
+  { name: 'Fensterumfang', color: '#00BCD4', order: 6, shortcut: 'FU' },
+  { name: 'Türumfang', color: '#795548', order: 7, shortcut: 'TU' },
+  { name: 'Rinne', color: '#607D8B', order: 8, shortcut: 'RI' },
+  { name: 'Fallrohr', color: '#3F51B5', order: 9, shortcut: 'FR' },
 ];
 
 export const LineCategoryService = {

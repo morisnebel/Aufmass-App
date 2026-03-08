@@ -26,6 +26,7 @@ import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync } from 'expo
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
+import * as MediaLibrary from 'expo-media-library';
 
 // API_URL removed - using local storage now
 
@@ -131,6 +132,11 @@ export default function ProjectDetailScreen() {
   const [deleteSketchModalVisible, setDeleteSketchModalVisible] = useState(false);
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
+  
+  // Photo gallery save state
+  const [photoSelectMode, setPhotoSelectMode] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+  const [isSavingToGallery, setIsSavingToGallery] = useState(false);
   
   // Checklist delete state
   const [deleteChecklistModalVisible, setDeleteChecklistModalVisible] = useState(false);
@@ -287,6 +293,58 @@ export default function ProjectDetailScreen() {
       }
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Fotos in iPad Galerie speichern
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotos(prev => 
+      prev.includes(photoId) 
+        ? prev.filter(id => id !== photoId)
+        : [...prev, photoId]
+    );
+  };
+
+  const saveSelectedPhotosToGallery = async () => {
+    if (selectedPhotos.length === 0) {
+      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Foto aus.');
+      return;
+    }
+
+    setIsSavingToGallery(true);
+
+    try {
+      // Request permission
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung benötigt', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+        setIsSavingToGallery(false);
+        return;
+      }
+
+      let savedCount = 0;
+      for (const photoId of selectedPhotos) {
+        const photo = photos.find(p => p.id === photoId);
+        if (photo?.uri) {
+          try {
+            await MediaLibrary.saveToLibraryAsync(photo.uri);
+            savedCount++;
+          } catch (err) {
+            console.error('Error saving photo:', err);
+          }
+        }
+      }
+
+      // Reset selection mode
+      setPhotoSelectMode(false);
+      setSelectedPhotos([]);
+
+      Alert.alert('Erfolg', `${savedCount} Foto(s) wurden in der Galerie gespeichert.`);
+    } catch (error) {
+      console.error('Error saving photos to gallery:', error);
+      Alert.alert('Fehler', 'Fotos konnten nicht gespeichert werden.');
+    } finally {
+      setIsSavingToGallery(false);
     }
   };
 
@@ -3318,19 +3376,66 @@ export default function ProjectDetailScreen() {
 
         {activeTab === 'photos' && (
           <View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => router.push(`/photos/new?projectId=${id}`)}
-            >
-              <Ionicons name="add-circle" size={24} color="#1976d2" />
-              <Text style={styles.addButtonText}>Foto hinzufügen</Text>
-            </TouchableOpacity>
+            {/* Button-Leiste */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[styles.addButton, { flex: 1 }]}
+                onPress={() => router.push(`/photos/new?projectId=${id}`)}
+              >
+                <Ionicons name="add-circle" size={24} color="#1976d2" />
+                <Text style={styles.addButtonText}>Foto hinzufügen</Text>
+              </TouchableOpacity>
+              
+              {photoSelectMode ? (
+                <>
+                  <TouchableOpacity
+                    style={[styles.addButton, { flex: 1, backgroundColor: '#4CAF50' }]}
+                    onPress={saveSelectedPhotosToGallery}
+                    disabled={isSavingToGallery}
+                  >
+                    {isSavingToGallery ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="download" size={24} color="#fff" />
+                        <Text style={[styles.addButtonText, { color: '#fff' }]}>
+                          Speichern ({selectedPhotos.length})
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: '#f44336', paddingHorizontal: 12 }]}
+                    onPress={() => {
+                      setPhotoSelectMode(false);
+                      setSelectedPhotos([]);
+                    }}
+                  >
+                    <Ionicons name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.addButton, { flex: 1 }]}
+                  onPress={() => setPhotoSelectMode(true)}
+                >
+                  <Ionicons name="images" size={24} color="#9c27b0" />
+                  <Text style={styles.addButtonText}>In Galerie</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={styles.photoGrid}>
               {photos.map((photo) => (
                 <View key={photo.id} style={styles.photoItem}>
                   <TouchableOpacity
-                    onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
+                    onPress={() => {
+                      if (photoSelectMode) {
+                        togglePhotoSelection(photo.id);
+                      } else {
+                        router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`);
+                      }
+                    }}
                     style={{ flex: 1 }}
                   >
                     <Image
@@ -3343,23 +3448,41 @@ export default function ProjectDetailScreen() {
                         {photo.description}
                       </Text>
                     )}
+                    
+                    {/* Selection Overlay */}
+                    {photoSelectMode && (
+                      <View style={[
+                        styles.photoSelectOverlay,
+                        selectedPhotos.includes(photo.id) && styles.photoSelectOverlayActive
+                      ]}>
+                        <Ionicons 
+                          name={selectedPhotos.includes(photo.id) ? "checkmark-circle" : "ellipse-outline"} 
+                          size={32} 
+                          color={selectedPhotos.includes(photo.id) ? "#4CAF50" : "#fff"} 
+                        />
+                      </View>
+                    )}
                   </TouchableOpacity>
                   
-                  {/* Edit Icon - Top Right */}
-                  <View style={styles.photoEditOverlay}>
-                    <Ionicons name="create-outline" size={20} color="#fff" />
-                  </View>
+                  {/* Edit Icon - Top Right (nur wenn nicht im Auswahl-Modus) */}
+                  {!photoSelectMode && (
+                    <View style={styles.photoEditOverlay}>
+                      <Ionicons name="create-outline" size={20} color="#fff" />
+                    </View>
+                  )}
                   
-                  {/* Delete Button - Bottom Right */}
-                  <TouchableOpacity
-                    style={styles.photoDeleteButton}
-                    onPress={() => {
-                      setPhotoToDelete(photo.id);
-                      setDeleteModalVisible(true);
-                    }}
-                  >
-                    <Ionicons name="trash" size={20} color="#fff" />
-                  </TouchableOpacity>
+                  {/* Delete Button - Bottom Right (nur wenn nicht im Auswahl-Modus) */}
+                  {!photoSelectMode && (
+                    <TouchableOpacity
+                      style={styles.photoDeleteButton}
+                      onPress={() => {
+                        setPhotoToDelete(photo.id);
+                        setDeleteModalVisible(true);
+                      }}
+                    >
+                      <Ionicons name="trash" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </View>
@@ -5138,6 +5261,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
     zIndex: 10,
+  },
+  photoSelectOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  photoSelectOverlayActive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    borderWidth: 3,
+    borderColor: '#4CAF50',
   },
   sketchImage: {
     width: '100%',

@@ -19,6 +19,8 @@ import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 // File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
@@ -255,10 +257,6 @@ export default function AnnotatePhotoScreen() {
           <Ionicons name="trash-outline" size={24} color="#f44336" />
           <Text style={styles.toolText}>Löschen</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={saveToGallery}>
-          <Ionicons name="download-outline" size={24} color="#9c27b0" />
-          <Text style={styles.toolText}>In Galerie</Text>
-        </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.toolButton, styles.deletePhotoButton]} 
           onPress={() => {
@@ -309,29 +307,13 @@ export default function AnnotatePhotoScreen() {
         ))}
       </View>
 
-      {/* Zoom Controls */}
-      <View style={styles.zoomContainer}>
-        <TouchableOpacity
-          style={styles.zoomButton}
-          onPress={() => setScale(prev => Math.min(4, prev + 0.25))}
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#333" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.zoomButton}
-          onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
-        >
-          <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{Math.round(scale * 100)}%</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.zoomButton}
-          onPress={() => setScale(prev => Math.max(0.25, prev - 0.25))}
-        >
-          <Ionicons name="remove-circle-outline" size={24} color="#333" />
-        </TouchableOpacity>
-      </View>
+      {/* Reset Zoom Button */}
+      <TouchableOpacity
+        style={styles.resetZoomButton}
+        onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
+      >
+        <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>{Math.round(scale * 100)}%</Text>
+      </TouchableOpacity>
 
       {/* PDF-Größen Auswahl */}
       <View style={styles.pdfSizeContainer}>
@@ -477,23 +459,15 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#1976d2',
   },
-  // Zoom Controls
-  zoomContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    gap: 15,
-  },
-  zoomButton: {
+  // Reset Zoom Button
+  resetZoomButton: {
+    position: 'absolute',
+    bottom: 250,
+    right: 10,
     padding: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 8,
-    minWidth: 50,
-    alignItems: 'center',
+    zIndex: 100,
   },
   // PDF-Größen Auswahl Styles
   pdfSizeContainer: {

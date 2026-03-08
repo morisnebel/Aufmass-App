@@ -951,13 +951,20 @@ export default function ProjectDetailScreen() {
     
     // Category colors
     const getCategoryColor = (category: string): string => {
+      // First try to find color from loaded line categories
+      const loadedCat = pdfLineCategories.find(c => c.name === category);
+      if (loadedCat) {
+        return loadedCat.color;
+      }
+      // Fallback to hardcoded colors
       const colors: { [key: string]: string } = {
         'Ortgang': '#4CAF50', 'Traufe': '#2196F3', 'First': '#9C27B0',
         'Kehle': '#673AB7', 'Grat': '#FF9800', 'Fensterbank': '#795548',
         'Sturz': '#607D8B', 'Laibung': '#E91E63', 'Rinne': '#00BCD4',
-        'Fensterumfang': '#FF5722',
+        'Fensterumfang': '#FF5722', 'Sockelleiste': '#795548',
+        'Ortgang rechts': '#4CAF50', 'Ortgang links': '#4CAF50',
       };
-      return colors[category] || '#9e9e9e';
+      return colors[category] || '#607D8B';
     };
     
     // Generate FULL SVG drawing for a calculation (large, with all details)

@@ -1,98 +1,98 @@
 # AUFMASSPROFI DACH - Product Requirements Document
 
 ## Original Problem Statement
-Build a comprehensive roofing project management app with:
-- Checklist template management
-- A powerful "Flächen-Kalkulator" (Area Calculator) tool integrated within projects
-- PDF export with customizable layout
+Build a comprehensive application for managing roofing projects with:
+- Checklist templates management
+- A powerful "Flächen-Kalkulator" (Area Calculator) tool
+- Photo annotation and management
+- PDF export functionality
 
-**User's preferred language**: German
+## User Language
+German (Deutsch)
 
 ## Core Features
 
-### 1. Flächen-Kalkulator (Area Calculator)
+### 1. Area Calculator (Flächen-Kalkulator)
 - Draw main polygons (total area) and subtraction polygons (openings)
-- Scale setting for canvas
-- Automatic net area calculation
-- Edge length input via angle/length modal
-- Line/edge naming with categories
-- Total length calculation grouped by category
-- Drawing aids: angle snapping, direct length input
-- Full shape editability
-- Movable Numpad for dimension input
+- Set scale for drawing canvas
+- Calculate and display net area
+- Line/edge management with categories
+- Angle snapping and direct length input
+- Movable numpad for dimension input
 - Annotation tools (shapes, text boxes, memo pointers)
 - Pinch-to-zoom and pan
 - Background image support
-- Live feedback and Undo/Redo
+- Undo/Redo functionality
 
-### 2. Voreinstellungen (Presets)
-- Line Categories (Linienkategorien) management
-- Text Shortcuts (Textkürzel) management
-- Bidirectional synchronization between linked categories/shortcuts
+### 2. Photo Management
+- Add photos to projects
+- Photo annotation with drawing tools
+- Save photos to device gallery (via Share in Expo Go, direct in production)
+- Multi-select mode for batch operations
 
 ### 3. PDF Export
-- Drawing with annotations and reference image
-- Calculation summary with category colors
-- Layout: [Drawing -> Details] per calculation
-- **Ink-saving design**: No background colors, only border-left/border-bottom for headers
+- Project documentation export
+- Customizable layout
+- Compact, ink-friendly headers and summary boxes
+- Include drawings, annotations, and reference images
+
+### 4. Checklist Management
+- Create and manage checklist templates
+- Template logos and category logos
+- Sub-items with images
 
 ## Tech Stack
-- React Native / Expo
-- TypeScript
-- Local Storage (@react-native-async-storage/async-storage)
-- expo-print for PDF generation
+- **Frontend**: React Native / Expo
+- **Storage**: AsyncStorage (local)
+- **PDF**: expo-print
+- **File System**: expo-file-system, expo-media-library
+- **Navigation**: expo-router
+
+## What's Been Implemented
+
+### Session: March 8, 2026
+- ✅ Fixed Expo development environment (EXPO_TOKEN authentication)
+- ✅ Implemented "Save to Gallery" feature with Share fallback for Expo Go
+- ✅ Photo annotation zoom/pan overhaul with ScrollView
+- ✅ Toolbar redesign with custom SVG icons
+- ✅ Calculator modal implementation
+- ✅ PDF export styling refinements
+- ✅ UI reorganization (header buttons, navigation tabs)
+
+## Known Limitations
+- **Expo Go**: FileSystem directories (documentDirectory, cacheDirectory) are null
+  - Workaround: Use Share sheet to save images
+  - Resolution: Works properly in TestFlight/production builds
+
+## Prioritized Backlog
+
+### P0 (Critical) - None currently
+
+### P1 (High Priority) - None currently
+
+### P2 (Medium Priority)
+- Create new TestFlight build
+- Implement Pro/Base version split with in-app purchases
+
+### P3 (Lower Priority)
+- Price calculation feature based on areas/lengths
+
+### P4 (Backlog)
+- Re-implement iCloud Sync
+- Fix dashed lines rendering in PDF preview
 
 ## Key Files
-- `/app/frontend/app/calculator/new.tsx` - Main calculator component
-- `/app/frontend/app/projects/[id].tsx` - Project detail & PDF export
-- `/app/frontend/app/services/LocalStorage.ts` - Data services
+- `/app/frontend/app/calculator/new.tsx` - Calculator with toolbar and modal
+- `/app/frontend/app/projects/[id].tsx` - Project details with photo management
+- `/app/frontend/app/photos/annotate.tsx` - Photo annotation with zoom/draw
+- `/app/frontend/app/_layout.tsx` - Navigation layout configuration
 
-## Data Models
+## Environment Configuration
+- **EXPO_TOKEN**: Required for Expo Go tunnel authentication
+- **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
+- **Preview URL**: https://polygon-area.preview.emergentagent.com
 
-### LineCategory
-```typescript
-interface LineCategory {
-  id: string;
-  name: string;
-  color: string;
-  shortcut?: string;
-}
-```
-
-### TextShortcut
-```typescript
-interface TextShortcut {
-  id: string;
-  shortcut: string;
-  fullName: string;
-  lineCategoryId?: string;
-}
-```
-
-## Completed Features (December 2025)
-- [x] Calculator drawing and polygon management
-- [x] Parallel lines modal with embedded Numpad
-- [x] Angle/direction input with negative angle support
-- [x] Voreinstellungen (Presets) feature with bidirectional sync
-- [x] Shortcut display on canvas next to line lengths
-- [x] Category formatting as "(Kürzel) Name"
-- [x] Category color synchronization in UI and PDF
-- [x] PDF layout refactoring: Drawing -> Details flow
-- [x] **PDF styling optimization**: Ink-saving design (no background colors)
-
-## Backlog
-
-### P2 - High Priority
-- [ ] Create new TestFlight build
-- [ ] Pro/Base version split with in-app purchases
-
-### P3 - Medium Priority
-- [ ] Price calculation based on areas/lengths
-
-### P4 - Low Priority
-- [ ] Re-implement iCloud Sync
-- [ ] Fix dashed lines rendering bug in PDF preview
-
-## Known Issues
-- Caching issues: If changes not visible, restart Expo server and clear Metro cache
-- Visual bug with dashed lines in PDF preview (low priority)
+## Testing Notes
+- Use Expo Go with `exp://polygon-area.preview.emergentagent.com`
+- Photo gallery save requires Share sheet in Expo Go
+- Full functionality available in TestFlight builds

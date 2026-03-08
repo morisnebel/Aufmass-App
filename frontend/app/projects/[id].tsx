@@ -337,18 +337,24 @@ export default function ProjectDetailScreen() {
             
             // Create temp file path
             const filename = `photo_${photoId}_${Date.now()}.jpg`;
-            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+            const fileUri = FileSystem.cacheDirectory + filename;
             
-            // Write base64 to file
-            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: 'base64',
-            });
+            // Write base64 to file using the correct encoding type
+            await FileSystem.writeAsStringAsync(
+              fileUri, 
+              base64Data, 
+              { encoding: FileSystem.EncodingType.Base64 }
+            );
             
             // Save to media library
-            await MediaLibrary.saveToLibraryAsync(fileUri);
+            const asset = await MediaLibrary.createAssetAsync(fileUri);
             
             // Clean up temp file
-            await FileSystem.deleteAsync(fileUri, { idempotent: true });
+            try {
+              await FileSystem.deleteAsync(fileUri, { idempotent: true });
+            } catch (e) {
+              // Ignore cleanup errors
+            }
             
             savedCount++;
           } catch (err) {

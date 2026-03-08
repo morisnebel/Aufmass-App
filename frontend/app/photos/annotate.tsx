@@ -437,7 +437,9 @@ export default function AnnotatePhotoScreen() {
         ref={canvasRef as any}
         minimumZoomScale={0.5}
         maximumZoomScale={4}
-        bouncesZoom={true}
+        bouncesZoom={!drawingEnabled}
+        scrollEnabled={!drawingEnabled}
+        pinchGestureEnabled={!drawingEnabled}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {

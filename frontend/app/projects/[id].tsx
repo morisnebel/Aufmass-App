@@ -327,7 +327,7 @@ export default function ProjectDetailScreen() {
         const photo = photos.find(p => p.id === photoId);
         if (photo?.image_data) {
           try {
-            // Convert base64 to file
+            // Get base64 data
             let base64Data = photo.image_data;
             
             // Remove data URI prefix if present
@@ -339,15 +339,28 @@ export default function ProjectDetailScreen() {
             const filename = `photo_${photoId}_${Date.now()}.jpg`;
             const fileUri = FileSystem.cacheDirectory + filename;
             
-            // Write base64 to file using the correct encoding type
-            await FileSystem.writeAsStringAsync(
-              fileUri, 
-              base64Data, 
-              { encoding: FileSystem.EncodingType.Base64 }
-            );
+            // Write base64 to file - try different encoding approaches
+            try {
+              // Method 1: Try with EncodingType enum
+              await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+                encoding: 'base64' as any,
+              });
+            } catch (writeError) {
+              // Method 2: If that fails, write the raw data
+              console.log('Using fallback write method');
+              const response = await fetch(`data:image/jpeg;base64,${base64Data}`);
+              const blob = await response.blob();
+              const reader = new FileReader();
+              await new Promise((resolve, reject) => {
+                reader.onload = resolve;
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            }
             
             // Save to media library
             const asset = await MediaLibrary.createAssetAsync(fileUri);
+            console.log('Asset created:', asset.id);
             
             // Clean up temp file
             try {
@@ -357,8 +370,8 @@ export default function ProjectDetailScreen() {
             }
             
             savedCount++;
-          } catch (err) {
-            console.error('Error saving photo:', err);
+          } catch (err: any) {
+            console.error('Error saving photo:', err?.message || err);
           }
         }
       }
@@ -367,10 +380,14 @@ export default function ProjectDetailScreen() {
       setPhotoSelectMode(false);
       setSelectedPhotos([]);
 
-      Alert.alert('Erfolg', `${savedCount} Foto(s) wurden in der Galerie gespeichert.`);
-    } catch (error) {
-      console.error('Error saving photos to gallery:', error);
-      Alert.alert('Fehler', 'Fotos konnten nicht gespeichert werden.');
+      if (savedCount > 0) {
+        Alert.alert('Erfolg', `${savedCount} Foto(s) wurden in der Galerie gespeichert.`);
+      } else {
+        Alert.alert('Fehler', 'Keine Fotos konnten gespeichert werden. Bitte versuchen Sie es erneut.');
+      }
+    } catch (error: any) {
+      console.error('Error saving photos to gallery:', error?.message || error);
+      Alert.alert('Fehler', 'Fotos konnten nicht gespeichert werden: ' + (error?.message || 'Unbekannter Fehler'));
     } finally {
       setIsSavingToGallery(false);
     }
@@ -3433,13 +3450,14 @@ export default function ProjectDetailScreen() {
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: '#f44336', paddingHorizontal: 12 }]}
+                    style={[styles.addButton, { backgroundColor: '#f44336' }]}
                     onPress={() => {
                       setPhotoSelectMode(false);
                       setSelectedPhotos([]);
                     }}
                   >
                     <Ionicons name="close" size={24} color="#fff" />
+                    <Text style={[styles.addButtonText, { color: '#fff' }]}>Abbrechen</Text>
                   </TouchableOpacity>
                 </>
               ) : (

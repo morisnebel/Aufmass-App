@@ -77,7 +77,9 @@ export default function AnnotatePhotoScreen() {
   const [editMode, setEditMode] = useState(false);
   const [selectedPathIndex, setSelectedPathIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragTotalOffsetRef = useRef({ x: 0, y: 0 });
+  const originalPathRef = useRef<string>('');
   
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
@@ -657,7 +659,10 @@ export default function AnnotatePhotoScreen() {
                 if (foundIndex !== null) {
                   setSelectedPathIndex(foundIndex);
                   setIsDragging(true);
-                  setDragOffset({ x: locationX, y: locationY });
+                  // Speichere Start-Position und Original-Pfad
+                  dragStartRef.current = { x: locationX, y: locationY };
+                  dragTotalOffsetRef.current = { x: 0, y: 0 };
+                  originalPathRef.current = paths[foundIndex].path;
                 } else {
                   setSelectedPathIndex(null);
                 }
@@ -674,16 +679,30 @@ export default function AnnotatePhotoScreen() {
               const locationY = touch.locationY;
               
               if (editMode && isDragging && selectedPathIndex !== null) {
-                // Element verschieben
-                const deltaX = locationX - dragOffset.x;
-                const deltaY = locationY - dragOffset.y;
+                // Berechne Gesamtverschiebung vom Startpunkt
+                const totalDeltaX = locationX - dragStartRef.current.x;
+                const totalDeltaY = locationY - dragStartRef.current.y;
                 
-                if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+                // Speichere für Release
+                dragTotalOffsetRef.current = { x: totalDeltaX, y: totalDeltaY };
+                return;
+              }
+              
+              if (drawingEnabled && currentPath) {
+                setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+              }
+            }}
+            onResponderRelease={() => {
+              if (editMode && isDragging && selectedPathIndex !== null) {
+                // Wende die Verschiebung nur einmal am Ende an
+                const { x: totalDeltaX, y: totalDeltaY } = dragTotalOffsetRef.current;
+                
+                if (Math.abs(totalDeltaX) > 5 || Math.abs(totalDeltaY) > 5) {
                   const newPaths = [...paths];
                   const selectedPath = newPaths[selectedPathIndex];
                   
-                  // Pfad verschieben
-                  const newPathString = translatePath(selectedPath.path, deltaX, deltaY);
+                  // Pfad verschieben basierend auf Original
+                  const newPathString = translatePath(originalPathRef.current, totalDeltaX, totalDeltaY);
                   const newBounds = calculateBounds(newPathString);
                   
                   newPaths[selectedPathIndex] = {
@@ -693,18 +712,9 @@ export default function AnnotatePhotoScreen() {
                   };
                   
                   setPaths(newPaths);
-                  setDragOffset({ x: locationX, y: locationY });
                   setHasChanges(true);
                 }
-                return;
-              }
-              
-              if (drawingEnabled && currentPath) {
-                setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
-              }
-            }}
-            onResponderRelease={() => {
-              if (editMode) {
+                
                 setIsDragging(false);
                 return;
               }

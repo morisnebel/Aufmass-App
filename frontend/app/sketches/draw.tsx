@@ -1479,7 +1479,7 @@ export default function DrawSketchScreen() {
       
       // Speichere die Memo-Koordinaten und öffne Modal
       setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
-      setMemoText('Notiz'); // Default Text
+      setMemoText(''); // Leerer Anfangstext
       setShowMemoModal(true);
       setStartPoint(null);
       setTempElement(null);
@@ -1559,7 +1559,7 @@ export default function DrawSketchScreen() {
         element = {
           id: 'temp',
           type: 'memo',
-          data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: 'Notiz' },
+          data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: '' },
           color: '#E74C3C',
           strokeWidth: 2,
           rotation: 0,
@@ -1725,7 +1725,7 @@ export default function DrawSketchScreen() {
           y1: pendingMemo.y1,
           x2: pendingMemo.x2, // Position des Textlabels
           y2: pendingMemo.y2,
-          text: memoText || 'Notiz',
+          text: memoText,
           fontSize: editMemoFontSize,
         },
         color: '#E74C3C', // Rot wie im Bild
@@ -1733,7 +1733,7 @@ export default function DrawSketchScreen() {
         rotation: 0,
       };
       addToHistory([...elements, newElement]);
-      setMemoText('Notiz');
+      setMemoText('');
       setPendingMemo(null);
       setShowMemoModal(false);
     }
@@ -2515,7 +2515,7 @@ export default function DrawSketchScreen() {
         const memoY1 = element.data.y1;
         const memoX2 = element.data.x2; // Textlabel Position
         const memoY2 = element.data.y2;
-        const memoTextContent = element.data.text || 'Notiz';
+        const memoTextContent = element.data.text || '';
         const memoFontSize = element.data.fontSize || 14;
         const memoMidX = (memoX1 + memoX2) / 2;
         const memoMidY = (memoY1 + memoY2) / 2;
@@ -3553,7 +3553,7 @@ export default function DrawSketchScreen() {
                     setDrawColor(selectedEl.color);
                     setShowEditPointerModal(true);
                   } else if (selectedEl?.type === 'memo') {
-                    setMemoText(selectedEl.data.text || 'Notiz');
+                    setMemoText(selectedEl.data.text || '');
                     setEditMemoFontSize(selectedEl.data.fontSize || 14);
                     setDrawColor(selectedEl.color);
                     setShowEditMemoModal(true);
@@ -4817,7 +4817,7 @@ export default function DrawSketchScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowMemoModal(false);
-                  setMemoText('Notiz');
+                  setMemoText('');
                   setPendingMemo(null);
                 }}
               >
@@ -4889,7 +4889,7 @@ export default function DrawSketchScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowEditMemoModal(false);
-                  setMemoText('Notiz');
+                  setMemoText('');
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>

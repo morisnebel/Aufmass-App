@@ -365,49 +365,78 @@ export default function AnnotatePhotoScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Kompakte Toolbar - eine Zeile mit Farben, Größe und Zeichnen-Toggle */}
+      {/* Kompakte Toolbar - eine Zeile: PDF-Größe links, Farben/Stärke/Zeichnen rechts */}
       <View style={styles.compactToolbar}>
-        {/* Linke Seite: Farben */}
-        <View style={styles.colorsRow}>
-          {colors.map((c) => (
+        {/* Linke Seite: PDF-Größe */}
+        <View style={styles.pdfSizeRow}>
+          {PDF_SIZES.map((size) => (
             <TouchableOpacity
-              key={c.color}
+              key={size.value}
               style={[
-                styles.colorButtonSmall,
-                { backgroundColor: c.color },
-                drawColor === c.color && styles.colorButtonSmallActive,
+                styles.pdfSizeButtonSmall,
+                pdfSize === size.value && styles.pdfSizeButtonSmallActive,
               ]}
-              onPress={() => setDrawColor(c.color)}
-            />
-          ))}
-        </View>
-        
-        {/* Mitte: Strichstärke */}
-        <View style={styles.strokeRow}>
-          {[2, 4, 6, 8].map((sw) => (
-            <TouchableOpacity
-              key={sw}
-              style={[
-                styles.strokeButton,
-                strokeWidth === sw && styles.strokeButtonActive,
-              ]}
-              onPress={() => setStrokeWidth(sw)}
+              onPress={() => { setPdfSize(size.value); setHasChanges(true); }}
             >
-              <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
+              <Ionicons 
+                name={size.icon as any} 
+                size={16} 
+                color={pdfSize === size.value ? '#fff' : '#1976d2'} 
+              />
+              <Text style={[
+                styles.pdfSizeTextSmall,
+                pdfSize === size.value && styles.pdfSizeTextSmallActive,
+              ]}>
+                {size.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
         
-        {/* Rechte Seite: Zeichnen Toggle */}
-        <TouchableOpacity 
-          style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
-          onPress={() => setDrawingEnabled(!drawingEnabled)}
-        >
-          <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={20} color={drawingEnabled ? '#fff' : '#4CAF50'} />
-          <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
-            {drawingEnabled ? 'AN' : 'AUS'}
-          </Text>
-        </TouchableOpacity>
+        {/* Rechte Seite: Farben, Strichstärke, Zeichnen Toggle */}
+        <View style={styles.rightToolsRow}>
+          {/* Farben */}
+          <View style={styles.colorsRow}>
+            {colors.map((c) => (
+              <TouchableOpacity
+                key={c.color}
+                style={[
+                  styles.colorButtonSmall,
+                  { backgroundColor: c.color },
+                  drawColor === c.color && styles.colorButtonSmallActive,
+                ]}
+                onPress={() => setDrawColor(c.color)}
+              />
+            ))}
+          </View>
+          
+          {/* Strichstärke */}
+          <View style={styles.strokeRow}>
+            {[2, 4, 6, 8].map((sw) => (
+              <TouchableOpacity
+                key={sw}
+                style={[
+                  styles.strokeButton,
+                  strokeWidth === sw && styles.strokeButtonActive,
+                ]}
+                onPress={() => setStrokeWidth(sw)}
+              >
+                <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Zeichnen Toggle */}
+          <TouchableOpacity 
+            style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
+            onPress={() => setDrawingEnabled(!drawingEnabled)}
+          >
+            <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={18} color={drawingEnabled ? '#fff' : '#4CAF50'} />
+            <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
+              {drawingEnabled ? 'AN' : 'AUS'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Zweite Toolbar-Zeile: Aktionen */}
@@ -454,41 +483,6 @@ export default function AnnotatePhotoScreen() {
           <Ionicons name="checkmark-circle" size={20} color="#fff" />
           <Text style={[styles.actionText, { color: '#fff' }]}>Speichern</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* PDF-Größen Auswahl */}
-      <View style={styles.pdfSizeContainer}>
-        <Text style={styles.pdfSizeLabel}>PDF-Größe:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pdfSizeScroll}>
-          {PDF_SIZES.map((size) => (
-            <TouchableOpacity
-              key={size.value}
-              style={[
-                styles.pdfSizeButton,
-                pdfSize === size.value && styles.pdfSizeButtonActive,
-              ]}
-              onPress={() => { setPdfSize(size.value); setHasChanges(true); }}
-            >
-              <Ionicons 
-                name={size.icon as any} 
-                size={20} 
-                color={pdfSize === size.value ? '#fff' : '#1976d2'} 
-              />
-              <Text style={[
-                styles.pdfSizeText,
-                pdfSize === size.value && styles.pdfSizeTextActive,
-              ]}>
-                {size.label}
-              </Text>
-              <Text style={[
-                styles.pdfSizeDesc,
-                pdfSize === size.value && styles.pdfSizeDescActive,
-              ]}>
-                {size.description}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
       {/* Beschreibung Eingabefeld */}
@@ -594,18 +588,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+  },
+  // PDF-Größe links
+  pdfSizeRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  pdfSizeButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  pdfSizeButtonSmallActive: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1565c0',
+  },
+  pdfSizeTextSmall: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1976d2',
+  },
+  pdfSizeTextSmallActive: {
+    color: '#fff',
+  },
+  // Rechte Seite: Farben, Stärke, Zeichnen
+  rightToolsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   colorsRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 4,
   },
   colorButtonSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#ddd',
   },
@@ -615,12 +643,12 @@ const styles = StyleSheet.create({
   },
   strokeRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 3,
   },
   strokeButton: {
-    width: 32,
-    height: 28,
-    borderRadius: 6,
+    width: 28,
+    height: 24,
+    borderRadius: 4,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -632,27 +660,26 @@ const styles = StyleSheet.create({
     borderColor: '#1565c0',
   },
   strokePreview: {
-    width: 18,
+    width: 14,
     borderRadius: 2,
   },
   drawToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
     backgroundColor: '#f5f5f5',
     borderWidth: 2,
     borderColor: '#4CAF50',
     gap: 4,
-    marginLeft: 'auto',
   },
   drawToggleButtonActive: {
     backgroundColor: '#4CAF50',
     borderColor: '#388E3C',
   },
   drawToggleText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#4CAF50',
   },
@@ -664,16 +691,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: 10,
+    gap: 6,
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
     borderRadius: 6,
     backgroundColor: '#f5f5f5',
     gap: 4,
@@ -689,7 +716,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4caf50',
     marginLeft: 'auto',
   },
-  // Alte Styles entfernt - nicht mehr benötigt
+  // Alte Styles für Kompatibilität
   colorButton: {
     width: 40,
     height: 40,

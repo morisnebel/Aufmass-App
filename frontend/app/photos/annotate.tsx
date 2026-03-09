@@ -11,7 +11,6 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
-  BackHandler,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +19,6 @@ import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 // File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
@@ -92,11 +89,13 @@ export default function AnnotatePhotoScreen() {
 
   // Track changes for auto-save
   useEffect(() => {
-    const currentPathsStr = JSON.stringify(paths);
-    if (initialPathsRef.current && currentPathsStr !== initialPathsRef.current) {
-      setHasChanges(true);
+    if (!loading && paths.length > 0) {
+      const currentPathsStr = JSON.stringify(paths);
+      if (initialPathsRef.current && currentPathsStr !== initialPathsRef.current) {
+        setHasChanges(true);
+      }
     }
-  }, [paths, pdfSize, description]);
+  }, [paths, loading]);
 
   // Auto-save when leaving the screen
   useFocusEffect(
@@ -104,11 +103,11 @@ export default function AnnotatePhotoScreen() {
       // Called when screen comes into focus - do nothing
       return () => {
         // Called when screen loses focus - auto-save if changes
-        if (hasChanges && imageUri) {
+        if (hasChanges && imageUri && !loading) {
           autoSave();
         }
       };
-    }, [hasChanges, imageUri, paths, pdfSize, description, canvasDimensions])
+    }, [hasChanges, imageUri, loading])
   );
 
   // Silent auto-save function (no alerts)

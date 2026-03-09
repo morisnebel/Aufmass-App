@@ -781,7 +781,6 @@ export default function AnnotatePhotoScreen() {
                 pointsBufferRef.current = [];
               }
             }}
-            }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
               {paths.map((p, index) => {

@@ -50,6 +50,27 @@ German (Deutsch)
 
 ## What's Been Implemented
 
+### Session: March 10, 2026
+- ✅ **TOOLBAR REDESIGN MIT LABELS**: Toolbar komplett umgestaltet mit Beschriftungen unter den Buttons:
+  - "Hand" → "Bearbeiten"
+  - "Stift" → "Stift"
+  - "Linie, Kreis, Rechteck" → "Formen" (gruppiert)
+  - "Maßlinie" + "Maße über Polygone" (gruppiert)
+  - "Memo" + "Text" + "Notiz zur Skizze" (gruppiert)
+  - "Galeriefotos"
+  - "Projektfotos" (NEU - TODO: Implementierung ausstehend)
+  - "neues Foto"
+  - "Fotobearbeitung"
+- ✅ **MEMO-PFEIL TEXT-STYLING FIX**: Der Rahmen um den Memo-Text passt sich jetzt an die Strichdicke des Pfeils an (proportional 1/3 der Linienstärke)
+
+### Session: March 9, 2026
+- ✅ Implemented manual Zoom-Toggle Button ("Zoom an/aus") in der Toolbar
+  - Grün = Zoom-Modus aktiv (pinch-to-zoom und pan funktionieren)
+  - Rot = Zoom aus (Zeichnen/Bearbeiten aktiv)
+- ✅ Automatische Umschaltung: Bei Auswahl eines Zeichenwerkzeugs wird Zoom automatisch deaktiviert
+- ✅ 100%-Button repariert: Setzt Zoom-Level und Position korrekt zurück
+- ✅ ScrollView korrekt an zoomMode gebunden (scrollEnabled und pinchGestureEnabled)
+
 ### Session: December 2025
 - ✅ **KRITISCHER BUG BEHOBEN**: Koordinatenberechnung beim Zeichnen/Bearbeiten auf gezoomter Leinwand
   - `onTouchMove` und `onTouchEnd` verwendeten falsche Formel (panOffset statt scrollOffset)
@@ -60,14 +81,6 @@ German (Deutsch)
   - Grüne Hintergrundfarbe bei genau 100% Zoom
   - Button ist jetzt immer sichtbar (nicht nur wenn gezoomt)
   - Reset setzt auch scrollOffset zurück
-
-### Session: March 9, 2026
-- ✅ Implemented manual Zoom-Toggle Button ("Zoom an/aus") in der Toolbar
-  - Grün = Zoom-Modus aktiv (pinch-to-zoom und pan funktionieren)
-  - Rot = Zoom aus (Zeichnen/Bearbeiten aktiv)
-- ✅ Automatische Umschaltung: Bei Auswahl eines Zeichenwerkzeugs wird Zoom automatisch deaktiviert
-- ✅ 100%-Button repariert: Setzt Zoom-Level und Position korrekt zurück
-- ✅ ScrollView korrekt an zoomMode gebunden (scrollEnabled und pinchGestureEnabled)
 
 ### Session: March 8, 2026
 - ✅ Fixed Expo development environment (EXPO_TOKEN authentication)
@@ -85,10 +98,14 @@ German (Deutsch)
 
 ## Prioritized Backlog
 
-### P0 (Critical) - None currently
+### P0 (Critical)
+- ⏳ **BENUTZERTEST ERFORDERLICH**: 
+  - Toolbar mit neuen Labels überprüfen
+  - Memo-Pfeil Text-Styling verifizieren
+  - Zoom-Button und Pinch-to-Zoom Verhalten testen
 
 ### P1 (High Priority)
-- ⏳ **BENÖTIGT BENUTZERTEST**: Koordinatenberechnung bei Zoom - Bitte testen Sie Zeichnen und Bearbeiten während der Leinwand gezoomt ist
+- 🆕 Projektfotos-Button vollständig implementieren (Fotos aus Projekt auswählen)
 
 ### P2 (Medium Priority)
 - Create new TestFlight build
@@ -111,7 +128,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://flaechen-sketch.preview.emergentagent.com
+- **Preview URL**: https://area-sketch.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

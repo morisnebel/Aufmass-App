@@ -2347,17 +2347,17 @@ export default function DrawSketchScreen() {
             {/* Notiz-Text am Startpunkt (wenn vorhanden) */}
             {ptrText && (
               <G>
-                {/* Hintergrund für bessere Lesbarkeit */}
+                {/* Hintergrund für bessere Lesbarkeit - Rahmen passt sich an strokeWidth an */}
                 <Rect
                   x={textOffsetX - 5}
                   y={textOffsetY - ptrFontSize}
                   width={ptrText.length * ptrFontSize * 0.6 + 10}
                   height={ptrFontSize + 8}
-                  fill="rgba(255, 255, 255, 0.85)"
+                  fill="rgba(255, 255, 255, 0.9)"
                   rx={4}
                   ry={4}
                   stroke={element.color}
-                  strokeWidth={1}
+                  strokeWidth={Math.max(1, element.strokeWidth / 3)}
                 />
                 <SvgText
                   x={textOffsetX}
@@ -2893,8 +2893,10 @@ export default function DrawSketchScreen() {
           const textY = y1 + textOffset * Math.sin(angle - Math.PI / 2);
           const textWidth = text.length * fontSize * 0.6 + 10;
           const textHeight = fontSize + 8;
+          // Rahmen-Strichdicke proportional zur Pfeil-Strichdicke
+          const textStrokeWidth = Math.max(1, pointerStrokeWidth / 3);
           
-          svgElements += `<rect x="${textX - 5}" y="${textY - fontSize}" width="${textWidth}" height="${textHeight}" fill="white" fill-opacity="0.85" rx="4" stroke="${el.color}" stroke-width="1"/>`;
+          svgElements += `<rect x="${textX - 5}" y="${textY - fontSize}" width="${textWidth}" height="${textHeight}" fill="white" fill-opacity="0.9" rx="4" stroke="${el.color}" stroke-width="${textStrokeWidth}"/>`;
           svgElements += `<text x="${textX}" y="${textY}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${text}</text>`;
         }
       } else if (el.type === 'text') {
@@ -3175,7 +3177,7 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Compact toolbar - Single row with icons only */}
+      {/* Toolbar mit Labels */}
       <View style={styles.toolbar}>
         {/* Undo/Redo */}
         <TouchableOpacity
@@ -3196,129 +3198,201 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* Drawing tools */}
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'select' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('select')}
-        >
-          <Ionicons name="hand-left" size={18} color={drawMode === 'select' ? '#fff' : '#333'} />
-        </TouchableOpacity>
+        {/* 1. Hand - Bearbeiten */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[styles.toolButtonInner, drawMode === 'select' && styles.toolButtonActive]}
+            onPress={() => selectDrawMode('select')}
+          >
+            <Ionicons name="hand-left" size={18} color={drawMode === 'select' ? '#fff' : '#333'} />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Bearbeiten</Text>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'pen' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('pen')}
-        >
-          <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
-        </TouchableOpacity>
+        {/* 2. Stift - Stift */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
+            onPress={() => selectDrawMode('pen')}
+          >
+            <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Stift</Text>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'line' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('line')}
-        >
-          <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'circle' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('circle')}
-        >
-          <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'rect' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('rect')}
-        >
-          <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toolButton, styles.toolButtonWide, drawMode === 'arrow' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('arrow')}
-        >
-          {/* Benutzerdefiniertes Maßlinie-Icon: Linie mit zwei Pfeilen und M in der Mitte */}
-          <Svg width={56} height={28} viewBox="0 0 56 28">
-            {/* Linker Pfeil - größer */}
-            <Polygon 
-              points="2,14 12,6 12,22" 
-              fill={drawMode === 'arrow' ? '#fff' : '#333'} 
-            />
-            {/* Rechter Pfeil - größer */}
-            <Polygon 
-              points="54,14 44,6 44,22" 
-              fill={drawMode === 'arrow' ? '#fff' : '#333'} 
-            />
-            {/* Linie - dicker */}
-            <Line 
-              x1="12" y1="14" x2="44" y2="14" 
-              stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
-              strokeWidth={3} 
-            />
-            {/* Box mit M - größer */}
-            <Rect 
-              x="18" y="4" width="20" height="20" 
-              fill={drawMode === 'arrow' ? '#2196f3' : '#f5f5f5'} 
-              stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
-              strokeWidth={2}
-              rx={3}
-            />
-            <SvgText 
-              x="28" y="19" 
-              fill={drawMode === 'arrow' ? '#fff' : '#333'} 
-              fontSize={16} 
-              fontWeight="bold" 
-              textAnchor="middle"
+        {/* 3. Formen (Linie, Kreis, Rechteck) */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('line')}
             >
-              M
-            </SvgText>
-          </Svg>
-        </TouchableOpacity>
+              <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('circle')}
+            >
+              <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('rect')}
+            >
+              <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.toolButtonLabel}>Formen</Text>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'pointer' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('pointer')}
-        >
-          <Ionicons name="arrow-forward" size={22} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
-        </TouchableOpacity>
+        <View style={styles.separator} />
 
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'text' && styles.toolButtonActive]}
-          onPress={() => selectDrawMode('text')}
-        >
-          <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
-        </TouchableOpacity>
+        {/* 4. Maßlinie + Maße über Polygone */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            {/* Maßlinie Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInnerWide, drawMode === 'arrow' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('arrow')}
+            >
+              <Svg width={46} height={22} viewBox="0 0 56 28">
+                <Polygon 
+                  points="2,14 12,6 12,22" 
+                  fill={drawMode === 'arrow' ? '#fff' : '#333'} 
+                />
+                <Polygon 
+                  points="54,14 44,6 44,22" 
+                  fill={drawMode === 'arrow' ? '#fff' : '#333'} 
+                />
+                <Line 
+                  x1="12" y1="14" x2="44" y2="14" 
+                  stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
+                  strokeWidth={3} 
+                />
+                <Rect 
+                  x="18" y="4" width="20" height="20" 
+                  fill={drawMode === 'arrow' ? '#2196f3' : '#f5f5f5'} 
+                  stroke={drawMode === 'arrow' ? '#fff' : '#333'} 
+                  strokeWidth={2}
+                  rx={3}
+                />
+                <SvgText 
+                  x="28" y="19" 
+                  fill={drawMode === 'arrow' ? '#fff' : '#333'} 
+                  fontSize={16} 
+                  fontWeight="bold" 
+                  textAnchor="middle"
+                >
+                  M
+                </SvgText>
+              </Svg>
+            </TouchableOpacity>
+            {/* Polygon Maße Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive]}
+              onPress={() => {
+                selectDrawMode('polyline');
+                setPolylinePoints([]);
+              }}
+            >
+              <Ionicons name="git-network-outline" size={18} color={drawMode === 'polyline' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.toolGroupLabelRow}>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maßlinie</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maße über{'\n'}Polygone</Text>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.toolButton, drawMode === 'polyline' && styles.toolButtonActive]}
-          onPress={() => {
-            selectDrawMode('polyline');
-            setPolylinePoints([]);
-          }}
-        >
-          <Ionicons name="git-network-outline" size={18} color={drawMode === 'polyline' ? '#fff' : '#333'} />
-        </TouchableOpacity>
+        <View style={styles.separator} />
 
-        <TouchableOpacity style={styles.toolButton} onPress={insertImage}>
-          <Ionicons name="image" size={18} color="#333" />
-        </TouchableOpacity>
+        {/* 5. Memo + Notiz zur Skizze + Text */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            {/* Memo-Pfeil */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'pointer' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('pointer')}
+            >
+              <Ionicons name="arrow-forward" size={20} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
+            </TouchableOpacity>
+            {/* Text Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'text' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('text')}
+            >
+              <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            {/* Notiz zur Skizze Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, notes.trim() && styles.toolButtonWithBadge]}
+              onPress={() => setShowNotesModal(true)}
+            >
+              <View style={styles.notesButtonContainer}>
+                <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
+                {notes.trim() && (
+                  <View style={styles.notesBadge}>
+                    <Ionicons name="checkmark" size={8} color="#fff" />
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.toolGroupLabelRow}>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Memo</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Text</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz zur{'\n'}Skizze</Text>
+          </View>
+        </View>
 
-        <TouchableOpacity style={styles.toolButton} onPress={takePhotoAndInsert}>
-          <Ionicons name="camera" size={18} color="#4caf50" />
-        </TouchableOpacity>
+        <View style={styles.separator} />
 
-        {/* Foto-Bearbeitungsmodus Toggle */}
-        <TouchableOpacity 
-          style={[styles.toolButton, photoEditMode && styles.photoEditButtonActive]} 
-          onPress={() => {
-            setPhotoEditMode(!photoEditMode);
-            setSelectedElementId(null);
-            if (!photoEditMode) {
-              selectDrawMode('select');
-            }
-          }}
-        >
-          <Ionicons name="image-outline" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
-        </TouchableOpacity>
+        {/* 6. Galeriefotos */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
+            <Ionicons name="image" size={18} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Galeriefotos</Text>
+        </View>
+
+        {/* 7. Projektfotos - Neuer Button */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={styles.toolButtonInner} 
+            onPress={() => {
+              // TODO: Projektfotos-Auswahl implementieren
+              Alert.alert('Projektfotos', 'Wählen Sie ein Foto aus dem Projekt aus');
+            }}
+          >
+            <Ionicons name="folder-open" size={18} color="#1976d2" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Projektfotos</Text>
+        </View>
+
+        {/* 8. neues Foto */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
+            <Ionicons name="camera" size={18} color="#4caf50" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>neues Foto</Text>
+        </View>
+
+        {/* 9. Fotobearbeitung */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={[styles.toolButtonInner, photoEditMode && styles.photoEditButtonActive]} 
+            onPress={() => {
+              setPhotoEditMode(!photoEditMode);
+              setSelectedElementId(null);
+              if (!photoEditMode) {
+                selectDrawMode('select');
+              }
+            }}
+          >
+            <Ionicons name="image-outline" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Fotobearbeitung</Text>
+        </View>
 
         <View style={styles.separator} />
 
@@ -3437,21 +3511,6 @@ export default function DrawSketchScreen() {
             color={backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333')} 
           />
         </TouchableOpacity>
-
-        {/* Notes Button */}
-        <TouchableOpacity
-          style={[styles.toolButton, notes.trim() && styles.toolButtonWithBadge]}
-          onPress={() => setShowNotesModal(true)}
-        >
-          <View style={styles.notesButtonContainer}>
-            <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
-            {notes.trim() && (
-              <View style={styles.notesBadge}>
-                <Ionicons name="checkmark" size={8} color="#fff" />
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
         
         {/* Zoom Reset Button - zeigt aktuellen Zoom-Level und 100% */}
         <View style={styles.toolSeparator} />
@@ -3459,7 +3518,8 @@ export default function DrawSketchScreen() {
           style={[
             styles.toolButton, 
             { 
-              backgroundColor: scale === 1 ? '#4caf50' : '#e3f2fd',
+              // Grün wenn zwischen 99% und 101% (Toleranz für Rundungsfehler)
+              backgroundColor: (scale >= 0.99 && scale <= 1.01) ? '#4caf50' : '#e3f2fd',
               flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
@@ -3470,7 +3530,7 @@ export default function DrawSketchScreen() {
             // Reset zoom und position über ScrollView
             if (scrollViewRef.current) {
               scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-              // ScrollView zoomScale auf 1 zurücksetzen (für iOS)
+              // ScrollView zoomScale auf exakt 1 zurücksetzen (für iOS)
               (scrollViewRef.current as any).scrollResponderZoomTo?.({
                 x: 0,
                 y: 0,
@@ -3479,15 +3539,16 @@ export default function DrawSketchScreen() {
                 animated: false,
               });
             }
+            // Explizit auf exakt 1 setzen
             setScale(1); 
             setPanOffset({ x: 0, y: 0 });
             setScrollOffset({ x: 0, y: 0 });
           }}
         >
-          <Text style={{ fontSize: 11, fontWeight: 'bold', color: scale === 1 ? '#fff' : '#1976d2' }}>
+          <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
             {`${Math.round(scale * 100)}%`}
           </Text>
-          <Text style={{ fontSize: 8, color: scale === 1 ? '#c8e6c9' : '#90caf9' }}>100%</Text>
+          <Text style={{ fontSize: 8, color: (scale >= 0.99 && scale <= 1.01) ? '#c8e6c9' : '#90caf9' }}>100%</Text>
         </TouchableOpacity>
         
         {/* Zoom an/aus Toggle Button - rechts in der Toolbar */}
@@ -3616,9 +3677,9 @@ export default function DrawSketchScreen() {
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={0.5}
-        maximumZoomScale={4}
-        bouncesZoom={true}
+        minimumZoomScale={zoomMode ? 0.5 : 1}
+        maximumZoomScale={zoomMode ? 4 : 1}
+        bouncesZoom={zoomMode}
         scrollEnabled={zoomMode}
         pinchGestureEnabled={zoomMode}
         showsHorizontalScrollIndicator={false}
@@ -4713,10 +4774,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
-    paddingVertical: 2,
-    paddingHorizontal: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
     flexWrap: 'wrap',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   toolButton: {
     alignItems: 'center',
@@ -4726,6 +4787,62 @@ const styles = StyleSheet.create({
     minWidth: 32,
     borderRadius: 4,
     marginHorizontal: 1,
+  },
+  // Neue Styles für Toolbar mit Labels
+  toolButtonWithLabel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  toolButtonInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minWidth: 36,
+    minHeight: 36,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  toolButtonInnerWide: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    minWidth: 52,
+    minHeight: 36,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  toolButtonLabel: {
+    fontSize: 8,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
+    maxWidth: 60,
+  },
+  toolButtonLabelSmall: {
+    fontSize: 7,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
+    lineHeight: 9,
+  },
+  toolGroupWithLabel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  toolGroupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  toolGroupLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    marginTop: 2,
   },
   toolButtonActive: {
     backgroundColor: '#1976d2',

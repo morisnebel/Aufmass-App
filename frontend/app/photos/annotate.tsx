@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
+  BackHandler,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -64,10 +65,58 @@ export default function AnnotatePhotoScreen() {
   
   // Drawing mode toggle
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  
+  // Track if changes were made (for auto-save)
+  const [hasChanges, setHasChanges] = useState(false);
+  const initialPathsRef = useRef<string>('');
 
   useEffect(() => {
     loadPhoto();
   }, [photoId]);
+
+  // Track changes for auto-save
+  useEffect(() => {
+    const currentPathsStr = JSON.stringify(paths);
+    if (initialPathsRef.current && currentPathsStr !== initialPathsRef.current) {
+      setHasChanges(true);
+    }
+  }, [paths, pdfSize, description]);
+
+  // Auto-save when leaving the screen
+  useFocusEffect(
+    useCallback(() => {
+      // Called when screen comes into focus - do nothing
+      return () => {
+        // Called when screen loses focus - auto-save if changes
+        if (hasChanges && imageUri) {
+          autoSave();
+        }
+      };
+    }, [hasChanges, imageUri, paths, pdfSize, description, canvasDimensions])
+  );
+
+  // Silent auto-save function (no alerts)
+  const autoSave = async () => {
+    try {
+      const annotationData = {
+        paths: paths,
+        canvasWidth: canvasDimensions.width || width,
+        canvasHeight: canvasDimensions.height || 400,
+      };
+
+      await PhotoService.update(photoId || '', {
+        project_id: projectId,
+        image_data: imageUri,
+        annotations: JSON.stringify(annotationData),
+        description: description,
+        pdf_size: pdfSize,
+      });
+      
+      console.log('Auto-saved photo annotations');
+    } catch (error) {
+      console.error('Error auto-saving:', error);
+    }
+  };
 
   const loadPhoto = async () => {
     try {
@@ -84,10 +133,14 @@ export default function AnnotatePhotoScreen() {
             const annotationData = JSON.parse(photo.annotations);
             if (annotationData.paths && Array.isArray(annotationData.paths)) {
               setPaths(annotationData.paths);
+              // Store initial state for change detection
+              initialPathsRef.current = JSON.stringify(annotationData.paths);
             }
           } catch (e) {
             console.error('Error parsing annotations:', e);
           }
+        } else {
+          initialPathsRef.current = '[]';
         }
       }
     } catch (error) {
@@ -312,28 +365,63 @@ export default function AnnotatePhotoScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        {/* Zeichnen Toggle Button */}
+      {/* Kompakte Toolbar - eine Zeile mit Farben, Größe und Zeichnen-Toggle */}
+      <View style={styles.compactToolbar}>
+        {/* Linke Seite: Farben */}
+        <View style={styles.colorsRow}>
+          {colors.map((c) => (
+            <TouchableOpacity
+              key={c.color}
+              style={[
+                styles.colorButtonSmall,
+                { backgroundColor: c.color },
+                drawColor === c.color && styles.colorButtonSmallActive,
+              ]}
+              onPress={() => setDrawColor(c.color)}
+            />
+          ))}
+        </View>
+        
+        {/* Mitte: Strichstärke */}
+        <View style={styles.strokeRow}>
+          {[2, 4, 6, 8].map((sw) => (
+            <TouchableOpacity
+              key={sw}
+              style={[
+                styles.strokeButton,
+                strokeWidth === sw && styles.strokeButtonActive,
+              ]}
+              onPress={() => setStrokeWidth(sw)}
+            >
+              <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
+            </TouchableOpacity>
+          ))}
+        </View>
+        
+        {/* Rechte Seite: Zeichnen Toggle */}
         <TouchableOpacity 
-          style={[styles.toolButton, drawingEnabled && { backgroundColor: '#4CAF50' }]} 
+          style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
           onPress={() => setDrawingEnabled(!drawingEnabled)}
         >
-          <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={24} color={drawingEnabled ? '#fff' : '#4CAF50'} />
-          <Text style={[styles.toolText, drawingEnabled && { color: '#fff' }]}>
-            {drawingEnabled ? 'Zeichnen AN' : 'Zeichnen AUS'}
+          <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={20} color={drawingEnabled ? '#fff' : '#4CAF50'} />
+          <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
+            {drawingEnabled ? 'AN' : 'AUS'}
           </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.toolButton} onPress={undo} disabled={!drawingEnabled}>
-          <Ionicons name="arrow-undo" size={24} color={drawingEnabled ? '#1976d2' : '#ccc'} />
-          <Text style={[styles.toolText, !drawingEnabled && { color: '#ccc' }]}>Rückgängig</Text>
+      </View>
+
+      {/* Zweite Toolbar-Zeile: Aktionen */}
+      <View style={styles.actionsToolbar}>
+        <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || paths.length === 0}>
+          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && paths.length > 0 ? '#1976d2' : '#ccc'} />
+          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Rückgängig</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={clear} disabled={!drawingEnabled}>
-          <Ionicons name="trash-outline" size={24} color={drawingEnabled ? '#f44336' : '#ccc'} />
-          <Text style={[styles.toolText, !drawingEnabled && { color: '#ccc' }]}>Löschen</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || paths.length === 0}>
+          <Ionicons name="trash-outline" size={20} color={drawingEnabled && paths.length > 0 ? '#f44336' : '#ccc'} />
+          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Löschen</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.toolButton, styles.deletePhotoButton]} 
+          style={[styles.actionButton, styles.deletePhotoButton]} 
           onPress={() => {
             Alert.alert(
               'Foto löschen',
@@ -359,27 +447,13 @@ export default function AnnotatePhotoScreen() {
             );
           }}
         >
-          <Ionicons name="trash" size={24} color="#fff" />
-          <Text style={[styles.toolText, { color: '#fff' }]}>Foto löschen</Text>
+          <Ionicons name="trash" size={20} color="#fff" />
+          <Text style={[styles.actionText, { color: '#fff' }]}>Foto löschen</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={save}>
-          <Ionicons name="checkmark-circle" size={24} color="#4caf50" />
-          <Text style={styles.toolText}>Speichern</Text>
+        <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={save}>
+          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+          <Text style={[styles.actionText, { color: '#fff' }]}>Speichern</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.colorPicker}>
-        {colors.map((c) => (
-          <TouchableOpacity
-            key={c.color}
-            style={[
-              styles.colorButton,
-              { backgroundColor: c.color },
-              drawColor === c.color && styles.colorButtonActive,
-            ]}
-            onPress={() => setDrawColor(c.color)}
-          />
-        ))}
       </View>
 
       {/* PDF-Größen Auswahl */}
@@ -393,7 +467,7 @@ export default function AnnotatePhotoScreen() {
                 styles.pdfSizeButton,
                 pdfSize === size.value && styles.pdfSizeButtonActive,
               ]}
-              onPress={() => setPdfSize(size.value)}
+              onPress={() => { setPdfSize(size.value); setHasChanges(true); }}
             >
               <Ionicons 
                 name={size.icon as any} 
@@ -423,7 +497,7 @@ export default function AnnotatePhotoScreen() {
         <TextInput
           style={styles.descriptionInput}
           value={description}
-          onChangeText={setDescription}
+          onChangeText={(text) => { setDescription(text); setHasChanges(true); }}
           placeholder="Beschreibung zum Foto eingeben..."
           placeholderTextColor="#999"
           multiline={false}
@@ -515,34 +589,107 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  toolbar: {
+  // Kompakte erste Toolbar-Zeile
+  compactToolbar: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    padding: 8,
-    gap: 8,
-  },
-  toolButton: {
-    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    gap: 12,
   },
-  toolText: {
+  colorsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  colorButtonSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  colorButtonSmallActive: {
+    borderWidth: 3,
+    borderColor: '#1976d2',
+  },
+  strokeRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  strokeButton: {
+    width: 32,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  strokeButtonActive: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1565c0',
+  },
+  strokePreview: {
+    width: 18,
+    borderRadius: 2,
+  },
+  drawToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    gap: 4,
+    marginLeft: 'auto',
+  },
+  drawToggleButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#388E3C',
+  },
+  drawToggleText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  drawToggleTextActive: {
+    color: '#fff',
+  },
+  // Zweite Toolbar-Zeile: Aktionen
+  actionsToolbar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+    gap: 4,
+  },
+  actionText: {
+    fontSize: 11,
     color: '#333',
-    marginTop: 4,
   },
   deletePhotoButton: {
     backgroundColor: '#f44336',
   },
-  colorPicker: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 8,
-    gap: 8,
-    justifyContent: 'center',
+  saveButton: {
+    backgroundColor: '#4caf50',
+    marginLeft: 'auto',
   },
+  // Alte Styles entfernt - nicht mehr benötigt
   colorButton: {
     width: 40,
     height: 40,

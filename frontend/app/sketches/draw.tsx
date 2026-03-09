@@ -2089,6 +2089,30 @@ export default function DrawSketchScreen() {
             if (dist < 20) return el;
           }
         }
+      } else if (el.type === 'memo') {
+        // Memo: Prüfe Ankerpunkt, Linie und Textbox
+        const x1 = el.data.x1; // Ankerpunkt
+        const y1 = el.data.y1;
+        const x2 = el.data.x2; // Textbox Position
+        const y2 = el.data.y2;
+        const fontSize = el.data.fontSize || 14;
+        const text = el.data.text || '';
+        const labelWidth = Math.max(60, text.length * fontSize * 0.6 + 20);
+        const labelHeight = fontSize + 14;
+        
+        // Prüfe ob nahe am Ankerpunkt (roter Kreis)
+        const distToAnchor = Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2));
+        if (distToAnchor <= 15) return el;
+        
+        // Prüfe ob nahe an der Linie
+        const distToLine = distanceToLineSegment(x, y, x1, y1, x2, y2);
+        if (distToLine < 15) return el;
+        
+        // Prüfe ob in der Textbox
+        if (x >= x2 - labelWidth/2 - 10 && x <= x2 + labelWidth/2 + 10 &&
+            y >= y2 - labelHeight/2 - 10 && y <= y2 + labelHeight/2 + 10) {
+          return el;
+        }
       }
     }
     return null;

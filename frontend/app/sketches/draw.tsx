@@ -1612,7 +1612,7 @@ export default function DrawSketchScreen() {
   const [pendingPointer, setPendingPointer] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [pendingMemo, setPendingMemo] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [showMemoModal, setShowMemoModal] = useState(false);
-  const [memoText, setMemoText] = useState('Notiz');
+  const [memoText, setMemoText] = useState('');
   const [editMemoFontSize, setEditMemoFontSize] = useState(14);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
 
@@ -1757,7 +1757,7 @@ export default function DrawSketchScreen() {
         return el;
       });
       addToHistory(newElements);
-      setMemoText('Notiz');
+      setMemoText('');
       setShowEditMemoModal(false);
     }
   };

@@ -15,51 +15,51 @@ The user's primary goal is to build a comprehensive application for managing roo
     - Drawing actions must work correctly on a zoomed/panned canvas.
     - Shape/element selection and editing mode must be functional.
     - Remove the redundant New Sketch selection screen.
+- **New Feature: Notiz (Annotation)**
+    - Implement a Notiz button that allows placing a callout-style annotation on the canvas.
+    - The annotation consists of an anchor point (red dot), a dashed line, and a text box.
+    - The text box should be empty by default.
+    - The annotation text must be editable after creation.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a client-side React Native/Expo app with all core logic for the sketch tool consolidated in a monolithic file: .
+The application is a client-side React Native/Expo app. The core logic for the sketch tool is in a single, large file: .
 
-In this session, the agent addressed three critical regressions from the previous fork:
-1.  **Projektfotos feature**: Fixed by adding the missing modal. The user has confirmed this is working.
-2.  **Editing mode**: Fixed by ensuring the zoom mode is disabled when the 'select' tool is active.
-3.  **Drawing while zoomed**: A workaround was implemented that resets the zoom to 100% when a drawing tool is selected.
-
-The agent also removed the redundant New Sketch selection screen (), so the app now navigates directly to a blank canvas. Following user requests, the toolbar was further modified, but this introduced new issues.
+In this session, the agent fully implemented the Notiz (memo/annotation) feature based on user specifications and an accompanying image. This involved adding a new  draw mode, implementing touch handlers for placing the annotation, creating rendering logic for the element (anchor point, dashed line, and text box), adding a modal for text input, and enabling editing of existing memos. As per the user's final instruction, the default text for a new memo was set to be empty.
 
 **Last working item**:
-- **Last item agent was working**: Addressing user feedback on the newly modified toolbar. The user reported that the Notiz button's functionality is incorrect, and the Notizen zur Skizze button had disappeared. The agent just re-added the Notizen zur Skizze button and corrected a TypeScript type error for .
-- **Status**: IN PROGRESS
+- **Last item agent was working**: Modifying the newly implemented Notiz feature to ensure the text field is empty upon creation, as per the user's latest request. The agent has applied the code changes but they have not been tested or verified.
+- **Status**: USER VERIFICATION PENDING
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: Frontend testing. The user must verify all UI and functionality changes on their device using the Expo Go app.
-- **User Testing Done**: N (for the very latest fix of re-adding the button).
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Notiz button functionality is incorrect (P0)
--   **Issue 2**: Toolbar buttons (Notizen zur Skizze) need verification (P0)
+-   **Issue 1**: Verify the new Notiz (Memo) feature functionality (P0)
+-   **Issue 2**: Verify the Notizen zur Skizze button is visible and functional (P0)
 -   **Issue 3**: Verify fixes for core drawing/editing regressions (P1)
 -   **Issue 4**: Expo Server/Client Sync Instability (P2 - Environmental Blocker)
 
 **Issues Detail:**
-- **Issue 1: Notiz button functionality is incorrect**
-    - **Description**: The user reported that the Notiz button in the sketch tool does not function in the same way as it does in the Flächenberechnungen or Dokument sections of the app.
-    - **Attempted fixes**: The agent added the button and linked it to . This was not the correct behavior. The agent also corrected the icon to match other sections. The functional discrepancy remains.
+- **Issue 1: Verify the new Notiz (Memo) feature functionality**
+    - **Description**: The agent has just completed a full implementation of the Notiz (memo) feature, which allows placing a callout-style annotation on the canvas. The user needs to test the complete workflow: creating a memo, confirming the text is initially empty, and editing an existing memo.
+    - **Attempted fixes**: The agent implemented the feature from scratch, including adding a  type to , state management, touch handlers, rendering logic, and an input modal in . The initial text was then changed from Notiz to an empty string based on user feedback.
     - **Next debug checklist**:
-        1.  Investigate the implementation of the Notiz button in the Flächenberechnungen section to understand the expected behavior.
-        2.  Modify the  handler for the Notiz button in  to replicate this correct behavior.
-    - **Why fix this issue and what will be achieved with the fix?**: To ensure UI/UX consistency across the application and meet the user's explicit requirement.
-    - **Status**: IN PROGRESS
+        1.  Deploy the latest code.
+        2.  Instruct the user to hard-refresh Expo Go.
+        3.  Ask the user to test the following:
+            -   Clicking the Notiz button and tapping on the canvas. Does it create an annotation with an empty text box?
+            -   Selecting the new annotation and clicking Editieren. Does the modal appear, and can the text be successfully changed?
+    - **Why fix this issue and what will be achieved with the fix?**: To confirm that the newly developed feature meets all user requirements and is working correctly.
+    - **Status**: USER VERIFICATION PENDING
     - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None.
 
-- **Issue 2: Toolbar buttons (Notizen zur Skizze) need verification**
-    - **Description**: While adding other buttons, the agent accidentally removed the Notizen zur Skizze button. The user reported it missing. The agent has since re-added it.
-    - **Attempted fixes**: The agent added the  for Notizen zur Skizze back into the JSX in .
-    - **Next debug checklist**:
-        1.  Deploy the code.
-        2.  Instruct the user to hard-refresh Expo Go and confirm the button is visible and correctly placed after the Notiz button.
+- **Issue 2: Verify the Notizen zur Skizze button is visible and functional**
+    - **Description**: In a previous session, the Notizen zur Skizze button was accidentally removed and then re-added. It still requires user confirmation that it is visible and correctly placed.
+    - **Next debug checklist**: Ask the user to confirm the button's presence and placement.
     - **Why fix this issue and what will be achieved with the fix?**: To restore a requested feature that was accidentally removed.
     - **Status**: USER VERIFICATION PENDING
     - **Is recurring issue?**: N
@@ -67,22 +67,17 @@ The agent also removed the redundant New Sketch selection screen (), so the app 
     - **Blocked on other issue**: None.
 
 - **Issue 3: Verify fixes for core drawing/editing regressions**
-    - **Description**: At the start of the session, drawing-while-zoomed and editing elements were broken. The agent implemented fixes. User feedback has since focused on the toolbar, but there's no explicit confirmation that the original issues are fully resolved to their satisfaction.
-    - **Attempted fixes**: Implemented  when a draw/select tool is chosen and ensured  is turned off for selection.
-    - **Next debug checklist**: After resolving the current toolbar issues, explicitly ask the user to test and confirm that they can now:
-        - Select and edit existing shapes.
-        - Draw/edit without issues (acknowledging the zoom reset behavior).
-    - **Why fix this issue and what will be achieved with the fix?**: To formally close out the critical bugs that started this session.
+    - **Description**: At the start of the previous session, drawing-while-zoomed and editing elements were broken. The agent implemented fixes (a workaround for zoom-drawing), but there's no explicit user confirmation that these are fully resolved.
+    - **Next debug checklist**: After resolving current toolbar issues, explicitly ask the user to test and confirm that they can select and edit existing shapes.
+    - **Why fix this issue and what will be achieved with the fix?**: To formally close out critical bugs.
     - **Status**: USER VERIFICATION PENDING
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None.
 
 - **Issue 4: Expo Server/Client Sync Instability**
-    - **Description**: A recurring environmental problem where changes deployed by the agent are not reflected in the user's Expo Go client, causing confusion and delays.
-    - **Attempted fixes**: Restarting the Expo server (expo: ERROR (not running)
-expo: started).
-    - **Next debug checklist**: After every deployment, explicitly instruct the user to hard refresh by force-quitting the Expo Go app and reopening it before checking for changes.
+    - **Description**: A recurring environmental problem where changes deployed by the agent are not reflected in the user's Expo Go client.
+    - **Next debug checklist**: After every deployment, explicitly instruct the user to hard refresh by force-quitting the Expo Go app and reopening it.
     - **Why fix this issue and what will be achieved with the fix?**: This is a development workflow blocker. Mitigating it ensures efficient testing and feedback.
     - **Status**: IN PROGRESS
     - **Is recurring issue?**: Y
@@ -90,12 +85,12 @@ expo: started).
     - **Blocked on other issue**: This issue blocks verification for all other tasks.
 
 **In progress Task List**:
-- **Task 1: Finalize Toolbar Implementation**
-    - **Where to resume**: . Investigate and fix the Notiz button's functionality to match other app areas.
-    - **What will be achieved with this?**: A toolbar that is fully functional and matches the user's latest design requests.
+- **Task 1: Finalize Toolbar and Feature Verification**
+    - **Where to resume**: . Guide the user through testing the new Notiz feature.
+    - **What will be achieved with this?**: User confirmation on the new feature and other pending UI verifications.
     - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on something**: None.
+    - **Blocked on something**: Potentially the Expo Sync issue.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -109,19 +104,14 @@ expo: started).
 -   **P4**: Fix a low-priority visual bug where dashed lines render incorrectly in the PDF preview.
 
 **Completed work in this session**
-- **Feature Fix**: Fixed the Projektfotos feature by adding the missing modal and connecting it to the button. User confirmed it works.
-- **Bug Fix**: Fixed the inability to select/edit elements by ensuring  is disabled when the 'select' tool is chosen.
-- **Bug Fix (Workaround)**: Mitigated the drawing while zoomed issue by automatically resetting zoom to 100% when a drawing tool is selected.
-- **Refactor**: Removed the redundant New Sketch selection screen () to streamline user flow.
-- **UI Updates**: Added Editieren and Notiz buttons to the toolbar and corrected the Notiz icon.
-- **UI Fix**: Re-added the Notizen zur Skizze button after it was accidentally removed during a toolbar refactor.
+- **Feature Implemented**: Fully implemented the Notiz (memo/annotation) feature, allowing users to add callout-style notes to the sketch. This includes creation, rendering, editing, and setting the initial text to empty as per user feedback.
 
 **Earlier issues found/mentioned but not fixed**
-- The core issue of **drawing on an already-zoomed canvas** has not been truly fixed. The agent implemented a workaround that resets the zoom. The user might expect to be able to draw accurately while remaining zoomed in, which is a more complex task that has not been addressed.
+- The core issue of **drawing on an already-zoomed canvas** has a workaround (zoom resets to 100%), not a true fix. The user may expect to draw accurately while zoomed in, which remains unaddressed.
 
 **Known issue recurrence from previous fork**
-- **Expo Development Server Instability**: Persists. The agent must continue reminding the user to hard-refresh the Expo Go app. Recurrence count: 4+. Status: IN PROGRESS.
-- **Zoom/Pan Coordinate Calculation**: The underlying complexity remains a high risk for regressions. The current fix is a workaround, not a fundamental solution. Recurrence count: 3. Status: IN PROGRESS.
+- **Expo Development Server Instability**: Persists. The agent must continue reminding the user to hard-refresh the Expo Go app. Recurrence count: 5+. Status: IN PROGRESS.
+- **Zoom/Pan Coordinate Calculation**: The underlying complexity remains a high risk for regressions. The current fix is a workaround. Recurrence count: 3. Status: IN PROGRESS.
 
 **Code Architecture**
 
@@ -129,7 +119,7 @@ expo: started).
 **Key Technical Concepts**
 - **React Native & Expo**: The core framework.
 - **React Native Gestures & ScrollView**: Managing a complex coordinate system by accounting for ,  (scroll), and .
-- **State-Driven UI**: Heavy use of  to manage , , modal visibility, etc.
+- **State-Driven UI**: Heavy use of  to manage , modal visibility, elements, etc.
 - **React Native SVG**: Renders all drawing elements.
 - **React Navigation**: For screen transitions.
 
@@ -140,40 +130,33 @@ N/A (Client-side application).
 None.
 
 **All files of reference**
-- : The primary file for all logic and UI.
-- : Was modified to redirect to the sketch screen.
-- : Has been updated.
+- : The primary file for all logic and UI; heavily modified in this session.
 
 **Areas that need refactoring**:
-- The  file is critically oversized and complex. Its monolithic nature is the direct cause of recent regressions. It urgently needs to be broken down into smaller, manageable components (e.g., , , , etc.) to improve maintainability.
+- The  file is critically oversized. Its monolithic nature makes it difficult to maintain and prone to regressions. It urgently needs to be broken down into smaller, manageable components (e.g., , , , , etc.).
 
 **key api endpoints**
 N/A (Client-side application).
 
 **Critical Info for New Agent**
 - **You MUST continue all user communication in German.**
-- Your immediate priority is to fix the toolbar issues as per the user's latest feedback.
-    1.  **Notiz button functionality.**
-    2.  **Verify the Notizen zur Skizze button is visible and correctly placed.**
-- Be proactive about the Expo sync issue. After every deployment, explicitly instruct the user to hard-refresh their Expo Go app.
-- The fix for drawing while zoomed is a workaround that resets the zoom. Be aware that the user may eventually want to draw on a zoomed canvas without the zoom resetting.
+- Your immediate priority is to guide the user to test and verify the newly implemented **Notiz feature**. Confirm it creates an empty, editable note.
+- After that, seek verification for the other pending items: the visibility of the **Notizen zur Skizze** button and the general **drawing/editing functionality**.
+- Be proactive about the Expo sync issue. After every deployment, explicitly instruct the user to **hard-refresh their Expo Go app**.
+- Be aware the drawing while zoomed fix is a workaround that resets the zoom.
 
 **documents and test reports created in this job**
-- 
+-  (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **User (latest)**: The Notiz button doesn't work like in other parts of the app, and my Notizen zur Skizze button is gone. You should put it after the Notiz button.
-- **User**: The toolbar hasn't changed, and the icon for the Notiz button is wrong. It should be the same as in the area calculator.
-- **User**: Can we now insert the Editieren button after Text and then add our Notiz button from the area calculator?
-- **User**: It hasn't changed yet.
-- **User**: Okay, inserting project photos works well. Now, let's completely delete the New Sketch selection screen. It's redundant since the buttons are in the toolbar.
-- **User**: All three critical bugs are present: Projektfotos doesn't work, drawing is broken while zoomed, and I can't edit shapes.
+- **User (latest)**: Yes 👍 it should just contain nothing at the beginning and it also has to be editable later.
+- **User**: I have attached a picture, maybe you know which button it is. (Provided image clarifying Notiz functionality)
+- **User**: Yes. (In response to agent's plan)
 
 **Project Health Check:**
-- **Broken**:
-    - Notiz button functionality is incorrect/inconsistent with the rest of the app.
 - **Incomplete / Verification Pending**:
-    - The Notizen zur Skizze button has been re-added but needs user verification. Its functionality may also be incomplete.
+    - The new Notiz (memo) feature is implemented but needs full user testing.
+    - The Notizen zur Skizze button's visibility is pending user verification.
     - Core editing/drawing functionality fixes are pending final user confirmation.
 - **Unreliable**:
     - The development feedback loop due to Expo Go client sync issues.
@@ -249,9 +232,9 @@ N/A (Client-side application).
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[21:14:15]   Run a command with --help for more info 💡
-[21:14:15]     $ expo start --help
-[21:14:15]
+[21:29:00]   Run a command with --help for more info 💡
+[21:29:00]     $ expo start --help
+[21:29:00]
 - 
 - 
 - 
@@ -263,12 +246,10 @@ N/A (Client-side application).
 - **Testing agent used after significant changes**: NO
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: []
-- **Known regressions**: The agent accidentally removed a UI element (Notizen zur Skizze button) during a refactor, which was then reported by the user.
+- **Known regressions**: None in this session, but regressions from previous sessions were the starting point.
 
 **Credentials to test flow:**
 The user's  is set as an environment variable, allowing deployment to their Expo account for testing.
 
 **What agent forgot to execute**
-- The agent repeatedly modified the toolbar without fully understanding all user requirements, leading to multiple back-and-forth corrections.
-- The agent accidentally removed the Notizen zur Skizze button while implementing other toolbar changes, demonstrating a lack of regression checking before deploying.
-- The agent did not investigate the *correct* behavior of the Notiz button before implementing it, leading to a functional mismatch.</analysis>
+- The agent did not perform any self-testing after implementing the changes. It only checked that the Expo server was running before declaring the work done and handing off for user verification. A simple check on a simulator or web build could have caught potential issues earlier.</analysis>

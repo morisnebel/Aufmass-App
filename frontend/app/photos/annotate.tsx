@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, G } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
@@ -77,9 +77,10 @@ export default function AnnotatePhotoScreen() {
   const [editMode, setEditMode] = useState(false);
   const [selectedPathIndex, setSelectedPathIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragPreviewOffset, setDragPreviewOffset] = useState({ x: 0, y: 0 }); // Live preview offset
   const dragStartRef = useRef({ x: 0, y: 0 });
-  const dragTotalOffsetRef = useRef({ x: 0, y: 0 });
   const originalPathRef = useRef<string>('');
+  const lastDrawPointRef = useRef({ x: 0, y: 0 }); // For smoother drawing
   
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
@@ -659,9 +660,8 @@ export default function AnnotatePhotoScreen() {
                 if (foundIndex !== null) {
                   setSelectedPathIndex(foundIndex);
                   setIsDragging(true);
-                  // Speichere Start-Position und Original-Pfad
                   dragStartRef.current = { x: locationX, y: locationY };
-                  dragTotalOffsetRef.current = { x: 0, y: 0 };
+                  setDragPreviewOffset({ x: 0, y: 0 });
                   originalPathRef.current = paths[foundIndex].path;
                 } else {
                   setSelectedPathIndex(null);
@@ -670,7 +670,8 @@ export default function AnnotatePhotoScreen() {
               }
               
               if (drawingEnabled) {
-                setCurrentPath(`M ${locationX} ${locationY}`);
+                lastDrawPointRef.current = { x: locationX, y: locationY };
+                setCurrentPath(`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
               }
             }}
             onResponderMove={(event) => {
@@ -679,30 +680,36 @@ export default function AnnotatePhotoScreen() {
               const locationY = touch.locationY;
               
               if (editMode && isDragging && selectedPathIndex !== null) {
-                // Berechne Gesamtverschiebung vom Startpunkt
-                const totalDeltaX = locationX - dragStartRef.current.x;
-                const totalDeltaY = locationY - dragStartRef.current.y;
-                
-                // Speichere für Release
-                dragTotalOffsetRef.current = { x: totalDeltaX, y: totalDeltaY };
+                // Live-Vorschau mit offset
+                const deltaX = locationX - dragStartRef.current.x;
+                const deltaY = locationY - dragStartRef.current.y;
+                setDragPreviewOffset({ x: deltaX, y: deltaY });
                 return;
               }
               
               if (drawingEnabled && currentPath) {
-                setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+                // Nur Punkte hinzufügen wenn Abstand groß genug (glattere Linien)
+                const lastPoint = lastDrawPointRef.current;
+                const distance = Math.sqrt(
+                  Math.pow(locationX - lastPoint.x, 2) + 
+                  Math.pow(locationY - lastPoint.y, 2)
+                );
+                
+                if (distance > 3) { // Mindestabstand für neue Punkte
+                  lastDrawPointRef.current = { x: locationX, y: locationY };
+                  setCurrentPath((prev) => `${prev} L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+                }
               }
             }}
             onResponderRelease={() => {
               if (editMode && isDragging && selectedPathIndex !== null) {
-                // Wende die Verschiebung nur einmal am Ende an
-                const { x: totalDeltaX, y: totalDeltaY } = dragTotalOffsetRef.current;
+                const { x: deltaX, y: deltaY } = dragPreviewOffset;
                 
-                if (Math.abs(totalDeltaX) > 5 || Math.abs(totalDeltaY) > 5) {
+                if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
                   const newPaths = [...paths];
                   const selectedPath = newPaths[selectedPathIndex];
                   
-                  // Pfad verschieben basierend auf Original
-                  const newPathString = translatePath(originalPathRef.current, totalDeltaX, totalDeltaY);
+                  const newPathString = translatePath(originalPathRef.current, deltaX, deltaY);
                   const newBounds = calculateBounds(newPathString);
                   
                   newPaths[selectedPathIndex] = {
@@ -716,6 +723,7 @@ export default function AnnotatePhotoScreen() {
                 }
                 
                 setIsDragging(false);
+                setDragPreviewOffset({ x: 0, y: 0 });
                 return;
               }
               
@@ -728,32 +736,42 @@ export default function AnnotatePhotoScreen() {
             }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
-              {paths.map((p, index) => (
-                <React.Fragment key={index}>
-                  {/* Auswahlrahmen wenn im Bearbeitungsmodus und ausgewählt */}
-                  {editMode && selectedPathIndex === index && p.bounds && (
+              {paths.map((p, index) => {
+                // Berechne Translation für ausgewähltes Element während des Ziehens
+                const isSelected = editMode && selectedPathIndex === index;
+                const translateX = isSelected && isDragging ? dragPreviewOffset.x : 0;
+                const translateY = isSelected && isDragging ? dragPreviewOffset.y : 0;
+                
+                return (
+                  <G 
+                    key={index} 
+                    transform={`translate(${translateX}, ${translateY})`}
+                  >
+                    {/* Auswahlrahmen wenn im Bearbeitungsmodus und ausgewählt */}
+                    {isSelected && p.bounds && (
+                      <Path
+                        d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
+                            L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
+                            L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
+                            L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
+                        stroke="#FF9800"
+                        strokeWidth={2}
+                        strokeDasharray="6,4"
+                        fill="rgba(255, 152, 0, 0.15)"
+                      />
+                    )}
                     <Path
-                      d={`M ${p.bounds.minX - 5} ${p.bounds.minY - 5} 
-                          L ${p.bounds.maxX + 5} ${p.bounds.minY - 5} 
-                          L ${p.bounds.maxX + 5} ${p.bounds.maxY + 5} 
-                          L ${p.bounds.minX - 5} ${p.bounds.maxY + 5} Z`}
-                      stroke="#FF9800"
-                      strokeWidth={2}
-                      strokeDasharray="5,5"
-                      fill="rgba(255, 152, 0, 0.1)"
+                      d={p.path}
+                      stroke={p.color}
+                      strokeWidth={p.strokeWidth}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
                     />
-                  )}
-                  <Path
-                    d={p.path}
-                    stroke={p.color}
-                    strokeWidth={p.strokeWidth}
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity={editMode && selectedPathIndex !== null && selectedPathIndex !== index ? 0.4 : 1}
-                  />
-                </React.Fragment>
-              ))}
+                  </G>
+                );
+              })}
               {currentPath && currentPath.length > 0 && (
                 <Path
                   d={currentPath}

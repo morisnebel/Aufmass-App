@@ -3382,25 +3382,56 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
             </TouchableOpacity>
-            {/* Notiz zur Skizze Button */}
+            {/* Text Editieren Button */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, notes.trim() && styles.toolButtonWithBadge]}
-              onPress={() => setShowNotesModal(true)}
+              style={[styles.toolButtonInner, !selectedElementId && styles.toolButtonDisabled]}
+              onPress={() => {
+                if (selectedElementId) {
+                  const selectedEl = elements.find(el => el.id === selectedElementId);
+                  if (selectedEl?.type === 'text') {
+                    setTextInput(selectedEl.data.text || '');
+                    setEditFontSize(selectedEl.fontSize || 20);
+                    setEditFontWeight(selectedEl.fontWeight || 'bold');
+                    setEditFontStyle(selectedEl.fontStyle || 'normal');
+                    setDrawColor(selectedEl.color);
+                    setShowEditTextModal(true);
+                  } else if (selectedEl?.type === 'arrow') {
+                    setArrowText(selectedEl.data.text || '');
+                    setArrowHeads(selectedEl.data.heads || 'double');
+                    setEditArrowFontSize(selectedEl.data.fontSize || 14);
+                    setEditStrokeWidth(selectedEl.strokeWidth || 3);
+                    setDrawColor(selectedEl.color);
+                    setShowEditArrowModal(true);
+                  } else if (selectedEl?.type === 'pointer') {
+                    setPointerText(selectedEl.data.text || '');
+                    setEditPointerFontSize(selectedEl.data.fontSize || 16);
+                    setEditPointerStrokeWidth(selectedEl.strokeWidth || 6);
+                    setDrawColor(selectedEl.color);
+                    setShowEditPointerModal(true);
+                  }
+                }
+              }}
+              disabled={!selectedElementId || !['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
             >
-              <View style={styles.notesButtonContainer}>
-                <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
-                {notes.trim() && (
-                  <View style={styles.notesBadge}>
-                    <Ionicons name="checkmark" size={8} color="#fff" />
-                  </View>
-                )}
-              </View>
+              <Ionicons 
+                name="create" 
+                size={18} 
+                color={selectedElementId && ['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
+              />
+            </TouchableOpacity>
+            {/* Notiz Button (Aufmaß) */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, showMeasurementTool && styles.toolButtonActive]}
+              onPress={() => setShowMeasurementTool(!showMeasurementTool)}
+            >
+              <Ionicons name="calculator" size={18} color={showMeasurementTool ? '#fff' : '#9c27b0'} />
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Memo</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Text</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz zur{'\n'}Skizze</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Editieren</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz</Text>
           </View>
         </View>
 

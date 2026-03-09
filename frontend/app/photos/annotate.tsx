@@ -27,19 +27,12 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 // API_URL removed - using local storage now
 const { width } = Dimensions.get('window');
 
-// Memoized component for the current drawing stroke (prevents full re-render)
-const CurrentStroke = memo(({ path, color, strokeWidth }: { path: string; color: string; strokeWidth: number }) => {
-  if (!path || path.length === 0) return null;
-  return (
-    <Path
-      d={path}
-      stroke={color}
-      strokeWidth={strokeWidth}
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  );
+import { Circle } from 'react-native-svg';
+
+// Simple dot indicator showing current touch position (no heavy path rendering)
+const TouchIndicator = memo(({ x, y, color, visible }: { x: number; y: number; color: string; visible: boolean }) => {
+  if (!visible) return null;
+  return <Circle cx={x} cy={y} r={8} fill={color} opacity={0.6} />;
 });
 
 // Memoized component for saved paths
@@ -124,7 +117,6 @@ export default function AnnotatePhotoScreen() {
   const canvasRef = useRef(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [paths, setPaths] = useState<DrawPath[]>([]);
-  const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -150,12 +142,12 @@ export default function AnnotatePhotoScreen() {
   const dragStartRef = useRef({ x: 0, y: 0 });
   const originalPathRef = useRef<string>('');
   
-  // Optimized drawing refs
+  // Optimized drawing - only store touch position for indicator
+  const [touchPosition, setTouchPosition] = useState({ x: 0, y: 0, visible: false });
   const currentPathRef = useRef<string>('');
   const pointsBufferRef = useRef<{x: number, y: number}[]>([]);
   const lastDrawPointRef = useRef({ x: 0, y: 0 });
   const isDrawingRef = useRef(false);
-  const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
@@ -164,15 +156,6 @@ export default function AnnotatePhotoScreen() {
   useEffect(() => {
     loadPhoto();
   }, [photoId]);
-  
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (updateTimerRef.current) {
-        clearTimeout(updateTimerRef.current);
-      }
-    };
-  }, []);
 
   // Track changes for auto-save
   useEffect(() => {
@@ -270,67 +253,6 @@ export default function AnnotatePhotoScreen() {
       x: (touches[0].pageX + touches[1].pageX) / 2,
       y: (touches[0].pageY + touches[1].pageY) / 2,
     };
-  };
-
-  const onTouchStart = (event: any) => {
-    const touches = event.nativeEvent.touches;
-    setTouchCount(touches.length);
-    
-    if (touches.length === 2) {
-      // Start pinch zoom
-      setIsZooming(true);
-      setInitialPinchDistance(getDistance(touches));
-      setLastScale(scale);
-      setLastPanOffset({ ...panOffset });
-      return;
-    }
-    
-    if (touches.length === 1 && !isZooming && drawingEnabled) {
-      // Start drawing only if drawing is enabled
-      const touch = touches[0];
-      // Koordinaten direkt verwenden - locationX/Y ist relativ zum SVG-Container
-      const locationX = touch.locationX / scale;
-      const locationY = touch.locationY / scale;
-      setCurrentPath(`M ${locationX} ${locationY}`);
-    }
-  };
-
-  const onTouchMove = (event: any) => {
-    const touches = event.nativeEvent.touches;
-    
-    if (touches.length === 2 && initialPinchDistance) {
-      // Handle pinch zoom
-      const currentDistance = getDistance(touches);
-      const newScale = Math.min(Math.max(lastScale * (currentDistance / initialPinchDistance), 0.5), 4);
-      setScale(newScale);
-      return;
-    }
-    
-    if (touches.length === 1 && !isZooming && currentPath && drawingEnabled) {
-      // Continue drawing only if drawing is enabled
-      const touch = touches[0];
-      const locationX = touch.locationX / scale;
-      const locationY = touch.locationY / scale;
-      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
-    }
-  };
-
-  const onTouchEnd = (event: any) => {
-    const touches = event.nativeEvent.touches;
-    
-    if (touches.length < 2) {
-      setIsZooming(false);
-      setInitialPinchDistance(null);
-    }
-    
-    if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming && drawingEnabled) {
-      // Calculate bounding box for the new path
-      const bounds = calculateBounds(currentPath);
-      setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
-      setCurrentPath('');
-    }
-    
-    setTouchCount(touches.length);
   };
 
   // Calculate bounding box from SVG path string
@@ -735,15 +657,15 @@ export default function AnnotatePhotoScreen() {
             onMoveShouldSetResponder={() => drawingEnabled || (editMode && isDragging)}
             onResponderGrant={(event) => {
               const touch = event.nativeEvent;
-              const locationX = touch.locationX;
-              const locationY = touch.locationY;
+              const x = Math.round(touch.locationX);
+              const y = Math.round(touch.locationY);
               
               if (editMode) {
-                const foundIndex = findPathAtPoint(locationX, locationY);
+                const foundIndex = findPathAtPoint(x, y);
                 if (foundIndex !== null) {
                   setSelectedPathIndex(foundIndex);
                   setIsDragging(true);
-                  dragStartRef.current = { x: locationX, y: locationY };
+                  dragStartRef.current = { x, y };
                   setDragPreviewOffset({ x: 0, y: 0 });
                   originalPathRef.current = paths[foundIndex].path;
                 } else {
@@ -753,51 +675,40 @@ export default function AnnotatePhotoScreen() {
               }
               
               if (drawingEnabled) {
-                // Start drawing - use refs for performance
+                // Start drawing - only use refs, no state updates during drawing
                 isDrawingRef.current = true;
-                const x = Math.round(locationX);
-                const y = Math.round(locationY);
                 lastDrawPointRef.current = { x, y };
                 pointsBufferRef.current = [{ x, y }];
                 currentPathRef.current = `M ${x} ${y}`;
-                setCurrentPath(`M ${x} ${y}`);
+                // Show touch indicator
+                setTouchPosition({ x, y, visible: true });
               }
             }}
             onResponderMove={(event) => {
               const touch = event.nativeEvent;
-              const locationX = touch.locationX;
-              const locationY = touch.locationY;
+              const x = Math.round(touch.locationX);
+              const y = Math.round(touch.locationY);
               
               if (editMode && isDragging && selectedPathIndex !== null) {
-                const deltaX = locationX - dragStartRef.current.x;
-                const deltaY = locationY - dragStartRef.current.y;
+                const deltaX = x - dragStartRef.current.x;
+                const deltaY = y - dragStartRef.current.y;
                 setDragPreviewOffset({ x: deltaX, y: deltaY });
                 return;
               }
               
               if (drawingEnabled && isDrawingRef.current) {
-                const x = Math.round(locationX);
-                const y = Math.round(locationY);
                 const lastPoint = lastDrawPointRef.current;
-                
-                // Berechne Distanz
                 const dx = x - lastPoint.x;
                 const dy = y - lastPoint.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Nur sammeln wenn Abstand > 2px
-                if (distance > 2) {
+                // Sammle Punkte nur wenn Abstand > 3px
+                if (distance > 3) {
                   lastDrawPointRef.current = { x, y };
                   pointsBufferRef.current.push({ x, y });
                   currentPathRef.current += ` L ${x} ${y}`;
-                  
-                  // Batch-Update: nur alle 50ms aktualisieren für bessere Performance
-                  if (!updateTimerRef.current) {
-                    updateTimerRef.current = setTimeout(() => {
-                      setCurrentPath(currentPathRef.current);
-                      updateTimerRef.current = null;
-                    }, 50);
-                  }
+                  // Update nur den Touch-Indikator (sehr leicht)
+                  setTouchPosition({ x, y, visible: true });
                 }
               }
             }}
@@ -829,23 +740,17 @@ export default function AnnotatePhotoScreen() {
               
               if (drawingEnabled && isDrawingRef.current) {
                 isDrawingRef.current = false;
+                setTouchPosition({ x: 0, y: 0, visible: false });
                 
-                // Clear any pending update timer
-                if (updateTimerRef.current) {
-                  clearTimeout(updateTimerRef.current);
-                  updateTimerRef.current = null;
-                }
-                
-                // Finalize the path
+                // Finalize the path - this is the only heavy update
                 const finalPath = currentPathRef.current;
-                if (finalPath && finalPath.length > 5) {
+                if (finalPath && pointsBufferRef.current.length > 2) {
                   const bounds = calculateBounds(finalPath);
-                  setPaths([...paths, { path: finalPath, color: drawColor, strokeWidth, bounds }]);
+                  setPaths(prev => [...prev, { path: finalPath, color: drawColor, strokeWidth, bounds }]);
                   setHasChanges(true);
                 }
                 
                 // Reset
-                setCurrentPath('');
                 currentPathRef.current = '';
                 pointsBufferRef.current = [];
               }
@@ -859,10 +764,11 @@ export default function AnnotatePhotoScreen() {
                 isDragging={isDragging}
                 dragPreviewOffset={dragPreviewOffset}
               />
-              <CurrentStroke 
-                path={currentPath}
+              <TouchIndicator 
+                x={touchPosition.x}
+                y={touchPosition.y}
                 color={drawColor}
-                strokeWidth={strokeWidth}
+                visible={touchPosition.visible}
               />
             </Svg>
           </View>

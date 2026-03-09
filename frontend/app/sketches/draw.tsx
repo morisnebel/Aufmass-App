@@ -1733,6 +1733,8 @@ export default function DrawSketchScreen() {
         rotation: 0,
       };
       addToHistory([...elements, newElement]);
+      setSelectedElementId(newElement.id); // Neue Memo auswählen
+      setDrawMode('select'); // Zurück zum Auswahl-Modus
       setMemoText('');
       setPendingMemo(null);
       setShowMemoModal(false);
@@ -1846,6 +1848,12 @@ export default function DrawSketchScreen() {
           setEditPointerStrokeWidth(clickedElement.strokeWidth || 6);
           setDrawColor(clickedElement.color);
           setShowEditPointerModal(true);
+        } else if (clickedElement.type === 'memo') {
+          // Memo/Notiz bearbeiten bei Doppeltipp
+          setMemoText(clickedElement.data.text || '');
+          setEditMemoFontSize(clickedElement.data.fontSize || 14);
+          setDrawColor(clickedElement.color);
+          setShowEditMemoModal(true);
         }
         lastTapRef.current = { time: 0, elementId: null };
         return;

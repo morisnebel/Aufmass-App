@@ -298,7 +298,10 @@ export default function DrawSketchScreen() {
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [zoomMode, setZoomMode] = useState(false); // Wenn true, kann gezoomt werden statt gezeichnet
+  // Automatische Erkennung: 2+ Finger = Zoom, 1 Finger = Zeichnen
+  const [isMultiTouch, setIsMultiTouch] = useState(false);
+  // Legacy: zoomMode wird jetzt automatisch gesteuert
+  const zoomMode = isMultiTouch;
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -1268,8 +1271,13 @@ export default function DrawSketchScreen() {
 
   // Touch handlers
   const onTouchStart = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
-    if (zoomMode) return;
+    // Prüfe ob Multi-Touch (2+ Finger) → Zoom aktivieren
+    const touchCount = event.nativeEvent.touches?.length || 1;
+    if (touchCount >= 2) {
+      setIsMultiTouch(true);
+      return; // ScrollView übernimmt das Zoomen
+    }
+    setIsMultiTouch(false);
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
@@ -1313,8 +1321,15 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
-    if (zoomMode) return;
+    // Multi-Touch → Zoom-Modus, ScrollView übernimmt
+    const touchCount = event.nativeEvent.touches?.length || 1;
+    if (touchCount >= 2) {
+      setIsMultiTouch(true);
+      return;
+    }
+    
+    // Wenn wir gerade im Multi-Touch waren, nicht weiter zeichnen
+    if (isMultiTouch) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
@@ -1333,8 +1348,11 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
-    if (zoomMode) return;
+    // Reset Multi-Touch Status nach Geste
+    setTimeout(() => setIsMultiTouch(false), 100);
+    
+    // Wenn Multi-Touch aktiv war, keine Zeichnung abschließen
+    if (isMultiTouch) return;
     
     if (drawMode === 'pen' && currentPath && currentPath.length > 0) {
       const newElement: DrawElement = {
@@ -1454,13 +1472,13 @@ export default function DrawSketchScreen() {
         };
         break;
       case 'pointer':
-        // Pointer-Pfeil: Dicke Linie mit großer Pfeilspitze (nur eine Spitze am Ende)
+        // Pointer-Pfeil: verwendet die ausgewählte Strichstärke direkt
         element = {
           id: 'temp',
           type: 'pointer',
           data: { x1: start.x, y1: start.y, x2: endX, y2: endY },
           color: drawColor,
-          strokeWidth: Math.max(strokeWidth * 2, 6), // Mindestens doppelt so dick
+          strokeWidth: strokeWidth, // Direkt die ausgewählte Strichstärke verwenden
           rotation: 0,
         };
         break;
@@ -1574,7 +1592,7 @@ export default function DrawSketchScreen() {
           fontSize: editPointerFontSize,
         },
         color: drawColor,
-        strokeWidth: Math.max(strokeWidth * 2, 6),
+        strokeWidth: strokeWidth, // Direkt die ausgewählte Strichstärke verwenden
         rotation: 0,
       };
       addToHistory([...elements, newElement]);
@@ -2283,8 +2301,9 @@ export default function DrawSketchScreen() {
         const ptrAngle = Math.atan2(ptrY2 - ptrY1, ptrX2 - ptrX1);
         const ptrAngleDeg = ptrAngle * 180 / Math.PI;
         
-        // Große Pfeilspitze berechnen (proportional zur Strichdicke)
-        const arrowHeadSize = Math.max(20, element.strokeWidth * 4);
+        // Pfeilspitze proportional zur Strichdicke (skaliert für alle Größen)
+        // Bei strokeWidth 1 → 12, bei 3 → 18, bei 8 → 32
+        const arrowHeadSize = Math.max(12, element.strokeWidth * 4);
         const arrowHeadAngle = Math.PI / 6; // 30 Grad
         
         // Pfeilspitzen-Koordinaten
@@ -2847,8 +2866,9 @@ export default function DrawSketchScreen() {
       } else if (el.type === 'pointer') {
         const { x1, y1, x2, y2, text } = el.data;
         const angle = Math.atan2(y2 - y1, x2 - x1);
-        const pointerStrokeWidth = el.strokeWidth || 6;
-        const arrowHeadSize = Math.max(20, pointerStrokeWidth * 4);
+        const pointerStrokeWidth = el.strokeWidth || 3;
+        // Pfeilspitze proportional zur Strichdicke (skaliert für alle Größen)
+        const arrowHeadSize = Math.max(12, pointerStrokeWidth * 4);
         const arrowHeadAngle = Math.PI / 6;
         
         // Arrowhead coordinates
@@ -3432,37 +3452,18 @@ export default function DrawSketchScreen() {
           </View>
         </TouchableOpacity>
         
-        {/* Zoom Controls */}
-        <View style={styles.toolSeparator} />
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={() => setScale(prev => Math.min(4, prev + 0.25))}
-        >
-          <Ionicons name="add-circle-outline" size={18} color="#333" />
-        </TouchableOpacity>
-        
-        {/* 100% Reset Button */}
-        <TouchableOpacity
-          style={[styles.toolButton, scale !== 1 && { backgroundColor: '#e3f2fd' }]}
-          onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
-        >
-          <Text style={{ fontSize: 10, fontWeight: 'bold', color: scale !== 1 ? '#1976d2' : '#333' }}>100%</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.toolButton}
-          onPress={() => setScale(prev => Math.max(0.25, prev - 0.25))}
-        >
-          <Ionicons name="remove-circle-outline" size={18} color="#333" />
-        </TouchableOpacity>
-        
-        {/* Zoom-Modus Toggle */}
-        <TouchableOpacity 
-          style={[styles.toolButton, zoomMode && { backgroundColor: '#FF9800' }]}
-          onPress={() => setZoomMode(!zoomMode)}
-        >
-          <Ionicons name={zoomMode ? "hand-left" : "search"} size={18} color={zoomMode ? '#fff' : '#333'} />
-        </TouchableOpacity>
+        {/* 100% Reset Button - nur sichtbar wenn gezoomt */}
+        {scale !== 1 && (
+          <>
+            <View style={styles.toolSeparator} />
+            <TouchableOpacity
+              style={[styles.toolButton, { backgroundColor: '#e3f2fd' }]}
+              onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#1976d2' }}>100%</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
@@ -3561,9 +3562,9 @@ export default function DrawSketchScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         minimumZoomScale={0.5}
         maximumZoomScale={4}
-        bouncesZoom={zoomMode}
-        scrollEnabled={zoomMode}
-        pinchGestureEnabled={zoomMode}
+        bouncesZoom={true}
+        scrollEnabled={true}
+        pinchGestureEnabled={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
@@ -3577,8 +3578,8 @@ export default function DrawSketchScreen() {
         <View
           ref={canvasRef}
           style={styles.canvasContainer}
-          onStartShouldSetResponder={() => !zoomMode}
-          onMoveShouldSetResponder={() => !zoomMode}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}

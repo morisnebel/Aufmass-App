@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://polygon-area.preview.emergentagent.com/api"
+BACKEND_URL = "https://polygon-draw-app.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

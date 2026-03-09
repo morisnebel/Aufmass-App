@@ -50,6 +50,17 @@ German (Deutsch)
 
 ## What's Been Implemented
 
+### Session: December 2025
+- ✅ **KRITISCHER BUG BEHOBEN**: Koordinatenberechnung beim Zeichnen/Bearbeiten auf gezoomter Leinwand
+  - `onTouchMove` und `onTouchEnd` verwendeten falsche Formel (panOffset statt scrollOffset)
+  - Alle Touch-Handler verwenden jetzt konsistent: `((touch.locationX) + scrollOffset.x) / scale`
+- ✅ **100%-Button verbessert** gemäß Benutzeranforderung:
+  - Zeigt dynamischen Zoom-Prozentsatz (z.B. "150%")
+  - "100%" statisch darunter angezeigt
+  - Grüne Hintergrundfarbe bei genau 100% Zoom
+  - Button ist jetzt immer sichtbar (nicht nur wenn gezoomt)
+  - Reset setzt auch scrollOffset zurück
+
 ### Session: March 9, 2026
 - ✅ Implemented manual Zoom-Toggle Button ("Zoom an/aus") in der Toolbar
   - Grün = Zoom-Modus aktiv (pinch-to-zoom und pan funktionieren)
@@ -76,7 +87,8 @@ German (Deutsch)
 
 ### P0 (Critical) - None currently
 
-### P1 (High Priority) - None currently
+### P1 (High Priority)
+- ⏳ **BENÖTIGT BENUTZERTEST**: Koordinatenberechnung bei Zoom - Bitte testen Sie Zeichnen und Bearbeiten während der Leinwand gezoomt ist
 
 ### P2 (Medium Priority)
 - Create new TestFlight build
@@ -99,7 +111,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://draw-measure-preview.preview.emergentagent.com
+- **Preview URL**: https://flaechen-sketch.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

@@ -298,6 +298,8 @@ export default function DrawSketchScreen() {
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
+  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   // Zoom-Modus: manuell gesteuert über Lupe-Button
   const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
@@ -1285,8 +1287,9 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-    const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
+    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
+    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
@@ -1330,8 +1333,9 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-    const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
+    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
+    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
@@ -1386,8 +1390,9 @@ export default function DrawSketchScreen() {
       setOriginalElement(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
+      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
+      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
       
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -1397,8 +1402,9 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
+      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
+      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
+      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
       
       // Speichere die Pointer-Koordinaten und öffne Modal
       setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3447,33 +3453,42 @@ export default function DrawSketchScreen() {
           </View>
         </TouchableOpacity>
         
-        {/* 100% Reset Button - nur sichtbar wenn gezoomt */}
-        {scale !== 1 && (
-          <>
-            <View style={styles.toolSeparator} />
-            <TouchableOpacity
-              style={[styles.toolButton, { backgroundColor: '#e3f2fd' }]}
-              onPress={() => { 
-                // Reset zoom und position über ScrollView
-                if (scrollViewRef.current) {
-                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-                  // ScrollView zoomScale auf 1 zurücksetzen (für iOS)
-                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
-                    x: 0,
-                    y: 0,
-                    width: width,
-                    height: height - 120,
-                    animated: false,
-                  });
-                }
-                setScale(1); 
-                setPanOffset({ x: 0, y: 0 }); 
-              }}
-            >
-              <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#1976d2' }}>100%</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        {/* Zoom Reset Button - zeigt aktuellen Zoom-Level und 100% */}
+        <View style={styles.toolSeparator} />
+        <TouchableOpacity
+          style={[
+            styles.toolButton, 
+            { 
+              backgroundColor: scale === 1 ? '#4caf50' : '#e3f2fd',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingVertical: 2,
+            }
+          ]}
+          onPress={() => { 
+            // Reset zoom und position über ScrollView
+            if (scrollViewRef.current) {
+              scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+              // ScrollView zoomScale auf 1 zurücksetzen (für iOS)
+              (scrollViewRef.current as any).scrollResponderZoomTo?.({
+                x: 0,
+                y: 0,
+                width: width,
+                height: height - 120,
+                animated: false,
+              });
+            }
+            setScale(1); 
+            setPanOffset({ x: 0, y: 0 });
+            setScrollOffset({ x: 0, y: 0 });
+          }}
+        >
+          <Text style={{ fontSize: 11, fontWeight: 'bold', color: scale === 1 ? '#fff' : '#1976d2' }}>
+            {`${Math.round(scale * 100)}%`}
+          </Text>
+          <Text style={{ fontSize: 8, color: scale === 1 ? '#c8e6c9' : '#90caf9' }}>100%</Text>
+        </TouchableOpacity>
         
         {/* Zoom an/aus Toggle Button - rechts in der Toolbar */}
         <View style={styles.toolSeparator} />
@@ -3612,6 +3627,11 @@ export default function DrawSketchScreen() {
           const currentScale = event.nativeEvent.zoomScale || 1;
           if (currentScale !== scale) {
             setScale(currentScale);
+          }
+          // Speichere die Scroll-Position für korrekte Koordinatenberechnung
+          const { contentOffset } = event.nativeEvent;
+          if (contentOffset) {
+            setScrollOffset({ x: contentOffset.x, y: contentOffset.y });
           }
         }}
         scrollEventThrottle={16}

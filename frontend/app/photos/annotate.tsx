@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,75 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 
 // API_URL removed - using local storage now
 const { width } = Dimensions.get('window');
+
+// Memoized component for the current drawing stroke (prevents full re-render)
+const CurrentStroke = memo(({ path, color, strokeWidth }: { path: string; color: string; strokeWidth: number }) => {
+  if (!path || path.length === 0) return null;
+  return (
+    <Path
+      d={path}
+      stroke={color}
+      strokeWidth={strokeWidth}
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
+});
+
+// Memoized component for saved paths
+const SavedPaths = memo(({ 
+  paths, 
+  editMode, 
+  selectedPathIndex, 
+  isDragging, 
+  dragPreviewOffset 
+}: { 
+  paths: DrawPath[]; 
+  editMode: boolean; 
+  selectedPathIndex: number | null;
+  isDragging: boolean;
+  dragPreviewOffset: { x: number; y: number };
+}) => {
+  return (
+    <>
+      {paths.map((p, index) => {
+        const isSelected = editMode && selectedPathIndex === index;
+        const translateX = isSelected && isDragging ? dragPreviewOffset.x : 0;
+        const translateY = isSelected && isDragging ? dragPreviewOffset.y : 0;
+        
+        return (
+          <G 
+            key={index} 
+            transform={`translate(${translateX}, ${translateY})`}
+          >
+            {isSelected && p.bounds && (
+              <Path
+                d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
+                    L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
+                    L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
+                    L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
+                stroke="#FF9800"
+                strokeWidth={2}
+                strokeDasharray="6,4"
+                fill="rgba(255, 152, 0, 0.15)"
+              />
+            )}
+            <Path
+              d={p.path}
+              stroke={p.color}
+              strokeWidth={p.strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
+            />
+          </G>
+        );
+      })}
+    </>
+  );
+});
 
 interface DrawPath {
   path: string;
@@ -722,12 +791,12 @@ export default function AnnotatePhotoScreen() {
                   pointsBufferRef.current.push({ x, y });
                   currentPathRef.current += ` L ${x} ${y}`;
                   
-                  // Batch-Update: nur alle 30ms aktualisieren
+                  // Batch-Update: nur alle 50ms aktualisieren für bessere Performance
                   if (!updateTimerRef.current) {
                     updateTimerRef.current = setTimeout(() => {
                       setCurrentPath(currentPathRef.current);
                       updateTimerRef.current = null;
-                    }, 30);
+                    }, 50);
                   }
                 }
               }
@@ -783,52 +852,18 @@ export default function AnnotatePhotoScreen() {
             }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
-              {paths.map((p, index) => {
-                // Berechne Translation für ausgewähltes Element während des Ziehens
-                const isSelected = editMode && selectedPathIndex === index;
-                const translateX = isSelected && isDragging ? dragPreviewOffset.x : 0;
-                const translateY = isSelected && isDragging ? dragPreviewOffset.y : 0;
-                
-                return (
-                  <G 
-                    key={index} 
-                    transform={`translate(${translateX}, ${translateY})`}
-                  >
-                    {/* Auswahlrahmen wenn im Bearbeitungsmodus und ausgewählt */}
-                    {isSelected && p.bounds && (
-                      <Path
-                        d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
-                            L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
-                            L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
-                            L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
-                        stroke="#FF9800"
-                        strokeWidth={2}
-                        strokeDasharray="6,4"
-                        fill="rgba(255, 152, 0, 0.15)"
-                      />
-                    )}
-                    <Path
-                      d={p.path}
-                      stroke={p.color}
-                      strokeWidth={p.strokeWidth}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
-                    />
-                  </G>
-                );
-              })}
-              {currentPath && currentPath.length > 0 && (
-                <Path
-                  d={currentPath}
-                  stroke={drawColor}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
+              <SavedPaths 
+                paths={paths}
+                editMode={editMode}
+                selectedPathIndex={selectedPathIndex}
+                isDragging={isDragging}
+                dragPreviewOffset={dragPreviewOffset}
+              />
+              <CurrentStroke 
+                path={currentPath}
+                color={drawColor}
+                strokeWidth={strokeWidth}
+              />
             </Svg>
           </View>
         </View>

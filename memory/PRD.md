@@ -50,6 +50,14 @@ German (Deutsch)
 
 ## What's Been Implemented
 
+### Session: March 9, 2026
+- ✅ Implemented manual Zoom-Toggle Button ("Zoom an/aus") in der Toolbar
+  - Grün = Zoom-Modus aktiv (pinch-to-zoom und pan funktionieren)
+  - Rot = Zoom aus (Zeichnen/Bearbeiten aktiv)
+- ✅ Automatische Umschaltung: Bei Auswahl eines Zeichenwerkzeugs wird Zoom automatisch deaktiviert
+- ✅ 100%-Button repariert: Setzt Zoom-Level und Position korrekt zurück
+- ✅ ScrollView korrekt an zoomMode gebunden (scrollEnabled und pinchGestureEnabled)
+
 ### Session: March 8, 2026
 - ✅ Fixed Expo development environment (EXPO_TOKEN authentication)
 - ✅ Implemented "Save to Gallery" feature with Share fallback for Expo Go
@@ -82,6 +90,7 @@ German (Deutsch)
 - Fix dashed lines rendering in PDF preview
 
 ## Key Files
+- `/app/frontend/app/sketches/draw.tsx` - Hauptdatei für Skizzen-Tool mit Zoom-Toggle, Zeichenwerkzeugen und Toolbar
 - `/app/frontend/app/calculator/new.tsx` - Calculator with toolbar and modal
 - `/app/frontend/app/projects/[id].tsx` - Project details with photo management
 - `/app/frontend/app/photos/annotate.tsx` - Photo annotation with zoom/draw
@@ -90,7 +99,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://polygon-draw-app.preview.emergentagent.com
+- **Preview URL**: https://draw-measure-preview.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

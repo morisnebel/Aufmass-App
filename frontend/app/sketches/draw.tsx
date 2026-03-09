@@ -298,13 +298,23 @@ export default function DrawSketchScreen() {
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  // Automatische Erkennung: 2+ Finger = Zoom, 1 Finger = Zeichnen
-  const [isMultiTouch, setIsMultiTouch] = useState(false);
-  // Legacy: zoomMode wird jetzt automatisch gesteuert
-  const zoomMode = isMultiTouch;
+  // Zoom-Modus: manuell gesteuert über Lupe-Button
+  const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
+  // Referenz für ScrollView um Zoom zurückzusetzen
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
+  
+  // Helper-Funktion: Wechselt den Zeichenmodus und schaltet Zoom automatisch aus
+  // wenn ein Zeichenwerkzeug (nicht 'select') ausgewählt wird
+  const selectDrawMode = (mode: DrawMode) => {
+    setDrawMode(mode);
+    // Bei jedem Zeichenwerkzeug außer 'select' den Zoom-Modus ausschalten
+    if (mode !== 'select') {
+      setZoomMode(false);
+    }
+  };
   
   // Kästchenpapier Hintergrund
   const [showGrid, setShowGrid] = useState(true);
@@ -1271,13 +1281,8 @@ export default function DrawSketchScreen() {
 
   // Touch handlers
   const onTouchStart = (event: any) => {
-    // Prüfe ob Multi-Touch (2+ Finger) → Zoom aktivieren
-    const touchCount = event.nativeEvent.touches?.length || 1;
-    if (touchCount >= 2) {
-      setIsMultiTouch(true);
-      return; // ScrollView übernimmt das Zoomen
-    }
-    setIsMultiTouch(false);
+    // Im Zoom-Modus keine Zeichnung
+    if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
@@ -1321,15 +1326,8 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
-    // Multi-Touch → Zoom-Modus, ScrollView übernimmt
-    const touchCount = event.nativeEvent.touches?.length || 1;
-    if (touchCount >= 2) {
-      setIsMultiTouch(true);
-      return;
-    }
-    
-    // Wenn wir gerade im Multi-Touch waren, nicht weiter zeichnen
-    if (isMultiTouch) return;
+    // Im Zoom-Modus keine Zeichnung
+    if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
@@ -1348,11 +1346,8 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
-    // Reset Multi-Touch Status nach Geste
-    setTimeout(() => setIsMultiTouch(false), 100);
-    
-    // Wenn Multi-Touch aktiv war, keine Zeichnung abschließen
-    if (isMultiTouch) return;
+    // Im Zoom-Modus keine Zeichnung
+    if (zoomMode) return;
     
     if (drawMode === 'pen' && currentPath && currentPath.length > 0) {
       const newElement: DrawElement = {
@@ -3198,42 +3193,42 @@ export default function DrawSketchScreen() {
         {/* Drawing tools */}
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'select' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('select')}
+          onPress={() => selectDrawMode('select')}
         >
           <Ionicons name="hand-left" size={18} color={drawMode === 'select' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'pen' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('pen')}
+          onPress={() => selectDrawMode('pen')}
         >
           <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'line' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('line')}
+          onPress={() => selectDrawMode('line')}
         >
           <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'circle' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('circle')}
+          onPress={() => selectDrawMode('circle')}
         >
           <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'rect' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('rect')}
+          onPress={() => selectDrawMode('rect')}
         >
           <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, styles.toolButtonWide, drawMode === 'arrow' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('arrow')}
+          onPress={() => selectDrawMode('arrow')}
         >
           {/* Benutzerdefiniertes Maßlinie-Icon: Linie mit zwei Pfeilen und M in der Mitte */}
           <Svg width={56} height={28} viewBox="0 0 56 28">
@@ -3275,14 +3270,14 @@ export default function DrawSketchScreen() {
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'pointer' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('pointer')}
+          onPress={() => selectDrawMode('pointer')}
         >
           <Ionicons name="arrow-forward" size={22} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'text' && styles.toolButtonActive]}
-          onPress={() => setDrawMode('text')}
+          onPress={() => selectDrawMode('text')}
         >
           <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
         </TouchableOpacity>
@@ -3290,7 +3285,7 @@ export default function DrawSketchScreen() {
         <TouchableOpacity
           style={[styles.toolButton, drawMode === 'polyline' && styles.toolButtonActive]}
           onPress={() => {
-            setDrawMode('polyline');
+            selectDrawMode('polyline');
             setPolylinePoints([]);
           }}
         >
@@ -3312,7 +3307,7 @@ export default function DrawSketchScreen() {
             setPhotoEditMode(!photoEditMode);
             setSelectedElementId(null);
             if (!photoEditMode) {
-              setDrawMode('select');
+              selectDrawMode('select');
             }
           }}
         >
@@ -3458,12 +3453,57 @@ export default function DrawSketchScreen() {
             <View style={styles.toolSeparator} />
             <TouchableOpacity
               style={[styles.toolButton, { backgroundColor: '#e3f2fd' }]}
-              onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
+              onPress={() => { 
+                // Reset zoom und position über ScrollView
+                if (scrollViewRef.current) {
+                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+                  // ScrollView zoomScale auf 1 zurücksetzen (für iOS)
+                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
+                    x: 0,
+                    y: 0,
+                    width: width,
+                    height: height - 120,
+                    animated: false,
+                  });
+                }
+                setScale(1); 
+                setPanOffset({ x: 0, y: 0 }); 
+              }}
             >
               <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#1976d2' }}>100%</Text>
             </TouchableOpacity>
           </>
         )}
+        
+        {/* Zoom an/aus Toggle Button - rechts in der Toolbar */}
+        <View style={styles.toolSeparator} />
+        <TouchableOpacity
+          style={[
+            styles.toolButton, 
+            { 
+              backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
+              borderWidth: 2,
+              borderColor: zoomMode ? '#4caf50' : '#f44336',
+            }
+          ]}
+          onPress={() => setZoomMode(!zoomMode)}
+        >
+          <View style={{ alignItems: 'center' }}>
+            <Ionicons 
+              name="search" 
+              size={16} 
+              color={zoomMode ? '#4caf50' : '#f44336'} 
+            />
+            <Text style={{ 
+              fontSize: 8, 
+              fontWeight: 'bold', 
+              color: zoomMode ? '#4caf50' : '#f44336',
+              marginTop: 1,
+            }}>
+              {zoomMode ? 'Zoom an' : 'Zoom aus'}
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
@@ -3558,13 +3598,14 @@ export default function DrawSketchScreen() {
 
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}
         minimumZoomScale={0.5}
         maximumZoomScale={4}
         bouncesZoom={true}
-        scrollEnabled={true}
-        pinchGestureEnabled={true}
+        scrollEnabled={zoomMode}
+        pinchGestureEnabled={zoomMode}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {

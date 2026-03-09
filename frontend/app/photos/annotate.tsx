@@ -29,10 +29,34 @@ const { width } = Dimensions.get('window');
 
 import { Circle } from 'react-native-svg';
 
-// Simple dot indicator showing current touch position (no heavy path rendering)
+// Touch indicator component - shows where the user is touching
 const TouchIndicator = memo(({ x, y, color, visible }: { x: number; y: number; color: string; visible: boolean }) => {
   if (!visible) return null;
-  return <Circle cx={x} cy={y} r={8} fill={color} opacity={0.6} />;
+  return (
+    <Circle
+      cx={x}
+      cy={y}
+      r={8}
+      fill={color}
+      opacity={0.5}
+    />
+  );
+});
+
+// Component for the current drawing stroke (shows line while drawing)
+const CurrentStroke = memo(({ path, color, strokeWidth }: { path: string; color: string; strokeWidth: number }) => {
+  if (!path || path.length === 0) return null;
+  return (
+    <Path
+      d={path}
+      stroke={color}
+      strokeWidth={strokeWidth}
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity={0.7}
+    />
+  );
 });
 
 // Memoized component for saved paths

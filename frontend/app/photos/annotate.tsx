@@ -29,20 +29,6 @@ const { width } = Dimensions.get('window');
 
 import { Circle } from 'react-native-svg';
 
-// Touch indicator component - shows where the user is touching
-const TouchIndicator = memo(({ x, y, color, visible }: { x: number; y: number; color: string; visible: boolean }) => {
-  if (!visible) return null;
-  return (
-    <Circle
-      cx={x}
-      cy={y}
-      r={8}
-      fill={color}
-      opacity={0.5}
-    />
-  );
-});
-
 // Component for the current drawing stroke (shows line while drawing)
 const CurrentStroke = memo(({ path, color, strokeWidth }: { path: string; color: string; strokeWidth: number }) => {
   if (!path || path.length === 0) return null;
@@ -788,12 +774,16 @@ export default function AnnotatePhotoScreen() {
                 isDragging={isDragging}
                 dragPreviewOffset={dragPreviewOffset}
               />
-              <TouchIndicator 
-                x={touchPosition.x}
-                y={touchPosition.y}
-                color={drawColor}
-                visible={touchPosition.visible}
-              />
+              {/* Touch indicator - shows where user is touching */}
+              {touchPosition.visible && (
+                <Circle
+                  cx={touchPosition.x}
+                  cy={touchPosition.y}
+                  r={8}
+                  fill={drawColor}
+                  opacity={0.5}
+                />
+              )}
             </Svg>
           </View>
         </View>

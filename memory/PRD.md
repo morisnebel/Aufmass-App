@@ -50,6 +50,18 @@ German (Deutsch)
 
 ## What's Been Implemented
 
+### Session: December 2025 (Current)
+- ✅ **PROJEKTFOTOS-FUNKTION IMPLEMENTIERT**: 
+  - Modal für Projektfotos-Auswahl hinzugefügt
+  - Fotos aus dem Projekt können ausgewählt und in die Skizze eingefügt werden
+  - Button "Projektfotos" ist jetzt voll funktionsfähig
+- ✅ **BEARBEITUNGSMODUS BUG BEHOBEN**: 
+  - `selectDrawMode` schaltet jetzt auch bei 'select' den Zoom-Modus aus
+  - Elemente können wieder ausgewählt und bearbeitet werden
+- ✅ **ZOOM/ZEICHNEN KOORDINATEN FIX**:
+  - Bei Auswahl eines Werkzeugs wird automatisch der Zoom deaktiviert
+  - Zoom wird auf 100% zurückgesetzt bevor gezeichnet/bearbeitet wird
+
 ### Session: March 10, 2026
 - ✅ **TOOLBAR REDESIGN MIT LABELS**: Toolbar komplett umgestaltet mit Beschriftungen unter den Buttons:
   - "Hand" → "Bearbeiten"
@@ -58,7 +70,7 @@ German (Deutsch)
   - "Maßlinie" + "Maße über Polygone" (gruppiert)
   - "Memo" + "Text" + "Notiz zur Skizze" (gruppiert)
   - "Galeriefotos"
-  - "Projektfotos" (NEU - TODO: Implementierung ausstehend)
+  - "Projektfotos" (jetzt implementiert)
   - "neues Foto"
   - "Fotobearbeitung"
 - ✅ **MEMO-PFEIL TEXT-STYLING FIX**: Der Rahmen um den Memo-Text passt sich jetzt an die Strichdicke des Pfeils an (proportional 1/3 der Linienstärke)
@@ -100,12 +112,13 @@ German (Deutsch)
 
 ### P0 (Critical)
 - ⏳ **BENUTZERTEST ERFORDERLICH**: 
-  - Toolbar mit neuen Labels überprüfen
-  - Memo-Pfeil Text-Styling verifizieren
-  - Zoom-Button und Pinch-to-Zoom Verhalten testen
+  - Projektfotos-Funktion testen
+  - Bearbeitungsmodus testen (Elemente auswählen, verschieben, löschen)
+  - Zeichnen testen (mit und ohne Zoom)
 
 ### P1 (High Priority)
-- 🆕 Projektfotos-Button vollständig implementieren (Fotos aus Projekt auswählen)
+- "Maße über Polygone" Button implementieren
+- "Notiz zur Skizze" Button implementieren (Modal existiert bereits)
 
 ### P2 (Medium Priority)
 - Create new TestFlight build
@@ -128,9 +141,10 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://area-sketch.preview.emergentagent.com
+- **Preview URL**: https://area-calc-tool.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`
 - Photo gallery save requires Share sheet in Expo Go
 - Full functionality available in TestFlight builds
+- **WICHTIG**: Nach jeder Änderung Expo Go komplett schließen und neu öffnen!

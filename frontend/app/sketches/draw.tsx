@@ -15,6 +15,7 @@ import {
   Keyboard,
   Animated,
   PanResponder,
+  Image as RNImage,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
@@ -309,13 +310,71 @@ export default function DrawSketchScreen() {
   const [photoEditMode, setPhotoEditMode] = useState(false);
   
   // Helper-Funktion: Wechselt den Zeichenmodus und schaltet Zoom automatisch aus
-  // wenn ein Zeichenwerkzeug (nicht 'select') ausgewählt wird
+  // wenn ein Zeichenwerkzeug (auch 'select' für Bearbeiten) ausgewählt wird
   const selectDrawMode = (mode: DrawMode) => {
     setDrawMode(mode);
-    // Bei jedem Zeichenwerkzeug außer 'select' den Zoom-Modus ausschalten
-    if (mode !== 'select') {
-      setZoomMode(false);
+    // Bei ALLEN Werkzeugen den Zoom-Modus ausschalten (auch bei 'select')
+    // damit Bearbeiten funktioniert
+    setZoomMode(false);
+    // Wenn gezoomt ist, erst auf 100% zurücksetzen bevor gezeichnet/bearbeitet wird
+    if (scale !== 1) {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+        (scrollViewRef.current as any).scrollResponderZoomTo?.({
+          x: 0,
+          y: 0,
+          width: width,
+          height: height - 120,
+          animated: false,
+        });
+      }
+      setScale(1);
+      setPanOffset({ x: 0, y: 0 });
+      setScrollOffset({ x: 0, y: 0 });
     }
+  };
+  
+  // State für Projektfotos-Modal
+  const [showProjectPhotosModal, setShowProjectPhotosModal] = useState(false);
+  const [projectPhotos, setProjectPhotos] = useState<any[]>([]);
+  
+  // Projektfotos laden wenn Modal geöffnet wird
+  const loadProjectPhotos = async () => {
+    if (projectId) {
+      const photos = await PhotoService.getByProjectId(projectId);
+      setProjectPhotos(photos);
+      setShowProjectPhotosModal(true);
+    } else {
+      Alert.alert('Hinweis', 'Kein Projekt ausgewählt. Bitte öffnen Sie die Skizze aus einem Projekt.');
+    }
+  };
+
+  // Funktion um ein Projektfoto als Bild-Element einzufügen
+  const insertProjectPhoto = (photo: any) => {
+    const imageUri = photo.image_data || photo.uri;
+    if (!imageUri) {
+      Alert.alert('Fehler', 'Dieses Foto hat keine gültige Bilddaten');
+      return;
+    }
+    
+    const imageElement: DrawElement = {
+      id: generateId(),
+      type: 'image',
+      data: { uri: imageUri },
+      color: '#000000',
+      strokeWidth: 0,
+      x: 50,
+      y: 50,
+      width: 300,
+      height: 200,
+      rotation: 0,
+    };
+    
+    const newElements = [...elements, imageElement];
+    addToHistory(newElements);
+    setElements(newElements);
+    setSelectedElementId(imageElement.id);
+    setShowProjectPhotosModal(false);
   };
   
   // Kästchenpapier Hintergrund
@@ -3355,14 +3414,11 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Galeriefotos</Text>
         </View>
 
-        {/* 7. Projektfotos - Neuer Button */}
+        {/* 7. Projektfotos - Button für Fotos aus dem Projekt */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
             style={styles.toolButtonInner} 
-            onPress={() => {
-              // TODO: Projektfotos-Auswahl implementieren
-              Alert.alert('Projektfotos', 'Wählen Sie ein Foto aus dem Projekt aus');
-            }}
+            onPress={loadProjectPhotos}
           >
             <Ionicons name="folder-open" size={18} color="#1976d2" />
           </TouchableOpacity>
@@ -4727,6 +4783,73 @@ export default function DrawSketchScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Projektfotos Modal */}
+      <Modal visible={showProjectPhotosModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%', width: '95%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.modalTitle}>Projektfotos auswählen</Text>
+              <TouchableOpacity onPress={() => setShowProjectPhotosModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {projectPhotos.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Ionicons name="images-outline" size={48} color="#ccc" />
+                <Text style={{ marginTop: 16, color: '#666', textAlign: 'center' }}>
+                  Keine Fotos in diesem Projekt vorhanden.
+                </Text>
+                <Text style={{ marginTop: 8, color: '#999', fontSize: 12, textAlign: 'center' }}>
+                  Fügen Sie Fotos über die Projekt-Detailseite hinzu.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 400 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {projectPhotos.map((photo, index) => (
+                    <TouchableOpacity
+                      key={photo.id || index}
+                      style={{
+                        width: '31%',
+                        aspectRatio: 1,
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        backgroundColor: '#f0f0f0',
+                        borderWidth: 2,
+                        borderColor: '#e0e0e0',
+                      }}
+                      onPress={() => insertProjectPhoto(photo)}
+                    >
+                      {(photo.image_data || photo.uri) ? (
+                        <RNImage
+                          source={{ uri: photo.image_data || photo.uri }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="image-outline" size={32} color="#ccc" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+            
+            <View style={[styles.modalButtons, { marginTop: 16 }]}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowProjectPhotosModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );

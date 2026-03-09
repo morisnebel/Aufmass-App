@@ -3421,10 +3421,10 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
             {/* Notiz Button (Aufmaß) */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, showMeasurementTool && styles.toolButtonActive]}
+              style={[styles.toolButtonInner, showMeasurementTool && { backgroundColor: '#FF5722' }]}
               onPress={() => setShowMeasurementTool(!showMeasurementTool)}
             >
-              <Ionicons name="calculator" size={18} color={showMeasurementTool ? '#fff' : '#9c27b0'} />
+              <Ionicons name="chatbox-outline" size={18} color={showMeasurementTool ? '#fff' : '#FF5722'} />
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>

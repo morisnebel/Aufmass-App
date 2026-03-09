@@ -298,6 +298,11 @@ export default function DrawSketchScreen() {
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPinching, setIsPinching] = useState(false);
+  const pinchStartDistance = useRef(0);
+  const pinchStartScale = useRef(1);
+  const pinchStartOffset = useRef({ x: 0, y: 0 });
+  const pinchCenter = useRef({ x: 0, y: 0 });
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -1267,7 +1272,29 @@ export default function DrawSketchScreen() {
 
   // Touch handlers
   const onTouchStart = (event: any) => {
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
+    const touches = event.nativeEvent.touches;
+    
+    // Pinch-to-Zoom: Zwei Finger erkannt
+    if (touches && touches.length === 2) {
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      const dx = touch2.pageX - touch1.pageX;
+      const dy = touch2.pageY - touch1.pageY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      pinchStartDistance.current = distance;
+      pinchStartScale.current = scale;
+      pinchStartOffset.current = { ...panOffset };
+      pinchCenter.current = {
+        x: (touch1.pageX + touch2.pageX) / 2,
+        y: (touch1.pageY + touch2.pageY) / 2,
+      };
+      setIsPinching(true);
+      return;
+    }
+    
+    // Single touch - normale Zeichenfunktion
+    const touch = touches ? touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
     const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
 
@@ -1309,7 +1336,28 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
-    const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
+    const touches = event.nativeEvent.touches;
+    
+    // Pinch-to-Zoom: Zwei Finger bewegen sich
+    if (touches && touches.length === 2 && isPinching) {
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      const dx = touch2.pageX - touch1.pageX;
+      const dy = touch2.pageY - touch1.pageY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (pinchStartDistance.current > 0) {
+        const scaleRatio = distance / pinchStartDistance.current;
+        const newScale = Math.min(4, Math.max(0.25, pinchStartScale.current * scaleRatio));
+        setScale(newScale);
+      }
+      return;
+    }
+    
+    // Wenn wir gerade pinchen, ignoriere Single-Touch
+    if (isPinching) return;
+    
+    const touch = touches ? touches[0] : event.nativeEvent;
     const locationX = (touch.locationX || touch.pageX) / scale - panOffset.x / scale;
     const locationY = (touch.locationY || touch.pageY) / scale - panOffset.y / scale;
 
@@ -1326,6 +1374,13 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
+    // Pinch-to-Zoom beenden
+    if (isPinching) {
+      setIsPinching(false);
+      pinchStartDistance.current = 0;
+      return;
+    }
+    
     if (drawMode === 'pen' && currentPath && currentPath.length > 0) {
       const newElement: DrawElement = {
         id: generateId(),

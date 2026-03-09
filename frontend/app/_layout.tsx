@@ -66,7 +66,11 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="sketches/draw" 
-          options={{ title: 'Skizze zeichnen' }} 
+          options={{ title: 'Skizze zeichnen', headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="sketches/new" 
+          options={{ title: 'Neue Skizze', headerShown: false }} 
         />
         <Stack.Screen 
           name="checklists/templates" 

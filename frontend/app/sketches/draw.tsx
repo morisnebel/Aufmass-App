@@ -3441,11 +3441,12 @@ export default function DrawSketchScreen() {
           <Ionicons name="add-circle-outline" size={18} color="#333" />
         </TouchableOpacity>
         
+        {/* 100% Reset Button */}
         <TouchableOpacity
-          style={[styles.toolButton, { minWidth: 40 }]}
+          style={[styles.toolButton, scale !== 1 && { backgroundColor: '#e3f2fd' }]}
           onPress={() => { setScale(1); setPanOffset({ x: 0, y: 0 }); }}
         >
-          <Text style={{ fontSize: 10, fontWeight: 'bold' }}>{Math.round(scale * 100)}%</Text>
+          <Text style={{ fontSize: 10, fontWeight: 'bold', color: scale !== 1 ? '#1976d2' : '#333' }}>100%</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -3453,6 +3454,14 @@ export default function DrawSketchScreen() {
           onPress={() => setScale(prev => Math.max(0.25, prev - 0.25))}
         >
           <Ionicons name="remove-circle-outline" size={18} color="#333" />
+        </TouchableOpacity>
+        
+        {/* Zoom-Modus Toggle */}
+        <TouchableOpacity 
+          style={[styles.toolButton, zoomMode && { backgroundColor: '#FF9800' }]}
+          onPress={() => setZoomMode(!zoomMode)}
+        >
+          <Ionicons name={zoomMode ? "hand-left" : "search"} size={18} color={zoomMode ? '#fff' : '#333'} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.toolButton} onPress={() => {
@@ -3468,14 +3477,6 @@ export default function DrawSketchScreen() {
           }
         }}>
           <Ionicons name="trash-bin" size={18} color="#f44336" />
-        </TouchableOpacity>
-        
-        {/* Zoom-Modus Toggle */}
-        <TouchableOpacity 
-          style={[styles.toolButton, zoomMode && { backgroundColor: '#FF9800' }]}
-          onPress={() => setZoomMode(!zoomMode)}
-        >
-          <Ionicons name={zoomMode ? "hand-left" : "search"} size={18} color={zoomMode ? '#fff' : '#333'} />
         </TouchableOpacity>
       </View>
 

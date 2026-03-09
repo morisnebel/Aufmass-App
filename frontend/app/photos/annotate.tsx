@@ -77,10 +77,16 @@ export default function AnnotatePhotoScreen() {
   const [editMode, setEditMode] = useState(false);
   const [selectedPathIndex, setSelectedPathIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragPreviewOffset, setDragPreviewOffset] = useState({ x: 0, y: 0 }); // Live preview offset
+  const [dragPreviewOffset, setDragPreviewOffset] = useState({ x: 0, y: 0 });
   const dragStartRef = useRef({ x: 0, y: 0 });
   const originalPathRef = useRef<string>('');
-  const lastDrawPointRef = useRef({ x: 0, y: 0 }); // For smoother drawing
+  
+  // Optimized drawing refs
+  const currentPathRef = useRef<string>('');
+  const pointsBufferRef = useRef<{x: number, y: number}[]>([]);
+  const lastDrawPointRef = useRef({ x: 0, y: 0 });
+  const isDrawingRef = useRef(false);
+  const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
@@ -89,6 +95,15 @@ export default function AnnotatePhotoScreen() {
   useEffect(() => {
     loadPhoto();
   }, [photoId]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimerRef.current) {
+        clearTimeout(updateTimerRef.current);
+      }
+    };
+  }, []);
 
   // Track changes for auto-save
   useEffect(() => {
@@ -655,7 +670,6 @@ export default function AnnotatePhotoScreen() {
               const locationY = touch.locationY;
               
               if (editMode) {
-                // Im Bearbeitungsmodus: Element auswählen oder verschieben
                 const foundIndex = findPathAtPoint(locationX, locationY);
                 if (foundIndex !== null) {
                   setSelectedPathIndex(foundIndex);
@@ -670,8 +684,14 @@ export default function AnnotatePhotoScreen() {
               }
               
               if (drawingEnabled) {
-                lastDrawPointRef.current = { x: locationX, y: locationY };
-                setCurrentPath(`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+                // Start drawing - use refs for performance
+                isDrawingRef.current = true;
+                const x = Math.round(locationX);
+                const y = Math.round(locationY);
+                lastDrawPointRef.current = { x, y };
+                pointsBufferRef.current = [{ x, y }];
+                currentPathRef.current = `M ${x} ${y}`;
+                setCurrentPath(`M ${x} ${y}`);
               }
             }}
             onResponderMove={(event) => {
@@ -680,24 +700,35 @@ export default function AnnotatePhotoScreen() {
               const locationY = touch.locationY;
               
               if (editMode && isDragging && selectedPathIndex !== null) {
-                // Live-Vorschau mit offset
                 const deltaX = locationX - dragStartRef.current.x;
                 const deltaY = locationY - dragStartRef.current.y;
                 setDragPreviewOffset({ x: deltaX, y: deltaY });
                 return;
               }
               
-              if (drawingEnabled && currentPath) {
-                // Nur Punkte hinzufügen wenn Abstand groß genug (glattere Linien)
+              if (drawingEnabled && isDrawingRef.current) {
+                const x = Math.round(locationX);
+                const y = Math.round(locationY);
                 const lastPoint = lastDrawPointRef.current;
-                const distance = Math.sqrt(
-                  Math.pow(locationX - lastPoint.x, 2) + 
-                  Math.pow(locationY - lastPoint.y, 2)
-                );
                 
-                if (distance > 3) { // Mindestabstand für neue Punkte
-                  lastDrawPointRef.current = { x: locationX, y: locationY };
-                  setCurrentPath((prev) => `${prev} L ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+                // Berechne Distanz
+                const dx = x - lastPoint.x;
+                const dy = y - lastPoint.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Nur sammeln wenn Abstand > 2px
+                if (distance > 2) {
+                  lastDrawPointRef.current = { x, y };
+                  pointsBufferRef.current.push({ x, y });
+                  currentPathRef.current += ` L ${x} ${y}`;
+                  
+                  // Batch-Update: nur alle 30ms aktualisieren
+                  if (!updateTimerRef.current) {
+                    updateTimerRef.current = setTimeout(() => {
+                      setCurrentPath(currentPathRef.current);
+                      updateTimerRef.current = null;
+                    }, 30);
+                  }
                 }
               }
             }}
@@ -727,12 +758,29 @@ export default function AnnotatePhotoScreen() {
                 return;
               }
               
-              if (drawingEnabled && currentPath && currentPath.length > 0) {
-                const bounds = calculateBounds(currentPath);
-                setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
+              if (drawingEnabled && isDrawingRef.current) {
+                isDrawingRef.current = false;
+                
+                // Clear any pending update timer
+                if (updateTimerRef.current) {
+                  clearTimeout(updateTimerRef.current);
+                  updateTimerRef.current = null;
+                }
+                
+                // Finalize the path
+                const finalPath = currentPathRef.current;
+                if (finalPath && finalPath.length > 5) {
+                  const bounds = calculateBounds(finalPath);
+                  setPaths([...paths, { path: finalPath, color: drawColor, strokeWidth, bounds }]);
+                  setHasChanges(true);
+                }
+                
+                // Reset
                 setCurrentPath('');
-                setHasChanges(true);
+                currentPathRef.current = '';
+                pointsBufferRef.current = [];
               }
+            }}
             }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>

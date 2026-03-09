@@ -51,6 +51,12 @@ German (Deutsch)
 ## What's Been Implemented
 
 ### Session: December 2025 (Current)
+- ✅ **NOTIZ-BUTTON IMPLEMENTIERT (wie in Flächenberechnung)**:
+  - Neuer DrawMode 'memo' hinzugefügt
+  - Zeichnet Annotation mit rotem Ankerpunkt, gestrichelter Linie und Textlabel
+  - Modal zum Eingeben des Notiz-Textes
+  - Bearbeitungsmodus für Memo-Elemente (Text, Schriftgröße, Farbe ändern)
+  - Button in Toolbar mit korrektem Icon und Styling
 - ✅ **PROJEKTFOTOS-FUNKTION IMPLEMENTIERT**: 
   - Modal für Projektfotos-Auswahl hinzugefügt
   - Fotos aus dem Projekt können ausgewählt und in die Skizze eingefügt werden
@@ -112,13 +118,14 @@ German (Deutsch)
 
 ### P0 (Critical)
 - ⏳ **BENUTZERTEST ERFORDERLICH**: 
+  - **Notiz-Button** testen (roter Punkt mit gestrichelter Linie und Textlabel)
   - Projektfotos-Funktion testen
   - Bearbeitungsmodus testen (Elemente auswählen, verschieben, löschen)
   - Zeichnen testen (mit und ohne Zoom)
 
 ### P1 (High Priority)
 - "Maße über Polygone" Button implementieren
-- "Notiz zur Skizze" Button implementieren (Modal existiert bereits)
+- "Notizen zur Skizze" Button Funktionalität vervollständigen (Modal existiert bereits)
 
 ### P2 (Medium Priority)
 - Create new TestFlight build
@@ -141,7 +148,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://area-calc-tool.preview.emergentagent.com
+- **Preview URL**: https://sketch-measure-app.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

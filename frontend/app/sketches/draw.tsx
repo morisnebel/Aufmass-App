@@ -145,7 +145,7 @@ const perpendicularDistance = (
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline' | 'memo';
   data: any;
   color: string;
   strokeWidth: number;
@@ -159,7 +159,7 @@ interface DrawElement {
   fontStyle?: 'normal' | 'italic';
 }
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo';
 
 // Verschiebbare Summenbox-Komponente für jedes Polyline-Element
 interface DraggableTotalBoxProps {
@@ -1471,6 +1471,18 @@ export default function DrawSketchScreen() {
       setShowPointerModal(true);
       setStartPoint(null);
       setTempElement(null);
+    } else if (startPoint && drawMode === 'memo') {
+      // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
+      const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
+      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
+      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      
+      // Speichere die Memo-Koordinaten und öffne Modal
+      setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+      setMemoText('Notiz'); // Default Text
+      setShowMemoModal(true);
+      setStartPoint(null);
+      setTempElement(null);
     } else if (startPoint && tempElement) {
       // Wichtig: Neue eindeutige ID vergeben beim Hinzufügen
       const finalElement = { ...tempElement, id: Date.now().toString() };
@@ -1542,6 +1554,17 @@ export default function DrawSketchScreen() {
           rotation: 0,
         };
         break;
+      case 'memo':
+        // Memo/Notiz: Ankerpunkt mit gestrichelter Linie zum Textlabel
+        element = {
+          id: 'temp',
+          type: 'memo',
+          data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: 'Notiz' },
+          color: '#E74C3C',
+          strokeWidth: 2,
+          rotation: 0,
+        };
+        break;
     }
 
     setTempElement(element);
@@ -1587,6 +1610,11 @@ export default function DrawSketchScreen() {
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [pendingArrow, setPendingArrow] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [pendingPointer, setPendingPointer] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [pendingMemo, setPendingMemo] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [memoText, setMemoText] = useState('Notiz');
+  const [editMemoFontSize, setEditMemoFontSize] = useState(14);
+  const [showEditMemoModal, setShowEditMemoModal] = useState(false);
 
   // Add text element
   const addTextElement = () => {
@@ -1683,6 +1711,54 @@ export default function DrawSketchScreen() {
       addToHistory(newElements);
       setPointerText('');
       setShowEditPointerModal(false);
+    }
+  };
+
+  // Add memo (annotation with dashed line) element - wie in Flächenberechnung
+  const addMemoElement = () => {
+    if (pendingMemo) {
+      const newElement: DrawElement = {
+        id: generateId(),
+        type: 'memo',
+        data: {
+          x1: pendingMemo.x1, // Ankerpunkt (roter Kreis)
+          y1: pendingMemo.y1,
+          x2: pendingMemo.x2, // Position des Textlabels
+          y2: pendingMemo.y2,
+          text: memoText || 'Notiz',
+          fontSize: editMemoFontSize,
+        },
+        color: '#E74C3C', // Rot wie im Bild
+        strokeWidth: 2,
+        rotation: 0,
+      };
+      addToHistory([...elements, newElement]);
+      setMemoText('Notiz');
+      setPendingMemo(null);
+      setShowMemoModal(false);
+    }
+  };
+
+  // Update existing memo element (edit mode)
+  const updateMemoElement = () => {
+    if (selectedElementId) {
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId && el.type === 'memo') {
+          return {
+            ...el,
+            data: {
+              ...el.data,
+              text: memoText,
+              fontSize: editMemoFontSize,
+            },
+            color: drawColor,
+          };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+      setMemoText('Notiz');
+      setShowEditMemoModal(false);
     }
   };
 
@@ -2429,6 +2505,74 @@ export default function DrawSketchScreen() {
                 </SvgText>
               </G>
             )}
+            {isSelected && renderTransformHandles(element)}
+          </G>
+        );
+      
+      case 'memo':
+        // Memo/Notiz: Roter Ankerpunkt mit gestrichelter Linie zu Textlabel (wie in Flächenberechnung)
+        const memoX1 = element.data.x1; // Ankerpunkt
+        const memoY1 = element.data.y1;
+        const memoX2 = element.data.x2; // Textlabel Position
+        const memoY2 = element.data.y2;
+        const memoTextContent = element.data.text || 'Notiz';
+        const memoFontSize = element.data.fontSize || 14;
+        const memoMidX = (memoX1 + memoX2) / 2;
+        const memoMidY = (memoY1 + memoY2) / 2;
+        
+        // Berechne Textbreite für das Label
+        const memoLabelWidth = Math.max(60, memoTextContent.length * memoFontSize * 0.6 + 20);
+        const memoLabelHeight = memoFontSize + 14;
+        
+        return (
+          <G key={element.id}>
+            {/* Gestrichelte Verbindungslinie */}
+            <Line
+              x1={memoX1}
+              y1={memoY1}
+              x2={memoX2}
+              y2={memoY2}
+              stroke={element.color}
+              strokeWidth={2}
+              strokeDasharray="6,4"
+              transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}
+            />
+            {/* Roter Ankerpunkt (gefüllter Kreis) */}
+            <Circle
+              cx={memoX1}
+              cy={memoY1}
+              r={6}
+              fill={element.color}
+              stroke={element.color}
+              strokeWidth={2}
+              transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}
+            />
+            {/* Textlabel mit Rahmen */}
+            <G transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}>
+              {/* Weißer Hintergrund mit farbigem Rahmen */}
+              <Rect
+                x={memoX2 - memoLabelWidth / 2}
+                y={memoY2 - memoLabelHeight / 2}
+                width={memoLabelWidth}
+                height={memoLabelHeight}
+                fill="white"
+                rx={4}
+                ry={4}
+                stroke={element.color}
+                strokeWidth={2}
+              />
+              {/* Text im Label */}
+              <SvgText
+                x={memoX2}
+                y={memoY2 + memoFontSize / 3}
+                fill={element.color}
+                fontSize={memoFontSize}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {memoTextContent}
+              </SvgText>
+            </G>
             {isSelected && renderTransformHandles(element)}
           </G>
         );
@@ -3408,23 +3552,42 @@ export default function DrawSketchScreen() {
                     setEditPointerStrokeWidth(selectedEl.strokeWidth || 6);
                     setDrawColor(selectedEl.color);
                     setShowEditPointerModal(true);
+                  } else if (selectedEl?.type === 'memo') {
+                    setMemoText(selectedEl.data.text || 'Notiz');
+                    setEditMemoFontSize(selectedEl.data.fontSize || 14);
+                    setDrawColor(selectedEl.color);
+                    setShowEditMemoModal(true);
                   }
                 }
               }}
-              disabled={!selectedElementId || !['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
+              disabled={!selectedElementId || !['text', 'arrow', 'pointer', 'memo'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
             >
               <Ionicons 
                 name="create" 
                 size={18} 
-                color={selectedElementId && ['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
+                color={selectedElementId && ['text', 'arrow', 'pointer', 'memo'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
               />
             </TouchableOpacity>
-            {/* Notiz Button (Aufmaß) */}
+            {/* Notiz Button (Annotation Memo - wie in Flächenberechnung) */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, showMeasurementTool && { backgroundColor: '#FF5722' }]}
-              onPress={() => setShowMeasurementTool(!showMeasurementTool)}
+              style={[styles.toolButtonInner, drawMode === 'memo' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('memo')}
             >
-              <Ionicons name="chatbox-outline" size={18} color={showMeasurementTool ? '#fff' : '#FF5722'} />
+              <Ionicons name="chatbox-outline" size={18} color={drawMode === 'memo' ? '#fff' : '#E74C3C'} />
+            </TouchableOpacity>
+            {/* Notizen zur Skizze Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, notes.trim() && styles.toolButtonWithBadge]}
+              onPress={() => setShowNotesModal(true)}
+            >
+              <View style={styles.notesButtonContainer}>
+                <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
+                {notes.trim() && (
+                  <View style={styles.notesBadge}>
+                    <Ionicons name="checkmark" size={8} color="#fff" />
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
@@ -3432,6 +3595,7 @@ export default function DrawSketchScreen() {
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Text</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Editieren</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notizen</Text>
           </View>
         </View>
 
@@ -4631,6 +4795,113 @@ export default function DrawSketchScreen() {
           </ScrollView>
           {/* Numpad als floating Element INNERHALB des Modals */}
           {renderInModalNumpad()}
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Memo/Notiz Modal - Neue Notiz erstellen */}
+      <Modal visible={showMemoModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
+            <Text style={styles.modalSubtitle}>Text für die Notiz eingeben</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={memoText}
+              onChangeText={setMemoText}
+              placeholder="Notiz eingeben"
+              autoFocus
+              selectTextOnFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowMemoModal(false);
+                  setMemoText('Notiz');
+                  setPendingMemo(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addMemoElement}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Memo Modal - Bestehende Notiz bearbeiten */}
+      <Modal visible={showEditMemoModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Notiz bearbeiten</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={memoText}
+              onChangeText={setMemoText}
+              placeholder="Notiz eingeben"
+              multiline
+            />
+            {/* Font Size Slider */}
+            <View style={styles.sliderContainer}>
+              <Text style={styles.modalLabel}>Schriftgröße: {editMemoFontSize}px</Text>
+              <View style={styles.sliderRow}>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditMemoFontSize(Math.max(10, editMemoFontSize - 2))}
+                >
+                  <Text style={styles.sliderButtonText}>-</Text>
+                </TouchableOpacity>
+                <View style={styles.sliderTrack}>
+                  <View style={[styles.sliderFill, { width: `${((editMemoFontSize - 10) / 30) * 100}%` }]} />
+                </View>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditMemoFontSize(Math.min(40, editMemoFontSize + 2))}
+                >
+                  <Text style={styles.sliderButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {/* Color Selection */}
+            <View style={styles.colorSelectionContainer}>
+              <Text style={styles.modalLabel}>Farbe:</Text>
+              <View style={styles.colorOptions}>
+                {['#E74C3C', '#333333', '#2196f3', '#4caf50', '#FF9800', '#9C27B0'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      drawColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setDrawColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowEditMemoModal(false);
+                  setMemoText('Notiz');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updateMemoElement}
+              >
+                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 

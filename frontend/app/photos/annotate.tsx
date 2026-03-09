@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,102 +8,22 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  Platform,
-  TextInput,
-  KeyboardAvoidingView,
-  BackHandler,
+  PanResponder,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, G } from 'react-native-svg';
+import Svg, { Path, G, Circle } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
-import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-// File system import removed - using simpler export method
 
-// API_URL removed - using local storage now
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-import { Circle } from 'react-native-svg';
-
-// Component for the current drawing stroke (shows line while drawing)
-const CurrentStroke = memo(({ path, color, strokeWidth }: { path: string; color: string; strokeWidth: number }) => {
-  if (!path || path.length === 0) return null;
-  return (
-    <Path
-      d={path}
-      stroke={color}
-      strokeWidth={strokeWidth}
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity={0.7}
-    />
-  );
-});
-
-// Memoized component for saved paths
-const SavedPaths = memo(({ 
-  paths, 
-  editMode, 
-  selectedPathIndex, 
-  isDragging, 
-  dragPreviewOffset 
-}: { 
-  paths: DrawPath[]; 
-  editMode: boolean; 
-  selectedPathIndex: number | null;
-  isDragging: boolean;
-  dragPreviewOffset: { x: number; y: number };
-}) => {
-  return (
-    <>
-      {paths.map((p, index) => {
-        const isSelected = editMode && selectedPathIndex === index;
-        const translateX = isSelected && isDragging ? dragPreviewOffset.x : 0;
-        const translateY = isSelected && isDragging ? dragPreviewOffset.y : 0;
-        
-        return (
-          <G 
-            key={index} 
-            transform={`translate(${translateX}, ${translateY})`}
-          >
-            {isSelected && p.bounds && (
-              <Path
-                d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
-                    L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
-                    L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
-                    L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
-                stroke="#FF9800"
-                strokeWidth={2}
-                strokeDasharray="6,4"
-                fill="rgba(255, 152, 0, 0.15)"
-              />
-            )}
-            <Path
-              d={p.path}
-              stroke={p.color}
-              strokeWidth={p.strokeWidth}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
-            />
-          </G>
-        );
-      })}
-    </>
-  );
-});
-
+// Types
 interface DrawPath {
   path: string;
   color: string;
   strokeWidth: number;
-  // Bounding box for selection
   bounds?: {
     minX: number;
     minY: number;
@@ -112,62 +32,60 @@ interface DrawPath {
   };
 }
 
-// PDF-Größen Optionen
+// PDF Size Options
 const PDF_SIZES = [
-  { value: 'small', label: 'Klein', icon: 'apps-outline', description: '3 pro Zeile' },
-  { value: 'medium', label: 'Mittel', icon: 'grid-outline', description: '2 pro Zeile' },
-  { value: 'large', label: 'Groß', icon: 'square-outline', description: '1 pro Zeile' },
+  { value: 'small', label: 'Klein', icon: 'apps-outline' },
+  { value: 'medium', label: 'Mittel', icon: 'grid-outline' },
+  { value: 'large', label: 'Groß', icon: 'square-outline' },
 ];
+
+// Colors
+const COLORS = [
+  { color: '#FF0000', name: 'Rot' },
+  { color: '#00FF00', name: 'Grün' },
+  { color: '#0000FF', name: 'Blau' },
+  { color: '#FFFF00', name: 'Gelb' },
+  { color: '#FFFFFF', name: 'Weiß' },
+  { color: '#000000', name: 'Schwarz' },
+];
+
+// Stroke widths
+const STROKE_WIDTHS = [2, 4, 6, 8];
 
 export default function AnnotatePhotoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-  const canvasRef = useRef(null);
+  
+  const canvasRef = useRef<View>(null);
+  
+  // State
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [paths, setPaths] = useState<DrawPath[]>([]);
-  const [drawColor, setDrawColor] = useState('#FF0000');
-  const [strokeWidth, setStrokeWidth] = useState(3);
   const [loading, setLoading] = useState(true);
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const [paths, setPaths] = useState<DrawPath[]>([]);
+  const [currentPath, setCurrentPath] = useState<string>('');
+  const [drawColor, setDrawColor] = useState('#FF0000');
+  const [strokeWidth, setStrokeWidth] = useState(4);
   const [pdfSize, setPdfSize] = useState<string>('medium');
   const [description, setDescription] = useState<string>('');
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
   
-  // Zoom & Pan
-  const [scale, setScale] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [lastScale, setLastScale] = useState(1);
-  const [lastPanOffset, setLastPanOffset] = useState({ x: 0, y: 0 });
-  const [isZooming, setIsZooming] = useState(false);
-  
-  // Drawing mode toggle
+  // Mode
   const [drawingEnabled, setDrawingEnabled] = useState(false);
-  
-  // Edit/Select mode
   const [editMode, setEditMode] = useState(false);
   const [selectedPathIndex, setSelectedPathIndex] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragPreviewOffset, setDragPreviewOffset] = useState({ x: 0, y: 0 });
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const originalPathRef = useRef<string>('');
   
-  // Optimized drawing - only store touch position for indicator
-  const [touchPosition, setTouchPosition] = useState({ x: 0, y: 0, visible: false });
-  const currentPathRef = useRef<string>('');
-  const pointsBufferRef = useRef<{x: number, y: number}[]>([]);
-  const lastDrawPointRef = useRef({ x: 0, y: 0 });
-  const isDrawingRef = useRef(false);
-  
-  // Track if changes were made (for auto-save)
+  // Track changes
   const [hasChanges, setHasChanges] = useState(false);
   const initialPathsRef = useRef<string>('');
 
+  // Load photo on mount
   useEffect(() => {
     loadPhoto();
   }, [photoId]);
 
-  // Track changes for auto-save
+  // Track changes
   useEffect(() => {
     const currentPathsStr = JSON.stringify(paths);
     if (initialPathsRef.current && currentPathsStr !== initialPathsRef.current) {
@@ -175,12 +93,10 @@ export default function AnnotatePhotoScreen() {
     }
   }, [paths, pdfSize, description]);
 
-  // Auto-save when leaving the screen
+  // Auto-save on exit
   useFocusEffect(
     useCallback(() => {
-      // Called when screen comes into focus - do nothing
       return () => {
-        // Called when screen loses focus - auto-save if changes
         if (hasChanges && imageUri) {
           autoSave();
         }
@@ -188,15 +104,13 @@ export default function AnnotatePhotoScreen() {
     }, [hasChanges, imageUri, paths, pdfSize, description, canvasDimensions])
   );
 
-  // Silent auto-save function (no alerts)
   const autoSave = async () => {
     try {
       const annotationData = {
         paths: paths,
-        canvasWidth: canvasDimensions.width || width,
+        canvasWidth: canvasDimensions.width || SCREEN_WIDTH,
         canvasHeight: canvasDimensions.height || 400,
       };
-
       await PhotoService.update(photoId || '', {
         project_id: projectId,
         image_data: imageUri,
@@ -204,10 +118,9 @@ export default function AnnotatePhotoScreen() {
         description: description,
         pdf_size: pdfSize,
       });
-      
-      console.log('Auto-saved photo annotations');
+      console.log('Auto-saved annotations');
     } catch (error) {
-      console.error('Error auto-saving:', error);
+      console.error('Auto-save error:', error);
     }
   };
 
@@ -220,13 +133,11 @@ export default function AnnotatePhotoScreen() {
         setPdfSize(photo.pdf_size || 'medium');
         setDescription(photo.description || '');
         
-        // Load existing annotations if available
         if (photo.annotations) {
           try {
             const annotationData = JSON.parse(photo.annotations);
             if (annotationData.paths && Array.isArray(annotationData.paths)) {
               setPaths(annotationData.paths);
-              // Store initial state for change detection
               initialPathsRef.current = JSON.stringify(annotationData.paths);
             }
           } catch (e) {
@@ -244,32 +155,10 @@ export default function AnnotatePhotoScreen() {
     }
   };
 
-  // Multi-touch tracking for pinch zoom
-  const [touchCount, setTouchCount] = useState(0);
-  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  const canvasContainerRef = useRef<View>(null);
-
-  const getDistance = (touches: any[]) => {
-    if (touches.length < 2) return 0;
-    const dx = touches[0].pageX - touches[1].pageX;
-    const dy = touches[0].pageY - touches[1].pageY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const getMidpoint = (touches: any[]) => {
-    if (touches.length < 2) return { x: 0, y: 0 };
-    return {
-      x: (touches[0].pageX + touches[1].pageX) / 2,
-      y: (touches[0].pageY + touches[1].pageY) / 2,
-    };
-  };
-
-  // Calculate bounding box from SVG path string
+  // Calculate bounds for a path
   const calculateBounds = (pathString: string) => {
     const coords: { x: number; y: number }[] = [];
     const parts = pathString.split(/[ML]\s*/);
-    
     parts.forEach(part => {
       const trimmed = part.trim();
       if (trimmed) {
@@ -279,12 +168,9 @@ export default function AnnotatePhotoScreen() {
         }
       }
     });
-    
     if (coords.length === 0) return undefined;
-    
     const xs = coords.map(c => c.x);
     const ys = coords.map(c => c.y);
-    
     return {
       minX: Math.min(...xs),
       minY: Math.min(...ys),
@@ -293,24 +179,13 @@ export default function AnnotatePhotoScreen() {
     };
   };
 
-  // Translate/move a path by offset
-  const translatePath = (pathString: string, offsetX: number, offsetY: number): string => {
-    return pathString.replace(/([ML])\s*([\d.]+)\s+([\d.]+)/g, (match, cmd, x, y) => {
-      const newX = parseFloat(x) + offsetX;
-      const newY = parseFloat(y) + offsetY;
-      return `${cmd} ${newX} ${newY}`;
-    });
-  };
-
-  // Check if a point is near a path (for selection)
+  // Find path at touch point
   const findPathAtPoint = (x: number, y: number): number | null => {
-    const threshold = 30; // Pixel tolerance for selection
-    
+    const threshold = 30;
     for (let i = paths.length - 1; i >= 0; i--) {
       const path = paths[i];
       if (path.bounds) {
         const { minX, minY, maxX, maxY } = path.bounds;
-        // Expand bounds by threshold for easier selection
         if (x >= minX - threshold && x <= maxX + threshold &&
             y >= minY - threshold && y <= maxY + threshold) {
           return i;
@@ -320,139 +195,136 @@ export default function AnnotatePhotoScreen() {
     return null;
   };
 
-  // Delete selected path
-  const deleteSelectedPath = () => {
+  // PanResponder for drawing
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => drawingEnabled || editMode,
+      onMoveShouldSetPanResponder: () => drawingEnabled || editMode,
+      onPanResponderGrant: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        
+        if (editMode) {
+          const pathIndex = findPathAtPoint(locationX, locationY);
+          setSelectedPathIndex(pathIndex);
+        } else if (drawingEnabled) {
+          setCurrentPath(`M ${locationX} ${locationY}`);
+        }
+      },
+      onPanResponderMove: (evt) => {
+        const { locationX, locationY } = evt.nativeEvent;
+        
+        if (drawingEnabled && currentPath) {
+          setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (drawingEnabled && currentPath) {
+          const bounds = calculateBounds(currentPath);
+          const newPath: DrawPath = {
+            path: currentPath,
+            color: drawColor,
+            strokeWidth: strokeWidth,
+            bounds,
+          };
+          setPaths(prev => [...prev, newPath]);
+          setCurrentPath('');
+          setHasChanges(true);
+        }
+      },
+    })
+  ).current;
+
+  // Update panResponder when mode changes
+  useEffect(() => {
+    panResponder.panHandlers.onStartShouldSetPanResponder = () => drawingEnabled || editMode;
+    panResponder.panHandlers.onMoveShouldSetPanResponder = () => drawingEnabled || editMode;
+  }, [drawingEnabled, editMode]);
+
+  const undo = () => {
+    if (paths.length > 0) {
+      setPaths(paths.slice(0, -1));
+      setHasChanges(true);
+    }
+  };
+
+  const deleteSelected = () => {
     if (selectedPathIndex !== null) {
-      const newPaths = paths.filter((_, index) => index !== selectedPathIndex);
-      setPaths(newPaths);
+      setPaths(paths.filter((_, i) => i !== selectedPathIndex));
       setSelectedPathIndex(null);
       setHasChanges(true);
     }
   };
 
-  const undo = () => {
-    if (paths.length > 0) {
-      setPaths(paths.slice(0, -1));
-    }
-  };
-
-  const clear = () => {
-    Alert.alert(
-      'Alle löschen',
-      'Möchten Sie alle Zeichnungen löschen?',
-      [
-        { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Löschen', onPress: () => setPaths([]) },
-      ]
-    );
+  const clearAll = () => {
+    Alert.alert('Alle löschen', 'Alle Zeichnungen löschen?', [
+      { text: 'Abbrechen', style: 'cancel' },
+      { text: 'Löschen', onPress: () => { setPaths([]); setHasChanges(true); } },
+    ]);
   };
 
   const save = async () => {
     try {
       setLoading(true);
-      
-      // Create annotation data with actual canvas dimensions for proper scaling in PDF
       const annotationData = {
         paths: paths,
-        canvasWidth: canvasDimensions.width || width, // Use measured dimensions
-        canvasHeight: canvasDimensions.height || 400, // Fallback to reasonable default
+        canvasWidth: canvasDimensions.width || SCREEN_WIDTH,
+        canvasHeight: canvasDimensions.height || 400,
       };
-
-      // Update photo with annotations and PDF size
       await PhotoService.update(photoId || '', {
         project_id: projectId,
-        image_data: imageUri, // Keep original image
+        image_data: imageUri,
         annotations: JSON.stringify(annotationData),
         description: description,
         pdf_size: pdfSize,
       });
-
       Alert.alert('Erfolg', 'Foto wurde gespeichert', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
-      console.error('Error saving annotated photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+      console.error('Save error:', error);
+      Alert.alert('Fehler', 'Speichern fehlgeschlagen');
     } finally {
       setLoading(false);
     }
   };
 
-  // Foto in der Galerie speichern über Share
   const saveToGallery = async () => {
     try {
       setLoading(true);
-
-      // Wenn Annotationen vorhanden sind, Screenshot des Canvas machen
-      let fileUri: string;
+      let fileUri: string | null = null;
       
       if (paths.length > 0 && canvasRef.current) {
-        try {
-          fileUri = await captureRef(canvasRef, {
-            format: 'png',
-            quality: 1,
-          });
-        } catch (captureError) {
-          console.error('Error capturing canvas:', captureError);
-          // Fallback: Originalbild verwenden
-          fileUri = await saveBase64ToFile();
-        }
-      } else {
-        // Keine Annotationen, Originalbild verwenden
-        fileUri = await saveBase64ToFile();
+        fileUri = await captureRef(canvasRef, { format: 'png', quality: 1 });
       }
-
-      // Nutze die native Share-Funktion - dort kann man "Bild sichern" wählen
+      
       const canShare = await Sharing.isAvailableAsync();
-      if (canShare && fileUri) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'image/jpeg',
-          dialogTitle: 'Foto speichern oder teilen',
-          UTI: 'public.jpeg',
+      if (canShare && (fileUri || imageUri)) {
+        await Sharing.shareAsync(fileUri || imageUri!, {
+          mimeType: 'image/png',
+          dialogTitle: 'Foto speichern',
         });
       } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
+        Alert.alert('Fehler', 'Teilen nicht verfügbar');
       }
     } catch (error) {
-      console.error('Error saving to gallery:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden: ' + (error as Error).message);
+      console.error('Gallery save error:', error);
+      Alert.alert('Fehler', 'Speichern fehlgeschlagen');
     } finally {
       setLoading(false);
     }
   };
 
-  // Hilfsfunktion: Base64 in temporäre Datei speichern
-  const saveBase64ToFile = async (): Promise<string> => {
-    if (!imageUri) throw new Error('Kein Bild vorhanden');
-    
-    const base64Data = imageUri.includes(',') 
-      ? imageUri.split(',')[1] 
-      : imageUri;
-    
-    const filename = `aufmass_foto_${Date.now()}.jpg`;
-    const file = new File(Paths.cache, filename);
-    
-    // Konvertiere Base64 zu Uint8Array
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    // Schreibe die Datei mit der neuen API
-    await file.write(bytes);
-    
-    return file.uri;
+  const toggleDrawingMode = () => {
+    setDrawingEnabled(!drawingEnabled);
+    setEditMode(false);
+    setSelectedPathIndex(null);
   };
 
-  const colors = [
-    { color: '#FF0000', name: 'Rot' },
-    { color: '#00FF00', name: 'Grün' },
-    { color: '#0000FF', name: 'Blau' },
-    { color: '#FFFF00', name: 'Gelb' },
-    { color: '#FFFFFF', name: 'Weiß' },
-    { color: '#000000', name: 'Schwarz' },
-  ];
+  const toggleEditMode = () => {
+    setEditMode(!editMode);
+    setDrawingEnabled(false);
+    setSelectedPathIndex(null);
+  };
 
   if (loading || !imageUri) {
     return (
@@ -464,330 +336,159 @@ export default function AnnotatePhotoScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Kompakte Toolbar - eine Zeile: PDF-Größe links, Farben/Stärke/Zeichnen rechts */}
-      <View style={styles.compactToolbar}>
-        {/* Linke Seite: PDF-Größe */}
-        <View style={styles.pdfSizeRow}>
+      {/* Toolbar */}
+      <View style={styles.toolbar}>
+        {/* PDF Size */}
+        <View style={styles.toolGroup}>
           {PDF_SIZES.map((size) => (
             <TouchableOpacity
               key={size.value}
-              style={[
-                styles.pdfSizeButtonSmall,
-                pdfSize === size.value && styles.pdfSizeButtonSmallActive,
-              ]}
+              style={[styles.toolBtn, pdfSize === size.value && styles.toolBtnActive]}
               onPress={() => { setPdfSize(size.value); setHasChanges(true); }}
             >
-              <Ionicons 
-                name={size.icon as any} 
-                size={16} 
-                color={pdfSize === size.value ? '#fff' : '#1976d2'} 
-              />
-              <Text style={[
-                styles.pdfSizeTextSmall,
-                pdfSize === size.value && styles.pdfSizeTextSmallActive,
-              ]}>
-                {size.label}
-              </Text>
+              <Ionicons name={size.icon as any} size={18} color={pdfSize === size.value ? '#fff' : '#1976d2'} />
             </TouchableOpacity>
           ))}
         </View>
-        
-        {/* Rechte Seite: Farben, Strichstärke, Modus-Buttons */}
-        <View style={styles.rightToolsRow}>
-          {/* Farben - nur wenn im Zeichenmodus */}
-          {drawingEnabled && (
-            <View style={styles.colorsRow}>
-              {colors.map((c) => (
-                <TouchableOpacity
-                  key={c.color}
-                  style={[
-                    styles.colorButtonSmall,
-                    { backgroundColor: c.color },
-                    drawColor === c.color && styles.colorButtonSmallActive,
-                  ]}
-                  onPress={() => setDrawColor(c.color)}
-                />
-              ))}
-            </View>
-          )}
-          
-          {/* Strichstärke - nur wenn im Zeichenmodus */}
-          {drawingEnabled && (
-            <View style={styles.strokeRow}>
-              {[2, 4, 6, 8].map((sw) => (
-                <TouchableOpacity
-                  key={sw}
-                  style={[
-                    styles.strokeButton,
-                    strokeWidth === sw && styles.strokeButtonActive,
-                  ]}
-                  onPress={() => setStrokeWidth(sw)}
-                >
-                  <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          
-          {/* Bearbeiten-Modus Toggle */}
-          <TouchableOpacity 
-            style={[styles.editToggleButton, editMode && styles.editToggleButtonActive]} 
-            onPress={() => {
-              setEditMode(!editMode);
-              if (!editMode) {
-                setDrawingEnabled(false);
-                setSelectedPathIndex(null);
-              }
-            }}
+
+        {/* Colors (when drawing) */}
+        {drawingEnabled && (
+          <View style={styles.toolGroup}>
+            {COLORS.slice(0, 4).map((c) => (
+              <TouchableOpacity
+                key={c.color}
+                style={[styles.colorBtn, { backgroundColor: c.color }, drawColor === c.color && styles.colorBtnActive]}
+                onPress={() => setDrawColor(c.color)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Stroke Width (when drawing) */}
+        {drawingEnabled && (
+          <View style={styles.toolGroup}>
+            {STROKE_WIDTHS.slice(0, 3).map((sw) => (
+              <TouchableOpacity
+                key={sw}
+                style={[styles.strokeBtn, strokeWidth === sw && styles.strokeBtnActive]}
+                onPress={() => setStrokeWidth(sw)}
+              >
+                <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Mode Buttons */}
+        <View style={styles.toolGroup}>
+          <TouchableOpacity
+            style={[styles.modeBtn, drawingEnabled && styles.modeBtnActive]}
+            onPress={toggleDrawingMode}
           >
-            <Ionicons name={editMode ? "move" : "move-outline"} size={18} color={editMode ? '#fff' : '#FF9800'} />
-            <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
-              Bearb.
-            </Text>
+            <Ionicons name="pencil" size={20} color={drawingEnabled ? '#fff' : '#1976d2'} />
           </TouchableOpacity>
-          
-          {/* Zeichnen Toggle */}
-          <TouchableOpacity 
-            style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
-            onPress={() => {
-              setDrawingEnabled(!drawingEnabled);
-              if (!drawingEnabled) {
-                setEditMode(false);
-                setSelectedPathIndex(null);
-              }
-            }}
+          <TouchableOpacity
+            style={[styles.modeBtn, editMode && styles.modeBtnActive]}
+            onPress={toggleEditMode}
           >
-            <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={18} color={drawingEnabled ? '#fff' : '#4CAF50'} />
-            <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
-              Zeichn.
-            </Text>
+            <Ionicons name="move" size={20} color={editMode ? '#fff' : '#FF9800'} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Info-Zeile wenn im Bearbeitungsmodus */}
-      {editMode && (
-        <View style={styles.editModeInfo}>
-          <Ionicons name="information-circle-outline" size={16} color="#FF9800" />
-          <Text style={styles.editModeInfoText}>
-            {selectedPathIndex !== null 
-              ? `Element ${selectedPathIndex + 1} ausgewählt - Ziehen zum Verschieben`
-              : 'Tippen Sie auf eine Zeichnung zum Auswählen'}
-          </Text>
-          {selectedPathIndex !== null && (
-            <TouchableOpacity style={styles.deleteSelectedButton} onPress={deleteSelectedPath}>
-              <Ionicons name="trash-outline" size={18} color="#fff" />
-              <Text style={styles.deleteSelectedText}>Löschen</Text>
-            </TouchableOpacity>
-          )}
+      {/* Edit Mode Actions */}
+      {editMode && selectedPathIndex !== null && (
+        <View style={styles.editActions}>
+          <TouchableOpacity style={styles.deleteBtn} onPress={deleteSelected}>
+            <Ionicons name="trash" size={20} color="#fff" />
+            <Text style={styles.deleteBtnText}>Löschen</Text>
+          </TouchableOpacity>
         </View>
       )}
 
-      {/* Zweite Toolbar-Zeile: Aktionen */}
-      <View style={styles.actionsToolbar}>
-        <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || paths.length === 0}>
-          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && paths.length > 0 ? '#1976d2' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Rückgängig</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || paths.length === 0}>
-          <Ionicons name="trash-outline" size={20} color={drawingEnabled && paths.length > 0 ? '#f44336' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Löschen</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.deletePhotoButton]} 
-          onPress={() => {
-            Alert.alert(
-              'Foto löschen',
-              'Möchten Sie dieses Foto komplett löschen?',
-              [
-                { text: 'Abbrechen', style: 'cancel' },
-                {
-                  text: 'Löschen',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await PhotoService.delete(photoId || '');
-                      Alert.alert('Erfolg', 'Foto wurde gelöscht', [
-                        { text: 'OK', onPress: () => router.back() },
-                      ]);
-                    } catch (error) {
-                      console.error('Error deleting photo:', error);
-                      Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
-                    }
-                  },
-                },
-              ]
-            );
+      {/* Canvas */}
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        <View 
+          ref={canvasRef}
+          style={styles.canvasContainer}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasDimensions({ width, height });
           }}
+          {...panResponder.panHandlers}
         >
-          <Ionicons name="trash" size={20} color="#fff" />
-          <Text style={[styles.actionText, { color: '#fff' }]}>Foto löschen</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={save}>
-          <Ionicons name="checkmark-circle" size={20} color="#fff" />
-          <Text style={[styles.actionText, { color: '#fff' }]}>Speichern</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Beschreibung Eingabefeld */}
-      <View style={styles.descriptionContainer}>
-        <Text style={styles.descriptionLabel}>Beschreibung:</Text>
-        <TextInput
-          style={styles.descriptionInput}
-          value={description}
-          onChangeText={(text) => { setDescription(text); setHasChanges(true); }}
-          placeholder="Beschreibung zum Foto eingeben..."
-          placeholderTextColor="#999"
-          multiline={false}
-          returnKeyType="done"
-        />
-      </View>
-
-      <ScrollView 
-        style={styles.canvasContainer}
-        contentContainerStyle={{ flexGrow: 1 }}
-        ref={canvasRef as any}
-        minimumZoomScale={0.5}
-        maximumZoomScale={4}
-        bouncesZoom={!drawingEnabled && !editMode}
-        scrollEnabled={!drawingEnabled && !editMode}
-        pinchGestureEnabled={!drawingEnabled && !editMode}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        onLayout={(event) => {
-          const { width, height } = event.nativeEvent.layout;
-          setCanvasDimensions({ width, height });
-        }}
-      >
-        <View style={{ flex: 1 }}>
-          <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
-          <View
-            style={styles.svgContainer}
-            onStartShouldSetResponder={() => drawingEnabled || editMode}
-            onMoveShouldSetResponder={() => drawingEnabled || (editMode && isDragging)}
-            onResponderGrant={(event) => {
-              const touch = event.nativeEvent;
-              const x = Math.round(touch.locationX);
-              const y = Math.round(touch.locationY);
-              
-              if (editMode) {
-                const foundIndex = findPathAtPoint(x, y);
-                if (foundIndex !== null) {
-                  setSelectedPathIndex(foundIndex);
-                  setIsDragging(true);
-                  dragStartRef.current = { x, y };
-                  setDragPreviewOffset({ x: 0, y: 0 });
-                  originalPathRef.current = paths[foundIndex].path;
-                } else {
-                  setSelectedPathIndex(null);
-                }
-                return;
-              }
-              
-              if (drawingEnabled) {
-                // Start drawing - only use refs, no state updates during drawing
-                isDrawingRef.current = true;
-                lastDrawPointRef.current = { x, y };
-                pointsBufferRef.current = [{ x, y }];
-                currentPathRef.current = `M ${x} ${y}`;
-                // Show touch indicator
-                setTouchPosition({ x, y, visible: true });
-              }
-            }}
-            onResponderMove={(event) => {
-              const touch = event.nativeEvent;
-              const x = Math.round(touch.locationX);
-              const y = Math.round(touch.locationY);
-              
-              if (editMode && isDragging && selectedPathIndex !== null) {
-                const deltaX = x - dragStartRef.current.x;
-                const deltaY = y - dragStartRef.current.y;
-                setDragPreviewOffset({ x: deltaX, y: deltaY });
-                return;
-              }
-              
-              if (drawingEnabled && isDrawingRef.current) {
-                const lastPoint = lastDrawPointRef.current;
-                const dx = x - lastPoint.x;
-                const dy = y - lastPoint.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // Sammle Punkte nur wenn Abstand > 3px
-                if (distance > 3) {
-                  lastDrawPointRef.current = { x, y };
-                  pointsBufferRef.current.push({ x, y });
-                  currentPathRef.current += ` L ${x} ${y}`;
-                  // Update nur den Touch-Indikator (sehr leicht)
-                  setTouchPosition({ x, y, visible: true });
-                }
-              }
-            }}
-            onResponderRelease={() => {
-              if (editMode && isDragging && selectedPathIndex !== null) {
-                const { x: deltaX, y: deltaY } = dragPreviewOffset;
-                
-                if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-                  const newPaths = [...paths];
-                  const selectedPath = newPaths[selectedPathIndex];
-                  
-                  const newPathString = translatePath(originalPathRef.current, deltaX, deltaY);
-                  const newBounds = calculateBounds(newPathString);
-                  
-                  newPaths[selectedPathIndex] = {
-                    ...selectedPath,
-                    path: newPathString,
-                    bounds: newBounds,
-                  };
-                  
-                  setPaths(newPaths);
-                  setHasChanges(true);
-                }
-                
-                setIsDragging(false);
-                setDragPreviewOffset({ x: 0, y: 0 });
-                return;
-              }
-              
-              if (drawingEnabled && isDrawingRef.current) {
-                isDrawingRef.current = false;
-                setTouchPosition({ x: 0, y: 0, visible: false });
-                
-                // Finalize the path - this is the only heavy update
-                const finalPath = currentPathRef.current;
-                if (finalPath && pointsBufferRef.current.length > 2) {
-                  const bounds = calculateBounds(finalPath);
-                  setPaths(prev => [...prev, { path: finalPath, color: drawColor, strokeWidth, bounds }]);
-                  setHasChanges(true);
-                }
-                
-                // Reset
-                currentPathRef.current = '';
-                pointsBufferRef.current = [];
-              }
-            }}
-          >
-            <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
-              <SavedPaths 
-                paths={paths}
-                editMode={editMode}
-                selectedPathIndex={selectedPathIndex}
-                isDragging={isDragging}
-                dragPreviewOffset={dragPreviewOffset}
+          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
+          <Svg style={StyleSheet.absoluteFill}>
+            {/* Saved Paths */}
+            {paths.map((p, index) => {
+              const isSelected = editMode && selectedPathIndex === index;
+              return (
+                <G key={index}>
+                  {isSelected && p.bounds && (
+                    <Path
+                      d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
+                          L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
+                          L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
+                          L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
+                      stroke="#FF9800"
+                      strokeWidth={2}
+                      strokeDasharray="6,4"
+                      fill="rgba(255, 152, 0, 0.15)"
+                    />
+                  )}
+                  <Path
+                    d={p.path}
+                    stroke={p.color}
+                    strokeWidth={p.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
+                  />
+                </G>
+              );
+            })}
+            {/* Current Drawing Path */}
+            {currentPath ? (
+              <Path
+                d={currentPath}
+                stroke={drawColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={0.8}
               />
-              {/* Touch indicator - shows where user is touching */}
-              {touchPosition.visible && (
-                <Circle
-                  cx={touchPosition.x}
-                  cy={touchPosition.y}
-                  r={8}
-                  fill={drawColor}
-                  opacity={0.5}
-                />
-              )}
-            </Svg>
-          </View>
+            ) : null}
+          </Svg>
+          
+          {/* Mode indicator overlay */}
+          {(drawingEnabled || editMode) && (
+            <View style={styles.modeIndicator}>
+              <Text style={styles.modeIndicatorText}>
+                {drawingEnabled ? 'Zeichnen aktiv' : 'Bearbeiten aktiv'}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Bottom Actions */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity style={styles.actionBtn} onPress={undo} disabled={paths.length === 0}>
+          <Ionicons name="arrow-undo" size={22} color={paths.length > 0 ? '#1976d2' : '#ccc'} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={clearAll} disabled={paths.length === 0}>
+          <Ionicons name="trash-outline" size={22} color={paths.length > 0 ? '#f44336' : '#ccc'} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={saveToGallery}>
+          <Ionicons name="download-outline" size={22} color="#4CAF50" />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]} onPress={save}>
+          <Ionicons name="checkmark" size={24} color="#fff" />
+          <Text style={styles.saveBtnText}>Speichern</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -795,313 +496,145 @@ export default function AnnotatePhotoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#f5f5f5',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Kompakte erste Toolbar-Zeile
-  compactToolbar: {
+  toolbar: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  // PDF-Größe links
-  pdfSizeRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  pdfSizeButtonSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  pdfSizeButtonSmallActive: {
-    backgroundColor: '#1976d2',
-    borderColor: '#1565c0',
-  },
-  pdfSizeTextSmall: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#1976d2',
-  },
-  pdfSizeTextSmallActive: {
-    color: '#fff',
-  },
-  // Rechte Seite: Farben, Stärke, Zeichnen
-  rightToolsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  colorsRow: {
+  toolGroup: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
-  colorButtonSmall: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  toolBtn: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+  },
+  toolBtnActive: {
+    backgroundColor: '#1976d2',
+  },
+  colorBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: '#ddd',
   },
-  colorButtonSmallActive: {
-    borderWidth: 3,
+  colorBtnActive: {
     borderColor: '#1976d2',
+    borderWidth: 3,
   },
-  strokeRow: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  strokeButton: {
-    width: 28,
-    height: 24,
+  strokeBtn: {
+    width: 36,
+    height: 28,
     borderRadius: 4,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
   },
-  strokeButtonActive: {
+  strokeBtnActive: {
     backgroundColor: '#1976d2',
-    borderColor: '#1565c0',
   },
   strokePreview: {
-    width: 14,
+    width: 20,
     borderRadius: 2,
   },
-  drawToggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    gap: 3,
-  },
-  drawToggleButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#388E3C',
-  },
-  drawToggleText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4CAF50',
-  },
-  drawToggleTextActive: {
-    color: '#fff',
-  },
-  // Bearbeiten-Modus Button
-  editToggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 2,
-    borderColor: '#FF9800',
-    gap: 3,
-  },
-  editToggleButtonActive: {
-    backgroundColor: '#FF9800',
-    borderColor: '#F57C00',
-  },
-  editToggleText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FF9800',
-  },
-  editToggleTextActive: {
-    color: '#fff',
-  },
-  // Bearbeitungsmodus Info-Zeile
-  editModeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFE0B2',
-  },
-  editModeInfoText: {
-    flex: 1,
-    fontSize: 11,
-    color: '#E65100',
-  },
-  deleteSelectedButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f44336',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    gap: 4,
-  },
-  deleteSelectedText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  // Zweite Toolbar-Zeile: Aktionen
-  actionsToolbar: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: '#f5f5f5',
-    gap: 4,
-  },
-  actionText: {
-    fontSize: 11,
-    color: '#333',
-  },
-  deletePhotoButton: {
-    backgroundColor: '#f44336',
-  },
-  saveButton: {
-    backgroundColor: '#4caf50',
-    marginLeft: 'auto',
-  },
-  // Alte Styles für Kompatibilität
-  colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#ddd',
-  },
-  colorButtonActive: {
-    borderWidth: 4,
-    borderColor: '#1976d2',
-  },
-  // Reset Zoom Button
-  resetZoomButton: {
-    position: 'absolute',
-    bottom: 250,
-    right: 10,
+  modeBtn: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 8,
-    zIndex: 100,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
   },
-  // PDF-Größen Auswahl Styles
-  pdfSizeContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+  modeBtnActive: {
+    backgroundColor: '#1976d2',
   },
-  pdfSizeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 6,
-  },
-  pdfSizeScroll: {
-    flexGrow: 0,
-  },
-  pdfSizeButton: {
+  editActions: {
+    backgroundColor: '#FF9800',
+    padding: 8,
     alignItems: 'center',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f44336',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginRight: 8,
-    minWidth: 80,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  pdfSizeButtonActive: {
-    backgroundColor: '#1976d2',
-    borderColor: '#1565c0',
-  },
-  pdfSizeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1976d2',
-    marginTop: 4,
-  },
-  pdfSizeTextActive: {
-    color: '#fff',
-  },
-  pdfSizeDesc: {
-    fontSize: 10,
-    color: '#888',
-    marginTop: 2,
-  },
-  pdfSizeDescActive: {
-    color: '#e3f2fd',
-  },
-  // Beschreibung Styles
-  descriptionContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 6,
     gap: 8,
   },
-  descriptionLabel: {
-    fontSize: 12,
+  deleteBtnText: {
+    color: '#fff',
     fontWeight: '600',
-    color: '#666',
   },
-  descriptionInput: {
+  scrollContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   canvasContainer: {
     flex: 1,
+    minHeight: 400,
+    backgroundColor: '#000',
     position: 'relative',
   },
-  backgroundImage: {
+  image: {
     width: '100%',
     height: '100%',
+  },
+  modeIndicator: {
     position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
   },
-  svgContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+  modeIndicatorText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  canvas: {
-    flex: 1,
+  bottomBar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  actionBtn: {
+    padding: 10,
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  saveBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

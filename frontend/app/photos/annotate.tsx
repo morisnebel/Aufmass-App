@@ -31,6 +31,13 @@ interface DrawPath {
   path: string;
   color: string;
   strokeWidth: number;
+  // Bounding box for selection
+  bounds?: {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  };
 }
 
 // PDF-Größen Optionen
@@ -65,6 +72,12 @@ export default function AnnotatePhotoScreen() {
   
   // Drawing mode toggle
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  
+  // Edit/Select mode
+  const [editMode, setEditMode] = useState(false);
+  const [selectedPathIndex, setSelectedPathIndex] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
@@ -224,11 +237,78 @@ export default function AnnotatePhotoScreen() {
     }
     
     if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming && drawingEnabled) {
-      setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
+      // Calculate bounding box for the new path
+      const bounds = calculateBounds(currentPath);
+      setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
       setCurrentPath('');
     }
     
     setTouchCount(touches.length);
+  };
+
+  // Calculate bounding box from SVG path string
+  const calculateBounds = (pathString: string) => {
+    const coords: { x: number; y: number }[] = [];
+    const parts = pathString.split(/[ML]\s*/);
+    
+    parts.forEach(part => {
+      const trimmed = part.trim();
+      if (trimmed) {
+        const [x, y] = trimmed.split(/\s+/).map(Number);
+        if (!isNaN(x) && !isNaN(y)) {
+          coords.push({ x, y });
+        }
+      }
+    });
+    
+    if (coords.length === 0) return undefined;
+    
+    const xs = coords.map(c => c.x);
+    const ys = coords.map(c => c.y);
+    
+    return {
+      minX: Math.min(...xs),
+      minY: Math.min(...ys),
+      maxX: Math.max(...xs),
+      maxY: Math.max(...ys),
+    };
+  };
+
+  // Translate/move a path by offset
+  const translatePath = (pathString: string, offsetX: number, offsetY: number): string => {
+    return pathString.replace(/([ML])\s*([\d.]+)\s+([\d.]+)/g, (match, cmd, x, y) => {
+      const newX = parseFloat(x) + offsetX;
+      const newY = parseFloat(y) + offsetY;
+      return `${cmd} ${newX} ${newY}`;
+    });
+  };
+
+  // Check if a point is near a path (for selection)
+  const findPathAtPoint = (x: number, y: number): number | null => {
+    const threshold = 30; // Pixel tolerance for selection
+    
+    for (let i = paths.length - 1; i >= 0; i--) {
+      const path = paths[i];
+      if (path.bounds) {
+        const { minX, minY, maxX, maxY } = path.bounds;
+        // Expand bounds by threshold for easier selection
+        if (x >= minX - threshold && x <= maxX + threshold &&
+            y >= minY - threshold && y <= maxY + threshold) {
+          return i;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Delete selected path
+  const deleteSelectedPath = () => {
+    if (selectedPathIndex !== null) {
+      const newPaths = paths.filter((_, index) => index !== selectedPathIndex);
+      setPaths(newPaths);
+      setSelectedPathIndex(null);
+      setHasChanges(true);
+    }
   };
 
   const undo = () => {
@@ -393,51 +473,96 @@ export default function AnnotatePhotoScreen() {
           ))}
         </View>
         
-        {/* Rechte Seite: Farben, Strichstärke, Zeichnen Toggle */}
+        {/* Rechte Seite: Farben, Strichstärke, Modus-Buttons */}
         <View style={styles.rightToolsRow}>
-          {/* Farben */}
-          <View style={styles.colorsRow}>
-            {colors.map((c) => (
-              <TouchableOpacity
-                key={c.color}
-                style={[
-                  styles.colorButtonSmall,
-                  { backgroundColor: c.color },
-                  drawColor === c.color && styles.colorButtonSmallActive,
-                ]}
-                onPress={() => setDrawColor(c.color)}
-              />
-            ))}
-          </View>
+          {/* Farben - nur wenn im Zeichenmodus */}
+          {drawingEnabled && (
+            <View style={styles.colorsRow}>
+              {colors.map((c) => (
+                <TouchableOpacity
+                  key={c.color}
+                  style={[
+                    styles.colorButtonSmall,
+                    { backgroundColor: c.color },
+                    drawColor === c.color && styles.colorButtonSmallActive,
+                  ]}
+                  onPress={() => setDrawColor(c.color)}
+                />
+              ))}
+            </View>
+          )}
           
-          {/* Strichstärke */}
-          <View style={styles.strokeRow}>
-            {[2, 4, 6, 8].map((sw) => (
-              <TouchableOpacity
-                key={sw}
-                style={[
-                  styles.strokeButton,
-                  strokeWidth === sw && styles.strokeButtonActive,
-                ]}
-                onPress={() => setStrokeWidth(sw)}
-              >
-                <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* Strichstärke - nur wenn im Zeichenmodus */}
+          {drawingEnabled && (
+            <View style={styles.strokeRow}>
+              {[2, 4, 6, 8].map((sw) => (
+                <TouchableOpacity
+                  key={sw}
+                  style={[
+                    styles.strokeButton,
+                    strokeWidth === sw && styles.strokeButtonActive,
+                  ]}
+                  onPress={() => setStrokeWidth(sw)}
+                >
+                  <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          
+          {/* Bearbeiten-Modus Toggle */}
+          <TouchableOpacity 
+            style={[styles.editToggleButton, editMode && styles.editToggleButtonActive]} 
+            onPress={() => {
+              setEditMode(!editMode);
+              if (!editMode) {
+                setDrawingEnabled(false);
+                setSelectedPathIndex(null);
+              }
+            }}
+          >
+            <Ionicons name={editMode ? "move" : "move-outline"} size={18} color={editMode ? '#fff' : '#FF9800'} />
+            <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
+              Bearb.
+            </Text>
+          </TouchableOpacity>
           
           {/* Zeichnen Toggle */}
           <TouchableOpacity 
             style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
-            onPress={() => setDrawingEnabled(!drawingEnabled)}
+            onPress={() => {
+              setDrawingEnabled(!drawingEnabled);
+              if (!drawingEnabled) {
+                setEditMode(false);
+                setSelectedPathIndex(null);
+              }
+            }}
           >
             <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={18} color={drawingEnabled ? '#fff' : '#4CAF50'} />
             <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
-              {drawingEnabled ? 'AN' : 'AUS'}
+              Zeichn.
             </Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Info-Zeile wenn im Bearbeitungsmodus */}
+      {editMode && (
+        <View style={styles.editModeInfo}>
+          <Ionicons name="information-circle-outline" size={16} color="#FF9800" />
+          <Text style={styles.editModeInfoText}>
+            {selectedPathIndex !== null 
+              ? `Element ${selectedPathIndex + 1} ausgewählt - Ziehen zum Verschieben`
+              : 'Tippen Sie auf eine Zeichnung zum Auswählen'}
+          </Text>
+          {selectedPathIndex !== null && (
+            <TouchableOpacity style={styles.deleteSelectedButton} onPress={deleteSelectedPath}>
+              <Ionicons name="trash-outline" size={18} color="#fff" />
+              <Text style={styles.deleteSelectedText}>Löschen</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Zweite Toolbar-Zeile: Aktionen */}
       <View style={styles.actionsToolbar}>
@@ -505,9 +630,9 @@ export default function AnnotatePhotoScreen() {
         ref={canvasRef as any}
         minimumZoomScale={0.5}
         maximumZoomScale={4}
-        bouncesZoom={!drawingEnabled}
-        scrollEnabled={!drawingEnabled}
-        pinchGestureEnabled={!drawingEnabled}
+        bouncesZoom={!drawingEnabled && !editMode}
+        scrollEnabled={!drawingEnabled && !editMode}
+        pinchGestureEnabled={!drawingEnabled && !editMode}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {
@@ -519,41 +644,105 @@ export default function AnnotatePhotoScreen() {
           <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
           <View
             style={styles.svgContainer}
-            onStartShouldSetResponder={() => drawingEnabled}
-            onMoveShouldSetResponder={() => drawingEnabled}
+            onStartShouldSetResponder={() => drawingEnabled || editMode}
+            onMoveShouldSetResponder={() => drawingEnabled || (editMode && isDragging)}
             onResponderGrant={(event) => {
-              if (!drawingEnabled) return;
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
-              setCurrentPath(`M ${locationX} ${locationY}`);
+              
+              if (editMode) {
+                // Im Bearbeitungsmodus: Element auswählen oder verschieben
+                const foundIndex = findPathAtPoint(locationX, locationY);
+                if (foundIndex !== null) {
+                  setSelectedPathIndex(foundIndex);
+                  setIsDragging(true);
+                  setDragOffset({ x: locationX, y: locationY });
+                } else {
+                  setSelectedPathIndex(null);
+                }
+                return;
+              }
+              
+              if (drawingEnabled) {
+                setCurrentPath(`M ${locationX} ${locationY}`);
+              }
             }}
             onResponderMove={(event) => {
-              if (!drawingEnabled || !currentPath) return;
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
-              setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+              
+              if (editMode && isDragging && selectedPathIndex !== null) {
+                // Element verschieben
+                const deltaX = locationX - dragOffset.x;
+                const deltaY = locationY - dragOffset.y;
+                
+                if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+                  const newPaths = [...paths];
+                  const selectedPath = newPaths[selectedPathIndex];
+                  
+                  // Pfad verschieben
+                  const newPathString = translatePath(selectedPath.path, deltaX, deltaY);
+                  const newBounds = calculateBounds(newPathString);
+                  
+                  newPaths[selectedPathIndex] = {
+                    ...selectedPath,
+                    path: newPathString,
+                    bounds: newBounds,
+                  };
+                  
+                  setPaths(newPaths);
+                  setDragOffset({ x: locationX, y: locationY });
+                  setHasChanges(true);
+                }
+                return;
+              }
+              
+              if (drawingEnabled && currentPath) {
+                setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+              }
             }}
             onResponderRelease={() => {
-              if (!drawingEnabled) return;
-              if (currentPath && currentPath.length > 0) {
-                setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth }]);
+              if (editMode) {
+                setIsDragging(false);
+                return;
+              }
+              
+              if (drawingEnabled && currentPath && currentPath.length > 0) {
+                const bounds = calculateBounds(currentPath);
+                setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
                 setCurrentPath('');
+                setHasChanges(true);
               }
             }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
               {paths.map((p, index) => (
-                <Path
-                  key={index}
-                  d={p.path}
-                  stroke={p.color}
-                  strokeWidth={p.strokeWidth}
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <React.Fragment key={index}>
+                  {/* Auswahlrahmen wenn im Bearbeitungsmodus und ausgewählt */}
+                  {editMode && selectedPathIndex === index && p.bounds && (
+                    <Path
+                      d={`M ${p.bounds.minX - 5} ${p.bounds.minY - 5} 
+                          L ${p.bounds.maxX + 5} ${p.bounds.minY - 5} 
+                          L ${p.bounds.maxX + 5} ${p.bounds.maxY + 5} 
+                          L ${p.bounds.minX - 5} ${p.bounds.maxY + 5} Z`}
+                      stroke="#FF9800"
+                      strokeWidth={2}
+                      strokeDasharray="5,5"
+                      fill="rgba(255, 152, 0, 0.1)"
+                    />
+                  )}
+                  <Path
+                    d={p.path}
+                    stroke={p.color}
+                    strokeWidth={p.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={editMode && selectedPathIndex !== null && selectedPathIndex !== index ? 0.4 : 1}
+                  />
+                </React.Fragment>
               ))}
               {currentPath && currentPath.length > 0 && (
                 <Path
@@ -667,23 +856,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 16,
     backgroundColor: '#f5f5f5',
     borderWidth: 2,
     borderColor: '#4CAF50',
-    gap: 4,
+    gap: 3,
   },
   drawToggleButtonActive: {
     backgroundColor: '#4CAF50',
     borderColor: '#388E3C',
   },
   drawToggleText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#4CAF50',
   },
   drawToggleTextActive: {
+    color: '#fff',
+  },
+  // Bearbeiten-Modus Button
+  editToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#FF9800',
+    gap: 3,
+  },
+  editToggleButtonActive: {
+    backgroundColor: '#FF9800',
+    borderColor: '#F57C00',
+  },
+  editToggleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FF9800',
+  },
+  editToggleTextActive: {
+    color: '#fff',
+  },
+  // Bearbeitungsmodus Info-Zeile
+  editModeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0B2',
+  },
+  editModeInfoText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#E65100',
+  },
+  deleteSelectedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f44336',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    gap: 4,
+  },
+  deleteSelectedText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: '#fff',
   },
   // Zweite Toolbar-Zeile: Aktionen

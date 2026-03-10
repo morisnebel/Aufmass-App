@@ -3384,21 +3384,18 @@ export default function ProjectDetailScreen() {
               )}
               
               {/* Objektadresse (separate Felder) */}
-              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email) && (
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email) && (
                 <>
                   <View style={styles.sectionDivider} />
-                  <View style={styles.objektAdresseHeader}>
-                    <Text style={styles.subSectionTitle}>
-                      Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.aufmassButton}
-                      onPress={() => setActiveTab('roofs')}
-                    >
-                      <Ionicons name="resize" size={16} color="#fff" />
-                      <Text style={styles.aufmassButtonText}>Aufmaß</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={styles.subSectionTitle}>
+                    Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
+                  </Text>
+                  {project?.objekt_name && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Name:</Text>
+                      <Text style={styles.infoValue}>{project.objekt_name}</Text>
+                    </View>
+                  )}
                   <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>Straße:</Text>
                     <Text style={styles.infoValue}>{project.objekt_street || '-'}</Text>

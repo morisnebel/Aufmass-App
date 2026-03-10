@@ -3686,29 +3686,29 @@ export default function DrawSketchScreen() {
         
         {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
-            <Ionicons name="camera" size={18} color="#4caf50" />
+          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={takePhotoAndInsert}>
+            <Ionicons name="camera" size={20} color="#4caf50" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Foto</Text>
+          <Text style={styles.toolButtonLabelWide}>Foto Neu</Text>
         </View>
 
         {/* 2. Projektfotos */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
-            style={styles.toolButtonInner} 
+            style={styles.toolButtonPhotoWide} 
             onPress={loadProjectPhotos}
           >
-            <Ionicons name="folder-open" size={18} color="#1976d2" />
+            <Ionicons name="images" size={20} color="#1976d2" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Projekt</Text>
+          <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Projekt</Text>
         </View>
 
         {/* 3. Galeriefotos */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
-            <Ionicons name="image" size={18} color="#333" />
+          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={insertImage}>
+            <Ionicons name="image" size={20} color="#9C27B0" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Galerie</Text>
+          <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Galerie</Text>
         </View>
 
         {/* 4. Foto Position */}
@@ -5514,6 +5514,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 2,
+  },
+  // Breiterer Button für Foto-Tools (gleiche Größe)
+  toolButtonPhotoWide: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 50,
+    minHeight: 38,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  // Breiteres Label für Foto-Buttons (mehrzeilig)
+  toolButtonLabelWide: {
+    fontSize: 7,
+    color: '#666',
+    marginTop: 2,
+    textAlign: 'center',
+    lineHeight: 9,
+    maxWidth: 55,
   },
   toolButtonInner: {
     alignItems: 'center',

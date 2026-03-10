@@ -3765,7 +3765,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Stift</Text>
         </View>
 
-        {/* 8. Formen (Linie, Kreis, Rechteck) */}
+        {/* 8. Formen (Linie, Kreis, Rechteck) + Element löschen */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
@@ -3786,8 +3786,25 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
             </TouchableOpacity>
+            {/* Element löschen Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInnerWide, !selectedElementId && styles.toolButtonDisabled]}
+              onPress={() => {
+                if (selectedElementId) {
+                  setShowDeleteConfirm(true);
+                }
+              }}
+              disabled={!selectedElementId}
+            >
+              <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
+            </TouchableOpacity>
           </View>
-          <Text style={styles.toolButtonLabel}>Formen</Text>
+          <View style={styles.toolGroupLabelRow}>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Linie</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Kreis</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Rechteck</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1.4, textAlign: 'center' }]}>Element{'\n'}löschen</Text>
+          </View>
         </View>
 
         <View style={styles.separator} />
@@ -3900,185 +3917,169 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* ========== FARBEN & STRICHSTÄRKEN ========== */}
-        {/* Color picker */}
-        <TouchableOpacity style={styles.toolButton} onPress={() => setShowColorPicker(!showColorPicker)}>
-          <View style={[styles.colorPreview, { backgroundColor: drawColor }]} />
-        </TouchableOpacity>
+        {/* ========== FARBEN & STRICHSTÄRKEN (ZEICHENLEISTE) ========== */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            {/* Color picker */}
+            <TouchableOpacity style={styles.toolButtonInner} onPress={() => setShowColorPicker(!showColorPicker)}>
+              <View style={[styles.colorPreviewSmall, { backgroundColor: drawColor }]} />
+            </TouchableOpacity>
 
-        {/* Stroke width - inline */}
-        {strokeWidths.map(w => (
-          <TouchableOpacity
-            key={w}
-            style={[styles.strokeWidthButton, strokeWidth === w && styles.strokeWidthButtonActive]}
-            onPress={() => setStrokeWidth(w)}
-          >
-            <View style={[styles.strokeWidthDot, { width: w * 1.5, height: w * 1.5 }]} />
-          </TouchableOpacity>
-        ))}
-
-        <View style={styles.separator} />
-
-        {/* ========== LÖSCHEN & EBENEN ========== */}
-        {/* Delete */}
-        <TouchableOpacity
-          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
-          onPress={() => {
-            if (selectedElementId) {
-              setShowDeleteConfirm(true);
-            }
-          }}
-          disabled={!selectedElementId}
-        >
-          <Ionicons 
-            name="trash" 
-            size={18} 
-            color={selectedElementId ? '#f44336' : '#ccc'} 
-          />
-        </TouchableOpacity>
-
-        {/* Bring to front */}
-        <TouchableOpacity
-          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
-          onPress={bringToFront}
-          disabled={!selectedElementId}
-        >
-          <Ionicons name="arrow-up" size={18} color={selectedElementId ? '#4caf50' : '#ccc'} />
-        </TouchableOpacity>
-
-        {/* Send to back */}
-        <TouchableOpacity
-          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
-          onPress={sendToBack}
-          disabled={!selectedElementId}
-        >
-          <Ionicons name="arrow-down" size={18} color={selectedElementId ? '#ff9800' : '#ccc'} />
-        </TouchableOpacity>
+            {/* Stroke width - inline */}
+            {strokeWidths.map(w => (
+              <TouchableOpacity
+                key={w}
+                style={[styles.strokeWidthButtonSmall, strokeWidth === w && styles.strokeWidthButtonActive]}
+                onPress={() => setStrokeWidth(w)}
+              >
+                <View style={[styles.strokeWidthDot, { width: w * 1.5, height: w * 1.5 }]} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.toolButtonLabel}>Zeichenleiste</Text>
+        </View>
 
         <View style={styles.separator} />
 
         {/* ========== GITTER & ZOOM ========== */}
-        {/* Gitter Toggle */}
-        <TouchableOpacity 
-          style={[styles.toolButton, showGrid && !backgroundImage && styles.gridButtonActive]} 
-          onPress={() => {
-            if (!backgroundImage) {
-              setShowGrid(!showGrid);
-            }
-          }}
-          onLongPress={() => {
-            if (!backgroundImage) {
-              setShowGridSettings(!showGridSettings);
-            }
-          }}
-          disabled={!!backgroundImage}
-        >
-          <Ionicons 
-            name="grid" 
-            size={18} 
-            color={backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333')} 
-          />
-        </TouchableOpacity>
-        
-        {/* Zoom Reset Button */}
-        <TouchableOpacity
-          style={[
-            styles.toolButton, 
-            { 
-              backgroundColor: (scale >= 0.99 && scale <= 1.01) ? '#4caf50' : '#e3f2fd',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              paddingVertical: 2,
-            }
-          ]}
-          onPress={() => { 
-            if (scrollViewRef.current) {
-              scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-              (scrollViewRef.current as any).scrollResponderZoomTo?.({
-                x: 0,
-                y: 0,
-                width: width,
-                height: height - 120,
-                animated: false,
-              });
-            }
-            setScale(1); 
-            setPanOffset({ x: 0, y: 0 });
-            setScrollOffset({ x: 0, y: 0 });
-          }}
-        >
-          <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
-            {`${Math.round(scale * 100)}%`}
-          </Text>
-          <Text style={{ fontSize: 8, color: (scale >= 0.99 && scale <= 1.01) ? '#c8e6c9' : '#90caf9' }}>100%</Text>
-        </TouchableOpacity>
-        
-        {/* Zoom an/aus Toggle */}
-        <TouchableOpacity
-          style={[
-            styles.toolButton, 
-            { 
-              backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
-              borderWidth: 2,
-              borderColor: zoomMode ? '#4caf50' : '#f44336',
-            }
-          ]}
-          onPress={() => setZoomMode(!zoomMode)}
-        >
-          <View style={{ alignItems: 'center' }}>
-            <Ionicons 
-              name="search" 
-              size={16} 
-              color={zoomMode ? '#4caf50' : '#f44336'} 
-            />
-            <Text style={{ 
-              fontSize: 8, 
-              fontWeight: 'bold', 
-              color: zoomMode ? '#4caf50' : '#f44336',
-              marginTop: 1,
-            }}>
-              {zoomMode ? 'Zoom an' : 'Zoom aus'}
-            </Text>
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            {/* Gitter Toggle - größerer Button mit "Raster" Text */}
+            <TouchableOpacity 
+              style={[
+                styles.toolButtonZoomSize, 
+                showGrid && !backgroundImage && styles.gridButtonActive
+              ]} 
+              onPress={() => {
+                if (!backgroundImage) {
+                  setShowGrid(!showGrid);
+                }
+              }}
+              onLongPress={() => {
+                if (!backgroundImage) {
+                  setShowGridSettings(!showGridSettings);
+                }
+              }}
+              disabled={!!backgroundImage}
+            >
+              <Ionicons 
+                name="grid" 
+                size={16} 
+                color={backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333')} 
+              />
+              <Text style={{ 
+                fontSize: 8, 
+                fontWeight: 'bold', 
+                color: backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333'),
+                marginTop: 1,
+              }}>
+                Raster
+              </Text>
+            </TouchableOpacity>
+            
+            {/* Zoom Reset Button - größerer Button */}
+            <TouchableOpacity
+              style={[
+                styles.toolButtonZoomSize, 
+                { 
+                  backgroundColor: (scale >= 0.99 && scale <= 1.01) ? '#4caf50' : '#e3f2fd',
+                }
+              ]}
+              onPress={() => { 
+                if (scrollViewRef.current) {
+                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
+                    x: 0,
+                    y: 0,
+                    width: width,
+                    height: height - 120,
+                    animated: false,
+                  });
+                }
+                setScale(1); 
+                setPanOffset({ x: 0, y: 0 });
+                setScrollOffset({ x: 0, y: 0 });
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
+                {`${Math.round(scale * 100)}%`}
+              </Text>
+              <Text style={{ fontSize: 8, color: (scale >= 0.99 && scale <= 1.01) ? '#c8e6c9' : '#90caf9' }}>100%</Text>
+            </TouchableOpacity>
+            
+            {/* Zoom an/aus Toggle - größerer Button */}
+            <TouchableOpacity
+              style={[
+                styles.toolButtonZoomSize, 
+                { 
+                  backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
+                  borderWidth: 2,
+                  borderColor: zoomMode ? '#4caf50' : '#f44336',
+                }
+              ]}
+              onPress={() => setZoomMode(!zoomMode)}
+            >
+              <Ionicons 
+                name="search" 
+                size={16} 
+                color={zoomMode ? '#4caf50' : '#f44336'} 
+              />
+              <Text style={{ 
+                fontSize: 8, 
+                fontWeight: 'bold', 
+                color: zoomMode ? '#4caf50' : '#f44336',
+                marginTop: 1,
+              }}>
+                {zoomMode ? 'Zoom an' : 'Zoom aus'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
 
         <View style={styles.separator} />
 
-        {/* ========== UNDO/REDO (GANZ RECHTS) ========== */}
-        <TouchableOpacity
-          style={[styles.toolButton, !canUndo && styles.toolButtonDisabled]}
-          onPress={undo}
-          disabled={!canUndo}
-        >
-          <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.toolButton, !canRedo && styles.toolButtonDisabled]}
-          onPress={redo}
-          disabled={!canRedo}
-        >
-          <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
-        </TouchableOpacity>
+        {/* ========== UNDO/REDO ========== */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, !canUndo && styles.toolButtonDisabled]}
+              onPress={undo}
+              disabled={!canUndo}
+            >
+              <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.toolButtonInner, !canRedo && styles.toolButtonDisabled]}
+              onPress={redo}
+              disabled={!canRedo}
+            >
+              <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.toolButtonLabel}>Vor-Zurück</Text>
+        </View>
 
         <View style={styles.separator} />
 
-        {/* Alles löschen */}
-        <TouchableOpacity style={styles.toolButton} onPress={() => {
-          if (Platform.OS === 'web') {
-            if (confirm('Möchten Sie alle Elemente löschen?')) {
-              clearAll();
+        {/* ========== SEITE LÖSCHEN ========== */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonInner} onPress={() => {
+            if (Platform.OS === 'web') {
+              if (confirm('Möchten Sie alle Elemente löschen?')) {
+                clearAll();
+              }
+            } else {
+              Alert.alert('Alles löschen', 'Möchten Sie alle Elemente löschen?', [
+                { text: 'Abbrechen', style: 'cancel' },
+                { text: 'Löschen', style: 'destructive', onPress: clearAll },
+              ]);
             }
-          } else {
-            Alert.alert('Alles löschen', 'Möchten Sie alle Elemente löschen?', [
-              { text: 'Abbrechen', style: 'cancel' },
-              { text: 'Löschen', style: 'destructive', onPress: clearAll },
-            ]);
-          }
-        }}>
-          <Ionicons name="trash-bin" size={18} color="#f44336" />
-        </TouchableOpacity>
+          }}>
+            <Ionicons name="trash-bin" size={18} color="#f44336" />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: '#f44336' }]}>Seite{'\n'}löschen</Text>
+        </View>
       </View>
 
       {/* Color picker expandable */}
@@ -5533,6 +5534,36 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: 6,
     backgroundColor: '#f5f5f5',
+  },
+  // Style für Zoom-Buttons (gleichgroß wie Zoom-Toggle)
+  toolButtonZoomSize: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'column',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    minWidth: 48,
+    minHeight: 40,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  // Kleinere Color Preview für gruppierte Toolbar
+  colorPreviewSmall: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  // Kleinere Stroke Width Buttons für gruppierte Toolbar
+  strokeWidthButtonSmall: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 3,
+    backgroundColor: '#f0f0f0',
+    marginHorizontal: 1,
   },
   toolButtonLabel: {
     fontSize: 8,

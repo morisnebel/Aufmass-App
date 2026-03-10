@@ -136,8 +136,12 @@ export default function DocumentViewScreen() {
   const [editElementColor, setEditElementColor] = useState('#FF0000');
   const [editElementStrokeWidth, setEditElementStrokeWidth] = useState(3);
   const [editElementFontSize, setEditElementFontSize] = useState(16);
-  const [editNoteWidth, setEditNoteWidth] = useState(100);
-  const [editNoteHeight, setEditNoteHeight] = useState(36);
+  const [editNoteWidth, setEditNoteWidth] = useState(60);
+  const [editNoteHeight, setEditNoteHeight] = useState(24);
+  
+  // Letzte verwendete Notizgröße merken
+  const [lastNoteWidth, setLastNoteWidth] = useState(60);
+  const [lastNoteHeight, setLastNoteHeight] = useState(24);
   
   // Track undo history for better ordering
   const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
@@ -1115,8 +1119,9 @@ export default function DocumentViewScreen() {
     if (pendingPointer) {
       const newId = Date.now().toString();
       const textLength = pointerText.length;
-      const defaultNoteWidth = Math.max(textLength * 9 + 20, 100);
-      const defaultNoteHeight = 36;
+      // Verwende letzte Größe, aber mindestens so breit wie der Text
+      const minWidthForText = Math.max(textLength * 7 + 16, 50);
+      const useWidth = Math.max(lastNoteWidth, minWidthForText);
       const newShape: Shape = {
         id: newId,
         type: 'pointer',
@@ -1127,8 +1132,8 @@ export default function DocumentViewScreen() {
         color: drawColor,
         strokeWidth: 1,
         text: pointerText,
-        noteWidth: defaultNoteWidth,
-        noteHeight: defaultNoteHeight,
+        noteWidth: useWidth,
+        noteHeight: lastNoteHeight,
       };
       setShapes(prev => [...prev, newShape]);
       setUndoHistory(prev => [...prev, { type: 'shape', id: newId }]);
@@ -1482,8 +1487,10 @@ export default function DocumentViewScreen() {
     if (selectedElement.type === 'shape' || selectedElement.type === 'pointer') {
       setShapes(prev => prev.map(s => {
         if (s.id === selectedElement.id) {
-          // Für Pointer: auch Notizgröße speichern
+          // Für Pointer: auch Notizgröße speichern und letzte Größe merken
           if (s.type === 'pointer') {
+            setLastNoteWidth(editNoteWidth);
+            setLastNoteHeight(editNoteHeight);
             return { ...s, color: editElementColor, strokeWidth: editElementStrokeWidth, noteWidth: editNoteWidth, noteHeight: editNoteHeight };
           }
           return { ...s, color: editElementColor, strokeWidth: editElementStrokeWidth };

@@ -21,6 +21,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
 import { captureRef } from 'react-native-view-shot';
 import Svg, { 
@@ -308,6 +309,16 @@ export default function DrawSketchScreen() {
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
+  
+  // Zuschneiden-Modus
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImageUri, setCropImageUri] = useState<string | null>(null);
+  const [cropImageId, setCropImageId] = useState<string | null>(null);
+  const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 200 });
+  const [cropImageDimensions, setCropImageDimensions] = useState({ width: 300, height: 300 });
+  const [cropDragMode, setCropDragMode] = useState<string | null>(null);
+  const [cropDragStart, setCropDragStart] = useState({ x: 0, y: 0 });
+  const [originalCropBox, setOriginalCropBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
   // Helper-Funktion: Wechselt den Zeichenmodus und schaltet Zoom automatisch aus
   // wenn ein Zeichenwerkzeug (auch 'select' für Bearbeiten) ausgewählt wird
@@ -1217,6 +1228,102 @@ export default function DrawSketchScreen() {
         addToHistory(newElements);
       }
     }
+  };
+
+  // Zuschneiden-Modus starten
+  const startCropMode = () => {
+    const selectedEl = elements.find(el => el.id === selectedElementId);
+    if (selectedEl && selectedEl.type === 'image' && selectedEl.data?.uri) {
+      setCropImageUri(selectedEl.data.uri);
+      setCropImageId(selectedEl.id);
+      // Lade die Original-Bildgröße
+      RNImage.getSize(
+        selectedEl.data.uri,
+        (imgWidth, imgHeight) => {
+          setCropImageDimensions({ width: imgWidth, height: imgHeight });
+          // Initiale Crop-Box = 80% des Bildes, zentriert
+          const boxWidth = Math.min(imgWidth * 0.8, 280);
+          const boxHeight = Math.min(imgHeight * 0.8, 280);
+          setCropBox({
+            x: (300 - boxWidth) / 2,
+            y: (300 - boxHeight) / 2,
+            width: boxWidth,
+            height: boxHeight,
+          });
+          setShowCropModal(true);
+        },
+        (error) => {
+          console.error('Error getting image size:', error);
+          // Fallback
+          setCropImageDimensions({ width: 300, height: 300 });
+          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          setShowCropModal(true);
+        }
+      );
+    } else {
+      Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Bild aus.');
+    }
+  };
+
+  // Zuschnitt anwenden
+  const applyCrop = async () => {
+    if (!cropImageUri || !cropImageId) return;
+    
+    try {
+      // Berechne die Crop-Koordinaten relativ zur angezeigten Bildgröße im Modal
+      const displaySize = 300;
+      const scaleX = cropImageDimensions.width / displaySize;
+      const scaleY = cropImageDimensions.height / displaySize;
+      
+      const cropOriginX = Math.max(0, Math.round(cropBox.x * scaleX));
+      const cropOriginY = Math.max(0, Math.round(cropBox.y * scaleY));
+      const cropWidth = Math.round(cropBox.width * scaleX);
+      const cropHeight = Math.round(cropBox.height * scaleY);
+      
+      // Verwende ImageManipulator zum Zuschneiden
+      const result = await ImageManipulator.manipulateAsync(
+        cropImageUri,
+        [
+          {
+            crop: {
+              originX: cropOriginX,
+              originY: cropOriginY,
+              width: Math.min(cropWidth, cropImageDimensions.width - cropOriginX),
+              height: Math.min(cropHeight, cropImageDimensions.height - cropOriginY),
+            },
+          },
+        ],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      
+      // Aktualisiere das Element mit dem zugeschnittenen Bild
+      const croppedUri = `data:image/jpeg;base64,${result.base64}`;
+      const newElements = elements.map(el => {
+        if (el.id === cropImageId) {
+          return {
+            ...el,
+            data: { uri: croppedUri },
+            // Behalte Position und Größe bei
+          };
+        }
+        return el;
+      });
+      
+      addToHistory(newElements);
+      setShowCropModal(false);
+      setCropImageUri(null);
+      setCropImageId(null);
+    } catch (error) {
+      console.error('Error cropping image:', error);
+      Alert.alert('Fehler', 'Bild konnte nicht zugeschnitten werden');
+    }
+  };
+
+  // Zuschneiden abbrechen
+  const cancelCrop = () => {
+    setShowCropModal(false);
+    setCropImageUri(null);
+    setCropImageId(null);
   };
 
   // Clear all - auch Maße und Summenbox-Positionen zurücksetzen
@@ -3693,6 +3800,18 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Foto Position</Text>
         </View>
 
+        {/* 10. Foto zuschneiden */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={[styles.toolButtonInner, { opacity: photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? 1 : 0.5 }]} 
+            onPress={startCropMode}
+            disabled={!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
+          >
+            <Ionicons name="crop-outline" size={18} color={photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc'} />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#333' : '#ccc' }]}>Foto zuschneiden</Text>
+        </View>
+
         <View style={styles.separator} />
 
         {/* Color picker */}
@@ -5201,6 +5320,153 @@ export default function DrawSketchScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Crop Modal */}
+      <Modal visible={showCropModal} transparent animationType="fade">
+        <View style={styles.cropModalOverlay}>
+          <View style={styles.cropModalContent}>
+            <Text style={styles.cropModalTitle}>Foto zuschneiden</Text>
+            <Text style={styles.cropModalSubtitle}>Ziehen Sie die Ecken um den Bereich anzupassen</Text>
+            
+            <View style={styles.cropImageContainer}>
+              {cropImageUri && (
+                <RNImage
+                  source={{ uri: cropImageUri }}
+                  style={styles.cropImage}
+                  resizeMode="contain"
+                />
+              )}
+              
+              {/* Dunkle Overlay außerhalb der Crop-Box */}
+              <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} />
+              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} />
+              <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} />
+              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} />
+              
+              {/* Crop Box Rahmen */}
+              <View 
+                style={[
+                  styles.cropBox,
+                  {
+                    left: cropBox.x,
+                    top: cropBox.y,
+                    width: cropBox.width,
+                    height: cropBox.height,
+                  }
+                ]}
+                onTouchStart={(e) => {
+                  const touch = e.nativeEvent;
+                  setCropDragMode('move');
+                  setCropDragStart({ x: touch.locationX, y: touch.locationY });
+                  setOriginalCropBox({ ...cropBox });
+                }}
+                onTouchMove={(e) => {
+                  if (cropDragMode === 'move') {
+                    const touch = e.nativeEvent;
+                    const dx = touch.locationX - cropDragStart.x;
+                    const dy = touch.locationY - cropDragStart.y;
+                    setCropBox({
+                      ...cropBox,
+                      x: Math.max(0, Math.min(300 - cropBox.width, originalCropBox.x + dx)),
+                      y: Math.max(0, Math.min(300 - cropBox.height, originalCropBox.y + dy)),
+                    });
+                  }
+                }}
+                onTouchEnd={() => setCropDragMode(null)}
+              >
+                {/* Ecken-Handles */}
+                <View 
+                  style={[styles.cropHandle, styles.cropHandleTopLeft]}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    setCropDragMode('top-left');
+                    setOriginalCropBox({ ...cropBox });
+                  }}
+                  onTouchMove={(e) => {
+                    if (cropDragMode === 'top-left') {
+                      const touch = e.nativeEvent;
+                      const newX = Math.max(0, originalCropBox.x + touch.pageX - (originalCropBox.x + 15));
+                      const newY = Math.max(0, originalCropBox.y + touch.pageY - (originalCropBox.y + 15));
+                      const newWidth = Math.max(50, originalCropBox.width - (newX - originalCropBox.x));
+                      const newHeight = Math.max(50, originalCropBox.height - (newY - originalCropBox.y));
+                      setCropBox({ x: newX, y: newY, width: newWidth, height: newHeight });
+                    }
+                  }}
+                  onTouchEnd={() => setCropDragMode(null)}
+                />
+                <View 
+                  style={[styles.cropHandle, styles.cropHandleTopRight]}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    setCropDragMode('top-right');
+                    setOriginalCropBox({ ...cropBox });
+                  }}
+                  onTouchMove={(e) => {
+                    if (cropDragMode === 'top-right') {
+                      const touch = e.nativeEvent;
+                      const newWidth = Math.max(50, touch.pageX - cropBox.x);
+                      const newY = Math.max(0, originalCropBox.y + touch.pageY - (originalCropBox.y + 15));
+                      const newHeight = Math.max(50, originalCropBox.height - (newY - originalCropBox.y));
+                      setCropBox({ ...cropBox, y: newY, width: Math.min(300 - cropBox.x, newWidth), height: newHeight });
+                    }
+                  }}
+                  onTouchEnd={() => setCropDragMode(null)}
+                />
+                <View 
+                  style={[styles.cropHandle, styles.cropHandleBottomLeft]}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    setCropDragMode('bottom-left');
+                    setOriginalCropBox({ ...cropBox });
+                  }}
+                  onTouchMove={(e) => {
+                    if (cropDragMode === 'bottom-left') {
+                      const touch = e.nativeEvent;
+                      const newX = Math.max(0, originalCropBox.x + touch.pageX - (originalCropBox.x + 15));
+                      const newWidth = Math.max(50, originalCropBox.width - (newX - originalCropBox.x));
+                      const newHeight = Math.max(50, touch.pageY - cropBox.y);
+                      setCropBox({ ...cropBox, x: newX, width: newWidth, height: Math.min(300 - cropBox.y, newHeight) });
+                    }
+                  }}
+                  onTouchEnd={() => setCropDragMode(null)}
+                />
+                <View 
+                  style={[styles.cropHandle, styles.cropHandleBottomRight]}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    setCropDragMode('bottom-right');
+                    setOriginalCropBox({ ...cropBox });
+                  }}
+                  onTouchMove={(e) => {
+                    if (cropDragMode === 'bottom-right') {
+                      const touch = e.nativeEvent;
+                      const newWidth = Math.max(50, touch.pageX - cropBox.x);
+                      const newHeight = Math.max(50, touch.pageY - cropBox.y);
+                      setCropBox({ 
+                        ...cropBox, 
+                        width: Math.min(300 - cropBox.x, newWidth), 
+                        height: Math.min(300 - cropBox.y, newHeight) 
+                      });
+                    }
+                  }}
+                  onTouchEnd={() => setCropDragMode(null)}
+                />
+              </View>
+            </View>
+            
+            <View style={styles.cropButtonRow}>
+              <TouchableOpacity style={styles.cropCancelButton} onPress={cancelCrop}>
+                <Ionicons name="close" size={20} color="#fff" />
+                <Text style={styles.cropButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cropApplyButton} onPress={applyCrop}>
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.cropButtonText}>Anwenden</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -6198,5 +6464,120 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Crop Modal Styles
+  cropModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cropModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 360,
+    alignItems: 'center',
+  },
+  cropModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  cropModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  cropImageContainer: {
+    width: 300,
+    height: 300,
+    backgroundColor: '#000',
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cropImage: {
+    width: 300,
+    height: 300,
+  },
+  cropOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  cropOverlayTop: {
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  cropOverlayBottom: {
+    left: 0,
+    right: 0,
+  },
+  cropOverlayLeft: {
+    left: 0,
+  },
+  cropOverlayRight: {},
+  cropBox: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderStyle: 'dashed',
+  },
+  cropHandle: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    backgroundColor: '#9C27B0',
+    borderRadius: 15,
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  cropHandleTopLeft: {
+    top: -15,
+    left: -15,
+  },
+  cropHandleTopRight: {
+    top: -15,
+    right: -15,
+  },
+  cropHandleBottomLeft: {
+    bottom: -15,
+    left: -15,
+  },
+  cropHandleBottomRight: {
+    bottom: -15,
+    right: -15,
+  },
+  cropButtonRow: {
+    flexDirection: 'row',
+    marginTop: 20,
+    gap: 16,
+  },
+  cropCancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f44336',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+  },
+  cropApplyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4caf50',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+  },
+  cropButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

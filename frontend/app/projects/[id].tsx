@@ -622,6 +622,7 @@ export default function ProjectDetailScreen() {
         objekt_contact_person: editObjektContactPerson || undefined,
         objekt_phone: editObjektPhone || undefined,
         objekt_email: editObjektEmail || undefined,
+        objekt_address_name: project?.objekt_address_name || undefined, // Link zur Kunden-Adresse beibehalten
       });
 
       // Synchronisiere Bauherr-Daten mit Kundenstamm
@@ -653,34 +654,45 @@ export default function ProjectDetailScreen() {
       await loadProjectData();
 
       // Prüfe ob eine passende Projektadresse beim Kunden existiert und frage nach Sync
-      if (project?.customer_id && project?.objekt_address_name) {
+      if (project?.customer_id && (editObjektStreet || editObjektPlz || editObjektCity)) {
         try {
           const existingCustomer = await CustomerService.getById(project.customer_id);
-          if (existingCustomer?.projectAddresses) {
-            const matchingAddress = existingCustomer.projectAddresses.find(
-              addr => addr.name === project.objekt_address_name
-            );
+          if (existingCustomer?.projectAddresses && existingCustomer.projectAddresses.length > 0) {
+            // Finde passende Adresse - über Name oder über Straße/PLZ
+            let matchingAddress = null;
+            if (project?.objekt_address_name) {
+              matchingAddress = existingCustomer.projectAddresses.find(
+                addr => addr.name === project.objekt_address_name
+              );
+            }
+            // Falls kein Name-Match, versuche über alte Straßendaten zu matchen
+            if (!matchingAddress && project?.objekt_street) {
+              matchingAddress = existingCustomer.projectAddresses.find(
+                addr => addr.street === project.objekt_street && addr.zip === project.objekt_plz
+              );
+            }
+            
             if (matchingAddress) {
               // Prüfe ob sich Daten geändert haben
               const hasChanges = 
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
                 matchingAddress.city !== editObjektCity ||
-                matchingAddress.contactPerson !== editObjektContactPerson ||
-                matchingAddress.phone !== editObjektPhone ||
-                matchingAddress.email !== editObjektEmail;
+                (matchingAddress.contactPerson || '') !== (editObjektContactPerson || '') ||
+                (matchingAddress.phone || '') !== (editObjektPhone || '') ||
+                (matchingAddress.email || '') !== (editObjektEmail || '');
               
               if (hasChanges) {
                 Alert.alert(
                   'Adresse synchronisieren?',
-                  `Die Objektadresse wurde geändert. Soll die Projektadresse "${project.objekt_address_name}" beim Kunden auch aktualisiert werden?`,
+                  `Die Objektadresse wurde geändert. Soll die Projektadresse "${matchingAddress.name}" beim Kunden auch aktualisiert werden?`,
                   [
                     { text: 'Nein', style: 'cancel' },
                     { 
                       text: 'Ja, synchronisieren', 
                       onPress: async () => {
                         const updatedAddresses = existingCustomer.projectAddresses!.map(addr => 
-                          addr.name === project.objekt_address_name
+                          addr.id === matchingAddress!.id
                             ? { 
                                 ...addr, 
                                 street: editObjektStreet, 

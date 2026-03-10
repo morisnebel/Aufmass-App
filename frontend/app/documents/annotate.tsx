@@ -46,7 +46,13 @@ interface ShapeAnnotation {
   strokeWidth: number;
 }
 
-type ToolMode = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'line';
+type ToolMode = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'line' | 'select';
+
+// Typ für ausgewähltes Element
+type SelectedElement = {
+  type: 'path' | 'shape' | 'text';
+  index: number;
+} | null;
 
 export default function DocumentAnnotateScreen() {
   const router = useRouter();
@@ -89,16 +95,145 @@ export default function DocumentAnnotateScreen() {
   const [showToolPicker, setShowToolPicker] = useState(false);
   const [showStrokePicker, setShowStrokePicker] = useState(false);
   
+  // Element selection & editing
+  const [selectedElement, setSelectedElement] = useState<SelectedElement>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editStrokeWidth, setEditStrokeWidth] = useState(3);
+  const [editColor, setEditColor] = useState('#FF0000');
+  const [editTextSize, setEditTextSize] = useState<'small' | 'medium' | 'large'>('medium');
+  
   const canvasRef = useRef(null);
   const webViewRef = useRef<WebView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const drawingViewRef = useRef<View>(null);
+
+  // Hilfsfunktion zur Element-Auswahl
+  const findElementAtPosition = (x: number, y: number): SelectedElement | null => {
+    // Prüfe Text-Annotationen
+    for (let i = textAnnotations.length - 1; i >= 0; i--) {
+      const t = textAnnotations[i];
+      const textWidth = t.text.length * (t.fontSize / 2); // Ungefähre Breite
+      const textHeight = t.fontSize;
+      if (x >= t.x - 10 && x <= t.x + textWidth + 10 && 
+          y >= t.y - textHeight && y <= t.y + 10) {
+        return { type: 'text', index: i };
+      }
+    }
+    
+    // Prüfe Shapes
+    for (let i = shapes.length - 1; i >= 0; i--) {
+      const s = shapes[i];
+      const minX = Math.min(s.x1, s.x2) - 10;
+      const maxX = Math.max(s.x1, s.x2) + 10;
+      const minY = Math.min(s.y1, s.y2) - 10;
+      const maxY = Math.max(s.y1, s.y2) + 10;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        return { type: 'shape', index: i };
+      }
+    }
+    
+    return null;
+  };
+
+  // Funktion zum Anwenden der Änderungen aus dem Edit-Modal
+  const applyEditChanges = () => {
+    if (!selectedElement) return;
+    
+    if (selectedElement.type === 'shape') {
+      const updatedShapes = [...shapes];
+      updatedShapes[selectedElement.index] = {
+        ...updatedShapes[selectedElement.index],
+        strokeWidth: editStrokeWidth,
+        color: editColor,
+      };
+      setShapes(updatedShapes);
+    } else if (selectedElement.type === 'text') {
+      const updatedTexts = [...textAnnotations];
+      const fontSize = editTextSize === 'small' ? 12 : editTextSize === 'large' ? 24 : 16;
+      updatedTexts[selectedElement.index] = {
+        ...updatedTexts[selectedElement.index],
+        color: editColor,
+        fontSize: fontSize,
+      };
+      setTextAnnotations(updatedTexts);
+    }
+    
+    setShowEditModal(false);
+    setSelectedElement(null);
+  };
+
+  // Funktion zum Löschen des ausgewählten Elements
+  const deleteSelectedElement = () => {
+    if (!selectedElement) return;
+    
+    if (selectedElement.type === 'shape') {
+      const updatedShapes = shapes.filter((_, idx) => idx !== selectedElement.index);
+      setShapes(updatedShapes);
+    } else if (selectedElement.type === 'text') {
+      const updatedTexts = textAnnotations.filter((_, idx) => idx !== selectedElement.index);
+      setTextAnnotations(updatedTexts);
+    }
+    
+    setShowEditModal(false);
+    setSelectedElement(null);
+  };
+
+  // Hilfsfunktion für Auswahlrahmen
+  const getSelectionBounds = () => {
+    if (!selectedElement) return null;
+    
+    if (selectedElement.type === 'shape') {
+      const s = shapes[selectedElement.index];
+      if (!s) return null;
+      return {
+        x: Math.min(s.x1, s.x2) - 5,
+        y: Math.min(s.y1, s.y2) - 5,
+        width: Math.abs(s.x2 - s.x1) + 10,
+        height: Math.abs(s.y2 - s.y1) + 10,
+      };
+    } else if (selectedElement.type === 'text') {
+      const t = textAnnotations[selectedElement.index];
+      if (!t) return null;
+      const textWidth = t.text.length * (t.fontSize / 2);
+      return {
+        x: t.x - 5,
+        y: t.y - t.fontSize - 5,
+        width: textWidth + 20,
+        height: t.fontSize + 15,
+      };
+    }
+    return null;
+  };
 
   // Touch handlers
   const handleTouchStart = (evt: any) => {
     
     const { locationX, locationY } = evt.nativeEvent;
     console.log('🟢 handleTouchStart:', locationX, locationY, 'tool:', toolMode);
+    
+    // Select-Modus: Element auswählen
+    if (toolMode === 'select') {
+      const element = findElementAtPosition(locationX, locationY);
+      if (element) {
+        setSelectedElement(element);
+        // Lade die aktuellen Werte des Elements ins Edit-Modal
+        if (element.type === 'shape') {
+          const shape = shapes[element.index];
+          setEditStrokeWidth(shape.strokeWidth);
+          setEditColor(shape.color);
+        } else if (element.type === 'text') {
+          const text = textAnnotations[element.index];
+          setEditColor(text.color);
+          if (text.fontSize <= 12) setEditTextSize('small');
+          else if (text.fontSize <= 16) setEditTextSize('medium');
+          else setEditTextSize('large');
+        }
+        setShowEditModal(true);
+      } else {
+        setSelectedElement(null);
+      }
+      return;
+    }
     
     if (toolMode === 'text') {
       setTextPosition({ x: locationX, y: locationY });
@@ -504,6 +639,7 @@ export default function DocumentAnnotateScreen() {
   ];
 
   const tools = [
+    { mode: 'select' as ToolMode, icon: 'hand-left', label: 'Auswahl' },
     { mode: 'pen' as ToolMode, icon: 'pencil', label: 'Stift' },
     { mode: 'highlighter' as ToolMode, icon: 'color-fill', label: 'Marker' },
     { mode: 'eraser' as ToolMode, icon: 'backspace', label: 'Radierer' },
@@ -727,6 +863,31 @@ export default function DocumentAnnotateScreen() {
                       {t.text}
                     </SvgText>
                   ))}
+                  
+                  {/* Auswahlrahmen für selektiertes Element */}
+                  {selectedElement && toolMode === 'select' && (() => {
+                    const bounds = getSelectionBounds();
+                    if (!bounds) return null;
+                    return (
+                      <G>
+                        <Rect
+                          x={bounds.x}
+                          y={bounds.y}
+                          width={bounds.width}
+                          height={bounds.height}
+                          stroke="#1976d2"
+                          strokeWidth={2}
+                          strokeDasharray="5,5"
+                          fill="rgba(25, 118, 210, 0.1)"
+                        />
+                        {/* Eck-Handles */}
+                        <Rect x={bounds.x - 4} y={bounds.y - 4} width={8} height={8} fill="#1976d2" />
+                        <Rect x={bounds.x + bounds.width - 4} y={bounds.y - 4} width={8} height={8} fill="#1976d2" />
+                        <Rect x={bounds.x - 4} y={bounds.y + bounds.height - 4} width={8} height={8} fill="#1976d2" />
+                        <Rect x={bounds.x + bounds.width - 4} y={bounds.y + bounds.height - 4} width={8} height={8} fill="#1976d2" />
+                      </G>
+                    );
+                  })()}
                 </Svg>
               </View>
             </View>
@@ -891,6 +1052,119 @@ export default function DocumentAnnotateScreen() {
               </View>
             </View>
           </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Edit Element Modal */}
+        <Modal visible={showEditModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity 
+              style={styles.modalBackground} 
+              activeOpacity={1}
+              onPress={() => {
+                setShowEditModal(false);
+                setSelectedElement(null);
+              }}
+            />
+            <View style={styles.editModal}>
+              <Text style={styles.modalTitle}>
+                {selectedElement?.type === 'text' ? 'Text bearbeiten' : 'Form bearbeiten'}
+              </Text>
+              
+              {/* Farbe */}
+              <Text style={styles.editSectionTitle}>Farbe</Text>
+              <View style={styles.editColorRow}>
+                {colors.map((c) => (
+                  <TouchableOpacity
+                    key={c.color}
+                    style={[
+                      styles.editColorButton,
+                      { backgroundColor: c.color },
+                      editColor === c.color && styles.editColorButtonActive,
+                      c.color === '#FFFFFF' && styles.colorButtonWhite,
+                    ]}
+                    onPress={() => setEditColor(c.color)}
+                  />
+                ))}
+              </View>
+              
+              {/* Strichstärke nur für Shapes */}
+              {selectedElement?.type === 'shape' && (
+                <>
+                  <Text style={styles.editSectionTitle}>Strichstärke</Text>
+                  <View style={styles.editStrokeRow}>
+                    {strokeWidths.map((sw) => (
+                      <TouchableOpacity
+                        key={sw.width}
+                        style={[
+                          styles.editStrokeOption,
+                          editStrokeWidth === sw.width && styles.editStrokeOptionActive,
+                        ]}
+                        onPress={() => setEditStrokeWidth(sw.width)}
+                      >
+                        <View style={[styles.editStrokeLine, { height: sw.width, backgroundColor: editColor }]} />
+                        <Text style={styles.editStrokeLabel}>{sw.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+              
+              {/* Textgröße nur für Text */}
+              {selectedElement?.type === 'text' && (
+                <>
+                  <Text style={styles.editSectionTitle}>Textgröße</Text>
+                  <View style={styles.editStrokeRow}>
+                    {[
+                      { size: 'small' as const, label: 'Klein', fontSize: 12 },
+                      { size: 'medium' as const, label: 'Mittel', fontSize: 16 },
+                      { size: 'large' as const, label: 'Groß', fontSize: 24 },
+                    ].map((ts) => (
+                      <TouchableOpacity
+                        key={ts.size}
+                        style={[
+                          styles.editStrokeOption,
+                          editTextSize === ts.size && styles.editStrokeOptionActive,
+                        ]}
+                        onPress={() => setEditTextSize(ts.size)}
+                      >
+                        <Text style={[styles.textSizePreview, { fontSize: ts.fontSize, color: editColor }]}>Aa</Text>
+                        <Text style={styles.editStrokeLabel}>{ts.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+              
+              {/* Aktions-Buttons */}
+              <View style={styles.editModalActions}>
+                <TouchableOpacity 
+                  style={styles.deleteElementButton}
+                  onPress={deleteSelectedElement}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#fff" />
+                  <Text style={styles.deleteElementButtonText}>Löschen</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.editModalButtonRow}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowEditModal(false);
+                      setSelectedElement(null);
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.addButton]}
+                    onPress={applyEditChanges}
+                  >
+                    <Text style={styles.addButtonText}>Übernehmen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
         </Modal>
 
         {/* Hidden WebView for PDF rendering - placed at end to not affect layout */}
@@ -1360,5 +1634,86 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  // Edit Modal Styles
+  editModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+  },
+  editSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  editColorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  editColorButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  editColorButtonActive: {
+    borderWidth: 3,
+    borderColor: '#1976d2',
+  },
+  editStrokeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 10,
+  },
+  editStrokeOption: {
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    minWidth: 75,
+  },
+  editStrokeOptionActive: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 2,
+    borderColor: '#1976d2',
+  },
+  editStrokeLine: {
+    width: 40,
+    borderRadius: 2,
+    marginBottom: 6,
+  },
+  editStrokeLabel: {
+    fontSize: 11,
+    color: '#333',
+  },
+  editModalActions: {
+    marginTop: 24,
+  },
+  deleteElementButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f44336',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+  },
+  deleteElementButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  editModalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
   },
 });

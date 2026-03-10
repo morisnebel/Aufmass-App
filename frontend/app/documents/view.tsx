@@ -45,6 +45,8 @@ interface Shape {
   color: string;
   strokeWidth: number;
   text?: string;
+  noteWidth?: number;
+  noteHeight?: number;
 }
 
 interface TextAnnotation {
@@ -134,6 +136,8 @@ export default function DocumentViewScreen() {
   const [editElementColor, setEditElementColor] = useState('#FF0000');
   const [editElementStrokeWidth, setEditElementStrokeWidth] = useState(3);
   const [editElementFontSize, setEditElementFontSize] = useState(16);
+  const [editNoteWidth, setEditNoteWidth] = useState(100);
+  const [editNoteHeight, setEditNoteHeight] = useState(36);
   
   // Track undo history for better ordering
   const [undoHistory, setUndoHistory] = useState<Array<{type: 'path' | 'shape' | 'text', id: string}>>([]);
@@ -540,8 +544,9 @@ export default function DocumentViewScreen() {
           // Note annotation with connecting line
           const noteText = s.text || '';
           const textLength = noteText.length;
-          const noteWidth = Math.max(textLength * 9 + 20, 80);
-          const noteHeight = 32;
+          // Use saved size or calculate from text
+          const noteWidth = s.noteWidth || Math.max(textLength * 9 + 20, 80);
+          const noteHeight = s.noteHeight || 32;
           const noteX = x1 - noteWidth / 2;
           const noteY = y1 - noteHeight - 5;
           const cornerRadius = 6;
@@ -836,9 +841,9 @@ export default function DocumentViewScreen() {
         // Check for pointer/note elements first (they have type 'pointer')
         const clickedPointer = shapes.find(s => {
           if (s.type !== 'pointer') return false;
-          // Check if clicking on note box area
-          const noteWidth = Math.max((s.text?.length || 0) * 9 + 20, 80);
-          const noteHeight = 32;
+          // Check if clicking on note box area - use saved size or calculate
+          const noteWidth = s.noteWidth || Math.max((s.text?.length || 0) * 9 + 20, 80);
+          const noteHeight = s.noteHeight || 32;
           const noteX = s.x1 - noteWidth / 2;
           const noteY = s.y1 - noteHeight - 5;
           const inNoteBox = locationX >= noteX && locationX <= noteX + noteWidth && 
@@ -849,13 +854,13 @@ export default function DocumentViewScreen() {
         });
         
         if (clickedPointer) {
-          // Determine which part was clicked
-          const noteWidth = Math.max((clickedPointer.text?.length || 0) * 9 + 20, 80);
-          const noteHeight = 32;
+          // Determine which part was clicked - use saved size or calculate
+          const noteWidth = clickedPointer.noteWidth || Math.max((clickedPointer.text?.length || 0) * 9 + 20, 80);
+          const noteHeight = clickedPointer.noteHeight || 32;
           const noteX = clickedPointer.x1 - noteWidth / 2;
           const noteY = clickedPointer.y1 - noteHeight - 5;
           const inNoteBox = locationX >= noteX && locationX <= noteX + noteWidth && 
-                          locationY >= noteY && locationY <= noteY + noteHeight + 15;
+                          locationY >= noteY && locationY <= noteHeight + 15;
           const inTarget = Math.sqrt(Math.pow(locationX - clickedPointer.x2, 2) + Math.pow(locationY - clickedPointer.y2, 2)) < 20;
           
           const dragPart = inTarget ? 'target' : 'note';
@@ -1109,6 +1114,9 @@ export default function DocumentViewScreen() {
   const addPointerElement = () => {
     if (pendingPointer) {
       const newId = Date.now().toString();
+      const textLength = pointerText.length;
+      const defaultNoteWidth = Math.max(textLength * 9 + 20, 100);
+      const defaultNoteHeight = 36;
       const newShape: Shape = {
         id: newId,
         type: 'pointer',
@@ -1119,6 +1127,8 @@ export default function DocumentViewScreen() {
         color: drawColor,
         strokeWidth: 3,
         text: pointerText,
+        noteWidth: defaultNoteWidth,
+        noteHeight: defaultNoteHeight,
       };
       setShapes(prev => [...prev, newShape]);
       setUndoHistory(prev => [...prev, { type: 'shape', id: newId }]);
@@ -1318,8 +1328,9 @@ export default function DocumentViewScreen() {
         
         const noteText = shape.text || '';
         const textLength = noteText.length;
-        const noteWidth = Math.max(textLength * 9 + 20, 80);
-        const noteHeight = 32;
+        // Use saved size or calculate from text
+        const noteWidth = shape.noteWidth || Math.max(textLength * 9 + 20, 80);
+        const noteHeight = shape.noteHeight || 32;
         const noteX = x1 - noteWidth / 2;
         const noteY = y1 - noteHeight - 5;
         const cornerRadius = 6;
@@ -1440,6 +1451,12 @@ export default function DocumentViewScreen() {
       if (shape) {
         setEditElementColor(shape.color);
         setEditElementStrokeWidth(shape.strokeWidth);
+        // Für Pointer: Notizgröße laden
+        if (shape.type === 'pointer') {
+          const textLength = shape.text?.length || 0;
+          setEditNoteWidth(shape.noteWidth || Math.max(textLength * 9 + 20, 100));
+          setEditNoteHeight(shape.noteHeight || 36);
+        }
       }
     } else if (selectedElement.type === 'text') {
       const text = textAnnotations.find(t => t.id === selectedElement.id);
@@ -1465,6 +1482,10 @@ export default function DocumentViewScreen() {
     if (selectedElement.type === 'shape' || selectedElement.type === 'pointer') {
       setShapes(prev => prev.map(s => {
         if (s.id === selectedElement.id) {
+          // Für Pointer: auch Notizgröße speichern
+          if (s.type === 'pointer') {
+            return { ...s, color: editElementColor, strokeWidth: editElementStrokeWidth, noteWidth: editNoteWidth, noteHeight: editNoteHeight };
+          }
           return { ...s, color: editElementColor, strokeWidth: editElementStrokeWidth };
         }
         return s;
@@ -1888,8 +1909,9 @@ export default function DocumentViewScreen() {
                         const pointer = shapes.find(s => s.id === selectedElement.id && s.type === 'pointer');
                         if (!pointer) return null;
                         const noteText = pointer.text || '';
-                        const noteWidth = Math.max(noteText.length * 9 + 20, 80);
-                        const noteHeight = 32;
+                        // Use saved size or calculate from text
+                        const noteWidth = pointer.noteWidth || Math.max(noteText.length * 9 + 20, 80);
+                        const noteHeight = pointer.noteHeight || 32;
                         const noteX = pointer.x1 - noteWidth / 2;
                         const noteY = pointer.y1 - noteHeight - 5;
                         return (
@@ -2060,7 +2082,7 @@ export default function DocumentViewScreen() {
                     onPress={openEditElementModal}
                   >
                     <View style={[styles.actionBtnInner, { backgroundColor: '#2196F3' }]}>
-                      <Ionicons name="color-palette-outline" size={16} color="#fff" />
+                      <Ionicons name="hand-left-outline" size={16} color="#fff" />
                       <Text style={styles.actionBtnText}>Bearbeiten</Text>
                     </View>
                   </TouchableOpacity>
@@ -2337,6 +2359,53 @@ export default function DocumentViewScreen() {
                           </Text>
                         </TouchableOpacity>
                       ))}
+                    </View>
+                  </>
+                )}
+                
+                {/* Note Size - for pointer only */}
+                {selectedElement?.type === 'pointer' && (
+                  <>
+                    <Text style={styles.editSectionTitle}>Notizfeld-Größe</Text>
+                    <View style={styles.noteSizeContainer}>
+                      <View style={styles.noteSizeRow}>
+                        <Text style={styles.noteSizeLabel}>Breite: {editNoteWidth}px</Text>
+                        <View style={styles.noteSizeButtons}>
+                          <TouchableOpacity 
+                            style={styles.noteSizeBtn}
+                            onPress={() => setEditNoteWidth(Math.max(60, editNoteWidth - 20))}
+                          >
+                            <Ionicons name="remove" size={20} color="#666" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.noteSizeBtn}
+                            onPress={() => setEditNoteWidth(Math.min(300, editNoteWidth + 20))}
+                          >
+                            <Ionicons name="add" size={20} color="#666" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <View style={styles.noteSizeRow}>
+                        <Text style={styles.noteSizeLabel}>Höhe: {editNoteHeight}px</Text>
+                        <View style={styles.noteSizeButtons}>
+                          <TouchableOpacity 
+                            style={styles.noteSizeBtn}
+                            onPress={() => setEditNoteHeight(Math.max(24, editNoteHeight - 8))}
+                          >
+                            <Ionicons name="remove" size={20} color="#666" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.noteSizeBtn}
+                            onPress={() => setEditNoteHeight(Math.min(100, editNoteHeight + 8))}
+                          >
+                            <Ionicons name="add" size={20} color="#666" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      {/* Preview */}
+                      <View style={[styles.noteSizePreview, { width: editNoteWidth, height: editNoteHeight, borderColor: editElementColor }]}>
+                        <Text style={styles.noteSizePreviewText} numberOfLines={1}>Vorschau</Text>
+                      </View>
                     </View>
                   </>
                 )}
@@ -2797,5 +2866,45 @@ const styles = StyleSheet.create({
   editElementBtnOkText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  // Note Size Controls
+  noteSizeContainer: {
+    marginTop: 8,
+  },
+  noteSizeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  noteSizeLabel: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  noteSizeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  noteSizeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noteSizePreview: {
+    backgroundColor: '#FFFDE7',
+    borderWidth: 2,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginTop: 8,
+  },
+  noteSizePreviewText: {
+    fontSize: 12,
+    color: '#666',
   },
 });

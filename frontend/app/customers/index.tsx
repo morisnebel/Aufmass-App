@@ -165,7 +165,7 @@ export default function CustomersScreen() {
     const addressNameToSync = editingAddress?.name || addressName;
     if (addressNameToSync) {
       try {
-        const allProjects = await ProjectService.getByCustomer(selectedCustomer.id);
+        const allProjects = await ProjectService.getByCustomerId(selectedCustomer.id);
         const matchingProjects = allProjects.filter(
           p => p.objekt_address_name === addressNameToSync
         );
@@ -182,6 +182,7 @@ export default function CustomersScreen() {
                   for (const proj of matchingProjects) {
                     await ProjectService.update(proj.id, {
                       ...proj,
+                      objekt_name: addressName || undefined,
                       objekt_street: addressStreet,
                       objekt_plz: addressZip,
                       objekt_city: addressCity,

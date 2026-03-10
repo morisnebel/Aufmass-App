@@ -654,9 +654,19 @@ export default function ProjectDetailScreen() {
       await loadProjectData();
 
       // Prüfe ob eine passende Projektadresse beim Kunden existiert und frage nach Sync
+      console.log('=== SYNC CHECK ===');
+      console.log('customer_id:', project?.customer_id);
+      console.log('editObjektStreet:', editObjektStreet);
+      console.log('editObjektPlz:', editObjektPlz);
+      console.log('editObjektCity:', editObjektCity);
+      console.log('objekt_address_name:', project?.objekt_address_name);
+      
       if (project?.customer_id && (editObjektStreet || editObjektPlz || editObjektCity)) {
         try {
           const existingCustomer = await CustomerService.getById(project.customer_id);
+          console.log('existingCustomer:', existingCustomer?.name);
+          console.log('projectAddresses:', existingCustomer?.projectAddresses?.length);
+          
           if (existingCustomer?.projectAddresses && existingCustomer.projectAddresses.length > 0) {
             // Finde passende Adresse - über Name oder über Straße/PLZ
             let matchingAddress = null;
@@ -664,15 +674,58 @@ export default function ProjectDetailScreen() {
               matchingAddress = existingCustomer.projectAddresses.find(
                 addr => addr.name === project.objekt_address_name
               );
+              console.log('Match by name:', matchingAddress?.name);
             }
             // Falls kein Name-Match, versuche über alte Straßendaten zu matchen
             if (!matchingAddress && project?.objekt_street) {
               matchingAddress = existingCustomer.projectAddresses.find(
                 addr => addr.street === project.objekt_street && addr.zip === project.objekt_plz
               );
+              console.log('Match by street:', matchingAddress?.name);
             }
             
-            if (matchingAddress) {
+            // Wenn immer noch kein Match, zeige alle Adressen zur Auswahl
+            if (!matchingAddress && existingCustomer.projectAddresses.length > 0) {
+              console.log('No match found, showing selection dialog');
+              // Zeige Dialog mit allen Adressen
+              Alert.alert(
+                'Adresse beim Kunden aktualisieren?',
+                'Welche Projektadresse soll aktualisiert werden?',
+                [
+                  { text: 'Keine', style: 'cancel' },
+                  ...existingCustomer.projectAddresses.map(addr => ({
+                    text: addr.name || 'Unbenannt',
+                    onPress: async () => {
+                      const updatedAddresses = existingCustomer.projectAddresses!.map(a => 
+                        a.id === addr.id
+                          ? { 
+                              ...a, 
+                              street: editObjektStreet, 
+                              zip: editObjektPlz, 
+                              city: editObjektCity,
+                              contactPerson: editObjektContactPerson || undefined,
+                              phone: editObjektPhone || undefined,
+                              email: editObjektEmail || undefined,
+                            }
+                          : a
+                      );
+                      await CustomerService.update(project.customer_id!, {
+                        ...existingCustomer,
+                        projectAddresses: updatedAddresses,
+                      });
+                      // Speichere auch den Link zum Adress-Namen
+                      const projectId = Array.isArray(id) ? id[0] : id;
+                      await ProjectService.update(projectId, {
+                        ...project,
+                        objekt_address_name: addr.name,
+                      });
+                      Alert.alert('Erfolg', `Projektadresse "${addr.name}" wurde aktualisiert`);
+                    }
+                  }))
+                ]
+              );
+            } else if (matchingAddress) {
+              console.log('Found matching address:', matchingAddress.name);
               // Prüfe ob sich Daten geändert haben
               const hasChanges = 
                 matchingAddress.street !== editObjektStreet ||
@@ -681,6 +734,8 @@ export default function ProjectDetailScreen() {
                 (matchingAddress.contactPerson || '') !== (editObjektContactPerson || '') ||
                 (matchingAddress.phone || '') !== (editObjektPhone || '') ||
                 (matchingAddress.email || '') !== (editObjektEmail || '');
+              
+              console.log('hasChanges:', hasChanges);
               
               if (hasChanges) {
                 Alert.alert(

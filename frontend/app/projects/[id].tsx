@@ -2838,9 +2838,9 @@ export default function ProjectDetailScreen() {
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
                 <strong style="color: #1976d2;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</strong>
-                ${objektName ? `<div style="margin-top: 4px;">${objektName}</div>` : ''}
-                <div style="margin-top: 2px;">${objektStreet || bauherrStreet}</div>
-                <div>${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</div>
+                ${objektName ? `<div style="margin-top: 4px;"><strong>Name:</strong> ${objektName}</div>` : ''}
+                ${objektStreet ? `<div style="margin-top: 2px;"><strong>Straße:</strong> ${objektStreet}</div>` : ''}
+                ${(objektPlz || objektCity) ? `<div><strong>PLZ/Ort:</strong> ${objektPlz || ''} ${objektCity || ''}</div>` : ''}
                 ${objektContactPerson ? `<div style="margin-top: 6px;"><strong>Ansprechpartner:</strong> ${objektContactPerson}</div>` : ''}
                 ${objektPhone ? `<div><strong>Tel:</strong> ${objektPhone}</div>` : ''}
                 ${objektEmail ? `<div><strong>E-Mail:</strong> ${objektEmail}</div>` : ''}
@@ -2850,14 +2850,24 @@ export default function ProjectDetailScreen() {
           
           <div class="info-box">
             <h3>Bauherr</h3>
-            <div class="info-row">
-              <span class="info-label">Name:</span>
-              <span class="info-value">${bauherrName}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Adresse:</span>
-              <span class="info-value">${bauherrStreet}<br/>${bauherrPlz} ${bauherrCity}</span>
-            </div>
+            ${bauherrName ? `
+              <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value">${bauherrName}</span>
+              </div>
+            ` : ''}
+            ${bauherrStreet ? `
+              <div class="info-row">
+                <span class="info-label">Straße:</span>
+                <span class="info-value">${bauherrStreet}</span>
+              </div>
+            ` : ''}
+            ${(bauherrPlz || bauherrCity) ? `
+              <div class="info-row">
+                <span class="info-label">PLZ/Ort:</span>
+                <span class="info-value">${bauherrPlz || ''} ${bauherrCity || ''}</span>
+              </div>
+            ` : ''}
             ${bauherrPhone ? `
               <div class="info-row">
                 <span class="info-label">Telefon:</span>

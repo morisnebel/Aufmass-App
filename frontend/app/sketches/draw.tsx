@@ -3898,16 +3898,16 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Foto Position</Text>
         </View>
 
-        {/* 10. Foto zuschneiden */}
+        {/* 10. Foto zuschneiden - unabhängig von photoEditMode */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
-            style={[styles.toolButtonInner, { opacity: photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? 1 : 0.5 }]} 
+            style={[styles.toolButtonInner, { opacity: selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? 1 : 0.5 }]} 
             onPress={startCropMode}
-            disabled={!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
+            disabled={!selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
           >
-            <Ionicons name="crop-outline" size={18} color={photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc'} />
+            <Ionicons name="crop-outline" size={18} color={selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc'} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#333' : '#ccc' }]}>Foto zuschneiden</Text>
+          <Text style={[styles.toolButtonLabel, { color: selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#333' : '#ccc' }]}>Zuschneiden</Text>
         </View>
 
         <View style={styles.separator} />

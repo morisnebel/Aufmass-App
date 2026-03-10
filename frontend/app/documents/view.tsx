@@ -90,7 +90,7 @@ export default function DocumentViewScreen() {
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState('');
   const [drawColor, setDrawColor] = useState('#FF0000');
-  const [strokeWidth, setStrokeWidth] = useState(3);
+  const [strokeWidth, setStrokeWidth] = useState(1);
   const [isHighlighter, setIsHighlighter] = useState(false);
   const [isEraser, setIsEraser] = useState(false);
   
@@ -108,7 +108,7 @@ export default function DocumentViewScreen() {
   const [newText, setNewText] = useState('');
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const [isTextMode, setIsTextMode] = useState(false);
-  const [textFontSize, setTextFontSize] = useState(16);
+  const [textFontSize, setTextFontSize] = useState(10);
   
   // Zoom
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -1125,7 +1125,7 @@ export default function DocumentViewScreen() {
         x2: pendingPointer.x2,
         y2: pendingPointer.y2,
         color: drawColor,
-        strokeWidth: 3,
+        strokeWidth: 1,
         text: pointerText,
         noteWidth: defaultNoteWidth,
         noteHeight: defaultNoteHeight,
@@ -2033,12 +2033,12 @@ export default function DocumentViewScreen() {
                 <Ionicons name="chatbubble-outline" size={20} color={getCurrentTool() === 'pointer' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <View style={styles.divider} />
-              <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 3 ? 6 : strokeWidth === 6 ? 9 : 3)}>
+              <TouchableOpacity style={styles.toolBtn} onPress={() => setStrokeWidth(strokeWidth === 1 ? 2 : strokeWidth === 2 ? 4 : 1)}>
                 <View style={[styles.strokePreview, { height: strokeWidth, backgroundColor: drawColor }]} />
               </TouchableOpacity>
               {isTextMode && (
-                <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 12 ? 16 : textFontSize === 16 ? 24 : 12)}>
-                  <Text style={{ fontSize: textFontSize === 12 ? 10 : textFontSize === 16 ? 14 : 18, fontWeight: 'bold', color: '#666' }}>A</Text>
+                <TouchableOpacity style={styles.toolBtn} onPress={() => setTextFontSize(textFontSize === 8 ? 12 : textFontSize === 12 ? 18 : 8)}>
+                  <Text style={{ fontSize: textFontSize === 8 ? 8 : textFontSize === 12 ? 11 : 14, fontWeight: 'bold', color: '#666' }}>A</Text>
                 </TouchableOpacity>
               )}
               <View style={styles.divider} />
@@ -2178,14 +2178,14 @@ export default function DocumentViewScreen() {
                 />
                 <View style={styles.textSizeRow}>
                   <Text style={styles.textSizeLabel}>Textgröße:</Text>
-                  {[12, 16, 24].map(size => (
+                  {[8, 12, 18].map(size => (
                     <TouchableOpacity 
                       key={size}
                       style={[styles.textSizeBtn, textFontSize === size && styles.textSizeBtnActive]}
                       onPress={() => setTextFontSize(size)}
                     >
                       <Text style={{ fontSize: size * 0.6, fontWeight: textFontSize === size ? 'bold' : 'normal' }}>
-                        {size === 12 ? 'S' : size === 16 ? 'M' : 'L'}
+                        {size === 8 ? 'S' : size === 12 ? 'M' : 'L'}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -2320,7 +2320,7 @@ export default function DocumentViewScreen() {
                   <>
                     <Text style={styles.editSectionTitle}>Strichstärke</Text>
                     <View style={styles.editStrokeRow}>
-                      {[3, 6, 9].map(width => (
+                      {[1, 2, 4].map(width => (
                         <TouchableOpacity
                           key={width}
                           style={[
@@ -2331,7 +2331,7 @@ export default function DocumentViewScreen() {
                         >
                           <View style={[styles.editStrokeLine, { height: width, backgroundColor: editElementColor }]} />
                           <Text style={styles.editStrokeLabel}>
-                            {width === 3 ? 'Dünn' : width === 6 ? 'Mittel' : 'Dick'}
+                            {width === 1 ? 'Fein' : width === 2 ? 'Dünn' : 'Mittel'}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -2344,7 +2344,7 @@ export default function DocumentViewScreen() {
                   <>
                     <Text style={styles.editSectionTitle}>Textgröße</Text>
                     <View style={styles.editStrokeRow}>
-                      {[12, 16, 24].map(size => (
+                      {[8, 12, 18].map(size => (
                         <TouchableOpacity
                           key={size}
                           style={[
@@ -2355,7 +2355,7 @@ export default function DocumentViewScreen() {
                         >
                           <Text style={[styles.editFontPreview, { fontSize: size, color: editElementColor }]}>Aa</Text>
                           <Text style={styles.editStrokeLabel}>
-                            {size === 12 ? 'Klein' : size === 16 ? 'Mittel' : 'Groß'}
+                            {size === 8 ? 'Klein' : size === 12 ? 'Mittel' : 'Groß'}
                           </Text>
                         </TouchableOpacity>
                       ))}

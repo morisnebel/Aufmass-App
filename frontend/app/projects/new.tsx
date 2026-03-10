@@ -108,6 +108,8 @@ export default function NewProjectScreen() {
 
   // Objektadresse States
   const [selectedProjectAddress, setSelectedProjectAddress] = useState<ProjectAddress | null>(null);
+  const [objektAddressName, setObjektAddressName] = useState(''); // Bezeichnung z.B. "Dorfscheune"
+  const [objektName, setObjektName] = useState(''); // Objektname z.B. "Scheune im Dorf 2"
   const [objektStreet, setObjektStreet] = useState('');
   const [objektPlz, setObjektPlz] = useState('');
   const [objektCity, setObjektCity] = useState('');
@@ -152,6 +154,8 @@ export default function NewProjectScreen() {
     setSearchQuery('');
     // Objektadresse zurücksetzen wenn Kunde wechselt
     setSelectedProjectAddress(null);
+    setObjektAddressName('');
+    setObjektName('');
     setObjektStreet('');
     setObjektPlz('');
     setObjektCity('');
@@ -162,6 +166,8 @@ export default function NewProjectScreen() {
 
   const handleSelectProjectAddress = (address: ProjectAddress) => {
     setSelectedProjectAddress(address);
+    setObjektAddressName(address.name);
+    setObjektName(address.objectName || '');
     setObjektStreet(address.street);
     setObjektPlz(address.zip);
     setObjektCity(address.city);
@@ -173,6 +179,8 @@ export default function NewProjectScreen() {
 
   const clearProjectAddress = () => {
     setSelectedProjectAddress(null);
+    setObjektAddressName('');
+    setObjektName('');
     setObjektStreet('');
     setObjektPlz('');
     setObjektCity('');
@@ -514,6 +522,7 @@ export default function NewProjectScreen() {
         const newAddress: ProjectAddress = {
           id: Date.now().toString(36) + Math.random().toString(36).substr(2),
           name: saveAddressWithName,
+          objectName: objektName || undefined,
           street: objektStreet,
           zip: objektPlz,
           city: objektCity,
@@ -541,10 +550,11 @@ export default function NewProjectScreen() {
         bauherr_email: selectedCustomer?.email || undefined,
         bauherr_address: selectedCustomer?.address || undefined,
         // Objektadresse
+        objekt_address_name: objektAddressName || savedAddressName || undefined,
+        objekt_name: objektName || undefined,
         objekt_street: objektStreet || undefined,
         objekt_plz: objektPlz || undefined,
         objekt_city: objektCity || undefined,
-        objekt_address_name: savedAddressName || undefined,
         objekt_contact_person: objektContactPerson || undefined,
         objekt_phone: objektPhone || undefined,
         objekt_email: objektEmail || undefined,
@@ -660,6 +670,24 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>
               {selectedCustomer?.projectAddresses?.length ? 'Objektadresse (manuell)' : 'Objektadresse'}
             </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
+              value={objektAddressName}
+              onChangeText={(text) => {
+                setObjektAddressName(text);
+                if (selectedProjectAddress) setSelectedProjectAddress(null);
+              }}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Objektname (optional)"
+              value={objektName}
+              onChangeText={(text) => {
+                setObjektName(text);
+                if (selectedProjectAddress) setSelectedProjectAddress(null);
+              }}
+            />
             <TextInput
               style={styles.input}
               placeholder="Straße und Hausnummer"

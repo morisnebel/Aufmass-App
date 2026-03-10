@@ -160,6 +160,46 @@ export default function CustomersScreen() {
     const updatedCustomer = await CustomerService.getById(selectedCustomer.id);
     setSelectedCustomer(updatedCustomer);
     resetAddressForm();
+    
+    // Prüfe ob es Projekte gibt, die diese Adresse verwenden und frage nach Sync
+    const addressNameToSync = editingAddress?.name || addressName;
+    if (addressNameToSync) {
+      try {
+        const allProjects = await ProjectService.getByCustomer(selectedCustomer.id);
+        const matchingProjects = allProjects.filter(
+          p => p.objekt_address_name === addressNameToSync
+        );
+        
+        if (matchingProjects.length > 0) {
+          Alert.alert(
+            'Projekte synchronisieren?',
+            `${matchingProjects.length} Projekt(e) verwenden diese Adresse. Sollen die Objektadressen in diesen Projekten auch aktualisiert werden?`,
+            [
+              { text: 'Nein', style: 'cancel' },
+              { 
+                text: 'Ja, synchronisieren', 
+                onPress: async () => {
+                  for (const proj of matchingProjects) {
+                    await ProjectService.update(proj.id, {
+                      ...proj,
+                      objekt_street: addressStreet,
+                      objekt_plz: addressZip,
+                      objekt_city: addressCity,
+                      objekt_contact_person: addressContactPerson || undefined,
+                      objekt_phone: addressPhone || undefined,
+                      objekt_email: addressEmail || undefined,
+                    });
+                  }
+                  Alert.alert('Erfolg', `${matchingProjects.length} Projekt(e) wurden aktualisiert`);
+                }
+              },
+            ]
+          );
+        }
+      } catch (syncError) {
+        console.error('Error syncing project addresses:', syncError);
+      }
+    }
   };
 
   const deleteAddress = async (addressId: string) => {

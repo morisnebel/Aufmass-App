@@ -652,6 +652,63 @@ export default function ProjectDetailScreen() {
       setShowEditProjectModal(false);
       await loadProjectData();
 
+      // Prüfe ob eine passende Projektadresse beim Kunden existiert und frage nach Sync
+      if (project?.customer_id && project?.objekt_address_name) {
+        try {
+          const existingCustomer = await CustomerService.getById(project.customer_id);
+          if (existingCustomer?.projectAddresses) {
+            const matchingAddress = existingCustomer.projectAddresses.find(
+              addr => addr.name === project.objekt_address_name
+            );
+            if (matchingAddress) {
+              // Prüfe ob sich Daten geändert haben
+              const hasChanges = 
+                matchingAddress.street !== editObjektStreet ||
+                matchingAddress.zip !== editObjektPlz ||
+                matchingAddress.city !== editObjektCity ||
+                matchingAddress.contactPerson !== editObjektContactPerson ||
+                matchingAddress.phone !== editObjektPhone ||
+                matchingAddress.email !== editObjektEmail;
+              
+              if (hasChanges) {
+                Alert.alert(
+                  'Adresse synchronisieren?',
+                  `Die Objektadresse wurde geändert. Soll die Projektadresse "${project.objekt_address_name}" beim Kunden auch aktualisiert werden?`,
+                  [
+                    { text: 'Nein', style: 'cancel' },
+                    { 
+                      text: 'Ja, synchronisieren', 
+                      onPress: async () => {
+                        const updatedAddresses = existingCustomer.projectAddresses!.map(addr => 
+                          addr.name === project.objekt_address_name
+                            ? { 
+                                ...addr, 
+                                street: editObjektStreet, 
+                                zip: editObjektPlz, 
+                                city: editObjektCity,
+                                contactPerson: editObjektContactPerson || undefined,
+                                phone: editObjektPhone || undefined,
+                                email: editObjektEmail || undefined,
+                              }
+                            : addr
+                        );
+                        await CustomerService.update(project.customer_id!, {
+                          ...existingCustomer,
+                          projectAddresses: updatedAddresses,
+                        });
+                        Alert.alert('Erfolg', 'Projektadresse beim Kunden wurde aktualisiert');
+                      }
+                    },
+                  ]
+                );
+              }
+            }
+          }
+        } catch (syncError) {
+          console.error('Error checking customer address sync:', syncError);
+        }
+      }
+
       if (Platform.OS === 'web') {
         alert('Projekt wurde aktualisiert');
       } else {

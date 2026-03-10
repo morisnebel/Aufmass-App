@@ -421,6 +421,28 @@ export default function CustomersScreen() {
                       {address.street}{address.street && (address.zip || address.city) ? ', ' : ''}
                       {address.zip} {address.city}
                     </Text>
+                    {(address.contactPerson || address.phone || address.email) && (
+                      <View style={styles.addressItemExtraInfo}>
+                        {address.contactPerson && (
+                          <Text style={styles.addressItemExtraText}>
+                            <Text style={styles.addressItemExtraLabel}>Ansprechpartner: </Text>
+                            {address.contactPerson}
+                          </Text>
+                        )}
+                        {address.phone && (
+                          <Text style={styles.addressItemExtraText}>
+                            <Text style={styles.addressItemExtraLabel}>Tel: </Text>
+                            {address.phone}
+                          </Text>
+                        )}
+                        {address.email && (
+                          <Text style={styles.addressItemExtraText}>
+                            <Text style={styles.addressItemExtraLabel}>E-Mail: </Text>
+                            {address.email}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <View style={styles.addressItemActions}>
                     <TouchableOpacity 
@@ -770,6 +792,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  addressItemExtraInfo: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  addressItemExtraText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  addressItemExtraLabel: {
+    fontWeight: '600',
+    color: '#333',
   },
   addressItemActions: {
     flexDirection: 'row',

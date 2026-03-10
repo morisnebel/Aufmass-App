@@ -721,6 +721,9 @@ export default function ProjectDetailScreen() {
     const objektStreet = project?.objekt_street || '';
     const objektPlz = project?.objekt_plz || '';
     const objektCity = project?.objekt_city || '';
+    const objektContactPerson = project?.objekt_contact_person || '';
+    const objektPhone = project?.objekt_phone || '';
+    const objektEmail = project?.objekt_email || '';
     
     // Company info für Header - verwende die Felder aus den Einstellungen
     const companyName = settings.company_name || '';
@@ -2705,12 +2708,15 @@ export default function ProjectDetailScreen() {
               <span class="info-label">Status:</span>
               <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
-            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName) ? `
+            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
                 <strong style="color: #1976d2;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</strong>
                 ${objektName ? `<div style="margin-top: 4px;">${objektName}</div>` : ''}
                 <div style="margin-top: 2px;">${objektStreet || bauherrStreet}</div>
                 <div>${objektPlz || bauherrPlz} ${objektCity || bauherrCity}</div>
+                ${objektContactPerson ? `<div style="margin-top: 6px;"><strong>Ansprechpartner:</strong> ${objektContactPerson}</div>` : ''}
+                ${objektPhone ? `<div><strong>Tel:</strong> ${objektPhone}</div>` : ''}
+                ${objektEmail ? `<div><strong>E-Mail:</strong> ${objektEmail}</div>` : ''}
               </div>
             ` : ''}
           </div>

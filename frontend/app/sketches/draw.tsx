@@ -3682,26 +3682,68 @@ export default function DrawSketchScreen() {
 
       {/* Toolbar mit Labels */}
       <View style={styles.toolbar}>
-        {/* Undo/Redo */}
-        <TouchableOpacity
-          style={[styles.toolButton, !canUndo && styles.toolButtonDisabled]}
-          onPress={undo}
-          disabled={!canUndo}
-        >
-          <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
-        </TouchableOpacity>
+        {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
-        <TouchableOpacity
-          style={[styles.toolButton, !canRedo && styles.toolButtonDisabled]}
-          onPress={redo}
-          disabled={!canRedo}
-        >
-          <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
-        </TouchableOpacity>
+        {/* 1. Galeriefotos */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
+            <Ionicons name="image" size={18} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Galerie</Text>
+        </View>
+
+        {/* 2. Projektfotos */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={styles.toolButtonInner} 
+            onPress={loadProjectPhotos}
+          >
+            <Ionicons name="folder-open" size={18} color="#1976d2" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Projekt</Text>
+        </View>
+
+        {/* 3. neues Foto */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
+            <Ionicons name="camera" size={18} color="#4caf50" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Foto</Text>
+        </View>
+
+        {/* 4. Foto Position */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={[styles.toolButtonInner, photoEditMode && styles.photoEditButtonActive]} 
+            onPress={() => {
+              setPhotoEditMode(!photoEditMode);
+              setSelectedElementId(null);
+              if (!photoEditMode) {
+                selectDrawMode('select');
+              }
+            }}
+          >
+            <Ionicons name="move" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Position</Text>
+        </View>
+
+        {/* 5. Foto zuschneiden */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity 
+            style={[styles.toolButtonInner, drawMode === 'crop' && styles.toolButtonActive]} 
+            onPress={() => selectDrawMode(drawMode === 'crop' ? 'select' : 'crop')}
+          >
+            <Ionicons name="crop-outline" size={18} color={drawMode === 'crop' ? '#fff' : '#9C27B0'} />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: drawMode === 'crop' ? '#9C27B0' : '#333' }]}>Zuschneiden</Text>
+        </View>
 
         <View style={styles.separator} />
 
-        {/* 1. Hand - Bearbeiten */}
+        {/* ========== ZEICHEN-TOOLS ========== */}
+        
+        {/* 6. Hand - Bearbeiten */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, drawMode === 'select' && styles.toolButtonActive]}
@@ -3712,7 +3754,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Bearbeiten</Text>
         </View>
 
-        {/* 2. Stift - Stift */}
+        {/* 7. Stift */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
@@ -3723,7 +3765,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Stift</Text>
         </View>
 
-        {/* 3. Formen (Linie, Kreis, Rechteck) */}
+        {/* 8. Formen (Linie, Kreis, Rechteck) */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
@@ -3750,7 +3792,7 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* 4. Maßlinie + Maße über Polygone */}
+        {/* ========== MAßLINIEN ========== */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             {/* Maßlinie Button */}
@@ -3809,7 +3851,7 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* 5. Memo + Notiz zur Skizze + Text */}
+        {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             {/* Memo-Pfeil */}
@@ -3826,49 +3868,7 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
             </TouchableOpacity>
-            {/* Text Editieren Button */}
-            <TouchableOpacity
-              style={[styles.toolButtonInner, !selectedElementId && styles.toolButtonDisabled]}
-              onPress={() => {
-                if (selectedElementId) {
-                  const selectedEl = elements.find(el => el.id === selectedElementId);
-                  if (selectedEl?.type === 'text') {
-                    setTextInput(selectedEl.data.text || '');
-                    setEditFontSize(selectedEl.fontSize || 20);
-                    setEditFontWeight(selectedEl.fontWeight || 'bold');
-                    setEditFontStyle(selectedEl.fontStyle || 'normal');
-                    setDrawColor(selectedEl.color);
-                    setShowEditTextModal(true);
-                  } else if (selectedEl?.type === 'arrow') {
-                    setArrowText(selectedEl.data.text || '');
-                    setArrowHeads(selectedEl.data.heads || 'double');
-                    setEditArrowFontSize(selectedEl.data.fontSize || 14);
-                    setEditStrokeWidth(selectedEl.strokeWidth || 3);
-                    setDrawColor(selectedEl.color);
-                    setShowEditArrowModal(true);
-                  } else if (selectedEl?.type === 'pointer') {
-                    setPointerText(selectedEl.data.text || '');
-                    setEditPointerFontSize(selectedEl.data.fontSize || 16);
-                    setEditPointerStrokeWidth(selectedEl.strokeWidth || 6);
-                    setDrawColor(selectedEl.color);
-                    setShowEditPointerModal(true);
-                  } else if (selectedEl?.type === 'memo') {
-                    setMemoText(selectedEl.data.text || '');
-                    setEditMemoFontSize(selectedEl.data.fontSize || 14);
-                    setDrawColor(selectedEl.color);
-                    setShowEditMemoModal(true);
-                  }
-                }
-              }}
-              disabled={!selectedElementId || !['text', 'arrow', 'pointer', 'memo'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
-            >
-              <Ionicons 
-                name="create" 
-                size={18} 
-                color={selectedElementId && ['text', 'arrow', 'pointer', 'memo'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
-              />
-            </TouchableOpacity>
-            {/* Notiz Button (Annotation Memo - wie in Flächenberechnung) */}
+            {/* Notiz Button (Annotation Memo) */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'memo' && styles.toolButtonActive]}
               onPress={() => selectDrawMode('memo')}
@@ -3893,7 +3893,6 @@ export default function DrawSketchScreen() {
           <View style={styles.toolGroupLabelRow}>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Memo</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Text</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Editieren</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notizen</Text>
           </View>
@@ -3901,63 +3900,7 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* 6. Galeriefotos */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
-            <Ionicons name="image" size={18} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Galeriefotos</Text>
-        </View>
-
-        {/* 7. Projektfotos - Button für Fotos aus dem Projekt */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity 
-            style={styles.toolButtonInner} 
-            onPress={loadProjectPhotos}
-          >
-            <Ionicons name="folder-open" size={18} color="#1976d2" />
-          </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Projektfotos</Text>
-        </View>
-
-        {/* 8. neues Foto */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
-            <Ionicons name="camera" size={18} color="#4caf50" />
-          </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>neues Foto</Text>
-        </View>
-
-        {/* 9. Fotobearbeitung */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity 
-            style={[styles.toolButtonInner, photoEditMode && styles.photoEditButtonActive]} 
-            onPress={() => {
-              setPhotoEditMode(!photoEditMode);
-              setSelectedElementId(null);
-              if (!photoEditMode) {
-                selectDrawMode('select');
-              }
-            }}
-          >
-            <Ionicons name="image-outline" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
-          </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Foto Position</Text>
-        </View>
-
-        {/* 10. Foto zuschneiden - Modus-Button */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity 
-            style={[styles.toolButtonInner, drawMode === 'crop' && styles.toolButtonActive]} 
-            onPress={() => selectDrawMode(drawMode === 'crop' ? 'select' : 'crop')}
-          >
-            <Ionicons name="crop-outline" size={18} color={drawMode === 'crop' ? '#fff' : '#9C27B0'} />
-          </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: drawMode === 'crop' ? '#9C27B0' : '#333' }]}>Zuschneiden</Text>
-        </View>
-
-        <View style={styles.separator} />
-
+        {/* ========== FARBEN & STRICHSTÄRKEN ========== */}
         {/* Color picker */}
         <TouchableOpacity style={styles.toolButton} onPress={() => setShowColorPicker(!showColorPicker)}>
           <View style={[styles.colorPreview, { backgroundColor: drawColor }]} />
@@ -3976,45 +3919,7 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* Edit Button - for text, arrows and pointers */}
-        <TouchableOpacity
-          style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
-          onPress={() => {
-            if (selectedElementId) {
-              const selectedEl = elements.find(el => el.id === selectedElementId);
-              if (selectedEl?.type === 'text') {
-                setTextInput(selectedEl.data.text || '');
-                setEditFontSize(selectedEl.fontSize || 20);
-                setEditFontWeight(selectedEl.fontWeight || 'bold');
-                setEditFontStyle(selectedEl.fontStyle || 'normal');
-                setDrawColor(selectedEl.color);
-                setShowEditTextModal(true);
-              } else if (selectedEl?.type === 'arrow') {
-                setArrowText(selectedEl.data.text || '');
-                setArrowHeads(selectedEl.data.heads || 'double');
-                setEditArrowFontSize(selectedEl.data.fontSize || 14);
-                setEditStrokeWidth(selectedEl.strokeWidth || 3);
-                setDrawColor(selectedEl.color);
-                setShowEditArrowModal(true);
-              } else if (selectedEl?.type === 'pointer') {
-                // Memo-Pfeil bearbeiten
-                setPointerText(selectedEl.data.text || '');
-                setEditPointerFontSize(selectedEl.data.fontSize || 16);
-                setEditPointerStrokeWidth(selectedEl.strokeWidth || 6);
-                setDrawColor(selectedEl.color);
-                setShowEditPointerModal(true);
-              }
-            }
-          }}
-          disabled={!selectedElementId || !['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '')}
-        >
-          <Ionicons 
-            name="create" 
-            size={18} 
-            color={selectedElementId && ['text', 'arrow', 'pointer'].includes(elements.find(el => el.id === selectedElementId)?.type || '') ? '#1976d2' : '#ccc'} 
-          />
-        </TouchableOpacity>
-
+        {/* ========== LÖSCHEN & EBENEN ========== */}
         {/* Delete */}
         <TouchableOpacity
           style={[styles.toolButton, !selectedElementId && styles.toolButtonDisabled]}
@@ -4052,7 +3957,8 @@ export default function DrawSketchScreen() {
 
         <View style={styles.separator} />
 
-        {/* Gitter Toggle und Einstellungen */}
+        {/* ========== GITTER & ZOOM ========== */}
+        {/* Gitter Toggle */}
         <TouchableOpacity 
           style={[styles.toolButton, showGrid && !backgroundImage && styles.gridButtonActive]} 
           onPress={() => {
@@ -4074,13 +3980,11 @@ export default function DrawSketchScreen() {
           />
         </TouchableOpacity>
         
-        {/* Zoom Reset Button - zeigt aktuellen Zoom-Level und 100% */}
-        <View style={styles.toolSeparator} />
+        {/* Zoom Reset Button */}
         <TouchableOpacity
           style={[
             styles.toolButton, 
             { 
-              // Grün wenn zwischen 99% und 101% (Toleranz für Rundungsfehler)
               backgroundColor: (scale >= 0.99 && scale <= 1.01) ? '#4caf50' : '#e3f2fd',
               flexDirection: 'column',
               justifyContent: 'center',
@@ -4089,10 +3993,8 @@ export default function DrawSketchScreen() {
             }
           ]}
           onPress={() => { 
-            // Reset zoom und position über ScrollView
             if (scrollViewRef.current) {
               scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-              // ScrollView zoomScale auf exakt 1 zurücksetzen (für iOS)
               (scrollViewRef.current as any).scrollResponderZoomTo?.({
                 x: 0,
                 y: 0,
@@ -4101,7 +4003,6 @@ export default function DrawSketchScreen() {
                 animated: false,
               });
             }
-            // Explizit auf exakt 1 setzen
             setScale(1); 
             setPanOffset({ x: 0, y: 0 });
             setScrollOffset({ x: 0, y: 0 });
@@ -4113,8 +4014,7 @@ export default function DrawSketchScreen() {
           <Text style={{ fontSize: 8, color: (scale >= 0.99 && scale <= 1.01) ? '#c8e6c9' : '#90caf9' }}>100%</Text>
         </TouchableOpacity>
         
-        {/* Zoom an/aus Toggle Button - rechts in der Toolbar */}
-        <View style={styles.toolSeparator} />
+        {/* Zoom an/aus Toggle */}
         <TouchableOpacity
           style={[
             styles.toolButton, 
@@ -4143,6 +4043,28 @@ export default function DrawSketchScreen() {
           </View>
         </TouchableOpacity>
 
+        <View style={styles.separator} />
+
+        {/* ========== UNDO/REDO (GANZ RECHTS) ========== */}
+        <TouchableOpacity
+          style={[styles.toolButton, !canUndo && styles.toolButtonDisabled]}
+          onPress={undo}
+          disabled={!canUndo}
+        >
+          <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.toolButton, !canRedo && styles.toolButtonDisabled]}
+          onPress={redo}
+          disabled={!canRedo}
+        >
+          <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
+        </TouchableOpacity>
+
+        <View style={styles.separator} />
+
+        {/* Alles löschen */}
         <TouchableOpacity style={styles.toolButton} onPress={() => {
           if (Platform.OS === 'web') {
             if (confirm('Möchten Sie alle Elemente löschen?')) {

@@ -1182,7 +1182,10 @@ export default function NewProjectScreen() {
           saveProject(null);
         }}
       >
-        <View style={styles.saveAddressModalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.saveAddressModalOverlay}
+        >
           <View style={styles.saveAddressModalContent}>
             <View style={styles.saveAddressModalHeader}>
               <Ionicons name="home" size={32} color="#ff9800" />
@@ -1220,7 +1223,7 @@ export default function NewProjectScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );

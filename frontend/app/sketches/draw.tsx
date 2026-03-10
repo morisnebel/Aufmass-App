@@ -377,7 +377,7 @@ export default function DrawSketchScreen() {
     setShowProjectPhotosModal(false);
     // Automatisch Foto-Bearbeiten Modus aktivieren
     setPhotoEditMode(true);
-    setDrawMode('select');
+    selectDrawMode('select');
   };
   
   // Kästchenpapier Hintergrund
@@ -1299,7 +1299,12 @@ export default function DrawSketchScreen() {
           height: 200,
           rotation: 0,
         };
-        addToHistory([...elements, newElement]);
+        const newElements = [...elements, newElement];
+        addToHistory(newElements);
+        // Automatisch Foto-Bearbeiten Modus aktivieren
+        setSelectedElementId(newElement.id);
+        setPhotoEditMode(true);
+        selectDrawMode('select');
       }
     } catch (error) {
       console.error('Error inserting image:', error);
@@ -1338,7 +1343,12 @@ export default function DrawSketchScreen() {
           height: 250,
           rotation: 0,
         };
-        addToHistory([...elements, newElement]);
+        const newElements = [...elements, newElement];
+        addToHistory(newElements);
+        // Automatisch Foto-Bearbeiten Modus aktivieren
+        setSelectedElementId(newElement.id);
+        setPhotoEditMode(true);
+        selectDrawMode('select');
       }
     } catch (error) {
       console.error('Error taking photo:', error);

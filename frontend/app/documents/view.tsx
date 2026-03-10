@@ -2280,9 +2280,18 @@ export default function DocumentViewScreen() {
                     style={[styles.pointerBtnOk, { backgroundColor: '#4caf50' }]} 
                     onPress={() => {
                       if (editingPointerId) {
+                        // Breite automatisch an Textlänge anpassen
+                        const newTextLength = editingPointerText.length;
+                        const autoWidth = Math.max(newTextLength * 7 + 16, 50);
                         setShapes(prev => prev.map(s => 
-                          s.id === editingPointerId ? { ...s, text: editingPointerText } : s
+                          s.id === editingPointerId ? { 
+                            ...s, 
+                            text: editingPointerText,
+                            noteWidth: Math.max(autoWidth, s.noteHeight || 24) // Breite anpassen
+                          } : s
                         ));
+                        // Letzte Größe merken
+                        setLastNoteWidth(autoWidth);
                         setEditingPointerId(null);
                         setEditingPointerText('');
                       }
@@ -2397,7 +2406,7 @@ export default function DocumentViewScreen() {
                         <View style={styles.noteSizeButtons}>
                           <TouchableOpacity 
                             style={styles.noteSizeBtn}
-                            onPress={() => setEditNoteHeight(Math.max(10, editNoteHeight - 8))}
+                            onPress={() => setEditNoteHeight(Math.max(16, editNoteHeight - 8))}
                           >
                             <Ionicons name="remove" size={20} color="#666" />
                           </TouchableOpacity>

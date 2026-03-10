@@ -893,6 +893,9 @@ export default function DrawSketchScreen() {
       setHistory([[imageElement]]);
       setHistoryIndex(0);
       setSelectedElementId(imageElement.id);
+      // Automatisch Foto-Bearbeiten Modus aktivieren
+      setPhotoEditMode(true);
+      setDrawMode('select');
     };
 
     // Option 1: Load from photoId (fast - loads from LocalStorage)

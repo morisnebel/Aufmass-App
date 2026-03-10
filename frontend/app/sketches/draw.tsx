@@ -3851,24 +3851,6 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Foto Position</Text>
         </View>
 
-        {/* 10. Zuschneiden */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity 
-            style={[styles.toolButtonInner, cropMode && styles.toolButtonActive]} 
-            onPress={() => {
-              if (cropMode) {
-                cancelCrop();
-              } else {
-                startCropMode();
-              }
-            }}
-            disabled={!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
-          >
-            <Ionicons name="crop-outline" size={18} color={cropMode ? '#fff' : (photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc')} />
-          </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, (!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image') && { color: '#ccc' }]}>Foto zuschneiden</Text>
-        </View>
-
         <View style={styles.separator} />
 
         {/* Color picker */}
@@ -4286,41 +4268,6 @@ export default function DrawSketchScreen() {
               )}
             </>
           )}
-
-          {/* Crop Overlay */}
-          {cropMode && cropBox && (
-            <>
-              {/* Dunkle Overlay außerhalb der Crop-Box */}
-              <Rect x={0} y={0} width={cropBox.x} height={canvasSize.height} fill="rgba(0,0,0,0.5)" />
-              <Rect x={cropBox.x + cropBox.width} y={0} width={canvasSize.width - cropBox.x - cropBox.width} height={canvasSize.height} fill="rgba(0,0,0,0.5)" />
-              <Rect x={cropBox.x} y={0} width={cropBox.width} height={cropBox.y} fill="rgba(0,0,0,0.5)" />
-              <Rect x={cropBox.x} y={cropBox.y + cropBox.height} width={cropBox.width} height={canvasSize.height - cropBox.y - cropBox.height} fill="rgba(0,0,0,0.5)" />
-              
-              {/* Crop-Box Rahmen */}
-              <Rect 
-                x={cropBox.x} 
-                y={cropBox.y} 
-                width={cropBox.width} 
-                height={cropBox.height} 
-                fill="none" 
-                stroke="#fff" 
-                strokeWidth={2}
-                strokeDasharray="10,5"
-              />
-              
-              {/* Ecken-Handles */}
-              <Circle cx={cropBox.x} cy={cropBox.y} r={12} fill="#9C27B0" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x + cropBox.width} cy={cropBox.y} r={12} fill="#9C27B0" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x} cy={cropBox.y + cropBox.height} r={12} fill="#9C27B0" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x + cropBox.width} cy={cropBox.y + cropBox.height} r={12} fill="#9C27B0" stroke="#fff" strokeWidth={2} />
-              
-              {/* Kanten-Handles */}
-              <Circle cx={cropBox.x + cropBox.width / 2} cy={cropBox.y} r={10} fill="#E91E63" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x + cropBox.width / 2} cy={cropBox.y + cropBox.height} r={10} fill="#E91E63" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x} cy={cropBox.y + cropBox.height / 2} r={10} fill="#E91E63" stroke="#fff" strokeWidth={2} />
-              <Circle cx={cropBox.x + cropBox.width} cy={cropBox.y + cropBox.height / 2} r={10} fill="#E91E63" stroke="#fff" strokeWidth={2} />
-            </>
-          )}
         </Svg>
 
         {/* Info overlay */}
@@ -4340,26 +4287,6 @@ export default function DrawSketchScreen() {
             </View>
           )}
         </View>
-
-        {/* Crop-Modus Steuerung */}
-        {cropMode && (
-          <View style={styles.cropControls}>
-            <TouchableOpacity 
-              style={[styles.cropButton, styles.cropButtonCancel]} 
-              onPress={cancelCrop}
-            >
-              <Ionicons name="close" size={20} color="#fff" />
-              <Text style={styles.cropButtonText}>Abbrechen</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.cropButton, styles.cropButtonApply]} 
-              onPress={applyCrop}
-            >
-              <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.cropButtonText}>Anwenden</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
       </View>
       </ScrollView>

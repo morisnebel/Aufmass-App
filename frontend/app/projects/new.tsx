@@ -111,6 +111,9 @@ export default function NewProjectScreen() {
   const [objektStreet, setObjektStreet] = useState('');
   const [objektPlz, setObjektPlz] = useState('');
   const [objektCity, setObjektCity] = useState('');
+  const [objektContactPerson, setObjektContactPerson] = useState('');
+  const [objektPhone, setObjektPhone] = useState('');
+  const [objektEmail, setObjektEmail] = useState('');
   const [showAddressPicker, setShowAddressPicker] = useState(false);
   
   // Adresse speichern Modal
@@ -152,6 +155,9 @@ export default function NewProjectScreen() {
     setObjektStreet('');
     setObjektPlz('');
     setObjektCity('');
+    setObjektContactPerson('');
+    setObjektPhone('');
+    setObjektEmail('');
   };
 
   const handleSelectProjectAddress = (address: ProjectAddress) => {
@@ -159,6 +165,9 @@ export default function NewProjectScreen() {
     setObjektStreet(address.street);
     setObjektPlz(address.zip);
     setObjektCity(address.city);
+    setObjektContactPerson(address.contactPerson || '');
+    setObjektPhone(address.phone || '');
+    setObjektEmail(address.email || '');
     setShowAddressPicker(false);
   };
 
@@ -167,6 +176,9 @@ export default function NewProjectScreen() {
     setObjektStreet('');
     setObjektPlz('');
     setObjektCity('');
+    setObjektContactPerson('');
+    setObjektPhone('');
+    setObjektEmail('');
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -505,6 +517,9 @@ export default function NewProjectScreen() {
           street: objektStreet,
           zip: objektPlz,
           city: objektCity,
+          contactPerson: objektContactPerson || undefined,
+          phone: objektPhone || undefined,
+          email: objektEmail || undefined,
         };
         
         const existingAddresses = selectedCustomer.projectAddresses || [];
@@ -530,6 +545,9 @@ export default function NewProjectScreen() {
         objekt_plz: objektPlz || undefined,
         objekt_city: objektCity || undefined,
         objekt_address_name: savedAddressName || undefined,
+        objekt_contact_person: objektContactPerson || undefined,
+        objekt_phone: objektPhone || undefined,
+        objekt_email: objektEmail || undefined,
       });
       
       const successMessage = saveAddressWithName 
@@ -670,6 +688,42 @@ export default function NewProjectScreen() {
                   setObjektCity(text);
                   if (selectedProjectAddress) setSelectedProjectAddress(null);
                 }}
+              />
+            </View>
+            
+            {/* Ansprechpartner */}
+            <TextInput
+              style={styles.input}
+              placeholder="Ansprechpartner"
+              value={objektContactPerson}
+              onChangeText={(text) => {
+                setObjektContactPerson(text);
+                if (selectedProjectAddress) setSelectedProjectAddress(null);
+              }}
+            />
+            
+            {/* Telefon und E-Mail */}
+            <View style={styles.addressRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginRight: 8 }]}
+                placeholder="Telefon"
+                value={objektPhone}
+                onChangeText={(text) => {
+                  setObjektPhone(text);
+                  if (selectedProjectAddress) setSelectedProjectAddress(null);
+                }}
+                keyboardType="phone-pad"
+              />
+              <TextInput
+                style={[styles.input, { flex: 1.5 }]}
+                placeholder="E-Mail"
+                value={objektEmail}
+                onChangeText={(text) => {
+                  setObjektEmail(text);
+                  if (selectedProjectAddress) setSelectedProjectAddress(null);
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
           </View>

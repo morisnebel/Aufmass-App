@@ -193,6 +193,9 @@ export interface ProjectAddress {
   street: string;
   zip: string;
   city: string;
+  contactPerson?: string; // Ansprechpartner
+  phone?: string; // Telefonnummer
+  email?: string; // E-Mail
 }
 
 export interface Customer {
@@ -266,6 +269,9 @@ export interface Project {
   objekt_plz?: string;
   objekt_city?: string;
   objekt_address_name?: string; // Name der gespeicherten Adresse (z.B. "Haupthaus")
+  objekt_contact_person?: string; // Ansprechpartner
+  objekt_phone?: string; // Telefon
+  objekt_email?: string; // E-Mail
   created_at: string;
   updated_at: string;
 }

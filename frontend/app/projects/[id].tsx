@@ -51,6 +51,9 @@ interface Project {
   objekt_plz?: string;
   objekt_city?: string;
   objekt_address_name?: string; // Name der gespeicherten Adresse (z.B. "Haupthaus")
+  objekt_contact_person?: string; // Ansprechpartner
+  objekt_phone?: string; // Telefon
+  objekt_email?: string; // E-Mail
 }
 
 interface Customer {
@@ -165,6 +168,9 @@ export default function ProjectDetailScreen() {
   const [editObjektStreet, setEditObjektStreet] = useState('');
   const [editObjektPlz, setEditObjektPlz] = useState('');
   const [editObjektCity, setEditObjektCity] = useState('');
+  const [editObjektContactPerson, setEditObjektContactPerson] = useState('');
+  const [editObjektPhone, setEditObjektPhone] = useState('');
+  const [editObjektEmail, setEditObjektEmail] = useState('');
   const [isSavingProject, setIsSavingProject] = useState(false);
   
   // PDF Preview state
@@ -573,6 +579,9 @@ export default function ProjectDetailScreen() {
       setEditObjektStreet(project.objekt_street || '');
       setEditObjektPlz(project.objekt_plz || '');
       setEditObjektCity(project.objekt_city || '');
+      setEditObjektContactPerson(project.objekt_contact_person || '');
+      setEditObjektPhone(project.objekt_phone || '');
+      setEditObjektEmail(project.objekt_email || '');
       
       setShowEditProjectModal(true);
     }
@@ -610,6 +619,9 @@ export default function ProjectDetailScreen() {
         objekt_street: editObjektStreet || undefined,
         objekt_plz: editObjektPlz || undefined,
         objekt_city: editObjektCity || undefined,
+        objekt_contact_person: editObjektContactPerson || undefined,
+        objekt_phone: editObjektPhone || undefined,
+        objekt_email: editObjektEmail || undefined,
       });
 
       // Synchronisiere Bauherr-Daten mit Kundenstamm
@@ -3366,7 +3378,7 @@ export default function ProjectDetailScreen() {
               )}
               
               {/* Objektadresse (separate Felder) */}
-              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name) && (
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email) && (
                 <>
                   <View style={styles.sectionDivider} />
                   <View style={styles.objektAdresseHeader}>
@@ -3389,6 +3401,24 @@ export default function ProjectDetailScreen() {
                     <Text style={styles.infoLabel}>PLZ / Ort:</Text>
                     <Text style={styles.infoValue}>{project.objekt_plz || ''} {project.objekt_city || ''}</Text>
                   </View>
+                  {project?.objekt_contact_person && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Ansprechpartner:</Text>
+                      <Text style={styles.infoValue}>{project.objekt_contact_person}</Text>
+                    </View>
+                  )}
+                  {project?.objekt_phone && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Telefon:</Text>
+                      <Text style={styles.infoValue}>{project.objekt_phone}</Text>
+                    </View>
+                  )}
+                  {project?.objekt_email && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>E-Mail:</Text>
+                      <Text style={styles.infoValue}>{project.objekt_email}</Text>
+                    </View>
+                  )}
                 </>
               )}
             </View>
@@ -4891,6 +4921,40 @@ export default function ProjectDetailScreen() {
                         value={editObjektCity}
                         onChangeText={setEditObjektCity}
                         placeholder="Ort"
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Ansprechpartner</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editObjektContactPerson}
+                      onChangeText={setEditObjektContactPerson}
+                      placeholder="Name des Ansprechpartners"
+                    />
+                  </View>
+                  
+                  <View style={styles.addressRow}>
+                    <View style={styles.plzInput}>
+                      <Text style={styles.compactLabel}>Telefon</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editObjektPhone}
+                        onChangeText={setEditObjektPhone}
+                        placeholder="Telefon"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>E-Mail</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editObjektEmail}
+                        onChangeText={setEditObjektEmail}
+                        placeholder="E-Mail"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
                       />
                     </View>
                   </View>

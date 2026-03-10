@@ -1899,7 +1899,7 @@ export default function DrawSketchScreen() {
           newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
             return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
           });
-        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer' || el.type === 'memo') {
           newEl.data = {
             ...el.data,
             x1: originalElement.data.x1 + dx,
@@ -1943,7 +1943,7 @@ export default function DrawSketchScreen() {
         if (el.type === 'circle') {
           centerX = originalElement.data.cx;
           centerY = originalElement.data.cy;
-        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer' || el.type === 'memo') {
           centerX = (originalElement.data.x1 + originalElement.data.x2) / 2;
           centerY = (originalElement.data.y1 + originalElement.data.y2) / 2;
         } else if (el.type === 'rect') {
@@ -1968,7 +1968,7 @@ export default function DrawSketchScreen() {
             Math.pow(locationY - originalElement.data.cy, 2)
           );
           newEl.data = { ...el.data, r: Math.max(10, newRadius) };
-        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
+        } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer' || el.type === 'memo') {
           if (resizeHandle === 'start') {
             newEl.data = { ...el.data, x1: locationX, y1: locationY };
           } else if (resizeHandle === 'end') {
@@ -2212,7 +2212,7 @@ export default function DrawSketchScreen() {
       if (Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - (cy - r - 30), 2)) < handleRadius) {
         return { type: 'rotate', handle: 'rotate' };
       }
-    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer') {
+    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer' || element.type === 'memo') {
       const { x1, y1, x2, y2 } = element.data;
       if (Math.sqrt(Math.pow(x - x1, 2) + Math.pow(y - y1, 2)) < handleRadius) {
         return { type: 'resize', handle: 'start' };
@@ -2855,7 +2855,7 @@ export default function DrawSketchScreen() {
           <SvgText x={cx - 5} y={cy - r - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
         </G>
       );
-    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer') {
+    } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer' || element.type === 'memo') {
       const { x1, y1, x2, y2 } = element.data;
       handles.push(
         <Circle key="start" cx={x1} cy={y1} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />

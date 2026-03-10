@@ -2002,7 +2002,7 @@ export default function DocumentViewScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContent} keyboardShouldPersistTaps="always">
               {/* Select/Move Tool */}
               <TouchableOpacity style={[styles.toolBtn, getCurrentTool() === 'select' && styles.toolBtnActive]} onPress={() => selectTool('select')}>
-                <Ionicons name="move" size={20} color={getCurrentTool() === 'select' ? '#fff' : '#666'} />
+                <Ionicons name="hand-left" size={20} color={getCurrentTool() === 'select' ? '#fff' : '#666'} />
               </TouchableOpacity>
               <View style={styles.divider} />
               
@@ -2390,7 +2390,7 @@ export default function DocumentViewScreen() {
                         <View style={styles.noteSizeButtons}>
                           <TouchableOpacity 
                             style={styles.noteSizeBtn}
-                            onPress={() => setEditNoteHeight(Math.max(24, editNoteHeight - 8))}
+                            onPress={() => setEditNoteHeight(Math.max(16, editNoteHeight - 8))}
                           >
                             <Ionicons name="remove" size={20} color="#666" />
                           </TouchableOpacity>

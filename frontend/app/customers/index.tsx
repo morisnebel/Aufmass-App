@@ -37,6 +37,9 @@ export default function CustomersScreen() {
   const [addressStreet, setAddressStreet] = useState('');
   const [addressZip, setAddressZip] = useState('');
   const [addressCity, setAddressCity] = useState('');
+  const [addressContactPerson, setAddressContactPerson] = useState('');
+  const [addressPhone, setAddressPhone] = useState('');
+  const [addressEmail, setAddressEmail] = useState('');
   
   // Projects für Aufmaß-Navigation
   const [projects, setProjects] = useState<Project[]>([]);
@@ -98,6 +101,9 @@ export default function CustomersScreen() {
     setAddressStreet('');
     setAddressZip('');
     setAddressCity('');
+    setAddressContactPerson('');
+    setAddressPhone('');
+    setAddressEmail('');
     setEditingAddress(null);
   };
 
@@ -107,6 +113,9 @@ export default function CustomersScreen() {
     setAddressStreet(address.street);
     setAddressZip(address.zip);
     setAddressCity(address.city);
+    setAddressContactPerson(address.contactPerson || '');
+    setAddressPhone(address.phone || '');
+    setAddressEmail(address.email || '');
   };
 
   const saveAddress = async () => {
@@ -121,7 +130,7 @@ export default function CustomersScreen() {
       // Bestehende Adresse aktualisieren
       const updatedAddresses = addresses.map(a => 
         a.id === editingAddress.id 
-          ? { ...a, name: addressName, street: addressStreet, zip: addressZip, city: addressCity }
+          ? { ...a, name: addressName, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
           : a
       );
       await CustomerService.update(selectedCustomer.id, { 
@@ -136,6 +145,9 @@ export default function CustomersScreen() {
         street: addressStreet,
         zip: addressZip,
         city: addressCity,
+        contactPerson: addressContactPerson || undefined,
+        phone: addressPhone || undefined,
+        email: addressEmail || undefined,
       };
       await CustomerService.update(selectedCustomer.id, { 
         ...selectedCustomer, 
@@ -466,6 +478,31 @@ export default function CustomersScreen() {
                   placeholder="Stadt"
                   value={addressCity}
                   onChangeText={setAddressCity}
+                />
+              </View>
+              
+              <TextInput
+                style={styles.addressInput}
+                placeholder="Ansprechpartner"
+                value={addressContactPerson}
+                onChangeText={setAddressContactPerson}
+              />
+              
+              <View style={styles.addressRow}>
+                <TextInput
+                  style={[styles.addressInput, { flex: 1 }]}
+                  placeholder="Telefon"
+                  value={addressPhone}
+                  onChangeText={setAddressPhone}
+                  keyboardType="phone-pad"
+                />
+                <TextInput
+                  style={[styles.addressInput, { flex: 1.5 }]}
+                  placeholder="E-Mail"
+                  value={addressEmail}
+                  onChangeText={setAddressEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
               </View>
               

@@ -316,9 +316,18 @@ export default function DrawSketchScreen() {
   const [cropImageId, setCropImageId] = useState<string | null>(null);
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 200 });
   const [cropImageDimensions, setCropImageDimensions] = useState({ width: 300, height: 300 });
-  const [cropDragMode, setCropDragMode] = useState<string | null>(null);
-  const [cropDragStart, setCropDragStart] = useState({ x: 0, y: 0 });
-  const [originalCropBox, setOriginalCropBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  
+  // Refs für Crop-Interaktion (verwende Refs statt State für bessere Performance)
+  const cropContainerRef = useRef<View>(null);
+  const cropBoxRef = useRef({ x: 50, y: 50, width: 200, height: 200 }); // Sync mit cropBox
+  const activeCropHandle = useRef<string | null>(null);
+  const cropStartPos = useRef({ x: 0, y: 0 });
+  const cropStartBox = useRef({ x: 50, y: 50, width: 200, height: 200 });
+  
+  // Halte cropBoxRef synchron mit cropBox State
+  useEffect(() => {
+    cropBoxRef.current = cropBox;
+  }, [cropBox]);
   
   // Helper-Funktion: Wechselt den Zeichenmodus und schaltet Zoom automatisch aus
   // wenn ein Zeichenwerkzeug (auch 'select' für Bearbeiten) ausgewählt wird
@@ -1325,6 +1334,95 @@ export default function DrawSketchScreen() {
     setCropImageUri(null);
     setCropImageId(null);
   };
+
+  // PanResponder für Crop-Interaktion
+  const getCropHandleAtPosition = (x: number, y: number): string | null => {
+    const handleSize = 35; // Größerer Touch-Bereich für bessere Bedienbarkeit
+    const box = cropBoxRef.current; // Verwende Ref für aktuellen Wert
+    
+    // Prüfe Ecken
+    if (Math.abs(x - box.x) < handleSize && Math.abs(y - box.y) < handleSize) {
+      return 'top-left';
+    }
+    if (Math.abs(x - (box.x + box.width)) < handleSize && Math.abs(y - box.y) < handleSize) {
+      return 'top-right';
+    }
+    if (Math.abs(x - box.x) < handleSize && Math.abs(y - (box.y + box.height)) < handleSize) {
+      return 'bottom-left';
+    }
+    if (Math.abs(x - (box.x + box.width)) < handleSize && Math.abs(y - (box.y + box.height)) < handleSize) {
+      return 'bottom-right';
+    }
+    // Prüfe ob innerhalb der Box (zum Verschieben)
+    if (x > box.x && x < box.x + box.width && y > box.y && y < box.y + box.height) {
+      return 'move';
+    }
+    return null;
+  };
+
+  const cropPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const { pageX, pageY } = evt.nativeEvent;
+        
+        // Berechne Position relativ zum Container
+        cropContainerRef.current?.measure((fx, fy, width, height, px, py) => {
+          const localX = pageX - px;
+          const localY = pageY - py;
+          
+          const handle = getCropHandleAtPosition(localX, localY);
+          activeCropHandle.current = handle;
+          cropStartPos.current = { x: pageX, y: pageY };
+          cropStartBox.current = { ...cropBoxRef.current }; // Verwende Ref
+        });
+      },
+      onPanResponderMove: (evt) => {
+        if (!activeCropHandle.current) return;
+        
+        const { pageX, pageY } = evt.nativeEvent;
+        const dx = pageX - cropStartPos.current.x;
+        const dy = pageY - cropStartPos.current.y;
+        const minSize = 50;
+        const maxSize = 300;
+        
+        let newBox = { ...cropStartBox.current };
+        
+        switch (activeCropHandle.current) {
+          case 'move':
+            newBox.x = Math.max(0, Math.min(maxSize - cropStartBox.current.width, cropStartBox.current.x + dx));
+            newBox.y = Math.max(0, Math.min(maxSize - cropStartBox.current.height, cropStartBox.current.y + dy));
+            break;
+          case 'top-left':
+            newBox.x = Math.max(0, Math.min(cropStartBox.current.x + cropStartBox.current.width - minSize, cropStartBox.current.x + dx));
+            newBox.y = Math.max(0, Math.min(cropStartBox.current.y + cropStartBox.current.height - minSize, cropStartBox.current.y + dy));
+            newBox.width = cropStartBox.current.x + cropStartBox.current.width - newBox.x;
+            newBox.height = cropStartBox.current.y + cropStartBox.current.height - newBox.y;
+            break;
+          case 'top-right':
+            newBox.y = Math.max(0, Math.min(cropStartBox.current.y + cropStartBox.current.height - minSize, cropStartBox.current.y + dy));
+            newBox.width = Math.max(minSize, Math.min(maxSize - cropStartBox.current.x, cropStartBox.current.width + dx));
+            newBox.height = cropStartBox.current.y + cropStartBox.current.height - newBox.y;
+            break;
+          case 'bottom-left':
+            newBox.x = Math.max(0, Math.min(cropStartBox.current.x + cropStartBox.current.width - minSize, cropStartBox.current.x + dx));
+            newBox.width = cropStartBox.current.x + cropStartBox.current.width - newBox.x;
+            newBox.height = Math.max(minSize, Math.min(maxSize - cropStartBox.current.y, cropStartBox.current.height + dy));
+            break;
+          case 'bottom-right':
+            newBox.width = Math.max(minSize, Math.min(maxSize - cropStartBox.current.x, cropStartBox.current.width + dx));
+            newBox.height = Math.max(minSize, Math.min(maxSize - cropStartBox.current.y, cropStartBox.current.height + dy));
+            break;
+        }
+        
+        setCropBox(newBox);
+      },
+      onPanResponderRelease: () => {
+        activeCropHandle.current = null;
+      },
+    })
+  ).current;
 
   // Clear all - auch Maße und Summenbox-Positionen zurücksetzen
   const clearAll = () => {
@@ -5328,20 +5426,25 @@ export default function DrawSketchScreen() {
             <Text style={styles.cropModalTitle}>Foto zuschneiden</Text>
             <Text style={styles.cropModalSubtitle}>Ziehen Sie die Ecken um den Bereich anzupassen</Text>
             
-            <View style={styles.cropImageContainer}>
+            <View 
+              ref={cropContainerRef}
+              style={styles.cropImageContainer}
+              {...cropPanResponder.panHandlers}
+            >
               {cropImageUri && (
                 <RNImage
                   source={{ uri: cropImageUri }}
                   style={styles.cropImage}
                   resizeMode="contain"
+                  pointerEvents="none"
                 />
               )}
               
               {/* Dunkle Overlay außerhalb der Crop-Box */}
-              <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} />
-              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} />
-              <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} />
-              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} />
+              <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} pointerEvents="none" />
               
               {/* Crop Box Rahmen */}
               <View 
@@ -5354,103 +5457,13 @@ export default function DrawSketchScreen() {
                     height: cropBox.height,
                   }
                 ]}
-                onTouchStart={(e) => {
-                  const touch = e.nativeEvent;
-                  setCropDragMode('move');
-                  setCropDragStart({ x: touch.locationX, y: touch.locationY });
-                  setOriginalCropBox({ ...cropBox });
-                }}
-                onTouchMove={(e) => {
-                  if (cropDragMode === 'move') {
-                    const touch = e.nativeEvent;
-                    const dx = touch.locationX - cropDragStart.x;
-                    const dy = touch.locationY - cropDragStart.y;
-                    setCropBox({
-                      ...cropBox,
-                      x: Math.max(0, Math.min(300 - cropBox.width, originalCropBox.x + dx)),
-                      y: Math.max(0, Math.min(300 - cropBox.height, originalCropBox.y + dy)),
-                    });
-                  }
-                }}
-                onTouchEnd={() => setCropDragMode(null)}
+                pointerEvents="none"
               >
                 {/* Ecken-Handles */}
-                <View 
-                  style={[styles.cropHandle, styles.cropHandleTopLeft]}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    setCropDragMode('top-left');
-                    setOriginalCropBox({ ...cropBox });
-                  }}
-                  onTouchMove={(e) => {
-                    if (cropDragMode === 'top-left') {
-                      const touch = e.nativeEvent;
-                      const newX = Math.max(0, originalCropBox.x + touch.pageX - (originalCropBox.x + 15));
-                      const newY = Math.max(0, originalCropBox.y + touch.pageY - (originalCropBox.y + 15));
-                      const newWidth = Math.max(50, originalCropBox.width - (newX - originalCropBox.x));
-                      const newHeight = Math.max(50, originalCropBox.height - (newY - originalCropBox.y));
-                      setCropBox({ x: newX, y: newY, width: newWidth, height: newHeight });
-                    }
-                  }}
-                  onTouchEnd={() => setCropDragMode(null)}
-                />
-                <View 
-                  style={[styles.cropHandle, styles.cropHandleTopRight]}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    setCropDragMode('top-right');
-                    setOriginalCropBox({ ...cropBox });
-                  }}
-                  onTouchMove={(e) => {
-                    if (cropDragMode === 'top-right') {
-                      const touch = e.nativeEvent;
-                      const newWidth = Math.max(50, touch.pageX - cropBox.x);
-                      const newY = Math.max(0, originalCropBox.y + touch.pageY - (originalCropBox.y + 15));
-                      const newHeight = Math.max(50, originalCropBox.height - (newY - originalCropBox.y));
-                      setCropBox({ ...cropBox, y: newY, width: Math.min(300 - cropBox.x, newWidth), height: newHeight });
-                    }
-                  }}
-                  onTouchEnd={() => setCropDragMode(null)}
-                />
-                <View 
-                  style={[styles.cropHandle, styles.cropHandleBottomLeft]}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    setCropDragMode('bottom-left');
-                    setOriginalCropBox({ ...cropBox });
-                  }}
-                  onTouchMove={(e) => {
-                    if (cropDragMode === 'bottom-left') {
-                      const touch = e.nativeEvent;
-                      const newX = Math.max(0, originalCropBox.x + touch.pageX - (originalCropBox.x + 15));
-                      const newWidth = Math.max(50, originalCropBox.width - (newX - originalCropBox.x));
-                      const newHeight = Math.max(50, touch.pageY - cropBox.y);
-                      setCropBox({ ...cropBox, x: newX, width: newWidth, height: Math.min(300 - cropBox.y, newHeight) });
-                    }
-                  }}
-                  onTouchEnd={() => setCropDragMode(null)}
-                />
-                <View 
-                  style={[styles.cropHandle, styles.cropHandleBottomRight]}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    setCropDragMode('bottom-right');
-                    setOriginalCropBox({ ...cropBox });
-                  }}
-                  onTouchMove={(e) => {
-                    if (cropDragMode === 'bottom-right') {
-                      const touch = e.nativeEvent;
-                      const newWidth = Math.max(50, touch.pageX - cropBox.x);
-                      const newHeight = Math.max(50, touch.pageY - cropBox.y);
-                      setCropBox({ 
-                        ...cropBox, 
-                        width: Math.min(300 - cropBox.x, newWidth), 
-                        height: Math.min(300 - cropBox.y, newHeight) 
-                      });
-                    }
-                  }}
-                  onTouchEnd={() => setCropDragMode(null)}
-                />
+                <View style={[styles.cropHandle, styles.cropHandleTopLeft]} />
+                <View style={[styles.cropHandle, styles.cropHandleTopRight]} />
+                <View style={[styles.cropHandle, styles.cropHandleBottomLeft]} />
+                <View style={[styles.cropHandle, styles.cropHandleBottomRight]} />
               </View>
             </View>
             

@@ -2397,7 +2397,7 @@ export default function DocumentViewScreen() {
                         <View style={styles.noteSizeButtons}>
                           <TouchableOpacity 
                             style={styles.noteSizeBtn}
-                            onPress={() => setEditNoteHeight(Math.max(16, editNoteHeight - 8))}
+                            onPress={() => setEditNoteHeight(Math.max(10, editNoteHeight - 8))}
                           >
                             <Ionicons name="remove" size={20} color="#666" />
                           </TouchableOpacity>

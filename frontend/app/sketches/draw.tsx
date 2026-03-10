@@ -382,6 +382,9 @@ export default function DrawSketchScreen() {
     setElements(newElements);
     setSelectedElementId(imageElement.id);
     setShowProjectPhotosModal(false);
+    // Automatisch Foto-Bearbeiten Modus aktivieren
+    setPhotoEditMode(true);
+    setDrawMode('select');
   };
   
   // Kästchenpapier Hintergrund
@@ -1236,6 +1239,8 @@ export default function DrawSketchScreen() {
       });
       setCropMode(true);
       setDrawMode('select');
+      // Zoom deaktivieren damit Touch-Events funktionieren
+      setZoomMode(false);
     } else {
       Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Bild aus.');
     }
@@ -3843,7 +3848,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="image-outline" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Fotobearbeitung</Text>
+          <Text style={styles.toolButtonLabel}>Foto Position</Text>
         </View>
 
         {/* 10. Zuschneiden */}
@@ -3857,11 +3862,11 @@ export default function DrawSketchScreen() {
                 startCropMode();
               }
             }}
-            disabled={!photoEditMode || !selectedElementId}
+            disabled={!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
           >
-            <Ionicons name="crop-outline" size={18} color={cropMode ? '#fff' : (photoEditMode && selectedElementId ? '#9C27B0' : '#ccc')} />
+            <Ionicons name="crop-outline" size={18} color={cropMode ? '#fff' : (photoEditMode && selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc')} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, (!photoEditMode || !selectedElementId) && { color: '#ccc' }]}>Zuschneiden</Text>
+          <Text style={[styles.toolButtonLabel, (!photoEditMode || !selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image') && { color: '#ccc' }]}>Foto zuschneiden</Text>
         </View>
 
         <View style={styles.separator} />

@@ -3684,12 +3684,12 @@ export default function DrawSketchScreen() {
       <View style={styles.toolbar}>
         {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
-        {/* 1. Galeriefotos */}
+        {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
-            <Ionicons name="image" size={18} color="#333" />
+          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
+            <Ionicons name="camera" size={18} color="#4caf50" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Galerie</Text>
+          <Text style={styles.toolButtonLabel}>Foto</Text>
         </View>
 
         {/* 2. Projektfotos */}
@@ -3703,12 +3703,12 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Projekt</Text>
         </View>
 
-        {/* 3. neues Foto */}
+        {/* 3. Galeriefotos */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={takePhotoAndInsert}>
-            <Ionicons name="camera" size={18} color="#4caf50" />
+          <TouchableOpacity style={styles.toolButtonInner} onPress={insertImage}>
+            <Ionicons name="image" size={18} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Foto</Text>
+          <Text style={styles.toolButtonLabel}>Galerie</Text>
         </View>
 
         {/* 4. Foto Position */}
@@ -3832,20 +3832,20 @@ export default function DrawSketchScreen() {
                 </SvgText>
               </Svg>
             </TouchableOpacity>
-            {/* Polygon Maße Button */}
+            {/* Polygon Maße Button - gleiche Breite wie Maßlinie */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive]}
+              style={[styles.toolButtonInnerWide, drawMode === 'polyline' && styles.toolButtonActive]}
               onPress={() => {
                 selectDrawMode('polyline');
                 setPolylinePoints([]);
               }}
             >
-              <Ionicons name="git-network-outline" size={18} color={drawMode === 'polyline' ? '#fff' : '#333'} />
+              <Ionicons name="git-network-outline" size={22} color={drawMode === 'polyline' ? '#fff' : '#333'} />
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maßlinie</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maße über{'\n'}Polygone</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Polygone</Text>
           </View>
         </View>
 

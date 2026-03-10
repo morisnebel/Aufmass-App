@@ -34,6 +34,7 @@ export default function CustomersScreen() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingAddress, setEditingAddress] = useState<ProjectAddress | null>(null);
   const [addressName, setAddressName] = useState('');
+  const [addressObjectName, setAddressObjectName] = useState('');
   const [addressStreet, setAddressStreet] = useState('');
   const [addressZip, setAddressZip] = useState('');
   const [addressCity, setAddressCity] = useState('');
@@ -98,6 +99,7 @@ export default function CustomersScreen() {
 
   const resetAddressForm = () => {
     setAddressName('');
+    setAddressObjectName('');
     setAddressStreet('');
     setAddressZip('');
     setAddressCity('');
@@ -110,6 +112,7 @@ export default function CustomersScreen() {
   const editAddress = (address: ProjectAddress) => {
     setEditingAddress(address);
     setAddressName(address.name);
+    setAddressObjectName(address.objectName || '');
     setAddressStreet(address.street);
     setAddressZip(address.zip);
     setAddressCity(address.city);
@@ -130,7 +133,7 @@ export default function CustomersScreen() {
       // Bestehende Adresse aktualisieren
       const updatedAddresses = addresses.map(a => 
         a.id === editingAddress.id 
-          ? { ...a, name: addressName, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
+          ? { ...a, name: addressName, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
           : a
       );
       await CustomerService.update(selectedCustomer.id, { 
@@ -142,6 +145,7 @@ export default function CustomersScreen() {
       const newAddress: ProjectAddress = {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         name: addressName,
+        objectName: addressObjectName || undefined,
         street: addressStreet,
         zip: addressZip,
         city: addressCity,
@@ -182,7 +186,7 @@ export default function CustomersScreen() {
                   for (const proj of matchingProjects) {
                     await ProjectService.update(proj.id, {
                       ...proj,
-                      objekt_name: addressName || undefined,
+                      objekt_name: addressObjectName || undefined,
                       objekt_street: addressStreet,
                       objekt_plz: addressZip,
                       objekt_city: addressCity,
@@ -458,6 +462,9 @@ export default function CustomersScreen() {
                     onPress={() => goToAufmass(address)}
                   >
                     <Text style={styles.addressItemName}>{address.name}</Text>
+                    {address.objectName && (
+                      <Text style={styles.addressItemObjectName}>{address.objectName}</Text>
+                    )}
                     <Text style={styles.addressItemDetails}>
                       {address.street}{address.street && (address.zip || address.city) ? ', ' : ''}
                       {address.zip} {address.city}
@@ -521,6 +528,12 @@ export default function CustomersScreen() {
                 placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
                 value={addressName}
                 onChangeText={setAddressName}
+              />
+              <TextInput
+                style={styles.addressInput}
+                placeholder="Objektname (optional)"
+                value={addressObjectName}
+                onChangeText={setAddressObjectName}
               />
               <TextInput
                 style={styles.addressInput}
@@ -828,6 +841,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+  },
+  addressItemObjectName: {
+    fontSize: 13,
+    color: '#1976d2',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   addressItemDetails: {
     fontSize: 13,

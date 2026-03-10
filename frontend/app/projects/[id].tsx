@@ -700,6 +700,7 @@ export default function ProjectDetailScreen() {
                         a.id === addr.id
                           ? { 
                               ...a, 
+                              objectName: editObjektName || undefined,
                               street: editObjektStreet, 
                               zip: editObjektPlz, 
                               city: editObjektCity,
@@ -728,6 +729,7 @@ export default function ProjectDetailScreen() {
               console.log('Found matching address:', matchingAddress.name);
               // Prüfe ob sich Daten geändert haben
               const hasChanges = 
+                (matchingAddress.objectName || '') !== (editObjektName || '') ||
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
                 matchingAddress.city !== editObjektCity ||
@@ -750,6 +752,7 @@ export default function ProjectDetailScreen() {
                           addr.id === matchingAddress!.id
                             ? { 
                                 ...addr, 
+                                objectName: editObjektName || undefined,
                                 street: editObjektStreet, 
                                 zip: editObjektPlz, 
                                 city: editObjektCity,

@@ -189,7 +189,8 @@ const setItems = async <T>(key: string, items: T[]): Promise<void> => {
 // ============ CUSTOMERS ============
 export interface ProjectAddress {
   id: string;
-  name: string; // z.B. "Haupthaus", "Garage"
+  name: string; // Bezeichnung z.B. "Haupthaus", "Garage"
+  objectName?: string; // Objektname
   street: string;
   zip: string;
   city: string;

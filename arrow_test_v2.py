@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://roof-calc-16.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-tool-3.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

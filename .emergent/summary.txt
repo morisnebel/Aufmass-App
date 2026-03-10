@@ -11,67 +11,67 @@ The user's primary goal is to build a comprehensive application for managing roo
     - Add descriptive text labels under all toolbar icons.
     - Add buttons for Projektfotos, Maße über Polygone, and Notiz zur Skizze.
     - Reorganize the toolbar to group related buttons.
-    - Rename Fotobearbeitung to Foto Position.
+    - The Zuschneiden (Crop) button should function as an independent mode.
 - **Bug Fixes & Refactoring**:
     - Drawing actions must work correctly on a zoomed/panned canvas.
     - Shape/element selection and editing mode must be functional.
-    - The Foto Position button should be automatically enabled immediately after inserting a photo.
 - **New Features**:
-    - **Notiz (Annotation)**: Implement a Notiz button that allows placing and editing a callout-style annotation on the canvas. (Completed and verified).
-    - **Photo Cropping**: Implement a feature to crop an already-placed image on the canvas. This should be an interactive visual tool.
+    - **Notiz (Annotation)**: Implement a Notiz button that allows placing and editing a callout-style annotation on the canvas. (Completed).
+    - **Photo Cropping**: Implement a feature to crop an already-placed image on the canvas. (Interaction fixed, workflow being refined).
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a client-side React Native/Expo app. The entire logic and UI for the drawing feature are contained in a monolithic file: . The agent has successfully implemented memo (Notiz) creation, editing, and moving. It also fixed issues with photo selection. The current work is focused on implementing a photo cropping feature, which is partially built but not functional. A library  has been installed for this purpose.
+The application is a client-side React Native/Expo app. The entire logic and UI for the drawing feature are contained in a monolithic file: . The agent successfully fixed the interactive photo cropping feature using , which the user confirmed is working well. The current task is to refactor the *workflow* for this feature to be a dedicated crop mode as per the user's latest request.
 
 **Last working item**:
-- **Last item agent was working**: Fixing the interactive photo cropping feature. The user reported that a modal for cropping opens, but the crop selection handles are not interactive. The agent identified the initial touch handling logic as overly complex and began refactoring it to use a simpler system with a single touch handler for the crop modal's container.
+- **Last item agent was working**: Implementing a new Crop Mode workflow. The user wants the Zuschneiden (Crop) button to act as a mode selector: click the button to enter crop mode, then click an image to open the crop modal, and the mode should deactivate after cropping.
+    - The agent started by adding a new  value to the  type definition in .
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: Frontend testing. The user must verify all UI and functionality changes on their device using the Expo Go app.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Photo cropping handles are not interactive (P0)
+- **Issue 1**: Implement the Crop Mode workflow (P0)
 - **Issue 2**: Verify fixes for core drawing/editing regressions (P1)
 - **Issue 3**: Expo Server/Client Sync Instability (P2 - Environmental Blocker)
 
 **Issues Detail:**
-- **Issue 1: Photo cropping handles are not interactive**
-    - **Attempted fixes**:
-        1.  (Failed) An initial complex implementation with multiple touch handlers and state variables (, specific logic in //) was created. It was buggy and later completely removed.
-        2.  (In Progress) A second attempt was made using  and a new crop modal. This version also failed because the crop handles were not interactive. The agent started refactoring the modal's touch logic to use a simpler, unified touch handler but did not complete it.
+- **Issue 1: Implement the Crop Mode workflow**
+    - **Description**: The Zuschneiden (Crop) button should activate a dedicated mode. When this mode is active, tapping an image should open the crop modal. After cropping is complete, the mode should automatically be disabled.
+    - **Attempted fixes**: The agent has added  to the  type in . The core logic has not been implemented yet.
     - **Next debug checklist**:
-        1.  Complete the implementation of the simplified touch logic for the crop modal in , likely using  or a similar gesture handling approach.
-        2.  Ensure the state for the crop rectangle () is correctly updated by the touch gestures.
-        3.  Verify that the  function correctly uses the final  with .
-        4.  Restart the Expo server using [07:51:44] Starting project at /app/frontend to ensure a clean build.
-        5.  Ask the user to test the cropping functionality again.
-    - **Why fix this issue and what will be achieved with the fix?**: This will complete the user-requested photo cropping feature, allowing users to trim images directly on the canvas.
+        1.  In , modify the  handler for the Zuschneiden button to set .
+        2.  Update the main canvas touch handler ( or ) to check if .
+        3.  If in crop mode and the touched element is an image, find that element and trigger the  function for it.
+        4.  In the  function, after a successful crop, reset the draw mode back to a default state (e.g., ).
+        5.  Ensure the Zuschneiden button's styling correctly indicates when it's the active mode.
+        6.  Restart the server with cache clearing ([08:19:27] Starting project at /app/frontend) and ask the user to test the new workflow.
+    - **Why fix this issue and what will be achieved with the fix?**: This will complete the user's requested workflow, making the cropping tool more intuitive and independent from other editing modes.
     - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y
+    - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
 
 - **Issue 2: Verify fixes for core drawing/editing regressions**
-    - **Description**: Lingering verification task. After recent fixes, it's important to confirm that basic shape selection, moving, and resizing still work as expected.
-    - **Next debug checklist**: Bundle this into the next user verification step. Ask the user to confirm they can still select and edit other shapes (polygons, lines, etc.) besides images.
+    - **Description**: Lingering verification task. After recent fixes to cropping and element selection, it's important to confirm that basic shape selection, moving, and resizing for *other* elements (polygons, lines, etc.) still work as expected.
+    - **Next debug checklist**: Bundle this into the next user verification step. After fixing the crop workflow, explicitly ask the user to confirm they can still select and edit other shapes.
     - **Status**: USER VERIFICATION PENDING
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
 
 - **Issue 3: Expo Server/Client Sync Instability**
-    - **Description**: A recurring environmental problem where changes are not reflected in the user's Expo Go client without a hard refresh and server cache clearing.
-    - **Next debug checklist**: After every deployment, explicitly instruct the user to hard refresh by force-quitting the Expo Go app and reopening it. Use [07:51:46] Starting project at /app/frontend to clear the cache when restarting the server.
+    - **Description**: A recurring environmental problem where code changes are not reflected in the user's Expo Go client without a hard refresh and server cache clearing.
+    - **Next debug checklist**: After every deployment, explicitly instruct the user to hard refresh by force-quitting the Expo Go app and reopening it. Always use [08:19:28] Starting project at /app/frontend to clear the cache when restarting the server.
     - **Status**: IN PROGRESS
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: N/A (Environmental)
 
 **In progress Task List**:
-- **Task 1: Finalize Photo Cropping Feature**
-    - **Where to resume**: . The agent was in the middle of replacing the non-working interactive crop UI with a simpler touch-handling mechanism within the crop modal.
-    - **What will be achieved with this?**: A fully functional photo cropping tool.
+- **Task 1: Finalize Crop Mode Workflow**
+    - **Where to resume**: .
+    - **What will be achieved with this?**: A fully functional and intuitive photo cropping workflow as per the user's latest request.
     - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on something**: None.
@@ -79,7 +79,7 @@ The application is a client-side React Native/Expo app. The entire logic and UI 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
 - **P1**: Implement the Maße über Polygone button and its functionality.
-- **P1**: Implement the functionality for the Notizen zur Skizze button (the button exists, but the logic needs to be verified/completed).
+- **P1**: Implement the functionality for the Notizen zur Skizze button.
 **Future Tasks:**
 - **P2**: Create a new TestFlight build for the user.
 - **P2**: Implement a Pro/Base version split with in-app purchases.
@@ -88,17 +88,15 @@ The application is a client-side React Native/Expo app. The entire logic and UI 
 - **P4**: Fix a low-priority visual bug where dashed lines render incorrectly in the PDF preview.
 
 **Completed work in this session**
-- **Feature**: Implemented moving, resizing, and rotating for Notiz (memo) elements.
-- **Bug Fix**: Corrected the Notiz feature to ensure it could be selected and edited after creation.
-- **Bug Fix**: Fixed a bug where the Foto Position mode was not automatically activated after inserting a photo from the gallery, a project photo, or a new camera photo. This is now working correctly.
-- **Bug Fix**: Fixed a regression where resizing image elements was broken after attempting to implement the crop feature.
-- **UI**: Renamed the Fotobearbeitung button to Foto Position.
+- **Feature**: Fixed the interactive photo cropping feature. The previously non-functional crop handles are now fully interactive and draggable using a . The user confirmed this works fantastically.
+- **UI/Workflow**: Started separating the Foto Position and Zuschneiden buttons to work independently, which led to the current Crop Mode implementation task.
+- **Bug Fix**: Resolved an issue where changes were not appearing for the user by restarting the Expo server with a cleared cache ([08:19:29] Starting project at /app/frontend).
 
 **Earlier issues found/mentioned but not fixed**
 - The core issue of **drawing on an already-zoomed canvas** has a workaround (zoom resets to 100% on draw), not a true fix. The user may expect to draw accurately while zoomed in, which remains unaddressed.
 
 **Known issue recurrence from previous fork**
-- **Expo Development Server Instability**: Persists. The agent must continue reminding the user to hard-refresh the Expo Go app. Recurrence count: 10+. Status: IN PROGRESS.
+- **Expo Development Server Instability**: Persists. It occurred again during this session, requiring a server restart with cache clearing to resolve. Recurrence count: 10+. Status: IN PROGRESS.
 - **Zoom/Pan Coordinate Calculation**: The underlying complexity remains a high risk for regressions. The current fix is a workaround. Recurrence count: 4. Status: IN PROGRESS.
 
 **Code Architecture**
@@ -106,19 +104,20 @@ The application is a client-side React Native/Expo app. The entire logic and UI 
 
 **Key Technical Concepts**
 - **React Native & Expo**: The core framework.
-- **React Native Gestures & ScrollView**: Managing a complex coordinate system by accounting for ,  (scroll), and .
+- **React Native Gestures & ScrollView**: Managing a complex coordinate system.
+- ****: Used to implement robust gesture handling for the interactive crop modal.
 - **State-Driven UI**: Heavy use of  to manage , modal visibility, elements, etc.
 - **React Native SVG**: Renders all drawing elements.
-- **expo-image-manipulator**: Used for the image cropping functionality.
+- ****: Used for the image cropping functionality.
 
 **key DB schema**
 N/A (Client-side application).
 
 **changes in tech stack**
-- Added .
+- No new packages were added in this session.
 
 **All files of reference**
-- : The primary file for all logic and UI; heavily modified in this session.
+- : The only file modified in this session.
 
 **Areas that need refactoring**:
 - The  file is critically oversized and complex. Its monolithic nature makes it difficult to maintain and prone to regressions. It urgently needs to be broken down into smaller, manageable components (e.g., , , , , etc.).
@@ -128,28 +127,25 @@ N/A (Client-side application).
 
 **Critical Info for New Agent**
 - **You MUST continue all user communication in German.**
-- Your immediate priority is to fix the **interactive photo cropping** feature.
-- The previous implementation was too complex and was removed. The current attempt is to create a simpler, more robust touch handler for the crop modal. You should complete this refactoring.
-- Be proactive about the Expo sync issue. After deployment, explicitly instruct the user to **hard-refresh their Expo Go app** () and use [07:51:46] Starting project at /app/frontend to clear the cache.
+- Your immediate priority is to implement the **Crop Mode workflow**. The core cropping *interaction* is fixed and verified; this task is about the *activation* workflow.
+- Be proactive about the Expo sync issue. After deploying changes, use [08:19:29] Starting project at /app/frontend to restart the server and explicitly instruct the user to **hard-refresh their Expo Go app** (force quit and restart).
 
 **documents and test reports created in this job**
 - None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Confirmed the crop modal opens but the crop lines cannot be adjusted.
-2.  **User**: Asked to proceed with implementing the cropping feature.
-3.  **User**: Confirmed that the automatic activation of photo editing mode now works perfectly for all methods.
-4.  **User**: Reported that changes were not visible after an update.
-5.  **User**: Reported that automatic selection of the Foto Position button was not working for the first photo, image resizing was broken, and the cropping feature was misunderstood.
-6.  **User**: Reported changes were not visible.
-7.  **User**: Confirmed that option 'A' (visual handles for cropping) was preferred.
-8.  **User**: Asked if the photo can be cropped.
-9.  **User**: Confirmed that moving a note is now perfect.
-10. **User**: Reported that memo editing now works and requested the ability to move the memo.
+- **1. (LATEST)** User specifies the desired Crop Mode workflow:
+    - Click Zuschneiden button to enter crop mode.
+    - Click the photo to be cropped.
+    - After cropping, the button/mode should become inactive. (IN PROGRESS)
+- **2.** User reports that the previous fix (independent crop button) is not working. (RESOLVED - was a cache issue)
+- **3.** User reports that no changes are visible after an update. (RESOLVED - was a cache issue)
+- **4.** User confirms the crop *interaction* now works perfectly (traumhaft) and proposes the new, independent Crop Mode workflow. (COMPLETED & Led to current task)
+- **5. (OLDEST)** User approves the agent's initial plan to fix the broken crop feature. (COMPLETED)
 
 **Project Health Check:**
 - **Broken**:
-    - The photo cropping feature is implemented but non-functional. The UI appears, but it is not interactive.
+    - The photo cropping *workflow* is not yet implemented as per the user's latest request. The feature is functional but not intuitive.
 - **Unreliable**:
     - The development feedback loop due to Expo Go client sync issues remains a major blocker, requiring frequent server restarts and user guidance.
 
@@ -224,25 +220,25 @@ N/A (Client-side application).
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[07:51:47]   Run a command with --help for more info 💡
-[07:51:47]     $ expo start --help
-[07:51:47]
+[08:19:29]   Run a command with --help for more info 💡
+[08:19:29]     $ expo start --help
+[08:19:29]
 - 
 - 
 - 
 - 
 - 
 - 
--  (new)
+- 
 
 **Testing status**
 - **Testing agent used after significant changes**: NO
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: []
-- **Known regressions**: A regression where image resizing broke was introduced while implementing the crop feature; it has since been fixed.
+- **Known regressions**: None in this session.
 
 **Credentials to test flow:**
 The user's  is set as an environment variable, allowing deployment to their Expo account for testing.
 
 **What agent forgot to execute**
-The agent initially over-engineered the photo cropping feature with a complex touch-handling system that was difficult to debug and ultimately failed. It was then completely removed, wasting effort. The agent also repeatedly failed to account for the Expo cache, leading to several cycles where the user tested old code, believing the new changes were faulty. The next agent should prioritize a simpler implementation and be more aggressive with cache clearing ([07:51:47] Starting project at /app/frontend) before asking the user to test.</analysis>
+- The agent initially forgot to clear the Expo cache when deploying a change, which caused the user to report that the fix was not working. This is a recurring pattern that the next agent must be vigilant about. The agent should always assume a cache clear ([08:19:29] Starting project at /app/frontend) is necessary before asking the user to test.</analysis>

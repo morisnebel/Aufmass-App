@@ -160,7 +160,7 @@ interface DrawElement {
   fontStyle?: 'normal' | 'italic';
 }
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';
 
 // Verschiebbare Summenbox-Komponente für jedes Polyline-Element
 interface DraggableTotalBoxProps {
@@ -1274,6 +1274,46 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Handler für Crop-Modus Touch - sucht Bild an Position und öffnet Modal
+  const handleCropModeTouch = (locationX: number, locationY: number) => {
+    // Suche nach einem Bild an dieser Position (onlyImages = true)
+    const clickedImage = findElementAtPoint(locationX, locationY, true);
+    
+    if (clickedImage && clickedImage.type === 'image' && clickedImage.data?.uri) {
+      // Bild gefunden - Crop-Modal öffnen
+      setCropImageUri(clickedImage.data.uri);
+      setCropImageId(clickedImage.id);
+      
+      // Lade die Original-Bildgröße
+      RNImage.getSize(
+        clickedImage.data.uri,
+        (imgWidth, imgHeight) => {
+          setCropImageDimensions({ width: imgWidth, height: imgHeight });
+          // Initiale Crop-Box = 80% des Bildes, zentriert
+          const boxWidth = Math.min(imgWidth * 0.8, 280);
+          const boxHeight = Math.min(imgHeight * 0.8, 280);
+          setCropBox({
+            x: (300 - boxWidth) / 2,
+            y: (300 - boxHeight) / 2,
+            width: boxWidth,
+            height: boxHeight,
+          });
+          setShowCropModal(true);
+        },
+        (error) => {
+          console.error('Error getting image size:', error);
+          // Fallback
+          setCropImageDimensions({ width: 300, height: 300 });
+          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          setShowCropModal(true);
+        }
+      );
+    } else {
+      // Kein Bild an dieser Position - Hinweis zeigen
+      Alert.alert('Hinweis', 'Tippen Sie auf ein Foto, um es zuzuschneiden.');
+    }
+  };
+
   // Zuschnitt anwenden
   const applyCrop = async () => {
     if (!cropImageUri || !cropImageId) return;
@@ -1322,6 +1362,8 @@ export default function DrawSketchScreen() {
       setShowCropModal(false);
       setCropImageUri(null);
       setCropImageId(null);
+      // Modus zurücksetzen nach erfolgreichem Zuschneiden
+      setDrawMode('select');
     } catch (error) {
       console.error('Error cropping image:', error);
       Alert.alert('Fehler', 'Bild konnte nicht zugeschnitten werden');
@@ -1333,6 +1375,8 @@ export default function DrawSketchScreen() {
     setShowCropModal(false);
     setCropImageUri(null);
     setCropImageId(null);
+    // Modus zurücksetzen beim Abbrechen
+    setDrawMode('select');
   };
 
   // PanResponder für Crop-Interaktion
@@ -1573,6 +1617,9 @@ export default function DrawSketchScreen() {
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
+    } else if (drawMode === 'crop') {
+      // Im Crop-Modus: Suche nach einem Bild an dieser Position
+      handleCropModeTouch(locationX, locationY);
     } else if (drawMode === 'text') {
       // Show text input modal
       setPendingPosition({ x: locationX, y: locationY });
@@ -3898,16 +3945,15 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Foto Position</Text>
         </View>
 
-        {/* 10. Foto zuschneiden - unabhängig von photoEditMode */}
+        {/* 10. Foto zuschneiden - Modus-Button */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
-            style={[styles.toolButtonInner, { opacity: selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? 1 : 0.5 }]} 
-            onPress={startCropMode}
-            disabled={!selectedElementId || elements.find(el => el.id === selectedElementId)?.type !== 'image'}
+            style={[styles.toolButtonInner, drawMode === 'crop' && styles.toolButtonActive]} 
+            onPress={() => selectDrawMode(drawMode === 'crop' ? 'select' : 'crop')}
           >
-            <Ionicons name="crop-outline" size={18} color={selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#9C27B0' : '#ccc'} />
+            <Ionicons name="crop-outline" size={18} color={drawMode === 'crop' ? '#fff' : '#9C27B0'} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' ? '#333' : '#ccc' }]}>Zuschneiden</Text>
+          <Text style={[styles.toolButtonLabel, { color: drawMode === 'crop' ? '#9C27B0' : '#333' }]}>Zuschneiden</Text>
         </View>
 
         <View style={styles.separator} />

@@ -5138,18 +5138,6 @@ export default function ProjectDetailScreen() {
                   </View>
 
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Beschreibung</Text>
-                    <TextInput
-                      style={[styles.compactInput, { minHeight: 60, textAlignVertical: 'top' }]}
-                      value={editObjektDescription}
-                      onChangeText={setEditObjektDescription}
-                      placeholder="Beschreibung (optional)"
-                      multiline
-                      numberOfLines={2}
-                    />
-                  </View>
-
-                  <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Straße</Text>
                     <TextInput
                       style={styles.compactInput}

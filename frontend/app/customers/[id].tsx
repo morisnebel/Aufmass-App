@@ -394,7 +394,7 @@ export default function EditCustomerScreen() {
       const fullName = generateFullName(salutation, firstName, lastName);
 
       // Kontaktdaten vorbereiten
-      const contactData: Contacts.Contact = {
+      const contactData: Partial<Contacts.Contact> = {
         contactType: Contacts.ContactTypes.Person,
         name: fullName,
         firstName: firstName || '',
@@ -419,24 +419,28 @@ export default function EditCustomerScreen() {
           const existingContact = await Contacts.getContactByIdAsync(importedContactId);
           
           if (existingContact) {
-            // Kontakt existiert - aktualisieren
-            const updatedContact = {
-              ...existingContact,
-              ...contactData,
-              id: importedContactId,
-            };
+            // Kontakt existiert - lösche den alten und erstelle einen neuen mit denselben Daten
+            await Contacts.removeContactAsync(importedContactId);
             
-            await Contacts.updateContactAsync(updatedContact);
+            // Neuen Kontakt mit aktualisierten Daten erstellen
+            const newContactId = await Contacts.addContactAsync(contactData as Contacts.Contact);
+            
+            // Speichere die neue Contact-ID
+            if (newContactId) {
+              setImportedContactId(newContactId);
+              await CustomerService.update(customerId, { importedContactId: newContactId });
+            }
+            
             Alert.alert('Erfolg', `"${fullName}" wurde in Ihren Kontakten aktualisiert.`);
             return;
           }
         } catch (updateError) {
-          console.log('Kontakt nicht gefunden oder Update fehlgeschlagen, erstelle neuen:', updateError);
+          console.log('Kontakt nicht gefunden oder Update fehlgeschlagen:', updateError);
         }
       }
 
-      // Kein existierender Kontakt oder Update fehlgeschlagen - neuen erstellen
-      const newContactId = await Contacts.addContactAsync(contactData);
+      // Kein existierender Kontakt - neuen erstellen
+      const newContactId = await Contacts.addContactAsync(contactData as Contacts.Contact);
       
       // Speichere die neue Contact-ID
       if (newContactId) {

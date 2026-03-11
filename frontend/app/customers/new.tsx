@@ -92,6 +92,9 @@ export default function NewCustomerScreen() {
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Importierte Kontakt-ID für Synchronisation
+  const [importedContactId, setImportedContactId] = useState<string | null>(null);
+  
   // Anrede-Picker Modal
   const [showSalutationPicker, setShowSalutationPicker] = useState(false);
   
@@ -205,6 +208,7 @@ export default function NewCustomerScreen() {
         zip: plz || undefined,
         city: city || undefined,
         address: fullAddress || undefined,
+        importedContactId: importedContactId || undefined,
       });
       
       // Save to device contacts if requested
@@ -297,6 +301,11 @@ export default function NewCustomerScreen() {
     setStreet(extractedStreet);
     setPlz(extractedPlz);
     setCity(extractedCity);
+    
+    // Speichere die Kontakt-ID für spätere Synchronisation
+    if (contact.id) {
+      setImportedContactId(contact.id);
+    }
     
     setShowContactPicker(false);
     setSearchQuery('');

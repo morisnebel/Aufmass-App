@@ -371,6 +371,53 @@ export default function EditCustomerScreen() {
     }
   };
 
+  // Sync mit Gerätekontakten
+  const syncWithDeviceContacts = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Hinweis', 'Kontakt-Synchronisation ist nur in der mobilen App verfügbar.');
+      return;
+    }
+
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        return;
+      }
+
+      const fullName = generateFullName(salutation, firstName, lastName);
+
+      // Neuen Kontakt erstellen
+      const newContact: Contacts.Contact = {
+        contactType: Contacts.ContactTypes.Person,
+        name: fullName,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        ...(email && {
+          emails: [{ email: email, label: 'Arbeit' }],
+        }),
+        phoneNumbers: [
+          ...(mobile ? [{ number: mobile, label: 'Mobil' }] : []),
+          ...(phone ? [{ number: phone, label: 'Arbeit' }] : []),
+        ].filter(p => p.number),
+        ...(street && {
+          addresses: [{
+            street: street,
+            postalCode: zip || '',
+            city: city || '',
+            label: 'Arbeit',
+          }],
+        }),
+      };
+
+      await Contacts.addContactAsync(newContact);
+      Alert.alert('Erfolg', `"${fullName}" wurde zu Ihren Kontakten hinzugefügt.`);
+    } catch (error) {
+      console.error('Error syncing contact:', error);
+      Alert.alert('Fehler', 'Kontakt konnte nicht synchronisiert werden.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -509,6 +556,14 @@ export default function EditCustomerScreen() {
             <Text style={styles.buttonText}>
               {saving ? 'Wird gespeichert...' : 'Änderungen speichern'}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.syncContactButton}
+            onPress={syncWithDeviceContacts}
+          >
+            <Ionicons name="sync" size={20} color="#4caf50" />
+            <Text style={styles.syncContactButtonText}>Mit Kontakten synchronisieren</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -921,6 +976,23 @@ const styles = StyleSheet.create({
   },
   deleteCustomerButtonText: {
     color: '#f44336',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  syncContactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+    marginTop: 16,
+    gap: 8,
+    backgroundColor: '#e8f5e9',
+  },
+  syncContactButtonText: {
+    color: '#4caf50',
     fontSize: 16,
     fontWeight: '600',
   },

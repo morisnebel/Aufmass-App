@@ -384,6 +384,9 @@ export default function EditCustomerScreen() {
       return;
     }
 
+    console.log('=== SYNC START ===');
+    console.log('importedContactId:', importedContactId);
+
     try {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status !== 'granted') {
@@ -414,38 +417,48 @@ export default function EditCustomerScreen() {
 
       // Prüfen, ob wir einen existierenden Kontakt haben
       if (importedContactId) {
+        console.log('Versuche existierenden Kontakt zu finden:', importedContactId);
         try {
           // Versuche den existierenden Kontakt zu laden
           const existingContact = await Contacts.getContactByIdAsync(importedContactId);
+          console.log('Existierender Kontakt gefunden:', existingContact ? 'JA' : 'NEIN');
           
           if (existingContact) {
             // Kontakt existiert - lösche den alten und erstelle einen neuen mit denselben Daten
+            console.log('Lösche alten Kontakt...');
             await Contacts.removeContactAsync(importedContactId);
+            console.log('Alter Kontakt gelöscht');
             
             // Neuen Kontakt mit aktualisierten Daten erstellen
+            console.log('Erstelle neuen Kontakt mit aktualisierten Daten...');
             const newContactId = await Contacts.addContactAsync(contactData as Contacts.Contact);
+            console.log('Neuer Kontakt erstellt mit ID:', newContactId);
             
             // Speichere die neue Contact-ID
             if (newContactId) {
               setImportedContactId(newContactId);
               await CustomerService.update(customerId, { importedContactId: newContactId });
+              console.log('Neue ID gespeichert');
             }
             
             Alert.alert('Erfolg', `"${fullName}" wurde in Ihren Kontakten aktualisiert.`);
             return;
           }
         } catch (updateError) {
-          console.log('Kontakt nicht gefunden oder Update fehlgeschlagen:', updateError);
+          console.log('Fehler beim Update:', updateError);
         }
       }
 
       // Kein existierender Kontakt - neuen erstellen
+      console.log('Erstelle komplett neuen Kontakt...');
       const newContactId = await Contacts.addContactAsync(contactData as Contacts.Contact);
+      console.log('Neuer Kontakt erstellt mit ID:', newContactId);
       
       // Speichere die neue Contact-ID
       if (newContactId) {
         setImportedContactId(newContactId);
         await CustomerService.update(customerId, { importedContactId: newContactId });
+        console.log('ID beim Kunden gespeichert');
       }
       
       Alert.alert('Erfolg', `"${fullName}" wurde zu Ihren Kontakten hinzugefügt.`);

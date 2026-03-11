@@ -30,6 +30,9 @@ import * as MediaLibrary from 'expo-media-library';
 
 // API_URL removed - using local storage now
 
+// Anrede-Optionen für Bauherr
+const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
+
 interface Project {
   id: string;
   name: string;
@@ -37,8 +40,11 @@ interface Project {
   customer_id: string;
   status: string;
   remarks?: string;
-  // Bauherr-Daten (separate Felder)
-  bauherr_name?: string;
+  // Bauherr-Daten (separate Felder) - erweitert für Anrede, Vorname, Nachname
+  bauherr_salutation?: string; // Anrede
+  bauherr_first_name?: string; // Vorname
+  bauherr_last_name?: string; // Nachname
+  bauherr_name?: string; // Vollständiger Name (für Abwärtskompatibilität)
   bauherr_phone?: string;
   bauherr_mobile?: string;
   bauherr_email?: string;
@@ -156,14 +162,18 @@ export default function ProjectDetailScreen() {
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState('');
-  // Bauherr edit fields (separate)
-  const [editBauherrName, setEditBauherrName] = useState('');
+  // Bauherr edit fields (separate) - erweitert für Anrede, Vorname, Nachname
+  const [editBauherrSalutation, setEditBauherrSalutation] = useState('');
+  const [editBauherrFirstName, setEditBauherrFirstName] = useState('');
+  const [editBauherrLastName, setEditBauherrLastName] = useState('');
   const [editBauherrPhone, setEditBauherrPhone] = useState('');
   const [editBauherrMobile, setEditBauherrMobile] = useState('');
   const [editBauherrEmail, setEditBauherrEmail] = useState('');
   const [editBauherrStreet, setEditBauherrStreet] = useState('');
   const [editBauherrPlz, setEditBauherrPlz] = useState('');
   const [editBauherrCity, setEditBauherrCity] = useState('');
+  // Anrede-Picker Modal für Bauherr
+  const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
   // Objektadresse edit fields (separate)
   const [editObjektName, setEditObjektName] = useState('');
   const [editObjektDescription, setEditObjektDescription] = useState('');
@@ -567,14 +577,16 @@ export default function ProjectDetailScreen() {
       // Parse customer address as fallback
       const customerAddr = parseCustomerAddress(customer?.address);
       
-      // Bauherr data - use project-specific or fall back to customer
-      setEditBauherrName(project.bauherr_name || customer?.name || '');
+      // Bauherr data - use project-specific or fall back to customer (mit separaten Feldern)
+      setEditBauherrSalutation(project.bauherr_salutation || customer?.salutation || '');
+      setEditBauherrFirstName(project.bauherr_first_name || customer?.firstName || '');
+      setEditBauherrLastName(project.bauherr_last_name || customer?.lastName || '');
       setEditBauherrPhone(project.bauherr_phone || customer?.phone || '');
       setEditBauherrMobile(project.bauherr_mobile || customer?.mobile || '');
       setEditBauherrEmail(project.bauherr_email || customer?.email || '');
-      setEditBauherrStreet(project.bauherr_street || customerAddr.street || '');
-      setEditBauherrPlz(project.bauherr_plz || customerAddr.plz || '');
-      setEditBauherrCity(project.bauherr_city || customerAddr.city || '');
+      setEditBauherrStreet(project.bauherr_street || customer?.street || customerAddr.street || '');
+      setEditBauherrPlz(project.bauherr_plz || customer?.zip || customerAddr.plz || '');
+      setEditBauherrCity(project.bauherr_city || customer?.city || customerAddr.city || '');
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
       setEditObjektName(project.objekt_name || '');
@@ -609,8 +621,11 @@ export default function ProjectDetailScreen() {
         description: editProjectDescription || undefined,
         status: editProjectStatus,
         customer_id: project?.customer_id,
-        // Bauherr data (separate fields)
-        bauherr_name: editBauherrName || undefined,
+        // Bauherr data (separate fields) - erweitert
+        bauherr_salutation: editBauherrSalutation || undefined,
+        bauherr_first_name: editBauherrFirstName || undefined,
+        bauherr_last_name: editBauherrLastName || undefined,
+        bauherr_name: `${editBauherrSalutation} ${editBauherrFirstName} ${editBauherrLastName}`.trim() || undefined, // Für Abwärtskompatibilität
         bauherr_phone: editBauherrPhone || undefined,
         bauherr_mobile: editBauherrMobile || undefined,
         bauherr_email: editBauherrEmail || undefined,
@@ -639,12 +654,20 @@ export default function ProjectDetailScreen() {
               ? `${editBauherrStreet || ''}, ${editBauherrPlz || ''} ${editBauherrCity || ''}`.trim()
               : existingCustomer.address;
             
+            const fullName = `${editBauherrSalutation} ${editBauherrFirstName} ${editBauherrLastName}`.trim();
+            
             await CustomerService.update(project.customer_id, {
               ...existingCustomer,
-              name: editBauherrName || existingCustomer.name,
+              salutation: editBauherrSalutation || existingCustomer.salutation,
+              firstName: editBauherrFirstName || existingCustomer.firstName,
+              lastName: editBauherrLastName || existingCustomer.lastName,
+              name: fullName || existingCustomer.name,
               phone: editBauherrPhone || existingCustomer.phone,
               mobile: editBauherrMobile || existingCustomer.mobile,
               email: editBauherrEmail || existingCustomer.email,
+              street: editBauherrStreet || existingCustomer.street,
+              zip: editBauherrPlz || existingCustomer.zip,
+              city: editBauherrCity || existingCustomer.city,
               address: newAddress,
             });
           }
@@ -5000,13 +5023,37 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.editSectionTitle}>Bauherr</Text>
                   
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Name</Text>
-                    <TextInput
-                      style={styles.compactInput}
-                      value={editBauherrName}
-                      onChangeText={setEditBauherrName}
-                      placeholder="Bauherr Name"
-                    />
+                    <Text style={styles.compactLabel}>Anrede</Text>
+                    <TouchableOpacity 
+                      style={styles.compactPickerButton}
+                      onPress={() => setShowBauherrSalutationPicker(true)}
+                    >
+                      <Text style={editBauherrSalutation ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                        {editBauherrSalutation || 'Anrede...'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.addressRow}>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Vorname</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrFirstName}
+                        onChangeText={setEditBauherrFirstName}
+                        placeholder="Vorname"
+                      />
+                    </View>
+                    <View style={styles.cityInput}>
+                      <Text style={styles.compactLabel}>Nachname</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrLastName}
+                        onChangeText={setEditBauherrLastName}
+                        placeholder="Nachname"
+                      />
+                    </View>
                   </View>
 
                   <View style={styles.addressRow}>
@@ -5190,6 +5237,51 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Bauherr Anrede Picker Modal */}
+      <Modal
+        visible={showBauherrSalutationPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowBauherrSalutationPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.salutationModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowBauherrSalutationPicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            {SALUTATION_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setEditBauherrSalutation(option);
+                  setShowBauherrSalutationPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  editBauherrSalutation === option && styles.salutationOptionSelected
+                ]}>{option}</Text>
+                {editBauherrSalutation === option && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setEditBauherrSalutation('');
+                setShowBauherrSalutationPicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* PDF Preview Modal */}
@@ -6699,5 +6791,61 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     textAlign: 'center',
     marginBottom: 2,
+  },
+  // Anrede Picker Styles für Bauherr
+  compactPickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  compactPickerText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  compactPickerPlaceholder: {
+    fontSize: 14,
+    color: '#999',
+  },
+  salutationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  salutationModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+    maxWidth: 300,
+  },
+  salutationModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  salutationOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  salutationOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  salutationOptionSelected: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });

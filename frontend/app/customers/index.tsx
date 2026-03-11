@@ -10,7 +10,6 @@ import {
   TextInput,
   Modal,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -446,11 +445,7 @@ export default function CustomersScreen() {
         animationType="slide"
         onRequestClose={() => setShowAddressModal(false)}
       >
-        <KeyboardAvoidingView 
-          style={styles.addressModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
+        <View style={styles.addressModalOverlay}>
           <View style={styles.addressModalContent}>
             <View style={styles.addressModalHeader}>
               <Text style={styles.addressModalTitle}>
@@ -632,7 +627,7 @@ export default function CustomersScreen() {
             </View>
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );
@@ -829,14 +824,14 @@ const styles = StyleSheet.create({
   addressModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 50,
   },
   addressModalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    minHeight: '70%',
-    maxHeight: '90%',
+    borderRadius: 20,
+    marginHorizontal: 10,
+    maxHeight: '85%',
   },
   addressModalHeader: {
     flexDirection: 'row',

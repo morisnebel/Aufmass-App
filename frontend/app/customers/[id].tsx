@@ -327,17 +327,17 @@ export default function EditCustomerScreen() {
       const fullAddress = generateFullAddress(street, zip, city);
       
       await CustomerService.update(customerId, {
-        salutation: salutation || undefined,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
+        salutation: salutation,
+        firstName: firstName,
+        lastName: lastName,
         name: fullName,
-        email: email || undefined,
-        phone: phone || undefined,
-        mobile: mobile || undefined,
-        street: street || undefined,
-        zip: zip || undefined,
-        city: city || undefined,
-        address: fullAddress || undefined,
+        email: email,
+        phone: phone,
+        mobile: mobile,
+        street: street,
+        zip: zip,
+        city: city,
+        address: fullAddress,
       });
       
       Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [

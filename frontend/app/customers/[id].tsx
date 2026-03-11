@@ -17,7 +17,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+import { CustomerService, ProjectService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -346,9 +346,63 @@ export default function EditCustomerScreen() {
         importedContactId: importedContactId || undefined,
       });
       
-      Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      // Prüfe, ob es Projekte gibt, die zu diesem Kunden gehören
+      const allProjects = await ProjectService.getAll();
+      const customerProjects = allProjects.filter(p => p.customer_id === customerId);
+      
+      if (customerProjects.length > 0) {
+        // Frage, ob die Projekte auch aktualisiert werden sollen
+        Alert.alert(
+          'Projekte aktualisieren?',
+          `Dieser Kunde hat ${customerProjects.length} Projekt(e). Sollen die Bauherr-Daten in allen zugehörigen Projekten auch aktualisiert werden?`,
+          [
+            {
+              text: 'Nein',
+              style: 'cancel',
+              onPress: () => {
+                Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+                  { text: 'OK', onPress: () => router.back() },
+                ]);
+              },
+            },
+            {
+              text: 'Ja, aktualisieren',
+              onPress: async () => {
+                try {
+                  // Aktualisiere alle Projekte mit den neuen Kundendaten
+                  for (const project of customerProjects) {
+                    await ProjectService.update(project.id, {
+                      ...project,
+                      bauherr_salutation: salutation || undefined,
+                      bauherr_first_name: firstName || undefined,
+                      bauherr_last_name: lastName || undefined,
+                      bauherr_name: fullName || undefined,
+                      bauherr_phone: phone || undefined,
+                      bauherr_mobile: mobile || undefined,
+                      bauherr_email: email || undefined,
+                      bauherr_street: street || undefined,
+                      bauherr_plz: zip || undefined,
+                      bauherr_city: city || undefined,
+                    });
+                  }
+                  Alert.alert('Erfolg', `Kunde und ${customerProjects.length} Projekt(e) wurden aktualisiert`, [
+                    { text: 'OK', onPress: () => router.back() },
+                  ]);
+                } catch (syncError) {
+                  console.error('Error syncing projects:', syncError);
+                  Alert.alert('Teilweise erfolgreich', 'Kunde wurde aktualisiert, aber einige Projekte konnten nicht synchronisiert werden', [
+                    { text: 'OK', onPress: () => router.back() },
+                  ]);
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
       console.error('Error updating customer:', error);
       Alert.alert('Fehler', 'Kunde konnte nicht aktualisiert werden');

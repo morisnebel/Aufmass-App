@@ -117,6 +117,10 @@ German (Deutsch)
 ## Prioritized Backlog
 
 ### P0 (Critical)
+- ✅ **PROJEKTADRESSEN-MODAL LABELS** (Dezember 2025):
+  - Labels für alle Eingabefelder hinzugefügt (Bezeichnung, Beschreibung, Objektname, Straße, PLZ, Ort, Ansprechpartner, Telefon, E-Mail)
+- ✅ **CODE CLEANUP** (Dezember 2025):
+  - Ungenutzte `annotate.tsx` Datei entfernt
 - ⏳ **BENUTZERTEST ERFORDERLICH**: 
   - **Notiz-Button** testen (roter Punkt mit gestrichelter Linie und Textlabel)
   - Projektfotos-Funktion testen
@@ -148,7 +152,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://roof-sketch-annotate.preview.emergentagent.com
+- **Preview URL**: https://address-sync-hub.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

@@ -554,29 +554,36 @@ export default function CustomersScreen() {
                 {editingAddress ? 'Adresse bearbeiten' : 'Neue Adresse hinzufügen'}
               </Text>
               
+              <Text style={styles.fieldLabel}>Bezeichnung *</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
+                placeholder="z.B. Haupthaus, Garage"
                 value={addressName}
                 onChangeText={setAddressName}
                 placeholderTextColor="#999"
               />
+              
+              <Text style={styles.fieldLabel}>Beschreibung</Text>
               <TextInput
                 style={[styles.addressInput, styles.textArea]}
-                placeholder="Beschreibung (optional)"
+                placeholder="Optional"
                 value={addressDescription}
                 onChangeText={setAddressDescription}
                 multiline
                 numberOfLines={2}
                 placeholderTextColor="#999"
               />
+              
+              <Text style={styles.fieldLabel}>Objektname</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholder="Objektname (optional)"
+                placeholder="Optional"
                 value={addressObjectName}
                 onChangeText={setAddressObjectName}
                 placeholderTextColor="#999"
               />
+              
+              <Text style={styles.fieldLabel}>Straße und Hausnummer</Text>
               <TextInput
                 style={styles.addressInput}
                 placeholder="Straße und Hausnummer"
@@ -584,24 +591,32 @@ export default function CustomersScreen() {
                 onChangeText={setAddressStreet}
                 placeholderTextColor="#999"
               />
+              
               <View style={styles.addressInputRow}>
-                <TextInput
-                  style={[styles.addressInput, { flex: 1 }]}
-                  placeholder="PLZ"
-                  value={addressZip}
-                  onChangeText={setAddressZip}
-                  keyboardType="number-pad"
-                  placeholderTextColor="#999"
-                />
-                <TextInput
-                  style={[styles.addressInput, { flex: 2 }]}
-                  placeholder="Stadt"
-                  value={addressCity}
-                  onChangeText={setAddressCity}
-                  placeholderTextColor="#999"
-                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>PLZ</Text>
+                  <TextInput
+                    style={styles.addressInput}
+                    placeholder="PLZ"
+                    value={addressZip}
+                    onChangeText={setAddressZip}
+                    keyboardType="number-pad"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={{ flex: 2 }}>
+                  <Text style={styles.fieldLabel}>Ort</Text>
+                  <TextInput
+                    style={styles.addressInput}
+                    placeholder="Stadt"
+                    value={addressCity}
+                    onChangeText={setAddressCity}
+                    placeholderTextColor="#999"
+                  />
+                </View>
               </View>
               
+              <Text style={styles.fieldLabel}>Ansprechpartner</Text>
               <TextInput
                 style={styles.addressInput}
                 placeholder="Ansprechpartner"
@@ -611,23 +626,29 @@ export default function CustomersScreen() {
               />
               
               <View style={styles.addressRow}>
-                <TextInput
-                  style={[styles.addressInput, { flex: 1 }]}
-                  placeholder="Telefon"
-                  value={addressPhone}
-                  onChangeText={setAddressPhone}
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#999"
-                />
-                <TextInput
-                  style={[styles.addressInput, { flex: 1.5 }]}
-                  placeholder="E-Mail"
-                  value={addressEmail}
-                  onChangeText={setAddressEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholderTextColor="#999"
-                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Telefon</Text>
+                  <TextInput
+                    style={styles.addressInput}
+                    placeholder="Telefon"
+                    value={addressPhone}
+                    onChangeText={setAddressPhone}
+                    keyboardType="phone-pad"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={{ flex: 1.5 }}>
+                  <Text style={styles.fieldLabel}>E-Mail</Text>
+                  <TextInput
+                    style={styles.addressInput}
+                    placeholder="E-Mail"
+                    value={addressEmail}
+                    onChangeText={setAddressEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor="#999"
+                  />
+                </View>
               </View>
               
               <View style={styles.addressFormButtons}>
@@ -1009,6 +1030,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+    marginTop: 8,
   },
   selectModeHeader: {
     flexDirection: 'row',

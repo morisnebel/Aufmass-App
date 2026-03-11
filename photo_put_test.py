@@ -10,7 +10,7 @@ import base64
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://roof-sketch-annotate.preview.emergentagent.com/api"
+BASE_URL = "https://address-sync-hub.preview.emergentagent.com/api"
 
 def create_test_image_data():
     """Create a simple base64 encoded test image"""

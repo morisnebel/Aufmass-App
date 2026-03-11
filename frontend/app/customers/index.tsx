@@ -34,6 +34,7 @@ export default function CustomersScreen() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingAddress, setEditingAddress] = useState<ProjectAddress | null>(null);
   const [addressName, setAddressName] = useState('');
+  const [addressDescription, setAddressDescription] = useState('');
   const [addressObjectName, setAddressObjectName] = useState('');
   const [addressStreet, setAddressStreet] = useState('');
   const [addressZip, setAddressZip] = useState('');
@@ -99,6 +100,7 @@ export default function CustomersScreen() {
 
   const resetAddressForm = () => {
     setAddressName('');
+    setAddressDescription('');
     setAddressObjectName('');
     setAddressStreet('');
     setAddressZip('');
@@ -112,6 +114,7 @@ export default function CustomersScreen() {
   const editAddress = (address: ProjectAddress) => {
     setEditingAddress(address);
     setAddressName(address.name);
+    setAddressDescription(address.description || '');
     setAddressObjectName(address.objectName || '');
     setAddressStreet(address.street);
     setAddressZip(address.zip);
@@ -133,7 +136,7 @@ export default function CustomersScreen() {
       // Bestehende Adresse aktualisieren
       const updatedAddresses = addresses.map(a => 
         a.id === editingAddress.id 
-          ? { ...a, name: addressName, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
+          ? { ...a, name: addressName, description: addressDescription || undefined, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
           : a
       );
       await CustomerService.update(selectedCustomer.id, { 
@@ -145,6 +148,7 @@ export default function CustomersScreen() {
       const newAddress: ProjectAddress = {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         name: addressName,
+        description: addressDescription || undefined,
         objectName: addressObjectName || undefined,
         street: addressStreet,
         zip: addressZip,
@@ -187,6 +191,7 @@ export default function CustomersScreen() {
                     await ProjectService.update(proj.id, {
                       ...proj,
                       name: addressName, // Projektname = Bezeichnung
+                      description: addressDescription || proj.description || undefined, // Beschreibung
                       objekt_address_name: addressName, // Bezeichnung aktualisieren
                       objekt_name: addressObjectName || undefined,
                       objekt_street: addressStreet,
@@ -517,7 +522,6 @@ export default function CustomersScreen() {
                   Noch keine Projektadressen hinterlegt
                 </Text>
               )}
-            </ScrollView>
 
             {/* Formular für neue/bearbeitete Adresse */}
             <View style={styles.addressForm}>
@@ -530,18 +534,30 @@ export default function CustomersScreen() {
                 placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
                 value={addressName}
                 onChangeText={setAddressName}
+                placeholderTextColor="#999"
+              />
+              <TextInput
+                style={[styles.addressInput, styles.textArea]}
+                placeholder="Beschreibung (optional)"
+                value={addressDescription}
+                onChangeText={setAddressDescription}
+                multiline
+                numberOfLines={2}
+                placeholderTextColor="#999"
               />
               <TextInput
                 style={styles.addressInput}
                 placeholder="Objektname (optional)"
                 value={addressObjectName}
                 onChangeText={setAddressObjectName}
+                placeholderTextColor="#999"
               />
               <TextInput
                 style={styles.addressInput}
                 placeholder="Straße und Hausnummer"
                 value={addressStreet}
                 onChangeText={setAddressStreet}
+                placeholderTextColor="#999"
               />
               <View style={styles.addressInputRow}>
                 <TextInput
@@ -550,12 +566,14 @@ export default function CustomersScreen() {
                   value={addressZip}
                   onChangeText={setAddressZip}
                   keyboardType="number-pad"
+                  placeholderTextColor="#999"
                 />
                 <TextInput
                   style={[styles.addressInput, { flex: 2 }]}
                   placeholder="Stadt"
                   value={addressCity}
                   onChangeText={setAddressCity}
+                  placeholderTextColor="#999"
                 />
               </View>
               
@@ -564,6 +582,7 @@ export default function CustomersScreen() {
                 placeholder="Ansprechpartner"
                 value={addressContactPerson}
                 onChangeText={setAddressContactPerson}
+                placeholderTextColor="#999"
               />
               
               <View style={styles.addressRow}>
@@ -573,6 +592,7 @@ export default function CustomersScreen() {
                   value={addressPhone}
                   onChangeText={setAddressPhone}
                   keyboardType="phone-pad"
+                  placeholderTextColor="#999"
                 />
                 <TextInput
                   style={[styles.addressInput, { flex: 1.5 }]}
@@ -581,6 +601,7 @@ export default function CustomersScreen() {
                   onChangeText={setAddressEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  placeholderTextColor="#999"
                 />
               </View>
               
@@ -604,6 +625,7 @@ export default function CustomersScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -915,6 +937,11 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 15,
     marginBottom: 8,
+    color: '#333',
+  },
+  textArea: {
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   addressInputRow: {
     flexDirection: 'row',

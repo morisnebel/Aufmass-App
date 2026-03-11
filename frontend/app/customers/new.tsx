@@ -135,6 +135,7 @@ export default function NewCustomerScreen() {
       const contact: Contacts.Contact = {
         contactType: Contacts.ContactTypes.Person,
         name: fullName,
+        namePrefix: customerData.salutation || '', // Anrede als Präfix
         firstName: customerData.firstName || '',
         lastName: customerData.lastName || '',
         ...(customerData.email && {

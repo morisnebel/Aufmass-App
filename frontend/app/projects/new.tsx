@@ -175,6 +175,11 @@ export default function NewProjectScreen() {
     setObjektPhone(address.phone || '');
     setObjektEmail(address.email || '');
     setShowAddressPicker(false);
+    
+    // Projektname vorschlagen falls noch leer
+    if (!name && address.name) {
+      setName(address.name);
+    }
   };
 
   const clearProjectAddress = () => {

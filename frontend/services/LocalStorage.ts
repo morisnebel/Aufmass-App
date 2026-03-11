@@ -202,15 +202,35 @@ export interface ProjectAddress {
 
 export interface Customer {
   id: string;
-  name: string;
+  // Neues erweitertes Format
+  salutation?: string; // Anrede: Herr, Frau, Firma, etc.
+  firstName?: string; // Vorname
+  lastName?: string; // Nachname
+  name: string; // Vollständiger Name (automatisch generiert für Abwärtskompatibilität)
   email?: string;
   phone?: string;
   mobile?: string;
-  address?: string;
+  street?: string; // Straße
+  zip?: string; // PLZ
+  city?: string; // Ort
+  address?: string; // Legacy: kombinierte Adresse (für Abwärtskompatibilität)
   notes?: string;
   projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;
   updated_at: string;
+}
+
+// Helper-Funktion zum Generieren des vollständigen Namens
+export function generateFullName(salutation?: string, firstName?: string, lastName?: string): string {
+  const parts = [salutation, firstName, lastName].filter(Boolean);
+  return parts.join(' ');
+}
+
+// Helper-Funktion zum Generieren der kombinierten Adresse
+export function generateFullAddress(street?: string, zip?: string, city?: string): string {
+  const addressLine = street || '';
+  const cityLine = [zip, city].filter(Boolean).join(' ');
+  return [addressLine, cityLine].filter(Boolean).join(', ');
 }
 
 export const CustomerService = {

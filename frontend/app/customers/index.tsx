@@ -15,7 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService, Customer, ProjectAddress, ProjectService, Project } from '../../services/LocalStorage';
+import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();

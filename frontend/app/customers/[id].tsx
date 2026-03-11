@@ -17,17 +17,31 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService } from '../../services/LocalStorage';
+import { CustomerService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+
+// Anrede-Optionen
+const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
 
 // Helper function to extract contact data
 function extractContactData(contact: Contacts.Contact) {
-  let extractedName = '';
+  let extractedFirstName = '';
+  let extractedLastName = '';
   let extractedEmail = '';
   let extractedPhone = '';
-  let extractedAddress = '';
+  let extractedMobile = '';
+  let extractedStreet = '';
+  let extractedPlz = '';
+  let extractedCity = '';
 
-  extractedName = contact.name || 
-    [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
+  extractedFirstName = contact.firstName || '';
+  extractedLastName = contact.lastName || '';
+  
+  // Falls kein Vor-/Nachname, versuche den Namen zu splitten
+  if (!extractedFirstName && !extractedLastName && contact.name) {
+    const nameParts = contact.name.split(' ');
+    extractedFirstName = nameParts[0] || '';
+    extractedLastName = nameParts.slice(1).join(' ') || '';
+  }
 
   if (contact.emails && contact.emails.length > 0) {
     const emailObj = contact.emails[0] as any;
@@ -35,33 +49,32 @@ function extractContactData(contact: Contacts.Contact) {
       (emailObj?.email || emailObj?.value || '');
   }
 
+  // Try to get both phone and mobile
   if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-    const phoneObj = contact.phoneNumbers[0] as any;
-    if (typeof phoneObj === 'string') {
-      extractedPhone = phoneObj;
-    } else {
+    for (const phoneObj of contact.phoneNumbers as any[]) {
+      const label = (phoneObj?.label || '').toLowerCase();
+      const number = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
+      
+      if (label.includes('mobil') || label.includes('mobile') || label.includes('handy') || label.includes('cell')) {
+        if (!extractedMobile) extractedMobile = number;
+      } else {
+        if (!extractedPhone) extractedPhone = number;
+      }
+    }
+    if (!extractedPhone && !extractedMobile) {
+      const phoneObj = contact.phoneNumbers[0] as any;
       extractedPhone = phoneObj?.number || phoneObj?.digits || phoneObj?.value || '';
     }
   }
 
   if (contact.addresses && contact.addresses.length > 0) {
     const addr = contact.addresses[0] as any;
-    if (typeof addr === 'string') {
-      extractedAddress = addr;
-    } else if (addr?.formattedAddress) {
-      extractedAddress = addr.formattedAddress;
-    } else {
-      const parts = [
-        addr?.street,
-        [addr?.postalCode, addr?.city].filter(Boolean).join(' '),
-        addr?.region,
-        addr?.country
-      ].filter(Boolean);
-      extractedAddress = parts.join(', ');
-    }
+    extractedStreet = addr?.street || '';
+    extractedPlz = addr?.postalCode || '';
+    extractedCity = addr?.city || '';
   }
 
-  return { extractedName, extractedEmail, extractedPhone, extractedAddress };
+  return { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
 }
 
 export default function EditCustomerScreen() {
@@ -72,14 +85,21 @@ export default function EditCustomerScreen() {
   // Skip if this is the index route being misrouted
   const isValidCustomerId = customerId && customerId !== 'index' && customerId !== 'new';
   
-  // Form state
-  const [name, setName] = useState('');
+  // Form state - neue erweiterte Felder
+  const [salutation, setSalutation] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [mobile, setMobile] = useState('');
-  const [address, setAddress] = useState('');
+  const [street, setStreet] = useState('');
+  const [zip, setZip] = useState('');
+  const [city, setCity] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Anrede-Picker Modal
+  const [showSalutationPicker, setShowSalutationPicker] = useState(false);
   
   // Contact sync state
   const [importedContactId, setImportedContactId] = useState<string | null>(null);
@@ -89,10 +109,13 @@ export default function EditCustomerScreen() {
   
   // Quick entry modal state
   const [showQuickEntry, setShowQuickEntry] = useState(false);
-  const [quickName, setQuickName] = useState('');
+  const [quickFirstName, setQuickFirstName] = useState('');
+  const [quickLastName, setQuickLastName] = useState('');
   const [quickEmail, setQuickEmail] = useState('');
   const [quickPhone, setQuickPhone] = useState('');
-  const [quickAddress, setQuickAddress] = useState('');
+  const [quickStreet, setQuickStreet] = useState('');
+  const [quickZip, setQuickZip] = useState('');
+  const [quickCity, setQuickCity] = useState('');
   
   // Contact picker state
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -126,11 +149,51 @@ export default function EditCustomerScreen() {
       console.log('Loaded customer:', customer);
       
       if (customer && !isImportingRef.current) {
-        setName(customer.name || '');
+        setSalutation(customer.salutation || '');
+        setFirstName(customer.firstName || '');
+        setLastName(customer.lastName || '');
         setEmail(customer.email || '');
         setPhone(customer.phone || '');
         setMobile(customer.mobile || '');
-        setAddress(customer.address || '');
+        setStreet(customer.street || '');
+        setZip(customer.zip || '');
+        setCity(customer.city || '');
+        
+        // Abwärtskompatibilität: Falls nur name vorhanden, versuche zu splitten
+        if (!customer.firstName && !customer.lastName && customer.name) {
+          const nameParts = customer.name.split(' ');
+          if (nameParts.length >= 2) {
+            // Prüfe ob erster Teil eine Anrede ist
+            const possibleSalutation = nameParts[0];
+            if (SALUTATION_OPTIONS.includes(possibleSalutation)) {
+              setSalutation(possibleSalutation);
+              setFirstName(nameParts[1] || '');
+              setLastName(nameParts.slice(2).join(' ') || '');
+            } else {
+              setFirstName(nameParts[0] || '');
+              setLastName(nameParts.slice(1).join(' ') || '');
+            }
+          } else {
+            setLastName(customer.name);
+          }
+        }
+        
+        // Abwärtskompatibilität: Falls nur address vorhanden, versuche zu parsen
+        if (!customer.street && !customer.zip && !customer.city && customer.address) {
+          const addressParts = customer.address.split(',').map(p => p.trim());
+          if (addressParts.length >= 1) {
+            setStreet(addressParts[0] || '');
+          }
+          if (addressParts.length >= 2) {
+            const cityParts = addressParts[1].split(' ');
+            if (cityParts.length >= 2 && /^\d+$/.test(cityParts[0])) {
+              setZip(cityParts[0]);
+              setCity(cityParts.slice(1).join(' '));
+            } else {
+              setCity(addressParts[1]);
+            }
+          }
+        }
       } else {
         console.log('Customer not found or importing');
       }
@@ -238,8 +301,8 @@ export default function EditCustomerScreen() {
   });
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
+    if (!firstName.trim() && !lastName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
       return;
     }
 
@@ -249,12 +312,22 @@ export default function EditCustomerScreen() {
   const saveCustomer = async () => {
     setSaving(true);
     try {
+      // Generiere den vollständigen Namen und die kombinierte Adresse
+      const fullName = generateFullName(salutation, firstName, lastName);
+      const fullAddress = generateFullAddress(street, zip, city);
+      
       await CustomerService.update(customerId, {
-        name,
+        salutation: salutation || undefined,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        name: fullName,
         email: email || undefined,
         phone: phone || undefined,
         mobile: mobile || undefined,
-        address: address || undefined,
+        street: street || undefined,
+        zip: zip || undefined,
+        city: city || undefined,
+        address: fullAddress || undefined,
       });
       
       Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
@@ -301,7 +374,7 @@ export default function EditCustomerScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.form}>
           {/* Import Button */}
           <Pressable
@@ -315,14 +388,95 @@ export default function EditCustomerScreen() {
             <Text style={styles.importButtonText}>Daten importieren / Schnelleingabe</Text>
           </Pressable>
 
+          {/* Anrede */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name *</Text>
+            <Text style={styles.label}>Anrede</Text>
+            <TouchableOpacity 
+              style={styles.pickerButton}
+              onPress={() => setShowSalutationPicker(true)}
+            >
+              <Text style={salutation ? styles.pickerText : styles.pickerPlaceholder}>
+                {salutation || 'Anrede auswählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Vorname & Nachname */}
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Vorname *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Vorname"
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Nachname *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nachname"
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Straße</Text>
             <TextInput
               style={styles.input}
-              placeholder="Kundenname"
-              value={name}
-              onChangeText={setName}
+              placeholder="Straße und Hausnummer"
+              value={street}
+              onChangeText={setStreet}
             />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.plzInput}>
+              <Text style={styles.label}>PLZ</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="PLZ"
+                value={zip}
+                onChangeText={setZip}
+                keyboardType="number-pad"
+              />
+            </View>
+            <View style={styles.cityInput}>
+              <Text style={styles.label}>Ort</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ort"
+                value={city}
+                onChangeText={setCity}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Mobiltelefon</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Handynummer"
+                value={mobile}
+                onChangeText={setMobile}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Telefon</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Festnetz"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -334,40 +488,6 @@ export default function EditCustomerScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Telefon</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="+49 123 456789"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Handy</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="+49 170 1234567"
-              value={mobile}
-              onChangeText={setMobile}
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Adresse</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Straße, PLZ, Stadt"
-              value={address}
-              onChangeText={setAddress}
-              multiline
-              numberOfLines={3}
             />
           </View>
 
@@ -627,6 +747,50 @@ export default function EditCustomerScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Anrede Picker Modal */}
+      <Modal
+        visible={showSalutationPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSalutationPicker(false)}
+      >
+        <Pressable 
+          style={styles.salutationModalOverlay}
+          onPress={() => setShowSalutationPicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            {SALUTATION_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setSalutation(option);
+                  setShowSalutationPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  salutation === option && styles.salutationOptionSelected
+                ]}>{option}</Text>
+                {salutation === option && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setSalutation('');
+                setShowSalutationPicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -943,6 +1107,76 @@ const styles = StyleSheet.create({
   deleteModalConfirmText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Neue Styles für erweiterte Felder
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  halfInput: {
+    flex: 1,
+  },
+  plzInput: {
+    flex: 1,
+  },
+  cityInput: {
+    flex: 2,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  pickerText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  pickerPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+  },
+  salutationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  salutationModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+    maxWidth: 300,
+  },
+  salutationModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  salutationOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  salutationOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  salutationOptionSelected: {
+    color: '#1976d2',
     fontWeight: '600',
   },
 });

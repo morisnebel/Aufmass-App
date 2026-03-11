@@ -17,11 +17,15 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
-import { CustomerService } from '../../services/LocalStorage';
+import { CustomerService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+
+// Anrede-Optionen
+const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
 
 // Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {
-  let extractedName = '';
+  let extractedFirstName = '';
+  let extractedLastName = '';
   let extractedEmail = '';
   let extractedPhone = '';
   let extractedMobile = '';
@@ -29,8 +33,15 @@ function extractContactData(contact: Contacts.Contact) {
   let extractedPlz = '';
   let extractedCity = '';
 
-  extractedName = contact.name || 
-    [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
+  extractedFirstName = contact.firstName || '';
+  extractedLastName = contact.lastName || '';
+  
+  // Falls kein Vor-/Nachname, versuche den Namen zu splitten
+  if (!extractedFirstName && !extractedLastName && contact.name) {
+    const nameParts = contact.name.split(' ');
+    extractedFirstName = nameParts[0] || '';
+    extractedLastName = nameParts.slice(1).join(' ') || '';
+  }
 
   if (contact.emails && contact.emails.length > 0) {
     const emailObj = contact.emails[0] as any;
@@ -63,14 +74,16 @@ function extractContactData(contact: Contacts.Contact) {
     extractedCity = addr?.city || '';
   }
 
-  return { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
+  return { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
 }
 
 export default function NewCustomerScreen() {
   const router = useRouter();
   
-  // Form state - separate address fields
-  const [name, setName] = useState('');
+  // Form state - neue erweiterte Felder
+  const [salutation, setSalutation] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [mobile, setMobile] = useState('');
@@ -78,6 +91,9 @@ export default function NewCustomerScreen() {
   const [plz, setPlz] = useState('');
   const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Anrede-Picker Modal
+  const [showSalutationPicker, setShowSalutationPicker] = useState(false);
   
   // Import options modal
   const [showImportOptions, setShowImportOptions] = useState(false);
@@ -90,7 +106,9 @@ export default function NewCustomerScreen() {
 
   // Function to save contact to device contacts
   const saveToDeviceContacts = async (customerData: {
-    name: string;
+    salutation?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     phone?: string;
     mobile?: string;
@@ -109,15 +127,13 @@ export default function NewCustomerScreen() {
         return;
       }
 
-      const nameParts = customerData.name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
+      const fullName = generateFullName(customerData.salutation, customerData.firstName, customerData.lastName);
 
       const contact: Contacts.Contact = {
         contactType: Contacts.ContactTypes.Person,
-        name: customerData.name,
-        firstName,
-        lastName,
+        name: fullName,
+        firstName: customerData.firstName || '',
+        lastName: customerData.lastName || '',
         ...(customerData.email && {
           emails: [{ email: customerData.email, label: 'Arbeit' }],
         }),
@@ -143,8 +159,8 @@ export default function NewCustomerScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
+    if (!firstName.trim() && !lastName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
       return;
     }
 
@@ -173,20 +189,30 @@ export default function NewCustomerScreen() {
   const saveCustomer = async (saveToContacts: boolean) => {
     setLoading(true);
     try {
-      // Combine address fields for storage
-      const address = [street, [plz, city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      // Generiere den vollständigen Namen und die kombinierte Adresse
+      const fullName = generateFullName(salutation, firstName, lastName);
+      const fullAddress = generateFullAddress(street, plz, city);
       
       await CustomerService.create({
-        name,
+        salutation: salutation || undefined,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        name: fullName,
         email: email || undefined,
         phone: phone || undefined,
-        address: address || undefined,
+        mobile: mobile || undefined,
+        street: street || undefined,
+        zip: plz || undefined,
+        city: city || undefined,
+        address: fullAddress || undefined,
       });
       
       // Save to device contacts if requested
       if (saveToContacts) {
         await saveToDeviceContacts({
-          name,
+          salutation: salutation || undefined,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
           email: email || undefined,
           phone: phone || undefined,
           mobile: mobile || undefined,
@@ -261,9 +287,10 @@ export default function NewCustomerScreen() {
 
   // Select contact and fill form
   const handleSelectContact = (contact: Contacts.Contact) => {
-    const { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
+    const { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
     
-    setName(extractedName);
+    setFirstName(extractedFirstName);
+    setLastName(extractedLastName);
     setEmail(extractedEmail);
     setPhone(extractedPhone);
     setMobile(extractedMobile);
@@ -300,50 +327,40 @@ export default function NewCustomerScreen() {
             <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
           </Pressable>
 
+          {/* Anrede */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Kundenname"
-              value={name}
-              onChangeText={setName}
-              autoComplete="name"
-            />
+            <Text style={styles.label}>Anrede</Text>
+            <TouchableOpacity 
+              style={styles.pickerButton}
+              onPress={() => setShowSalutationPicker(true)}
+            >
+              <Text style={salutation ? styles.pickerText : styles.pickerPlaceholder}>
+                {salutation || 'Anrede auswählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-Mail</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="E-Mail-Adresse"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-          </View>
-
+          {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Telefon</Text>
+              <Text style={styles.label}>Vorname *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Festnetz"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                autoComplete="tel"
+                placeholder="Vorname"
+                value={firstName}
+                onChangeText={setFirstName}
+                autoComplete="given-name"
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Mobil</Text>
+              <Text style={styles.label}>Nachname *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Handynummer"
-                value={mobile}
-                onChangeText={setMobile}
-                keyboardType="phone-pad"
+                placeholder="Nachname"
+                value={lastName}
+                onChangeText={setLastName}
+                autoComplete="family-name"
               />
             </View>
           </View>
@@ -382,6 +399,43 @@ export default function NewCustomerScreen() {
             </View>
           </View>
 
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Mobiltelefon</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Handynummer"
+                value={mobile}
+                onChangeText={setMobile}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Telefon</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Festnetz"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>E-Mail</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="E-Mail-Adresse"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+          </View>
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSave}
@@ -393,6 +447,50 @@ export default function NewCustomerScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Anrede Picker Modal */}
+      <Modal
+        visible={showSalutationPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSalutationPicker(false)}
+      >
+        <Pressable 
+          style={styles.salutationModalOverlay}
+          onPress={() => setShowSalutationPicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            {SALUTATION_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setSalutation(option);
+                  setShowSalutationPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  salutation === option && styles.salutationOptionSelected
+                ]}>{option}</Text>
+                {salutation === option && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setSalutation('');
+                setShowSalutationPicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Contact Picker Modal */}
       <Modal
@@ -444,7 +542,8 @@ export default function NewCustomerScreen() {
                 data={filteredContacts}
                 keyExtractor={(item, index) => item.id || index.toString()}
                 renderItem={({ item }) => {
-                  const { extractedName, extractedPhone, extractedMobile, extractedStreet, extractedCity } = extractContactData(item);
+                  const { extractedFirstName, extractedLastName, extractedPhone, extractedMobile, extractedStreet, extractedCity } = extractContactData(item);
+                  const displayName = `${extractedFirstName} ${extractedLastName}`.trim() || item.name || 'Unbekannt';
                   return (
                     <TouchableOpacity
                       style={styles.contactItem}
@@ -452,10 +551,10 @@ export default function NewCustomerScreen() {
                     >
                       <Ionicons name="person-circle" size={40} color="#1976d2" />
                       <View style={styles.contactItemInfo}>
-                        <Text style={styles.contactItemName}>{extractedName}</Text>
+                        <Text style={styles.contactItemName}>{displayName}</Text>
                         {(extractedPhone || extractedMobile) && (
                           <Text style={styles.contactItemDetail}>
-                            {extractedPhone || extractedMobile}
+                            {extractedMobile || extractedPhone}
                           </Text>
                         )}
                         {extractedStreet && (
@@ -638,5 +737,61 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#666',
+  },
+  // Anrede Picker Styles
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  pickerText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  pickerPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+  },
+  salutationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  salutationModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+    maxWidth: 300,
+  },
+  salutationModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  salutationOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  salutationOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  salutationOptionSelected: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });

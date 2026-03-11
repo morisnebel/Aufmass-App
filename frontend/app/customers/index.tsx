@@ -191,7 +191,7 @@ export default function CustomersScreen() {
                     await ProjectService.update(proj.id, {
                       ...proj,
                       name: addressName, // Projektname = Bezeichnung
-                      description: addressDescription || proj.description || undefined, // Beschreibung
+                      objekt_description: addressDescription || undefined, // Objektadress-Beschreibung
                       objekt_address_name: addressName, // Bezeichnung aktualisieren
                       objekt_name: addressObjectName || undefined,
                       objekt_street: addressStreet,
@@ -922,7 +922,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   addressForm: {
-    padding: 16,
+    padding: 12,
+    paddingHorizontal: 10,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     backgroundColor: '#f5f5f5',

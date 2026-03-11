@@ -271,6 +271,8 @@ export interface Project {
   objekt_plz?: string;
   objekt_city?: string;
   objekt_address_name?: string; // Name der gespeicherten Adresse (z.B. "Haupthaus")
+  objekt_name?: string; // Objektname
+  objekt_description?: string; // Beschreibung der Objektadresse
   objekt_contact_person?: string; // Ansprechpartner
   objekt_phone?: string; // Telefon
   objekt_email?: string; // E-Mail

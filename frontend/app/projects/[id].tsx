@@ -47,6 +47,7 @@ interface Project {
   bauherr_city?: string;
   // Objektadresse (separate Felder)
   objekt_name?: string;
+  objekt_description?: string; // Beschreibung der Objektadresse
   objekt_street?: string;
   objekt_plz?: string;
   objekt_city?: string;
@@ -165,6 +166,7 @@ export default function ProjectDetailScreen() {
   const [editBauherrCity, setEditBauherrCity] = useState('');
   // Objektadresse edit fields (separate)
   const [editObjektName, setEditObjektName] = useState('');
+  const [editObjektDescription, setEditObjektDescription] = useState('');
   const [editObjektStreet, setEditObjektStreet] = useState('');
   const [editObjektPlz, setEditObjektPlz] = useState('');
   const [editObjektCity, setEditObjektCity] = useState('');
@@ -576,6 +578,7 @@ export default function ProjectDetailScreen() {
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
       setEditObjektName(project.objekt_name || '');
+      setEditObjektDescription(project.objekt_description || '');
       setEditObjektStreet(project.objekt_street || '');
       setEditObjektPlz(project.objekt_plz || '');
       setEditObjektCity(project.objekt_city || '');
@@ -616,6 +619,7 @@ export default function ProjectDetailScreen() {
         bauherr_city: editBauherrCity || undefined,
         // Objektadresse (separate fields)
         objekt_name: editObjektName || undefined,
+        objekt_description: editObjektDescription || undefined,
         objekt_street: editObjektStreet || undefined,
         objekt_plz: editObjektPlz || undefined,
         objekt_city: editObjektCity || undefined,
@@ -701,6 +705,7 @@ export default function ProjectDetailScreen() {
                           ? { 
                               ...a, 
                               objectName: editObjektName || undefined,
+                              description: editObjektDescription || undefined,
                               street: editObjektStreet, 
                               zip: editObjektPlz, 
                               city: editObjektCity,
@@ -735,6 +740,7 @@ export default function ProjectDetailScreen() {
               const hasChanges = 
                 matchingAddress.name !== editProjectName || // Projektname/Bezeichnung geändert
                 (matchingAddress.objectName || '') !== (editObjektName || '') ||
+                (matchingAddress.description || '') !== (editObjektDescription || '') ||
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
                 matchingAddress.city !== editObjektCity ||
@@ -760,6 +766,7 @@ export default function ProjectDetailScreen() {
                                 ...addr, 
                                 name: editProjectName || addr.name, // Bezeichnung = Projektname (wenn geändert)
                                 objectName: editObjektName || undefined,
+                                description: editObjektDescription || undefined,
                                 street: editObjektStreet, 
                                 zip: editObjektPlz, 
                                 city: editObjektCity,
@@ -5080,6 +5087,18 @@ export default function ProjectDetailScreen() {
                       value={editObjektName}
                       onChangeText={setEditObjektName}
                       placeholder="z.B. Herr Müller"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Beschreibung</Text>
+                    <TextInput
+                      style={[styles.compactInput, { minHeight: 60, textAlignVertical: 'top' }]}
+                      value={editObjektDescription}
+                      onChangeText={setEditObjektDescription}
+                      placeholder="Beschreibung (optional)"
+                      multiline
+                      numberOfLines={2}
                     />
                   </View>
 

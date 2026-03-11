@@ -729,6 +729,7 @@ export default function ProjectDetailScreen() {
               console.log('Found matching address:', matchingAddress.name);
               // Prüfe ob sich Daten geändert haben
               const hasChanges = 
+                matchingAddress.name !== editProjectName || // Projektname/Bezeichnung geändert
                 (matchingAddress.objectName || '') !== (editObjektName || '') ||
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
@@ -748,10 +749,12 @@ export default function ProjectDetailScreen() {
                     { 
                       text: 'Ja, synchronisieren', 
                       onPress: async () => {
+                        // Aktualisiere beim Kunden: Bezeichnung bleibt gleich, aber Objektname und andere Daten werden aktualisiert
                         const updatedAddresses = existingCustomer.projectAddresses!.map(addr => 
                           addr.id === matchingAddress!.id
                             ? { 
                                 ...addr, 
+                                name: editProjectName || addr.name, // Bezeichnung = Projektname (wenn geändert)
                                 objectName: editObjektName || undefined,
                                 street: editObjektStreet, 
                                 zip: editObjektPlz, 
@@ -766,6 +769,14 @@ export default function ProjectDetailScreen() {
                           ...existingCustomer,
                           projectAddresses: updatedAddresses,
                         });
+                        // Aktualisiere auch objekt_address_name falls Projektname geändert wurde
+                        if (editProjectName && editProjectName !== project?.objekt_address_name) {
+                          const projectId = Array.isArray(id) ? id[0] : id;
+                          await ProjectService.update(projectId, {
+                            ...project,
+                            objekt_address_name: editProjectName,
+                          });
+                        }
                         Alert.alert('Erfolg', 'Projektadresse beim Kunden wurde aktualisiert');
                       }
                     },

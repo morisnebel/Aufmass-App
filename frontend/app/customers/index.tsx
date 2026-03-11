@@ -186,6 +186,8 @@ export default function CustomersScreen() {
                   for (const proj of matchingProjects) {
                     await ProjectService.update(proj.id, {
                       ...proj,
+                      name: addressName, // Projektname = Bezeichnung
+                      objekt_address_name: addressName, // Bezeichnung aktualisieren
                       objekt_name: addressObjectName || undefined,
                       objekt_street: addressStreet,
                       objekt_plz: addressZip,

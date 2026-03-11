@@ -1155,7 +1155,8 @@ export default function NewProjectScreen() {
                 data={filteredContacts}
                 keyExtractor={(item, index) => item.id || index.toString()}
                 renderItem={({ item }) => {
-                  const { extractedName, extractedPhone, extractedStreet, extractedPlz, extractedCity } = extractContactData(item);
+                  const { extractedFirstName, extractedLastName, extractedPhone, extractedStreet, extractedPlz, extractedCity } = extractContactData(item);
+                  const displayName = `${extractedFirstName} ${extractedLastName}`.trim() || item.name || 'Unbekannt';
                   const displayAddress = [extractedStreet, [extractedPlz, extractedCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
                   return (
                     <TouchableOpacity
@@ -1164,7 +1165,7 @@ export default function NewProjectScreen() {
                     >
                       <Ionicons name="person-circle" size={40} color="#1976d2" />
                       <View style={styles.contactItemInfo}>
-                        <Text style={styles.contactItemName}>{extractedName}</Text>
+                        <Text style={styles.contactItemName}>{displayName}</Text>
                         {extractedPhone && (
                           <Text style={styles.contactItemDetail}>{extractedPhone}</Text>
                         )}

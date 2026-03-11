@@ -2848,7 +2848,7 @@ export default function ProjectDetailScreen() {
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 14px;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</h4>
+                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 9px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</h4>
                 ${objektName ? `
                   <div class="info-row">
                     <span class="info-label">Name:</span>

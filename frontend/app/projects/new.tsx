@@ -25,7 +25,8 @@ import { CustomerService, ProjectService, Customer, ProjectAddress } from '../..
 
 // Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {
-  let extractedName = '';
+  let extractedFirstName = '';
+  let extractedLastName = '';
   let extractedEmail = '';
   let extractedPhone = '';
   let extractedMobile = '';
@@ -33,8 +34,16 @@ function extractContactData(contact: Contacts.Contact) {
   let extractedPlz = '';
   let extractedCity = '';
 
-  extractedName = contact.name || 
-    [contact.firstName, contact.lastName].filter(Boolean).join(' ') || '';
+  // Extrahiere Vor- und Nachname separat
+  extractedFirstName = contact.firstName || '';
+  extractedLastName = contact.lastName || '';
+  
+  // Falls kein Vor-/Nachname, versuche den Namen zu splitten
+  if (!extractedFirstName && !extractedLastName && contact.name) {
+    const nameParts = contact.name.split(' ');
+    extractedFirstName = nameParts[0] || '';
+    extractedLastName = nameParts.slice(1).join(' ') || '';
+  }
 
   if (contact.emails && contact.emails.length > 0) {
     const emailObj = contact.emails[0] as any;
@@ -67,7 +76,7 @@ function extractContactData(contact: Contacts.Contact) {
     extractedCity = addr?.city || '';
   }
 
-  return { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
+  return { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
 }
 
 export default function NewProjectScreen() {
@@ -88,7 +97,8 @@ export default function NewProjectScreen() {
   // New customer modal state - separate fields
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [newCustomerAnrede, setNewCustomerAnrede] = useState('');
-  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerFirstName, setNewCustomerFirstName] = useState('');
+  const [newCustomerLastName, setNewCustomerLastName] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerMobile, setNewCustomerMobile] = useState('');
@@ -261,9 +271,10 @@ export default function NewProjectScreen() {
 
   // Select a contact and fill new customer form
   const handleSelectContact = (contact: Contacts.Contact & { id?: string }) => {
-    const { extractedName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
+    const { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
     
-    setNewCustomerName(extractedName);
+    setNewCustomerFirstName(extractedFirstName);
+    setNewCustomerLastName(extractedLastName);
     setNewCustomerEmail(extractedEmail);
     setNewCustomerPhone(extractedPhone);
     setNewCustomerMobile(extractedMobile);
@@ -292,8 +303,8 @@ export default function NewProjectScreen() {
 
   // Create new customer - mit Bestätigungsdialog
   const handleCreateCustomer = async () => {
-    if (!newCustomerName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
+    if (!newCustomerFirstName.trim() && !newCustomerLastName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
       return;
     }
 
@@ -347,17 +358,25 @@ export default function NewProjectScreen() {
     try {
       // Combine name with Anrede
       const fullName = newCustomerAnrede 
-        ? `${newCustomerAnrede} ${newCustomerName}` 
-        : newCustomerName;
+        ? `${newCustomerAnrede} ${newCustomerFirstName} ${newCustomerLastName}`.trim()
+        : `${newCustomerFirstName} ${newCustomerLastName}`.trim();
       
       // Combine address fields
       const address = [newCustomerStreet, [newCustomerPlz, newCustomerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       
       createdCustomer = await CustomerService.create({
+        salutation: newCustomerAnrede || undefined,
+        firstName: newCustomerFirstName || undefined,
+        lastName: newCustomerLastName || undefined,
         name: fullName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
+        mobile: newCustomerMobile || undefined,
+        street: newCustomerStreet || undefined,
+        zip: newCustomerPlz || undefined,
+        city: newCustomerCity || undefined,
         address: address || undefined,
+        importedContactId: savedImportedContactId || undefined,
       });
       
       // Save or update device contacts (nur wenn erforderlich)
@@ -365,18 +384,21 @@ export default function NewProjectScreen() {
         try {
           const { status } = await Contacts.requestPermissionsAsync();
           if (status === 'granted') {
-            const nameParts = newCustomerName.split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
 
             if (savedImportedContactId) {
-              // Aktualisiere bestehenden Kontakt
-              const updatedContact = {
-                id: savedImportedContactId,
+              // Aktualisiere bestehenden Kontakt - lösche und erstelle neu
+              try {
+                await Contacts.removeContactAsync(savedImportedContactId);
+              } catch (e) {
+                console.log('Could not remove old contact:', e);
+              }
+              
+              const newContact: Contacts.Contact = {
                 contactType: Contacts.ContactTypes.Person,
                 name: fullName,
-                firstName: newCustomerAnrede ? newCustomerAnrede : firstName,
-                lastName: newCustomerAnrede ? newCustomerName : lastName,
+                namePrefix: newCustomerAnrede || '',
+                firstName: newCustomerFirstName || '',
+                lastName: newCustomerLastName || '',
                 ...(newCustomerEmail && {
                   emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
                 }),
@@ -393,14 +415,19 @@ export default function NewProjectScreen() {
                   }],
                 }),
               };
-              await Contacts.updateContactAsync(updatedContact as any);
+              const newContactId = await Contacts.addContactAsync(newContact);
+              // Update customer with new contact ID
+              if (newContactId && createdCustomer) {
+                await CustomerService.update(createdCustomer.id, { importedContactId: newContactId });
+              }
             } else {
               // Erstelle neuen Kontakt
               const contact: Contacts.Contact = {
                 contactType: Contacts.ContactTypes.Person,
                 name: fullName,
-                firstName: newCustomerAnrede ? newCustomerAnrede : firstName,
-                lastName: newCustomerAnrede ? newCustomerName : lastName,
+                namePrefix: newCustomerAnrede || '',
+                firstName: newCustomerFirstName || '',
+                lastName: newCustomerLastName || '',
                 ...(newCustomerEmail && {
                   emails: [{ email: newCustomerEmail, label: 'Arbeit' }],
                 }),
@@ -461,7 +488,8 @@ export default function NewProjectScreen() {
   // Helper zum Zurücksetzen des Formulars
   const resetNewCustomerForm = () => {
     setNewCustomerAnrede('');
-    setNewCustomerName('');
+    setNewCustomerFirstName('');
+    setNewCustomerLastName('');
     setNewCustomerEmail('');
     setNewCustomerPhone('');
     setNewCustomerMobile('');
@@ -964,12 +992,22 @@ export default function NewProjectScreen() {
               </View>
               
               <View style={styles.formInputGroup}>
-                <Text style={styles.formLabel}>Name *</Text>
+                <Text style={styles.formLabel}>Vorname *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Kundenname"
-                  value={newCustomerName}
-                  onChangeText={setNewCustomerName}
+                  placeholder="Vorname"
+                  value={newCustomerFirstName}
+                  onChangeText={setNewCustomerFirstName}
+                />
+              </View>
+
+              <View style={styles.formInputGroup}>
+                <Text style={styles.formLabel}>Nachname *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Nachname"
+                  value={newCustomerLastName}
+                  onChangeText={setNewCustomerLastName}
                 />
               </View>
 

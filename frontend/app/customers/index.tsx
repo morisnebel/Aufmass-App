@@ -830,7 +830,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '85%',
+    minHeight: '70%',
+    maxHeight: '90%',
   },
   addressModalHeader: {
     flexDirection: 'row',
@@ -922,8 +923,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   addressForm: {
-    padding: 12,
-    paddingHorizontal: 10,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     backgroundColor: '#f5f5f5',

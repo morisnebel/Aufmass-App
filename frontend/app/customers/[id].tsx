@@ -159,6 +159,11 @@ export default function EditCustomerScreen() {
         setZip(customer.zip || '');
         setCity(customer.city || '');
         
+        // Lade die importedContactId wenn vorhanden
+        if (customer.importedContactId) {
+          setImportedContactId(customer.importedContactId);
+        }
+        
         // Abwärtskompatibilität: Falls nur name vorhanden, versuche zu splitten
         if (!customer.firstName && !customer.lastName && customer.name) {
           const nameParts = customer.name.split(' ');
@@ -338,6 +343,7 @@ export default function EditCustomerScreen() {
         zip: zip,
         city: city,
         address: fullAddress,
+        importedContactId: importedContactId || undefined,
       });
       
       Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
@@ -387,30 +393,57 @@ export default function EditCustomerScreen() {
 
       const fullName = generateFullName(salutation, firstName, lastName);
 
-      // Neuen Kontakt erstellen
-      const newContact: Contacts.Contact = {
+      // Kontaktdaten vorbereiten
+      const contactData: Contacts.Contact = {
         contactType: Contacts.ContactTypes.Person,
         name: fullName,
         firstName: firstName || '',
         lastName: lastName || '',
-        ...(email && {
-          emails: [{ email: email, label: 'Arbeit' }],
-        }),
+        emails: email ? [{ email: email, label: 'Arbeit' }] : [],
         phoneNumbers: [
           ...(mobile ? [{ number: mobile, label: 'Mobil' }] : []),
           ...(phone ? [{ number: phone, label: 'Arbeit' }] : []),
         ].filter(p => p.number),
-        ...(street && {
-          addresses: [{
-            street: street,
-            postalCode: zip || '',
-            city: city || '',
-            label: 'Arbeit',
-          }],
-        }),
+        addresses: street ? [{
+          street: street,
+          postalCode: zip || '',
+          city: city || '',
+          label: 'Arbeit',
+        }] : [],
       };
 
-      await Contacts.addContactAsync(newContact);
+      // Prüfen, ob wir einen existierenden Kontakt haben
+      if (importedContactId) {
+        try {
+          // Versuche den existierenden Kontakt zu laden
+          const existingContact = await Contacts.getContactByIdAsync(importedContactId);
+          
+          if (existingContact) {
+            // Kontakt existiert - aktualisieren
+            const updatedContact = {
+              ...existingContact,
+              ...contactData,
+              id: importedContactId,
+            };
+            
+            await Contacts.updateContactAsync(updatedContact);
+            Alert.alert('Erfolg', `"${fullName}" wurde in Ihren Kontakten aktualisiert.`);
+            return;
+          }
+        } catch (updateError) {
+          console.log('Kontakt nicht gefunden oder Update fehlgeschlagen, erstelle neuen:', updateError);
+        }
+      }
+
+      // Kein existierender Kontakt oder Update fehlgeschlagen - neuen erstellen
+      const newContactId = await Contacts.addContactAsync(contactData);
+      
+      // Speichere die neue Contact-ID
+      if (newContactId) {
+        setImportedContactId(newContactId);
+        await CustomerService.update(customerId, { importedContactId: newContactId });
+      }
+      
       Alert.alert('Erfolg', `"${fullName}" wurde zu Ihren Kontakten hinzugefügt.`);
     } catch (error) {
       console.error('Error syncing contact:', error);

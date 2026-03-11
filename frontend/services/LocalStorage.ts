@@ -215,6 +215,7 @@ export interface Customer {
   city?: string; // Ort
   address?: string; // Legacy: kombinierte Adresse (für Abwärtskompatibilität)
   notes?: string;
+  importedContactId?: string; // ID des importierten Telefonkontakts für Synchronisation
   projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;
   updated_at: string;

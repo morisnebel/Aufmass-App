@@ -5103,26 +5103,25 @@ export default function ProjectDetailScreen() {
                     />
                   </View>
 
-                  <View style={styles.addressRow}>
-                    <View style={styles.plzInput}>
-                      <Text style={styles.compactLabel}>PLZ</Text>
-                      <TextInput
-                        style={styles.compactInput}
-                        value={editBauherrPlz}
-                        onChangeText={setEditBauherrPlz}
-                        placeholder="PLZ"
-                        keyboardType="number-pad"
-                      />
-                    </View>
-                    <View style={styles.cityInput}>
-                      <Text style={styles.compactLabel}>Ort</Text>
-                      <TextInput
-                        style={styles.compactInput}
-                        value={editBauherrCity}
-                        onChangeText={setEditBauherrCity}
-                        placeholder="Ort"
-                      />
-                    </View>
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>PLZ</Text>
+                    <TextInput
+                      style={[styles.compactInput, { width: 120 }]}
+                      value={editBauherrPlz}
+                      onChangeText={setEditBauherrPlz}
+                      placeholder="PLZ"
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Ort</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editBauherrCity}
+                      onChangeText={setEditBauherrCity}
+                      placeholder="Ort (inkl. Ortsteil)"
+                    />
                   </View>
 
                   <Text style={styles.editSectionTitle}>Objektadresse (optional)</Text>

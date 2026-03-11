@@ -5239,51 +5239,6 @@ export default function ProjectDetailScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Bauherr Anrede Picker Modal */}
-      <Modal
-        visible={showBauherrSalutationPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowBauherrSalutationPicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.salutationModalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowBauherrSalutationPicker(false)}
-        >
-          <View style={styles.salutationModalContent}>
-            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
-            {SALUTATION_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={styles.salutationOption}
-                onPress={() => {
-                  setEditBauherrSalutation(option);
-                  setShowBauherrSalutationPicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.salutationOptionText,
-                  editBauherrSalutation === option && styles.salutationOptionSelected
-                ]}>{option}</Text>
-                {editBauherrSalutation === option && (
-                  <Ionicons name="checkmark" size={20} color="#1976d2" />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.salutationOption}
-              onPress={() => {
-                setEditBauherrSalutation('');
-                setShowBauherrSalutationPicker(false);
-              }}
-            >
-              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
       {/* PDF Preview Modal */}
       <Modal
         visible={showPdfPreviewModal}
@@ -5455,6 +5410,51 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* Bauherr Anrede Picker Modal */}
+      <Modal
+        visible={showBauherrSalutationPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowBauherrSalutationPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.salutationModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowBauherrSalutationPicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            {SALUTATION_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setEditBauherrSalutation(option);
+                  setShowBauherrSalutationPicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  editBauherrSalutation === option && styles.salutationOptionSelected
+                ]}>{option}</Text>
+                {editBauherrSalutation === option && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setEditBauherrSalutation('');
+                setShowBauherrSalutationPicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }

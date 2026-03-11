@@ -657,13 +657,14 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 50,
+    paddingHorizontal: 15,
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
+    borderRadius: 20,
+    height: 450,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   modalHeader: {

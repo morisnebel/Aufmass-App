@@ -5237,6 +5237,47 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+
+        {/* Bauherr Anrede Picker - innerhalb des Edit Modal */}
+        {showBauherrSalutationPicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowBauherrSalutationPicker(false)}
+            />
+            <View style={styles.salutationPickerContent}>
+              <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+              {SALUTATION_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.salutationOption}
+                  onPress={() => {
+                    setEditBauherrSalutation(option);
+                    setShowBauherrSalutationPicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.salutationOptionText,
+                    editBauherrSalutation === option && styles.salutationOptionSelected
+                  ]}>{option}</Text>
+                  {editBauherrSalutation === option && (
+                    <Ionicons name="checkmark" size={20} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.salutationOption}
+                onPress={() => {
+                  setEditBauherrSalutation('');
+                  setShowBauherrSalutationPicker(false);
+                }}
+              >
+                <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </Modal>
 
       {/* PDF Preview Modal */}
@@ -5411,50 +5452,6 @@ export default function ProjectDetailScreen() {
         </View>
       )}
 
-      {/* Bauherr Anrede Picker Modal */}
-      <Modal
-        visible={showBauherrSalutationPicker}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowBauherrSalutationPicker(false)}
-      >
-        <TouchableOpacity 
-          style={styles.salutationModalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowBauherrSalutationPicker(false)}
-        >
-          <View style={styles.salutationModalContent}>
-            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
-            {SALUTATION_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={styles.salutationOption}
-                onPress={() => {
-                  setEditBauherrSalutation(option);
-                  setShowBauherrSalutationPicker(false);
-                }}
-              >
-                <Text style={[
-                  styles.salutationOptionText,
-                  editBauherrSalutation === option && styles.salutationOptionSelected
-                ]}>{option}</Text>
-                {editBauherrSalutation === option && (
-                  <Ionicons name="checkmark" size={20} color="#1976d2" />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.salutationOption}
-              onPress={() => {
-                setEditBauherrSalutation('');
-                setShowBauherrSalutationPicker(false);
-              }}
-            >
-              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -6847,5 +6844,31 @@ const styles = StyleSheet.create({
   salutationOptionSelected: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  salutationPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  salutationPickerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  salutationPickerContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    width: '80%',
+    maxWidth: 300,
+    zIndex: 1001,
   },
 });

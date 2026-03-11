@@ -396,10 +396,11 @@ export default function EditCustomerScreen() {
 
       const fullName = generateFullName(salutation, firstName, lastName);
 
-      // Kontaktdaten vorbereiten
+      // Kontaktdaten vorbereiten - Anrede separat als namePrefix
       const contactData: Partial<Contacts.Contact> = {
         contactType: Contacts.ContactTypes.Person,
         name: fullName,
+        namePrefix: salutation || '', // Anrede (Herr, Frau, Dr., etc.)
         firstName: firstName || '',
         lastName: lastName || '',
         emails: email ? [{ email: email, label: 'Arbeit' }] : [],

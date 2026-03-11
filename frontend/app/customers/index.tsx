@@ -825,14 +825,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-start',
-    paddingTop: 60,
+    paddingTop: 50,
     paddingHorizontal: 15,
   },
   addressModalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
     width: '100%',
-    maxHeight: '55%',
+    height: 450,
   },
   addressModalHeader: {
     flexDirection: 'row',

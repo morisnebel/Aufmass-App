@@ -716,10 +716,14 @@ export default function ProjectDetailScreen() {
                       });
                       // Speichere auch den Link zum Adress-Namen
                       const projectId = Array.isArray(id) ? id[0] : id;
-                      await ProjectService.update(projectId, {
-                        ...project,
-                        objekt_address_name: addr.name,
-                      });
+                      const currentProject = await ProjectService.getById(projectId);
+                      if (currentProject) {
+                        await ProjectService.update(projectId, {
+                          ...currentProject,
+                          objekt_address_name: addr.name,
+                        });
+                      }
+                      await loadProjectData(); // Daten neu laden
                       Alert.alert('Erfolg', `Projektadresse "${addr.name}" wurde aktualisiert`);
                     }
                   }))
@@ -772,12 +776,16 @@ export default function ProjectDetailScreen() {
                         // Aktualisiere auch objekt_address_name falls Projektname geändert wurde
                         if (editProjectName && editProjectName !== project?.objekt_address_name) {
                           const projectId = Array.isArray(id) ? id[0] : id;
-                          await ProjectService.update(projectId, {
-                            ...project,
-                            objekt_address_name: editProjectName,
-                          });
+                          const currentProject = await ProjectService.getById(projectId);
+                          if (currentProject) {
+                            await ProjectService.update(projectId, {
+                              ...currentProject,
+                              objekt_address_name: editProjectName,
+                            });
+                          }
                         }
                         Alert.alert('Erfolg', 'Projektadresse beim Kunden wurde aktualisiert');
+                        await loadProjectData(); // Daten neu laden nach Sync
                       }
                     },
                   ]

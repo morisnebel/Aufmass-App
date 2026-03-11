@@ -211,19 +211,25 @@ export default function EditCustomerScreen() {
 
   const openQuickEntry = () => {
     setShowImportOptions(false);
-    setQuickName(name);
+    setQuickFirstName(firstName);
+    setQuickLastName(lastName);
     setQuickEmail(email);
     setQuickPhone(phone);
-    setQuickAddress(address);
+    setQuickStreet(street);
+    setQuickZip(zip);
+    setQuickCity(city);
     setShowQuickEntry(true);
   };
 
   const applyQuickEntry = () => {
     isImportingRef.current = true;
-    setName(quickName);
+    setFirstName(quickFirstName);
+    setLastName(quickLastName);
     setEmail(quickEmail);
     setPhone(quickPhone);
-    setAddress(quickAddress);
+    setStreet(quickStreet);
+    setZip(quickZip);
+    setCity(quickCity);
     setShowQuickEntry(false);
   };
 
@@ -278,12 +284,16 @@ export default function EditCustomerScreen() {
   const selectContact = (contact: Contacts.Contact & { id?: string }) => {
     isImportingRef.current = true;
     
-    const { extractedName, extractedEmail, extractedPhone, extractedAddress } = extractContactData(contact);
+    const { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
     
-    setName(extractedName || '');
+    setFirstName(extractedFirstName || '');
+    setLastName(extractedLastName || '');
     setEmail(extractedEmail || '');
     setPhone(extractedPhone || '');
-    setAddress(extractedAddress || '');
+    setMobile(extractedMobile || '');
+    setStreet(extractedStreet || '');
+    setZip(extractedPlz || '');
+    setCity(extractedCity || '');
     
     if (contact.id) {
       setImportedContactId(contact.id);
@@ -583,27 +593,58 @@ export default function EditCustomerScreen() {
           </View>
 
           <ScrollView style={styles.quickEntryForm}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Kundenname"
-                value={quickName}
-                onChangeText={setQuickName}
-                autoFocus
-              />
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.label}>Vorname</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Vorname"
+                  value={quickFirstName}
+                  onChangeText={setQuickFirstName}
+                  autoFocus
+                />
+              </View>
+              <View style={styles.halfInput}>
+                <Text style={styles.label}>Nachname</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nachname"
+                  value={quickLastName}
+                  onChangeText={setQuickLastName}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-Mail</Text>
+              <Text style={styles.label}>Straße</Text>
               <TextInput
                 style={styles.input}
-                placeholder="kunde@beispiel.de"
-                value={quickEmail}
-                onChangeText={setQuickEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                placeholder="Straße und Hausnummer"
+                value={quickStreet}
+                onChangeText={setQuickStreet}
               />
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.plzInput}>
+                <Text style={styles.label}>PLZ</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="PLZ"
+                  value={quickZip}
+                  onChangeText={setQuickZip}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.cityInput}>
+                <Text style={styles.label}>Ort</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ort"
+                  value={quickCity}
+                  onChangeText={setQuickCity}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -618,14 +659,14 @@ export default function EditCustomerScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Adresse</Text>
+              <Text style={styles.label}>E-Mail</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Straße, PLZ, Stadt"
-                value={quickAddress}
-                onChangeText={setQuickAddress}
-                multiline
-                numberOfLines={3}
+                style={styles.input}
+                placeholder="kunde@beispiel.de"
+                value={quickEmail}
+                onChangeText={setQuickEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
 

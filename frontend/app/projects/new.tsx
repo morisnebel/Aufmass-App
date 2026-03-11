@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,10 @@ import {
   InteractionManager,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, ProjectService, Customer, ProjectAddress } from '../../services/LocalStorage';
 
 // Customer type is imported from LocalStorage service
@@ -135,6 +137,43 @@ export default function NewProjectScreen() {
   useEffect(() => {
     loadCustomers();
   }, []);
+
+  // Prüfe bei Focus, ob ein Kunde ausgewählt wurde (via AsyncStorage)
+  useFocusEffect(
+    useCallback(() => {
+      const checkSelectedCustomer = async () => {
+        try {
+          const selectedCustomerId = await AsyncStorage.getItem('selectedCustomerId');
+          if (selectedCustomerId) {
+            // Lösche den Eintrag sofort
+            await AsyncStorage.removeItem('selectedCustomerId');
+            
+            // Lade den Kunden
+            const customer = await CustomerService.getById(selectedCustomerId);
+            if (customer) {
+              console.log('Selected customer loaded:', customer.name);
+              setCustomerId(customer.id);
+              setSelectedCustomer(customer);
+              // Objektadresse zurücksetzen wenn Kunde wechselt
+              setSelectedProjectAddress(null);
+              setObjektAddressName('');
+              setObjektName('');
+              setObjektStreet('');
+              setObjektPlz('');
+              setObjektCity('');
+              setObjektContactPerson('');
+              setObjektPhone('');
+              setObjektEmail('');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking selected customer:', error);
+        }
+      };
+      
+      checkSelectedCustomer();
+    }, [])
+  );
 
   const loadCustomers = async () => {
     try {
@@ -637,7 +676,7 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>Kunde *</Text>
             <TouchableOpacity
               style={styles.customerSelector}
-              onPress={() => setShowCustomerPicker(true)}
+              onPress={() => router.push('/customers?selectMode=true')}
             >
               <View style={styles.customerSelectorContent}>
                 <Ionicons name="person" size={20} color="#666" />
@@ -652,7 +691,7 @@ export default function NewProjectScreen() {
                   )}
                 </View>
               </View>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-forward" size={20} color="#1976d2" />
             </TouchableOpacity>
           </View>
 

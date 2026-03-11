@@ -12,13 +12,17 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const selectMode = params.selectMode === 'true';
+  
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -302,9 +306,17 @@ export default function CustomersScreen() {
     <View style={styles.customerCard}>
       <TouchableOpacity
         style={styles.customerMainArea}
-        onPress={() => {
-          console.log('Navigating to customer with ID:', item.id);
-          router.push(`/customers/${item.id}`);
+        onPress={async () => {
+          if (selectMode) {
+            // Im Auswahlmodus: Kunde in AsyncStorage speichern und zurück navigieren
+            console.log('Customer selected:', item.id, item.name);
+            await AsyncStorage.setItem('selectedCustomerId', item.id);
+            router.back();
+          } else {
+            // Normaler Modus: Zur Bearbeitung navigieren
+            console.log('Navigating to customer with ID:', item.id);
+            router.push(`/customers/${item.id}`);
+          }
         }}
       >
         <View style={styles.customerAvatar}>
@@ -325,7 +337,11 @@ export default function CustomersScreen() {
             </Text>
           )}
         </View>
+        {selectMode && (
+          <Ionicons name="chevron-forward" size={20} color="#1976d2" />
+        )}
       </TouchableOpacity>
+      {!selectMode && (
       <View style={styles.customerActions}>
         {/* Adressen-Button */}
         <TouchableOpacity
@@ -354,6 +370,7 @@ export default function CustomersScreen() {
           <Ionicons name="trash-outline" size={20} color="#f44336" />
         </TouchableOpacity>
       </View>
+      )}
     </View>
   );
 
@@ -367,6 +384,14 @@ export default function CustomersScreen() {
 
   return (
     <View style={styles.container}>
+      {selectMode && (
+        <View style={styles.selectModeHeader}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#1976d2" />
+          </TouchableOpacity>
+          <Text style={styles.selectModeTitle}>Kunde auswählen</Text>
+        </View>
+      )}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#666" />
@@ -984,5 +1009,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  selectModeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  selectModeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
   },
 });

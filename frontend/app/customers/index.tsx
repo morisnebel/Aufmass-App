@@ -824,14 +824,15 @@ const styles = StyleSheet.create({
   addressModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    paddingTop: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   addressModalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    marginHorizontal: 10,
-    maxHeight: '85%',
+    width: '100%',
+    height: '80%',
   },
   addressModalHeader: {
     flexDirection: 'row',

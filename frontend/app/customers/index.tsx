@@ -847,8 +847,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addressList: {
-    maxHeight: 200,
+    flex: 1,
     padding: 16,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   addressItem: {
     flexDirection: 'row',

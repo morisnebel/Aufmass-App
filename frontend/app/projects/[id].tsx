@@ -622,7 +622,7 @@ export default function ProjectDetailScreen() {
         objekt_contact_person: editObjektContactPerson || undefined,
         objekt_phone: editObjektPhone || undefined,
         objekt_email: editObjektEmail || undefined,
-        objekt_address_name: project?.objekt_address_name || undefined, // Link zur Kunden-Adresse beibehalten
+        objekt_address_name: editProjectName || project?.objekt_address_name || undefined, // Projektname = Bezeichnung
       });
 
       // Synchronisiere Bauherr-Daten mit Kundenstamm

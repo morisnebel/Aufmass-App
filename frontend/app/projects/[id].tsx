@@ -705,7 +705,7 @@ export default function ProjectDetailScreen() {
                           ? { 
                               ...a, 
                               objectName: editObjektName || undefined,
-                              description: editObjektDescription || undefined,
+                              description: editProjectDescription || undefined, // Projekt-Beschreibung synchronisieren
                               street: editObjektStreet, 
                               zip: editObjektPlz, 
                               city: editObjektCity,
@@ -740,7 +740,7 @@ export default function ProjectDetailScreen() {
               const hasChanges = 
                 matchingAddress.name !== editProjectName || // Projektname/Bezeichnung geändert
                 (matchingAddress.objectName || '') !== (editObjektName || '') ||
-                (matchingAddress.description || '') !== (editObjektDescription || '') ||
+                (matchingAddress.description || '') !== (editProjectDescription || '') || // Projekt-Beschreibung prüfen
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
                 matchingAddress.city !== editObjektCity ||
@@ -766,7 +766,7 @@ export default function ProjectDetailScreen() {
                                 ...addr, 
                                 name: editProjectName || addr.name, // Bezeichnung = Projektname (wenn geändert)
                                 objectName: editObjektName || undefined,
-                                description: editObjektDescription || undefined,
+                                description: editProjectDescription || undefined, // Projekt-Beschreibung synchronisieren
                                 street: editObjektStreet, 
                                 zip: editObjektPlz, 
                                 city: editObjektCity,

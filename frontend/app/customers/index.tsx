@@ -448,7 +448,8 @@ export default function CustomersScreen() {
       >
         <KeyboardAvoidingView 
           style={styles.addressModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <View style={styles.addressModalContent}>
             <View style={styles.addressModalHeader}>
@@ -460,7 +461,11 @@ export default function CustomersScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.addressList}>
+            <ScrollView 
+              style={styles.addressList}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
               {/* Bestehende Adressen */}
               {selectedCustomer?.projectAddresses?.map((address) => (
                 <View key={address.id} style={styles.addressItem}>

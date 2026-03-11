@@ -1034,9 +1034,9 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: '#1976d2',
     marginBottom: 4,
-    marginTop: 8,
+    marginTop: 10,
   },
   selectModeHeader: {
     flexDirection: 'row',

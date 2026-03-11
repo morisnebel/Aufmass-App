@@ -2225,10 +2225,10 @@ export default function ProjectDetailScreen() {
             font-size: 8px;
           }
           .info-label {
-            font-weight: 600;
-            width: 70px;
+            font-weight: 700;
+            width: 95px;
             flex-shrink: 0;
-            color: #666;
+            color: #333;
           }
           .info-value {
             flex: 1;

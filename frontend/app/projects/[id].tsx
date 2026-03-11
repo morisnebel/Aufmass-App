@@ -2848,13 +2848,43 @@ export default function ProjectDetailScreen() {
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <strong style="color: #1976d2;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</strong>
-                ${objektName ? `<div style="margin-top: 4px;"><strong>Name:</strong> ${objektName}</div>` : ''}
-                ${objektStreet ? `<div style="margin-top: 2px;"><strong>Straße:</strong> ${objektStreet}</div>` : ''}
-                ${(objektPlz || objektCity) ? `<div><strong>PLZ/Ort:</strong> ${objektPlz || ''} ${objektCity || ''}</div>` : ''}
-                ${objektContactPerson ? `<div style="margin-top: 6px;"><strong>Ansprechpartner:</strong> ${objektContactPerson}</div>` : ''}
-                ${objektPhone ? `<div><strong>Tel:</strong> ${objektPhone}</div>` : ''}
-                ${objektEmail ? `<div><strong>E-Mail:</strong> ${objektEmail}</div>` : ''}
+                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 14px;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</h4>
+                ${objektName ? `
+                  <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value">${objektName}</span>
+                  </div>
+                ` : ''}
+                ${objektStreet ? `
+                  <div class="info-row">
+                    <span class="info-label">Straße:</span>
+                    <span class="info-value">${objektStreet}</span>
+                  </div>
+                ` : ''}
+                ${(objektPlz || objektCity) ? `
+                  <div class="info-row">
+                    <span class="info-label">PLZ/Ort:</span>
+                    <span class="info-value">${objektPlz || ''} ${objektCity || ''}</span>
+                  </div>
+                ` : ''}
+                ${objektContactPerson ? `
+                  <div class="info-row">
+                    <span class="info-label">Ansprechpartner:</span>
+                    <span class="info-value">${objektContactPerson}</span>
+                  </div>
+                ` : ''}
+                ${objektPhone ? `
+                  <div class="info-row">
+                    <span class="info-label">Tel:</span>
+                    <span class="info-value">${objektPhone}</span>
+                  </div>
+                ` : ''}
+                ${objektEmail ? `
+                  <div class="info-row">
+                    <span class="info-label">E-Mail:</span>
+                    <span class="info-value">${objektEmail}</span>
+                  </div>
+                ` : ''}
               </div>
             ` : ''}
           </div>

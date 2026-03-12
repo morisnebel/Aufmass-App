@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://project-sync-app-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://zoom-draw-debug.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

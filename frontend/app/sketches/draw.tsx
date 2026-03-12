@@ -1593,29 +1593,32 @@ export default function DrawSketchScreen() {
   // Hilfsfunktion: Berechnet die Canvas-Koordinaten aus Touch-Event
   // Bei Zoom/Scroll müssen die Koordinaten korrekt umgerechnet werden
   const getCanvasCoordinates = (touch: any) => {
-    // In React Native ScrollView mit Zoom:
-    // Die ScrollView skaliert den inneren View, aber locationX/locationY bleiben
-    // in Screen-Koordinaten (unabhängig vom Zoom).
+    // DEBUG: Log alle verfügbaren Touch-Werte
+    console.log('=== TOUCH DEBUG ===');
+    console.log('touch.locationX:', touch.locationX);
+    console.log('touch.locationY:', touch.locationY);
+    console.log('touch.pageX:', touch.pageX);
+    console.log('touch.pageY:', touch.pageY);
+    console.log('scrollOffset:', JSON.stringify(scrollOffset));
+    console.log('scale:', scale);
+    
+    const rawX = touch.locationX ?? touch.pageX ?? 0;
+    const rawY = touch.locationY ?? touch.pageY ?? 0;
+    
+    // Bei gezoomter ScrollView in React Native:
+    // - locationX/locationY sind im SKALIERTEN View-Koordinatensystem
+    // - Das bedeutet: wenn wir bei 2x Zoom sind, ist locationX bereits in skalierten Pixeln
+    // - scrollOffset (contentOffset) ist ebenfalls in skalierten/screen Pixeln
     // 
-    // Um Canvas-Koordinaten zu bekommen:
-    // 1. Die Touch-Position ist relativ zum sichtbaren Viewport
-    // 2. Wir müssen den Scroll-Offset addieren (um die absolute Position im skalierten Content zu bekommen)
-    // 3. Dann durch den Zoom-Faktor teilen (um auf Canvas-Koordinaten zu kommen)
-    //
-    // Formel: canvasX = (screenX + scrollOffset.x) / scale
+    // Um die echten Canvas-Koordinaten zu bekommen:
+    // canvasX = (locationX / scale) + (scrollOffset.x / scale)
+    // canvasX = (locationX + scrollOffset.x) / scale
     
-    const rawX = touch.locationX || touch.pageX || 0;
-    const rawY = touch.locationY || touch.pageY || 0;
-    
-    // Wenn scale === 1 und scrollOffset === (0,0), sind die Koordinaten direkt nutzbar
-    // Bei Zoom müssen wir transformieren
     const canvasX = (rawX + scrollOffset.x) / scale;
     const canvasY = (rawY + scrollOffset.y) / scale;
     
-    // Debug-Log (kann später entfernt werden)
-    if (scale !== 1 || scrollOffset.x !== 0 || scrollOffset.y !== 0) {
-      console.log(`Touch: raw(${rawX.toFixed(0)}, ${rawY.toFixed(0)}) + scroll(${scrollOffset.x.toFixed(0)}, ${scrollOffset.y.toFixed(0)}) / scale(${scale.toFixed(2)}) => canvas(${canvasX.toFixed(0)}, ${canvasY.toFixed(0)})`);
-    }
+    console.log(`RESULT: raw(${rawX.toFixed(1)}, ${rawY.toFixed(1)}) => canvas(${canvasX.toFixed(1)}, ${canvasY.toFixed(1)})`);
+    console.log('===================');
     
     return { x: canvasX, y: canvasY };
   };

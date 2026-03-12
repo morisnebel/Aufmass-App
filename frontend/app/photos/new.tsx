@@ -10,6 +10,8 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -155,21 +157,25 @@ export default function NewPhotoScreen() {
   };
 
   return (
-    <ScrollView 
-      ref={scrollViewRef}
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 400, flexGrow: 1 }}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      showsVerticalScrollIndicator={true}
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
-      <View style={styles.content}>
-        {/* Upload Buttons - immer sichtbar */}
-        <View style={styles.uploadSection}>
-          <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
-            <Ionicons name="camera" size={36} color="#1976d2" />
-            <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
-          </TouchableOpacity>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+      >
+        <View style={styles.content}>
+          {/* Upload Buttons - immer sichtbar */}
+          <View style={styles.uploadSection}>
+            <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+              <Ionicons name="camera" size={36} color="#1976d2" />
+              <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
+            </TouchableOpacity>
 
           <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
             <Ionicons name="images" size={36} color="#1976d2" />
@@ -233,6 +239,7 @@ export default function NewPhotoScreen() {
         )}
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

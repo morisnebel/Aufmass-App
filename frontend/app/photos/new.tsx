@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Keyboard,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -30,20 +29,39 @@ export default function NewPhotoScreen() {
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
-  // Scroll zum fokussierten Input - scrollt das Eingabefeld über die Tastatur
-  const scrollToInput = (index: number) => {
-    // Verzögerung damit Tastatur erscheinen kann
-    setTimeout(() => {
-      // Berechne Position: Upload-Bereich (~180px) + Titel (~40px) + (Foto-Karte ~120px * index)
-      // Scrolle so dass das Eingabefeld oben sichtbar ist
-      const targetY = 220 + (index * 130);
-      scrollViewRef.current?.scrollTo({
-        y: targetY,
-        animated: true,
-      });
-    }, 350);
-  };
+  // Keyboard-Events für dynamische Höhenanpassung
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Scroll zum fokussierten Input nach kurzer Verzögerung
+        if (focusedIndex !== null) {
+          setTimeout(() => {
+            scrollViewRef.current?.scrollTo({
+              y: 220 + (focusedIndex * 130),
+              animated: true,
+            });
+          }, 100);
+        }
+      }
+    );
+    
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, [focusedIndex]);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -157,25 +175,20 @@ export default function NewPhotoScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
+    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <ScrollView 
         ref={scrollViewRef}
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 50 : 100 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
-        <View style={styles.content}>
-          {/* Upload Buttons - immer sichtbar */}
-          <View style={styles.uploadSection}>
-            <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
-              <Ionicons name="camera" size={36} color="#1976d2" />
-              <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
-            </TouchableOpacity>
+        {/* Upload Buttons - immer sichtbar */}
+        <View style={styles.uploadSection}>
+          <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+            <Ionicons name="camera" size={36} color="#1976d2" />
+            <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
             <Ionicons name="images" size={36} color="#1976d2" />
@@ -184,36 +197,37 @@ export default function NewPhotoScreen() {
           </TouchableOpacity>
         </View>
 
-          {/* Ausgewählte Fotos */}
-          {selectedPhotos.length > 0 && (
-            <View style={styles.selectedSection}>
-              <Text style={styles.sectionTitle}>
-                {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
-              </Text>
-              
-              {selectedPhotos.map((photo, index) => (
-                <View key={index} style={styles.photoCard}>
-                  <View style={styles.photoHeader}>
-                    <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
-                    <View style={styles.photoInfo}>
-                      <Text style={styles.photoNumber}>Foto {index + 1}</Text>
-                      <TextInput
-                        style={styles.descriptionInput}
-                        placeholder="Beschreibung (optional)"
-                        value={photo.description}
-                        onChangeText={(text) => updateDescription(index, text)}
-                        onFocus={() => scrollToInput(index)}
-                        multiline
-                      />
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.removeButton}
-                      onPress={() => removePhoto(index)}
-                    >
-                      <Ionicons name="close-circle" size={28} color="#f44336" />
-                    </TouchableOpacity>
+        {/* Ausgewählte Fotos */}
+        {selectedPhotos.length > 0 && (
+          <View style={styles.selectedSection}>
+            <Text style={styles.sectionTitle}>
+              {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
+            </Text>
+            
+            {selectedPhotos.map((photo, index) => (
+              <View key={index} style={styles.photoCard}>
+                <View style={styles.photoHeader}>
+                  <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
+                  <View style={styles.photoInfo}>
+                    <Text style={styles.photoNumber}>Foto {index + 1}</Text>
+                    <TextInput
+                      style={styles.descriptionInput}
+                      placeholder="Beschreibung (optional)"
+                      value={photo.description}
+                      onChangeText={(text) => updateDescription(index, text)}
+                      onFocus={() => setFocusedIndex(index)}
+                      onBlur={() => setFocusedIndex(null)}
+                      multiline
+                    />
                   </View>
+                  <TouchableOpacity 
+                    style={styles.removeButton}
+                    onPress={() => removePhoto(index)}
+                  >
+                    <Ionicons name="close-circle" size={28} color="#f44336" />
+                  </TouchableOpacity>
                 </View>
+              </View>
             ))}
 
             {/* Speichern Button */}
@@ -237,9 +251,8 @@ export default function NewPhotoScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
     </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

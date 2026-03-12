@@ -497,23 +497,6 @@ export default function AnnotatePhotoScreen() {
             </View>
           )}
           
-          {/* Bearbeiten-Modus Toggle */}
-          <TouchableOpacity 
-            style={[styles.editToggleButton, editMode && styles.editToggleButtonActive]} 
-            onPress={() => {
-              setEditMode(!editMode);
-              if (!editMode) {
-                setDrawingEnabled(false);
-                setSelectedPathIndex(null);
-              }
-            }}
-          >
-            <Ionicons name={editMode ? "move" : "move-outline"} size={18} color={editMode ? '#fff' : '#FF9800'} />
-            <Text style={[styles.editToggleText, editMode && styles.editToggleTextActive]}>
-              Bearb.
-            </Text>
-          </TouchableOpacity>
-          
           {/* Zeichnen Toggle */}
           <TouchableOpacity 
             style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
@@ -527,29 +510,11 @@ export default function AnnotatePhotoScreen() {
           >
             <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={18} color={drawingEnabled ? '#fff' : '#4CAF50'} />
             <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
-              Zeichn.
+              Zeichnen
             </Text>
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Info-Zeile wenn im Bearbeitungsmodus */}
-      {editMode && (
-        <View style={styles.editModeInfo}>
-          <Ionicons name="information-circle-outline" size={16} color="#FF9800" />
-          <Text style={styles.editModeInfoText}>
-            {selectedPathIndex !== null 
-              ? `Element ${selectedPathIndex + 1} ausgewählt - Ziehen zum Verschieben`
-              : 'Tippen Sie auf eine Zeichnung zum Auswählen'}
-          </Text>
-          {selectedPathIndex !== null && (
-            <TouchableOpacity style={styles.deleteSelectedButton} onPress={deleteSelectedPath}>
-              <Ionicons name="trash-outline" size={18} color="#fff" />
-              <Text style={styles.deleteSelectedText}>Löschen</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
 
       {/* Zweite Toolbar-Zeile: Aktionen */}
       <View style={styles.actionsToolbar}>
@@ -617,9 +582,9 @@ export default function AnnotatePhotoScreen() {
         ref={canvasRef as any}
         minimumZoomScale={0.5}
         maximumZoomScale={4}
-        bouncesZoom={!drawingEnabled && !editMode}
-        scrollEnabled={!drawingEnabled && !editMode}
-        pinchGestureEnabled={!drawingEnabled && !editMode}
+        bouncesZoom={!drawingEnabled}
+        scrollEnabled={!drawingEnabled}
+        pinchGestureEnabled={!drawingEnabled}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {
@@ -631,27 +596,12 @@ export default function AnnotatePhotoScreen() {
           <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
           <View
             style={styles.svgContainer}
-            onStartShouldSetResponder={() => drawingEnabled || editMode}
-            onMoveShouldSetResponder={() => drawingEnabled || (editMode && isDragging)}
+            onStartShouldSetResponder={() => drawingEnabled}
+            onMoveShouldSetResponder={() => drawingEnabled}
             onResponderGrant={(event) => {
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
-              
-              if (editMode) {
-                // Im Bearbeitungsmodus: Element auswählen oder verschieben
-                const foundIndex = findPathAtPoint(locationX, locationY);
-                if (foundIndex !== null) {
-                  setSelectedPathIndex(foundIndex);
-                  setIsDragging(true);
-                  dragStartRef.current = { x: locationX, y: locationY };
-                  setDragPreviewOffset({ x: 0, y: 0 });
-                  originalPathRef.current = paths[foundIndex].path;
-                } else {
-                  setSelectedPathIndex(null);
-                }
-                return;
-              }
               
               if (drawingEnabled) {
                 lastDrawPointRef.current = { x: locationX, y: locationY };
@@ -662,14 +612,6 @@ export default function AnnotatePhotoScreen() {
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
-              
-              if (editMode && isDragging && selectedPathIndex !== null) {
-                // Live-Vorschau mit offset
-                const deltaX = locationX - dragStartRef.current.x;
-                const deltaY = locationY - dragStartRef.current.y;
-                setDragPreviewOffset({ x: deltaX, y: deltaY });
-                return;
-              }
               
               if (drawingEnabled && currentPath) {
                 // Nur Punkte hinzufügen wenn Abstand groß genug (glattere Linien)
@@ -686,31 +628,6 @@ export default function AnnotatePhotoScreen() {
               }
             }}
             onResponderRelease={() => {
-              if (editMode && isDragging && selectedPathIndex !== null) {
-                const { x: deltaX, y: deltaY } = dragPreviewOffset;
-                
-                if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-                  const newPaths = [...paths];
-                  const selectedPath = newPaths[selectedPathIndex];
-                  
-                  const newPathString = translatePath(originalPathRef.current, deltaX, deltaY);
-                  const newBounds = calculateBounds(newPathString);
-                  
-                  newPaths[selectedPathIndex] = {
-                    ...selectedPath,
-                    path: newPathString,
-                    bounds: newBounds,
-                  };
-                  
-                  setPaths(newPaths);
-                  setHasChanges(true);
-                }
-                
-                setIsDragging(false);
-                setDragPreviewOffset({ x: 0, y: 0 });
-                return;
-              }
-              
               if (drawingEnabled && currentPath && currentPath.length > 0) {
                 const bounds = calculateBounds(currentPath);
                 setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
@@ -721,29 +638,8 @@ export default function AnnotatePhotoScreen() {
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
               {paths.map((p, index) => {
-                // Berechne Translation für ausgewähltes Element während des Ziehens
-                const isSelected = editMode && selectedPathIndex === index;
-                const translateX = isSelected && isDragging ? dragPreviewOffset.x : 0;
-                const translateY = isSelected && isDragging ? dragPreviewOffset.y : 0;
-                
                 return (
-                  <G 
-                    key={index} 
-                    transform={`translate(${translateX}, ${translateY})`}
-                  >
-                    {/* Auswahlrahmen wenn im Bearbeitungsmodus und ausgewählt */}
-                    {isSelected && p.bounds && (
-                      <Path
-                        d={`M ${p.bounds.minX - 8} ${p.bounds.minY - 8} 
-                            L ${p.bounds.maxX + 8} ${p.bounds.minY - 8} 
-                            L ${p.bounds.maxX + 8} ${p.bounds.maxY + 8} 
-                            L ${p.bounds.minX - 8} ${p.bounds.maxY + 8} Z`}
-                        stroke="#FF9800"
-                        strokeWidth={2}
-                        strokeDasharray="6,4"
-                        fill="rgba(255, 152, 0, 0.15)"
-                      />
-                    )}
+                  <G key={index}>
                     <Path
                       d={p.path}
                       stroke={p.color}
@@ -751,7 +647,6 @@ export default function AnnotatePhotoScreen() {
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      opacity={editMode && selectedPathIndex !== null && !isSelected ? 0.3 : 1}
                     />
                   </G>
                 );

@@ -10,7 +10,6 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -153,19 +152,15 @@ export default function NewPhotoScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1, backgroundColor: '#f5f5f5' }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={100}
+    <ScrollView 
+      ref={scrollViewRef}
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 400, flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      showsVerticalScrollIndicator={true}
     >
-      <ScrollView 
-        ref={scrollViewRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 350 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-      >
+      <View style={styles.content}>
         {/* Upload Buttons - immer sichtbar */}
         <View style={styles.uploadSection}>
           <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
@@ -233,8 +228,8 @@ export default function NewPhotoScreen() {
             </TouchableOpacity>
           </View>
         )}
+      </View>
     </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 

@@ -23,7 +23,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
+
+// Key für Tool-Größen-Einstellungen
+const TOOL_SIZES_KEY = 'aufmassprofi_tool_sizes';
 import Svg, { 
   Path, 
   Line, 
@@ -874,6 +878,58 @@ export default function DrawSketchScreen() {
   const [editArrowFontSize, setEditArrowFontSize] = useState(12);
   const [editPointerFontSize, setEditPointerFontSize] = useState(12);
   const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(3);
+
+  // Tool-Größen aus AsyncStorage laden beim Start
+  useEffect(() => {
+    const loadToolSizes = async () => {
+      try {
+        const savedSizes = await AsyncStorage.getItem(TOOL_SIZES_KEY);
+        if (savedSizes) {
+          const sizes = JSON.parse(savedSizes);
+          if (sizes.editPointerFontSize) setEditPointerFontSize(sizes.editPointerFontSize);
+          if (sizes.editPointerStrokeWidth) setEditPointerStrokeWidth(sizes.editPointerStrokeWidth);
+          if (sizes.editMemoFontSize) setEditMemoFontSize(sizes.editMemoFontSize);
+          if (sizes.strokeWidth) setStrokeWidth(sizes.strokeWidth);
+        }
+      } catch (error) {
+        console.log('Error loading tool sizes:', error);
+      }
+    };
+    loadToolSizes();
+  }, []);
+
+  // Tool-Größen in AsyncStorage speichern bei Änderung
+  const saveToolSizes = useCallback(async (key: string, value: number) => {
+    try {
+      const savedSizes = await AsyncStorage.getItem(TOOL_SIZES_KEY);
+      const sizes = savedSizes ? JSON.parse(savedSizes) : {};
+      sizes[key] = value;
+      await AsyncStorage.setItem(TOOL_SIZES_KEY, JSON.stringify(sizes));
+    } catch (error) {
+      console.log('Error saving tool sizes:', error);
+    }
+  }, []);
+
+  // Wrapper-Funktionen für die Setter mit Speicherung
+  const updateEditPointerFontSize = useCallback((value: number) => {
+    setEditPointerFontSize(value);
+    saveToolSizes('editPointerFontSize', value);
+  }, [saveToolSizes]);
+
+  const updateEditPointerStrokeWidth = useCallback((value: number) => {
+    setEditPointerStrokeWidth(value);
+    saveToolSizes('editPointerStrokeWidth', value);
+  }, [saveToolSizes]);
+
+  const updateEditMemoFontSize = useCallback((value: number) => {
+    setEditMemoFontSize(value);
+    saveToolSizes('editMemoFontSize', value);
+  }, [saveToolSizes]);
+
+  const updateStrokeWidth = useCallback((value: number) => {
+    setStrokeWidth(value);
+    saveToolSizes('strokeWidth', value);
+  }, [saveToolSizes]);
   
   // Double tap detection
   const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });
@@ -2797,27 +2853,39 @@ export default function DrawSketchScreen() {
             {/* Notiz-Text am Startpunkt (wenn vorhanden) */}
             {ptrText && (
               <G>
-                {/* Hintergrund für bessere Lesbarkeit - Rahmen passt sich an strokeWidth an */}
-                <Rect
-                  x={textOffsetX - 5}
-                  y={textOffsetY - ptrFontSize}
-                  width={ptrText.length * ptrFontSize * 0.6 + 10}
-                  height={ptrFontSize + 8}
-                  fill="rgba(255, 255, 255, 0.9)"
-                  rx={4}
-                  ry={4}
-                  stroke={element.color}
-                  strokeWidth={Math.max(1, element.strokeWidth / 3)}
-                />
-                <SvgText
-                  x={textOffsetX}
-                  y={textOffsetY}
-                  fill={element.color}
-                  fontSize={ptrFontSize}
-                  fontWeight="bold"
-                >
-                  {ptrText}
-                </SvgText>
+                {/* Hintergrund für bessere Lesbarkeit - Rahmen skaliert proportional zur Schriftgröße */}
+                {(() => {
+                  // Skalierungsfaktor basierend auf Schriftgröße (Basis: 16px)
+                  const ptrScaleFactor = ptrFontSize / 16;
+                  const ptrFrameStroke = Math.max(1, 2 * ptrScaleFactor);
+                  const ptrFrameRadius = Math.max(2, 4 * ptrScaleFactor);
+                  const ptrPaddingX = 5 * ptrScaleFactor;
+                  const ptrPaddingY = 8 * ptrScaleFactor;
+                  return (
+                    <>
+                      <Rect
+                        x={textOffsetX - ptrPaddingX}
+                        y={textOffsetY - ptrFontSize}
+                        width={ptrText.length * ptrFontSize * 0.6 + 2 * ptrPaddingX}
+                        height={ptrFontSize + ptrPaddingY}
+                        fill="rgba(255, 255, 255, 0.9)"
+                        rx={ptrFrameRadius}
+                        ry={ptrFrameRadius}
+                        stroke={element.color}
+                        strokeWidth={ptrFrameStroke}
+                      />
+                      <SvgText
+                        x={textOffsetX}
+                        y={textOffsetY}
+                        fill={element.color}
+                        fontSize={ptrFontSize}
+                        fontWeight="bold"
+                      >
+                        {ptrText}
+                      </SvgText>
+                    </>
+                  );
+                })()}
               </G>
             )}
             {isSelected && renderTransformHandles(element)}
@@ -2835,46 +2903,56 @@ export default function DrawSketchScreen() {
         const memoMidX = (memoX1 + memoX2) / 2;
         const memoMidY = (memoY1 + memoY2) / 2;
         
-        // Berechne Textbreite für das Label
-        const memoLabelWidth = Math.max(60, memoTextContent.length * memoFontSize * 0.6 + 20);
-        const memoLabelHeight = memoFontSize + 14;
+        // Skalierungsfaktor basierend auf Schriftgröße (Basis: 14px)
+        const memoScaleFactor = memoFontSize / 14;
+        
+        // Berechne Textbreite für das Label - proportional skaliert
+        const memoLabelWidth = Math.max(60 * memoScaleFactor, memoTextContent.length * memoFontSize * 0.6 + 20 * memoScaleFactor);
+        const memoLabelHeight = memoFontSize + 14 * memoScaleFactor;
+        
+        // Rahmen-Attribute proportional zur Schriftgröße
+        const memoLineStroke = Math.max(1, 2 * memoScaleFactor);
+        const memoAnchorRadius = Math.max(3, 6 * memoScaleFactor);
+        const memoFrameStroke = Math.max(1, 2 * memoScaleFactor);
+        const memoFrameRadius = Math.max(2, 4 * memoScaleFactor);
+        const memoDashArray = `${6 * memoScaleFactor},${4 * memoScaleFactor}`;
         
         return (
           <G key={element.id}>
-            {/* Gestrichelte Verbindungslinie */}
+            {/* Gestrichelte Verbindungslinie - skaliert */}
             <Line
               x1={memoX1}
               y1={memoY1}
               x2={memoX2}
               y2={memoY2}
               stroke={element.color}
-              strokeWidth={2}
-              strokeDasharray="6,4"
+              strokeWidth={memoLineStroke}
+              strokeDasharray={memoDashArray}
               transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}
             />
-            {/* Roter Ankerpunkt (gefüllter Kreis) */}
+            {/* Roter Ankerpunkt (gefüllter Kreis) - skaliert */}
             <Circle
               cx={memoX1}
               cy={memoY1}
-              r={6}
+              r={memoAnchorRadius}
               fill={element.color}
               stroke={element.color}
-              strokeWidth={2}
+              strokeWidth={memoLineStroke}
               transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}
             />
-            {/* Textlabel mit Rahmen */}
+            {/* Textlabel mit Rahmen - skaliert */}
             <G transform={element.rotation ? `rotate(${element.rotation} ${memoMidX} ${memoMidY})` : undefined}>
-              {/* Weißer Hintergrund mit farbigem Rahmen */}
+              {/* Weißer Hintergrund mit farbigem Rahmen - skaliert */}
               <Rect
                 x={memoX2 - memoLabelWidth / 2}
                 y={memoY2 - memoLabelHeight / 2}
                 width={memoLabelWidth}
                 height={memoLabelHeight}
                 fill="white"
-                rx={4}
-                ry={4}
+                rx={memoFrameRadius}
+                ry={memoFrameRadius}
                 stroke={element.color}
-                strokeWidth={2}
+                strokeWidth={memoFrameStroke}
               />
               {/* Text im Label */}
               <SvgText
@@ -4939,7 +5017,7 @@ export default function DrawSketchScreen() {
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerStrokeWidth(Math.max(1, editPointerStrokeWidth - 1))}
+                    onPress={() => updateEditPointerStrokeWidth(Math.max(1, editPointerStrokeWidth - 1))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
@@ -4948,7 +5026,7 @@ export default function DrawSketchScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerStrokeWidth(Math.min(20, editPointerStrokeWidth + 2))}
+                    onPress={() => updateEditPointerStrokeWidth(Math.min(20, editPointerStrokeWidth + 2))}
                   >
                     <Text style={styles.sliderButtonText}>+</Text>
                   </TouchableOpacity>
@@ -4961,7 +5039,7 @@ export default function DrawSketchScreen() {
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerFontSize(Math.max(6, editPointerFontSize - 2))}
+                    onPress={() => updateEditPointerFontSize(Math.max(6, editPointerFontSize - 2))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
@@ -4970,7 +5048,7 @@ export default function DrawSketchScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerFontSize(Math.min(40, editPointerFontSize + 2))}
+                    onPress={() => updateEditPointerFontSize(Math.min(40, editPointerFontSize + 2))}
                   >
                     <Text style={styles.sliderButtonText}>+</Text>
                   </TouchableOpacity>
@@ -5071,7 +5149,7 @@ export default function DrawSketchScreen() {
               <View style={styles.sliderRow}>
                 <TouchableOpacity 
                   style={styles.sliderButton} 
-                  onPress={() => setEditMemoFontSize(Math.max(6, editMemoFontSize - 2))}
+                  onPress={() => updateEditMemoFontSize(Math.max(6, editMemoFontSize - 2))}
                 >
                   <Text style={styles.sliderButtonText}>-</Text>
                 </TouchableOpacity>
@@ -5080,7 +5158,7 @@ export default function DrawSketchScreen() {
                 </View>
                 <TouchableOpacity 
                   style={styles.sliderButton} 
-                  onPress={() => setEditMemoFontSize(Math.min(40, editMemoFontSize + 2))}
+                  onPress={() => updateEditMemoFontSize(Math.min(40, editMemoFontSize + 2))}
                 >
                   <Text style={styles.sliderButtonText}>+</Text>
                 </TouchableOpacity>

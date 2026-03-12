@@ -2004,7 +2004,7 @@ export default function DrawSketchScreen() {
           y2: pendingArrow.y2,
           text: arrowText,
           heads: arrowHeads,
-          fontSize: 14,
+          fontSize: editArrowFontSize, // Gespeicherte Schriftgröße verwenden
         },
         color: drawColor,
         strokeWidth: editArrowStrokeWidth, // Gespeicherte Arrow-Strichstärke verwenden

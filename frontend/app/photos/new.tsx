@@ -29,15 +29,18 @@ export default function NewPhotoScreen() {
   const [savingProgress, setSavingProgress] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Scroll zum fokussierten Input
+  // Scroll zum fokussierten Input - scrollt das Eingabefeld über die Tastatur
   const scrollToInput = (index: number) => {
-    // Kleine Verzögerung damit Tastatur erscheinen kann
+    // Verzögerung damit Tastatur erscheinen kann
     setTimeout(() => {
+      // Berechne Position: Upload-Bereich (~180px) + Titel (~40px) + (Foto-Karte ~120px * index)
+      // Scrolle so dass das Eingabefeld oben sichtbar ist
+      const targetY = 220 + (index * 130);
       scrollViewRef.current?.scrollTo({
-        y: 250 + (index * 120), // Position basierend auf Foto-Index
+        y: targetY,
         animated: true,
       });
-    }, 300);
+    }, 350);
   };
 
   const requestPermissions = async () => {

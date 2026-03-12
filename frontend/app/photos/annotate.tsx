@@ -82,6 +82,29 @@ export default function AnnotatePhotoScreen() {
   // Track if changes were made (for auto-save)
   const [hasChanges, setHasChanges] = useState(false);
   const initialPathsRef = useRef<string>('');
+  
+  // Refs für aktuelle Werte (für Auto-Save Closure-Problem)
+  const pathsRef = useRef(paths);
+  const descriptionRef = useRef(description);
+  const pdfSizeRef = useRef(pdfSize);
+  const imageUriRef = useRef(imageUri);
+  
+  // Refs aktuell halten
+  useEffect(() => {
+    pathsRef.current = paths;
+  }, [paths]);
+  
+  useEffect(() => {
+    descriptionRef.current = description;
+  }, [description]);
+  
+  useEffect(() => {
+    pdfSizeRef.current = pdfSize;
+  }, [pdfSize]);
+  
+  useEffect(() => {
+    imageUriRef.current = imageUri;
+  }, [imageUri]);
 
   useEffect(() => {
     loadPhoto();
@@ -103,31 +126,37 @@ export default function AnnotatePhotoScreen() {
       // Called when screen comes into focus - do nothing
       return () => {
         // Called when screen loses focus - auto-save if changes
-        if (hasChanges && imageUri && !loading) {
+        if (hasChanges && imageUriRef.current && !loading) {
           autoSave();
         }
       };
-    }, [hasChanges, imageUri, loading])
+    }, [hasChanges, loading])
   );
 
-  // Silent auto-save function (no alerts)
+  // Silent auto-save function (no alerts) - verwendet Refs für aktuelle Werte
   const autoSave = async () => {
     try {
+      const currentPaths = pathsRef.current;
+      const currentDescription = descriptionRef.current;
+      const currentPdfSize = pdfSizeRef.current;
+      const currentImageUri = imageUriRef.current;
+      
       const annotationData = {
-        paths: paths,
+        paths: currentPaths,
         canvasWidth: canvasDimensions.width || width,
         canvasHeight: canvasDimensions.height || 400,
       };
 
       await PhotoService.update(photoId || '', {
         project_id: projectId,
-        image_data: imageUri,
+        image_data: currentImageUri,
+        uri: currentImageUri,
         annotations: JSON.stringify(annotationData),
-        description: description,
-        pdf_size: pdfSize,
+        description: currentDescription,
+        pdf_size: currentPdfSize,
       });
       
-      console.log('Auto-saved photo annotations');
+      console.log('Auto-saved photo annotations, paths count:', currentPaths.length);
     } catch (error) {
       console.error('Error auto-saving:', error);
     }

@@ -4845,7 +4845,7 @@ export default function DrawSketchScreen() {
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditArrowFontSize(Math.max(8, editArrowFontSize - 2))}
+                    onPress={() => updateEditArrowFontSize(Math.max(8, editArrowFontSize - 2))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
@@ -4854,7 +4854,7 @@ export default function DrawSketchScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditArrowFontSize(Math.min(40, editArrowFontSize + 2))}
+                    onPress={() => updateEditArrowFontSize(Math.min(40, editArrowFontSize + 2))}
                   >
                     <Text style={styles.sliderButtonText}>+</Text>
                   </TouchableOpacity>

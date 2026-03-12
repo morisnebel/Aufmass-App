@@ -2007,7 +2007,7 @@ export default function DrawSketchScreen() {
           fontSize: 14,
         },
         color: drawColor,
-        strokeWidth: strokeWidth,
+        strokeWidth: editArrowStrokeWidth, // Gespeicherte Arrow-Strichstärke verwenden
         rotation: 0,
       };
       addToHistory([...elements, newElement]);

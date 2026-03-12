@@ -6,10 +6,12 @@ The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) b
 3.  **UX Flow Simplification**: Refactoring a confusing new customer modal within the project creation flow into a more streamlined process.
 4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs related to keyboard handling, stale data, and layout issues across various screens. The user's most recent requests focus on refining the functionality of core tools (Photos, Sketches) and fixing usability bugs.
 
+The current critical issue is that drawing functionality in the Sketch tool is broken when the canvas is zoomed or panned. A related bug is that the zoom reset button is not working correctly.
+
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app for roofing project management. It uses  for all local data persistence. The codebase consists of several large, monolithic components that handle UI, state, and business logic.
+The application is a React Native/Expo app for roofing project management. It uses  for all local data persistence. The codebase is characterized by large, monolithic components that handle UI, state, and business logic.
 
 Key functionalities include:
 -   **Customer & Project Management**: Detailed forms for creating and editing customers and projects.
@@ -21,43 +23,43 @@ Key functionalities include:
     -   **Checklists**: Manage lists of items.
 
 **Last working item**:
-The agent was debugging an issue where drawings were misplaced on a zoomed-in sketch.
+The agent attempted to fix the faulty 100% zoom reset button in the Sketch tool (). The chosen approach was to force the  to re-mount by using a  prop that was updated on button press. This fix failed catastrophically. While it did reset the zoom level to 100%, it also caused all content within the  (the image and any drawings) to disappear, leaving a blank white screen and making the app unusable. The agent was in the process of reverting this failed implementation when the session ended.
 
-- **Last item agent was working**: After fixing a bug that reset the zoom level upon tool selection, a new bug emerged: touch coordinates for drawing actions (pen, lines) are incorrect on a zoomed/panned canvas. The agent was in the process of updating all touch handlers (, , ) in  to correctly transform touch coordinates using the current  and .
+- **Last item agent was working**: Reverting the failed force re-mount fix for the zoom reset button in .
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing (user verifies on Expo Go).
-- **User Testing Done**: N
+- **Which testing method agent to use?**: Frontend testing via Expo Go URL.
+- **User Testing Done**: Y (The user tested the fix and confirmed it resulted in a blank white screen, blocking all further actions).
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Fix misplaced drawing coordinates in the zoomed Sketch tool (P0).
+-   **Issue 1**: Fix misplaced drawing coordinates and broken zoom reset in the Sketch tool (P0).
 -   **Issue 2**: Fix stale data on the main project list screen (P1).
 
 **Issues Detail:**
--   **Issue 1: Misplaced drawing coordinates in zoomed Sketch tool**
-    -   **Description**: When the user draws (pen, lines, etc.) on a zoomed-in portion of a sketch, the drawing appears at an incorrect location. This is a coordinate transformation issue.
-    -   **Attempted fixes**: The agent identified the need to convert screen touch coordinates to canvas coordinates using the formula . The agent started applying this fix to the , , and  handlers in , but has not yet completed the changes for all drawing modes.
+-   **Issue 1: Misplaced drawing coordinates & broken zoom reset in Sketch tool**
+    -   **Description**: Drawing on a zoomed/panned sketch appears at an incorrect location. The 100% reset button is also broken. The last attempted fix for the reset button (force re-mount with a  prop) caused the canvas content to disappear entirely.
+    -   **Attempted fixes**:
+        1.  **Force re-mount with  prop**: This was the last attempt. It updated a  state on button press, which was passed as a  to the . This caused the 's content to vanish. This approach is a dead end.
+        2.  **Unified coordinate formula**: The agent changed the formula in all touch handlers to . **This is highly suspect**, as the original working formula from git history was . The difference in the operator ( vs ) must be investigated.
     -   **Next debug checklist**:
-        1.  Thoroughly review , , and  in .
-        2.  Ensure the coordinate transformation  and  is applied consistently across **all** drawing modes handled in the touch events (e.g., pen, line, measure-line). The user confirmed multiple tool types are broken.
-        3.  Verify that the  and  state variables are correctly updated from the 's  event handler.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is critical for the core functionality of the sketch tool, allowing users to make precise drawings on detailed, zoomed-in sections.
+        1.  **Completely Revert Failed Fix**: Ensure all traces of the  state and the  prop on the  in  are removed.
+        2.  **Use a ScrollView Ref**: Create a  for the  component ().
+        3.  **Implement a Non-Destructive Reset**: Use the  to call built-in  methods to reset the view. The most promising approach is . This should reset both zoom and pan without re-mounting.
+        4.  **Re-evaluate the Coordinate Formula**: After fixing the reset button, re-verify the coordinate transformation logic. Critically examine why the agent used  when the historical working version used . This is a likely source of the drawing misplacement bug.
+    -   **Why fix this issue and what will be achieved with the fix?**: This bug makes a core application feature unusable. Fixing it is the highest priority.
     -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-
--   **Issue 2: Stale data in project list ()**
-    -   **Description**: The project list on the home screen () does not refresh automatically after a project's details have been changed on another screen.
-    -   **Attempted fixes**: An agent in a previous session visually inspected the  hook and concluded it looked correct, but did not perform any debugging to confirm if it fires or if the data fetching is the issue. The bug persists.
-    -   **Next debug checklist**:
-        1.  In , add a  inside the  callback to confirm it runs when the screen comes into focus.
-        2.  If it runs, verify that the  function is correctly fetching and setting the updated project list from .
-        3.  The root cause is likely that the dependency array of the  inside  is empty or incorrect.
-    -   **Why fix this issue and what will be achieved with the fix?**: To prevent user confusion and ensure the main project list always displays the most current information.
-    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None
+
+-   **Issue 2: Stale data in project list ()**
+    -   **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
+    -   **Next debug checklist**: In , verify the  hook is firing and that its  function is correctly fetching and setting the updated project list from .
+    -   **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: Blocked by the P0 Sketch tool bug.
 
 **In progress Task List**:
 -   None.
@@ -75,64 +77,59 @@ The agent was debugging an issue where drawings were misplaced on a zoomed-in sk
 -   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   **Bug Fix**: In the Sketch tool (), fixed an issue where the view would reset to 100% zoom whenever a drawing tool was selected. The zoom level is now correctly maintained, allowing the user to select tools while zoomed in.
+-   Attempted a fix for the zoom reset button by force re-mounting the . This fix failed and has been partially reverted.
 
 **Earlier issues found/mentioned but not fixed**
--   The stale data issue in  (listed in All Pending/In progress Issue list).
+-   The stale data issue in  is tracked in the All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
--   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable. The agent in this session also encountered tunnel errors and had to restart the server and find the correct  URL to provide to the user. This is an environmental issue that slows down development and testing cycles.
+-   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and required a restart during the session. This is an ongoing environmental issue.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--   React Hooks: Extensive use and debugging of , , , , .
--   State Management: Deep debugging of state management within large components.
--   UI/Layout:  for zoom and pan functionality.
--   **Coordinate Transformation**: Calculating drawing coordinates within a zoomed and panned .
--   Local Data Persistence: .
+-   React Hooks: , , , , .
+-   **React Native **: Deep understanding of its zoom/pan behavior, refs, and methods like  is required. The  prop trick for re-mounting has proven destructive.
+-   **Coordinate Transformation**: The central, unresolved problem related to converting touch coordinates to canvas coordinates based on  zoom and pan offsets.
 
 **key DB schema**
-N/A. Data is stored client-side in AsyncStorage. The data interfaces (, , ) are defined in .
+-   N/A (Client-side application using AsyncStorage).
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   : File for the current bug being worked on. All recent changes have been in this file.
--   : Contains the pending stale-data bug.
+-   : The primary file for the current bug-fixing effort. It was modified in this session.
+-   : The location of the next priority bug (stale data).
 
 **Areas that need refactoring**:
--   **Monolithic Components**: The file  is over 4000 lines long, making it extremely difficult to debug and maintain. The current series of bugs related to zoom and drawing highlights the urgent need to break this component into smaller, manageable custom hooks and components.
+-   ****: This monolithic component (over 6000 lines) is extremely difficult to debug and maintain. Its complexity is the root cause of the current issues. It urgently needs to be broken down into smaller, manageable custom hooks and sub-components.
 
 **key api endpoints**
-N/A (Client-side application).
+-   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK**: Your first action is to finish fixing the coordinate calculation bug in . The user reported that when they draw on a zoomed-in canvas, the lines/pen strokes appear in the wrong place. You must apply the correct coordinate transformation to all drawing modes.
--   **Expo Tunnel/Server is UNRELIABLE**: Expect to spend time troubleshooting connection issues. A standard fix is to restart the server with env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT
-Starting project at /app/frontend
-Fast resolver is enabled.
-Starting Metro Bundler
-warning: Bundler cache is empty, rebuilding (this may take a minute)
-Waiting on http://localhost:8081
-Logs for your project will appear below. and find the tunnel URL ending in  in the logs, as this is often more reliable than the default.
+-   **IMMEDIATE TASK (P0)**: Fix the drawing bug in . The last attempt to fix the reset button failed and made the app unusable.
+-   **DO NOT REPEAT FAILED ATTEMPT**: The force re-mount approach using a  prop on the  is a dead end. It clears the 's content. Revert this change completely and use a  with  instead.
+-   **INVESTIGATE FORMULA**: The agent implemented a coordinate formula with a  operator: . The original, working formula from a previous commit used a  operator. This discrepancy is a likely cause of the bug and must be investigated.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**:  (Yes, that works now, but unfortunately the editing doesn't match the zoomed area yet (lines in another place and the pen function writes in another place on the image, not where I put my pencil, the dimension lines also don't adapt to the zoomed size). Can this be changed?) - **Status: PENDING**
-2.  **User**:  (Yes) - **Status: Completed** (User approved the agent's initial plan).
+The user's recent messages confirm the failure of the last fix:
+1.  **User**: Confirmed the agent's plan to proceed.
+2.  **User**: wenn ich jetzt auf den 100% button drücke dann geht der Button genau auf 100% aber es verschwindet das bild komplett (When I press the 100% button now, the button goes to exactly 100% but the image disappears completely). - **STATUS: PENDING FIX**.
+3.  **User**: Expressed frustration: ich werde noch wahnsinnig (I'm going crazy).
+4.  **User**: In response to agent questions, confirmed that pressing the button results in a white page and the app becomes completely unresponsive. - **STATUS: PENDING FIX**.
 
 **Project Health Check:**
--   **Broken**: The core drawing functionality of the Sketch tool () is unusable when the canvas is zoomed.
+-   **Broken**: The core drawing functionality of the Sketch tool () is unusable. The last fix attempt made the problem worse, causing a blank screen on reset.
 -   **Mocked**: None.
--   **Technical Debt**: High. The codebase is characterized by large, complex components that are prone to bugs and difficult to maintain, as evidenced by the current bug-fixing cycle.
+-   **Technical Debt**: **High**. The  file is a prime example of a component that is too large, making it bug-prone and extremely difficult to maintain.
 
 **3rd Party Integrations**
 -   
@@ -205,9 +202,9 @@ Logs for your project will appear below. and find the tunnel URL ending in  in t
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[08:38:35]   Run a command with --help for more info 💡
-[08:38:35]     $ expo start --help
-[08:38:35] & related libraries (, , )
+[16:56:01]   Run a command with --help for more info 💡
+[16:56:01]     $ expo start --help
+[16:56:01] & related libraries (, , )
 -   
 -   
 
@@ -215,10 +212,11 @@ Logs for your project will appear below. and find the tunnel URL ending in  in t
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: The project list on the home screen () does not update automatically.
+-   **Known regressions**: The drawing coordinate transformation was broken while implementing zoom. The subsequent fix for the zoom-reset button broke the UI completely.
 
 **Credentials to test flow:**
--   The  is set as an environment variable for deployment.
+-   N/A.
 
 **What agent forgot to execute**
--   The agent correctly identified the solution for the coordinate transformation but was in the middle of implementing it. It is crucial that the fix is applied to *all* drawing modes within the touch handlers, not just a single one, as the user reported issues with lines, pen, and measurement lines. The agent was last seen editing the  handler, which is the correct place to address the different drawing modes.</analysis>
+-   The previous agent overlooked a critical detail from the initial handoff: the original, working coordinate formula used a subtraction () operator. The agent implemented a new formula with an addition () operator without investigating this discrepancy, which is a likely cause of the persistent bug.
+-   The agent opted for a complex and destructive force re-mount solution instead of first trying standard, non-destructive React Native APIs like  which are designed for this exact purpose.</analysis>

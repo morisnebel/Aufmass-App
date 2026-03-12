@@ -306,8 +306,9 @@ export default function DrawSketchScreen() {
   const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
-  // Key für ScrollView force re-mount (um Zoom auf exakt 100% zurückzusetzen)
-  const [scrollViewKey, setScrollViewKey] = useState(0);
+  // Canvas-Dimensionen für zoomToRect
+  const canvasWidth = width;
+  const canvasHeight = height - 120;
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -1593,17 +1594,20 @@ export default function DrawSketchScreen() {
 
   // Touch handlers
   // Hilfsfunktion: Berechnet die Canvas-Koordinaten aus Touch-Event
-  // Bei Zoom/Scroll müssen die Koordinaten korrekt umgerechnet werden
+  // locationX/Y sind relativ zum inneren View (dem Canvas-Container)
+  // Bei einem gezoomten ScrollView sind diese Koordinaten bereits in Canvas-Koordinaten!
+  // Der scrollOffset wird benötigt, um die Position des sichtbaren Ausschnitts zu berücksichtigen
   const onTouchStart = (event: any) => {
     // Im Zoom-Modus keine Zeichnung
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // KORREKTE Formel: Touch-Position durch Zoom teilen, dann Scroll-Offset addieren
-    // Bei scale=1, scrollOffset=0: locationX = touch.locationX (unverändert)
-    // Bei scale=2, scrollOffset=100: locationX = touch.locationX/2 + 100/2 = korrekte Canvas-Position
-    const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
-    const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
+    // Die locationX/Y sind relativ zum inneren View (Canvas-Container)
+    // Bei gezoomter ScrollView: Der innere View wird NICHT skaliert, nur die ScrollView zoomt
+    // Das bedeutet: locationX ist bereits in Canvas-Koordinaten!
+    // Wir müssen nur den scrollOffset berücksichtigen (in Content/Canvas-Koordinaten)
+    const locationX = touch.locationX || touch.pageX;
+    const locationY = touch.locationY || touch.pageY;
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
@@ -1650,9 +1654,9 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
-    const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
-    const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
+    // Gleiche Formel wie onTouchStart - locationX/Y sind bereits Canvas-Koordinaten
+    const locationX = touch.locationX || touch.pageX;
+    const locationY = touch.locationY || touch.pageY;
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
@@ -1707,9 +1711,9 @@ export default function DrawSketchScreen() {
       setOriginalElement(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
-      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
+      // locationX/Y sind bereits Canvas-Koordinaten
+      const locationX = touch.locationX || touch.pageX;
+      const locationY = touch.locationY || touch.pageY;
       
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -1719,9 +1723,9 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
-      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
+      // locationX/Y sind bereits Canvas-Koordinaten
+      const locationX = touch.locationX || touch.pageX;
+      const locationY = touch.locationY || touch.pageY;
       
       // Speichere die Pointer-Koordinaten und öffne Modal
       setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -1732,9 +1736,9 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'memo') {
       // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
-      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
-      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
+      // locationX/Y sind bereits Canvas-Koordinaten
+      const locationX = touch.locationX || touch.pageX;
+      const locationY = touch.locationY || touch.pageY;
       
       // Speichere die Memo-Koordinaten und öffne Modal
       setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3981,8 +3985,18 @@ export default function DrawSketchScreen() {
                 setScale(1); 
                 setPanOffset({ x: 0, y: 0 });
                 setScrollOffset({ x: 0, y: 0 });
-                // ScrollView zum Ursprung scrollen
+                // ScrollView Zoom UND Position zurücksetzen mit scrollResponderZoomTo
                 if (scrollViewRef.current) {
+                  // scrollResponderZoomTo setzt Zoom auf 1 und scrollt zum Ursprung
+                  // Das Rechteck entspricht der Canvas-Größe bei 100% Zoom
+                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
+                    x: 0,
+                    y: 0,
+                    width: canvasWidth,
+                    height: canvasHeight,
+                    animated: false,
+                  });
+                  // Fallback: Auch scrollTo aufrufen
                   scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
                 }
               }}

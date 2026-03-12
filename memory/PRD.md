@@ -152,7 +152,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://zoom-draw-debug.preview.emergentagent.com
+- **Preview URL**: https://sketch-zoom-fix.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

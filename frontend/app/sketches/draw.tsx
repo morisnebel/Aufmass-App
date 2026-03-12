@@ -306,6 +306,8 @@ export default function DrawSketchScreen() {
   const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
+  // Key für ScrollView force re-mount (um Zoom auf exakt 100% zurückzusetzen)
+  const [scrollViewKey, setScrollViewKey] = useState(0);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -1597,9 +1599,11 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+    // KORREKTE Formel: Touch-Position durch Zoom teilen, dann Scroll-Offset addieren
+    // Bei scale=1, scrollOffset=0: locationX = touch.locationX (unverändert)
+    // Bei scale=2, scrollOffset=100: locationX = touch.locationX/2 + 100/2 = korrekte Canvas-Position
+    const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
+    const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
@@ -1646,9 +1650,9 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+    // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
+    const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
+    const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
@@ -1703,9 +1707,9 @@ export default function DrawSketchScreen() {
       setOriginalElement(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
+      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
+      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
       
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -1715,9 +1719,9 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
+      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
+      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
       
       // Speichere die Pointer-Koordinaten und öffne Modal
       setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -1728,9 +1732,9 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'memo') {
       // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // GLEICHE Formel wie onTouchStart für konsistente Koordinaten
+      const locationX = (touch.locationX || touch.pageX) / scale + scrollOffset.x / scale;
+      const locationY = (touch.locationY || touch.pageY) / scale + scrollOffset.y / scale;
       
       // Speichere die Memo-Koordinaten und öffne Modal
       setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3973,19 +3977,14 @@ export default function DrawSketchScreen() {
                 }
               ]}
               onPress={() => { 
-                if (scrollViewRef.current) {
-                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
-                    x: 0,
-                    y: 0,
-                    width: width,
-                    height: height - 120,
-                    animated: false,
-                  });
-                }
+                // WICHTIG: ScrollView komplett neu laden um Zoom auf exakt 100% zurückzusetzen
+                // Das verhindert den 94%-Bug, da die interne zoomScale des ScrollView
+                // nicht direkt gesteuert werden kann
                 setScale(1); 
                 setPanOffset({ x: 0, y: 0 });
                 setScrollOffset({ x: 0, y: 0 });
+                // Force re-mount des ScrollView durch Key-Änderung
+                setScrollViewKey(prev => prev + 1);
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
@@ -4146,6 +4145,7 @@ export default function DrawSketchScreen() {
 
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
+        key={scrollViewKey}
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}

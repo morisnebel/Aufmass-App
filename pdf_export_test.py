@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://zoom-draw-debug.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-zoom-fix.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

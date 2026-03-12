@@ -871,9 +871,9 @@ export default function DrawSketchScreen() {
   const [editStrokeWidth, setEditStrokeWidth] = useState(3);
   const [editFontWeight, setEditFontWeight] = useState<'normal' | 'bold'>('bold');
   const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
-  const [editArrowFontSize, setEditArrowFontSize] = useState(14);
-  const [editPointerFontSize, setEditPointerFontSize] = useState(16);
-  const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(6);
+  const [editArrowFontSize, setEditArrowFontSize] = useState(12);
+  const [editPointerFontSize, setEditPointerFontSize] = useState(12);
+  const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(3);
   
   // Double tap detection
   const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });
@@ -1896,7 +1896,7 @@ export default function DrawSketchScreen() {
   const [pendingMemo, setPendingMemo] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoText, setMemoText] = useState('');
-  const [editMemoFontSize, setEditMemoFontSize] = useState(14);
+  const [editMemoFontSize, setEditMemoFontSize] = useState(10);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
 
   // Add text element
@@ -4939,12 +4939,12 @@ export default function DrawSketchScreen() {
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerStrokeWidth(Math.max(2, editPointerStrokeWidth - 2))}
+                    onPress={() => setEditPointerStrokeWidth(Math.max(1, editPointerStrokeWidth - 1))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
                   <View style={styles.sliderTrack}>
-                    <View style={[styles.sliderFill, { width: `${((editPointerStrokeWidth - 2) / 18) * 100}%` }]} />
+                    <View style={[styles.sliderFill, { width: `${((editPointerStrokeWidth - 1) / 19) * 100}%` }]} />
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -4961,12 +4961,12 @@ export default function DrawSketchScreen() {
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditPointerFontSize(Math.max(10, editPointerFontSize - 2))}
+                    onPress={() => setEditPointerFontSize(Math.max(6, editPointerFontSize - 2))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
                   <View style={styles.sliderTrack}>
-                    <View style={[styles.sliderFill, { width: `${((editPointerFontSize - 10) / 30) * 100}%` }]} />
+                    <View style={[styles.sliderFill, { width: `${((editPointerFontSize - 6) / 34) * 100}%` }]} />
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -5071,12 +5071,12 @@ export default function DrawSketchScreen() {
               <View style={styles.sliderRow}>
                 <TouchableOpacity 
                   style={styles.sliderButton} 
-                  onPress={() => setEditMemoFontSize(Math.max(10, editMemoFontSize - 2))}
+                  onPress={() => setEditMemoFontSize(Math.max(6, editMemoFontSize - 2))}
                 >
                   <Text style={styles.sliderButtonText}>-</Text>
                 </TouchableOpacity>
                 <View style={styles.sliderTrack}>
-                  <View style={[styles.sliderFill, { width: `${((editMemoFontSize - 10) / 30) * 100}%` }]} />
+                  <View style={[styles.sliderFill, { width: `${((editMemoFontSize - 6) / 34) * 100}%` }]} />
                 </View>
                 <TouchableOpacity 
                   style={styles.sliderButton} 

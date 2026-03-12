@@ -1,60 +1,65 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope then expanded significantly to include:
+The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope then expanded to include data model changes, data synchronization, and extensive UI polishing.
 
-1.  **Comprehensive Data Model Expansion**: Overhauling customer and project data models.
-2.  **Complex Data Synchronization**: Implementing bi-directional sync between projects and the device's native address book.
-3.  **UX Flow Simplification**: Refactoring a confusing new customer modal.
-4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs.
-
-The most recent critical issues were a broken zoom-reset button and laggy drawing performance in the Sketch tool. During this session, the user decided that the problematic zoom-reset button was not necessary and requested its removal.
+During the last session, the user decided to remove a buggy 100% zoom reset button and instead display the zoom percentage in a different location. The current session has finished that cleanup and has moved on to a new user request: to make the memo arrows and notes within the drawing tool smaller.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app for roofing project management using  for local data persistence. The agent has just implemented a UI change based on user feedback:
-- The 100% zoom reset button in the drawing toolbar has been removed.
-- The current zoom percentage is now displayed as part of the Zoom-Modus badge at the top of the screen (e.g., Zoom-Modus: 97%).
-The codebase, particularly , contains leftover state and logic from a now-abandoned fix for the removed button.
+The application is a React Native/Expo app. The agent has just completed a code cleanup in  by removing dead code related to a removed zoom-reset button. Following a new user request, the agent has modified the same file to adjust the size of memo annotations. Specifically, it has reduced the default  values and the minimum  prop values for the sliders that control font size and line thickness for memo arrows and text.
 
 **Last working item**:
-The agent was in the process of cleaning up the code in  after removing the 100% zoom button. It had already removed the button from the toolbar's JSX and updated the Zoom-Modus badge. The agent was in the middle of removing the now-unused  state and its associated logic, which was part of a fix that is no longer needed.
+The agent was implementing the user's request to make the memo arrows and associated notes smaller and more adjustable. It has already edited the code to reduce both the default sizes and the minimum possible sizes via the UI sliders.
 
-- **Last item agent was working**: Removing dead code ( state and related logic) from  after the user decided to remove the feature it supported.
-- **Status**: IN PROGRESS
+- **Last item agent was working**: The agent just finished applying  to update the default and minimum values for memo font size, pointer font size, and pointer stroke width in .
+- **Status**: IN PROGRESS (Implementation complete, verification pending)
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: Frontend testing via Expo Go URL or screenshot tool.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Verify the fix for laggy drawing performance in the Sketch tool (P1).
-- **Issue 2**: Fix stale data on the main project list screen (P2).
+-   **Issue 1 (P0)**: Verify the changes for the memo arrow and note sizes.
+-   **Issue 2 (P1)**: Verify the fix for laggy drawing performance in the Sketch tool.
+-   **Issue 3 (P2)**: Fix stale data on the main project list screen.
 
 **Issues Detail:**
-- **Issue 1: Sketch drawing is laggy/choppy**
-    - **Description**: The user reported that the drawing line lags behind the finger and appears choppy.
-    - **Attempted fixes**: An earlier agent implemented a fix using  () to store drawing points and throttling state updates () to only re-render every few points.
-    - **Why fix this issue and what will be achieved with the fix?**: Improves user experience and the perceived performance of the core drawing feature.
-    - **Status**: USER VERIFICATION PENDING. The fix was implemented, but the user's focus shifted to the zoom button issue. This needs to be explicitly confirmed.
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None
+-   **Issue 1: Verify memo arrow/note size adjustment**
+    -   **Description**: The user requested that the memo annotations (arrow and text) be adjustable to a smaller size.
+    -   **Attempted fixes**: The agent modified  to:
+        1.  Reduce the default  values for  (14->12),  (16->14), and  (6->4).
+        2.  Reduce the  prop on the corresponding sliders for  (10->6),  (10->6), and  (2->1).
+    -   **Next debug checklist**: Provide the user with the Expo Go URL and ask them to test if the new default size is better and if they can now adjust the elements to be small enough.
+    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user request for better UI control and aesthetics.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None
 
-- **Issue 2: Stale data in project list ()**
-    - **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
-    - **Next debug checklist**: In , investigate the  hook. Ensure its  function is correctly re-fetching the project list from  and updating the component's state every time the screen comes into focus.
-    - **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date, preventing user confusion.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: Blocked by the P0/P1 Sketch tool items.
+-   **Issue 2: Sketch drawing is laggy/choppy**
+    -   **Description**: The user had previously reported that the drawing line lags behind the finger.
+    -   **Attempted fixes**: An earlier agent implemented a throttling mechanism using .
+    -   **Why fix this issue and what will be achieved with the fix?**: Improves the core user experience of the drawing feature.
+    -   **Status**: USER VERIFICATION PENDING. This verification was postponed due to the zoom button issue. It should be verified now.
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Stale data in project list ()**
+    -   **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
+    -   **Next debug checklist**: In , investigate the  hook to ensure it correctly re-fetches data from  and updates state whenever the screen is focused.
+    -   **Why fix this issue and what will be achieved with the fix?**: Ensures data consistency and prevents user confusion.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: Blocked by P0/P1 items.
 
 **In progress Task List**:
-- **Task 1: Finalize UI change for Zoom Display & Cleanup  (P0)**
-    - **Where to resume**: The agent has already removed the button UI and updated the new text display. The next step is to remove all remnants of the  logic, including the  declaration and the  function in .
-    - **What will be achieved with this?**: This will complete the user's request, remove the source of the original P0 bug, and clean up the component by removing dead code, making it slightly more maintainable.
-    - **Status**: IN PROGRESS
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on something**: None
+-   **Task 1: Finalize memo annotation size adjustment (P0)**
+    -   **Where to resume**: The code changes are complete. The next step is to generate the Expo URL and ask the user to verify the changes.
+    -   **What will be achieved with this?**: This will complete the user's latest request.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -69,23 +74,22 @@ The agent was in the process of cleaning up the code in  after removing the 100%
 -   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
-- **Resolved Zoom Button Bug by Feature Removal**: Based on direct user feedback, the problematic 100% zoom reset button was removed from the toolbar in .
-- **Relocated Zoom Percentage Display**: The functionality was simplified to a read-only display, which was moved to the Zoom-Modus badge at the top of the screen.
+-   **Code Cleanup in **: Removed the unused  state and associated dead code related to the now-removed 100% zoom button.
+-   **User Verification**: The user confirmed that the removal of the zoom button and the new placement of the zoom percentage display is acceptable ().
 
 **Earlier issues found/mentioned but not fixed**
-- The stale data issue in  is tracked in the All Pending/In progress Issue list.
+-   The stale data issue in  is tracked in the All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
-- **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts.
+-   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--   React Hooks: , , , .
--   **User-Driven Refactoring**: The key event was pivoting from fixing a complex bug to removing the feature entirely based on the user's pragmatic suggestion. This simplified the codebase and resolved the issue efficiently.
--   **Code Cleanup**: The current task involves removing dead code (state and handlers for a removed feature) to improve maintainability.
+-   React Hooks: , , 
+-   **Directives-based Development**: The agent is closely following user requests, first removing a feature, then cleaning the code, and now adjusting UI component parameters ( defaults and slider  values) based on specific feedback.
 
 **key DB schema**
 -   N/A (Client-side application using AsyncStorage).
@@ -94,35 +98,39 @@ The agent was in the process of cleaning up the code in  after removing the 100%
 -   None.
 
 **All files of reference**
--   : The only file modified in this session. The zoom button was removed, the zoom display was relocated, and code cleanup is pending.
+-   : The only file modified in this session. All changes related to the zoom button cleanup and the memo annotation size adjustment are in this file.
 
 **Areas that need refactoring**:
--   ****: This monolithic component (>6000 lines) remains extremely fragile and a source of technical debt, even after the recent simplification. Breaking it down into smaller hooks and components is critical for future stability.
+-   ****: This component remains a significant source of technical debt due to its large size (>6000 lines). Future work will be slow and risky until it is broken down into smaller, manageable hooks and components.
 
 **key api endpoints**
 -   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK (P0)**: Your first priority is to complete the code cleanup in . Remove the  state, the  function, and any other associated logic that is now dead code.
--   **VERIFY NEXT (P1)**: After the cleanup, ask the user to confirm two things:
-    1.  That the new zoom display in the Zoom-Modus badge works as they intended.
-    2.  That the drawing performance is still smooth (verifying the earlier performance fix).
--   Do not attempt to re-implement or fix the 100% zoom button. The user has explicitly decided to remove it.
+-   **IMMEDIATE TASK (P0)**: Your first priority is to get user verification for the memo annotation size changes. Generate the Expo preview URL and ask the user to test it.
+-   **VERIFY NEXT (P1)**: After the memo changes are approved, ask the user to confirm that the drawing performance is still smooth (verifying the earlier performance fix).
+-   After these verifications, proceed to the stale data issue (P2) or ask the user what to prioritize next from the upcoming tasks.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**:  (Do we even need the 100% button? If I can zoom with my fingers... then I don't need the button. Is that maybe easier for everything).
-    -   **Summary**: The user questioned the necessity of the buggy zoom button, proposing its removal as a simpler solution.
-    -   **Status**: COMPLETE. The agent acted on this suggestion.
-2.  **User**:  (b.) we could add the display to the Zoom-Modus display (circled in red) and not in the toolbar, that's confusing).
-    -   **Summary**: The user clarified the desired UI change: remove the button from the toolbar and move the percentage display to the Zoom-Modus badge.
-    -   **Status**: IN PROGRESS. The agent has implemented this UI change and is now cleaning up the related code.
+1.  **User**: 
+    -   **Summary**: User approved the agent's plan to start with the code cleanup.
+    -   **Status**: COMPLETE.
+2.  **User**:  (we can leave it like that now 👍)
+    -   **Summary**: User approved the zoom button removal and new percentage display.
+    -   **Status**: COMPLETE.
+3.  **User**:  (can we adjust our memo arrow and note to be a bit smaller)
+    -   **Summary**: User requested a new feature/adjustment.
+    -   **Status**: IN PROGRESS.
+4.  **User**:  (both)
+    -   **Summary**: User confirmed the agent's proposal to reduce both default and minimum sizes for the memo annotations.
+    -   **Status**: COMPLETE.
 
 **Project Health Check:**
--   **Technical Debt**: **High**. The  component is a major liability due to its size and complexity, making it bug-prone and difficult to maintain.
+-   **Technical Debt**: **High**. The  component is extremely large and complex, making it difficult and risky to modify.
 
 **3rd Party Integrations**
 -   
@@ -195,9 +203,9 @@ The agent was in the process of cleaning up the code in  after removing the 100%
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[17:51:44]   Run a command with --help for more info 💡
-[17:51:44]     $ expo start --help
-[17:51:44] & related libraries (, , )
+[18:07:58]   Run a command with --help for more info 💡
+[18:07:58]     $ expo start --help
+[18:07:58] & related libraries (, , )
 -   
 -   
 
@@ -211,4 +219,4 @@ The agent was in the process of cleaning up the code in  after removing the 100%
 -   N/A.
 
 **What agent forgot to execute**
-- The agent has correctly identified the need for cleanup but has not yet completed it. The  state and its handler function likely still exist in the code and must be removed to finalize the task.</analysis>
+-   The agent has correctly followed the user's instructions and has not forgotten any requested tasks in this session.</analysis>

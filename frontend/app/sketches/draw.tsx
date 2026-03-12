@@ -2498,6 +2498,8 @@ export default function DrawSketchScreen() {
           polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
         }
         
+        console.log('[DEBUG] Checking polygon:', el.id, 'points:', polygonPoints.length, 'data:', el.data?.substring(0, 50));
+        
         if (polygonPoints.length >= 3) {
           // Zuerst prüfen ob Punkt INNERHALB des Polygons liegt (Ray-Casting Algorithmus)
           let inside = false;
@@ -2509,16 +2511,23 @@ export default function DrawSketchScreen() {
               (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
             if (intersect) inside = !inside;
           }
+          console.log('[DEBUG] Point inside polygon?', inside, 'tap at:', x, y);
           if (inside) return el;
           
           // Dann prüfen ob Punkt nahe einer der Linien ist (für Kanten-Auswahl)
           for (let j = 0; j < polygonPoints.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
-            if (dist < 20) return el;
+            if (dist < 20) {
+              console.log('[DEBUG] Hit polygon edge, dist:', dist);
+              return el;
+            }
           }
           // Prüfe auch die schließende Linie (vom letzten zum ersten Punkt)
           const dist = distanceToLineSegment(x, y, polygonPoints[polygonPoints.length-1].x, polygonPoints[polygonPoints.length-1].y, polygonPoints[0].x, polygonPoints[0].y);
-          if (dist < 20) return el;
+          if (dist < 20) {
+            console.log('[DEBUG] Hit closing edge, dist:', dist);
+            return el;
+          }
         } else if (polygonPoints.length >= 2) {
           // Weniger als 3 Punkte - nur Linien prüfen
           for (let j = 0; j < polygonPoints.length - 1; j++) {

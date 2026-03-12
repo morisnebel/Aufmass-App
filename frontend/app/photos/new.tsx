@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,40 +28,6 @@ export default function NewPhotoScreen() {
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-
-  // Keyboard-Events für dynamische Höhenanpassung
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-        // Scroll zum fokussierten Input nach kurzer Verzögerung
-        if (focusedIndex !== null) {
-          setTimeout(() => {
-            scrollViewRef.current?.scrollTo({
-              y: 220 + (focusedIndex * 130),
-              animated: true,
-            });
-          }, 100);
-        }
-      }
-    );
-    
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-    };
-  }, [focusedIndex]);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -175,50 +141,46 @@ export default function NewPhotoScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-      <ScrollView 
-        ref={scrollViewRef}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: focusedIndex !== null ? 500 : 100 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-      >
-        {/* Upload Buttons - immer sichtbar */}
-        <View style={styles.uploadSection}>
-          <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
-            <Ionicons name="camera" size={36} color="#1976d2" />
-            <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
+        <View style={styles.content}>
+          {/* Upload Buttons - immer sichtbar */}
+          <View style={styles.uploadSection}>
+            <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+              <Ionicons name="camera" size={36} color="#1976d2" />
+              <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
-            <Ionicons name="images" size={36} color="#1976d2" />
-            <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
-            <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
+              <Ionicons name="images" size={36} color="#1976d2" />
+              <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
+              <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Ausgewählte Fotos */}
-        {selectedPhotos.length > 0 && (
-          <View style={styles.selectedSection}>
-            <Text style={styles.sectionTitle}>
-              {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
-            </Text>
-            
-            {selectedPhotos.map((photo, index) => (
-              <View key={index} style={styles.photoCard}>
-                <View style={styles.photoHeader}>
-                  <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
-                  <View style={styles.photoInfo}>
-                    <Text style={styles.photoNumber}>Foto {index + 1}</Text>
-                    <TextInput
-                      style={styles.descriptionInput}
-                      placeholder="Beschreibung (optional)"
-                      value={photo.description}
-                      onChangeText={(text) => updateDescription(index, text)}
-                      onFocus={() => setFocusedIndex(index)}
-                      onBlur={() => setFocusedIndex(null)}
-                      multiline
-                    />
+          {/* Ausgewählte Fotos */}
+          {selectedPhotos.length > 0 && (
+            <View style={styles.selectedSection}>
+              <Text style={styles.sectionTitle}>
+                {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
+              </Text>
+              
+              {selectedPhotos.map((photo, index) => (
+                <View key={index} style={styles.photoCard}>
+                  <View style={styles.photoHeader}>
+                    <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
+                    <View style={styles.photoInfo}>
+                      <Text style={styles.photoNumber}>Foto {index + 1}</Text>
+                      <TextInput
+                        style={styles.descriptionInput}
+                        placeholder="Beschreibung (optional)"
+                        value={photo.description}
+                        onChangeText={(text) => updateDescription(index, text)}
+                        multiline
+                      />
                   </View>
                   <TouchableOpacity 
                     style={styles.removeButton}
@@ -251,8 +213,9 @@ export default function NewPhotoScreen() {
             </TouchableOpacity>
           </View>
         )}
-    </ScrollView>
-    </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -261,8 +224,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     padding: 16,
+    paddingBottom: 100,
   },
   uploadSection: {
     flexDirection: 'row',

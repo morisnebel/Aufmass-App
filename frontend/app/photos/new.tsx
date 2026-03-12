@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,18 @@ export default function NewPhotoScreen() {
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Scroll zum fokussierten Input
+  const scrollToInput = (index: number) => {
+    // Kleine Verzögerung damit Tastatur erscheinen kann
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: 250 + (index * 120), // Position basierend auf Foto-Index
+        animated: true,
+      });
+    }, 300);
+  };
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -140,51 +153,62 @@ export default function NewPhotoScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        {/* Upload Buttons - immer sichtbar */}
-        <View style={styles.uploadSection}>
-          <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
-            <Ionicons name="camera" size={36} color="#1976d2" />
-            <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 50 }}
+      >
+        <View style={styles.content}>
+          {/* Upload Buttons - immer sichtbar */}
+          <View style={styles.uploadSection}>
+            <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+              <Ionicons name="camera" size={36} color="#1976d2" />
+              <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
-            <Ionicons name="images" size={36} color="#1976d2" />
-            <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
-            <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
+              <Ionicons name="images" size={36} color="#1976d2" />
+              <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
+              <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Ausgewählte Fotos */}
-        {selectedPhotos.length > 0 && (
-          <View style={styles.selectedSection}>
-            <Text style={styles.sectionTitle}>
-              {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
-            </Text>
-            
-            {selectedPhotos.map((photo, index) => (
-              <View key={index} style={styles.photoCard}>
-                <View style={styles.photoHeader}>
-                  <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
-                  <View style={styles.photoInfo}>
-                    <Text style={styles.photoNumber}>Foto {index + 1}</Text>
-                    <TextInput
-                      style={styles.descriptionInput}
-                      placeholder="Beschreibung (optional)"
-                      value={photo.description}
-                      onChangeText={(text) => updateDescription(index, text)}
-                      multiline
-                    />
+          {/* Ausgewählte Fotos */}
+          {selectedPhotos.length > 0 && (
+            <View style={styles.selectedSection}>
+              <Text style={styles.sectionTitle}>
+                {selectedPhotos.length} {selectedPhotos.length === 1 ? 'Foto' : 'Fotos'} ausgewählt
+              </Text>
+              
+              {selectedPhotos.map((photo, index) => (
+                <View key={index} style={styles.photoCard}>
+                  <View style={styles.photoHeader}>
+                    <Image source={{ uri: photo.uri }} style={styles.thumbnail} />
+                    <View style={styles.photoInfo}>
+                      <Text style={styles.photoNumber}>Foto {index + 1}</Text>
+                      <TextInput
+                        style={styles.descriptionInput}
+                        placeholder="Beschreibung (optional)"
+                        value={photo.description}
+                        onChangeText={(text) => updateDescription(index, text)}
+                        onFocus={() => scrollToInput(index)}
+                        multiline
+                      />
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => removePhoto(index)}
+                    >
+                      <Ionicons name="close-circle" size={28} color="#f44336" />
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.removeButton}
-                    onPress={() => removePhoto(index)}
-                  >
-                    <Ionicons name="close-circle" size={28} color="#f44336" />
-                  </TouchableOpacity>
                 </View>
-              </View>
             ))}
 
             {/* Speichern Button */}
@@ -210,6 +234,7 @@ export default function NewPhotoScreen() {
         )}
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

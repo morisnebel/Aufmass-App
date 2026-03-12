@@ -2287,6 +2287,16 @@ export default function DrawSketchScreen() {
           newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
             return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
           });
+        } else if (el.type === 'polygon') {
+          // Move polygon by shifting all coordinates in the SVG path string (similar to path)
+          const pathRegex = /([MLZ])\s*(-?\d+\.?\d*)?\s*(-?\d+\.?\d*)?/g;
+          newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
+            if (cmd === 'Z') return 'Z';
+            if (x && y) {
+              return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
+            }
+            return match;
+          });
         }
       } else if (dragMode === 'rotate' && resizeHandle === 'rotate') {
         // Rotate element
@@ -2446,6 +2456,27 @@ export default function DrawSketchScreen() {
         if (pathPoints.length >= 2) {
           for (let j = 0; j < pathPoints.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, pathPoints[j].x, pathPoints[j].y, pathPoints[j+1].x, pathPoints[j+1].y);
+            if (dist < 20) return el;
+          }
+        }
+      } else if (el.type === 'polygon') {
+        // Extrahiere Punkte aus dem SVG-Path (Polygon ist wie path aber geschlossen)
+        const polygonPoints: { x: number; y: number }[] = [];
+        const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+        let match;
+        while ((match = pathRegex.exec(el.data)) !== null) {
+          polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
+        }
+        
+        // Prüfe ob Punkt nahe einer der Linien ist
+        if (polygonPoints.length >= 2) {
+          for (let j = 0; j < polygonPoints.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
+            if (dist < 20) return el;
+          }
+          // Prüfe auch die schließende Linie (vom letzten zum ersten Punkt)
+          if (polygonPoints.length >= 3) {
+            const dist = distanceToLineSegment(x, y, polygonPoints[polygonPoints.length-1].x, polygonPoints[polygonPoints.length-1].y, polygonPoints[0].x, polygonPoints[0].y);
             if (dist < 20) return el;
           }
         }

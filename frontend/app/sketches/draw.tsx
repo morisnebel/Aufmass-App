@@ -2121,11 +2121,11 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // Update polygon element properties (color & strokeWidth)
+  // Update polygon/polyline/path element properties (color & strokeWidth)
   const updatePolygonElement = () => {
     if (selectedElementId) {
       const newElements = elements.map(el => {
-        if (el.id === selectedElementId && el.type === 'polygon') {
+        if (el.id === selectedElementId && (el.type === 'polygon' || el.type === 'polyline' || el.type === 'rect' || el.type === 'circle' || el.type === 'path')) {
           return {
             ...el,
             color: editPolygonColor,
@@ -2141,8 +2141,6 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
-    console.log('[DEBUG handleSelectTouchStart] Touch at:', locationX, locationY, 'photoEditMode:', photoEditMode);
-    
     // Check if clicking on transformation handles first
     if (selectedElementId) {
       const selectedEl = elements.find(el => el.id === selectedElementId);
@@ -2197,8 +2195,6 @@ export default function DrawSketchScreen() {
 
     // Check if clicking on an element - im Foto-Modus nur Bilder, sonst nur andere Elemente
     const clickedElement = findElementAtPoint(locationX, locationY, photoEditMode);
-    console.log('[DEBUG handleSelectTouchStart] Found element:', clickedElement?.id, clickedElement?.type);
-    
     if (clickedElement) {
       // Check for double tap
       const now = Date.now();
@@ -2233,8 +2229,8 @@ export default function DrawSketchScreen() {
           setEditMemoFontSize(clickedElement.data.fontSize || 14);
           setDrawColor(clickedElement.color);
           setShowEditMemoModal(true);
-        } else if (clickedElement.type === 'polygon' || clickedElement.type === 'rect' || clickedElement.type === 'circle') {
-          // Polygon/Rechteck/Kreis bearbeiten bei Doppeltipp
+        } else if (clickedElement.type === 'polygon' || clickedElement.type === 'rect' || clickedElement.type === 'circle' || clickedElement.type === 'polyline' || clickedElement.type === 'path') {
+          // Polygon/Rechteck/Kreis/Polyline/Pfad bearbeiten bei Doppeltipp
           setEditPolygonStrokeWidth(clickedElement.strokeWidth || 3);
           setEditPolygonColor(clickedElement.color || '#FF0000');
           setShowEditPolygonModal(true);
@@ -2257,9 +2253,6 @@ export default function DrawSketchScreen() {
 
   const handleSelectTouchMove = (locationX: number, locationY: number) => {
     if (!originalElement || !dragStart) return;
-    
-    console.log('[DEBUG handleSelectTouchMove] Moving from', dragStart.x, dragStart.y, 'to', locationX, locationY);
-    console.log('[DEBUG handleSelectTouchMove] Element type:', originalElement.type, 'id:', originalElement.id);
 
     const dx = locationX - dragStart.x;
     const dy = locationY - dragStart.y;
@@ -2325,8 +2318,6 @@ export default function DrawSketchScreen() {
         } else if (el.type === 'polygon') {
           // Move polygon by shifting all coordinates in the SVG path string
           // Format: "M x y L x y L x y ... Z"
-          console.log('[DEBUG polygon move] Original data:', originalElement.data);
-          console.log('[DEBUG polygon move] dx:', dx, 'dy:', dy);
           const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
           let newPath = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
             return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
@@ -2335,7 +2326,6 @@ export default function DrawSketchScreen() {
           if (originalElement.data.includes('Z') && !newPath.includes('Z')) {
             newPath += ' Z';
           }
-          console.log('[DEBUG polygon move] New data:', newPath);
           newEl.data = newPath;
         }
       } else if (dragMode === 'rotate' && resizeHandle === 'rotate') {
@@ -2432,13 +2422,9 @@ export default function DrawSketchScreen() {
 
   // Find element at point
   const findElementAtPoint = (x: number, y: number, onlyImages: boolean = false): DrawElement | null => {
-    console.log('[DEBUG findElementAtPoint] Looking for element at:', x, y, 'onlyImages:', onlyImages);
-    console.log('[DEBUG findElementAtPoint] Total elements:', elements.length);
-    
     // Check in reverse order (top elements first)
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
-      console.log('[DEBUG findElementAtPoint] Checking element:', el.id, 'type:', el.type);
       
       // Im Foto-Modus nur Bilder auswählen, im normalen Modus Bilder ignorieren
       if (onlyImages && el.type !== 'image') continue;
@@ -2512,8 +2498,6 @@ export default function DrawSketchScreen() {
           polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
         }
         
-        console.log('[DEBUG] Checking polygon:', el.id, 'points:', polygonPoints.length, 'data:', el.data?.substring(0, 50));
-        
         if (polygonPoints.length >= 3) {
           // Zuerst prüfen ob Punkt INNERHALB des Polygons liegt (Ray-Casting Algorithmus)
           let inside = false;
@@ -2525,21 +2509,18 @@ export default function DrawSketchScreen() {
               (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
             if (intersect) inside = !inside;
           }
-          console.log('[DEBUG] Point inside polygon?', inside, 'tap at:', x, y);
           if (inside) return el;
           
           // Dann prüfen ob Punkt nahe einer der Linien ist (für Kanten-Auswahl)
           for (let j = 0; j < polygonPoints.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
             if (dist < 20) {
-              console.log('[DEBUG] Hit polygon edge, dist:', dist);
               return el;
             }
           }
           // Prüfe auch die schließende Linie (vom letzten zum ersten Punkt)
           const dist = distanceToLineSegment(x, y, polygonPoints[polygonPoints.length-1].x, polygonPoints[polygonPoints.length-1].y, polygonPoints[0].x, polygonPoints[0].y);
           if (dist < 20) {
-            console.log('[DEBUG] Hit closing edge, dist:', dist);
             return el;
           }
         } else if (polygonPoints.length >= 2) {
@@ -5360,11 +5341,11 @@ export default function DrawSketchScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Edit Polygon Modal - Polygon Eigenschaften bearbeiten */}
+      {/* Edit Polygon Modal - Polygon/Polyline Eigenschaften bearbeiten */}
       <Modal visible={showEditPolygonModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Polygon bearbeiten</Text>
+            <Text style={styles.modalTitle}>Form bearbeiten</Text>
             
             {/* Stroke Width Slider */}
             <View style={styles.sliderContainer}>

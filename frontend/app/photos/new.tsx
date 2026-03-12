@@ -179,7 +179,7 @@ export default function NewPhotoScreen() {
       <ScrollView 
         ref={scrollViewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 50 : 100 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: focusedIndex !== null ? 500 : 100 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >

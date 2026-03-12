@@ -152,7 +152,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://measure-annotate.preview.emergentagent.com
+- **Preview URL**: https://flachen-kalkulator-1.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

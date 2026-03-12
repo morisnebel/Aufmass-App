@@ -4711,6 +4711,51 @@ export default function DrawSketchScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+              
+              {/* Stroke Width Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Linienstärke: {editArrowStrokeWidth}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateEditArrowStrokeWidth(Math.max(1, editArrowStrokeWidth - 1))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${(editArrowStrokeWidth / 10) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateEditArrowStrokeWidth(Math.min(10, editArrowStrokeWidth + 1))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Font Size Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Schriftgröße: {editArrowFontSize}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateEditArrowFontSize(Math.max(8, editArrowFontSize - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((editArrowFontSize - 8) / 32) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateEditArrowFontSize(Math.min(40, editArrowFontSize + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}

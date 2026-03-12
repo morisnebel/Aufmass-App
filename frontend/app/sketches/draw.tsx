@@ -2229,8 +2229,8 @@ export default function DrawSketchScreen() {
           setEditMemoFontSize(clickedElement.data.fontSize || 14);
           setDrawColor(clickedElement.color);
           setShowEditMemoModal(true);
-        } else if (clickedElement.type === 'polygon') {
-          // Polygon bearbeiten bei Doppeltipp
+        } else if (clickedElement.type === 'polygon' || clickedElement.type === 'rect' || clickedElement.type === 'circle') {
+          // Polygon/Rechteck/Kreis bearbeiten bei Doppeltipp
           setEditPolygonStrokeWidth(clickedElement.strokeWidth || 3);
           setEditPolygonColor(clickedElement.color || '#FF0000');
           setShowEditPolygonModal(true);

@@ -329,29 +329,13 @@ export default function DrawSketchScreen() {
     cropBoxRef.current = cropBox;
   }, [cropBox]);
   
-  // Helper-Funktion: Wechselt den Zeichenmodus und schaltet Zoom automatisch aus
-  // wenn ein Zeichenwerkzeug (auch 'select' für Bearbeiten) ausgewählt wird
+  // Helper-Funktion: Wechselt den Zeichenmodus
+  // Zoom bleibt erhalten, aber scrollEnabled wird deaktiviert damit Zeichnen funktioniert
   const selectDrawMode = (mode: DrawMode) => {
     setDrawMode(mode);
-    // Bei ALLEN Werkzeugen den Zoom-Modus ausschalten (auch bei 'select')
-    // damit Bearbeiten funktioniert
+    // Zoom-Modus ausschalten damit Zeichnen/Bearbeiten funktioniert
+    // aber den aktuellen Zoom-Level beibehalten!
     setZoomMode(false);
-    // Wenn gezoomt ist, erst auf 100% zurücksetzen bevor gezeichnet/bearbeitet wird
-    if (scale !== 1) {
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-        (scrollViewRef.current as any).scrollResponderZoomTo?.({
-          x: 0,
-          y: 0,
-          width: width,
-          height: height - 120,
-          animated: false,
-        });
-      }
-      setScale(1);
-      setPanOffset({ x: 0, y: 0 });
-      setScrollOffset({ x: 0, y: 0 });
-    }
   };
   
   // State für Projektfotos-Modal
@@ -4162,8 +4146,8 @@ export default function DrawSketchScreen() {
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={zoomMode ? 0.5 : 1}
-        maximumZoomScale={zoomMode ? 4 : 1}
+        minimumZoomScale={zoomMode ? 0.5 : scale}
+        maximumZoomScale={zoomMode ? 4 : scale}
         bouncesZoom={zoomMode}
         scrollEnabled={zoomMode}
         pinchGestureEnabled={zoomMode}

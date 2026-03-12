@@ -8,7 +8,7 @@ import json
 import base64
 from datetime import datetime
 
-BACKEND_URL = "https://projekt-manager-ro.preview.emergentagent.com/api"
+BACKEND_URL = "https://project-sync-app-1.preview.emergentagent.com/api"
 
 def debug_pdf_export():
     """Debug PDF export with detailed logging"""

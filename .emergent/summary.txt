@@ -1,169 +1,142 @@
 <analysis>**original_problem_statement:**
-The user's primary goal is to build a comprehensive application for managing roofing projects. The current focus is on enhancing a standalone Flächen-Kalkulator (Area Calculator) and sketch tool within their React Native/Expo application.
+The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope then expanded significantly to include:
 
-**PRODUCT REQUIREMENTS:**
-- **Core Functionality**:
-    - Draw and edit polygons, lines, circles, and rectangles.
-    - Set a scale, calculate and display net area.
-    - Full editability of drawn shapes: select, move, and delete.
-    - Pinch-to-zoom and pan functionality.
-- **UI/UX Enhancements (User-Requested)**:
-    - Add descriptive text labels under all toolbar icons.
-    - Add buttons for Projektfotos, Maße über Polygone, and Notiz zur Skizze.
-    - Reorganize the toolbar to group related buttons.
-    - The Zuschneiden (Crop) button should function as an independent mode.
-- **Bug Fixes & Refactoring**:
-    - Drawing actions must work correctly on a zoomed/panned canvas.
-    - Shape/element selection and editing mode must be functional.
-- **New Features**:
-    - **Notiz (Annotation)**: Implement a Notiz button that allows placing and editing a callout-style annotation on the canvas.
-    - **Photo Cropping**: Implement a feature to crop an already-placed image on the canvas.
-    - **Toolbar Reorganization**: Restructure the toolbar layout for better usability.
+1.  **Comprehensive Data Model Expansion**: Overhauling customer and project data models to include detailed fields like salutation, separate first/last names, and full addresses.
+2.  **Complex Data Synchronization**: Implementing bi-directional sync between project addresses and a customer's master list, and creating/updating contacts in the device's native address book.
+3.  **UX Flow Simplification**: Refactoring a confusing new customer modal within the project creation flow into a more streamlined process.
+4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs related to keyboard handling, stale data, and layout issues across various screens. The user's most recent requests focus on refining the functionality of core tools (Photos, Sketches) and fixing usability bugs.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a client-side React Native/Expo app. The core drawing and UI logic are consolidated in a large monolithic file: . In this session, the agent successfully implemented the logic for a dedicated Crop Mode and performed a major reorganization of the main toolbar buttons as requested by the user. The user has provided minor follow-up adjustments for the toolbar.
+The application is a React Native/Expo app for roofing project management. It uses  for all local data persistence. The codebase consists of several large, monolithic components that handle UI, state, and business logic.
+
+Key functionalities include:
+-   **Customer & Project Management**: Detailed forms for creating and editing customers and projects.
+-   **Data Synchronization**: Logic to sync customer data to their projects and to the device's native contacts.
+-   **Core Tools**:
+    -   **Photos**: Take/select photos, add descriptions, and draw annotations.
+    -   **Sketches**: Draw on a canvas with various tools. The zoom/draw functionality is currently broken.
+    -   **Area Calculator**: Calculate areas using polygons.
+    -   **Checklists**: Manage lists of items.
 
 **Last working item**:
-- **Last item agent was working**: Making final adjustments to the toolbar reorganization based on user feedback.
-    1.  Changing the order of the photo-related buttons to: Foto, Projektfoto, Galeriefoto, Position, Zuschneiden.
-    2.  Making the Maße über Polygone button the same width as the Maßlinie button to ensure the label text fits properly underneath.
+The agent was debugging an issue where drawings were misplaced on a zoomed-in sketch.
+
+- **Last item agent was working**: After fixing a bug that reset the zoom level upon tool selection, a new bug emerged: touch coordinates for drawing actions (pen, lines) are incorrect on a zoomed/panned canvas. The agent was in the process of updating all touch handlers (, , ) in  to correctly transform touch coordinates using the current  and .
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing. The user will need to verify all UI changes on their device using the Expo Go app.
+- **Which testing method agent to use?**: Frontend testing (user verifies on Expo Go).
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Finalize Toolbar Adjustments (P0)
-- **Issue 2**: User Verification for Crop Mode Workflow (P1)
-- **Issue 3**: User Verification for Toolbar Reorganization (P1)
-- **Issue 4**: Verify Core Drawing/Editing Regressions (P2)
-- **Issue 5**: Expo Server/Client Sync Instability (P3 - Environmental Blocker)
+-   **Issue 1**: Fix misplaced drawing coordinates in the zoomed Sketch tool (P0).
+-   **Issue 2**: Fix stale data on the main project list screen (P1).
 
 **Issues Detail:**
-- **Issue 1: Finalize Toolbar Adjustments**
-    - **Description**: The user requested two final tweaks after the major toolbar reorganization: reordering the photo buttons and resizing the Maße über Polygone button for better text alignment.
-    - **Attempted fixes**: The agent has viewed the relevant code in  to understand the structure.
-    - **Next debug checklist**:
-        1.  Use  on .
-        2.  Locate the 's JSX section.
-        3.  Rearrange the photo buttons to the specified order: , , , , .
-        4.  Find the  button and apply the same styling/width as the  button.
-        5.  Restart the server with cache clearing ([09:14:54] Starting project at /app/frontend) and ask the user to verify.
-    - **Why fix this issue and what will be achieved with the fix?**: This will complete the toolbar reorganization task to the user's full satisfaction.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None
+-   **Issue 1: Misplaced drawing coordinates in zoomed Sketch tool**
+    -   **Description**: When the user draws (pen, lines, etc.) on a zoomed-in portion of a sketch, the drawing appears at an incorrect location. This is a coordinate transformation issue.
+    -   **Attempted fixes**: The agent identified the need to convert screen touch coordinates to canvas coordinates using the formula . The agent started applying this fix to the , , and  handlers in , but has not yet completed the changes for all drawing modes.
+    -   **Next debug checklist**:
+        1.  Thoroughly review , , and  in .
+        2.  Ensure the coordinate transformation  and  is applied consistently across **all** drawing modes handled in the touch events (e.g., pen, line, measure-line). The user confirmed multiple tool types are broken.
+        3.  Verify that the  and  state variables are correctly updated from the 's  event handler.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is critical for the core functionality of the sketch tool, allowing users to make precise drawings on detailed, zoomed-in sections.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
 
-- **Issue 2: User Verification for Crop Mode Workflow**
-    - **Description**: The code for the Crop Mode has been implemented. When the Zuschneiden button is pressed, the app enters a mode where clicking an image opens the crop modal. After cropping or canceling, the mode is deactivated. This entire workflow needs to be tested by the user.
-    - **Status**: USER VERIFICATION PENDING
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Frontend
-
-- **Issue 3: User Verification for Toolbar Reorganization**
-    - **Description**: The agent performed a large-scale reordering of the toolbar buttons into logical groups as requested. The user has seen the agent's plan and provided feedback, but has not yet confirmed the final result on their device.
-    - **Status**: USER VERIFICATION PENDING
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Frontend
-
-- **Issue 4: Verify Core Drawing/Editing Regressions**
-    - **Description**: A lingering verification task. After recent changes, it's crucial to confirm that basic shape selection, moving, and resizing for elements other than images (polygons, lines, etc.) still work as expected.
-    - **Next debug checklist**: Bundle this into the next user verification step. Explicitly ask the user to confirm they can still select and edit other shapes.
-    - **Status**: USER VERIFICATION PENDING
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend
-
-- **Issue 5: Expo Server/Client Sync Instability**
-    - **Description**: A recurring environmental problem where code changes are not reflected in the user's Expo Go client without a hard refresh and server cache clearing.
-    - **Next debug checklist**: After every deployment, explicitly instruct the user to hard refresh by force-quitting the Expo Go app and reopening it. Always use [09:14:55] Starting project at /app/frontend to clear the cache when restarting the server.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: N/A (Environmental)
+-   **Issue 2: Stale data in project list ()**
+    -   **Description**: The project list on the home screen () does not refresh automatically after a project's details have been changed on another screen.
+    -   **Attempted fixes**: An agent in a previous session visually inspected the  hook and concluded it looked correct, but did not perform any debugging to confirm if it fires or if the data fetching is the issue. The bug persists.
+    -   **Next debug checklist**:
+        1.  In , add a  inside the  callback to confirm it runs when the screen comes into focus.
+        2.  If it runs, verify that the  function is correctly fetching and setting the updated project list from .
+        3.  The root cause is likely that the dependency array of the  inside  is empty or incorrect.
+    -   **Why fix this issue and what will be achieved with the fix?**: To prevent user confusion and ensure the main project list always displays the most current information.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
-- **Task 1: Finalize Crop Mode and Toolbar Adjustments**
-    - **Where to resume**: . Apply the two final user-requested changes.
-    - **What will be achieved with this?**: A fully functional and intuitive photo cropping workflow and a reorganized toolbar that meets all user specifications.
-    - **Status**: IN PROGRESS
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on something**: None.
+-   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-- **P1**: Implement the Maße über Polygone button and its functionality.
-- **P1**: Implement the functionality for the Notizen zur Skizze button.
+-   **P1**: Implement Maße über Polygone (Measurements via Polygons) button functionality in .
+-   **P1**: Implement Notizen zur Skizze (Notes for Sketch) button functionality in .
+
 **Future Tasks:**
-- **P2**: Create a new TestFlight build for the user.
-- **P2**: Implement a Pro/Base version split with in-app purchases.
-- **P3**: Add a price calculation feature based on calculated areas/lengths.
-- **P4**: Re-implement iCloud Sync.
-- **P4**: Fix a low-priority visual bug where dashed lines render incorrectly in the PDF preview.
+-   **P2**: Create a new TestFlight build.
+-   **P2**: Implement a Pro/Base version split with in-app purchases.
+-   **P3**: Add a price calculation feature.
+-   **P4**: Re-implement iCloud Sync.
+-   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
-- **Feature**: Implemented the complete logic for the Crop Mode workflow in .
-- **UI**: Performed a major reorganization of the toolbar, grouping buttons into logical sections as specified by the user.
+-   **Bug Fix**: In the Sketch tool (), fixed an issue where the view would reset to 100% zoom whenever a drawing tool was selected. The zoom level is now correctly maintained, allowing the user to select tools while zoomed in.
 
 **Earlier issues found/mentioned but not fixed**
-- The core issue of **drawing on an already-zoomed canvas** has a workaround (zoom resets to 100% on draw), not a true fix. The user may expect to draw accurately while zoomed in, which remains unaddressed.
+-   The stale data issue in  (listed in All Pending/In progress Issue list).
 
 **Known issue recurrence from previous fork**
-- **Expo Development Server Instability**: Persists. It occurred again during this session, requiring a server restart with cache clearing to resolve. Recurrence count: 10+. Status: IN PROGRESS.
-- **Zoom/Pan Coordinate Calculation**: The underlying complexity remains a high risk for regressions. The current fix is a workaround. Recurrence count: 4. Status: IN PROGRESS.
+-   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable. The agent in this session also encountered tunnel errors and had to restart the server and find the correct  URL to provide to the user. This is an environmental issue that slows down development and testing cycles.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **React Native & Expo**: The core framework.
-- **React Native Gestures & ScrollView**: Managing a complex coordinate system.
-- ****: Used to implement robust gesture handling for the interactive crop modal.
-- **State-Driven UI**: Heavy use of  to manage , modal visibility, elements, etc.
-- **React Native SVG**: Renders all drawing elements.
-- ****: Used for the image cropping functionality.
+-   React Native & Expo
+-   React Hooks: Extensive use and debugging of , , , , .
+-   State Management: Deep debugging of state management within large components.
+-   UI/Layout:  for zoom and pan functionality.
+-   **Coordinate Transformation**: Calculating drawing coordinates within a zoomed and panned .
+-   Local Data Persistence: .
 
 **key DB schema**
-N/A (Client-side application).
+N/A. Data is stored client-side in AsyncStorage. The data interfaces (, , ) are defined in .
 
 **changes in tech stack**
-- No new packages were added in this session.
+-   None.
 
 **All files of reference**
-- : The only file modified in this session. It contains all logic.
+-   : File for the current bug being worked on. All recent changes have been in this file.
+-   : Contains the pending stale-data bug.
 
 **Areas that need refactoring**:
-- The  file is critically oversized and complex. Its monolithic nature makes it difficult to maintain and prone to regressions. It urgently needs to be broken down into smaller, manageable components (e.g., , , , , etc.).
+-   **Monolithic Components**: The file  is over 4000 lines long, making it extremely difficult to debug and maintain. The current series of bugs related to zoom and drawing highlights the urgent need to break this component into smaller, manageable custom hooks and components.
 
 **key api endpoints**
 N/A (Client-side application).
 
 **Critical Info for New Agent**
-- **You MUST continue all user communication in German.**
-- Your immediate priority is to implement the **two final toolbar adjustments**.
-- After implementing the fixes, restart the server with [09:14:55] Starting project at /app/frontend and ask the user to test the complete set of recent changes:
-    1. The final toolbar layout.
-    2. The new Crop Mode workflow.
-- Be proactive about the Expo sync issue. Explicitly instruct the user to **hard-refresh their Expo Go app** (force quit and restart).
+-   **You MUST continue all user communication in German.**
+-   **IMMEDIATE TASK**: Your first action is to finish fixing the coordinate calculation bug in . The user reported that when they draw on a zoomed-in canvas, the lines/pen strokes appear in the wrong place. You must apply the correct coordinate transformation to all drawing modes.
+-   **Expo Tunnel/Server is UNRELIABLE**: Expect to spend time troubleshooting connection issues. A standard fix is to restart the server with env: load .env
+env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT
+Starting project at /app/frontend
+Fast resolver is enabled.
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below. and find the tunnel URL ending in  in the logs, as this is often more reliable than the default.
 
 **documents and test reports created in this job**
-- None.
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **1. (LATEST)** User requests final toolbar tweaks: change the order of photo buttons and adjust the width of the Maße über Polygone button. (IN PROGRESS)
-- **2.** User expresses approval of the major toolbar reorganization (sehr schön). (COMPLETED)
-- **3.** User provides a detailed list for the toolbar reorganization, including moving undo/redo buttons. (COMPLETED)
-- **4.** User confirms the agent's plan to implement the Crop Mode workflow. (ja) (COMPLETED)
+1.  **User**:  (Yes, that works now, but unfortunately the editing doesn't match the zoomed area yet (lines in another place and the pen function writes in another place on the image, not where I put my pencil, the dimension lines also don't adapt to the zoomed size). Can this be changed?) - **Status: PENDING**
+2.  **User**:  (Yes) - **Status: Completed** (User approved the agent's initial plan).
 
 **Project Health Check:**
-- **Broken**: No features are currently broken, but the latest user requests are not yet implemented.
-- **Unreliable**:
-    - The development feedback loop due to Expo Go client sync issues remains a major blocker, requiring frequent server restarts and user guidance.
+-   **Broken**: The core drawing functionality of the Sketch tool () is unusable when the canvas is zoomed.
+-   **Mocked**: None.
+-   **Technical Debt**: High. The codebase is characterized by large, complex components that are prone to bugs and difficult to maintain, as evidenced by the current bug-fixing cycle.
 
 **3rd Party Integrations**
-- 
-- 
+-   
+-   
   Usage: expo [command] [options]
 
   Options:
@@ -232,30 +205,20 @@ N/A (Client-side application).
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[09:14:56]   Run a command with --help for more info 💡
-[09:14:56]     $ expo start --help
-[09:14:56]
-- 
-- 
-- 
-- 
-- 
-- 
-- 
+[08:38:35]   Run a command with --help for more info 💡
+[08:38:35]     $ expo start --help
+[08:38:35] & related libraries (, , )
+-   
+-   
 
 **Testing status**
-- **Testing agent used after significant changes**: NO
-- **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: []
-- **Known regressions**: None reported in this session, but verification for older features is pending.
+-   **Testing agent used after significant changes**: NO
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: []
+-   **Known regressions**: The project list on the home screen () does not update automatically.
 
 **Credentials to test flow:**
-The user's  is set as an environment variable, allowing deployment to their Expo account for testing.
+-   The  is set as an environment variable for deployment.
 
 **What agent forgot to execute**
-- Nothing was forgotten. The agent correctly identified a port conflict issue during server restart and resolved it using backend                          STOPPED   Mar 10 09:14 AM
-code-server                      STOPPED   Not started
-expo                             STOPPED   Mar 10 09:14 AM
-mongodb                          RUNNING   pid 122, uptime 0:00:06
-nginx-code-proxy                 RUNNING   pid 118, uptime 0:00:06
-supervisor>  before proceeding with the cache-clearing command, showing good problem-solving. The agent is on track with the user's latest requests.</analysis>
+-   The agent correctly identified the solution for the coordinate transformation but was in the middle of implementing it. It is crucial that the fix is applied to *all* drawing modes within the touch handlers, not just a single one, as the user reported issues with lines, pen, and measurement lines. The agent was last seen editing the  handler, which is the correct place to address the different drawing modes.</analysis>

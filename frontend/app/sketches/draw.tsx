@@ -1590,14 +1590,31 @@ export default function DrawSketchScreen() {
   };
 
   // Touch handlers
+  // Hilfsfunktion: Berechnet die Canvas-Koordinaten aus Touch-Event
+  // Bei Zoom/Scroll müssen die Koordinaten korrekt umgerechnet werden
+  const getCanvasCoordinates = (touch: any) => {
+    // locationX/locationY sind relativ zum sichtbaren Viewport (nicht zum gesamten Canvas)
+    // Bei Zoom/Scroll müssen wir die Touch-Position + Scroll-Offset umrechnen
+    const rawX = touch.locationX || touch.pageX || 0;
+    const rawY = touch.locationY || touch.pageY || 0;
+    
+    // Canvas-Koordinaten = (Touch-Position + Scroll-Offset) / Zoom-Faktor
+    // scrollOffset enthält die aktuelle Scroll-Position der ScrollView
+    const canvasX = (rawX + scrollOffset.x) / scale;
+    const canvasY = (rawY + scrollOffset.y) / scale;
+    
+    return { x: canvasX, y: canvasY };
+  };
+
   const onTouchStart = (event: any) => {
     // Im Zoom-Modus keine Zeichnung
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+    // Berechne Canvas-Koordinaten mit Zoom-Korrektur
+    const coords = getCanvasCoordinates(touch);
+    const locationX = coords.x;
+    const locationY = coords.y;
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
@@ -1644,9 +1661,10 @@ export default function DrawSketchScreen() {
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
-    // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-    const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-    const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+    // Berechne Canvas-Koordinaten mit Zoom-Korrektur
+    const coords = getCanvasCoordinates(touch);
+    const locationX = coords.x;
+    const locationY = coords.y;
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
@@ -1701,24 +1719,22 @@ export default function DrawSketchScreen() {
       setOriginalElement(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // Verwende getCanvasCoordinates für konsistente Koordinatenberechnung
+      const coords = getCanvasCoordinates(touch);
       
       // Show arrow text input
-      setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+      setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: coords.x, y2: coords.y });
       setShowArrowModal(true);
       setStartPoint(null);
       setTempElement(null);
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Berücksichtige die aktuelle Scroll-Position und Zoom-Level für korrekte Koordinaten
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // Verwende getCanvasCoordinates für konsistente Koordinatenberechnung
+      const coords = getCanvasCoordinates(touch);
       
       // Speichere die Pointer-Koordinaten und öffne Modal
-      setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+      setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: coords.x, y2: coords.y });
       setPointerText(''); // Text zurücksetzen
       setShowPointerModal(true);
       setStartPoint(null);
@@ -1726,11 +1742,11 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'memo') {
       // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      const locationX = ((touch.locationX || touch.pageX) + scrollOffset.x) / scale;
-      const locationY = ((touch.locationY || touch.pageY) + scrollOffset.y) / scale;
+      // Verwende getCanvasCoordinates für konsistente Koordinatenberechnung
+      const coords = getCanvasCoordinates(touch);
       
       // Speichere die Memo-Koordinaten und öffne Modal
-      setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+      setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: coords.x, y2: coords.y });
       setMemoText(''); // Leerer Anfangstext
       setShowMemoModal(true);
       setStartPoint(null);

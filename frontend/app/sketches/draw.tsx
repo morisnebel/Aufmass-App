@@ -1968,6 +1968,11 @@ export default function DrawSketchScreen() {
   const [editMemoFontSize, setEditMemoFontSize] = useState(10);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
 
+  // Polygon Edit Modal State
+  const [showEditPolygonModal, setShowEditPolygonModal] = useState(false);
+  const [editPolygonStrokeWidth, setEditPolygonStrokeWidth] = useState(3);
+  const [editPolygonColor, setEditPolygonColor] = useState('#FF0000');
+
   // Add text element
   const addTextElement = () => {
     if (textInput.trim() && pendingPosition) {
@@ -2116,6 +2121,24 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Update polygon element properties (color & strokeWidth)
+  const updatePolygonElement = () => {
+    if (selectedElementId) {
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId && el.type === 'polygon') {
+          return {
+            ...el,
+            color: editPolygonColor,
+            strokeWidth: editPolygonStrokeWidth,
+          };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+      setShowEditPolygonModal(false);
+    }
+  };
+
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
     // Check if clicking on transformation handles first
@@ -2206,6 +2229,11 @@ export default function DrawSketchScreen() {
           setEditMemoFontSize(clickedElement.data.fontSize || 14);
           setDrawColor(clickedElement.color);
           setShowEditMemoModal(true);
+        } else if (clickedElement.type === 'polygon') {
+          // Polygon bearbeiten bei Doppeltipp
+          setEditPolygonStrokeWidth(clickedElement.strokeWidth || 3);
+          setEditPolygonColor(clickedElement.color || '#FF0000');
+          setShowEditPolygonModal(true);
         }
         lastTapRef.current = { time: 0, elementId: null };
         return;
@@ -2288,15 +2316,17 @@ export default function DrawSketchScreen() {
             return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
           });
         } else if (el.type === 'polygon') {
-          // Move polygon by shifting all coordinates in the SVG path string (similar to path)
-          const pathRegex = /([MLZ])\s*(-?\d+\.?\d*)?\s*(-?\d+\.?\d*)?/g;
-          newEl.data = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
-            if (cmd === 'Z') return 'Z';
-            if (x && y) {
-              return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
-            }
-            return match;
+          // Move polygon by shifting all coordinates in the SVG path string
+          // Format: "M x y L x y L x y ... Z"
+          const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+          let newPath = originalElement.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
+            return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
           });
+          // Keep the Z at the end if present
+          if (originalElement.data.includes('Z') && !newPath.includes('Z')) {
+            newPath += ' Z';
+          }
+          newEl.data = newPath;
         }
       } else if (dragMode === 'rotate' && resizeHandle === 'rotate') {
         // Rotate element
@@ -2468,15 +2498,31 @@ export default function DrawSketchScreen() {
           polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
         }
         
-        // Prüfe ob Punkt nahe einer der Linien ist
-        if (polygonPoints.length >= 2) {
+        if (polygonPoints.length >= 3) {
+          // Zuerst prüfen ob Punkt INNERHALB des Polygons liegt (Ray-Casting Algorithmus)
+          let inside = false;
+          for (let i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++) {
+            const xi = polygonPoints[i].x, yi = polygonPoints[i].y;
+            const xj = polygonPoints[j].x, yj = polygonPoints[j].y;
+            
+            const intersect = ((yi > y) !== (yj > y)) &&
+              (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+          }
+          if (inside) return el;
+          
+          // Dann prüfen ob Punkt nahe einer der Linien ist (für Kanten-Auswahl)
           for (let j = 0; j < polygonPoints.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
             if (dist < 20) return el;
           }
           // Prüfe auch die schließende Linie (vom letzten zum ersten Punkt)
-          if (polygonPoints.length >= 3) {
-            const dist = distanceToLineSegment(x, y, polygonPoints[polygonPoints.length-1].x, polygonPoints[polygonPoints.length-1].y, polygonPoints[0].x, polygonPoints[0].y);
+          const dist = distanceToLineSegment(x, y, polygonPoints[polygonPoints.length-1].x, polygonPoints[polygonPoints.length-1].y, polygonPoints[0].x, polygonPoints[0].y);
+          if (dist < 20) return el;
+        } else if (polygonPoints.length >= 2) {
+          // Weniger als 3 Punkte - nur Linien prüfen
+          for (let j = 0; j < polygonPoints.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
             if (dist < 20) return el;
           }
         }
@@ -5283,6 +5329,70 @@ export default function DrawSketchScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={updateMemoElement}
+              >
+                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Polygon Modal - Polygon Eigenschaften bearbeiten */}
+      <Modal visible={showEditPolygonModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Polygon bearbeiten</Text>
+            
+            {/* Stroke Width Slider */}
+            <View style={styles.sliderContainer}>
+              <Text style={styles.modalLabel}>Strichstärke: {editPolygonStrokeWidth}px</Text>
+              <View style={styles.sliderRow}>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditPolygonStrokeWidth(Math.max(1, editPolygonStrokeWidth - 1))}
+                >
+                  <Text style={styles.sliderButtonText}>-</Text>
+                </TouchableOpacity>
+                <View style={styles.sliderTrack}>
+                  <View style={[styles.sliderFill, { width: `${((editPolygonStrokeWidth - 1) / 19) * 100}%` }]} />
+                </View>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditPolygonStrokeWidth(Math.min(20, editPolygonStrokeWidth + 1))}
+                >
+                  <Text style={styles.sliderButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Color Selection */}
+            <View style={styles.colorSelectionContainer}>
+              <Text style={styles.modalLabel}>Farbe:</Text>
+              <View style={styles.colorOptions}>
+                {['#E74C3C', '#333333', '#2196f3', '#4caf50', '#FF9800', '#9C27B0', '#795548', '#607D8B'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      editPolygonColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setEditPolygonColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowEditPolygonModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updatePolygonElement}
               >
                 <Text style={styles.confirmButtonText}>Aktualisieren</Text>
               </TouchableOpacity>

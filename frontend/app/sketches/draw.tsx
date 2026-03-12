@@ -1379,15 +1379,44 @@ export default function DrawSketchScreen() {
     if (!cropImageUri || !cropImageId) return;
     
     try {
-      // Berechne die Crop-Koordinaten relativ zur angezeigten Bildgröße im Modal
-      const displaySize = 300;
-      const scaleX = cropImageDimensions.width / displaySize;
-      const scaleY = cropImageDimensions.height / displaySize;
+      // Berechne die tatsächliche Bildgröße im Container mit resizeMode="contain"
+      const containerSize = 300;
+      const imgWidth = cropImageDimensions.width;
+      const imgHeight = cropImageDimensions.height;
+      const imgAspect = imgWidth / imgHeight;
+      const containerAspect = 1; // Container ist quadratisch (300x300)
       
-      const cropOriginX = Math.max(0, Math.round(cropBox.x * scaleX));
-      const cropOriginY = Math.max(0, Math.round(cropBox.y * scaleY));
-      const cropWidth = Math.round(cropBox.width * scaleX);
-      const cropHeight = Math.round(cropBox.height * scaleY);
+      let displayedWidth: number, displayedHeight: number, offsetX: number, offsetY: number;
+      
+      if (imgAspect > containerAspect) {
+        // Bild ist breiter als Container (Querformat) - volle Breite, zentriert vertikal
+        displayedWidth = containerSize;
+        displayedHeight = containerSize / imgAspect;
+        offsetX = 0;
+        offsetY = (containerSize - displayedHeight) / 2;
+      } else {
+        // Bild ist höher als Container (Hochformat) - volle Höhe, zentriert horizontal
+        displayedHeight = containerSize;
+        displayedWidth = containerSize * imgAspect;
+        offsetX = (containerSize - displayedWidth) / 2;
+        offsetY = 0;
+      }
+      
+      // Skalierungsfaktor vom angezeigten Bild zum Originalbild (sollte für beide Achsen gleich sein bei contain)
+      const scale = imgWidth / displayedWidth;
+      
+      // Crop-Box Koordinaten relativ zum angezeigten Bild (nicht zum Container!)
+      // Begrenze auf den tatsächlichen Bildbereich
+      const cropBoxRelativeX = Math.max(0, cropBox.x - offsetX);
+      const cropBoxRelativeY = Math.max(0, cropBox.y - offsetY);
+      const cropBoxRelativeWidth = Math.min(cropBox.width, displayedWidth - cropBoxRelativeX);
+      const cropBoxRelativeHeight = Math.min(cropBox.height, displayedHeight - cropBoxRelativeY);
+      
+      // Umrechnung auf Original-Bildkoordinaten
+      const cropOriginX = Math.max(0, Math.round(cropBoxRelativeX * scale));
+      const cropOriginY = Math.max(0, Math.round(cropBoxRelativeY * scale));
+      const cropWidth = Math.round(cropBoxRelativeWidth * scale);
+      const cropHeight = Math.round(cropBoxRelativeHeight * scale);
       
       // Verwende ImageManipulator zum Zuschneiden
       const result = await ImageManipulator.manipulateAsync(

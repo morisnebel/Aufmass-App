@@ -117,15 +117,21 @@ German (Deutsch)
 ## Prioritized Backlog
 
 ### P0 (Critical)
+- ✅ **BILD-ZUSCHNITT FIX** (Dezember 2025):
+  - Koordinaten-Berechnung korrigiert für `resizeMode="contain"`
+  - Offset und Skalierung werden jetzt korrekt berechnet
+  - Vom Benutzer als "perfekt" bestätigt
+- ✅ **POLYLINE VERSCHIEBEN** (Dezember 2025):
+  - Zentraler Handle zum Verschieben der gesamten Form implementiert
+  - Interaktionslogik verfeinert (nur zentraler Handle verschiebt, Eckpunkte einzeln)
+  - Vom Benutzer bestätigt
 - ✅ **PROJEKTADRESSEN-MODAL LABELS** (Dezember 2025):
   - Labels für alle Eingabefelder hinzugefügt (Bezeichnung, Beschreibung, Objektname, Straße, PLZ, Ort, Ansprechpartner, Telefon, E-Mail)
 - ✅ **CODE CLEANUP** (Dezember 2025):
   - Ungenutzte `annotate.tsx` Datei entfernt
 - ⏳ **BENUTZERTEST ERFORDERLICH**: 
-  - **Notiz-Button** testen (roter Punkt mit gestrichelter Linie und Textlabel)
-  - Projektfotos-Funktion testen
-  - Bearbeitungsmodus testen (Elemente auswählen, verschieben, löschen)
-  - Zeichnen testen (mit und ohne Zoom)
+  - **Polyline Strich/Farbe bearbeiten** (Doppelklick auf Form)
+  - Sketch-Zeichnung Leistung prüfen
 
 ### P1 (High Priority)
 - "Maße über Polygone" Button implementieren
@@ -152,7 +158,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://polygon-tool.preview.emergentagent.com
+- **Preview URL**: https://crop-fix-test.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

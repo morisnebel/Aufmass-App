@@ -2187,6 +2187,10 @@ export default function DrawSketchScreen() {
         segmentIndex: segmentHit.segmentIndex 
       });
       setSelectedElementId(segmentHit.element.id);
+      // WICHTIG: Auch Verschiebung vorbereiten damit das ganze Polygon bewegt werden kann
+      setDragMode('move');
+      setDragStart({ x: locationX, y: locationY });
+      setOriginalElement(JSON.parse(JSON.stringify(segmentHit.element)));
       return;
     } else {
       // Kein Segment getroffen - Auswahl zurücksetzen

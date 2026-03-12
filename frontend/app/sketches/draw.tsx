@@ -313,8 +313,6 @@ export default function DrawSketchScreen() {
   // Canvas-Dimensionen für zoomToRect
   const canvasWidth = width;
   const canvasHeight = height - 120;
-  // State für Zoom-Reset: Wenn true, werden min/maxZoomScale temporär auf 1 gesetzt
-  const [forceZoomReset, setForceZoomReset] = useState(false);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -3994,37 +3992,6 @@ export default function DrawSketchScreen() {
               </Text>
             </TouchableOpacity>
             
-            {/* Zoom Reset Button - größerer Button */}
-            <TouchableOpacity
-              style={[
-                styles.toolButtonZoomSize, 
-                { 
-                  backgroundColor: (scale >= 0.99 && scale <= 1.01) ? '#4caf50' : '#e3f2fd',
-                }
-              ]}
-              onPress={() => { 
-                // Force zoom reset: Setze min/max temporär auf 1
-                setForceZoomReset(true);
-                // State-Werte zurücksetzen
-                setScale(1); 
-                setPanOffset({ x: 0, y: 0 });
-                setScrollOffset({ x: 0, y: 0 });
-                // ScrollView zum Ursprung scrollen
-                if (scrollViewRef.current) {
-                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-                }
-                // Nach kurzem Delay wieder normale Zoom-Grenzen erlauben
-                setTimeout(() => {
-                  setForceZoomReset(false);
-                }, 100);
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
-                {`${Math.round(scale * 100)}%`}
-              </Text>
-              <Text style={{ fontSize: 8, color: (scale >= 0.99 && scale <= 1.01) ? '#c8e6c9' : '#90caf9' }}>100%</Text>
-            </TouchableOpacity>
-            
             {/* Zoom an/aus Toggle - größerer Button */}
             <TouchableOpacity
               style={[
@@ -4180,8 +4147,8 @@ export default function DrawSketchScreen() {
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={forceZoomReset ? 1 : (zoomMode ? 0.5 : scale)}
-        maximumZoomScale={forceZoomReset ? 1 : (zoomMode ? 4 : scale)}
+        minimumZoomScale={zoomMode ? 0.5 : scale}
+        maximumZoomScale={zoomMode ? 4 : scale}
         bouncesZoom={zoomMode}
         scrollEnabled={zoomMode}
         pinchGestureEnabled={zoomMode}
@@ -4329,7 +4296,7 @@ export default function DrawSketchScreen() {
           {zoomMode && (
             <View style={[styles.photoEditBadge, { backgroundColor: '#FF9800' }]}>
               <Ionicons name="search-outline" size={14} color="#fff" />
-              <Text style={styles.photoEditBadgeText}>Zoom-Modus</Text>
+              <Text style={styles.photoEditBadgeText}>Zoom-Modus {Math.round(scale * 100)}%</Text>
             </View>
           )}
         </View>

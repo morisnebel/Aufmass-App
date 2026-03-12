@@ -6,71 +6,55 @@ The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) b
 3.  **UX Flow Simplification**: Refactoring a confusing new customer modal.
 4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs.
 
-The most recent critical issues were a broken zoom-reset button and laggy drawing performance in the Sketch tool. The agent implemented a fix for the performance and attempted a fix for the zoom button, but the latter introduced a severe bug where the drawing would disappear. The agent has since reverted the faulty zoom-button fix.
+The most recent critical issues were a broken zoom-reset button and laggy drawing performance in the Sketch tool. During this session, the user decided that the problematic zoom-reset button was not necessary and requested its removal.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app for roofing project management. It uses  for local data persistence. The codebase is characterized by large, monolithic components, notably .
-
-Key functionalities include:
--   **Customer & Project Management**: Detailed forms for creating and editing customers and projects.
--   **Core Tools**:
-    -   **Photos**: Take/select photos, add descriptions, and draw annotations.
-    -   **Sketches**: Draw on a canvas with various tools. A performance enhancement has been implemented but awaits final verification. The zoom-reset button is still not working correctly.
-    -   **Area Calculator**: Calculate areas using polygons.
-    -   **Checklists**: Manage lists of items.
+The application is a React Native/Expo app for roofing project management using  for local data persistence. The agent has just implemented a UI change based on user feedback:
+- The 100% zoom reset button in the drawing toolbar has been removed.
+- The current zoom percentage is now displayed as part of the Zoom-Modus badge at the top of the screen (e.g., Zoom-Modus: 97%).
+The codebase, particularly , contains leftover state and logic from a now-abandoned fix for the removed button.
 
 **Last working item**:
-The agent was reverting a failed fix for the 100% zoom reset button. The attempted fix, which involved forcing a re-mount of the  component using a  prop (), successfully reset the zoom but had a critical side effect: it cleared the existing drawing from the canvas. After the user reported this new bug, the agent correctly identified the cause and removed the  logic, returning the component to its previous state where the zoom button is inaccurate but does not delete the user's work.
+The agent was in the process of cleaning up the code in  after removing the 100% zoom button. It had already removed the button from the toolbar's JSX and updated the Zoom-Modus badge. The agent was in the middle of removing the now-unused  state and its associated logic, which was part of a fix that is no longer needed.
 
-- **Last item agent was working**: Reverting the  fix for the 100% zoom-reset button in .
-- **Status**: IN PROGRESS (The faulty fix was reverted, but the original zoom button issue now needs a new solution).
+- **Last item agent was working**: Removing dead code ( state and related logic) from  after the user decided to remove the feature it supported.
+- **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing via Expo Go URL.
-- **User Testing Done**: Y (User confirmed the reverted fix caused the drawing to disappear).
+- **Which testing method agent to use?**: Frontend testing via Expo Go URL or screenshot tool.
+- **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Fix the 100% zoom reset button in the Sketch tool (P0).
--   **Issue 2**: Verify the fix for laggy drawing performance in the Sketch tool (P1).
--   **Issue 3**: Fix stale data on the main project list screen (P2).
+- **Issue 1**: Verify the fix for laggy drawing performance in the Sketch tool (P1).
+- **Issue 2**: Fix stale data on the main project list screen (P2).
 
 **Issues Detail:**
--   **Issue 1: 100% zoom reset button is inaccurate**
-    -   **Description**: The 100% button in  sets the zoom level to an incorrect value (e.g., 94%) instead of exactly 100%. A recent attempt to fix this caused the entire drawing to disappear. That fix has been reverted.
-    -   **Attempted fixes**:
-        -   Using  was imprecise.
-        -   Forcing a re-mount with a  prop fixed the zoom but cleared the canvas. **This approach should be avoided.**
-    -   **Next debug checklist**:
-        1.  Investigate alternative  methods like .
-        2.  Re-attempt using , but with very precise rectangle dimensions calculated from the canvas content size, ensuring the aspect ratio is handled correctly.
-        3.  As a last resort, consider changing the button's behavior to fit to screen instead of a specific 100% value if a precise zoom level remains unattainable.
-    -   **Why fix this issue and what will be achieved with the fix?**: The zoom reset is a core usability feature for the sketch tool that is currently broken and frustrating for the user.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None
+- **Issue 1: Sketch drawing is laggy/choppy**
+    - **Description**: The user reported that the drawing line lags behind the finger and appears choppy.
+    - **Attempted fixes**: An earlier agent implemented a fix using  () to store drawing points and throttling state updates () to only re-render every few points.
+    - **Why fix this issue and what will be achieved with the fix?**: Improves user experience and the perceived performance of the core drawing feature.
+    - **Status**: USER VERIFICATION PENDING. The fix was implemented, but the user's focus shifted to the zoom button issue. This needs to be explicitly confirmed.
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Frontend
+    - **Blocked on other issue**: None
 
--   **Issue 2: Sketch drawing is laggy/choppy**
-    -   **Description**: The user reported that the drawing line lags behind the finger and appears choppy.
-    -   **Attempted fixes**: The agent implemented a fix using  () to store drawing points and throttling state updates () to only re-render every few points.
-    -   **Why fix this issue and what will be achieved with the fix?**: Improves user experience and the perceived performance of the core drawing feature.
-    -   **Status**: USER VERIFICATION PENDING. The fix is implemented. The user's feedback (jetzt lief alles super) before noticing the zoom bug suggests it was successful, but this needs to be explicitly confirmed.
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None
-
--   **Issue 3: Stale data in project list ()**
-    -   **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
-    -   **Next debug checklist**: In , investigate the  hook. Ensure its  function is correctly re-fetching the project list from  and updating the component's state every time the screen comes into focus.
-    -   **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date, preventing user confusion.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: Y
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: Blocked by the P0/P1 Sketch tool bugs.
+- **Issue 2: Stale data in project list ()**
+    - **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
+    - **Next debug checklist**: In , investigate the  hook. Ensure its  function is correctly re-fetching the project list from  and updating the component's state every time the screen comes into focus.
+    - **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date, preventing user confusion.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
+    - **Should Test frontend/backend/both after fix?**: Frontend
+    - **Blocked on other issue**: Blocked by the P0/P1 Sketch tool items.
 
 **In progress Task List**:
--   None.
+- **Task 1: Finalize UI change for Zoom Display & Cleanup  (P0)**
+    - **Where to resume**: The agent has already removed the button UI and updated the new text display. The next step is to remove all remnants of the  logic, including the  declaration and the  function in .
+    - **What will be achieved with this?**: This will complete the user's request, remove the source of the original P0 bug, and clean up the component by removing dead code, making it slightly more maintainable.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: Frontend
+    - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -85,23 +69,23 @@ The agent was reverting a failed fix for the 100% zoom reset button. The attempt
 -   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
-- **Implemented Drawing Performance Fix**: Optimized the drawing handlers in  using  and throttling to reduce re-renders, making the drawing feel smoother.
-- **Reverted Faulty Zoom-Reset Fix**: Identified that a -based fix was clearing the drawing canvas and successfully reverted the changes ( state and  prop).
+- **Resolved Zoom Button Bug by Feature Removal**: Based on direct user feedback, the problematic 100% zoom reset button was removed from the toolbar in .
+- **Relocated Zoom Percentage Display**: The functionality was simplified to a read-only display, which was moved to the Zoom-Modus badge at the top of the screen.
 
 **Earlier issues found/mentioned but not fixed**
--   The stale data issue in  is tracked in the All Pending/In progress Issue list.
+- The stale data issue in  is tracked in the All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
--   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts. The agent performed one restart during the session.
+- **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--   React Hooks: , , , , .
--   **React Native **: The limitations of programmatically controlling zoom are the central blocker. The  prop trick is a failed experiment.  has been unreliable.
--   **Performance Optimization**: The implemented  and throttling pattern for batching state updates is a key success from this session, though it needs final verification.
+-   React Hooks: , , , .
+-   **User-Driven Refactoring**: The key event was pivoting from fixing a complex bug to removing the feature entirely based on the user's pragmatic suggestion. This simplified the codebase and resolved the issue efficiently.
+-   **Code Cleanup**: The current task involves removing dead code (state and handlers for a removed feature) to improve maintainability.
 
 **key DB schema**
 -   N/A (Client-side application using AsyncStorage).
@@ -110,32 +94,35 @@ The agent was reverting a failed fix for the 100% zoom reset button. The attempt
 -   None.
 
 **All files of reference**
--   : The primary file for bug-fixing. It was modified to improve performance and then to attempt and revert a fix for the zoom button.
--   : The location of the next priority bug (stale data).
+-   : The only file modified in this session. The zoom button was removed, the zoom display was relocated, and code cleanup is pending.
 
 **Areas that need refactoring**:
--   ****: This monolithic component (>6000 lines) remains extremely fragile. The fact that a zoom fix cleared the canvas demonstrates how tightly coupled and unpredictable its state management is. Breaking it down into smaller, manageable custom hooks and components is critical for future stability.
+-   ****: This monolithic component (>6000 lines) remains extremely fragile and a source of technical debt, even after the recent simplification. Breaking it down into smaller hooks and components is critical for future stability.
 
 **key api endpoints**
 -   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK (P0)**: Devise a new solution for the 100% zoom reset button in . The previous attempt of re-mounting the  with a  prop is a **dead end** as it clears the drawing. Do not try it again. The new approach must reset the zoom without losing the canvas state.
--   **VERIFY NEXT (P1)**: The drawing performance fix (using  and throttling) is already implemented. The user's initial feedback was positive (jetzt lief alles super). Explicitly ask the user to confirm that the drawing is still smooth before moving on to other tasks.
--   The codebase is in a state where the drawing performance is improved, but the zoom button is still inaccurate.
+-   **IMMEDIATE TASK (P0)**: Your first priority is to complete the code cleanup in . Remove the  state, the  function, and any other associated logic that is now dead code.
+-   **VERIFY NEXT (P1)**: After the cleanup, ask the user to confirm two things:
+    1.  That the new zoom display in the Zoom-Modus badge works as they intended.
+    2.  That the drawing performance is still smooth (verifying the earlier performance fix).
+-   Do not attempt to re-implement or fix the 100% zoom button. The user has explicitly decided to remove it.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: jetzt lief alles super und ich habe gefreut doch als ich auf den 100% Button drückte wurde meine Zeichnung wieder weiß wie vorhin (everything was running great and I was happy but when I pressed the 100% button my drawing turned white again like before).
-    -   **Summary**: This message confirms the drawing performance fix likely worked but revealed a critical bug in the zoom-reset fix, which has since been reverted.
-    -   **Status**: The bug reported by the user is resolved (by reverting the change), but the original zoom inaccuracy issue persists and is now the top priority.
+1.  **User**:  (Do we even need the 100% button? If I can zoom with my fingers... then I don't need the button. Is that maybe easier for everything).
+    -   **Summary**: The user questioned the necessity of the buggy zoom button, proposing its removal as a simpler solution.
+    -   **Status**: COMPLETE. The agent acted on this suggestion.
+2.  **User**:  (b.) we could add the display to the Zoom-Modus display (circled in red) and not in the toolbar, that's confusing).
+    -   **Summary**: The user clarified the desired UI change: remove the button from the toolbar and move the percentage display to the Zoom-Modus badge.
+    -   **Status**: IN PROGRESS. The agent has implemented this UI change and is now cleaning up the related code.
 
 **Project Health Check:**
--   **Broken**: The 100% zoom reset button in the Sketch tool is inaccurate.
--   **Technical Debt**: **High**. The  component is extremely fragile, making it bug-prone and difficult to maintain. A simple fix breaking an unrelated feature is a major red flag.
+-   **Technical Debt**: **High**. The  component is a major liability due to its size and complexity, making it bug-prone and difficult to maintain.
 
 **3rd Party Integrations**
 -   
@@ -208,9 +195,9 @@ The agent was reverting a failed fix for the 100% zoom reset button. The attempt
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[17:35:07]   Run a command with --help for more info 💡
-[17:35:07]     $ expo start --help
-[17:35:07] & related libraries (, , )
+[17:51:44]   Run a command with --help for more info 💡
+[17:51:44]     $ expo start --help
+[17:51:44] & related libraries (, , )
 -   
 -   
 
@@ -218,10 +205,10 @@ The agent was reverting a failed fix for the 100% zoom reset button. The attempt
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: The zoom-reset button fix was a regression that has been reverted. The original inaccuracy is not a regression but a long-standing bug.
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
 -   N/A.
 
 **What agent forgot to execute**
--   The agent successfully reverted the breaking change but did not formulate a plan for the *next* attempt at fixing the P0 zoom button issue. The task is left in its original broken state.</analysis>
+- The agent has correctly identified the need for cleanup but has not yet completed it. The  state and its handler function likely still exist in the code and must be removed to finalize the task.</analysis>

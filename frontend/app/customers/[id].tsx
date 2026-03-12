@@ -374,14 +374,14 @@ export default function EditCustomerScreen() {
                     await ProjectService.update(project.id, {
                       ...project,
                       bauherr_salutation: salutation || undefined,
-                      bauherr_first_name: firstName || undefined,
-                      bauherr_last_name: lastName || undefined,
+                      bauherr_firstName: firstName || undefined,
+                      bauherr_lastName: lastName || undefined,
                       bauherr_name: fullName || undefined,
                       bauherr_phone: phone || undefined,
                       bauherr_mobile: mobile || undefined,
                       bauherr_email: email || undefined,
                       bauherr_street: street || undefined,
-                      bauherr_plz: zip || undefined,
+                      bauherr_zip: zip || undefined,
                       bauherr_city: city || undefined,
                     });
                   }

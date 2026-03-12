@@ -304,8 +304,8 @@ export default function NewCustomerScreen() {
     setCity(extractedCity);
     
     // Speichere die Kontakt-ID für spätere Synchronisation
-    if (contact.id) {
-      setImportedContactId(contact.id);
+    if ((contact as any).id) {
+      setImportedContactId((contact as any).id);
     }
     
     setShowContactPicker(false);
@@ -550,7 +550,7 @@ export default function NewCustomerScreen() {
             ) : (
               <FlatList
                 data={filteredContacts}
-                keyExtractor={(item, index) => item.id || index.toString()}
+                keyExtractor={(item, index) => (item as any).id || index.toString()}
                 renderItem={({ item }) => {
                   const { extractedFirstName, extractedLastName, extractedPhone, extractedMobile, extractedStreet, extractedCity } = extractContactData(item);
                   const displayName = `${extractedFirstName} ${extractedLastName}`.trim() || item.name || 'Unbekannt';

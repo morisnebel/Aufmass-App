@@ -283,9 +283,16 @@ export interface Project {
   address?: string;
   status: string;
   // Bauherr-Daten
+  bauherr_salutation?: string;
+  bauherr_firstName?: string;
+  bauherr_lastName?: string;
   bauherr_name?: string;
   bauherr_phone?: string;
+  bauherr_mobile?: string;
   bauherr_email?: string;
+  bauherr_street?: string;
+  bauherr_zip?: string;
+  bauherr_city?: string;
   bauherr_address?: string;
   // Objektadresse
   objekt_street?: string;

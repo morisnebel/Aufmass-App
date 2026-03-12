@@ -285,6 +285,10 @@ export default function DrawSketchScreen() {
   
   // Drawing state
   const [currentPath, setCurrentPath] = useState('');
+  // Ref für flüssigeres Zeichnen - speichert Pfaddaten ohne Re-Render
+  const currentPathRef = useRef<string>('');
+  // Counter für Throttling - nur alle N Punkte den State aktualisieren
+  const drawPointCountRef = useRef<number>(0);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [tempElement, setTempElement] = useState<DrawElement | null>(null);
   
@@ -309,6 +313,8 @@ export default function DrawSketchScreen() {
   // Canvas-Dimensionen für zoomToRect
   const canvasWidth = width;
   const canvasHeight = height - 120;
+  // Key für ScrollView um kompletten Remount und damit Zoom-Reset zu erzwingen
+  const [scrollViewKey, setScrollViewKey] = useState(0);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -1619,7 +1625,11 @@ export default function DrawSketchScreen() {
       setPendingPosition({ x: locationX, y: locationY });
       setShowTextModal(true);
     } else if (drawMode === 'pen') {
-      setCurrentPath(`M ${locationX} ${locationY}`);
+      // Initialisiere sowohl Ref (für Performance) als auch State (für Rendering)
+      const pathStart = `M ${locationX} ${locationY}`;
+      currentPathRef.current = pathStart;
+      drawPointCountRef.current = 0;
+      setCurrentPath(pathStart);
     } else if (drawMode === 'polygon') {
       // Start polygon drawing
       setCurrentPath(`M ${locationX} ${locationY}`);
@@ -1660,8 +1670,16 @@ export default function DrawSketchScreen() {
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
-    } else if (drawMode === 'pen' && currentPath) {
-      setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+    } else if (drawMode === 'pen' && currentPathRef.current) {
+      // Füge Punkt zum Ref hinzu (keine Re-Renders)
+      currentPathRef.current = `${currentPathRef.current} L ${locationX} ${locationY}`;
+      drawPointCountRef.current++;
+      
+      // Aktualisiere State nur alle 3 Punkte für visuelles Feedback
+      // Dies reduziert Re-Renders um ~66% bei gleichbleibender visueller Qualität
+      if (drawPointCountRef.current % 3 === 0) {
+        setCurrentPath(currentPathRef.current);
+      }
     } else if (drawMode === 'polygon' && currentPath) {
       setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
     } else if (startPoint && drawMode !== 'text') {
@@ -1674,16 +1692,20 @@ export default function DrawSketchScreen() {
     // Im Zoom-Modus keine Zeichnung
     if (zoomMode) return;
     
-    if (drawMode === 'pen' && currentPath && currentPath.length > 0) {
+    if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
+      // Verwende den kompletten Pfad aus dem Ref für maximale Genauigkeit
+      const finalPath = currentPathRef.current;
       const newElement: DrawElement = {
         id: generateId(),
         type: 'path',
-        data: currentPath,
+        data: finalPath,
         color: drawColor,
         strokeWidth,
         rotation: 0,
       };
       addToHistory([...elements, newElement]);
+      // Refs und State zurücksetzen
+      currentPathRef.current = '';
       setCurrentPath('');
     } else if (drawMode === 'polygon' && currentPath && currentPath.length > 0) {
       // Close the polygon path by adding 'Z' and simplify lines
@@ -3985,20 +4007,9 @@ export default function DrawSketchScreen() {
                 setScale(1); 
                 setPanOffset({ x: 0, y: 0 });
                 setScrollOffset({ x: 0, y: 0 });
-                // ScrollView Zoom UND Position zurücksetzen mit scrollResponderZoomTo
-                if (scrollViewRef.current) {
-                  // scrollResponderZoomTo setzt Zoom auf 1 und scrollt zum Ursprung
-                  // Das Rechteck entspricht der Canvas-Größe bei 100% Zoom
-                  (scrollViewRef.current as any).scrollResponderZoomTo?.({
-                    x: 0,
-                    y: 0,
-                    width: canvasWidth,
-                    height: canvasHeight,
-                    animated: false,
-                  });
-                  // Fallback: Auch scrollTo aufrufen
-                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-                }
+                // ScrollView komplett neu mounten durch Key-Änderung
+                // Dies ist der zuverlässigste Weg, den Zoom auf exakt 100% zurückzusetzen
+                setScrollViewKey(prev => prev + 1);
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
@@ -4159,6 +4170,7 @@ export default function DrawSketchScreen() {
 
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
+        key={scrollViewKey}
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}

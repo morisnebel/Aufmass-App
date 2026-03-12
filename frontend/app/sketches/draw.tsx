@@ -876,6 +876,7 @@ export default function DrawSketchScreen() {
   const [editFontWeight, setEditFontWeight] = useState<'normal' | 'bold'>('bold');
   const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
   const [editArrowFontSize, setEditArrowFontSize] = useState(12);
+  const [editArrowStrokeWidth, setEditArrowStrokeWidth] = useState(3);
   const [editPointerFontSize, setEditPointerFontSize] = useState(12);
   const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(3);
 
@@ -889,6 +890,8 @@ export default function DrawSketchScreen() {
           if (sizes.editPointerFontSize) setEditPointerFontSize(sizes.editPointerFontSize);
           if (sizes.editPointerStrokeWidth) setEditPointerStrokeWidth(sizes.editPointerStrokeWidth);
           if (sizes.editMemoFontSize) setEditMemoFontSize(sizes.editMemoFontSize);
+          if (sizes.editArrowStrokeWidth) setEditArrowStrokeWidth(sizes.editArrowStrokeWidth);
+          if (sizes.editArrowFontSize) setEditArrowFontSize(sizes.editArrowFontSize);
           if (sizes.strokeWidth) setStrokeWidth(sizes.strokeWidth);
         }
       } catch (error) {
@@ -929,6 +932,16 @@ export default function DrawSketchScreen() {
   const updateStrokeWidth = useCallback((value: number) => {
     setStrokeWidth(value);
     saveToolSizes('strokeWidth', value);
+  }, [saveToolSizes]);
+
+  const updateEditArrowStrokeWidth = useCallback((value: number) => {
+    setEditArrowStrokeWidth(value);
+    saveToolSizes('editArrowStrokeWidth', value);
+  }, [saveToolSizes]);
+
+  const updateEditArrowFontSize = useCallback((value: number) => {
+    setEditArrowFontSize(value);
+    saveToolSizes('editArrowFontSize', value);
   }, [saveToolSizes]);
   
   // Double tap detection
@@ -1878,18 +1891,18 @@ export default function DrawSketchScreen() {
           type: 'arrow',
           data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: '', heads: arrowHeads },
           color: drawColor,
-          strokeWidth: strokeWidth,
+          strokeWidth: editArrowStrokeWidth, // Gespeicherte Arrow-Strichstärke verwenden
           rotation: 0,
         };
         break;
       case 'pointer':
-        // Pointer-Pfeil: verwendet die ausgewählte Strichstärke direkt
+        // Pointer-Pfeil: verwendet die gespeicherte Pointer-Strichstärke
         element = {
           id: 'temp',
           type: 'pointer',
           data: { x1: start.x, y1: start.y, x2: endX, y2: endY },
           color: drawColor,
-          strokeWidth: strokeWidth, // Direkt die ausgewählte Strichstärke verwenden
+          strokeWidth: editPointerStrokeWidth, // Gespeicherte Pointer-Strichstärke verwenden
           rotation: 0,
         };
         break;
@@ -2019,7 +2032,7 @@ export default function DrawSketchScreen() {
           fontSize: editPointerFontSize,
         },
         color: drawColor,
-        strokeWidth: strokeWidth, // Direkt die ausgewählte Strichstärke verwenden
+        strokeWidth: editPointerStrokeWidth, // Gespeicherte Pointer-Strichstärke verwenden
         rotation: 0,
       };
       addToHistory([...elements, newElement]);
@@ -2177,7 +2190,7 @@ export default function DrawSketchScreen() {
           setArrowText(clickedElement.data.text || '');
           setArrowHeads(clickedElement.data.heads || 'double');
           setEditArrowFontSize(clickedElement.data.fontSize || 14);
-          setEditStrokeWidth(clickedElement.strokeWidth || 3);
+          setEditArrowStrokeWidth(clickedElement.strokeWidth || 3);
           setDrawColor(clickedElement.color);
           setShowEditArrowModal(true);
         } else if (clickedElement.type === 'pointer') {
@@ -4806,20 +4819,20 @@ export default function DrawSketchScreen() {
               
               {/* Stroke Width Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Linienstärke: {editStrokeWidth}px</Text>
+                <Text style={styles.modalLabel}>Linienstärke: {editArrowStrokeWidth}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditStrokeWidth(Math.max(1, editStrokeWidth - 1))}
+                    onPress={() => updateEditArrowStrokeWidth(Math.max(1, editArrowStrokeWidth - 1))}
                   >
                     <Text style={styles.sliderButtonText}>-</Text>
                   </TouchableOpacity>
                   <View style={styles.sliderTrack}>
-                    <View style={[styles.sliderFill, { width: `${(editStrokeWidth / 10) * 100}%` }]} />
+                    <View style={[styles.sliderFill, { width: `${(editArrowStrokeWidth / 10) * 100}%` }]} />
                   </View>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
-                    onPress={() => setEditStrokeWidth(Math.min(10, editStrokeWidth + 1))}
+                    onPress={() => updateEditArrowStrokeWidth(Math.min(10, editArrowStrokeWidth + 1))}
                   >
                     <Text style={styles.sliderButtonText}>+</Text>
                   </TouchableOpacity>
@@ -4889,7 +4902,7 @@ export default function DrawSketchScreen() {
                               fontSize: editArrowFontSize,
                             },
                             color: drawColor,
-                            strokeWidth: editStrokeWidth,
+                            strokeWidth: editArrowStrokeWidth,
                           };
                         }
                         return el;

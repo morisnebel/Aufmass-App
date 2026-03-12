@@ -1,56 +1,65 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope then expanded to include data model changes, data synchronization, and extensive UI polishing.
+The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope expanded to include UI polishing, data model changes, and data synchronization.
 
-During the last session, the user asked to make the memo arrows and notes within the drawing tool smaller. After seeing the initial implementation, the user provided two additional requirements which are the current focus:
-1.  The frame (border) around the memo text should scale proportionally with the font size.
-2.  The last used size for each tool (e.g., font size, line thickness) should be saved and automatically restored the next time the tool is used.
+During the last session, the user provided feedback on the implementation of scalable text frames and persistent tool sizes. The new requirements are:
+1.  Fix a bug where the arrow head of the Memopfeil (Pointer) does not retain its saved size when a new one is created.
+2.  Add a new feature to save and restore the line thickness for the Maßlinie (measurement line/arrow tool).
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app. The agent has been working exclusively within the  file.
+The application is a React Native/Expo app. The agent's work is focused on the monolithic  file.
 
-Following the user's request, the agent has implemented the logic for proportional scaling of frames for Notiz (Memo) and Memopfeil (Pointer) elements. The agent identified that a mechanism to save tool sizes to  was already partially in place. It then modified the SVG rendering logic to tie the frame dimensions to the respective font size state variables. Additionally, it corrected a bug in the memo's edit modal to ensure that font size changes made there are correctly persisted. The code changes are complete, but have not been tested or verified by the user.
+Following the user's latest feedback, the agent has analyzed the codebase and started implementing the required changes. It correctly identified that the Memopfeil creation logic uses a generic  variable instead of the specific one for the pointer tool. It also began adding a new state variable () and the corresponding persistence logic (loading from/saving to AsyncStorage) for the Maßlinie (measurement line), which is identified as the 'arrow' tool type. The implementation is currently in progress.
 
 **Last working item**:
-The agent was completing the implementation of scalable frames and ensuring the persistence logic was correctly triggered.
+The agent was in the process of adding persistence for the measurement line's thickness.
 
-- **Last item agent was working**: The agent finalized the implementation by modifying . This involved:
-    1.  Making the SVG frames for Memo and Pointer elements scale proportionally with their respective font sizes.
-    2.  Correcting the state update logic in the memo edit modal to use the  function, which ensures the size change is saved to .
-- **Status**: IN PROGRESS (Implementation is complete, testing is pending).
+- **Last item agent was working**: Modifying  to add state management and persistence for the Maßlinie (arrow tool). The agent has already added the state variable  and the functions to load, save, and update this value. The next step is to integrate this new state into the element creation logic and the UI controls.
+- **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing. The agent should generate an Expo Go URL for the user to test the changes on their device. A screenshot would not be sufficient to verify the dynamic resizing and persistence.
+- **Which testing method agent to use?**: Frontend testing agent. Once the fixes are implemented, the agent should generate a new Expo Go URL for the user to test the changes on their device.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0)**: Implement scalable text frames and persistent tool sizes.
--   **Issue 2 (P1)**: Verify the fix for laggy drawing performance in the Sketch tool.
--   **Issue 3 (P2)**: Fix stale data on the main project list screen.
+-   **Issue 1 (P0)**: Fix Memopfeil arrow size not persisting on creation.
+-   **Issue 2 (P1)**: Implement size persistence for Maßlinie (measurement line).
+-   **Issue 3 (P2)**: Verify the fix for laggy drawing performance in the Sketch tool.
+-   **Issue 4 (P3)**: Fix stale data on the main project list screen.
 
 **Issues Detail:**
--   **Issue 1: Implement scalable text frames and persistent tool sizes**
-    -   **Attempted fixes**: The agent successfully modified . The SVG  attributes for the Memo (Notiz) frame now have , , and  values that are dynamically calculated based on . A similar logic was applied to the Pointer (Memopfeil). The  handler for the slider in the memo edit modal was corrected to call  to persist the state.
+-   **Issue 1: Fix Memopfeil arrow size not persisting on creation**
+    -   **Attempted fixes**: The agent correctly identified that the  (line 1892) and  (line 2022) functions for the  tool are using the global  instead of the specific  state variable.
     -   **Next debug checklist**:
-        1.  Start the frontend service and generate a new Expo Go URL.
-        2.  Ask the user to test the changes by adjusting the font sizes for Notiz and Memopfeil and confirming the frames resize.
-        3.  Ask the user to confirm that after closing and reopening the app, the last used sizes are correctly restored.
-    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct user request for a more polished and intuitive UI.
-    -   **Status**: TESTING PENDING
+        1.  In , modify  and .
+        2.  Replace the  assignment with  for elements of type .
+    -   **Why fix this issue and what will be achieved with the fix?**: This will fix a bug reported by the user and ensure the Memopfeil tool behaves consistently with other tools.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None
 
--   **Issue 2: Sketch drawing is laggy/choppy**
+-   **Issue 2: Implement size persistence for Maßlinie (measurement line)**
+    -   **Attempted fixes**: The agent has already added the state variable , along with , , and  functions in .
+    -   **Next debug checklist**:
+        1.  In , ensure the logic for creating/rendering the  element uses the new  state variable.
+        2.  Connect the UI controls (likely a slider in the tool options) for the  tool to read from and update  by calling .
+    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a direct feature request from the user, making the app's tools more consistent and user-friendly.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Sketch drawing is laggy/choppy**
     -   **Description**: The user had previously reported that the drawing line lags behind their finger. A fix was implemented but verification is still pending.
-    -   **Next debug checklist**: When asking for verification of Issue 1, also ask the user to re-check if the drawing performance feels smooth.
+    -   **Next debug checklist**: When asking for verification of the new fixes (Issues 1 & 2), also ask the user to re-check if the drawing performance feels smooth.
     -   **Why fix this issue and what will be achieved with the fix?**: Improves the core user experience of the drawing feature.
     -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None
 
--   **Issue 3: Stale data in project list ()**
+-   **Issue 4: Stale data in project list ()**
     -   **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
     -   **Next debug checklist**: In , investigate the  hook to ensure it correctly re-fetches data from  and updates state whenever the screen is focused.
     -   **Why fix this issue and what will be achieved with the fix?**: Ensures data consistency and prevents user confusion.
@@ -60,10 +69,10 @@ The agent was completing the implementation of scalable frames and ensuring the 
     -   **Blocked on other issue**: Blocked by P0/P1 items.
 
 **In progress Task List**:
--   **Task 1: Test and Verify Frame Scaling and Size Persistence (P0)**
-    -   **Where to resume**: The implementation is done. The next step is to generate an Expo Go QR code and ask the user to test the functionality.
-    -   **What will be achieved with this?**: This will complete the user's latest requests, making the UI more dynamic and user-friendly.
-    -   **Status**: IN PROGRESS (Testing Pending)
+-   **Task 1: Complete Memopfeil fix and Maßlinie persistence implementation (P0)**
+    -   **Where to resume**: Continue editing . The agent needs to apply the identified fixes: use  for pointers and integrate the newly added  state into the arrow tool's rendering and UI controls.
+    -   **What will be achieved with this?**: This will complete the user's latest change requests, resolving a bug and adding a requested feature.
+    -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on something**: None
 
@@ -80,14 +89,16 @@ The agent was completing the implementation of scalable frames and ensuring the 
 -   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   **Implemented Proportional Frame Scaling**: Modified  to make the SVG frames for Memo (Notiz) and Pointer (Memopfeil) scale based on their respective font size state variables.
--   **Fixed Memo Edit Persistence**: Corrected the slider's  in the memo edit modal to call the correct state update function (), ensuring the new font size is persisted to .
+-   Successfully started the Expo server and generated a QR code for user testing.
+-   Received and analyzed user feedback, identifying a bug and a new feature request.
+-   Diagnosed the root cause of the Memopfeil bug in .
+-   Began implementation for Maßlinie persistence by adding state and storage functions.
 
 **Earlier issues found/mentioned but not fixed**
 -   The stale data issue in  is tracked in the All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
--   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts. Be prepared to restart the service if it becomes unresponsive.
+-   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts. The agent had to restart it once in this session to get a working tunnel.
 
 **Code Architecture**
 
@@ -105,33 +116,29 @@ The agent was completing the implementation of scalable frames and ensuring the 
 -   None.
 
 **All files of reference**
--   : The only file modified in this session. It contains all logic for the drawing canvas, tools, and the newly implemented scaling and persistence logic.
+-   : The only file being modified. It contains all logic for the drawing canvas, tools, and persistence logic.
 
 **Areas that need refactoring**:
--   : This file is over 6000 lines long. Its monolithic nature is a significant source of technical debt, making new features difficult and risky to implement. It should be prioritized for refactoring into smaller, manageable hooks and components in the future.
+-   : This file is over 6000 lines long and is a significant source of technical debt. It should be prioritized for refactoring into smaller hooks and components in the future to improve maintainability.
 
 **key api endpoints**
 -   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK (P0)**: The implementation of scalable frames and persistence is complete. Your first step is to test it. Generate a new Expo URL and ask the user to verify the changes.
--   **VERIFICATION**: When asking the user to test, be specific. Ask them to check three things:
-    1.  That the frames for Notiz and Memopfeil scale correctly when the font size is changed.
-    2.  That the last used tool sizes are correctly restored after closing and reopening the app.
-    3.  That the drawing performance is still smooth (to verify the previous lag fix).
--   After receiving user feedback, address any bugs or proceed to the next highest priority item, which is the stale data issue (Issue 3).
+-   **IMMEDIATE TASK (P0)**: The immediate priority is to finish the two fixes in  based on the user's latest feedback.
+-   **Implementation Checklist**:
+    1.  **Memopfeil fix**: In  and , replace  with  for the  type.
+    2.  **Maßlinie feature**: Connect the  state to the  element's creation/rendering logic and its UI slider control.
+-   **VERIFICATION**: After completing the implementation, generate a new Expo URL and ask the user to verify both the Memopfeil fix and the new Maßlinie persistence feature. Also, re-confirm the drawing smoothness.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
 1.  **User**: 
-    -   **Summary**: User gave explicit approval to implement the scalable frames for the note and memo arrow tools.
-    -   **Status**: **IN PROGRESS** (Implementation complete, verification pending).
-2.  **User**: 
-    -   **Summary**: User approved the agent's plan at the beginning of the session.
-    -   **Status**: COMPLETE.
+    -   **Summary**: The user confirmed the Notiz (Memo) functionality works well. They reported a bug with the Memopfeil (Pointer) where the arrow head size does not persist. They also requested a new feature: make the size of the Maßlinie (measurement line) persistent.
+    -   **Status**: **IN PROGRESS**. This is the current focus of development.
 
 **Project Health Check:**
 -   **Technical Debt**: **High**. The  component is a monolith that complicates development and increases the risk of regressions.
@@ -207,9 +214,9 @@ The agent was completing the implementation of scalable frames and ensuring the 
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[18:29:22]   Run a command with --help for more info 💡
-[18:29:22]     $ expo start --help
-[18:29:22] & related libraries
+[18:53:45]   Run a command with --help for more info 💡
+[18:53:45]     $ expo start --help
+[18:53:45] & related libraries
 -   
 -   
 
@@ -223,4 +230,4 @@ The agent was completing the implementation of scalable frames and ensuring the 
 -   N/A.
 
 **What agent forgot to execute**
--   The agent has correctly followed the user's instructions and is on the right track. No tasks were forgotten. The next logical step is testing the implemented changes.</analysis>
+-   The agent has correctly followed the user's instructions and is on the right track. No tasks were forgotten.</analysis>

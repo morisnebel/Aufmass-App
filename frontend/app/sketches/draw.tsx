@@ -3977,14 +3977,14 @@ export default function DrawSketchScreen() {
                 }
               ]}
               onPress={() => { 
-                // WICHTIG: ScrollView komplett neu laden um Zoom auf exakt 100% zurückzusetzen
-                // Das verhindert den 94%-Bug, da die interne zoomScale des ScrollView
-                // nicht direkt gesteuert werden kann
+                // State-Werte zurücksetzen
                 setScale(1); 
                 setPanOffset({ x: 0, y: 0 });
                 setScrollOffset({ x: 0, y: 0 });
-                // Force re-mount des ScrollView durch Key-Änderung
-                setScrollViewKey(prev => prev + 1);
+                // ScrollView zum Ursprung scrollen
+                if (scrollViewRef.current) {
+                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+                }
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
@@ -4145,7 +4145,6 @@ export default function DrawSketchScreen() {
 
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
-        key={scrollViewKey}
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}

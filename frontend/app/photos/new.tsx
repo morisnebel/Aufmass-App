@@ -108,6 +108,7 @@ export default function NewPhotoScreen() {
         await PhotoService.create({
           project_id: projId || '',
           image_data: photo.uri,
+          uri: photo.uri, // Für Kompatibilität
           description: photo.description || undefined,
         });
         setSavingProgress(i + 1);

@@ -138,7 +138,14 @@ export default function AnnotatePhotoScreen() {
       const photos = await PhotoService.getByProjectId(projectId || '');
       const photo = photos.find((p: any) => p.id === photoId);
       if (photo) {
-        setImageUri(photo.image_data);
+        // Prüfe ob image_data oder uri vorhanden ist
+        const imageSource = photo.image_data || photo.uri;
+        if (imageSource) {
+          setImageUri(imageSource);
+        } else {
+          console.error('No image data found for photo:', photoId);
+          Alert.alert('Fehler', 'Keine Bilddaten gefunden');
+        }
         setPdfSize(photo.pdf_size || 'medium');
         setDescription(photo.description || '');
         
@@ -157,6 +164,9 @@ export default function AnnotatePhotoScreen() {
         } else {
           initialPathsRef.current = '[]';
         }
+      } else {
+        console.error('Photo not found:', photoId);
+        Alert.alert('Fehler', 'Foto nicht gefunden');
       }
     } catch (error) {
       console.error('Error loading photo:', error);
@@ -342,9 +352,11 @@ export default function AnnotatePhotoScreen() {
       };
 
       // Update photo with annotations and PDF size
+      // Speichere sowohl image_data als auch uri, falls eines fehlt
       await PhotoService.update(photoId || '', {
         project_id: projectId,
         image_data: imageUri, // Keep original image
+        uri: imageUri, // Für Kompatibilität
         annotations: JSON.stringify(annotationData),
         description: description,
         pdf_size: pdfSize,

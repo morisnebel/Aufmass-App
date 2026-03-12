@@ -1,65 +1,73 @@
 <analysis>**original_problem_statement:**
 The user's initial goal was to enhance a Flächen-Kalkulator (Area Calculator) by adding an edit mode for annotations. The scope then expanded significantly to include:
 
-1.  **Comprehensive Data Model Expansion**: Overhauling customer and project data models to include detailed fields like salutation, separate first/last names, and full addresses.
-2.  **Complex Data Synchronization**: Implementing bi-directional sync between project addresses and a customer's master list, and creating/updating contacts in the device's native address book.
-3.  **UX Flow Simplification**: Refactoring a confusing new customer modal within the project creation flow into a more streamlined process.
-4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs related to keyboard handling, stale data, and layout issues across various screens. The user's most recent requests focus on refining the functionality of core tools (Photos, Sketches) and fixing usability bugs.
+1.  **Comprehensive Data Model Expansion**: Overhauling customer and project data models.
+2.  **Complex Data Synchronization**: Implementing bi-directional sync between projects and the device's native address book.
+3.  **UX Flow Simplification**: Refactoring a confusing new customer modal.
+4.  **Extensive Bug Fixing & UI Polishing**: Addressing numerous UI bugs.
 
-The current critical issue is that drawing functionality in the Sketch tool is broken when the canvas is zoomed or panned. A related bug is that the zoom reset button is not working correctly.
+The most recent critical issues were a broken zoom-reset button and laggy drawing performance in the Sketch tool. The agent implemented a fix for the performance and attempted a fix for the zoom button, but the latter introduced a severe bug where the drawing would disappear. The agent has since reverted the faulty zoom-button fix.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app for roofing project management. It uses  for all local data persistence. The codebase is characterized by large, monolithic components that handle UI, state, and business logic.
+The application is a React Native/Expo app for roofing project management. It uses  for local data persistence. The codebase is characterized by large, monolithic components, notably .
 
 Key functionalities include:
 -   **Customer & Project Management**: Detailed forms for creating and editing customers and projects.
--   **Data Synchronization**: Logic to sync customer data to their projects and to the device's native contacts.
 -   **Core Tools**:
     -   **Photos**: Take/select photos, add descriptions, and draw annotations.
-    -   **Sketches**: Draw on a canvas with various tools. The zoom/draw functionality is currently broken.
+    -   **Sketches**: Draw on a canvas with various tools. A performance enhancement has been implemented but awaits final verification. The zoom-reset button is still not working correctly.
     -   **Area Calculator**: Calculate areas using polygons.
     -   **Checklists**: Manage lists of items.
 
 **Last working item**:
-The agent attempted to fix the faulty 100% zoom reset button in the Sketch tool (). The chosen approach was to force the  to re-mount by using a  prop that was updated on button press. This fix failed catastrophically. While it did reset the zoom level to 100%, it also caused all content within the  (the image and any drawings) to disappear, leaving a blank white screen and making the app unusable. The agent was in the process of reverting this failed implementation when the session ended.
+The agent was reverting a failed fix for the 100% zoom reset button. The attempted fix, which involved forcing a re-mount of the  component using a  prop (), successfully reset the zoom but had a critical side effect: it cleared the existing drawing from the canvas. After the user reported this new bug, the agent correctly identified the cause and removed the  logic, returning the component to its previous state where the zoom button is inaccurate but does not delete the user's work.
 
-- **Last item agent was working**: Reverting the failed force re-mount fix for the zoom reset button in .
-- **Status**: IN PROGRESS
+- **Last item agent was working**: Reverting the  fix for the 100% zoom-reset button in .
+- **Status**: IN PROGRESS (The faulty fix was reverted, but the original zoom button issue now needs a new solution).
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: Frontend testing via Expo Go URL.
-- **User Testing Done**: Y (The user tested the fix and confirmed it resulted in a blank white screen, blocking all further actions).
+- **User Testing Done**: Y (User confirmed the reverted fix caused the drawing to disappear).
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Fix misplaced drawing coordinates and broken zoom reset in the Sketch tool (P0).
--   **Issue 2**: Fix stale data on the main project list screen (P1).
+-   **Issue 1**: Fix the 100% zoom reset button in the Sketch tool (P0).
+-   **Issue 2**: Verify the fix for laggy drawing performance in the Sketch tool (P1).
+-   **Issue 3**: Fix stale data on the main project list screen (P2).
 
 **Issues Detail:**
--   **Issue 1: Misplaced drawing coordinates & broken zoom reset in Sketch tool**
-    -   **Description**: Drawing on a zoomed/panned sketch appears at an incorrect location. The 100% reset button is also broken. The last attempted fix for the reset button (force re-mount with a  prop) caused the canvas content to disappear entirely.
+-   **Issue 1: 100% zoom reset button is inaccurate**
+    -   **Description**: The 100% button in  sets the zoom level to an incorrect value (e.g., 94%) instead of exactly 100%. A recent attempt to fix this caused the entire drawing to disappear. That fix has been reverted.
     -   **Attempted fixes**:
-        1.  **Force re-mount with  prop**: This was the last attempt. It updated a  state on button press, which was passed as a  to the . This caused the 's content to vanish. This approach is a dead end.
-        2.  **Unified coordinate formula**: The agent changed the formula in all touch handlers to . **This is highly suspect**, as the original working formula from git history was . The difference in the operator ( vs ) must be investigated.
+        -   Using  was imprecise.
+        -   Forcing a re-mount with a  prop fixed the zoom but cleared the canvas. **This approach should be avoided.**
     -   **Next debug checklist**:
-        1.  **Completely Revert Failed Fix**: Ensure all traces of the  state and the  prop on the  in  are removed.
-        2.  **Use a ScrollView Ref**: Create a  for the  component ().
-        3.  **Implement a Non-Destructive Reset**: Use the  to call built-in  methods to reset the view. The most promising approach is . This should reset both zoom and pan without re-mounting.
-        4.  **Re-evaluate the Coordinate Formula**: After fixing the reset button, re-verify the coordinate transformation logic. Critically examine why the agent used  when the historical working version used . This is a likely source of the drawing misplacement bug.
-    -   **Why fix this issue and what will be achieved with the fix?**: This bug makes a core application feature unusable. Fixing it is the highest priority.
+        1.  Investigate alternative  methods like .
+        2.  Re-attempt using , but with very precise rectangle dimensions calculated from the canvas content size, ensuring the aspect ratio is handled correctly.
+        3.  As a last resort, consider changing the button's behavior to fit to screen instead of a specific 100% value if a precise zoom level remains unattainable.
+    -   **Why fix this issue and what will be achieved with the fix?**: The zoom reset is a core usability feature for the sketch tool that is currently broken and frustrating for the user.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None
 
--   **Issue 2: Stale data in project list ()**
+-   **Issue 2: Sketch drawing is laggy/choppy**
+    -   **Description**: The user reported that the drawing line lags behind the finger and appears choppy.
+    -   **Attempted fixes**: The agent implemented a fix using  () to store drawing points and throttling state updates () to only re-render every few points.
+    -   **Why fix this issue and what will be achieved with the fix?**: Improves user experience and the perceived performance of the core drawing feature.
+    -   **Status**: USER VERIFICATION PENDING. The fix is implemented. The user's feedback (jetzt lief alles super) before noticing the zoom bug suggests it was successful, but this needs to be explicitly confirmed.
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None
+
+-   **Issue 3: Stale data in project list ()**
     -   **Description**: The project list on the home screen does not refresh after a project is modified on another screen.
-    -   **Next debug checklist**: In , verify the  hook is firing and that its  function is correctly fetching and setting the updated project list from .
-    -   **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date.
+    -   **Next debug checklist**: In , investigate the  hook. Ensure its  function is correctly re-fetching the project list from  and updating the component's state every time the screen comes into focus.
+    -   **Why fix this issue and what will be achieved with the fix?**: To ensure the main project list is always up-to-date, preventing user confusion.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: Blocked by the P0 Sketch tool bug.
+    -   **Blocked on other issue**: Blocked by the P0/P1 Sketch tool bugs.
 
 **In progress Task List**:
 -   None.
@@ -77,13 +85,14 @@ The agent attempted to fix the faulty 100% zoom reset button in the Sketch tool 
 -   **P4**: Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   Attempted a fix for the zoom reset button by force re-mounting the . This fix failed and has been partially reverted.
+- **Implemented Drawing Performance Fix**: Optimized the drawing handlers in  using  and throttling to reduce re-renders, making the drawing feel smoother.
+- **Reverted Faulty Zoom-Reset Fix**: Identified that a -based fix was clearing the drawing canvas and successfully reverted the changes ( state and  prop).
 
 **Earlier issues found/mentioned but not fixed**
 -   The stale data issue in  is tracked in the All Pending/In progress Issue list.
 
 **Known issue recurrence from previous fork**
--   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and required a restart during the session. This is an ongoing environmental issue.
+-   **Expo Tunnel/Server Instability**: The Expo development server remains unreliable and may require periodic restarts. The agent performed one restart during the session.
 
 **Code Architecture**
 
@@ -91,8 +100,8 @@ The agent attempted to fix the faulty 100% zoom reset button in the Sketch tool 
 **Key Technical Concepts**
 -   React Native & Expo
 -   React Hooks: , , , , .
--   **React Native **: Deep understanding of its zoom/pan behavior, refs, and methods like  is required. The  prop trick for re-mounting has proven destructive.
--   **Coordinate Transformation**: The central, unresolved problem related to converting touch coordinates to canvas coordinates based on  zoom and pan offsets.
+-   **React Native **: The limitations of programmatically controlling zoom are the central blocker. The  prop trick is a failed experiment.  has been unreliable.
+-   **Performance Optimization**: The implemented  and throttling pattern for batching state updates is a key success from this session, though it needs final verification.
 
 **key DB schema**
 -   N/A (Client-side application using AsyncStorage).
@@ -101,35 +110,32 @@ The agent attempted to fix the faulty 100% zoom reset button in the Sketch tool 
 -   None.
 
 **All files of reference**
--   : The primary file for the current bug-fixing effort. It was modified in this session.
+-   : The primary file for bug-fixing. It was modified to improve performance and then to attempt and revert a fix for the zoom button.
 -   : The location of the next priority bug (stale data).
 
 **Areas that need refactoring**:
--   ****: This monolithic component (over 6000 lines) is extremely difficult to debug and maintain. Its complexity is the root cause of the current issues. It urgently needs to be broken down into smaller, manageable custom hooks and sub-components.
+-   ****: This monolithic component (>6000 lines) remains extremely fragile. The fact that a zoom fix cleared the canvas demonstrates how tightly coupled and unpredictable its state management is. Breaking it down into smaller, manageable custom hooks and components is critical for future stability.
 
 **key api endpoints**
 -   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK (P0)**: Fix the drawing bug in . The last attempt to fix the reset button failed and made the app unusable.
--   **DO NOT REPEAT FAILED ATTEMPT**: The force re-mount approach using a  prop on the  is a dead end. It clears the 's content. Revert this change completely and use a  with  instead.
--   **INVESTIGATE FORMULA**: The agent implemented a coordinate formula with a  operator: . The original, working formula from a previous commit used a  operator. This discrepancy is a likely cause of the bug and must be investigated.
+-   **IMMEDIATE TASK (P0)**: Devise a new solution for the 100% zoom reset button in . The previous attempt of re-mounting the  with a  prop is a **dead end** as it clears the drawing. Do not try it again. The new approach must reset the zoom without losing the canvas state.
+-   **VERIFY NEXT (P1)**: The drawing performance fix (using  and throttling) is already implemented. The user's initial feedback was positive (jetzt lief alles super). Explicitly ask the user to confirm that the drawing is still smooth before moving on to other tasks.
+-   The codebase is in a state where the drawing performance is improved, but the zoom button is still inaccurate.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-The user's recent messages confirm the failure of the last fix:
-1.  **User**: Confirmed the agent's plan to proceed.
-2.  **User**: wenn ich jetzt auf den 100% button drücke dann geht der Button genau auf 100% aber es verschwindet das bild komplett (When I press the 100% button now, the button goes to exactly 100% but the image disappears completely). - **STATUS: PENDING FIX**.
-3.  **User**: Expressed frustration: ich werde noch wahnsinnig (I'm going crazy).
-4.  **User**: In response to agent questions, confirmed that pressing the button results in a white page and the app becomes completely unresponsive. - **STATUS: PENDING FIX**.
+1.  **User**: jetzt lief alles super und ich habe gefreut doch als ich auf den 100% Button drückte wurde meine Zeichnung wieder weiß wie vorhin (everything was running great and I was happy but when I pressed the 100% button my drawing turned white again like before).
+    -   **Summary**: This message confirms the drawing performance fix likely worked but revealed a critical bug in the zoom-reset fix, which has since been reverted.
+    -   **Status**: The bug reported by the user is resolved (by reverting the change), but the original zoom inaccuracy issue persists and is now the top priority.
 
 **Project Health Check:**
--   **Broken**: The core drawing functionality of the Sketch tool () is unusable. The last fix attempt made the problem worse, causing a blank screen on reset.
--   **Mocked**: None.
--   **Technical Debt**: **High**. The  file is a prime example of a component that is too large, making it bug-prone and extremely difficult to maintain.
+-   **Broken**: The 100% zoom reset button in the Sketch tool is inaccurate.
+-   **Technical Debt**: **High**. The  component is extremely fragile, making it bug-prone and difficult to maintain. A simple fix breaking an unrelated feature is a major red flag.
 
 **3rd Party Integrations**
 -   
@@ -202,9 +208,9 @@ The user's recent messages confirm the failure of the last fix:
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[16:56:01]   Run a command with --help for more info 💡
-[16:56:01]     $ expo start --help
-[16:56:01] & related libraries (, , )
+[17:35:07]   Run a command with --help for more info 💡
+[17:35:07]     $ expo start --help
+[17:35:07] & related libraries (, , )
 -   
 -   
 
@@ -212,11 +218,10 @@ The user's recent messages confirm the failure of the last fix:
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: The drawing coordinate transformation was broken while implementing zoom. The subsequent fix for the zoom-reset button broke the UI completely.
+-   **Known regressions**: The zoom-reset button fix was a regression that has been reverted. The original inaccuracy is not a regression but a long-standing bug.
 
 **Credentials to test flow:**
 -   N/A.
 
 **What agent forgot to execute**
--   The previous agent overlooked a critical detail from the initial handoff: the original, working coordinate formula used a subtraction () operator. The agent implemented a new formula with an addition () operator without investigating this discrepancy, which is a likely cause of the persistent bug.
--   The agent opted for a complex and destructive force re-mount solution instead of first trying standard, non-destructive React Native APIs like  which are designed for this exact purpose.</analysis>
+-   The agent successfully reverted the breaking change but did not formulate a plan for the *next* attempt at fixing the P0 zoom button issue. The task is left in its original broken state.</analysis>

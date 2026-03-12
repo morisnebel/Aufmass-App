@@ -313,8 +313,8 @@ export default function DrawSketchScreen() {
   // Canvas-Dimensionen für zoomToRect
   const canvasWidth = width;
   const canvasHeight = height - 120;
-  // Key für ScrollView um kompletten Remount und damit Zoom-Reset zu erzwingen
-  const [scrollViewKey, setScrollViewKey] = useState(0);
+  // State für Zoom-Reset: Wenn true, werden min/maxZoomScale temporär auf 1 gesetzt
+  const [forceZoomReset, setForceZoomReset] = useState(false);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -4003,13 +4003,20 @@ export default function DrawSketchScreen() {
                 }
               ]}
               onPress={() => { 
+                // Force zoom reset: Setze min/max temporär auf 1
+                setForceZoomReset(true);
                 // State-Werte zurücksetzen
                 setScale(1); 
                 setPanOffset({ x: 0, y: 0 });
                 setScrollOffset({ x: 0, y: 0 });
-                // ScrollView komplett neu mounten durch Key-Änderung
-                // Dies ist der zuverlässigste Weg, den Zoom auf exakt 100% zurückzusetzen
-                setScrollViewKey(prev => prev + 1);
+                // ScrollView zum Ursprung scrollen
+                if (scrollViewRef.current) {
+                  scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
+                }
+                // Nach kurzem Delay wieder normale Zoom-Grenzen erlauben
+                setTimeout(() => {
+                  setForceZoomReset(false);
+                }, 100);
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: 'bold', color: (scale >= 0.99 && scale <= 1.01) ? '#fff' : '#1976d2' }}>
@@ -4170,12 +4177,11 @@ export default function DrawSketchScreen() {
 
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
-        key={scrollViewKey}
         ref={scrollViewRef}
         style={styles.canvasScrollView}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={zoomMode ? 0.5 : scale}
-        maximumZoomScale={zoomMode ? 4 : scale}
+        minimumZoomScale={forceZoomReset ? 1 : (zoomMode ? 0.5 : scale)}
+        maximumZoomScale={forceZoomReset ? 1 : (zoomMode ? 4 : scale)}
         bouncesZoom={zoomMode}
         scrollEnabled={zoomMode}
         pinchGestureEnabled={zoomMode}

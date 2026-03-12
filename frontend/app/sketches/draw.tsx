@@ -2200,16 +2200,13 @@ export default function DrawSketchScreen() {
     // Prüfe ob auf ein Polyline-Segment geklickt wurde (für Maß-Funktion)
     const segmentHit = findPolylineSegmentAtPoint(locationX, locationY);
     if (segmentHit) {
-      // Segment gefunden - auswählen für Maß-Eingabe
+      // Segment gefunden - nur auswählen für Maß-Eingabe, KEIN Verschieben über Linien
       setSelectedLineSegment({ 
         elementId: segmentHit.element.id, 
         segmentIndex: segmentHit.segmentIndex 
       });
       setSelectedElementId(segmentHit.element.id);
-      // WICHTIG: Auch Verschiebung vorbereiten damit das ganze Polygon bewegt werden kann
-      setDragMode('move');
-      setDragStart({ x: locationX, y: locationY });
-      setOriginalElement(JSON.parse(JSON.stringify(segmentHit.element)));
+      // KEIN dragMode setzen - Polylinie nur über Mittelpunkt oder Eckpunkte verschiebbar
       return;
     } else {
       // Kein Segment getroffen - Auswahl zurücksetzen
@@ -2265,9 +2262,13 @@ export default function DrawSketchScreen() {
       lastTapRef.current = { time: now, elementId: clickedElement.id };
       
       setSelectedElementId(clickedElement.id);
-      setDragMode('move');
-      setDragStart({ x: locationX, y: locationY });
-      setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+      
+      // Polylines nur über Mittelpunkt oder Eckpunkte verschiebbar, nicht über die Fläche
+      if (clickedElement.type !== 'polyline') {
+        setDragMode('move');
+        setDragStart({ x: locationX, y: locationY });
+        setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+      }
     } else {
       setSelectedElementId(null);
       lastTapRef.current = { time: 0, elementId: null };

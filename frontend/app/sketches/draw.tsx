@@ -2145,7 +2145,26 @@ export default function DrawSketchScreen() {
     if (selectedElementId) {
       const selectedEl = elements.find(el => el.id === selectedElementId);
       if (selectedEl) {
-        // Check for polyline point editing first
+        // Check for polyline center handle (for moving entire polygon)
+        if (selectedEl.type === 'polyline' && selectedEl.data?.points && selectedEl.data.points.length >= 2) {
+          const points = selectedEl.data.points;
+          const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
+          const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
+          const centerRadius = 20; // Klick-Toleranz für Mittelpunkt
+          const distanceToCenter = Math.sqrt(
+            Math.pow(locationX - centerX, 2) + Math.pow(locationY - centerY, 2)
+          );
+          if (distanceToCenter <= centerRadius) {
+            // Mittelpunkt getroffen - Verschiebung des gesamten Polygons starten
+            setEditingPolylinePoint(null); // Kein einzelner Punkt, sondern ganzes Polygon
+            setDragMode('move');
+            setDragStart({ x: locationX, y: locationY });
+            setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+            return;
+          }
+        }
+        
+        // Check for polyline point editing
         if (selectedEl.type === 'polyline' && selectedEl.data?.points) {
           const pointRadius = 20; // Klick-Toleranz für Eckpunkte
           for (let i = 0; i < selectedEl.data.points.length; i++) {
@@ -3258,6 +3277,33 @@ export default function DrawSketchScreen() {
                 strokeWidth={editingPolylinePoint === idx ? 3 : 2} 
               />
             ))}
+            {/* Mittelpunkt zum Verschieben des gesamten Polygons */}
+            {isSelected && points.length >= 2 && (() => {
+              const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
+              const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
+              return (
+                <G key="move-handle">
+                  <Circle 
+                    cx={centerX} 
+                    cy={centerY} 
+                    r={14} 
+                    fill="#FF9800" 
+                    stroke="#fff" 
+                    strokeWidth={3} 
+                  />
+                  <SvgText 
+                    x={centerX} 
+                    y={centerY + 5} 
+                    fill="#fff" 
+                    fontSize={16} 
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    ✥
+                  </SvgText>
+                </G>
+              );
+            })()}
             {isSelected && renderTransformHandles(element)}
           </G>
         );

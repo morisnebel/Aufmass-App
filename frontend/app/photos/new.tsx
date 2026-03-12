@@ -154,30 +154,31 @@ export default function NewPhotoScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      style={{ flex: 1, backgroundColor: '#f5f5f5' }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={100}
     >
       <ScrollView 
         ref={scrollViewRef}
-        style={styles.container}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 350 }}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 50 }}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
       >
-        <View style={styles.content}>
-          {/* Upload Buttons - immer sichtbar */}
-          <View style={styles.uploadSection}>
-            <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
-              <Ionicons name="camera" size={36} color="#1976d2" />
-              <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
-            </TouchableOpacity>
+        {/* Upload Buttons - immer sichtbar */}
+        <View style={styles.uploadSection}>
+          <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+            <Ionicons name="camera" size={36} color="#1976d2" />
+            <Text style={styles.uploadButtonText}>Foto aufnehmen</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
-              <Ionicons name="images" size={36} color="#1976d2" />
-              <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
-              <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
+            <Ionicons name="images" size={36} color="#1976d2" />
+            <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
+            <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
+          </TouchableOpacity>
+        </View>
 
           {/* Ausgewählte Fotos */}
           {selectedPhotos.length > 0 && (
@@ -232,7 +233,6 @@ export default function NewPhotoScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
     </ScrollView>
     </KeyboardAvoidingView>
   );

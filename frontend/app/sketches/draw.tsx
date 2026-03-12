@@ -5673,6 +5673,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  colorSelectionContainer: {
+    marginTop: 8,
+  },
+  colorOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
   colorOption: {
     width: 40,
     height: 40,
@@ -5755,11 +5764,6 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 150,
     maxHeight: 250,
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 16,
   },
   notesButtonContainer: {
     position: 'relative',

@@ -428,9 +428,11 @@ export interface Photo {
   id: string;
   project_id: string;
   uri: string;
+  image_data?: string;
   thumbnail?: string;
-  annotations?: any[];
+  annotations?: string;
   description?: string;
+  pdf_size?: string;
   created_at: string;
   updated_at: string;
 }

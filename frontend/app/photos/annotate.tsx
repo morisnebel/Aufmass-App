@@ -408,24 +408,9 @@ export default function AnnotatePhotoScreen() {
   const saveBase64ToFile = async (): Promise<string> => {
     if (!imageUri) throw new Error('Kein Bild vorhanden');
     
-    const base64Data = imageUri.includes(',') 
-      ? imageUri.split(',')[1] 
-      : imageUri;
-    
-    const filename = `aufmass_foto_${Date.now()}.jpg`;
-    const file = new File(Paths.cache, filename);
-    
-    // Konvertiere Base64 zu Uint8Array
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    // Schreibe die Datei mit der neuen API
-    await file.write(bytes);
-    
-    return file.uri;
+    // Für React Native nutzen wir das Original-URI direkt
+    // da die Sharing-Funktion auch mit data: URIs funktioniert
+    return imageUri;
   };
 
   const colors = [

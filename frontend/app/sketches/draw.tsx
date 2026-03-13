@@ -485,6 +485,7 @@ export default function DrawSketchScreen() {
   const arrowInputRef = useRef<TextInput>(null);
   const textInputRef = useRef<TextInput>(null);
   const pointerInputRef = useRef<TextInput>(null);
+  const notesInputRef = useRef<TextInput>(null);
   
   // Aktiver Input für Numpad-Verbindung
   const [activeNumpadSetter, setActiveNumpadSetter] = useState<React.Dispatch<React.SetStateAction<string>> | null>(null);
@@ -5820,20 +5821,47 @@ export default function DrawSketchScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Notizen zur Skizze</Text>
             <Text style={styles.modalSubtitle}>Diese Notizen werden im PDF unter der Skizze angezeigt</Text>
-            <TextInput
-              style={[styles.modalInput, styles.notesInput]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Notizen hier eingeben..."
-              placeholderTextColor="#999"
-              multiline
-              autoFocus
-              textAlignVertical="top"
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <TextInput
+                ref={notesInputRef}
+                style={[styles.modalInput, styles.notesInput, { flex: 1 }]}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Notizen hier eingeben..."
+                placeholderTextColor="#999"
+                multiline
+                autoFocus
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={{
+                  marginLeft: 8,
+                  padding: 10,
+                  backgroundColor: showModalNumpad && activeNumpadRef === notesInputRef ? '#1976d2' : '#f0f0f0',
+                  borderRadius: 8,
+                }}
+                onPress={() => {
+                  if (showModalNumpad && activeNumpadRef === notesInputRef) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setNotes, notesInputRef);
+                  }
+                }}
+              >
+                <Ionicons
+                  name="keypad"
+                  size={24}
+                  color={showModalNumpad && activeNumpadRef === notesInputRef ? '#fff' : '#666'}
+                />
+              </TouchableOpacity>
+            </View>
             <View style={styles.notesModalButtons}>
               <TouchableOpacity
                 style={styles.notesModalButton}
-                onPress={() => setShowNotesModal(false)}
+                onPress={() => {
+                  closeModalNumpad();
+                  setShowNotesModal(false);
+                }}
               >
                 <Text style={styles.notesModalButtonText}>Schließen</Text>
               </TouchableOpacity>
@@ -5842,6 +5870,7 @@ export default function DrawSketchScreen() {
                   style={[styles.notesModalButton, styles.notesModalButtonDelete]}
                   onPress={() => {
                     setNotes('');
+                    closeModalNumpad();
                     setShowNotesModal(false);
                   }}
                 >
@@ -5850,11 +5879,16 @@ export default function DrawSketchScreen() {
               )}
               <TouchableOpacity
                 style={[styles.notesModalButton, styles.notesModalButtonSave]}
-                onPress={() => setShowNotesModal(false)}
+                onPress={() => {
+                  closeModalNumpad();
+                  setShowNotesModal(false);
+                }}
               >
                 <Text style={styles.notesModalButtonTextWhite}>Speichern</Text>
               </TouchableOpacity>
             </View>
+            {/* In-Modal Numpad für Notizen */}
+            {renderInModalNumpad()}
           </View>
         </KeyboardAvoidingView>
       </Modal>

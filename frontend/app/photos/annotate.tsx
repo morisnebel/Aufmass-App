@@ -484,7 +484,14 @@ export default function AnnotatePhotoScreen() {
                 styles.pdfSizeButtonSmall,
                 pdfSize === size.value && styles.pdfSizeButtonSmallActive,
               ]}
-              onPress={() => { setPdfSize(size.value); setHasChanges(true); }}
+              onPress={() => { 
+                try {
+                  setPdfSize(size.value); 
+                  setHasChanges(true); 
+                } catch (e) {
+                  console.error('Error setting PDF size:', e);
+                }
+              }}
             >
               <Ionicons 
                 name={size.icon as any} 

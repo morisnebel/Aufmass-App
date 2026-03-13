@@ -2802,6 +2802,24 @@ export default function ProjectDetailScreen() {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
+            display: inline-block;
+            width: 100%;
+          }
+          /* Photo/Sketch im Grid nicht umbrechen */
+          .photo-iphone, .sketch-iphone {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          .photo-small, .photo-medium, .photo-large, .photo-full {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          .sketch-small, .sketch-medium, .sketch-large, .sketch-full {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
           /* All images fill their container width */
           .photo-item img, .sketch-item img {

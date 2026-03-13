@@ -247,10 +247,10 @@ export default function EditChecklistScreen() {
   const toggleItemChecked = (path: number[]) => {
     if (!checklist) return;
     
-    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
-      if (path.length === 0) return null;
-      if (path.length === 1) return items[path[0]];
-      const [first, ...rest] = path;
+    const getItemAtPath = (items: RecursiveItem[], pathArr: number[]): RecursiveItem | null => {
+      if (pathArr.length === 0) return null;
+      if (pathArr.length === 1) return items[pathArr[0]];
+      const [first, ...rest] = pathArr;
       return getItemAtPath(items[first].subItems || [], rest);
     };
     
@@ -263,16 +263,19 @@ export default function EditChecklistScreen() {
     setChecklist({ ...checklist, items: newItems });
     setHasChanges(true);
     
-    // Auto-expand: Wenn abgehakt, öffne den ersten Unterpunkt dieses Items
-    if (newChecked && item.subItems && item.subItems.length > 0) {
-      // Öffne den ersten Unterpunkt
-      const firstChildPath = [...path, 0];
-      const firstChildPathKey = firstChildPath.join('-');
-      setCollapsedPaths(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(firstChildPathKey);
-        return newSet;
-      });
+    // Auto-expand: Wenn abgehakt UND dieses Item hat Unterpunkte → öffne den ersten Unterpunkt
+    if (newChecked) {
+      const currentItem = getItemAtPath(newItems, path);
+      if (currentItem && currentItem.subItems && currentItem.subItems.length > 0) {
+        // Pfad zum ersten Kind-Element
+        const firstChildPath = [...path, 0].join('-');
+        console.log('Auto-expanding child:', firstChildPath);
+        setCollapsedPaths(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(firstChildPath);
+          return newSet;
+        });
+      }
     }
   };
 

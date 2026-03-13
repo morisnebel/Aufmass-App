@@ -304,7 +304,7 @@ export default function ReferencesScreen() {
             onPress: () => setLoading(false)
           },
           {
-            text: 'Bilder wählen',
+            text: 'Ordner/Bilder wählen',
             onPress: async () => {
               try {
                 const result = await DocumentPicker.getDocumentAsync({

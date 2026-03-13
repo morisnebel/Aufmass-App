@@ -12,10 +12,12 @@ import {
   Platform,
   Image,
   Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
+import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 import * as ImagePicker from 'expo-image-picker';
 
 // Rekursive Struktur für verschachtelte Punkte
@@ -50,6 +52,14 @@ export default function EditTemplateScreen() {
   // State für Bild-Vorschau Modal
   const [imagePreviewModal, setImagePreviewModal] = useState<{ visible: boolean; images: string[]; title: string }>({ visible: false, images: [], title: '' });
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // State für Referenz-Ordner Modal
+  const [showReferenceFolderModal, setShowReferenceFolderModal] = useState(false);
+  const [referenceFolders, setReferenceFolders] = useState<ReferenceFolder[]>([]);
+  const [referencePhotos, setReferencePhotos] = useState<ReferencePhoto[]>([]);
+  const [currentReferenceFolder, setCurrentReferenceFolder] = useState<ReferenceFolder | null>(null);
+  const [referenceTargetPath, setReferenceTargetPath] = useState<number[]>([]);
+  const [loadingReferences, setLoadingReferences] = useState(false);
 
   useEffect(() => {
     if (templateId) {
@@ -215,6 +225,84 @@ export default function EditTemplateScreen() {
   const openImagePreview = (images: string[], title: string, startIndex: number = 0) => {
     setCurrentImageIndex(startIndex);
     setImagePreviewModal({ visible: true, images, title });
+  };
+
+  // Referenz-Ordner Modal öffnen
+  const openReferenceFolderPicker = async (path: number[]) => {
+    setReferenceTargetPath(path);
+    setLoadingReferences(true);
+    setShowReferenceFolderModal(true);
+    setCurrentReferenceFolder(null);
+    setReferencePhotos([]);
+    
+    try {
+      const folders = await ReferenceService.getFoldersByParent(undefined);
+      setReferenceFolders(folders);
+    } catch (error) {
+      console.error('Error loading reference folders:', error);
+      Alert.alert('Fehler', 'Referenz-Ordner konnten nicht geladen werden');
+    } finally {
+      setLoadingReferences(false);
+    }
+  };
+
+  // In einen Referenz-Ordner navigieren
+  const navigateToReferenceFolder = async (folder: ReferenceFolder) => {
+    setLoadingReferences(true);
+    try {
+      setCurrentReferenceFolder(folder);
+      const [subfolders, photos] = await Promise.all([
+        ReferenceService.getFoldersByParent(folder.id),
+        ReferenceService.getPhotosInFolder(folder.id),
+      ]);
+      setReferenceFolders(subfolders);
+      setReferencePhotos(photos);
+    } catch (error) {
+      console.error('Error loading folder contents:', error);
+    } finally {
+      setLoadingReferences(false);
+    }
+  };
+
+  // Zurück zur Ordner-Übersicht
+  const goBackInReferenceFolders = async () => {
+    setLoadingReferences(true);
+    try {
+      if (currentReferenceFolder?.parent_id) {
+        const parentFolder = await ReferenceService.getFolder(currentReferenceFolder.parent_id);
+        if (parentFolder) {
+          await navigateToReferenceFolder(parentFolder);
+          return;
+        }
+      }
+      // Zurück zur Root-Ebene
+      setCurrentReferenceFolder(null);
+      setReferencePhotos([]);
+      const folders = await ReferenceService.getFoldersByParent(undefined);
+      setReferenceFolders(folders);
+    } catch (error) {
+      console.error('Error going back:', error);
+    } finally {
+      setLoadingReferences(false);
+    }
+  };
+
+  // Foto aus Referenz-Ordner auswählen
+  const selectReferencePhoto = async (photo: ReferencePhoto) => {
+    try {
+      // Bild als Base64 laden
+      const base64Image = photo.uri;
+      
+      // Vorschau-Galerie aktualisieren
+      const currentItem = getItemAtPath(items, referenceTargetPath);
+      const currentPreviewImages = currentItem?.previewImages || [];
+      setItems(updateItemAtPath(items, referenceTargetPath, { previewImages: [...currentPreviewImages, base64Image] }));
+      
+      setShowReferenceFolderModal(false);
+    } catch (error) {
+      console.error('Error selecting reference photo:', error);
+      Alert.alert('Fehler', 'Foto konnte nicht hinzugefügt werden');
+    }
   };
 
   // Rekursiv Item an Pfad aktualisieren
@@ -563,6 +651,10 @@ export default function EditTemplateScreen() {
                 <Ionicons name="images-outline" size={16} color="#ff9800" />
                 <Text style={styles.addImageText}>+</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.addImageBtn, styles.referenceBtn]} onPress={() => openReferenceFolderPicker(path)}>
+                <Ionicons name="folder-outline" size={16} color="#2196f3" />
+                <Text style={[styles.addImageText, { color: '#2196f3' }]}>Ref</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -727,6 +819,99 @@ export default function EditTemplateScreen() {
                   </View>
                 )}
               </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Referenz-Ordner Modal */}
+      <Modal
+        visible={showReferenceFolderModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowReferenceFolderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.referenceFolderModalContent}>
+            <View style={styles.referenceFolderHeader}>
+              {currentReferenceFolder ? (
+                <TouchableOpacity onPress={goBackInReferenceFolders} style={styles.backBtn}>
+                  <Ionicons name="arrow-back" size={24} color="#1976d2" />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.backBtn} />
+              )}
+              <Text style={styles.referenceFolderTitle}>
+                {currentReferenceFolder?.name || 'Referenz-Ordner'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowReferenceFolderModal(false)}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingReferences ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#1976d2" />
+              </View>
+            ) : (
+              <ScrollView style={styles.referenceFolderList}>
+                {/* Ordner anzeigen */}
+                {referenceFolders.length > 0 && (
+                  <View style={styles.referenceFolderSection}>
+                    <Text style={styles.referenceSectionLabel}>Ordner</Text>
+                    {referenceFolders.map((folder) => (
+                      <TouchableOpacity
+                        key={folder.id}
+                        style={styles.referenceFolderItem}
+                        onPress={() => navigateToReferenceFolder(folder)}
+                      >
+                        {folder.thumbnail_uri ? (
+                          <Image source={{ uri: folder.thumbnail_uri }} style={styles.folderThumb} />
+                        ) : (
+                          <View style={styles.folderIconBox}>
+                            <Ionicons name="folder" size={24} color="#ffa726" />
+                          </View>
+                        )}
+                        <View style={styles.folderInfo}>
+                          <Text style={styles.folderNameText}>{folder.name}</Text>
+                          <Text style={styles.folderMetaText}>{folder.photo_count} Fotos</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#999" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Fotos anzeigen */}
+                {referencePhotos.length > 0 && (
+                  <View style={styles.referenceFolderSection}>
+                    <Text style={styles.referenceSectionLabel}>Fotos auswählen</Text>
+                    <View style={styles.referencePhotosGrid}>
+                      {referencePhotos.map((photo) => (
+                        <TouchableOpacity
+                          key={photo.id}
+                          style={styles.referencePhotoItem}
+                          onPress={() => selectReferencePhoto(photo)}
+                        >
+                          <Image source={{ uri: photo.uri }} style={styles.referencePhotoThumb} />
+                          {photo.name && (
+                            <Text style={styles.referencePhotoName} numberOfLines={1}>{photo.name}</Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {referenceFolders.length === 0 && referencePhotos.length === 0 && (
+                  <View style={styles.emptyReferenceState}>
+                    <Ionicons name="folder-open-outline" size={48} color="#ccc" />
+                    <Text style={styles.emptyReferenceText}>
+                      {currentReferenceFolder ? 'Ordner ist leer' : 'Keine Referenz-Ordner vorhanden'}
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
             )}
           </View>
         </View>
@@ -1080,5 +1265,115 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  // Reference Folder Modal Styles
+  referenceBtn: {
+    backgroundColor: '#e3f2fd',
+  },
+  referenceFolderModalContent: {
+    width: '95%',
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  referenceFolderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backBtn: {
+    width: 40,
+  },
+  referenceFolderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  referenceFolderList: {
+    maxHeight: 500,
+  },
+  referenceFolderSection: {
+    padding: 12,
+  },
+  referenceSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 10,
+  },
+  referenceFolderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    gap: 12,
+  },
+  folderThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+  },
+  folderIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: '#fff3e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  folderInfo: {
+    flex: 1,
+  },
+  folderNameText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  folderMetaText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  referencePhotosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  referencePhotoItem: {
+    width: 80,
+    alignItems: 'center',
+  },
+  referencePhotoThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+  },
+  referencePhotoName: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  emptyReferenceState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyReferenceText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 12,
   },
 });

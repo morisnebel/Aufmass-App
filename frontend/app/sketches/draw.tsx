@@ -4160,7 +4160,7 @@ export default function DrawSketchScreen() {
         
         {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhone && styles.toolButtonPhotoWidePhone]} onPress={takePhotoAndInsert}>
+          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhone && styles.toolButtonPhotoWidePhone]} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
             <Ionicons name="camera" size={isPhone ? 18 : 20} color="#4caf50" />
           </TouchableOpacity>
           <Text style={[styles.toolButtonLabelWide, isPhone && styles.toolButtonLabelWidePhone]}>Foto</Text>
@@ -4170,7 +4170,7 @@ export default function DrawSketchScreen() {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
             style={styles.toolButtonPhotoWide} 
-            onPress={loadProjectPhotos}
+            onPress={() => { setPhotoEditMode(false); loadProjectPhotos(); }}
           >
             <Ionicons name="images" size={20} color="#1976d2" />
           </TouchableOpacity>
@@ -4179,7 +4179,7 @@ export default function DrawSketchScreen() {
 
         {/* 3. Galeriefotos */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={insertImage}>
+          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); insertImage(); }}>
             <Ionicons name="image" size={20} color="#9C27B0" />
           </TouchableOpacity>
           <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Galerie</Text>
@@ -4190,10 +4190,13 @@ export default function DrawSketchScreen() {
           <TouchableOpacity 
             style={[styles.toolButtonInner, photoEditMode && styles.photoEditButtonActive]} 
             onPress={() => {
-              setPhotoEditMode(!photoEditMode);
+              const newPhotoEditMode = !photoEditMode;
+              setPhotoEditMode(newPhotoEditMode);
               setSelectedElementId(null);
-              if (!photoEditMode) {
-                selectDrawMode('select');
+              if (newPhotoEditMode) {
+                // Nur drawMode setzen, ohne photoEditMode zu deaktivieren
+                setDrawMode('select');
+                setZoomMode(false);
               }
             }}
           >

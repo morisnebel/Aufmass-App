@@ -587,6 +587,38 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  // Move checklist up or down
+  const moveChecklist = async (index: number, direction: 'up' | 'down') => {
+    if (!project) return;
+    
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= checklists.length) return;
+    
+    // Swap the checklists
+    const newChecklists = [...checklists];
+    const temp = newChecklists[index];
+    newChecklists[index] = newChecklists[newIndex];
+    newChecklists[newIndex] = temp;
+    
+    // Update order field for all checklists
+    try {
+      for (let i = 0; i < newChecklists.length; i++) {
+        await ChecklistService.update(newChecklists[i].id, {
+          ...newChecklists[i],
+          order: i
+        });
+      }
+      // Reload checklists
+      const updated = await ChecklistService.getByProject(project.id);
+      // Sort by order
+      updated.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      setChecklists(updated);
+    } catch (error) {
+      console.error('Error moving checklist:', error);
+      Alert.alert('Fehler', 'Checkliste konnte nicht verschoben werden');
+    }
+  };
+
   // Open edit project modal with current values
   const openEditProjectModal = () => {
     if (project) {
@@ -4617,13 +4649,32 @@ export default function ProjectDetailScreen() {
                             {checkedCount} von {totalCount}
                           </Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color="#1976d2" />
                       </View>
                     </View>
                     
                     {/* Kategorie-Container Grid */}
                     {renderCategoryContainers(checklist.items)}
                   </TouchableOpacity>
+                  
+                  {/* Move Up Button */}
+                  {checklistIndex > 0 && (
+                    <TouchableOpacity
+                      style={styles.checklistMoveUpButton}
+                      onPress={() => moveChecklist(checklistIndex, 'up')}
+                    >
+                      <Ionicons name="arrow-up" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* Move Down Button */}
+                  {checklistIndex < checklists.length - 1 && (
+                    <TouchableOpacity
+                      style={styles.checklistMoveDownButton}
+                      onPress={() => moveChecklist(checklistIndex, 'down')}
+                    >
+                      <Ionicons name="arrow-down" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  )}
                   
                   {/* Save as Template Button */}
                   <TouchableOpacity
@@ -5963,8 +6014,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 'auto',
-    marginRight: 8,
+    marginRight: 90,
   },
   checkedBadgeText: {
     fontSize: 12,
@@ -7037,5 +7087,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 12,
+  },
+  // Checklist Move Buttons
+  checklistMoveUpButton: {
+    position: 'absolute',
+    top: 8,
+    right: 130,
+    backgroundColor: '#9c27b0',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  checklistMoveDownButton: {
+    position: 'absolute',
+    top: 8,
+    right: 95,
+    backgroundColor: '#9c27b0',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

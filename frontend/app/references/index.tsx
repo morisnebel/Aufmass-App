@@ -307,7 +307,11 @@ export default function ReferencesScreen() {
     >
       <View style={styles.folderIconContainer}>
         {item.thumbnail_uri ? (
-          <Image source={{ uri: item.thumbnail_uri }} style={styles.folderThumbnail} />
+          <Image 
+            source={{ uri: item.thumbnail_uri }} 
+            style={styles.folderThumbnail} 
+            resizeMode="cover"
+          />
         ) : (
           <Ionicons name="folder" size={32} color="#ffa726" />
         )}

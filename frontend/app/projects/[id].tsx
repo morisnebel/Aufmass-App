@@ -3492,98 +3492,175 @@ export default function ProjectDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {/* 1. Info */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
-          onPress={() => setActiveTab('overview')}
+      {/* Modern Tabs */}
+      <View style={styles.tabsContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsScrollContent}
         >
-          <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
-            Info
-          </Text>
-        </TouchableOpacity>
-        {/* 2. Foto */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'photos' && styles.tabActive]}
-          onPress={() => setActiveTab('photos')}
-        >
-          <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>
-            Foto
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'photos' && styles.tabCountActive]}>
-            {photos.length}
-          </Text>
-        </TouchableOpacity>
-        {/* 3. Skizze */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'sketches' && styles.tabActive]}
-          onPress={() => setActiveTab('sketches')}
-        >
-          <Text style={[styles.tabText, activeTab === 'sketches' && styles.tabTextActive]}>
-            Skizze
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'sketches' && styles.tabCountActive]}>
-            {sketches.length}
-          </Text>
-        </TouchableOpacity>
-        {/* 4. Flächen */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'calculator' && styles.tabActive]}
-          onPress={() => setActiveTab('calculator')}
-        >
-          <Text style={[styles.tabText, activeTab === 'calculator' && styles.tabTextActive]}>
-            Flächen
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'calculator' && styles.tabCountActive]}>
-            {areaCalculations.length}
-          </Text>
-        </TouchableOpacity>
-        {/* 5. Dach */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'roofs' && styles.tabActive]}
-          onPress={() => setActiveTab('roofs')}
-        >
-          <Text style={[styles.tabText, activeTab === 'roofs' && styles.tabTextActive]}>
-            Dach
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'roofs' && styles.tabCountActive]}>
-            {roofs.length}
-          </Text>
-        </TouchableOpacity>
-        {/* 6. Liste */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'checklists' && styles.tabActive]}
-          onPress={() => setActiveTab('checklists')}
-        >
-          <Text style={[styles.tabText, activeTab === 'checklists' && styles.tabTextActive]}>
-            Liste
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'checklists' && styles.tabCountActive]}>
-            {checklists.length}
-          </Text>
-        </TouchableOpacity>
-        {/* 7. Notiz */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'remarks' && styles.tabActive]}
-          onPress={() => setActiveTab('remarks')}
-        >
-          <Text style={[styles.tabText, activeTab === 'remarks' && styles.tabTextActive]}>
-            Notiz
-          </Text>
-        </TouchableOpacity>
-        {/* 8. Doku */}
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'documents' && styles.tabActive]}
-          onPress={() => setActiveTab('documents')}
-        >
-          <Text style={[styles.tabText, activeTab === 'documents' && styles.tabTextActive]}>
-            Doku
-          </Text>
-          <Text style={[styles.tabCount, activeTab === 'documents' && styles.tabCountActive]}>
-            {documents.length}
-          </Text>
-        </TouchableOpacity>
+          {/* 1. Info */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'overview' && styles.tabPillActive]}
+            onPress={() => setActiveTab('overview')}
+          >
+            <Ionicons 
+              name="information-circle-outline" 
+              size={18} 
+              color={activeTab === 'overview' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'overview' && styles.tabPillTextActive]}>
+              Info
+            </Text>
+          </TouchableOpacity>
+          
+          {/* 2. Foto */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'photos' && styles.tabPillActive]}
+            onPress={() => setActiveTab('photos')}
+          >
+            <Ionicons 
+              name="camera-outline" 
+              size={18} 
+              color={activeTab === 'photos' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'photos' && styles.tabPillTextActive]}>
+              Foto
+            </Text>
+            {photos.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'photos' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'photos' && styles.tabBadgeTextActive]}>
+                  {photos.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* 3. Skizze */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'sketches' && styles.tabPillActive]}
+            onPress={() => setActiveTab('sketches')}
+          >
+            <Ionicons 
+              name="brush-outline" 
+              size={18} 
+              color={activeTab === 'sketches' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'sketches' && styles.tabPillTextActive]}>
+              Skizze
+            </Text>
+            {sketches.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'sketches' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'sketches' && styles.tabBadgeTextActive]}>
+                  {sketches.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* 4. Flächen */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'calculator' && styles.tabPillActive]}
+            onPress={() => setActiveTab('calculator')}
+          >
+            <Ionicons 
+              name="grid-outline" 
+              size={18} 
+              color={activeTab === 'calculator' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'calculator' && styles.tabPillTextActive]}>
+              Flächen
+            </Text>
+            {areaCalculations.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'calculator' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'calculator' && styles.tabBadgeTextActive]}>
+                  {areaCalculations.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* 5. Dach */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'roofs' && styles.tabPillActive]}
+            onPress={() => setActiveTab('roofs')}
+          >
+            <Ionicons 
+              name="home-outline" 
+              size={18} 
+              color={activeTab === 'roofs' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'roofs' && styles.tabPillTextActive]}>
+              Dach
+            </Text>
+            {roofs.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'roofs' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'roofs' && styles.tabBadgeTextActive]}>
+                  {roofs.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* 6. Liste */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'checklists' && styles.tabPillActive]}
+            onPress={() => setActiveTab('checklists')}
+          >
+            <Ionicons 
+              name="checkbox-outline" 
+              size={18} 
+              color={activeTab === 'checklists' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'checklists' && styles.tabPillTextActive]}>
+              Liste
+            </Text>
+            {checklists.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'checklists' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'checklists' && styles.tabBadgeTextActive]}>
+                  {checklists.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
+          {/* 7. Notiz */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'remarks' && styles.tabPillActive]}
+            onPress={() => setActiveTab('remarks')}
+          >
+            <Ionicons 
+              name="document-text-outline" 
+              size={18} 
+              color={activeTab === 'remarks' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'remarks' && styles.tabPillTextActive]}>
+              Notiz
+            </Text>
+          </TouchableOpacity>
+          
+          {/* 8. Doku */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'documents' && styles.tabPillActive]}
+            onPress={() => setActiveTab('documents')}
+          >
+            <Ionicons 
+              name="folder-outline" 
+              size={18} 
+              color={activeTab === 'documents' ? '#fff' : '#64748b'} 
+            />
+            <Text style={[styles.tabPillText, activeTab === 'documents' && styles.tabPillTextActive]}>
+              Doku
+            </Text>
+            {documents.length > 0 && (
+              <View style={[styles.tabBadge, activeTab === 'documents' && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, activeTab === 'documents' && styles.tabBadgeTextActive]}>
+                  {documents.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <ScrollView style={styles.content}>
@@ -5630,6 +5707,58 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  tabsContainer: {
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  tabPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 6,
+  },
+  tabPillActive: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1976d2',
+  },
+  tabPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabPillTextActive: {
+    color: '#fff',
+  },
+  tabBadge: {
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 22,
+    alignItems: 'center',
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  tabBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  tabBadgeTextActive: {
+    color: '#fff',
   },
   tab: {
     flex: 1,

@@ -4317,7 +4317,7 @@ export default function ProjectDetailScreen() {
               <Text style={styles.addButtonText}>Neue Checkliste</Text>
             </TouchableOpacity>
 
-            {checklists.map((checklist) => {
+            {checklists.map((checklist, checklistIndex) => {
               // Rekursiv alle abgehakten Items zählen
               const countCheckedItemsRecursive = (items: any[]): number => {
                 let total = 0;

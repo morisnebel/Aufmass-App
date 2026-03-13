@@ -19,7 +19,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { ReferenceService, ReferenceFolder, ReferencePhoto, ExternalFolder } from '../../services/ReferenceService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const FOLDER_COLUMNS = 4;
@@ -37,6 +39,7 @@ export default function ReferencesScreen() {
   // Data state
   const [folders, setFolders] = useState<ReferenceFolder[]>([]);
   const [photos, setPhotos] = useState<ReferencePhoto[]>([]);
+  const [externalFolders, setExternalFolders] = useState<ExternalFolder[]>([]);
   const [searchResults, setSearchResults] = useState<ReferencePhoto[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -73,6 +76,9 @@ export default function ReferencesScreen() {
         setPhotos(folderPhotos);
       } else {
         setPhotos([]);
+        // Load external folders only on root level
+        const extFolders = await ReferenceService.getExternalFolders();
+        setExternalFolders(extFolders);
       }
       
       // Load all folders for move modal
@@ -156,6 +162,96 @@ export default function ReferencesScreen() {
             } catch (error) {
               Alert.alert('Fehler', 'Ordner konnte nicht gelöscht werden');
             }
+          },
+        },
+      ]
+    );
+  };
+
+  // Export folder
+  const exportFolder = async (folder: ReferenceFolder) => {
+    try {
+      const data = await ReferenceService.exportFolderData(folder.id);
+      
+      // Create a temporary directory for export
+      const exportDir = `${FileSystem.cacheDirectory}export_${folder.id}/`;
+      await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
+      
+      // Create metadata file
+      const metadata = {
+        folder: data.folder,
+        photos: data.photos.map(p => ({ ...p, uri: p.uri.split('/').pop() })),
+        exportedAt: new Date().toISOString(),
+      };
+      await FileSystem.writeAsStringAsync(
+        `${exportDir}metadata.json`,
+        JSON.stringify(metadata, null, 2)
+      );
+      
+      // Copy photos
+      for (const photo of data.photos) {
+        const filename = photo.uri.split('/').pop();
+        if (filename) {
+          await FileSystem.copyAsync({
+            from: photo.uri,
+            to: `${exportDir}${filename}`,
+          });
+        }
+      }
+      
+      // Share the folder
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        // Share the metadata file (user can then save to Files)
+        await Sharing.shareAsync(`${exportDir}metadata.json`, {
+          mimeType: 'application/json',
+          dialogTitle: `Ordner "${folder.name}" exportieren`,
+        });
+        Alert.alert('Hinweis', `Die Fotos befinden sich unter:\n${exportDir}\n\nÖffnen Sie die Dateien-App und kopieren Sie den Ordner auf Ihren USB-Stick.`);
+      } else {
+        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
+      }
+    } catch (error) {
+      console.error('Error exporting folder:', error);
+      Alert.alert('Fehler', 'Ordner konnte nicht exportiert werden');
+    }
+  };
+
+  // Link external folder
+  const linkExternalFolder = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['public.folder', 'public.directory', '*/*'],
+        copyToCacheDirectory: false,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const folderName = asset.name || 'Externer Ordner';
+        
+        await ReferenceService.addExternalFolder(folderName, asset.uri);
+        loadData();
+        Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft`);
+      }
+    } catch (error) {
+      console.error('Error linking external folder:', error);
+      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
+    }
+  };
+
+  // Unlink external folder
+  const unlinkExternalFolder = (folder: ExternalFolder) => {
+    Alert.alert(
+      'Verknüpfung entfernen',
+      `Möchten Sie die Verknüpfung zu "${folder.name}" entfernen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Entfernen',
+          style: 'destructive',
+          onPress: async () => {
+            await ReferenceService.removeExternalFolder(folder.id);
+            loadData();
           },
         },
       ]
@@ -288,6 +384,10 @@ export default function ReferencesScreen() {
             onPress: () => setFolderThumbnailFromGallery(item),
           },
           {
+            text: 'Exportieren',
+            onPress: () => exportFolder(item),
+          },
+          {
             text: 'Umbenennen',
             onPress: () => {
               setEditingFolder(item);
@@ -315,6 +415,33 @@ export default function ReferencesScreen() {
         {(item.subfolder_count || 0) > 0 && `${item.subfolder_count} · `}
         {item.photo_count || 0} Fotos
       </Text>
+    </TouchableOpacity>
+  );
+
+  // Render external folder item
+  const renderExternalFolderItem = (item: ExternalFolder) => (
+    <TouchableOpacity
+      key={item.id}
+      style={[styles.folderCard, styles.externalFolderCard]}
+      onPress={() => {
+        // Try to open the external folder
+        Alert.alert('Externer Ordner', `Pfad: ${item.uri}\n\nDiese Funktion ist noch in Entwicklung.`);
+      }}
+      onLongPress={() => {
+        Alert.alert(item.name, 'Was möchten Sie tun?', [
+          { text: 'Abbrechen', style: 'cancel' },
+          { text: 'Verknüpfung entfernen', style: 'destructive', onPress: () => unlinkExternalFolder(item) },
+        ]);
+      }}
+    >
+      <View style={[styles.folderIconContainer, styles.externalIconContainer]}>
+        <Ionicons name="folder-open" size={32} color="#2196f3" />
+        <View style={styles.externalBadge}>
+          <Ionicons name="link" size={10} color="#fff" />
+        </View>
+      </View>
+      <Text style={styles.folderName} numberOfLines={2}>{item.name}</Text>
+      <Text style={styles.folderMeta}>Extern</Text>
     </TouchableOpacity>
   );
 
@@ -480,9 +607,28 @@ export default function ReferencesScreen() {
           {folders.length > 0 && (
             <>
               {currentFolder && <Text style={styles.sectionTitle}>Unterordner ({folders.length})</Text>}
+              {!currentFolder && <Text style={styles.sectionTitle}>Lokale Ordner ({folders.length})</Text>}
               <View style={styles.gridContainer}>
                 {folders.map(renderFolderItem)}
               </View>
+            </>
+          )}
+
+          {/* External Folders Section (only on root) */}
+          {!currentFolder && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Externe Ordner (USB/Cloud)</Text>
+              </View>
+              <TouchableOpacity style={styles.linkExternalButton} onPress={linkExternalFolder}>
+                <Ionicons name="link" size={18} color="#2196f3" />
+                <Text style={styles.linkExternalButtonText}>Externen Ordner verknüpfen</Text>
+              </TouchableOpacity>
+              {externalFolders.length > 0 && (
+                <View style={styles.gridContainer}>
+                  {externalFolders.map(renderExternalFolderItem)}
+                </View>
+              )}
             </>
           )}
 
@@ -741,6 +887,14 @@ const styles = StyleSheet.create({
   folderThumbnail: { width: '100%', height: '100%' },
   folderName: { fontSize: 11, fontWeight: '600', color: '#333', textAlign: 'center', marginTop: 4 },
   folderMeta: { fontSize: 9, color: '#999', marginTop: 2 },
+  
+  // External Folder
+  externalFolderCard: { borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed' },
+  externalIconContainer: { backgroundColor: '#e3f2fd', position: 'relative' },
+  externalBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#2196f3', borderRadius: 8, padding: 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  linkExternalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, marginBottom: 12, gap: 6 },
+  linkExternalButtonText: { color: '#2196f3', fontSize: 13, fontWeight: '600' },
   
   // Add Photo Buttons
   addPhotoButtons: { flexDirection: 'row', gap: 8, marginBottom: 12 },

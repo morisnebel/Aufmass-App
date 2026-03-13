@@ -5,6 +5,7 @@ import { File, Directory, Paths } from 'expo-file-system';
 const KEYS = {
   REFERENCE_FOLDERS: 'aufmassprofi_reference_folders',
   REFERENCE_PHOTOS: 'aufmassprofi_reference_photos',
+  EXTERNAL_FOLDERS: 'aufmassprofi_external_folders',
 };
 
 // Types
@@ -28,6 +29,14 @@ export interface ReferencePhoto {
   original_uri: string;
   source: 'camera' | 'gallery' | 'files';
   created_at: string;
+}
+
+export interface ExternalFolder {
+  id: string;
+  name: string;
+  uri: string; // Path to external folder
+  linked_at: string;
+  is_available?: boolean;
 }
 
 // Helper to generate unique IDs
@@ -431,6 +440,71 @@ export const ReferenceService = {
       await AsyncStorage.removeItem(KEYS.REFERENCE_PHOTOS);
     } catch (error) {
       console.error('Error clearing reference data:', error);
+      throw error;
+    }
+  },
+
+  // ============ EXTERNAL FOLDERS ============
+
+  // Get all external folders
+  getExternalFolders: async (): Promise<ExternalFolder[]> => {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.EXTERNAL_FOLDERS);
+      if (!data) return [];
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Error getting external folders:', error);
+      return [];
+    }
+  },
+
+  // Add external folder link
+  addExternalFolder: async (name: string, uri: string): Promise<ExternalFolder> => {
+    try {
+      const folders = await ReferenceService.getExternalFolders();
+      
+      const newFolder: ExternalFolder = {
+        id: generateId(),
+        name,
+        uri,
+        linked_at: new Date().toISOString(),
+      };
+      
+      folders.push(newFolder);
+      await AsyncStorage.setItem(KEYS.EXTERNAL_FOLDERS, JSON.stringify(folders));
+      
+      return newFolder;
+    } catch (error) {
+      console.error('Error adding external folder:', error);
+      throw error;
+    }
+  },
+
+  // Remove external folder link
+  removeExternalFolder: async (id: string): Promise<void> => {
+    try {
+      const folders = await ReferenceService.getExternalFolders();
+      const filtered = folders.filter(f => f.id !== id);
+      await AsyncStorage.setItem(KEYS.EXTERNAL_FOLDERS, JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error removing external folder:', error);
+      throw error;
+    }
+  },
+
+  // Export folder data for external storage
+  exportFolderData: async (folderId: string): Promise<{ folder: ReferenceFolder; photos: ReferencePhoto[]; subfolders: ReferenceFolder[] }> => {
+    try {
+      const folder = await ReferenceService.getFolder(folderId);
+      if (!folder) throw new Error('Folder not found');
+      
+      const photos = await ReferenceService.getPhotosInFolder(folderId);
+      const allFolders = await ReferenceService.getAllFolders();
+      const subfolders = allFolders.filter(f => f.parent_id === folderId);
+      
+      return { folder, photos, subfolders };
+    } catch (error) {
+      console.error('Error exporting folder data:', error);
       throw error;
     }
   },

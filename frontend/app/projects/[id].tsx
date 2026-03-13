@@ -1264,20 +1264,26 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // iPhone: Fotos in Gruppen von 6 aufteilen (jede Gruppe = 1 Seite)
-    // iPad: Alle Fotos in einem Container
+    // iPhone: Fotos in Gruppen von 4 aufteilen (jede Gruppe = 1 Seite)
+    // iPad: Fotos in Gruppen von 4 aufteilen für sauberen Seitenumbruch
     let photosHtml = '';
     if (photos.length > 0) {
+      // Beide: Gruppen von 4 Fotos pro Seite (2 Zeilen à 2 Fotos)
+      const photosPerPage = 4;
+      const photoGroups: string[][] = [];
+      for (let i = 0; i < photoItems.length; i += photosPerPage) {
+        photoGroups.push(photoItems.slice(i, i + photosPerPage));
+      }
+      
       if (isIpadForPhotos) {
-        // iPad: normaler Container
-        photosHtml = `<div class="photos-container">${photoItems.join('')}</div>`;
+        // iPad: Gruppen mit page-break
+        photosHtml = photoGroups.map((group, groupIndex) => `
+          <div class="photos-page-group" style="page-break-inside: avoid; ${groupIndex > 0 ? 'page-break-before: always;' : ''}">
+            <div class="photos-container">${group.join('')}</div>
+          </div>
+        `).join('');
       } else {
-        // iPhone: Gruppen von 6 Fotos pro Seite (3 Zeilen)
-        const photosPerPage = 6;
-        const photoGroups: string[][] = [];
-        for (let i = 0; i < photoItems.length; i += photosPerPage) {
-          photoGroups.push(photoItems.slice(i, i + photosPerPage));
-        }
+        // iPhone: Gruppen mit explizitem Seitenumbruch
         photosHtml = photoGroups.map((group, groupIndex) => `
           <div class="photos-container-iphone ${groupIndex > 0 ? 'photos-new-page' : ''}">
             ${group.join('')}
@@ -2683,6 +2689,25 @@ export default function ProjectDetailScreen() {
             content: "";
             display: table;
             clear: both;
+          }
+          /* Photo page groups - jede Gruppe auf eigener Seite */
+          .photos-page-group {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+          }
+          .photos-page-group .photos-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+          }
+          .photos-page-group .photo-item {
+            max-height: 320px;
+            overflow: hidden;
+          }
+          .photos-page-group .photo-item img {
+            max-height: 280px;
+            object-fit: contain;
           }
           /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
           .sketches-container-iphone {

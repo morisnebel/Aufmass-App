@@ -13,6 +13,7 @@ import {
   PanResponder,
   Animated,
   Image,
+  Keyboard,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8015,6 +8016,7 @@ export default function AreaCalculatorEditor() {
                 onFocus={() => { 
                   setAngleNumpadTarget('angle'); 
                   setShowAngleNumpad(true);
+                  Keyboard.dismiss(); // iPad-Tastatur ausblenden
                   // Aktuellen Winkel in Textfeld übernehmen
                   if (fixedAngle !== null && ![0, 15, 30, 45, 60, 90, 120, 135].includes(fixedAngle)) {
                     setAngleInputText(fixedAngle.toString());
@@ -8047,7 +8049,7 @@ export default function AreaCalculatorEditor() {
                   backgroundColor: angleNumpadTarget === 'angle' && showAngleNumpad ? '#E91E63' : '#e8eaf6', 
                   borderRadius: 8 
                 }}
-                onPress={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'angle'); }}
+                onPress={() => { setAngleNumpadTarget('angle'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'angle'); Keyboard.dismiss(); }}
               >
                 <Ionicons name="keypad" size={22} color={angleNumpadTarget === 'angle' && showAngleNumpad ? '#fff' : '#3949ab'} />
               </TouchableOpacity>
@@ -8075,7 +8077,7 @@ export default function AreaCalculatorEditor() {
                     const filtered = text.replace(/[^0-9.,+\-*/()]/g, '');
                     setFixedLength(filtered);
                   }}
-                  onFocus={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(true); }}
+                  onFocus={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(true); Keyboard.dismiss(); }}
                 />
                 <Text style={{ marginLeft: 6, fontSize: 14, color: '#666' }}>m</Text>
                 <TouchableOpacity
@@ -8085,7 +8087,7 @@ export default function AreaCalculatorEditor() {
                     backgroundColor: angleNumpadTarget === 'length' && showAngleNumpad ? '#4CAF50' : '#e8eaf6', 
                     borderRadius: 6 
                   }}
-                  onPress={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'length'); }}
+                  onPress={() => { setAngleNumpadTarget('length'); setShowAngleNumpad(!showAngleNumpad || angleNumpadTarget !== 'length'); Keyboard.dismiss(); }}
                 >
                   <Ionicons name="keypad" size={20} color={angleNumpadTarget === 'length' && showAngleNumpad ? '#fff' : '#3949ab'} />
                 </TouchableOpacity>

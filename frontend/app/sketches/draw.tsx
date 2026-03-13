@@ -351,7 +351,11 @@ export default function DrawSketchScreen() {
   const selectDrawMode = (mode: DrawMode) => {
     setDrawMode(mode);
     // PhotoEditMode deaktivieren wenn anderes Werkzeug gewählt wird
-    setPhotoEditMode(false);
+    if (photoEditMode) {
+      setPhotoEditMode(false);
+      // Auch die Auswahl aufheben, damit die grünen Handles verschwinden
+      setSelectedElementId(null);
+    }
     // Zoom-Modus ausschalten damit Zeichnen/Bearbeiten funktioniert
     // aber den aktuellen Zoom-Level beibehalten!
     setZoomMode(false);

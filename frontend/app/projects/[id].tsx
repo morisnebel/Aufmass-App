@@ -1289,10 +1289,10 @@ export default function ProjectDetailScreen() {
         }
       }
       
-      // Mittel: 4 pro Seite (2 Reihen à 2)
+      // Mittel: 2 pro Seite (1 Reihe à 2) - sicherer als 4
       if (mediumPhotos.length > 0) {
-        for (let i = 0; i < mediumPhotos.length; i += 4) {
-          const groupPhotos = mediumPhotos.slice(i, i + 4);
+        for (let i = 0; i < mediumPhotos.length; i += 2) {
+          const groupPhotos = mediumPhotos.slice(i, i + 2);
           const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
           const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
           sections.push(`<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);

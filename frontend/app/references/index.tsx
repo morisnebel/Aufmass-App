@@ -766,15 +766,19 @@ export default function ReferencesScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Externe Ordner (USB/Cloud)</Text>
               </View>
-              <TouchableOpacity style={styles.linkExternalButtonFull} onPress={linkExternalFolder}>
-                <Ionicons name="add-circle-outline" size={18} color="#2196f3" />
-                <Text style={styles.linkExternalButtonText}>Neue Verknüpfung erstellen</Text>
-              </TouchableOpacity>
-              {externalFolders.length > 0 && (
-                <View style={styles.gridContainer}>
-                  {externalFolders.map(renderExternalFolderItem)}
-                </View>
-              )}
+              <View style={styles.gridContainer}>
+                {/* Add new link button as a card */}
+                <TouchableOpacity
+                  style={[styles.folderCard, styles.addLinkCard]}
+                  onPress={linkExternalFolder}
+                >
+                  <View style={[styles.folderIconContainer, styles.addLinkIconContainer]}>
+                    <Ionicons name="add" size={32} color="#2196f3" />
+                  </View>
+                  <Text style={styles.folderName} numberOfLines={2}>Verknüpfung erstellen</Text>
+                </TouchableOpacity>
+                {externalFolders.map(renderExternalFolderItem)}
+              </View>
             </>
           )}
 
@@ -1077,6 +1081,8 @@ const styles = StyleSheet.create({
   externalFolderCard: { borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed' },
   externalIconContainer: { backgroundColor: '#e3f2fd', position: 'relative' },
   externalBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#2196f3', borderRadius: 8, padding: 2 },
+  addLinkCard: { borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed' },
+  addLinkIconContainer: { backgroundColor: '#e3f2fd' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
   externalButtonsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   linkExternalButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6 },

@@ -517,6 +517,14 @@ export default function AreaCalculatorEditor() {
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);
   
+  // Helper-Funktion: Wechselt den Modus und deaktiviert automatisch +Punkt/-Punkt Modi
+  const selectMode = (newMode: typeof mode) => {
+    setMode(newMode);
+    // +Punkt und -Punkt Modi deaktivieren wenn anderes Werkzeug gewählt wird
+    setAddPointMode(false);
+    setDeletePointMode(false);
+  };
+  
   // Resizing deduction rectangles (keeping 90° corners)
   const [resizingDeductionRect, setResizingDeductionRect] = useState<{ polygonId: string; handle: 'nw' | 'ne' | 'sw' | 'se' } | null>(null);
   const deductionRectOriginal = useRef<{ minX: number; minY: number; maxX: number; maxY: number }>({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
@@ -3671,7 +3679,7 @@ export default function AreaCalculatorEditor() {
           <View style={styles.toolbarSectionButtons}>
             <TouchableOpacity
               style={[styles.toolButton, mode === 'select' && styles.toolButtonActive, { backgroundColor: mode === 'select' ? '#2196F3' : '#f5f5f5' }]}
-              onPress={() => { setMode('select'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('select'); setCurrentPoints([]); }}
             >
               <Ionicons name="hand-left" size={18} color={mode === 'select' ? '#fff' : '#2196F3'} />
               <Text style={[styles.toolLabel, mode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
@@ -3680,7 +3688,7 @@ export default function AreaCalculatorEditor() {
             <TouchableOpacity
               style={[styles.toolButton, mode === 'scale' && styles.toolButtonActive]}
               onPress={() => { 
-                setMode('scale'); 
+                selectMode('scale'); 
                 setCurrentPoints([]); 
                 setScaleReference({ startPoint: null, endPoint: null, realLength: 1 });
               }}
@@ -3691,7 +3699,7 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButtonLarge, mode === 'polygon' && styles.toolButtonActive, { backgroundColor: mode === 'polygon' ? '#4CAF50' : '#f5f5f5' }]}
-              onPress={() => { setMode('polygon'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('polygon'); setCurrentPoints([]); }}
             >
               <AreaIcon size={20} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
               <Text style={[styles.toolLabel, mode === 'polygon' && styles.toolLabelActive, { fontSize: 7 }]}>Fläche/Poly</Text>
@@ -3729,7 +3737,7 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButtonLarge, mode === 'deduction' && styles.toolButtonActive, { backgroundColor: mode === 'deduction' ? '#f44336' : '#f5f5f5' }]}
-              onPress={() => { setMode('deduction'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('deduction'); setCurrentPoints([]); }}
             >
               <DeductionAreaIcon size={20} color={mode === 'deduction' ? '#fff' : '#f44336'} />
               <Text style={[styles.toolLabel, mode === 'deduction' && styles.toolLabelActive, { fontSize: 7 }]}>Abzug Fläche</Text>
@@ -3737,7 +3745,7 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButton, mode === 'deduction_rect' && styles.toolButtonActive, { backgroundColor: mode === 'deduction_rect' ? '#f44336' : '#f5f5f5' }]}
-              onPress={() => { setMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
+              onPress={() => { selectMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
             >
               <DeductionRectIcon size={18} color={mode === 'deduction_rect' ? '#fff' : '#f44336'} />
               <Text style={[styles.toolLabel, mode === 'deduction_rect' && styles.toolLabelActive, { fontSize: 6 }]}>Abzug Rechteck</Text>
@@ -3753,7 +3761,7 @@ export default function AreaCalculatorEditor() {
           <View style={styles.toolbarSectionButtons}>
             <TouchableOpacity
               style={[styles.toolButton, mode === 'guideline' && styles.toolButtonActive, { backgroundColor: mode === 'guideline' ? '#FF9800' : '#f5f5f5' }]}
-              onPress={() => { setMode('guideline'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('guideline'); setCurrentPoints([]); }}
             >
               <Ionicons name="analytics-outline" size={18} color={mode === 'guideline' ? '#fff' : '#FF9800'} />
               <Text style={[styles.toolLabel, mode === 'guideline' && styles.toolLabelActive]}>Hilfslinie</Text>
@@ -3761,7 +3769,7 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButton, mode === 'parallel' && styles.toolButtonActive, { backgroundColor: mode === 'parallel' ? '#9C27B0' : '#f5f5f5' }]}
-              onPress={() => { setMode('parallel'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('parallel'); setCurrentPoints([]); }}
             >
               <Ionicons name="reorder-two-outline" size={18} color={mode === 'parallel' ? '#fff' : '#9C27B0'} />
               <Text style={[styles.toolLabel, mode === 'parallel' && styles.toolLabelActive]}>Parallel</Text>
@@ -3849,7 +3857,7 @@ export default function AreaCalculatorEditor() {
           <View style={styles.toolbarSectionButtons}>
             <TouchableOpacity
               style={[styles.toolButton, mode === 'annotation_text' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_text' ? '#E91E63' : '#f5f5f5' }]}
-              onPress={() => { setMode('annotation_text'); setCurrentPoints([]); }}
+              onPress={() => { selectMode('annotation_text'); setCurrentPoints([]); }}
             >
               <Ionicons name="text-outline" size={18} color={mode === 'annotation_text' ? '#fff' : '#E91E63'} />
               <Text style={[styles.toolLabel, mode === 'annotation_text' && styles.toolLabelActive]}>Text</Text>
@@ -3857,7 +3865,7 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButton, mode === 'annotation_memo' && styles.toolButtonActive, { backgroundColor: mode === 'annotation_memo' ? '#FF5722' : '#f5f5f5' }]}
-              onPress={() => { setMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
+              onPress={() => { selectMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
             >
               <Ionicons name="chatbox-outline" size={18} color={mode === 'annotation_memo' ? '#fff' : '#FF5722'} />
               <Text style={[styles.toolLabel, mode === 'annotation_memo' && styles.toolLabelActive]}>Notiz</Text>

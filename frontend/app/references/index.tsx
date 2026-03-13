@@ -59,6 +59,10 @@ export default function ReferencesScreen() {
   const [allFoldersForMove, setAllFoldersForMove] = useState<ReferenceFolder[]>([]);
   const [moveModalParentId, setMoveModalParentId] = useState<string | undefined>(undefined);
   const [moveModalPath, setMoveModalPath] = useState<ReferenceFolder[]>([]);
+  
+  // External folder state
+  const [currentExternalFolder, setCurrentExternalFolder] = useState<ExternalFolder | null>(null);
+  const [externalPhotos, setExternalPhotos] = useState<string[]>([]);
 
   // Load data
   const loadData = async () => {
@@ -104,6 +108,13 @@ export default function ReferencesScreen() {
   };
 
   const navigateBack = () => {
+    // If viewing external folder, go back to main view
+    if (currentExternalFolder) {
+      setCurrentExternalFolder(null);
+      setExternalPhotos([]);
+      return;
+    }
+    
     if (folderStack.length > 0) {
       setFolderStack(folderStack.slice(0, -1));
     } else {
@@ -256,6 +267,90 @@ export default function ReferencesScreen() {
         },
       ]
     );
+  };
+
+  // Open external folder and load photos
+  const openExternalFolder = async (folder: ExternalFolder) => {
+    try {
+      setCurrentExternalFolder(folder);
+      setLoading(true);
+      
+      // Try to read directory contents
+      const dirInfo = await FileSystem.getInfoAsync(folder.uri);
+      if (dirInfo.exists && dirInfo.isDirectory) {
+        const contents = await FileSystem.readDirectoryAsync(folder.uri);
+        const imageFiles = contents.filter(file => 
+          /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(file)
+        );
+        setExternalPhotos(imageFiles.map(f => `${folder.uri}/${f}`));
+      } else {
+        Alert.alert('Fehler', 'Ordner nicht gefunden. Ist das Gerät verbunden?');
+        setCurrentExternalFolder(null);
+      }
+    } catch (error) {
+      console.error('Error opening external folder:', error);
+      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden. Möglicherweise ist das externe Gerät nicht verbunden.');
+      setCurrentExternalFolder(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Import folder from external storage
+  const importFolder = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/json'],
+        copyToCacheDirectory: true,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        const metadataUri = result.assets[0].uri;
+        const metadataContent = await FileSystem.readAsStringAsync(metadataUri);
+        const metadata = JSON.parse(metadataContent);
+        
+        if (!metadata.folder || !metadata.photos) {
+          Alert.alert('Fehler', 'Ungültiges Export-Format');
+          return;
+        }
+        
+        // Create the folder
+        const newFolder = await ReferenceService.createFolder(
+          metadata.folder.name + ' (importiert)',
+          currentFolder?.id
+        );
+        
+        // Ask user to select the photos directory
+        Alert.alert(
+          'Fotos importieren',
+          `Ordner "${metadata.folder.name}" wurde erstellt.\n\nMöchten Sie jetzt die ${metadata.photos.length} Fotos importieren?\n\nWählen Sie den Ordner mit den exportierten Fotos.`,
+          [
+            { text: 'Später', style: 'cancel', onPress: () => loadData() },
+            {
+              text: 'Fotos wählen',
+              onPress: async () => {
+                const photosResult = await DocumentPicker.getDocumentAsync({
+                  type: ['image/*'],
+                  copyToCacheDirectory: true,
+                  multiple: true,
+                });
+                
+                if (!photosResult.canceled && photosResult.assets.length > 0) {
+                  for (const asset of photosResult.assets) {
+                    await ReferenceService.addPhoto(newFolder.id, asset.uri, 'files');
+                  }
+                  Alert.alert('Erfolg', `${photosResult.assets.length} Fotos importiert`);
+                }
+                loadData();
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error importing folder:', error);
+      Alert.alert('Fehler', 'Import fehlgeschlagen');
+    }
   };
 
   // Photo functions
@@ -423,10 +518,7 @@ export default function ReferencesScreen() {
     <TouchableOpacity
       key={item.id}
       style={[styles.folderCard, styles.externalFolderCard]}
-      onPress={() => {
-        // Try to open the external folder
-        Alert.alert('Externer Ordner', `Pfad: ${item.uri}\n\nDiese Funktion ist noch in Entwicklung.`);
-      }}
+      onPress={() => openExternalFolder(item)}
       onLongPress={() => {
         Alert.alert(item.name, 'Was möchten Sie tun?', [
           { text: 'Abbrechen', style: 'cancel' },
@@ -442,6 +534,25 @@ export default function ReferencesScreen() {
       </View>
       <Text style={styles.folderName} numberOfLines={2}>{item.name}</Text>
       <Text style={styles.folderMeta}>Extern</Text>
+    </TouchableOpacity>
+  );
+
+  // Render external photo item
+  const renderExternalPhotoItem = (uri: string, index: number) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.photoItem}
+      onPress={() => {
+        // Show external photo in full screen
+        setSelectedPhoto({ id: `ext-${index}`, folder_id: '', uri, original_uri: uri, source: 'files', created_at: '' });
+        setShowPhotoModal(true);
+      }}
+    >
+      <Image 
+        source={{ uri }} 
+        style={styles.photoThumbnail} 
+        resizeMode="cover"
+      />
     </TouchableOpacity>
   );
 
@@ -510,7 +621,7 @@ export default function ReferencesScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {currentFolder?.name || 'Referenz Fotos'}
+          {currentExternalFolder?.name || currentFolder?.name || 'Referenz Fotos'}
         </Text>
         <TouchableOpacity style={styles.searchButton} onPress={() => setShowSearch(!showSearch)}>
           <Ionicons name="search" size={22} color="#fff" />
@@ -547,6 +658,29 @@ export default function ReferencesScreen() {
             </View>
           ) : (
             searchResults.map(renderSearchResult)
+          )}
+        </ScrollView>
+      ) : currentExternalFolder ? (
+        // External folder view
+        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.externalFolderHeader}>
+            <Ionicons name="folder-open" size={24} color="#2196f3" />
+            <Text style={styles.externalFolderHeaderText}>Externer Ordner</Text>
+          </View>
+          
+          {externalPhotos.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>Keine Fotos gefunden</Text>
+              <Text style={styles.emptySubtext}>Der Ordner ist leer oder das Gerät ist nicht verbunden</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>Fotos ({externalPhotos.length})</Text>
+              <View style={styles.photoGridContainer}>
+                {externalPhotos.map((uri, index) => renderExternalPhotoItem(uri, index))}
+              </View>
+            </>
           )}
         </ScrollView>
       ) : (
@@ -620,10 +754,16 @@ export default function ReferencesScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Externe Ordner (USB/Cloud)</Text>
               </View>
-              <TouchableOpacity style={styles.linkExternalButton} onPress={linkExternalFolder}>
-                <Ionicons name="link" size={18} color="#2196f3" />
-                <Text style={styles.linkExternalButtonText}>Externen Ordner verknüpfen</Text>
-              </TouchableOpacity>
+              <View style={styles.externalButtonsRow}>
+                <TouchableOpacity style={styles.linkExternalButton} onPress={linkExternalFolder}>
+                  <Ionicons name="link" size={16} color="#2196f3" />
+                  <Text style={styles.linkExternalButtonText}>Verknüpfen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.importButton} onPress={importFolder}>
+                  <Ionicons name="download" size={16} color="#4caf50" />
+                  <Text style={styles.importButtonText}>Importieren</Text>
+                </TouchableOpacity>
+              </View>
               {externalFolders.length > 0 && (
                 <View style={styles.gridContainer}>
                   {externalFolders.map(renderExternalFolderItem)}
@@ -893,8 +1033,13 @@ const styles = StyleSheet.create({
   externalIconContainer: { backgroundColor: '#e3f2fd', position: 'relative' },
   externalBadge: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#2196f3', borderRadius: 8, padding: 2 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
-  linkExternalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, marginBottom: 12, gap: 6 },
-  linkExternalButtonText: { color: '#2196f3', fontSize: 13, fontWeight: '600' },
+  externalButtonsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  linkExternalButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6 },
+  linkExternalButtonText: { color: '#2196f3', fontSize: 12, fontWeight: '600' },
+  importButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: '#4caf50', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6 },
+  importButtonText: { color: '#4caf50', fontSize: 12, fontWeight: '600' },
+  externalFolderHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', padding: 10, borderRadius: 8, marginBottom: 12, gap: 8 },
+  externalFolderHeaderText: { fontSize: 14, fontWeight: '600', color: '#2196f3' },
   
   // Add Photo Buttons
   addPhotoButtons: { flexDirection: 'row', gap: 8, marginBottom: 12 },

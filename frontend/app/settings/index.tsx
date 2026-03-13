@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +52,9 @@ const PDF_COLOR_OPTIONS = [
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhone = screenWidth < 500;
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettings>({
@@ -362,26 +366,28 @@ export default function SettingsScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>PDF Kopfzeilen-Farbe</Text>
               <Text style={styles.sublabel}>Wählen Sie eine Farbe für den PDF-Header</Text>
-              <View style={styles.colorSelector}>
+              <View style={[styles.colorSelector, isPhone && styles.colorSelectorPhone]}>
                 {PDF_COLOR_OPTIONS.map((option) => (
                   <TouchableOpacity
                     key={option.id}
                     style={[
                       styles.colorOption,
+                      isPhone && styles.colorOptionPhone,
                       settings.pdf_header_color === option.id && styles.colorOptionActive
                     ]}
                     onPress={() => setSettings({ ...settings, pdf_header_color: option.id })}
                   >
-                    <View style={[styles.colorPreview, { backgroundColor: option.color }]}>
+                    <View style={[styles.colorPreview, isPhone && styles.colorPreviewPhone, { backgroundColor: option.color }]}>
                       {settings.pdf_header_color === option.id && (
-                        <Ionicons name="checkmark" size={16} color={option.textColor} />
+                        <Ionicons name="checkmark" size={isPhone ? 12 : 16} color={option.textColor} />
                       )}
                     </View>
                     <Text style={[
                       styles.colorLabel,
+                      isPhone && styles.colorLabelPhone,
                       settings.pdf_header_color === option.id && styles.colorLabelActive
                     ]}>
-                      {option.label}
+                      {isPhone ? option.label.split(' ')[0] : option.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -724,6 +730,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  colorSelectorPhone: {
+    gap: 6,
+  },
   colorOption: {
     alignItems: 'center',
     padding: 8,
@@ -731,6 +740,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     width: '23%',
+  },
+  colorOptionPhone: {
+    width: '31%',
+    padding: 6,
   },
   colorOptionActive: {
     borderColor: '#1976d2',
@@ -746,10 +759,18 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     marginBottom: 4,
   },
+  colorPreviewPhone: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
   colorLabel: {
     fontSize: 10,
     color: '#666',
     textAlign: 'center',
+  },
+  colorLabelPhone: {
+    fontSize: 8,
   },
   colorLabelActive: {
     color: '#1976d2',

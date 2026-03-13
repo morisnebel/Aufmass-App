@@ -16,6 +16,7 @@ import {
   Animated,
   PanResponder,
   Image as RNImage,
+  useWindowDimensions,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
@@ -271,6 +272,10 @@ export default function DrawSketchScreen() {
   // Get photo ID for loading from LocalStorage (faster than passing base64 via URL)
   const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
   
+  // iPhone-Erkennung für responsive Layout
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isPhone = screenWidth < 500;
+  
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
   const initialImageAdded = useRef(false);
@@ -305,7 +310,7 @@ export default function DrawSketchScreen() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [originalElement, setOriginalElement] = useState<DrawElement | null>(null);
   
-  // Zoom & Pan
+  // Zoom & Pan - use dynamic dimensions
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
@@ -314,9 +319,9 @@ export default function DrawSketchScreen() {
   const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
-  // Canvas-Dimensionen für zoomToRect
-  const canvasWidth = width;
-  const canvasHeight = height - 120;
+  // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
+  const canvasWidth = screenWidth;
+  const canvasHeight = screenHeight - (isPhone ? 100 : 120);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -4140,16 +4145,21 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Toolbar mit Labels */}
-      <View style={styles.toolbar}>
+      {/* Toolbar mit Labels - scrollbar für iPhone */}
+      <ScrollView 
+        horizontal={isPhone} 
+        showsHorizontalScrollIndicator={isPhone}
+        style={[styles.toolbar, isPhone && styles.toolbarPhone]}
+        contentContainerStyle={isPhone ? styles.toolbarContentPhone : undefined}
+      >
         {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
         {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={takePhotoAndInsert}>
-            <Ionicons name="camera" size={20} color="#4caf50" />
+          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhone && styles.toolButtonPhotoWidePhone]} onPress={takePhotoAndInsert}>
+            <Ionicons name="camera" size={isPhone ? 18 : 20} color="#4caf50" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabelWide}>Foto Neu</Text>
+          <Text style={[styles.toolButtonLabelWide, isPhone && styles.toolButtonLabelWidePhone]}>Foto</Text>
         </View>
 
         {/* 2. Projektfotos */}
@@ -4510,7 +4520,7 @@ export default function DrawSketchScreen() {
           </TouchableOpacity>
           <Text style={[styles.toolButtonLabel, { color: '#f44336' }]}>Seite{'\n'}löschen</Text>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Color picker expandable */}
       {showColorPicker && (
@@ -6072,6 +6082,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-start',
   },
+  toolbarPhone: {
+    flexWrap: 'nowrap',
+    maxHeight: 70,
+  },
+  toolbarContentPhone: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingRight: 20,
+  },
   toolButton: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -6098,6 +6117,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#f5f5f5',
   },
+  toolButtonPhotoWidePhone: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    minWidth: 40,
+    minHeight: 32,
+  },
   // Breiteres Label für Foto-Buttons (mehrzeilig)
   toolButtonLabelWide: {
     fontSize: 7,
@@ -6106,6 +6131,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 9,
     maxWidth: 55,
+  },
+  toolButtonLabelWidePhone: {
+    fontSize: 6,
+    maxWidth: 40,
   },
   toolButtonInner: {
     alignItems: 'center',

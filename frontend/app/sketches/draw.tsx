@@ -4146,12 +4146,13 @@ export default function DrawSketchScreen() {
       </View>
 
       {/* Toolbar mit Labels - scrollbar für iPhone */}
-      <ScrollView 
-        horizontal={isPhone} 
-        showsHorizontalScrollIndicator={isPhone}
-        style={[styles.toolbar, isPhone && styles.toolbarPhone]}
-        contentContainerStyle={isPhone ? styles.toolbarContentPhone : styles.toolbarContent}
-      >
+      <View style={styles.toolbarContainer}>
+        <ScrollView 
+          horizontal={isPhone} 
+          showsHorizontalScrollIndicator={isPhone}
+          style={[styles.toolbar, isPhone && styles.toolbarPhone]}
+          contentContainerStyle={isPhone ? styles.toolbarContentPhone : styles.toolbarContent}
+        >
         {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
         {/* 1. neues Foto */}
@@ -4521,6 +4522,7 @@ export default function DrawSketchScreen() {
           <Text style={[styles.toolButtonLabel, { color: '#f44336' }]}>Seite{'\n'}löschen</Text>
         </View>
       </ScrollView>
+      </View>
 
       {/* Color picker expandable */}
       {showColorPicker && (
@@ -6072,10 +6074,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  toolbar: {
+  toolbarContainer: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+  },
+  toolbar: {
     paddingVertical: 4,
     paddingHorizontal: 4,
   },

@@ -3920,10 +3920,10 @@ export default function ProjectDetailScreen() {
                     style={[styles.photoActionButton, styles.photoActionButtonExport]}
                     onPress={() => setPhotoSelectMode(true)}
                   >
-                    <Ionicons name="cloud-upload-outline" size={22} color="#9c27b0" />
+                    <Ionicons name="cloud-upload-outline" size={22} color="#43a047" />
                     <View style={styles.photoActionButtonTextContainer}>
-                      <Text style={[styles.photoActionButtonText, { color: '#9c27b0' }]}>In Galerie</Text>
-                      <Text style={[styles.photoActionButtonSubtext, { color: '#9c27b0' }]}>(Exportieren)</Text>
+                      <Text style={[styles.photoActionButtonText, { color: '#43a047' }]}>In Galerie</Text>
+                      <Text style={[styles.photoActionButtonSubtext, { color: '#43a047' }]}>(Exportieren)</Text>
                     </View>
                   </TouchableOpacity>
                   
@@ -6156,9 +6156,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   photoActionButtonExport: {
-    backgroundColor: '#f3e5f5',
+    backgroundColor: '#e8f5e9',
     borderWidth: 1,
-    borderColor: '#ce93d8',
+    borderColor: '#81c784',
   },
   photoActionButtonImport: {
     backgroundColor: '#e3f2fd',

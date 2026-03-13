@@ -50,7 +50,20 @@ German (Deutsch)
 
 ## What's Been Implemented
 
-### Session: December 2025 (Current)
+### Session: December 2025 (Current - Latest Update)
+- ✅ **KRITISCHER BUG FIX - Bilder-Daten in Checklisten**:
+  - **Problem**: Beim Erstellen einer Checkliste aus einem Template mit Teil-Auswahl wurden printImage, previewImages und referenceFolderId nicht übertragen
+  - **Ursache**: Die `convertItems` Funktion in `/app/frontend/app/checklists/[id].tsx` hat die Bild-Felder beim Laden nicht kopiert
+  - **Fix 1**: `convertItems` Funktion erweitert - kopiert jetzt alle Bild-Felder (printImage, previewImages, categoryLogo, referenceFolderId, referenceFolderName)
+  - **Fix 2**: `RecursiveItem` Interface erweitert mit allen Bild-Feldern
+  - **Fix 3**: Beide `deepCopy` Funktionen aktualisiert für korrektes Kopieren der Bilder
+  - **Fix 4**: Fehlender Import von `ChecklistTemplateService` hinzugefügt
+- ✅ **AUTO-EXPAND BUG FIX**:
+  - **Problem**: Auto-Expand funktionierte nicht für das erste/oberste Element in der Checkliste
+  - **Fix**: `toggleItemChecked` Funktion überarbeitet - klappt jetzt sowohl das aktuelle Item als auch den ersten Unterpunkt (wenn vorhanden) auf
+  - **Datei**: `/app/frontend/app/checklists/[id].tsx`
+
+### Session: December 2025 (Previous)
 - ✅ **REFERENZ FOTOS TOOL IMPLEMENTIERT**:
   - Neuer Screen `/app/frontend/app/references/index.tsx`
   - Service `/app/frontend/services/ReferenceService.ts` für Datenverwaltung

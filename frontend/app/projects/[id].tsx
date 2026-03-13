@@ -5505,6 +5505,8 @@ export default function ProjectDetailScreen() {
                       key={photo.id}
                       style={styles.referencePhotoItem}
                       onPress={() => {
+                        // Erst Referenz-Modal schließen, dann Bild-Modal öffnen
+                        setReferencePhotosModal({ ...referencePhotosModal, visible: false });
                         setCurrentImageIndex(index);
                         setImagePreviewModal({ 
                           visible: true, 

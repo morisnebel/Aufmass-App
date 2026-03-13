@@ -12,11 +12,9 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const isPhone = Platform.OS === 'ios' && !Platform.isPad;
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +33,10 @@ const STATUS_OPTIONS = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  // iPhone hat typisch < 500px Breite, iPad >= 768px
+  const isPhone = screenWidth < 500;
+  
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<{ [key: string]: Customer }>({});
   const [loading, setLoading] = useState(true);

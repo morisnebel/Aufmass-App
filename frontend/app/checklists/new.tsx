@@ -173,6 +173,10 @@ export default function NewChecklistScreen() {
 
     try {
       const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+      
+      // Debug: Log checklist items to see if images are present
+      console.log('Saving checklist items:', JSON.stringify(checklistItems, null, 2));
+      
       await ChecklistService.create({
         project_id: projId || '',
         template_id: selectedTemplate.id,

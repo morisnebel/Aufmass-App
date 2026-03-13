@@ -102,6 +102,8 @@ interface SubItem {
   printImage?: string;
   previewImages?: string[];
   categoryLogo?: string;
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 interface ChecklistItem {
@@ -112,6 +114,8 @@ interface ChecklistItem {
   printImage?: string;
   previewImages?: string[];
   categoryLogo?: string;
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 interface Checklist {

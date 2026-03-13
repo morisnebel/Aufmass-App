@@ -27,6 +27,8 @@ interface RecursiveTemplateItem {
   printImage?: string; // Bild für PDF-Druck (Base64)
   previewImages?: string[]; // Bilder für Vorschau-Galerie (nicht gedruckt)
   categoryLogo?: string; // Logo für Kategorien (Base64)
+  referenceFolderId?: string; // ID des verknüpften Referenz-Ordners
+  referenceFolderName?: string; // Name des verknüpften Referenz-Ordners
 }
 
 interface ChecklistTemplate {
@@ -98,6 +100,9 @@ export default function EditTemplateScreen() {
                 printImage: sub.printImage,
                 previewImages: sub.previewImages,
                 categoryLogo: sub.categoryLogo,
+                // Referenz-Ordner mit laden
+                referenceFolderId: sub.referenceFolderId,
+                referenceFolderName: sub.referenceFolderName,
               };
             });
           }
@@ -109,6 +114,9 @@ export default function EditTemplateScreen() {
             printImage: item.printImage,
             previewImages: item.previewImages,
             categoryLogo: item.categoryLogo,
+            // Referenz-Ordner mit laden
+            referenceFolderId: item.referenceFolderId,
+            referenceFolderName: item.referenceFolderName,
           };
         });
       };
@@ -498,6 +506,9 @@ export default function EditTemplateScreen() {
         printImage: item.printImage,
         previewImages: item.previewImages,
         categoryLogo: item.categoryLogo,
+        // Referenz-Ordner mit speichern
+        referenceFolderId: item.referenceFolderId,
+        referenceFolderName: item.referenceFolderName,
       }));
   };
 

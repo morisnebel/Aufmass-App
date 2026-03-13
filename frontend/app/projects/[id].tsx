@@ -6763,7 +6763,7 @@ const styles = StyleSheet.create({
   },
   imageModalContent: {
     width: '98%',
-    maxHeight: '95%',
+    height: '85%',
     backgroundColor: '#000',
     borderRadius: 12,
     overflow: 'hidden',
@@ -6786,10 +6786,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000',
+    paddingHorizontal: 10,
   },
   fullPreviewImage: {
     width: '100%',
-    height: 600,
+    height: '100%',
   },
   imageNavigation: {
     flexDirection: 'row',

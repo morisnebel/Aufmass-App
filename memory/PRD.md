@@ -50,7 +50,18 @@ German (Deutsch)
 
 ## What's Been Implemented
 
-### Session: December 2025 (Current - Latest Update)
+### Session: December 2025 (Numpad für Projekt-Notizen)
+- ✅ **NUMPAD FÜR PROJEKT-BEMERKUNGEN IMPLEMENTIERT**:
+  - Neuer Toggle-Button neben dem "Zusätzliche Bemerkungen" Eingabefeld
+  - Vollständiges Numpad mit Zahlen, Operatoren (+, -, ×, ÷) und Einheiten (m, cm, mm, m², lfm, Stk, €, %)
+  - Buchstaben-Modus (ABC) mit QWERTZ-Layout und Caps-Lock
+  - Aktionstasten: C (Clear), Leerzeichen, Enter (↵), Backspace (⌫)
+  - State Management: `showRemarksNumpad`, `remarksNumpadMode`, `remarksNumpadCaps`
+  - Handler: `handleRemarksNumpadPress` für alle Tasteneingaben
+  - Vollständige StyleSheet-Definitionen für alle Numpad-Komponenten
+  - **Datei**: `/app/frontend/app/projects/[id].tsx`
+
+### Session: December 2025 (Previous - Latest Update)
 - ✅ **SKIZZEN-EDITOR FIX - Bild-Resize-Handles**:
   - **Problem**: Die grünen Resize/Move-Punkte waren zu weit vom Bild entfernt
   - **Ursache**: Bilder wurden mit festen Dimensionen (200x200 oder 250x250) eingefügt, unabhängig vom tatsächlichen Seitenverhältnis
@@ -195,7 +206,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://sketch-numpad.preview.emergentagent.com
+- **Preview URL**: https://numpad-integration.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

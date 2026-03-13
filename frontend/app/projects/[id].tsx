@@ -162,6 +162,25 @@ export default function ProjectDetailScreen() {
   const [remarks, setRemarks] = useState('');
   const [isSavingRemarks, setIsSavingRemarks] = useState(false);
   
+  // Numpad state für Bemerkungen
+  const [showRemarksNumpad, setShowRemarksNumpad] = useState(false);
+  const [remarksNumpadMode, setRemarksNumpadMode] = useState<'numbers' | 'letters'>('numbers');
+  const [remarksNumpadCaps, setRemarksNumpadCaps] = useState(false);
+  const remarksInputRef = useRef<TextInput>(null);
+  
+  // Numpad-Taste drücken Handler
+  const handleRemarksNumpadPress = (key: string) => {
+    if (key === '⌫') {
+      setRemarks(prev => prev.slice(0, -1));
+    } else if (key === 'C') {
+      setRemarks('');
+    } else {
+      setRemarks(prev => prev + key);
+    }
+    // Fokus zurücksetzen für Bluetooth-Eingabe
+    setTimeout(() => remarksInputRef?.current?.focus(), 10);
+  };
+  
   // Project edit modal state
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [editProjectName, setEditProjectName] = useState('');
@@ -4800,15 +4819,231 @@ export default function ProjectDetailScreen() {
               <Text style={styles.remarksSubtitle}>
                 Hier können Sie allgemeine Notizen und Bemerkungen zum Projekt erfassen.
               </Text>
-              <TextInput
-                style={styles.remarksInput}
-                placeholder="Bemerkungen eingeben..."
-                value={remarks}
-                onChangeText={setRemarks}
-                multiline
-                numberOfLines={10}
-                textAlignVertical="top"
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <TextInput
+                  ref={remarksInputRef}
+                  style={[styles.remarksInput, { flex: 1 }]}
+                  placeholder="Bemerkungen eingeben..."
+                  value={remarks}
+                  onChangeText={setRemarks}
+                  multiline
+                  numberOfLines={10}
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  style={{
+                    marginLeft: 8,
+                    padding: 12,
+                    backgroundColor: showRemarksNumpad ? '#1976d2' : '#f0f0f0',
+                    borderRadius: 8,
+                  }}
+                  onPress={() => setShowRemarksNumpad(!showRemarksNumpad)}
+                >
+                  <Ionicons
+                    name="keypad"
+                    size={24}
+                    color={showRemarksNumpad ? '#fff' : '#666'}
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Numpad für Bemerkungen */}
+              {showRemarksNumpad && (
+                <View style={styles.remarksNumpadContainer}>
+                  <View style={styles.remarksNumpadHeader}>
+                    <Text style={styles.remarksNumpadTitle}>Numpad</Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        style={[
+                          styles.remarksNumpadModeButton,
+                          remarksNumpadMode === 'numbers' && styles.remarksNumpadModeButtonActive,
+                        ]}
+                        onPress={() => setRemarksNumpadMode('numbers')}
+                      >
+                        <Text style={[
+                          styles.remarksNumpadModeButtonText,
+                          remarksNumpadMode === 'numbers' && styles.remarksNumpadModeButtonTextActive,
+                        ]}>123</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.remarksNumpadModeButton,
+                          remarksNumpadMode === 'letters' && styles.remarksNumpadModeButtonActive,
+                        ]}
+                        onPress={() => setRemarksNumpadMode('letters')}
+                      >
+                        <Text style={[
+                          styles.remarksNumpadModeButtonText,
+                          remarksNumpadMode === 'letters' && styles.remarksNumpadModeButtonTextActive,
+                        ]}>ABC</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {remarksNumpadMode === 'numbers' ? (
+                    <View style={styles.remarksNumpadGrid}>
+                      {/* Zahlenreihen */}
+                      <View style={styles.remarksNumpadRow}>
+                        {['7', '8', '9', '+'].map((k) => (
+                          <TouchableOpacity
+                            key={`num-${k}`}
+                            style={[styles.remarksNumpadKey, k === '+' && styles.remarksNumpadOp]}
+                            onPress={() => handleRemarksNumpadPress(k)}
+                          >
+                            <Text style={k === '+' ? styles.remarksNumpadOpText : styles.remarksNumpadKeyText}>{k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        {['4', '5', '6', '-'].map((k) => (
+                          <TouchableOpacity
+                            key={`num-${k}`}
+                            style={[styles.remarksNumpadKey, k === '-' && styles.remarksNumpadOp]}
+                            onPress={() => handleRemarksNumpadPress(k)}
+                          >
+                            <Text style={k === '-' ? styles.remarksNumpadOpText : styles.remarksNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        {['1', '2', '3', '×'].map((k) => (
+                          <TouchableOpacity
+                            key={`num-${k}`}
+                            style={[styles.remarksNumpadKey, k === '×' && styles.remarksNumpadOp]}
+                            onPress={() => handleRemarksNumpadPress(k === '×' ? '*' : k)}
+                          >
+                            <Text style={k === '×' ? styles.remarksNumpadOpText : styles.remarksNumpadKeyText}>{k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        {['0', ',', '.', '÷'].map((k) => (
+                          <TouchableOpacity
+                            key={`num-${k}`}
+                            style={[styles.remarksNumpadKey, k === '÷' && styles.remarksNumpadOp]}
+                            onPress={() => handleRemarksNumpadPress(k === '÷' ? '/' : k)}
+                          >
+                            <Text style={k === '÷' ? styles.remarksNumpadOpText : styles.remarksNumpadKeyText}>{k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {/* Einheiten */}
+                      <View style={styles.remarksNumpadRow}>
+                        {['m', 'cm', 'mm', 'm²'].map((k, i) => (
+                          <TouchableOpacity
+                            key={`unit-${i}`}
+                            style={[styles.remarksNumpadKey, styles.remarksNumpadUnit]}
+                            onPress={() => handleRemarksNumpadPress(k)}
+                          >
+                            <Text style={styles.remarksNumpadUnitText}>{k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        {['lfm', 'Stk', '€', '%'].map((k, i) => (
+                          <TouchableOpacity
+                            key={`unit2-${i}`}
+                            style={[styles.remarksNumpadKey, styles.remarksNumpadUnit]}
+                            onPress={() => handleRemarksNumpadPress(k)}
+                          >
+                            <Text style={styles.remarksNumpadUnitText}>{k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {/* Aktionstasten */}
+                      <View style={styles.remarksNumpadRow}>
+                        <TouchableOpacity
+                          style={[styles.remarksNumpadKey, styles.remarksNumpadClear]}
+                          onPress={() => handleRemarksNumpadPress('C')}
+                        >
+                          <Text style={styles.remarksNumpadClearText}>C</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.remarksNumpadKey}
+                          onPress={() => handleRemarksNumpadPress(' ')}
+                        >
+                          <Text style={styles.remarksNumpadKeyText}>␣</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.remarksNumpadKey}
+                          onPress={() => handleRemarksNumpadPress('\n')}
+                        >
+                          <Text style={styles.remarksNumpadKeyText}>↵</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.remarksNumpadKey, styles.remarksNumpadDel]}
+                          onPress={() => handleRemarksNumpadPress('⌫')}
+                        >
+                          <Ionicons name="backspace-outline" size={20} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.remarksNumpadGrid}>
+                      {/* Buchstaben */}
+                      <View style={styles.remarksNumpadRow}>
+                        {['q', 'w', 'e', 'r', 't', 'z', 'u', 'i', 'o', 'p'].map((k) => (
+                          <TouchableOpacity
+                            key={`let-${k}`}
+                            style={styles.remarksNumpadKeySmall}
+                            onPress={() => handleRemarksNumpadPress(remarksNumpadCaps ? k.toUpperCase() : k)}
+                          >
+                            <Text style={styles.remarksNumpadKeyTextSmall}>{remarksNumpadCaps ? k.toUpperCase() : k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        {['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map((k) => (
+                          <TouchableOpacity
+                            key={`let-${k}`}
+                            style={styles.remarksNumpadKeySmall}
+                            onPress={() => handleRemarksNumpadPress(remarksNumpadCaps ? k.toUpperCase() : k)}
+                          >
+                            <Text style={styles.remarksNumpadKeyTextSmall}>{remarksNumpadCaps ? k.toUpperCase() : k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        <TouchableOpacity
+                          style={[styles.remarksNumpadKeySmall, remarksNumpadCaps && styles.remarksNumpadCapsActive]}
+                          onPress={() => setRemarksNumpadCaps(!remarksNumpadCaps)}
+                        >
+                          <Ionicons name="arrow-up" size={16} color={remarksNumpadCaps ? '#fff' : '#666'} />
+                        </TouchableOpacity>
+                        {['y', 'x', 'c', 'v', 'b', 'n', 'm'].map((k) => (
+                          <TouchableOpacity
+                            key={`let-${k}`}
+                            style={styles.remarksNumpadKeySmall}
+                            onPress={() => handleRemarksNumpadPress(remarksNumpadCaps ? k.toUpperCase() : k)}
+                          >
+                            <Text style={styles.remarksNumpadKeyTextSmall}>{remarksNumpadCaps ? k.toUpperCase() : k}</Text>
+                          </TouchableOpacity>
+                        ))}
+                        <TouchableOpacity
+                          style={[styles.remarksNumpadKeySmall, styles.remarksNumpadDel]}
+                          onPress={() => handleRemarksNumpadPress('⌫')}
+                        >
+                          <Ionicons name="backspace-outline" size={16} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.remarksNumpadRow}>
+                        <TouchableOpacity
+                          style={[styles.remarksNumpadKey, { flex: 3 }]}
+                          onPress={() => handleRemarksNumpadPress(' ')}
+                        >
+                          <Text style={styles.remarksNumpadKeyText}>Leerzeichen</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.remarksNumpadKey}
+                          onPress={() => handleRemarksNumpadPress('\n')}
+                        >
+                          <Text style={styles.remarksNumpadKeyText}>↵</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
               <TouchableOpacity
                 style={[styles.saveRemarksButton, isSavingRemarks && styles.buttonDisabled]}
                 onPress={async () => {
@@ -6827,6 +7062,116 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     textAlignVertical: 'top',
+  },
+  // Numpad Styles für Bemerkungen
+  remarksNumpadContainer: {
+    marginTop: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  remarksNumpadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  remarksNumpadTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  remarksNumpadModeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#e0e0e0',
+  },
+  remarksNumpadModeButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  remarksNumpadModeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  remarksNumpadModeButtonTextActive: {
+    color: '#fff',
+  },
+  remarksNumpadGrid: {
+    gap: 6,
+  },
+  remarksNumpadRow: {
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  remarksNumpadKey: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  remarksNumpadKeySmall: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  remarksNumpadKeyText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#333',
+  },
+  remarksNumpadKeyTextSmall: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  remarksNumpadOp: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  remarksNumpadOpText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1976d2',
+  },
+  remarksNumpadUnit: {
+    backgroundColor: '#f3e5f5',
+    borderColor: '#9c27b0',
+  },
+  remarksNumpadUnitText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9c27b0',
+  },
+  remarksNumpadClear: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+  },
+  remarksNumpadClearText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f44336',
+  },
+  remarksNumpadDel: {
+    backgroundColor: '#f44336',
+    borderColor: '#f44336',
+  },
+  remarksNumpadCapsActive: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1976d2',
   },
   saveRemarksButton: {
     flexDirection: 'row',

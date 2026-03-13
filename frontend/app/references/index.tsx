@@ -231,39 +231,57 @@ export default function ReferencesScreen() {
     }
   };
 
-  // Link external folder - user selects any file from the folder to get the folder path
+  // Link external folder - user selects a folder directly
   const linkExternalFolder = async () => {
     try {
+      // Try to select a folder directly (iOS 14+)
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['public.folder'],
+        copyToCacheDirectory: false,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        const folderUri = result.assets[0].uri;
+        const folderName = result.assets[0].name || 'Externer Ordner';
+        
+        await ReferenceService.addExternalFolder(folderName, folderUri);
+        loadData();
+        Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft.\n\nTippe auf den Ordner um ihn in der Dateien-App zu öffnen.`);
+      }
+    } catch (error) {
+      console.error('Error linking external folder:', error);
+      // Fallback: Ask user to select a file from the folder
       Alert.alert(
-        'Externen Ordner verknüpfen',
-        'Wählen Sie eine beliebige Datei aus dem Ordner, den Sie verknüpfen möchten. Der übergeordnete Ordner wird dann gespeichert.',
+        'Ordner verknüpfen',
+        'Ordnerauswahl wird nicht unterstützt.\n\nAlternativ: Wählen Sie eine beliebige Datei aus dem Ordner, den Sie verknüpfen möchten.',
         [
           { text: 'Abbrechen', style: 'cancel' },
           {
             text: 'Datei wählen',
             onPress: async () => {
-              const result = await DocumentPicker.getDocumentAsync({
-                type: ['*/*'],
-                copyToCacheDirectory: false,
-              });
-              
-              if (!result.canceled && result.assets[0]) {
-                const fileUri = result.assets[0].uri;
-                // Get parent folder path by removing the filename
-                const folderUri = fileUri.substring(0, fileUri.lastIndexOf('/'));
-                const folderName = folderUri.substring(folderUri.lastIndexOf('/') + 1) || 'Externer Ordner';
+              try {
+                const fileResult = await DocumentPicker.getDocumentAsync({
+                  type: ['*/*'],
+                  copyToCacheDirectory: false,
+                });
                 
-                await ReferenceService.addExternalFolder(decodeURIComponent(folderName), folderUri);
-                loadData();
-                Alert.alert('Erfolg', `Ordner "${decodeURIComponent(folderName)}" wurde verknüpft.\n\nTippe auf den Ordner um ihn in der Dateien-App zu öffnen.`);
+                if (!fileResult.canceled && fileResult.assets[0]) {
+                  const fileUri = fileResult.assets[0].uri;
+                  // Get parent folder path
+                  const folderUri = fileUri.substring(0, fileUri.lastIndexOf('/'));
+                  const folderName = decodeURIComponent(folderUri.substring(folderUri.lastIndexOf('/') + 1)) || 'Externer Ordner';
+                  
+                  await ReferenceService.addExternalFolder(folderName, folderUri);
+                  loadData();
+                  Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft.`);
+                }
+              } catch (err) {
+                Alert.alert('Fehler', 'Verknüpfung fehlgeschlagen');
               }
             },
           },
         ]
       );
-    } catch (error) {
-      console.error('Error linking external folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
     }
   };
 

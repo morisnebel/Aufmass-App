@@ -1278,7 +1278,8 @@ export default function ProjectDetailScreen() {
         for (let i = 0; i < smallPhotos.length; i += 9) {
           const pagePhotos = smallPhotos.slice(i, i + 9);
           const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
-          pages.push(`<div class="photos-page photos-page-small">${photosInPage}</div>`);
+          const needsPageBreak = i > 0 ? 'photos-page-break' : '';
+          pages.push(`<div class="photos-page photos-page-small ${needsPageBreak}">${photosInPage}</div>`);
         }
       }
       
@@ -1287,7 +1288,9 @@ export default function ProjectDetailScreen() {
         for (let i = 0; i < mediumPhotos.length; i += 4) {
           const pagePhotos = mediumPhotos.slice(i, i + 4);
           const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
-          pages.push(`<div class="photos-page photos-page-medium">${photosInPage}</div>`);
+          // Seitenumbruch nur wenn es schon andere Seiten gibt oder nicht die erste Medium-Gruppe
+          const needsPageBreak = (pages.length > 0 || i > 0) ? 'photos-page-break' : '';
+          pages.push(`<div class="photos-page photos-page-medium ${needsPageBreak}">${photosInPage}</div>`);
         }
       }
       
@@ -1296,7 +1299,9 @@ export default function ProjectDetailScreen() {
         for (let i = 0; i < largePhotos.length; i += 2) {
           const pagePhotos = largePhotos.slice(i, i + 2);
           const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
-          pages.push(`<div class="photos-page photos-page-large">${photosInPage}</div>`);
+          // Seitenumbruch nur wenn es schon andere Seiten gibt oder nicht die erste Large-Gruppe
+          const needsPageBreak = (pages.length > 0 || i > 0) ? 'photos-page-break' : '';
+          pages.push(`<div class="photos-page photos-page-large ${needsPageBreak}">${photosInPage}</div>`);
         }
       }
       
@@ -2722,76 +2727,62 @@ export default function ProjectDetailScreen() {
           }
           /* Neue Foto-Seiten Layouts */
           .photos-page {
-            page-break-after: always;
-            break-after: page;
             page-break-inside: avoid;
             break-inside: avoid;
-            margin-bottom: 20px;
-          }
-          .photos-page:last-child {
-            page-break-after: auto;
-            break-after: auto;
+            margin-bottom: 15px;
           }
           /* Klein: 3x3 Grid = 9 Fotos pro Seite */
           .photos-page-small {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
             gap: 8px;
-            height: 95vh;
-            max-height: 800px;
           }
           .photos-page-small .photo-item {
-            height: 100%;
-            max-height: 250px;
+            max-height: 220px;
           }
           .photos-page-small .photo-item img {
-            max-height: 200px;
+            max-height: 180px;
             object-fit: contain;
           }
           .photo-grid-small {
             width: 100%;
-            height: 100%;
           }
           /* Mittel: 2x2 Grid = 4 Fotos pro Seite */
           .photos-page-medium {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(2, 1fr);
             gap: 12px;
-            height: 95vh;
-            max-height: 800px;
           }
           .photos-page-medium .photo-item {
-            height: 100%;
-            max-height: 380px;
+            max-height: 320px;
           }
           .photos-page-medium .photo-item img {
-            max-height: 340px;
+            max-height: 280px;
             object-fit: contain;
           }
           .photo-grid-medium {
             width: 100%;
-            height: 100%;
           }
-          /* Groß: 1x2 Grid = 2 Fotos pro Seite (übereinander) */
+          /* Groß: 1 Spalte = 2 Fotos pro Seite (übereinander) */
           .photos-page-large {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            height: 95vh;
-            max-height: 800px;
           }
           .photos-page-large .photo-item {
-            flex: 1;
-            max-height: 48%;
+            max-height: 380px;
           }
           .photos-page-large .photo-item img {
-            max-height: 350px;
+            max-height: 340px;
             object-fit: contain;
           }
           .photo-grid-large {
             width: 100%;
+          }
+          /* Seitenumbruch nur wenn nötig */
+          .photos-page-break {
+            page-break-before: always;
+            break-before: page;
           }
           /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
           .sketches-container-iphone {

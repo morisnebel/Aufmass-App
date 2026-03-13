@@ -287,29 +287,55 @@ export default function EditTemplateScreen() {
     }
   };
 
-  // Ordner mit Checklisten-Punkt verknüpfen
+  // Ordner mit Checklisten-Punkt verknüpfen (und automatisch speichern)
   const linkFolderToItem = async (folder: ReferenceFolder) => {
     try {
-      // Ordner-ID und Name speichern
-      setItems(updateItemAtPath(items, referenceTargetPath, { 
+      // Ordner-ID und Name im State speichern
+      const updatedItems = updateItemAtPath(items, referenceTargetPath, { 
         referenceFolderId: folder.id,
         referenceFolderName: folder.name
-      }));
-      
+      });
+      setItems(updatedItems);
       setShowReferenceFolderModal(false);
-      Alert.alert('Verknüpft', `Ordner "${folder.name}" wurde mit diesem Punkt verknüpft.`);
+      
+      // Automatisch in der Datenbank speichern
+      if (templateId && templateName.trim()) {
+        const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
+        await ChecklistTemplateService.update(tplId || '', {
+          name: templateName,
+          items: convertToApiFormat(updatedItems),
+          templateLogo: templateLogo,
+        });
+      }
+      
+      Alert.alert('Verknüpft', `Ordner "${folder.name}" wurde verknüpft und gespeichert.`);
     } catch (error) {
       console.error('Error linking folder:', error);
       Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
     }
   };
 
-  // Verknüpfung entfernen
-  const unlinkFolder = (path: number[]) => {
-    setItems(updateItemAtPath(items, path, { 
-      referenceFolderId: undefined,
-      referenceFolderName: undefined
-    }));
+  // Verknüpfung entfernen (und automatisch speichern)
+  const unlinkFolder = async (path: number[]) => {
+    try {
+      const updatedItems = updateItemAtPath(items, path, { 
+        referenceFolderId: undefined,
+        referenceFolderName: undefined
+      });
+      setItems(updatedItems);
+      
+      // Automatisch in der Datenbank speichern
+      if (templateId && templateName.trim()) {
+        const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
+        await ChecklistTemplateService.update(tplId || '', {
+          name: templateName,
+          items: convertToApiFormat(updatedItems),
+          templateLogo: templateLogo,
+        });
+      }
+    } catch (error) {
+      console.error('Error unlinking folder:', error);
+    }
   };
 
   // Rekursiv Item an Pfad aktualisieren

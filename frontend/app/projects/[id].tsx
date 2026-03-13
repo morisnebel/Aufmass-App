@@ -19,6 +19,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory } from '../../services/LocalStorage';
+import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -197,6 +198,25 @@ export default function ProjectDetailScreen() {
   // Checklist Image Preview Modal state
   const [imagePreviewModal, setImagePreviewModal] = useState<{ visible: boolean; images: string[]; title: string }>({ visible: false, images: [], title: '' });
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Reference Photos Modal state
+  const [referencePhotosModal, setReferencePhotosModal] = useState<{ visible: boolean; photos: ReferencePhoto[]; title: string; folderId: string }>({ visible: false, photos: [], title: '', folderId: '' });
+  const [loadingReferencePhotos, setLoadingReferencePhotos] = useState(false);
+
+  // Function to open reference photos for a checklist item
+  const openReferencePhotos = async (folderId: string, folderName: string) => {
+    setLoadingReferencePhotos(true);
+    setReferencePhotosModal({ visible: true, photos: [], title: folderName, folderId });
+    try {
+      const photos = await ReferenceService.getPhotosInFolder(folderId);
+      setReferencePhotosModal({ visible: true, photos, title: folderName, folderId });
+    } catch (error) {
+      console.error('Error loading reference photos:', error);
+      Alert.alert('Fehler', 'Referenz-Fotos konnten nicht geladen werden');
+    } finally {
+      setLoadingReferencePhotos(false);
+    }
+  };
 
   // Helper to parse address from customer
   const parseCustomerAddress = (address: string | undefined) => {
@@ -4377,6 +4397,15 @@ export default function ProjectDetailScreen() {
                                 <Text style={styles.previewGalleryCount}>{category.previewImages.length}</Text>
                               </TouchableOpacity>
                             )}
+                            {/* Referenz-Button für verknüpften Ordner */}
+                            {category.referenceFolderId && (
+                              <TouchableOpacity 
+                                onPress={() => openReferencePhotos(category.referenceFolderId!, category.referenceFolderName || 'Referenzen')}
+                                style={styles.referenceFolderBtn}
+                              >
+                                <Ionicons name="folder" size={18} color="#2196f3" />
+                              </TouchableOpacity>
+                            )}
                             {totalSubCount > 0 && (
                               <Text style={styles.categorySectionCount}>{checkedSubCount}/{totalSubCount}</Text>
                             )}
@@ -4469,6 +4498,15 @@ export default function ProjectDetailScreen() {
                                         >
                                           <Ionicons name="images" size={14} color="#ff9800" />
                                           <Text style={styles.previewGalleryCountSmall}>{level1Item.previewImages.length}</Text>
+                                        </TouchableOpacity>
+                                      )}
+                                      {/* Referenz-Button für Level 1 Item */}
+                                      {level1Item.referenceFolderId && (
+                                        <TouchableOpacity 
+                                          onPress={() => openReferencePhotos(level1Item.referenceFolderId!, level1Item.referenceFolderName || 'Referenzen')}
+                                          style={styles.referenceFolderBtnSmall}
+                                        >
+                                          <Ionicons name="folder" size={14} color="#2196f3" />
                                         </TouchableOpacity>
                                       )}
                                     </View>
@@ -5438,6 +5476,60 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* Reference Photos Modal */}
+      <Modal
+        visible={referencePhotosModal.visible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReferencePhotosModal({ ...referencePhotosModal, visible: false })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.referencePhotosModalContent}>
+            <View style={styles.referencePhotosHeader}>
+              <Text style={styles.referencePhotosTitle}>{referencePhotosModal.title}</Text>
+              <TouchableOpacity onPress={() => setReferencePhotosModal({ ...referencePhotosModal, visible: false })}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            {loadingReferencePhotos ? (
+              <View style={styles.referencePhotosLoading}>
+                <ActivityIndicator size="large" color="#1976d2" />
+              </View>
+            ) : referencePhotosModal.photos.length > 0 ? (
+              <ScrollView style={styles.referencePhotosGrid}>
+                <View style={styles.referencePhotosGridInner}>
+                  {referencePhotosModal.photos.map((photo, index) => (
+                    <TouchableOpacity
+                      key={photo.id}
+                      style={styles.referencePhotoItem}
+                      onPress={() => {
+                        setCurrentImageIndex(index);
+                        setImagePreviewModal({ 
+                          visible: true, 
+                          images: referencePhotosModal.photos.map(p => p.uri), 
+                          title: referencePhotosModal.title 
+                        });
+                      }}
+                    >
+                      <Image source={{ uri: photo.uri }} style={styles.referencePhotoThumb} />
+                      {photo.name && (
+                        <Text style={styles.referencePhotoName} numberOfLines={1}>{photo.name}</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            ) : (
+              <View style={styles.referencePhotosEmpty}>
+                <Ionicons name="images-outline" size={48} color="#ccc" />
+                <Text style={styles.referencePhotosEmptyText}>Keine Fotos in diesem Ordner</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -6857,5 +6949,84 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 300,
     zIndex: 1001,
+  },
+  // Reference Folder Button Styles
+  referenceFolderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 4,
+  },
+  referenceFolderBtnSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginLeft: 4,
+  },
+  // Reference Photos Modal Styles
+  referencePhotosModalContent: {
+    width: '95%',
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  referencePhotosHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  referencePhotosTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  referencePhotosLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  referencePhotosGrid: {
+    maxHeight: 500,
+  },
+  referencePhotosGridInner: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+    gap: 10,
+  },
+  referencePhotoItem: {
+    width: 100,
+    alignItems: 'center',
+  },
+  referencePhotoThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  referencePhotoName: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  referencePhotosEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  referencePhotosEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 12,
   },
 });

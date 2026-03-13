@@ -549,6 +549,8 @@ export interface ChecklistItem {
   printImage?: string; // Bild für PDF-Druck (Base64)
   previewImages?: string[]; // Bilder für Vorschau-Galerie (nicht gedruckt)
   categoryLogo?: string; // Logo für Kategorien (Base64)
+  referenceFolderId?: string; // ID des verknüpften Referenz-Ordners
+  referenceFolderName?: string; // Name des verknüpften Referenz-Ordners (für Anzeige)
 }
 
 export interface Checklist {

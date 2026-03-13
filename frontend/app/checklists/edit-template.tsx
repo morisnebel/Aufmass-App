@@ -227,7 +227,7 @@ export default function EditTemplateScreen() {
     setImagePreviewModal({ visible: true, images, title });
   };
 
-  // Referenz-Ordner Modal öffnen
+  // Referenz-Ordner Modal öffnen (zum Verknüpfen eines Ordners)
   const openReferenceFolderPicker = async (path: number[]) => {
     setReferenceTargetPath(path);
     setLoadingReferences(true);
@@ -287,22 +287,29 @@ export default function EditTemplateScreen() {
     }
   };
 
-  // Foto aus Referenz-Ordner auswählen
-  const selectReferencePhoto = async (photo: ReferencePhoto) => {
+  // Ordner mit Checklisten-Punkt verknüpfen
+  const linkFolderToItem = async (folder: ReferenceFolder) => {
     try {
-      // Bild als Base64 laden
-      const base64Image = photo.uri;
-      
-      // Vorschau-Galerie aktualisieren
-      const currentItem = getItemAtPath(items, referenceTargetPath);
-      const currentPreviewImages = currentItem?.previewImages || [];
-      setItems(updateItemAtPath(items, referenceTargetPath, { previewImages: [...currentPreviewImages, base64Image] }));
+      // Ordner-ID und Name speichern
+      setItems(updateItemAtPath(items, referenceTargetPath, { 
+        referenceFolderId: folder.id,
+        referenceFolderName: folder.name
+      }));
       
       setShowReferenceFolderModal(false);
+      Alert.alert('Verknüpft', `Ordner "${folder.name}" wurde mit diesem Punkt verknüpft.`);
     } catch (error) {
-      console.error('Error selecting reference photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht hinzugefügt werden');
+      console.error('Error linking folder:', error);
+      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
     }
+  };
+
+  // Verknüpfung entfernen
+  const unlinkFolder = (path: number[]) => {
+    setItems(updateItemAtPath(items, path, { 
+      referenceFolderId: undefined,
+      referenceFolderName: undefined
+    }));
   };
 
   // Rekursiv Item an Pfad aktualisieren
@@ -651,10 +658,29 @@ export default function EditTemplateScreen() {
                 <Ionicons name="images-outline" size={16} color="#ff9800" />
                 <Text style={styles.addImageText}>+</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.addImageBtn, styles.referenceBtn]} onPress={() => openReferenceFolderPicker(path)}>
-                <Ionicons name="folder-outline" size={16} color="#2196f3" />
-                <Text style={[styles.addImageText, { color: '#2196f3' }]}>Ref</Text>
-              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Referenz-Ordner Verknüpfung */}
+          <View style={styles.imageRow}>
+            <Text style={styles.imageLabel}>Referenz:</Text>
+            <View style={styles.previewImagesContainer}>
+              {item.referenceFolderId ? (
+                <View style={styles.linkedFolderContainer}>
+                  <View style={styles.linkedFolderInfo}>
+                    <Ionicons name="folder" size={16} color="#2196f3" />
+                    <Text style={styles.linkedFolderName} numberOfLines={1}>{item.referenceFolderName || 'Ordner'}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.unlinkBtn} onPress={() => unlinkFolder(path)}>
+                    <Ionicons name="close-circle" size={18} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={[styles.addImageBtn, styles.referenceBtn]} onPress={() => openReferenceFolderPicker(path)}>
+                  <Ionicons name="folder-outline" size={16} color="#2196f3" />
+                  <Text style={[styles.addImageText, { color: '#2196f3' }]}>Ordner verknüpfen</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -882,32 +908,42 @@ export default function EditTemplateScreen() {
                   </View>
                 )}
 
-                {/* Fotos anzeigen */}
-                {referencePhotos.length > 0 && (
+                {/* Fotos nicht anzeigen - nur Ordner-Auswahl */}
+                {currentReferenceFolder && referencePhotos.length > 0 && (
                   <View style={styles.referenceFolderSection}>
-                    <Text style={styles.referenceSectionLabel}>Fotos auswählen</Text>
-                    <View style={styles.referencePhotosGrid}>
-                      {referencePhotos.map((photo) => (
-                        <TouchableOpacity
-                          key={photo.id}
-                          style={styles.referencePhotoItem}
-                          onPress={() => selectReferencePhoto(photo)}
-                        >
-                          <Image source={{ uri: photo.uri }} style={styles.referencePhotoThumb} />
-                          {photo.name && (
-                            <Text style={styles.referencePhotoName} numberOfLines={1}>{photo.name}</Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <Text style={styles.referenceSectionLabel}>Dieser Ordner enthält {referencePhotos.length} Foto(s)</Text>
+                    <TouchableOpacity
+                      style={styles.selectFolderBtn}
+                      onPress={() => linkFolderToItem(currentReferenceFolder)}
+                    >
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={styles.selectFolderBtnText}>"{currentReferenceFolder.name}" verknüpfen</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
 
-                {referenceFolders.length === 0 && referencePhotos.length === 0 && (
+                {/* Ordner auswählen wenn wir in einem sind (auch wenn keine Fotos) */}
+                {currentReferenceFolder && referencePhotos.length === 0 && referenceFolders.length === 0 && (
+                  <View style={styles.referenceFolderSection}>
+                    <Text style={styles.referenceSectionLabel}>Ordner ist leer</Text>
+                    <TouchableOpacity
+                      style={styles.selectFolderBtn}
+                      onPress={() => linkFolderToItem(currentReferenceFolder)}
+                    >
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={styles.selectFolderBtnText}>"{currentReferenceFolder.name}" trotzdem verknüpfen</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {!currentReferenceFolder && referenceFolders.length === 0 && (
                   <View style={styles.emptyReferenceState}>
                     <Ionicons name="folder-open-outline" size={48} color="#ccc" />
                     <Text style={styles.emptyReferenceText}>
-                      {currentReferenceFolder ? 'Ordner ist leer' : 'Keine Referenz-Ordner vorhanden'}
+                      Keine Referenz-Ordner vorhanden
+                    </Text>
+                    <Text style={styles.emptyReferenceHint}>
+                      Erstellen Sie zuerst Ordner unter "Referenz Fotos"
                     </Text>
                   </View>
                 )}
@@ -1375,5 +1411,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 12,
+  },
+  emptyReferenceHint: {
+    fontSize: 12,
+    color: '#bbb',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  // Linked Folder Styles
+  linkedFolderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 6,
+  },
+  linkedFolderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  linkedFolderName: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '600',
+    maxWidth: 120,
+  },
+  unlinkBtn: {
+    marginLeft: 4,
+  },
+  selectFolderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4caf50',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  selectFolderBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -3883,19 +3883,11 @@ export default function ProjectDetailScreen() {
         {activeTab === 'photos' && (
           <View>
             {/* Button-Leiste */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-              <TouchableOpacity
-                style={[styles.addButton, { flex: 1 }]}
-                onPress={() => router.push(`/photos/new?projectId=${id}`)}
-              >
-                <Ionicons name="add-circle" size={24} color="#1976d2" />
-                <Text style={styles.addButtonText}>Foto hinzufügen</Text>
-              </TouchableOpacity>
-              
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
               {photoSelectMode ? (
                 <>
                   <TouchableOpacity
-                    style={[styles.addButton, { flex: 1, backgroundColor: '#4CAF50' }]}
+                    style={[styles.photoActionButton, styles.photoActionButtonSave]}
                     onPress={saveSelectedPhotosToGallery}
                     disabled={isSavingToGallery}
                   >
@@ -3903,32 +3895,50 @@ export default function ProjectDetailScreen() {
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
                       <>
-                        <Ionicons name="download" size={24} color="#fff" />
-                        <Text style={[styles.addButtonText, { color: '#fff' }]}>
+                        <Ionicons name="download" size={22} color="#fff" />
+                        <Text style={styles.photoActionButtonTextWhite}>
                           Speichern ({selectedPhotos.length})
                         </Text>
                       </>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: '#f44336' }]}
+                    style={[styles.photoActionButton, styles.photoActionButtonCancel]}
                     onPress={() => {
                       setPhotoSelectMode(false);
                       setSelectedPhotos([]);
                     }}
                   >
-                    <Ionicons name="close" size={24} color="#fff" />
-                    <Text style={[styles.addButtonText, { color: '#fff' }]}>Abbrechen</Text>
+                    <Ionicons name="close" size={22} color="#fff" />
+                    <Text style={styles.photoActionButtonTextWhite}>Abbrechen</Text>
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity
-                  style={[styles.addButton, { flex: 1 }]}
-                  onPress={() => setPhotoSelectMode(true)}
-                >
-                  <Ionicons name="images" size={24} color="#9c27b0" />
-                  <Text style={styles.addButtonText}>In Galerie</Text>
-                </TouchableOpacity>
+                <>
+                  {/* In Galerie (Exportieren) - jetzt zuerst */}
+                  <TouchableOpacity
+                    style={[styles.photoActionButton, styles.photoActionButtonExport]}
+                    onPress={() => setPhotoSelectMode(true)}
+                  >
+                    <Ionicons name="cloud-upload-outline" size={22} color="#9c27b0" />
+                    <View style={styles.photoActionButtonTextContainer}>
+                      <Text style={[styles.photoActionButtonText, { color: '#9c27b0' }]}>In Galerie</Text>
+                      <Text style={[styles.photoActionButtonSubtext, { color: '#9c27b0' }]}>(Exportieren)</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {/* Foto hinzufügen (Importieren) - jetzt zweiter */}
+                  <TouchableOpacity
+                    style={[styles.photoActionButton, styles.photoActionButtonImport]}
+                    onPress={() => router.push(`/photos/new?projectId=${id}`)}
+                  >
+                    <Ionicons name="camera-outline" size={22} color="#1976d2" />
+                    <View style={styles.photoActionButtonTextContainer}>
+                      <Text style={[styles.photoActionButtonText, { color: '#1976d2' }]}>Foto hinzufügen</Text>
+                      <Text style={[styles.photoActionButtonSubtext, { color: '#1976d2' }]}>(Importieren)</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
 
@@ -6126,6 +6136,58 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#1976d2',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Neue Photo Action Button Styles
+  photoActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  photoActionButtonExport: {
+    backgroundColor: '#f3e5f5',
+    borderWidth: 1,
+    borderColor: '#ce93d8',
+  },
+  photoActionButtonImport: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#90caf9',
+  },
+  photoActionButtonSave: {
+    backgroundColor: '#4CAF50',
+  },
+  photoActionButtonCancel: {
+    flex: 0,
+    backgroundColor: '#f44336',
+    paddingHorizontal: 20,
+  },
+  photoActionButtonTextContainer: {
+    alignItems: 'flex-start',
+  },
+  photoActionButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  photoActionButtonSubtext: {
+    fontSize: 11,
+    fontWeight: '400',
+    opacity: 0.8,
+  },
+  photoActionButtonTextWhite: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
   },
   itemCard: {

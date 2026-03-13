@@ -2751,26 +2751,31 @@ export default function ProjectDetailScreen() {
             height: 100%;
             pointer-events: none;
           }
-          /* Sketch sizes */
+          /* Sketch sizes - mit Flexbox */
           .sketch-small {
-            width: calc(33.33% - 10px);
-            float: left;
-            margin-right: 15px;
+            flex: 0 0 calc(33.33% - 10px);
+            max-width: calc(33.33% - 10px);
             margin-bottom: 15px;
           }
           .sketch-medium {
-            width: calc(50% - 10px);
-            float: left;
-            margin-right: 15px;
+            flex: 0 0 calc(50% - 10px);
+            max-width: calc(50% - 10px);
             margin-bottom: 15px;
           }
           .sketch-large {
-            width: 100%;
+            flex: 0 0 100%;
+            max-width: 100%;
             margin-bottom: 15px;
           }
           .sketch-full {
-            width: 100%;
+            flex: 0 0 100%;
+            max-width: 100%;
             margin-bottom: 15px;
+            page-break-before: always !important;
+          }
+          .sketch-item img {
+            max-height: 500px;
+            object-fit: contain;
           }
           .photo-item, .sketch-item {
             border: 1px solid #e0e0e0;

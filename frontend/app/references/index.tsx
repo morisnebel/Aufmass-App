@@ -24,9 +24,11 @@ import * as FileSystem from 'expo-file-system';
 import { ReferenceService, ReferenceFolder, ReferencePhoto, ExternalFolder } from '../../services/ReferenceService';
 
 const { width: screenWidth } = Dimensions.get('window');
-const FOLDER_COLUMNS = 4;
-const PHOTO_COLUMNS = 3;
-const FOLDER_SIZE = (screenWidth - 32 - (FOLDER_COLUMNS - 1) * 8) / FOLDER_COLUMNS;
+const FOLDER_COLUMNS = screenWidth > 600 ? 5 : 4; // 5 columns on iPad, 4 on iPhone
+const PHOTO_COLUMNS = screenWidth > 600 ? 4 : 3;
+const MAX_FOLDER_SIZE = 120; // Maximum folder size
+const CALCULATED_FOLDER_SIZE = (screenWidth - 32 - (FOLDER_COLUMNS - 1) * 8) / FOLDER_COLUMNS;
+const FOLDER_SIZE = Math.min(CALCULATED_FOLDER_SIZE, MAX_FOLDER_SIZE);
 const PHOTO_SIZE = (screenWidth - 32 - (PHOTO_COLUMNS - 1) * 8) / PHOTO_COLUMNS;
 
 export default function ReferencesScreen() {

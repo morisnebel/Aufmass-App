@@ -263,18 +263,29 @@ export default function EditChecklistScreen() {
     setChecklist({ ...checklist, items: newItems });
     setHasChanges(true);
     
-    // Auto-expand: Wenn abgehakt UND dieses Item hat Unterpunkte → öffne den ersten Unterpunkt
+    // Auto-expand: Wenn abgehakt UND dieses Item hat Unterpunkte
     if (newChecked) {
       const currentItem = getItemAtPath(newItems, path);
       if (currentItem && currentItem.subItems && currentItem.subItems.length > 0) {
-        // Pfad zum ersten Kind-Element
-        const firstChildPath = [...path, 0].join('-');
-        console.log('Auto-expanding child:', firstChildPath);
-        setCollapsedPaths(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(firstChildPath);
-          return newSet;
-        });
+        const currentPathKey = path.join('-');
+        
+        // Prüfe ob das aktuelle Item selbst eingeklappt ist
+        if (collapsedPaths.has(currentPathKey)) {
+          // Öffne das aktuelle Item selbst
+          setCollapsedPaths(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(currentPathKey);
+            return newSet;
+          });
+        } else {
+          // Das Item ist bereits offen - öffne den ersten Unterpunkt
+          const firstChildPath = [...path, 0].join('-');
+          setCollapsedPaths(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(firstChildPath);
+            return newSet;
+          });
+        }
       }
     }
   };

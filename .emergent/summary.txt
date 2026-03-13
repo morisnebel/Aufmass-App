@@ -1,68 +1,64 @@
 <analysis>**original_problem_statement:**
 The user's initial goal was to add a Referenz Fotos (Reference Photos) feature. In subsequent sessions, the user's requests focused on integrating this feature into the checklist functionality, making significant UI/UX improvements, and fixing bugs.
 
-The most recent request is to fix a UI bug in the sketch editor where the green resize/move handles for an image are positioned too far away from the actual image content, making them difficult to use.
+The most recent request is to change the placement of measurement lines for polygons drawn in the sketch editor, so they appear on the outside of the polygon edge.
 
 **PRODUCT REQUIREMENTS:**
-1.  **Fix Sketch Editor UI (Current):** Adjust the position of resize/move handles for images to be adjacent to the image borders.
+1.  **Fix Polygon Measurement Line Placement (Current):** Adjust the rendering logic to consistently place measurement lines on the outside of polygon edges.
 2.  **Integrate Reference Photos with Checklists:** Link reference folders to checklist items and view photos in a modal.
 3.  **Reorder Checklists:** Add controls to change the order of checklists in a project.
 4.  **Improve Checklist Workflow:** When editing a checklist, checking off an item should automatically expand its first sub-item.
 5.  **UI/UX Refinements:**
-    *   Modernize the main navigation tab bar in the project view.
     *   Fix the layout of photos and sketches in the PDF preview and print output to match the user's selections.
 6.  **Critical Bug Fix:** When creating a new checklist from a template with only a subset of items, the associated data (print images, preview images, reference folder links) must be carried over correctly.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app using AsyncStorage for local data persistence. It features project and checklist management, a reference photo system, and a PDF export function. Several major features and bug fixes have been completed, including a redesign of the project tab bar and a fix for a critical data integrity bug. The agent was in the process of fixing a UI bug in the sketch editor when the session ended.
+The application is a React Native/Expo app using AsyncStorage for local data persistence. It features project and checklist management, a reference photo system, a sketch editor, and a PDF export function. In this session, the agent successfully fixed a two-part UI bug in the sketch editor related to image resizing and scaling. The agent is now working on another request within the same sketch editor concerning the positioning of measurement lines for polygons.
 
 **Last working item**:
-The agent was working on fixing the positioning of the green resize/move handles for images within the sketch editor.
+The agent was attempting to move the measurement lines for polygons in the sketch editor to the outside of the polygon's edges, as requested by the user.
 
-- **Last item agent was working**: The agent identified that when images are inserted into a sketch, they are given a fixed bounding box that does not match the image's intrinsic aspect ratio. This causes the resize handles to appear far away from the visible image. The agent began modifying several functions in  to calculate the image's correct aspect ratio upon insertion and apply appropriate dimensions to the container.
+- **Last item agent was working**: The agent repeatedly modified the  value for the measurement line rendering logic within . The attempts included changing the value from  to , then , and finally . These changes failed to produce the desired consistent outside placement because the direction of the offset is relative to the drawing direction of the polygon edge, not the geometric outside. The user reported the line was still not where they wanted it.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **User Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing agent. The agent should test the full image insertion flow (from project photos, camera roll, and new photo) to verify that the resize handles are now correctly positioned snug against the image borders.
+- **Which testing method agent to use?**: Manual testing. The agent first needs to understand the geometry of the problem to implement a correct fix, then verify visually.
+- **User Testing Done**: Y (User has confirmed the current implementation is incorrect).
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0)**: Green resize handles are too far from the image in the sketch editor.
--   **Issue 2 (P1)**: PDF photo and sketch layout does not match the editor selection.
+-   **Issue 1 (P0)**: Polygon measurement lines are not consistently displayed on the outside of the polygon.
+-   **Issue 2 (P1)**: PDF photo and sketch layout fix is awaiting user verification.
 -   **Issue 3 (P2)**: App freezes when closing the photo viewer modal.
 -   **Issue 4 (P3)**: Folder thumbnail is not displayed correctly in the Referenz Fotos section.
 
 **Issues Detail:**
--   **Issue 1: Green resize handles are too far from the image in the sketch editor.**
-    -   **Attempted fixes**: The agent started patching the monolithic  file. It successfully used  to update the  and  functions to calculate and apply the correct aspect ratio. The work is incomplete.
+-   **Issue 1: Polygon measurement lines are not consistently displayed on the outside.**
+    -   **Attempted fixes**: The agent tried changing the  constant in  to both positive and negative values (, , , ). This failed because a static offset does not account for the direction in which the polygon segment was drawn.
     -   **Next debug checklist**:
-        1.  Continue patching .
-        2.  Find and update the  and  functions to also calculate and apply the image's aspect ratio upon insertion.
-        3.  Ensure the aspect ratio logic correctly handles both portrait and landscape images.
-        4.  Test the fix by inserting an image and confirming the green handles are now flush with the image borders.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a significant usability bug that prevents the user from accurately resizing and positioning images in their sketches.
+        1.  Analyze the function that calculates the position for the measurement line text in .
+        2.  Instead of a fixed offset, calculate the normal vector for each polygon edge.
+        3.  Determine a consistent outward direction (this may require knowledge of the polygon's winding order, e.g., always clockwise).
+        4.  Apply the offset along the calculated outward normal vector to position the text.
+    -   **Why fix this issue and what will be achieved with the fix?**: It's a user-requested UI improvement for a core feature. The fix will make sketches clearer and more professional.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None.
 
 -   **Issue 2: PDF photo and sketch layout is incorrect.**
-    -   **Attempted fixes**:
-        -   The CSS in  was modified to use a  and  model.
-        -   The Volle Seite (Full Page) option was removed from the sketch editor UI in  and its corresponding CSS was removed from .
+    -   **Attempted fixes**: CSS was modified in .
     -   **Next debug checklist**:
         1.  Instruct the user to completely close and restart the Expo Go app.
-        2.  Ask the user to generate a Projekt-PDF and confirm the photo/sketch grid layout is correct.
-        3.  Confirm the Volle Seite option is gone from the sketch editor.
-    -   **Why fix this issue and what will be achieved with the fix?**: The PDF export is a core feature, and this bug makes the output look unprofessional.
+        2.  Ask the user to generate a Projekt-PDF and confirm the photo/sketch grid layout is now correct.
+    -   **Why fix this issue and what will be achieved with the fix?**: The PDF export is a core feature, and this bug makes the output unprofessional.
     -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend (Manual user testing)
     -   **Blocked on other issue**: None.
 
 -   **Issue 3: App freezes when closing the photo viewer modal.**
-    -   **Attempted fixes**: None in this or the last session.
+    -   **Attempted fixes**: None.
     -   **Next debug checklist**: Investigate the  handler for the photo viewer modal in . Check for heavy re-renders or race conditions.
     -   **Why fix this issue and what will be achieved with this?**: This is a critical usability bug.
     -   **Status**: NOT STARTED
@@ -71,7 +67,7 @@ The agent was working on fixing the positioning of the green resize/move handles
     -   **Blocked on other issue**: None.
 
 -   **Issue 4: Folder thumbnail is not displayed correctly.**
-    -   **Attempted fixes**: None in this or the last session.
+    -   **Attempted fixes**: None.
     -   **Next debug checklist**: Inspect the  component styles and containers for folder thumbnails in , focusing on  and dimensions.
     -   **Why fix this issue and what will be achieved with this?**: Minor visual bug impacting the app's professional appearance.
     -   **Status**: NOT STARTED
@@ -80,9 +76,9 @@ The agent was working on fixing the positioning of the green resize/move handles
     -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   **Task 1: Complete aspect-ratio fix for images in the sketch editor**
-    -   **Where to resume**: The agent needs to modify the  and  functions within , following the pattern used for  and .
-    -   **What will be achieved with this?**: All methods of inserting an image into a sketch will result in a correctly-sized element with properly positioned resize handles.
+-   **Task 1: Correctly position polygon measurement lines**
+    -   **Where to resume**: In , implement a geometric calculation to determine the outside of a polygon edge, instead of guessing with a signed offset.
+    -   **What will be achieved with this?**: The measurement lines will appear consistently on the outside of the polygon, regardless of how it was drawn.
     -   **Status**: IN PROGRESS
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on something**: None.
@@ -104,7 +100,8 @@ The agent was working on fixing the positioning of the green resize/move handles
 -   Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   None. Work is in progress.
+- **Image Resize Handles in Sketch Editor (Fixed & Verified)**: Fixed the bug where green resize handles were positioned far from the image. The fix involved correctly calculating the image's aspect ratio on insertion.
+- **Proportional Image Scaling (Fixed & Verified)**: Fixed the follow-up bug where resizing an image would break its aspect ratio. The scaling logic in  within  was updated to maintain the aspect ratio, ensuring the handles now stay flush with the image corners during resize. The user confirmed with perfekt 👍.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: App freezes when closing the photo viewer modal**
@@ -121,60 +118,58 @@ The agent was working on fixing the positioning of the green resize/move handles
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: App freezing on modal close and incorrect thumbnail display.
 -   **Recurrence count**: 2+
--   **Status**: NOT STARTED (The status of previous fixes is unknown due to a user-initiated rollback).
+-   **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--   ****: Used extensively for the sketch/drawing canvas. The current bug is related to positioning  elements.
--   **Complex State Management**: Heavy use of  in large, monolithic components like .
--   **Data Persistence**: All data is stored client-side in AsyncStorage.
--   **Dynamic PDF Generation**: Using a React component with inline CSS to generate HTML for PDF conversion.
+-   ****: Used for the sketch canvas. The current issue involves geometric calculations (vector normals) for positioning text relative to polygon edges.
+-   ****: Used for the resize/drag logic that was just fixed.
+-   **Data Persistence**: AsyncStorage.
 
 **key DB schema**
-Data is stored as JSON in AsyncStorage. No schema changes in this session.
+N/A (Client-side application with AsyncStorage).
 
 **changes in tech stack**
 None.
 
 **All files of reference**
--   : **(CRITICAL)** The file currently being modified. It is a very large, monolithic component responsible for the entire sketch editor functionality. The fix requires multiple  operations within this single file.
+-   : **(CRITICAL)** The file containing the logic for the sketch editor. It was successfully modified to fix image resizing and now needs to be modified again for the polygon measurement lines.
 -   : Contains the PDF layout fixes that are awaiting user verification.
 -   : Location of the two recurring bugs (modal freeze, thumbnail display).
 
 **Areas that need refactoring**:
--   The  component is extremely large (over 3500 lines) and difficult to maintain. It desperately needs to be broken down into smaller, manageable components and custom hooks to separate concerns like rendering, state management, and user interactions.
+-   The  component remains over 3500 lines long and is a significant source of maintenance overhead. Breaking it down into smaller components and custom hooks is highly recommended for future stability.
 
 **key api endpoints**
-N/A (Client-side application with AsyncStorage).
+N/A.
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **Top Priority**: Your first action is to complete the fix for the image resize handles in . This involves updating the  and  functions to correctly calculate and apply the image's aspect ratio.
--   **Second Priority**: Once the sketch editor fix is complete and tested, you must guide the user to verify the pending PDF layout fix. Remind them to **fully close and restart the Expo Go app** as changes may be cached.
--   **Recurring Bugs**: After the above items are resolved, address the two long-standing recurring bugs: the modal freeze and the incorrect thumbnail display.
+-   **Top Priority**: Fix the polygon measurement line placement in . The previous approach of just changing the sign of an  value failed. The correct solution requires a geometric calculation (e.g., using the normal of the line segment) to determine the outside direction reliably.
+-   **Completed Work**: The user is very happy with the fix for the image resize/scaling handles (perfekt 👍). Do not revisit this.
+-   **Next Steps**: After fixing the polygon lines, guide the user to verify the pending PDF layout fix. Remind them to **fully close and restart the Expo Go app**.
 
 **documents and test reports created in this job**
--   /app/memory/PRD.md
--   /app/test_reports/iteration_1.json
+-   /app/memory/PRD.md (was updated during the session)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: könntest du die grünen Punkte bei der Skizzen bearbeiten und verschieben funktion etwas näher an das bild bringen (Could you bring the green dots for the sketch editing and moving function a bit closer to the image). (IN PROGRESS)
-2.  **User**: Requested removing the Volle Seite (Full Page) option from the sketch size selection menu. (PENDING VERIFICATION)
-3.  **User**: Stated that the PDF layout for sketches also needs to be fixed to match the editor selection. (PENDING VERIFICATION)
-4.  **User**: Reported not seeing any change after the agent's first attempt to fix the PDF photo layout. (PENDING VERIFICATION)
-5.  **User**: Reported the initial bug with the PDF photo layout. (PENDING VERIFICATION)
-6.  **User**: Confirmed the colored icon design for the new tab bar is good. (COMPLETED)
-7.  **User**: Reported that Expo was hanging again. (RESOLVED)
-8.  **User**: Clarified the tab bar redesign request. (COMPLETED)
-9.  **User**: Asked for the redesigned tab bar to be made a little more colorful. (COMPLETED)
-10. **User**: Confirmed the critical data bug was fixed and requested a redesign of the main tab bar. (COMPLETED)
+1.  **User**: Reports the measurement line is still inside, not outside. (IN PROGRESS)
+2.  **Agent**: Asks the user to test after changing offset from  to .
+3.  **User**: Confirms nothing has changed yet (before agent made the change).
+4.  **Agent**: Asks the user which option they prefer for flipping the line side.
+5.  **User**: Asks to move the measurement lines for polygons to the other side. (IN PROGRESS)
+6.  **User**: perfekt 👍 (Perfect 👍) - confirming the image resize handle fix works correctly. (COMPLETED)
+7.  **Agent**: Asks user to test the resize fix after restarting the server and app.
+8.  **User**: Believes Expo has not picked up the change for the resize fix.
+9.  **Agent**: Announces completion of the proportional scaling fix.
+10. **User**: schon viel besser, aber wenn ich das bild größer ziehe so wird der Abstand der grünen punkte zum bild auch immer größer (Much better, but when I drag the image larger, the distance of the green dots to the image also gets bigger). (This led to the proportional scaling fix, which is now COMPLETED).
 
 **Project Health Check:**
--   **Broken**: The image manipulation feature in the sketch editor is functionally broken due to the handle positioning bug.
--   **Mocked**: The PDF export feature has fixes applied but is awaiting user verification to be considered healthy.
+-   **Broken**: The rendering of polygon measurement lines does not meet the user's requirement.
+-   **Mocked**: The PDF export feature has a fix applied but is awaiting user verification to be considered healthy.
 
 **3rd Party Integrations**
 -   
@@ -247,9 +242,9 @@ N/A (Client-side application with AsyncStorage).
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[17:22:30]   Run a command with --help for more info 💡
-[17:22:30]     $ expo start --help
-[17:22:30]
+[17:46:58]   Run a command with --help for more info 💡
+[17:46:58]     $ expo start --help
+[17:46:58]
 -   
 -   
 -   
@@ -259,14 +254,13 @@ N/A (Client-side application with AsyncStorage).
 -   
 
 **Testing status**
--   **Testing agent used after significant changes**: NO (Not in this session).
+-   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: Two issues from a previous fork (modal freeze, thumbnail display) may have resurfaced and have not been re-tested.
+-   **Known regressions**: Two issues from a previous fork (modal freeze, thumbnail display) remain unresolved.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-- The agent has not finished the task it started. The fix for the image resize handles is incomplete.
-- The previous agent did not get final user confirmation on the PDF layout fixes.</analysis>
+- The agent failed to diagnose the root cause of the polygon measurement line issue, getting stuck in a loop of changing a single  value. A proper geometric analysis of the problem is needed instead of trial-and-error.</analysis>

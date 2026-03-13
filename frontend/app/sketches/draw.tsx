@@ -3341,10 +3341,31 @@ export default function DrawSketchScreen() {
               const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
               const angleDeg = angle * 180 / Math.PI;
               
-              // Offset für die Maßlinie (auf der anderen Seite / innen)
-              const offset = -15;
-              const offsetX = -Math.sin(angle) * offset;
-              const offsetY = Math.cos(angle) * offset;
+              // Berechne den Schwerpunkt (Centroid) des Polygons
+              const centroidX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0) / points.length;
+              const centroidY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0) / points.length;
+              
+              // Normalenvektor der Kante (senkrecht zur Kante)
+              // Standard-Normale zeigt nach "links" der Zeichenrichtung
+              const normalX = -Math.sin(angle);
+              const normalY = Math.cos(angle);
+              
+              // Vektor vom Mittelpunkt zum Schwerpunkt
+              const towardsCenterX = centroidX - midX;
+              const towardsCenterY = centroidY - midY;
+              
+              // Skalarprodukt: Wenn positiv, zeigt Normale Richtung Schwerpunkt (= innen)
+              // Dann müssen wir die Normale umkehren, damit sie nach außen zeigt
+              const dotProduct = normalX * towardsCenterX + normalY * towardsCenterY;
+              
+              // Offset-Betrag
+              const offsetMagnitude = 20;
+              
+              // Wenn dotProduct > 0, zeigt Normale nach innen -> umkehren
+              // Wenn dotProduct < 0, zeigt Normale nach außen -> beibehalten
+              const sign = dotProduct > 0 ? -1 : 1;
+              const offsetX = normalX * offsetMagnitude * sign;
+              const offsetY = normalY * offsetMagnitude * sign;
               
               // Linienlänge für End-Striche
               const lineLength = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
@@ -3846,6 +3867,11 @@ export default function DrawSketchScreen() {
         
         // Render dimension lines for this polyline if measurements exist
         const elementMeasurements = lineSegmentMeasurements[el.id] || {};
+        
+        // Berechne den Schwerpunkt (Centroid) des Polygons für die Außen-Berechnung
+        const centroidX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0) / points.length;
+        const centroidY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0) / points.length;
+        
         Object.keys(elementMeasurements).forEach((segIdxStr) => {
           const segIdx = parseInt(segIdxStr, 10);
           const measurementText = elementMeasurements[segIdx];
@@ -3864,10 +3890,24 @@ export default function DrawSketchScreen() {
           // Angle of the line
           const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
           
-          // Offset for dimension line (above the line)
-          const offset = 15;
-          const offsetX = -Math.sin(angle) * offset;
-          const offsetY = Math.cos(angle) * offset;
+          // Normalenvektor der Kante (senkrecht zur Kante)
+          const normalX = -Math.sin(angle);
+          const normalY = Math.cos(angle);
+          
+          // Vektor vom Mittelpunkt zum Schwerpunkt
+          const towardsCenterX = centroidX - midX;
+          const towardsCenterY = centroidY - midY;
+          
+          // Skalarprodukt: Wenn positiv, zeigt Normale Richtung Schwerpunkt (= innen)
+          const dotProduct = normalX * towardsCenterX + normalY * towardsCenterY;
+          
+          // Offset-Betrag
+          const offsetMagnitude = 20;
+          
+          // Wenn dotProduct > 0, zeigt Normale nach innen -> umkehren für außen
+          const sign = dotProduct > 0 ? -1 : 1;
+          const offsetX = normalX * offsetMagnitude * sign;
+          const offsetY = normalY * offsetMagnitude * sign;
           
           // Tick length for end marks
           const tickLength = 8;

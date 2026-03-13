@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Dimensions,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -509,7 +511,10 @@ export default function ReferencesScreen() {
 
       {/* New/Edit Folder Modal */}
       <Modal visible={showNewFolderModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {editingFolder ? 'Ordner umbenennen' : (currentFolder ? 'Neuer Unterordner' : 'Neuer Ordner')}
@@ -534,7 +539,7 @@ export default function ReferencesScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Photo Detail Modal */}
@@ -585,7 +590,10 @@ export default function ReferencesScreen() {
 
       {/* Edit Photo Name Modal */}
       <Modal visible={showEditPhotoModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Foto benennen</Text>
             <TextInput
@@ -605,7 +613,7 @@ export default function ReferencesScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Move Photo Modal */}

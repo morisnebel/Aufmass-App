@@ -609,7 +609,7 @@ export default function ProjectDetailScreen() {
         });
       }
       // Reload checklists
-      const updated = await ChecklistService.getByProject(project.id);
+      const updated = await ChecklistService.getByProjectId(project.id);
       // Sort by order
       updated.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
       setChecklists(updated);
@@ -6014,7 +6014,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginRight: 90,
+    marginRight: 170,
   },
   checkedBadgeText: {
     fontSize: 12,
@@ -7092,7 +7092,7 @@ const styles = StyleSheet.create({
   checklistMoveUpButton: {
     position: 'absolute',
     top: 8,
-    right: 130,
+    right: 165,
     backgroundColor: '#9c27b0',
     borderRadius: 20,
     width: 32,
@@ -7104,7 +7104,7 @@ const styles = StyleSheet.create({
   checklistMoveDownButton: {
     position: 'absolute',
     top: 8,
-    right: 95,
+    right: 130,
     backgroundColor: '#9c27b0',
     borderRadius: 20,
     width: 32,

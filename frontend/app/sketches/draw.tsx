@@ -372,27 +372,73 @@ export default function DrawSketchScreen() {
       return;
     }
     
-    const imageElement: DrawElement = {
-      id: generateId(),
-      type: 'image',
-      data: { uri: imageUri },
-      color: '#000000',
-      strokeWidth: 0,
-      x: 50,
-      y: 50,
-      width: 300,
-      height: 200,
-      rotation: 0,
-    };
-    
-    const newElements = [...elements, imageElement];
-    addToHistory(newElements);
-    setElements(newElements);
-    setSelectedElementId(imageElement.id);
-    setShowProjectPhotosModal(false);
-    // Automatisch Foto-Bearbeiten Modus aktivieren
-    setPhotoEditMode(true);
-    selectDrawMode('select');
+    // Berechne korrektes Seitenverhältnis des Bildes
+    RNImage.getSize(
+      imageUri,
+      (imgWidth, imgHeight) => {
+        // Maximale Größe im Canvas
+        const maxWidth = 400;
+        const maxHeight = 300;
+        const aspectRatio = imgWidth / imgHeight;
+        
+        let finalWidth, finalHeight;
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Bild ist breiter - begrenzen durch Breite
+          finalWidth = maxWidth;
+          finalHeight = maxWidth / aspectRatio;
+        } else {
+          // Bild ist höher - begrenzen durch Höhe
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
+        }
+        
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: finalWidth,
+          height: finalHeight,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        // Automatisch Foto-Bearbeiten Modus aktivieren
+        setPhotoEditMode(true);
+        selectDrawMode('select');
+      },
+      (error) => {
+        console.error('Error getting image size:', error);
+        // Fallback: Füge mit Standardgrößen ein
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: 300,
+          height: 200,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        setPhotoEditMode(true);
+        selectDrawMode('select');
+      }
+    );
   };
   
   // Kästchenpapier Hintergrund
@@ -959,26 +1005,71 @@ export default function DrawSketchScreen() {
       if (initialImageAdded.current) return;
       initialImageAdded.current = true;
       
-      const imageElement: DrawElement = {
-        id: generateId(),
-        type: 'image',
-        data: { uri: imageUri },
-        color: '#000000',
-        strokeWidth: 0,
-        x: 20,
-        y: 20,
-        width: width - 40,
-        height: (height - 160) * 0.8,
-        rotation: 0,
-      };
-      
-      setElements([imageElement]);
-      setHistory([[imageElement]]);
-      setHistoryIndex(0);
-      setSelectedElementId(imageElement.id);
-      // Automatisch Foto-Bearbeiten Modus aktivieren
-      setPhotoEditMode(true);
-      setDrawMode('select');
+      // Berechne korrektes Seitenverhältnis des Bildes
+      RNImage.getSize(
+        imageUri,
+        (imgWidth, imgHeight) => {
+          // Maximale Größe im Canvas (mit etwas Padding)
+          const maxWidth = width - 40;
+          const maxHeight = (height - 160) * 0.8;
+          const aspectRatio = imgWidth / imgHeight;
+          
+          let finalWidth, finalHeight;
+          if (aspectRatio > maxWidth / maxHeight) {
+            // Bild ist breiter - begrenzen durch Breite
+            finalWidth = maxWidth;
+            finalHeight = maxWidth / aspectRatio;
+          } else {
+            // Bild ist höher - begrenzen durch Höhe
+            finalHeight = maxHeight;
+            finalWidth = maxHeight * aspectRatio;
+          }
+          
+          const imageElement: DrawElement = {
+            id: generateId(),
+            type: 'image',
+            data: { uri: imageUri },
+            color: '#000000',
+            strokeWidth: 0,
+            x: 20,
+            y: 20,
+            width: finalWidth,
+            height: finalHeight,
+            rotation: 0,
+          };
+          
+          setElements([imageElement]);
+          setHistory([[imageElement]]);
+          setHistoryIndex(0);
+          setSelectedElementId(imageElement.id);
+          // Automatisch Foto-Bearbeiten Modus aktivieren
+          setPhotoEditMode(true);
+          setDrawMode('select');
+        },
+        (error) => {
+          console.error('Error getting image size:', error);
+          // Fallback: Verwende Standardgrößen
+          const imageElement: DrawElement = {
+            id: generateId(),
+            type: 'image',
+            data: { uri: imageUri },
+            color: '#000000',
+            strokeWidth: 0,
+            x: 20,
+            y: 20,
+            width: width - 40,
+            height: (height - 160) * 0.8,
+            rotation: 0,
+          };
+          
+          setElements([imageElement]);
+          setHistory([[imageElement]]);
+          setHistoryIndex(0);
+          setSelectedElementId(imageElement.id);
+          setPhotoEditMode(true);
+          setDrawMode('select');
+        }
+      );
     };
 
     // Option 1: Load from photoId (fast - loads from LocalStorage)
@@ -1623,8 +1714,28 @@ export default function DrawSketchScreen() {
         base64: true,
       });
 
-      if (!result.canceled && result.assets[0].base64) {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64Image = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        
+        // Berechne korrektes Seitenverhältnis des Bildes
+        const imgWidth = asset.width || 200;
+        const imgHeight = asset.height || 200;
+        const maxWidth = 400;
+        const maxHeight = 300;
+        const aspectRatio = imgWidth / imgHeight;
+        
+        let finalWidth, finalHeight;
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Bild ist breiter - begrenzen durch Breite
+          finalWidth = maxWidth;
+          finalHeight = maxWidth / aspectRatio;
+        } else {
+          // Bild ist höher - begrenzen durch Höhe
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
+        }
+        
         const newElement: DrawElement = {
           id: generateId(),
           type: 'image',
@@ -1633,8 +1744,8 @@ export default function DrawSketchScreen() {
           strokeWidth: 0,
           x: 100,
           y: 100,
-          width: 200,
-          height: 200,
+          width: finalWidth,
+          height: finalHeight,
           rotation: 0,
         };
         const newElements = [...elements, newElement];
@@ -1667,8 +1778,28 @@ export default function DrawSketchScreen() {
         base64: true,
       });
 
-      if (!result.canceled && result.assets[0].base64) {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const base64Image = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        
+        // Berechne korrektes Seitenverhältnis des Bildes
+        const imgWidth = asset.width || 250;
+        const imgHeight = asset.height || 250;
+        const maxWidth = 400;
+        const maxHeight = 300;
+        const aspectRatio = imgWidth / imgHeight;
+        
+        let finalWidth, finalHeight;
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Bild ist breiter - begrenzen durch Breite
+          finalWidth = maxWidth;
+          finalHeight = maxWidth / aspectRatio;
+        } else {
+          // Bild ist höher - begrenzen durch Höhe
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
+        }
+        
         const newElement: DrawElement = {
           id: generateId(),
           type: 'image',
@@ -1677,8 +1808,8 @@ export default function DrawSketchScreen() {
           strokeWidth: 0,
           x: 100,
           y: 100,
-          width: 250,
-          height: 250,
+          width: finalWidth,
+          height: finalHeight,
           rotation: 0,
         };
         const newElements = [...elements, newElement];
@@ -3926,8 +4057,8 @@ export default function DrawSketchScreen() {
         {/* PDF-Größe Button mit Label */}
         <TouchableOpacity 
           onPress={() => {
-            const sizes = ['small', 'medium', 'large', 'full'];
-            const labels = ['Klein (3/Zeile)', 'Mittel (2/Zeile)', 'Groß (1/Zeile)', 'Voll'];
+            const sizes = ['small', 'medium', 'large'];
+            const labels = ['Klein (3/Zeile)', 'Mittel (2/Zeile)', 'Groß (1/Zeile)'];
             const currentIndex = sizes.indexOf(pdfSize);
             const nextIndex = (currentIndex + 1) % sizes.length;
             setPdfSize(sizes[nextIndex]);
@@ -3936,7 +4067,7 @@ export default function DrawSketchScreen() {
           style={styles.pdfSizeHeaderButton}
         >
           <Ionicons 
-            name={pdfSize === 'small' ? 'apps-outline' : pdfSize === 'medium' ? 'grid-outline' : pdfSize === 'large' ? 'square-outline' : 'expand-outline'} 
+            name={pdfSize === 'small' ? 'apps-outline' : pdfSize === 'medium' ? 'grid-outline' : 'square-outline'} 
             size={20} 
             color="#fff" 
           />

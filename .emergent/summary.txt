@@ -1,83 +1,102 @@
 <analysis>**original_problem_statement:**
-The user's initial goal from the previous session was to add a Referenz Fotos (Reference Photos) feature. In this session, the user's requests focused on deeply integrating this feature into the existing checklist functionality and making significant UI/UX improvements.
+The user's initial goal was to add a Referenz Fotos (Reference Photos) feature. In subsequent sessions, the user's requests focused on integrating this feature into the checklist functionality, making significant UI/UX improvements, and fixing bugs.
+
+The most recent request is to fix a UI bug in the sketch editor where the green resize/move handles for an image are positioned too far away from the actual image content, making them difficult to use.
 
 **PRODUCT REQUIREMENTS:**
-1.  **Integrate Reference Photos with Checklists:**
-    *   In the checklist template editor, add a feature to link a specific Reference Folder to a checklist item.
-    *   When viewing a project's checklist, display a button next to items that have a linked reference folder.
-    *   Clicking this button should open a modal displaying all photos from the linked folder.
-    *   The photo viewer for reference images should be full-screen, allow navigation between images, and have a high-contrast design.
-2.  **Reorder Checklists:** In the project details view, add controls (up/down arrows) to change the order of the main checklists (e.g., move Aufmaß Standard before Jacobi Dachziegel).
-3.  **Improve Checklist Workflow:** When editing a checklist, checking off an item should automatically expand its first sub-item to speed up the workflow. This should also work for top-level parent items.
-4.  **UI/UX Refinements:**
-    *   Adjust the layout of buttons on the project checklist screen to prevent overlap and create a clean, organized arrangement.
-    *   Make the Verknüpfung erstellen button in the Reference Photos section smaller and consistent with the grid layout.
-    *   Remove the Importieren button from the Reference Photos screen.
-    *   Improve the full-screen image viewer's layout to ensure navigation arrows are always visible and not obscured by the image.
-5.  **Critical Bug Fix:** When creating a new checklist from a template by selecting only a subset of items, the associated data (print images, preview images, reference folder links) are not being carried over to the new checklist. This data is missing both on creation and when adding new items to the checklist later.
+1.  **Fix Sketch Editor UI (Current):** Adjust the position of resize/move handles for images to be adjacent to the image borders.
+2.  **Integrate Reference Photos with Checklists:** Link reference folders to checklist items and view photos in a modal.
+3.  **Reorder Checklists:** Add controls to change the order of checklists in a project.
+4.  **Improve Checklist Workflow:** When editing a checklist, checking off an item should automatically expand its first sub-item.
+5.  **UI/UX Refinements:**
+    *   Modernize the main navigation tab bar in the project view.
+    *   Fix the layout of photos and sketches in the PDF preview and print output to match the user's selections.
+6.  **Critical Bug Fix:** When creating a new checklist from a template with only a subset of items, the associated data (print images, preview images, reference folder links) must be carried over correctly.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app.
-- A Referenz Fotos section allows creating local photo folders and linking to external system folders (with iOS limitations).
-- A checklist template editor () allows creating and managing checklist structures.
-- A project details screen () displays checklists generated from templates.
-- **New Feature:** The template editor now allows linking a reference folder to a checklist item. This link is stored via  and .
-- **New Feature:** The project checklist view has a button to open a modal and view photos from the linked reference folder. The image viewer modal has been restyled for better usability.
-- **New Feature:** The project details screen has up/down arrows to reorder checklists.
-- **New Feature (Partial):** An auto-expand feature was added to the checklist editor (), which opens the next sub-item when a parent is checked.
+The application is a React Native/Expo app using AsyncStorage for local data persistence. It features project and checklist management, a reference photo system, and a PDF export function. Several major features and bug fixes have been completed, including a redesign of the project tab bar and a fix for a critical data integrity bug. The agent was in the process of fixing a UI bug in the sketch editor when the session ended.
 
 **Last working item**:
-The agent was actively debugging a critical data integrity bug reported by the user.
+The agent was working on fixing the positioning of the green resize/move handles for images within the sketch editor.
 
-- **Last item agent was working**: The user reported that when creating a checklist from a template and selecting only specific sub-items (e.g., J11V), the associated data like , , and  are not being transferred to the newly created checklist. The agent was investigating the data flow between the template creation screen () and the project checklist display (), suspecting the issue was in how items were being copied or saved.
+- **Last item agent was working**: The agent identified that when images are inserted into a sketch, they are given a fixed bounding box that does not match the image's intrinsic aspect ratio. This causes the resize handles to appear far away from the visible image. The agent began modifying several functions in  to calculate the image's correct aspect ratio upon insertion and apply appropriate dimensions to the container.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **User Testing Done**: Y (User discovered and reported the issue with screenshots).
-- **Which testing method agent to use?**: Frontend testing agent. This is a complex data flow issue involving state management across multiple screens and services, making it ideal for the testing agent to verify.
+- **User Testing Done**: N
+- **Which testing method agent to use?**: Frontend testing agent. The agent should test the full image insertion flow (from project photos, camera roll, and new photo) to verify that the resize handles are now correctly positioned snug against the image borders.
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0)**: Data (print images, preview images, reference links) is not copied when creating a checklist with a subset of items from a template.
--   **Issue 2 (P1)**: The checklist auto-expand feature does not work for the top-level parent item.
+-   **Issue 1 (P0)**: Green resize handles are too far from the image in the sketch editor.
+-   **Issue 2 (P1)**: PDF photo and sketch layout does not match the editor selection.
+-   **Issue 3 (P2)**: App freezes when closing the photo viewer modal.
+-   **Issue 4 (P3)**: Folder thumbnail is not displayed correctly in the Referenz Fotos section.
 
 **Issues Detail:**
--   **Issue 1: Data (print images, preview images, reference links) is not copied when creating a checklist with a subset of items from a template.**
-    -   **Attempted fixes**: The agent investigated multiple files (, , ), checked interface definitions, and added console logs. The agent correctly identified that the issue also occurs when adding a new sub-item to an already existing checklist in the  screen, pointing to a flaw in the  function. The core problem is that the logic for adding/creating items does not fetch the rich data from the original template; it only uses the name.
+-   **Issue 1: Green resize handles are too far from the image in the sketch editor.**
+    -   **Attempted fixes**: The agent started patching the monolithic  file. It successfully used  to update the  and  functions to calculate and apply the correct aspect ratio. The work is incomplete.
     -   **Next debug checklist**:
-        1.  Focus on  (for initial creation) and  (for adding items later).
-        2.  Refactor the logic that creates/adds checklist items ( in ,  in ).
-        3.  This logic must not just create a new item with a  and  status. It needs to find the corresponding item in the original source **template** and copy all associated properties (, , , , etc.).
-        4.  This may require loading the full template data into memory when in the add item flow.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug that breaks the entire create partial checklist from template workflow, which is a core user requirement.
+        1.  Continue patching .
+        2.  Find and update the  and  functions to also calculate and apply the image's aspect ratio upon insertion.
+        3.  Ensure the aspect ratio logic correctly handles both portrait and landscape images.
+        4.  Test the fix by inserting an image and confirming the green handles are now flush with the image borders.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a significant usability bug that prevents the user from accurately resizing and positioning images in their sketches.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None.
 
--   **Issue 2: The checklist auto-expand feature does not work for the top-level parent item.**
-    -   **Attempted fixes**: The agent modified the  function in  to handle different cases for collapsed and open items.
+-   **Issue 2: PDF photo and sketch layout is incorrect.**
+    -   **Attempted fixes**:
+        -   The CSS in  was modified to use a  and  model.
+        -   The Volle Seite (Full Page) option was removed from the sketch editor UI in  and its corresponding CSS was removed from .
     -   **Next debug checklist**:
-        1.  Review the logic in  in .
-        2.  The user stated Nur bei dem ersten noch nicht (Only for the first one not yet). This means the logic fails for the root-level item in the checklist.
-        3.  Test this specific case: collapse a top-level item that has sub-items (e.g., Vorarbeiten), then check it. It should expand to show its children. The current logic might be failing to find the correct path or item at depth 0.
-    -   **Why fix this issue and what will be achieved with the fix?**: Fulfills a user-requested quality-of-life improvement for faster checklist navigation.
-    -   **Status**: IN PROGRESS
+        1.  Instruct the user to completely close and restart the Expo Go app.
+        2.  Ask the user to generate a Projekt-PDF and confirm the photo/sketch grid layout is correct.
+        3.  Confirm the Volle Seite option is gone from the sketch editor.
+    -   **Why fix this issue and what will be achieved with the fix?**: The PDF export is a core feature, and this bug makes the output look unprofessional.
+    -   **Status**: USER VERIFICATION PENDING
     -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Frontend (Manual user testing)
+    -   **Blocked on other issue**: None.
+
+-   **Issue 3: App freezes when closing the photo viewer modal.**
+    -   **Attempted fixes**: None in this or the last session.
+    -   **Next debug checklist**: Investigate the  handler for the photo viewer modal in . Check for heavy re-renders or race conditions.
+    -   **Why fix this issue and what will be achieved with this?**: This is a critical usability bug.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on other issue**: None.
+
+-   **Issue 4: Folder thumbnail is not displayed correctly.**
+    -   **Attempted fixes**: None in this or the last session.
+    -   **Next debug checklist**: Inspect the  component styles and containers for folder thumbnails in , focusing on  and dimensions.
+    -   **Why fix this issue and what will be achieved with this?**: Minor visual bug impacting the app's professional appearance.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None.
 
 **In progress Task List**:
-None.
+-   **Task 1: Complete aspect-ratio fix for images in the sketch editor**
+    -   **Where to resume**: The agent needs to modify the  and  functions within , following the pattern used for  and .
+    -   **What will be achieved with this?**: All methods of inserting an image into a sketch will result in a correctly-sized element with properly positioned resize handles.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1**: Verify fixes for the two issues from the *previous* handoff, which may have been undone by a user rollback: App freezing when closing the photo viewer modal, and incorrect folder thumbnail display.
+-   **P0**: Get user verification for the PDF layout fix (Issue 2).
+-   **P1**: Fix the recurring issues: App freezing on modal close (Issue 3) and incorrect folder thumbnail display (Issue 4).
+
 **Future Tasks:**
--   Implement original Flächen-Kalkulator features:
+-   Implement Flächen-Kalkulator (Area Calculator) features:
     -   Edit polyline stroke width and color.
-    -   Implement Maße über Polygone button.
-    -   Implement Notizen zur Skizze button.
+    -   Implement Maße über Polygone (Measurements via Polygons) button.
+    -   Implement Notizen zur Skizze (Notes on Sketch) button.
 -   Create a new TestFlight build.
 -   Implement a Pro/Base version split with in-app purchases.
 -   Add a price calculation feature.
@@ -85,95 +104,77 @@ None.
 -   Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   **Checklist & Reference Photo Integration**:
-    -   Implemented linking of reference folders to checklist items in the template editor ().
-    -   Added a button in project checklists to view photos from the linked folder ().
-    -   Fixed the bug where linked folders were not being saved correctly in the template.
--   **Checklist Reordering**:
-    -   Added up/down arrow buttons to reorder main checklists within a project in .
-    -   Fixed a crash and layout issues related to this feature.
--   **Auto-Expanding Checklist Items**:
-    -   Implemented logic in  to automatically expand the next sub-item when an item is checked (partially working).
--   **UI/UX Improvements**:
-    -   Redesigned the full-screen image viewer with a larger view, dark background, and more visible controls.
-    -   Cleaned up the button layout in the project checklist view () to prevent overlapping.
-    -   Removed the Importieren button and restyled the Verknüpfung erstellen button in the Referenz Fotos screen.
--   **Bug Fixes**: Addressed multiple layout and caching issues by restarting Expo, clearing the cache, and making iterative style adjustments.
+-   None. Work is in progress.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: App freezes when closing the photo viewer modal**
-    -   This was a P0 issue from the previous handoff. The agent attempted a fix early on, but the user performed a rollback later in the session. The status of this fix is unknown and it may have been reverted.
-    -   **Debug checklist**: Check the  handler for the photo viewer modal in . The original problem was a suspected race condition or heavy re-render.
-    -   **Why to solve this issue and what will be achieved with this?**: This is a critical usability bug.
+    -   **Debug checklist**: Check the  handler for the photo viewer modal in . Suspected cause is a race condition or heavy re-render.
+    -   **Why to solve this issue and what will be achieved with this?**: Critical usability bug.
     -   **Should Test frontend/backend/both after fix**: Frontend
     -   **Is recurring issue?**: Y
 -   **Issue 2: Folder thumbnail is not displayed correctly**
-    -   This was a P1 issue from the previous handoff. The agent made style changes, but like the issue above, its current status is unknown due to the user's rollback.
-    -   **Debug checklist**: Inspect the  and container styles for folder thumbnails in . The issue was related to  and container dimensions.
-    -   **Why to solve this issue and what will be achieved with this?**: A visual bug that makes the UI look unprofessional.
+    -   **Debug checklist**: Inspect  styles (, dimensions) for thumbnails in .
+    -   **Why to solve this issue and what will be achieved with this?**: Visual bug that makes the UI look unprofessional.
     -   **Should Test frontend/backend/both after fix**: Frontend
     -   **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
 -   **Issue recurrence in previous fork**: App freezing on modal close and incorrect thumbnail display.
 -   **Recurrence count**: 2+
--   **Status**: BLOCKED (The status of the fixes is unknown due to a user-initiated rollback. They need to be re-verified).
+-   **Status**: NOT STARTED (The status of previous fixes is unknown due to a user-initiated rollback).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--   **Complex State Management**: Heavy use of  across very large, monolithic components (, , ) to manage UI state, modals, and deeply nested data structures.
--   **Data Propagation**: Fragile data flow where large, nested checklist objects are passed and copied between screens (template -> new checklist -> project checklist). Bugs arise when properties are not explicitly copied at each step.
--   , , : Core Expo APIs for file and media handling.
--   **AsyncStorage**: Used as the primary persistence layer, managed through service files.
+-   ****: Used extensively for the sketch/drawing canvas. The current bug is related to positioning  elements.
+-   **Complex State Management**: Heavy use of  in large, monolithic components like .
+-   **Data Persistence**: All data is stored client-side in AsyncStorage.
+-   **Dynamic PDF Generation**: Using a React component with inline CSS to generate HTML for PDF conversion.
 
 **key DB schema**
-The data is stored as JSON objects in AsyncStorage. The relevant interfaces have been expanded:
--    / : These nested objects now include optional fields: , .
+Data is stored as JSON in AsyncStorage. No schema changes in this session.
 
 **changes in tech stack**
 None.
 
 **All files of reference**
--   : (Critical) Displays the project's checklists. Logic for reordering and triggering the reference photo modal was added. Heavily modified and central to the current critical bug.
--   : (Critical) Editor for checklist templates. Logic for linking reference folders was added.
--   : (Critical) Screen for editing a live project checklist. The auto-expand feature was implemented here.
--   : (Critical) Screen for creating a new checklist from a template. Implicated in the current critical bug.
--   : Heavily modified with dozens of new styles for buttons, modals, and layout adjustments.
--   : Modified to save and load the new  fields.
--   : Modified to handle checklist creation and reordering.
+-   : **(CRITICAL)** The file currently being modified. It is a very large, monolithic component responsible for the entire sketch editor functionality. The fix requires multiple  operations within this single file.
+-   : Contains the PDF layout fixes that are awaiting user verification.
+-   : Location of the two recurring bugs (modal freeze, thumbnail display).
 
 **Areas that need refactoring**:
--   The monolithic components have become larger and more complex. , , and  are now over-extended. They handle data fetching, complex state management, multiple modals, and rendering logic all in one file, making them extremely difficult to debug and maintain. They should be broken down into smaller, focused components (e.g., , , ) and custom hooks (e.g., , ).
+-   The  component is extremely large (over 3500 lines) and difficult to maintain. It desperately needs to be broken down into smaller, manageable components and custom hooks to separate concerns like rendering, state management, and user interactions.
 
 **key api endpoints**
 N/A (Client-side application with AsyncStorage).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **Top Priority (P0 Bug)**: The most critical task is to fix the data loss issue when creating partial checklists from a template. The user cannot properly use their primary workflow until this is resolved. Your investigation should start in  and .
--   **User Rollback**: The user performed a rollback (message #58). Do not assume fixes for older issues (modal freezing, thumbnail layout) are still present. They should be re-verified.
--   **Code Fragility**: The main components for checklist functionality are large and tightly coupled. Changes in one file often have unintended consequences in another. Proceed with caution and consider minor refactoring to isolate logic as you fix bugs.
+-   **Top Priority**: Your first action is to complete the fix for the image resize handles in . This involves updating the  and  functions to correctly calculate and apply the image's aspect ratio.
+-   **Second Priority**: Once the sketch editor fix is complete and tested, you must guide the user to verify the pending PDF layout fix. Remind them to **fully close and restart the Expo Go app** as changes may be cached.
+-   **Recurring Bugs**: After the above items are resolved, address the two long-standing recurring bugs: the modal freeze and the incorrect thumbnail display.
 
 **documents and test reports created in this job**
-None.
+-   /app/memory/PRD.md
+-   /app/test_reports/iteration_1.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Reports a major bug: when creating a new checklist with only a subset of items, the print images, preview images, and reference folder buttons are missing. Provides screenshots. (PENDING)
-2.  **User**: Confirms that images/references were added to ALL items in the template, proving it's a data transfer bug. (PENDING)
-3.  **User**: Provides more detail on the critical bug: Checklists created with a subset of items are missing data, while checklists created with all items work correctly. (PENDING)
-4.  **User**: Reports the auto-expand feature works for sub-items but not for the very first, top-level item. (IN PROGRESS)
-5.  **User**: Confirms the checklist reordering works perfectly. Asks for two more changes: move the x of y counter to the left, and add reordering buttons. (COMPLETED)
-6.  **User**: Likes the full-screen image viewer and asks for it to be made even larger. (COMPLETED)
-7.  **User**: Confirms the fix for linking folders in the template is working. (COMPLETED)
-8.  **User**: Reports that linked folders in the template are not being saved. (COMPLETED)
-9.  **User**: Reports the reference folder button is missing in the project checklist view after being added in the template. (COMPLETED)
-10. **User**: Provides a detailed new feature request: link a reference folder to a checklist item in the template, and then view those photos from the project checklist. (COMPLETED)
+1.  **User**: könntest du die grünen Punkte bei der Skizzen bearbeiten und verschieben funktion etwas näher an das bild bringen (Could you bring the green dots for the sketch editing and moving function a bit closer to the image). (IN PROGRESS)
+2.  **User**: Requested removing the Volle Seite (Full Page) option from the sketch size selection menu. (PENDING VERIFICATION)
+3.  **User**: Stated that the PDF layout for sketches also needs to be fixed to match the editor selection. (PENDING VERIFICATION)
+4.  **User**: Reported not seeing any change after the agent's first attempt to fix the PDF photo layout. (PENDING VERIFICATION)
+5.  **User**: Reported the initial bug with the PDF photo layout. (PENDING VERIFICATION)
+6.  **User**: Confirmed the colored icon design for the new tab bar is good. (COMPLETED)
+7.  **User**: Reported that Expo was hanging again. (RESOLVED)
+8.  **User**: Clarified the tab bar redesign request. (COMPLETED)
+9.  **User**: Asked for the redesigned tab bar to be made a little more colorful. (COMPLETED)
+10. **User**: Confirmed the critical data bug was fixed and requested a redesign of the main tab bar. (COMPLETED)
 
 **Project Health Check:**
--   **Broken**: The primary workflow of creating a customized checklist from a template is broken due to a critical data integrity bug.
+-   **Broken**: The image manipulation feature in the sketch editor is functionally broken due to the handle positioning bug.
+-   **Mocked**: The PDF export feature has fixes applied but is awaiting user verification to be considered healthy.
 
 **3rd Party Integrations**
 -   
@@ -246,9 +247,9 @@ None.
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[16:11:32]   Run a command with --help for more info 💡
-[16:11:32]     $ expo start --help
-[16:11:32]
+[17:22:30]   Run a command with --help for more info 💡
+[17:22:30]     $ expo start --help
+[17:22:30]
 -   
 -   
 -   
@@ -258,14 +259,14 @@ None.
 -   
 
 **Testing status**
--   **Testing agent used after significant changes**: NO
+-   **Testing agent used after significant changes**: NO (Not in this session).
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: None identified, but the user rollback may have reintroduced old bugs.
+-   **Known regressions**: Two issues from a previous fork (modal freeze, thumbnail display) may have resurfaced and have not been re-tested.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-- The agent did not get final user confirmation on the fixes for the  and  issues from the previous handoff before the user did a rollback, leaving their status uncertain.
-- The agent's fix for the auto-expanding checklist did not cover the edge case of the top-level item, which the user pointed out.</analysis>
+- The agent has not finished the task it started. The fix for the image resize handles is incomplete.
+- The previous agent did not get final user confirmation on the PDF layout fixes.</analysis>

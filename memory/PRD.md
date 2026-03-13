@@ -51,6 +51,16 @@ German (Deutsch)
 ## What's Been Implemented
 
 ### Session: December 2025 (Current - Latest Update)
+- ✅ **SKIZZEN-EDITOR FIX - Bild-Resize-Handles**:
+  - **Problem**: Die grünen Resize/Move-Punkte waren zu weit vom Bild entfernt
+  - **Ursache**: Bilder wurden mit festen Dimensionen (200x200 oder 250x250) eingefügt, unabhängig vom tatsächlichen Seitenverhältnis
+  - **Fix**: Alle vier Bild-Einfüge-Funktionen aktualisiert mit korrekter Seitenverhältnis-Berechnung:
+    - `insertProjectPhoto` - bereits vorhanden
+    - `addImageElement` - bereits vorhanden
+    - `insertImage` - jetzt mit asset.width/height Berechnung
+    - `takePhotoAndInsert` - jetzt mit asset.width/height Berechnung
+  - **Datei**: `/app/frontend/app/sketches/draw.tsx`
+
 - ✅ **KRITISCHER BUG FIX - Bilder-Daten in Checklisten**:
   - **Problem**: Beim Erstellen einer Checkliste aus einem Template mit Teil-Auswahl wurden printImage, previewImages und referenceFolderId nicht übertragen
   - **Ursache**: Die `convertItems` Funktion in `/app/frontend/app/checklists/[id].tsx` hat die Bild-Felder beim Laden nicht kopiert
@@ -185,7 +195,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://checklist-refs.preview.emergentagent.com
+- **Preview URL**: https://pdf-layout-test.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

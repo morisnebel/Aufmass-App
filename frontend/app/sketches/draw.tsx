@@ -347,8 +347,11 @@ export default function DrawSketchScreen() {
   
   // Helper-Funktion: Wechselt den Zeichenmodus
   // Zoom bleibt erhalten, aber scrollEnabled wird deaktiviert damit Zeichnen funktioniert
+  // PhotoEditMode wird automatisch deaktiviert wenn ein anderes Werkzeug gewählt wird
   const selectDrawMode = (mode: DrawMode) => {
     setDrawMode(mode);
+    // PhotoEditMode deaktivieren wenn anderes Werkzeug gewählt wird
+    setPhotoEditMode(false);
     // Zoom-Modus ausschalten damit Zeichnen/Bearbeiten funktioniert
     // aber den aktuellen Zoom-Level beibehalten!
     setZoomMode(false);

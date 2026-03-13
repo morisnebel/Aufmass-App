@@ -6014,7 +6014,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginRight: 170,
+    marginRight: 100,
   },
   checkedBadgeText: {
     fontSize: 12,
@@ -7092,7 +7092,7 @@ const styles = StyleSheet.create({
   checklistMoveUpButton: {
     position: 'absolute',
     top: 8,
-    right: 165,
+    right: 95,
     backgroundColor: '#9c27b0',
     borderRadius: 20,
     width: 32,
@@ -7104,7 +7104,7 @@ const styles = StyleSheet.create({
   checklistMoveDownButton: {
     position: 'absolute',
     top: 8,
-    right: 130,
+    right: 60,
     backgroundColor: '#9c27b0',
     borderRadius: 20,
     width: 32,

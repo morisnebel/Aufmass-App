@@ -162,14 +162,86 @@ export default function NewCustomerScreen() {
     }
   };
 
+  // Funktion zum Aktualisieren eines bestehenden iPad-Kontakts
+  const updateDeviceContact = async (contactId: string, customerData: {
+    salutation?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    mobile?: string;
+    street?: string;
+    plz?: string;
+    city?: string;
+  }) => {
+    if (Platform.OS === 'web') {
+      return false;
+    }
+
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Contacts permission not granted');
+        return false;
+      }
+
+      const fullName = generateFullName(customerData.salutation, customerData.firstName, customerData.lastName);
+
+      const updatedContact: Contacts.Contact = {
+        id: contactId,
+        contactType: Contacts.ContactTypes.Person,
+        name: fullName,
+        namePrefix: customerData.salutation || '',
+        firstName: customerData.firstName || '',
+        lastName: customerData.lastName || '',
+        emails: customerData.email ? [{ email: customerData.email, label: 'Arbeit' }] : [],
+        phoneNumbers: [
+          ...(customerData.phone ? [{ number: customerData.phone, label: 'Arbeit' }] : []),
+          ...(customerData.mobile ? [{ number: customerData.mobile, label: 'Mobil' }] : []),
+        ].filter(p => p.number),
+        addresses: customerData.street ? [{
+          street: customerData.street,
+          postalCode: customerData.plz || '',
+          city: customerData.city || '',
+          label: 'Arbeit',
+        }] : [],
+      };
+
+      await Contacts.updateContactAsync(updatedContact);
+      console.log('Contact updated in device contacts');
+      return true;
+    } catch (error) {
+      console.error('Error updating device contact:', error);
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     if (!firstName.trim() && !lastName.trim()) {
       Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
       return;
     }
 
-    // Frage, ob der Kunde in Kontakten gespeichert werden soll
-    if (Platform.OS !== 'web') {
+    // Prüfe ob der Kontakt aus iPad-Kontakten importiert wurde
+    if (Platform.OS !== 'web' && importedContactId) {
+      // Kontakt wurde importiert - biete Option zum Aktualisieren an
+      Alert.alert(
+        'Kontakt synchronisieren?',
+        'Dieser Kunde wurde aus Ihren iPad-Kontakten importiert. Möchten Sie die Änderungen auch dort aktualisieren?',
+        [
+          {
+            text: 'Nur hier speichern',
+            style: 'cancel',
+            onPress: () => saveCustomer(false),
+          },
+          {
+            text: 'Kontakt aktualisieren',
+            onPress: () => saveCustomer(true, true), // updateExisting = true
+          },
+        ]
+      );
+    } else if (Platform.OS !== 'web') {
+      // Neuer Kontakt - frage ob in Kontakten speichern
       Alert.alert(
         'In Kontakte speichern?',
         'Soll dieser Kunde auch in Ihren iPad-Kontakten gespeichert werden?',
@@ -190,7 +262,7 @@ export default function NewCustomerScreen() {
     }
   };
 
-  const saveCustomer = async (saveToContacts: boolean) => {
+  const saveCustomer = async (saveToContacts: boolean, updateExisting: boolean = false) => {
     setLoading(true);
     try {
       // Generiere den vollständigen Namen und die kombinierte Adresse
@@ -212,8 +284,31 @@ export default function NewCustomerScreen() {
         importedContactId: importedContactId || undefined,
       });
       
-      // Save to device contacts if requested
-      if (saveToContacts) {
+      // Handle contact synchronization
+      if (saveToContacts && updateExisting && importedContactId) {
+        // Aktualisiere den bestehenden iPad-Kontakt
+        const success = await updateDeviceContact(importedContactId, {
+          salutation: salutation || undefined,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          mobile: mobile || undefined,
+          street: street || undefined,
+          plz: plz || undefined,
+          city: city || undefined,
+        });
+        if (success) {
+          Alert.alert('Erfolg', 'Kunde wurde erstellt und iPad-Kontakt wurde aktualisiert', [
+            { text: 'OK', onPress: () => router.back() },
+          ]);
+        } else {
+          Alert.alert('Teilweise erfolgreich', 'Kunde wurde erstellt, aber der iPad-Kontakt konnte nicht aktualisiert werden', [
+            { text: 'OK', onPress: () => router.back() },
+          ]);
+        }
+      } else if (saveToContacts) {
+        // Neuen Kontakt erstellen
         await saveToDeviceContacts({
           salutation: salutation || undefined,
           firstName: firstName || undefined,

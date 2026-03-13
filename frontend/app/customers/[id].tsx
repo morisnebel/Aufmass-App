@@ -321,15 +321,39 @@ export default function EditCustomerScreen() {
       return;
     }
 
-    saveCustomer();
+    // Prüfe ob der Kontakt aus iPad-Kontakten importiert wurde
+    if (Platform.OS !== 'web' && importedContactId) {
+      Alert.alert(
+        'Kontakt synchronisieren?',
+        'Möchten Sie die Änderungen auch in Ihren iPad-Kontakten aktualisieren?',
+        [
+          {
+            text: 'Nur hier speichern',
+            style: 'cancel',
+            onPress: () => saveCustomer(false),
+          },
+          {
+            text: 'Kontakt aktualisieren',
+            onPress: () => saveCustomer(true),
+          },
+        ]
+      );
+    } else {
+      saveCustomer(false);
+    }
   };
 
-  const saveCustomer = async () => {
+  const saveCustomer = async (syncToContacts: boolean = false) => {
     setSaving(true);
     try {
       // Generiere den vollständigen Namen und die kombinierte Adresse
       const fullName = generateFullName(salutation, firstName, lastName);
       const fullAddress = generateFullAddress(street, zip, city);
+      
+      // Wenn syncToContacts aktiviert ist, zuerst den iPad-Kontakt aktualisieren
+      if (syncToContacts && importedContactId) {
+        await syncWithDeviceContacts();
+      }
       
       await CustomerService.update(customerId, {
         salutation: salutation,
@@ -350,6 +374,10 @@ export default function EditCustomerScreen() {
       const allProjects = await ProjectService.getAll();
       const customerProjects = allProjects.filter(p => p.customer_id === customerId);
       
+      const successMessage = syncToContacts 
+        ? 'Kunde wurde aktualisiert und iPad-Kontakt synchronisiert'
+        : 'Kunde wurde aktualisiert';
+      
       if (customerProjects.length > 0) {
         // Frage, ob die Projekte auch aktualisiert werden sollen
         Alert.alert(
@@ -360,7 +388,7 @@ export default function EditCustomerScreen() {
               text: 'Nein',
               style: 'cancel',
               onPress: () => {
-                Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+                Alert.alert('Erfolg', successMessage, [
                   { text: 'OK', onPress: () => router.back() },
                 ]);
               },
@@ -385,7 +413,7 @@ export default function EditCustomerScreen() {
                       bauherr_city: city || undefined,
                     });
                   }
-                  Alert.alert('Erfolg', `Kunde und ${customerProjects.length} Projekt(e) wurden aktualisiert`, [
+                  Alert.alert('Erfolg', `${successMessage} und ${customerProjects.length} Projekt(e) wurden aktualisiert`, [
                     { text: 'OK', onPress: () => router.back() },
                   ]);
                 } catch (syncError) {
@@ -399,7 +427,7 @@ export default function EditCustomerScreen() {
           ]
         );
       } else {
-        Alert.alert('Erfolg', 'Kunde wurde aktualisiert', [
+        Alert.alert('Erfolg', successMessage, [
           { text: 'OK', onPress: () => router.back() },
         ]);
       }

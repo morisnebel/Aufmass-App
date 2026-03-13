@@ -2655,7 +2655,10 @@ export default function ProjectDetailScreen() {
           }
           /* Flexible photo/sketch containers */
           .photos-container, .sketches-container {
-            display: block;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-start;
           }
           .photos-container::after, .sketches-container::after {
             content: "";
@@ -2706,25 +2709,25 @@ export default function ProjectDetailScreen() {
             max-height: 200px;
             object-fit: contain;
           }
-          /* Photo sizes */
+          /* Photo sizes - iPad mit Flexbox */
           .photo-small {
-            width: calc(33.33% - 10px);
-            float: left;
-            margin-right: 15px;
+            flex: 0 0 calc(33.33% - 10px);
+            max-width: calc(33.33% - 10px);
             margin-bottom: 15px;
           }
           .photo-medium {
-            width: calc(50% - 10px);
-            float: left;
-            margin-right: 15px;
+            flex: 0 0 calc(50% - 10px);
+            max-width: calc(50% - 10px);
             margin-bottom: 15px;
           }
           .photo-large {
-            width: 100%;
+            flex: 0 0 100%;
+            max-width: 100%;
             margin-bottom: 15px;
           }
           .photo-full {
-            width: 100%;
+            flex: 0 0 100%;
+            max-width: 100%;
             margin-bottom: 15px;
           }
           /* Photo wrapper for annotation overlay */
@@ -2737,6 +2740,8 @@ export default function ProjectDetailScreen() {
             display: block;
             width: 100%;
             height: auto;
+            max-height: 400px;
+            object-fit: contain;
           }
           .photo-annotations {
             position: absolute;

@@ -2571,30 +2571,51 @@ export default function DrawSketchScreen() {
           
           newEl.data = newData;
         } else if (el.type === 'image') {
-          let newX = originalElement.x || 0;
-          let newY = originalElement.y || 0;
-          let newW = originalElement.width || 100;
-          let newH = originalElement.height || 100;
+          // Proportionales Resize - Seitenverhältnis beibehalten
+          const origX = originalElement.x || 0;
+          const origY = originalElement.y || 0;
+          const origW = originalElement.width || 100;
+          const origH = originalElement.height || 100;
+          const aspectRatio = origW / origH;
           
-          if (resizeHandle.includes('right')) {
-            newW = (originalElement.width || 100) + dx;
-          }
-          if (resizeHandle.includes('left')) {
-            newX = (originalElement.x || 0) + dx;
-            newW = (originalElement.width || 100) - dx;
-          }
-          if (resizeHandle.includes('bottom')) {
-            newH = (originalElement.height || 100) + dy;
-          }
-          if (resizeHandle.includes('top')) {
-            newY = (originalElement.y || 0) + dy;
-            newH = (originalElement.height || 100) - dy;
+          let newX = origX;
+          let newY = origY;
+          let newW = origW;
+          let newH = origH;
+          
+          if (resizeHandle === 'bottom-right') {
+            // Diagonal resize von rechts unten - proportional
+            const delta = Math.max(dx, dy * aspectRatio);
+            newW = origW + delta;
+            newH = newW / aspectRatio;
+          } else if (resizeHandle === 'top-left') {
+            // Diagonal resize von links oben - proportional
+            const delta = Math.max(-dx, -dy * aspectRatio);
+            newW = origW + delta;
+            newH = newW / aspectRatio;
+            newX = origX - delta;
+            newY = origY - (newH - origH);
+          } else if (resizeHandle === 'top-right') {
+            // Diagonal resize von rechts oben - proportional
+            const delta = Math.max(dx, -dy * aspectRatio);
+            newW = origW + delta;
+            newH = newW / aspectRatio;
+            newY = origY - (newH - origH);
+          } else if (resizeHandle === 'bottom-left') {
+            // Diagonal resize von links unten - proportional
+            const delta = Math.max(-dx, dy * aspectRatio);
+            newW = origW + delta;
+            newH = newW / aspectRatio;
+            newX = origX - delta;
           }
           
-          newEl.x = newX;
-          newEl.y = newY;
-          newEl.width = Math.max(20, newW);
-          newEl.height = Math.max(20, newH);
+          // Mindestgröße einhalten
+          if (newW >= 40 && newH >= 40) {
+            newEl.x = newX;
+            newEl.y = newY;
+            newEl.width = newW;
+            newEl.height = newH;
+          }
         }
       }
 

@@ -11,8 +11,11 @@ const KEYS = {
 export interface ReferenceFolder {
   id: string;
   name: string;
+  parent_id?: string; // For subfolders
   thumbnail_uri?: string;
+  thumbnail_photo_id?: string; // Selected thumbnail photo
   photo_count: number;
+  subfolder_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +23,7 @@ export interface ReferenceFolder {
 export interface ReferencePhoto {
   id: string;
   folder_id: string;
+  name?: string; // Optional photo name for search
   uri: string;
   original_uri: string;
   source: 'camera' | 'gallery' | 'files';
@@ -66,16 +70,43 @@ export const ReferenceService = {
       if (!data) return [];
       
       const folders: ReferenceFolder[] = JSON.parse(data);
-      
-      // Update photo counts
       const photos = await ReferenceService.getAllPhotos();
-      return folders.map(folder => ({
-        ...folder,
-        photo_count: photos.filter(p => p.folder_id === folder.id).length,
-        thumbnail_uri: photos.find(p => p.folder_id === folder.id)?.uri,
-      })).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      
+      // Update photo counts and subfolders
+      return folders.map(folder => {
+        const folderPhotos = photos.filter(p => p.folder_id === folder.id);
+        const subfolders = folders.filter(f => f.parent_id === folder.id);
+        
+        // Use selected thumbnail or first photo
+        let thumbnailUri = folder.thumbnail_uri;
+        if (folder.thumbnail_photo_id) {
+          const thumbPhoto = folderPhotos.find(p => p.id === folder.thumbnail_photo_id);
+          thumbnailUri = thumbPhoto?.uri;
+        }
+        if (!thumbnailUri && folderPhotos.length > 0) {
+          thumbnailUri = folderPhotos[0].uri;
+        }
+        
+        return {
+          ...folder,
+          photo_count: folderPhotos.length,
+          subfolder_count: subfolders.length,
+          thumbnail_uri: thumbnailUri,
+        };
+      }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     } catch (error) {
       console.error('Error getting folders:', error);
+      return [];
+    }
+  },
+
+  // Get folders by parent (for subfolder navigation)
+  getFoldersByParent: async (parentId?: string): Promise<ReferenceFolder[]> => {
+    try {
+      const allFolders = await ReferenceService.getAllFolders();
+      return allFolders.filter(f => f.parent_id === parentId);
+    } catch (error) {
+      console.error('Error getting folders by parent:', error);
       return [];
     }
   },
@@ -90,7 +121,7 @@ export const ReferenceService = {
     }
   },
 
-  createFolder: async (name: string): Promise<ReferenceFolder> => {
+  createFolder: async (name: string, parentId?: string): Promise<ReferenceFolder> => {
     try {
       const folders = await ReferenceService.getAllFolders();
       const now = new Date().toISOString();
@@ -98,7 +129,9 @@ export const ReferenceService = {
       const newFolder: ReferenceFolder = {
         id: generateId(),
         name,
+        parent_id: parentId,
         photo_count: 0,
+        subfolder_count: 0,
         created_at: now,
         updated_at: now,
       };
@@ -112,6 +145,26 @@ export const ReferenceService = {
       return newFolder;
     } catch (error) {
       console.error('Error creating folder:', error);
+      throw error;
+    }
+  },
+
+  // Set thumbnail for folder
+  setFolderThumbnail: async (folderId: string, photoId: string): Promise<void> => {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.REFERENCE_FOLDERS);
+      if (!data) return;
+      
+      const folders: ReferenceFolder[] = JSON.parse(data);
+      const index = folders.findIndex(f => f.id === folderId);
+      
+      if (index !== -1) {
+        folders[index].thumbnail_photo_id = photoId;
+        folders[index].updated_at = new Date().toISOString();
+        await AsyncStorage.setItem(KEYS.REFERENCE_FOLDERS, JSON.stringify(folders));
+      }
+    } catch (error) {
+      console.error('Error setting folder thumbnail:', error);
       throw error;
     }
   },
@@ -286,6 +339,42 @@ export const ReferenceService = {
     } catch (error) {
       console.error('Error moving photo:', error);
       throw error;
+    }
+  },
+
+  // Update photo (name)
+  updatePhoto: async (photoId: string, updates: { name?: string }): Promise<void> => {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.REFERENCE_PHOTOS);
+      if (!data) return;
+      
+      const photos: ReferencePhoto[] = JSON.parse(data);
+      const index = photos.findIndex(p => p.id === photoId);
+      
+      if (index !== -1) {
+        photos[index] = { ...photos[index], ...updates };
+        await AsyncStorage.setItem(KEYS.REFERENCE_PHOTOS, JSON.stringify(photos));
+      }
+    } catch (error) {
+      console.error('Error updating photo:', error);
+      throw error;
+    }
+  },
+
+  // Search photos by name across all folders
+  searchPhotos: async (query: string): Promise<ReferencePhoto[]> => {
+    try {
+      if (!query.trim()) return [];
+      
+      const photos = await ReferenceService.getAllPhotos();
+      const lowerQuery = query.toLowerCase();
+      
+      return photos.filter(p => 
+        p.name?.toLowerCase().includes(lowerQuery)
+      );
+    } catch (error) {
+      console.error('Error searching photos:', error);
+      return [];
     }
   },
 

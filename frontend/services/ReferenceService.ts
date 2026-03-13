@@ -149,7 +149,7 @@ export const ReferenceService = {
     }
   },
 
-  // Set thumbnail for folder
+  // Set thumbnail for folder (by photo ID)
   setFolderThumbnail: async (folderId: string, photoId: string): Promise<void> => {
     try {
       const data = await AsyncStorage.getItem(KEYS.REFERENCE_FOLDERS);
@@ -165,6 +165,27 @@ export const ReferenceService = {
       }
     } catch (error) {
       console.error('Error setting folder thumbnail:', error);
+      throw error;
+    }
+  },
+
+  // Set thumbnail URI directly (without saving photo to folder)
+  setFolderThumbnailUri: async (folderId: string, uri: string): Promise<void> => {
+    try {
+      const data = await AsyncStorage.getItem(KEYS.REFERENCE_FOLDERS);
+      if (!data) return;
+      
+      const folders: ReferenceFolder[] = JSON.parse(data);
+      const index = folders.findIndex(f => f.id === folderId);
+      
+      if (index !== -1) {
+        folders[index].thumbnail_uri = uri;
+        folders[index].thumbnail_photo_id = undefined; // Clear photo ID reference
+        folders[index].updated_at = new Date().toISOString();
+        await AsyncStorage.setItem(KEYS.REFERENCE_FOLDERS, JSON.stringify(folders));
+      }
+    } catch (error) {
+      console.error('Error setting folder thumbnail URI:', error);
       throw error;
     }
   },

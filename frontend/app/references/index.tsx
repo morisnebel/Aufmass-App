@@ -229,16 +229,7 @@ export default function ReferencesScreen() {
     ]);
   };
 
-  const setAsThumbnail = async () => {
-    if (!selectedPhoto || !currentFolder) return;
-    await ReferenceService.setFolderThumbnail(currentFolder.id, selectedPhoto.id);
-    Alert.alert('Erfolg', 'Vorschaubild wurde gesetzt');
-    setShowPhotoModal(false);
-    setSelectedPhoto(null);
-    loadData();
-  };
-
-  // Set folder thumbnail from gallery
+  // Set folder thumbnail from gallery (without saving to folder)
   const setFolderThumbnailFromGallery = async (folder: ReferenceFolder) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -252,9 +243,8 @@ export default function ReferencesScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       try {
-        // Add photo to folder and set as thumbnail
-        const photo = await ReferenceService.addPhoto(folder.id, result.assets[0].uri, 'gallery');
-        await ReferenceService.setFolderThumbnail(folder.id, photo.id);
+        // Set thumbnail URI directly without adding as photo
+        await ReferenceService.setFolderThumbnailUri(folder.id, result.assets[0].uri);
         loadData();
         Alert.alert('Erfolg', 'Vorschaubild wurde gesetzt');
       } catch (error) {
@@ -575,15 +565,11 @@ export default function ReferencesScreen() {
                 resizeMode="contain"
               />
               <View style={styles.photoModalActions}>
-                <TouchableOpacity style={styles.photoActionButton} onPress={() => { setEditPhotoName(selectedPhoto.name || ''); setShowEditPhotoModal(true); }}>
+                <TouchableOpacity style={styles.photoActionButton} onPress={() => { setEditPhotoName(selectedPhoto.name || ''); setShowEditPhotoModal(true); setShowPhotoModal(false); }}>
                   <Ionicons name="pencil" size={20} color="#1976d2" />
                   <Text style={styles.photoActionText}>Name</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.photoActionButton} onPress={setAsThumbnail}>
-                  <Ionicons name="image" size={20} color="#ff9800" />
-                  <Text style={styles.photoActionText}>Vorschau</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.photoActionButton} onPress={() => setShowMoveModal(true)}>
+                <TouchableOpacity style={styles.photoActionButton} onPress={() => { setShowMoveModal(true); setShowPhotoModal(false); }}>
                   <Ionicons name="folder-open" size={20} color="#4caf50" />
                   <Text style={styles.photoActionText}>Verschieben</Text>
                 </TouchableOpacity>

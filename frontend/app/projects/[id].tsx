@@ -2802,14 +2802,17 @@ export default function ProjectDetailScreen() {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
-            display: inline-block;
+            display: block;
             width: 100%;
+            max-height: 350px;
           }
           /* Photo/Sketch im Grid nicht umbrechen */
           .photo-iphone, .sketch-iphone {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
+            max-height: 280px;
+            overflow: hidden;
           }
           .photo-small, .photo-medium, .photo-large, .photo-full {
             page-break-inside: avoid !important;
@@ -2826,6 +2829,8 @@ export default function ProjectDetailScreen() {
             display: block;
             width: 100%;
             height: auto;
+            max-height: 300px;
+            object-fit: contain;
             background: #f5f5f5;
             page-break-inside: avoid !important;
             break-inside: avoid !important;

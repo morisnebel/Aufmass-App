@@ -3341,8 +3341,8 @@ export default function DrawSketchScreen() {
               const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
               const angleDeg = angle * 180 / Math.PI;
               
-              // Offset für die Maßlinie (oberhalb der Linie)
-              const offset = 15;
+              // Offset für die Maßlinie (auf der anderen Seite / innen)
+              const offset = -15;
               const offsetX = -Math.sin(angle) * offset;
               const offsetY = Math.cos(angle) * offset;
               

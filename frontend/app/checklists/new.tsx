@@ -127,8 +127,13 @@ export default function NewChecklistScreen() {
   };
 
   const selectTemplate = (template: ChecklistTemplate) => {
+    console.log('Selected template:', template.name);
+    console.log('Template items:', JSON.stringify(template.items, null, 2));
+    
     setSelectedTemplate(template);
-    setChecklistItems(template.items.map((item) => convertTemplateItem(item)));
+    const converted = template.items.map((item) => convertTemplateItem(item));
+    console.log('Converted items:', JSON.stringify(converted, null, 2));
+    setChecklistItems(converted);
   };
 
   const toggleItem = (index: number) => {

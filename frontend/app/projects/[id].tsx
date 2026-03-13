@@ -3501,53 +3501,35 @@ export default function ProjectDetailScreen() {
         >
           {/* 1. Info - Blau */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'overview' && { backgroundColor: '#3b82f6', borderColor: '#3b82f6' }
-            ]}
+            style={[styles.tabPill, activeTab === 'overview' && styles.tabPillActive]}
             onPress={() => setActiveTab('overview')}
           >
             <Ionicons 
-              name="information-circle-outline" 
-              size={18} 
-              color={activeTab === 'overview' ? '#fff' : '#3b82f6'} 
+              name={activeTab === 'overview' ? "information-circle" : "information-circle-outline"}
+              size={20} 
+              color="#3b82f6"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'overview' ? '#fff' : '#3b82f6' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'overview' && styles.tabPillTextActive]}>
               Info
             </Text>
           </TouchableOpacity>
           
           {/* 2. Foto - Grün */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'photos' && { backgroundColor: '#10b981', borderColor: '#10b981' }
-            ]}
+            style={[styles.tabPill, activeTab === 'photos' && styles.tabPillActive]}
             onPress={() => setActiveTab('photos')}
           >
             <Ionicons 
-              name="camera-outline" 
-              size={18} 
-              color={activeTab === 'photos' ? '#fff' : '#10b981'} 
+              name={activeTab === 'photos' ? "camera" : "camera-outline"}
+              size={20} 
+              color="#10b981"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'photos' ? '#fff' : '#10b981' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'photos' && styles.tabPillTextActive]}>
               Foto
             </Text>
             {photos.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'photos' ? 'rgba(255,255,255,0.25)' : '#d1fae5' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'photos' ? '#fff' : '#10b981' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#d1fae5' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#10b981' }]}>
                   {photos.length}
                 </Text>
               </View>
@@ -3556,32 +3538,20 @@ export default function ProjectDetailScreen() {
           
           {/* 3. Skizze - Lila */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'sketches' && { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }
-            ]}
+            style={[styles.tabPill, activeTab === 'sketches' && styles.tabPillActive]}
             onPress={() => setActiveTab('sketches')}
           >
             <Ionicons 
-              name="brush-outline" 
-              size={18} 
-              color={activeTab === 'sketches' ? '#fff' : '#8b5cf6'} 
+              name={activeTab === 'sketches' ? "brush" : "brush-outline"}
+              size={20} 
+              color="#8b5cf6"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'sketches' ? '#fff' : '#8b5cf6' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'sketches' && styles.tabPillTextActive]}>
               Skizze
             </Text>
             {sketches.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'sketches' ? 'rgba(255,255,255,0.25)' : '#ede9fe' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'sketches' ? '#fff' : '#8b5cf6' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#ede9fe' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#8b5cf6' }]}>
                   {sketches.length}
                 </Text>
               </View>
@@ -3590,32 +3560,20 @@ export default function ProjectDetailScreen() {
           
           {/* 4. Flächen - Orange */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'calculator' && { backgroundColor: '#f59e0b', borderColor: '#f59e0b' }
-            ]}
+            style={[styles.tabPill, activeTab === 'calculator' && styles.tabPillActive]}
             onPress={() => setActiveTab('calculator')}
           >
             <Ionicons 
-              name="grid-outline" 
-              size={18} 
-              color={activeTab === 'calculator' ? '#fff' : '#f59e0b'} 
+              name={activeTab === 'calculator' ? "grid" : "grid-outline"}
+              size={20} 
+              color="#f59e0b"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'calculator' ? '#fff' : '#f59e0b' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'calculator' && styles.tabPillTextActive]}>
               Flächen
             </Text>
             {areaCalculations.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'calculator' ? 'rgba(255,255,255,0.25)' : '#fef3c7' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'calculator' ? '#fff' : '#f59e0b' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#fef3c7' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#f59e0b' }]}>
                   {areaCalculations.length}
                 </Text>
               </View>
@@ -3624,32 +3582,20 @@ export default function ProjectDetailScreen() {
           
           {/* 5. Dach - Rot */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'roofs' && { backgroundColor: '#ef4444', borderColor: '#ef4444' }
-            ]}
+            style={[styles.tabPill, activeTab === 'roofs' && styles.tabPillActive]}
             onPress={() => setActiveTab('roofs')}
           >
             <Ionicons 
-              name="home-outline" 
-              size={18} 
-              color={activeTab === 'roofs' ? '#fff' : '#ef4444'} 
+              name={activeTab === 'roofs' ? "home" : "home-outline"}
+              size={20} 
+              color="#ef4444"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'roofs' ? '#fff' : '#ef4444' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'roofs' && styles.tabPillTextActive]}>
               Dach
             </Text>
             {roofs.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'roofs' ? 'rgba(255,255,255,0.25)' : '#fee2e2' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'roofs' ? '#fff' : '#ef4444' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#fee2e2' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#ef4444' }]}>
                   {roofs.length}
                 </Text>
               </View>
@@ -3658,32 +3604,20 @@ export default function ProjectDetailScreen() {
           
           {/* 6. Liste - Türkis */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'checklists' && { backgroundColor: '#06b6d4', borderColor: '#06b6d4' }
-            ]}
+            style={[styles.tabPill, activeTab === 'checklists' && styles.tabPillActive]}
             onPress={() => setActiveTab('checklists')}
           >
             <Ionicons 
-              name="checkbox-outline" 
-              size={18} 
-              color={activeTab === 'checklists' ? '#fff' : '#06b6d4'} 
+              name={activeTab === 'checklists' ? "checkbox" : "checkbox-outline"}
+              size={20} 
+              color="#06b6d4"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'checklists' ? '#fff' : '#06b6d4' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'checklists' && styles.tabPillTextActive]}>
               Liste
             </Text>
             {checklists.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'checklists' ? 'rgba(255,255,255,0.25)' : '#cffafe' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'checklists' ? '#fff' : '#06b6d4' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#cffafe' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#06b6d4' }]}>
                   {checklists.length}
                 </Text>
               </View>
@@ -3692,53 +3626,35 @@ export default function ProjectDetailScreen() {
           
           {/* 7. Notiz - Pink */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'remarks' && { backgroundColor: '#ec4899', borderColor: '#ec4899' }
-            ]}
+            style={[styles.tabPill, activeTab === 'remarks' && styles.tabPillActive]}
             onPress={() => setActiveTab('remarks')}
           >
             <Ionicons 
-              name="document-text-outline" 
-              size={18} 
-              color={activeTab === 'remarks' ? '#fff' : '#ec4899'} 
+              name={activeTab === 'remarks' ? "document-text" : "document-text-outline"}
+              size={20} 
+              color="#ec4899"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'remarks' ? '#fff' : '#ec4899' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'remarks' && styles.tabPillTextActive]}>
               Notiz
             </Text>
           </TouchableOpacity>
           
           {/* 8. Doku - Indigo */}
           <TouchableOpacity
-            style={[
-              styles.tabPill, 
-              activeTab === 'documents' && { backgroundColor: '#6366f1', borderColor: '#6366f1' }
-            ]}
+            style={[styles.tabPill, activeTab === 'documents' && styles.tabPillActive]}
             onPress={() => setActiveTab('documents')}
           >
             <Ionicons 
-              name="folder-outline" 
-              size={18} 
-              color={activeTab === 'documents' ? '#fff' : '#6366f1'} 
+              name={activeTab === 'documents' ? "folder" : "folder-outline"}
+              size={20} 
+              color="#6366f1"
             />
-            <Text style={[
-              styles.tabPillText, 
-              { color: activeTab === 'documents' ? '#fff' : '#6366f1' }
-            ]}>
+            <Text style={[styles.tabPillText, activeTab === 'documents' && styles.tabPillTextActive]}>
               Doku
             </Text>
             {documents.length > 0 && (
-              <View style={[
-                styles.tabBadge, 
-                { backgroundColor: activeTab === 'documents' ? 'rgba(255,255,255,0.25)' : '#e0e7ff' }
-              ]}>
-                <Text style={[
-                  styles.tabBadgeText, 
-                  { color: activeTab === 'documents' ? '#fff' : '#6366f1' }
-                ]}>
+              <View style={[styles.tabBadge, { backgroundColor: '#e0e7ff' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#6366f1' }]}>
                   {documents.length}
                 </Text>
               </View>

@@ -4150,7 +4150,7 @@ export default function DrawSketchScreen() {
         horizontal={isPhone} 
         showsHorizontalScrollIndicator={isPhone}
         style={[styles.toolbar, isPhone && styles.toolbarPhone]}
-        contentContainerStyle={isPhone ? styles.toolbarContentPhone : undefined}
+        contentContainerStyle={isPhone ? styles.toolbarContentPhone : styles.toolbarContent}
       >
         {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
@@ -6073,23 +6073,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   toolbar: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     paddingVertical: 4,
     paddingHorizontal: 4,
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
   },
   toolbarPhone: {
-    flexWrap: 'nowrap',
     maxHeight: 70,
   },
   toolbarContentPhone: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingRight: 20,
+  },
+  toolbarContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   toolButton: {
     alignItems: 'center',

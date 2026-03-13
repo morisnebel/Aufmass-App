@@ -11,7 +11,12 @@ import {
   Image,
   TextInput,
   ScrollView,
+  Platform,
+  Dimensions,
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isPhone = Platform.OS === 'ios' && !Platform.isPad;
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -462,45 +467,45 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Quick action grid */}
-        <View style={styles.quickGrid}>
+        <View style={[styles.quickGrid, isPhone && styles.quickGridPhone]}>
           <TouchableOpacity
-            style={styles.quickButton}
+            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/customers/')}
           >
-            <View style={[styles.quickIconContainer, { backgroundColor: '#e3f2fd' }]}>
-              <Ionicons name="people" size={20} color="#1976d2" />
+            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#e3f2fd' }]}>
+              <Ionicons name="people" size={isPhone ? 18 : 20} color="#1976d2" />
             </View>
-            <Text style={styles.quickButtonText}>Kunden</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>Kunden</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickButton}
+            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/checklists/templates')}
           >
-            <View style={[styles.quickIconContainer, { backgroundColor: '#f3e5f5' }]}>
-              <Ionicons name="checkbox-outline" size={20} color="#7b1fa2" />
+            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#f3e5f5' }]}>
+              <Ionicons name="checkbox-outline" size={isPhone ? 18 : 20} color="#7b1fa2" />
             </View>
-            <Text style={styles.quickButtonText}>Checklisten</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Listen' : 'Checklisten'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickButton}
+            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/references/')}
           >
-            <View style={[styles.quickIconContainer, { backgroundColor: '#fff3e0' }]}>
-              <Ionicons name="images" size={20} color="#f57c00" />
+            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#fff3e0' }]}>
+              <Ionicons name="images" size={isPhone ? 18 : 20} color="#f57c00" />
             </View>
-            <Text style={styles.quickButtonText}>Referenzen</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Referenz' : 'Referenzen'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickButton}
+            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/settings')}
           >
-            <View style={[styles.quickIconContainer, { backgroundColor: '#eceff1' }]}>
-              <Ionicons name="settings-outline" size={20} color="#546e7a" />
+            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>
+              <Ionicons name="settings-outline" size={isPhone ? 18 : 20} color="#546e7a" />
             </View>
-            <Text style={styles.quickButtonText}>Einstellungen</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Setup' : 'Einstellungen'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -649,6 +654,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  quickGridPhone: {
+    gap: 6,
+    justifyContent: 'space-between',
+  },
   quickButton: {
     width: '23%',
     backgroundColor: '#fff',
@@ -661,6 +670,12 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  quickButtonPhone: {
+    width: '23%',
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderRadius: 8,
+  },
   quickIconContainer: {
     width: 40,
     height: 40,
@@ -669,11 +684,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  quickIconContainerPhone: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
   quickButtonText: {
     fontSize: 11,
     color: '#333',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  quickButtonTextPhone: {
+    fontSize: 10,
   },
   utilityRow: {
     flexDirection: 'row',

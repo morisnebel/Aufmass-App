@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ReferenceService, ReferenceFolder, ReferencePhoto, ExternalFolder } from '../../services/ReferenceService';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -230,25 +230,53 @@ export default function ReferencesScreen() {
     }
   };
 
-  // Link external folder
+  // Link external folder - select multiple images from Files app
   const linkExternalFolder = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['public.folder', 'public.directory', '*/*'],
-        copyToCacheDirectory: false,
-      });
-      
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const folderName = asset.name || 'Externer Ordner';
-        
-        await ReferenceService.addExternalFolder(folderName, asset.uri);
-        loadData();
-        Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft`);
-      }
+      // Ask user how to add images
+      Alert.alert(
+        'Externe Bilder verknüpfen',
+        'Wählen Sie Bilder aus der Dateien-App (USB-Stick, iCloud, etc.)',
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: 'Bilder wählen',
+            onPress: async () => {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['image/*'],
+                copyToCacheDirectory: false,
+                multiple: true,
+              });
+              
+              if (!result.canceled && result.assets.length > 0) {
+                // Ask for folder name
+                Alert.prompt(
+                  'Ordnername',
+                  'Geben Sie einen Namen für diesen externen Ordner ein:',
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Erstellen',
+                      onPress: async (folderName) => {
+                        const name = folderName?.trim() || `Extern (${result.assets.length} Bilder)`;
+                        const uris = result.assets.map(a => a.uri).join('|||');
+                        await ReferenceService.addExternalFolder(name, uris);
+                        loadData();
+                        Alert.alert('Erfolg', `${result.assets.length} Bilder verknüpft`);
+                      },
+                    },
+                  ],
+                  'plain-text',
+                  'Externe Bilder'
+                );
+              }
+            },
+          },
+        ]
+      );
     } catch (error) {
       console.error('Error linking external folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
+      Alert.alert('Fehler', 'Bilder konnten nicht verknüpft werden');
     }
   };
 
@@ -271,27 +299,24 @@ export default function ReferencesScreen() {
     );
   };
 
-  // Open external folder and load photos
+  // Open external folder and show stored photos
   const openExternalFolder = async (folder: ExternalFolder) => {
     try {
       setCurrentExternalFolder(folder);
       setLoading(true);
       
-      // Try to read directory contents
-      const dirInfo = await FileSystem.getInfoAsync(folder.uri);
-      if (dirInfo.exists && dirInfo.isDirectory) {
-        const contents = await FileSystem.readDirectoryAsync(folder.uri);
-        const imageFiles = contents.filter(file => 
-          /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(file)
-        );
-        setExternalPhotos(imageFiles.map(f => `${folder.uri}/${f}`));
+      // URIs are stored separated by |||
+      const uris = folder.uri.split('|||').filter(uri => uri.trim());
+      
+      if (uris.length > 0) {
+        setExternalPhotos(uris);
       } else {
-        Alert.alert('Fehler', 'Ordner nicht gefunden. Ist das Gerät verbunden?');
+        Alert.alert('Fehler', 'Keine Bilder in diesem Ordner');
         setCurrentExternalFolder(null);
       }
     } catch (error) {
       console.error('Error opening external folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden. Möglicherweise ist das externe Gerät nicht verbunden.');
+      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden');
       setCurrentExternalFolder(null);
     } finally {
       setLoading(false);

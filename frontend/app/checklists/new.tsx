@@ -18,6 +18,8 @@ interface TemplateItem {
   printImage?: string;
   previewImages?: string[];
   categoryLogo?: string;
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 interface ChecklistTemplate {
@@ -35,6 +37,8 @@ interface SubItem {
   printImage?: string;
   previewImages?: string[];
   categoryLogo?: string;
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 interface ChecklistItem {
@@ -45,6 +49,8 @@ interface ChecklistItem {
   printImage?: string;
   previewImages?: string[];
   categoryLogo?: string;
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 export default function NewChecklistScreen() {
@@ -90,7 +96,7 @@ export default function NewChecklistScreen() {
           subItems: [],
         };
       }
-      // Rekursiv konvertieren für tiefere Ebenen (mit Bildern)
+      // Rekursiv konvertieren für tiefere Ebenen (mit Bildern und Referenzen)
       return {
         text: subItem.text || '',
         checked: false,
@@ -99,6 +105,9 @@ export default function NewChecklistScreen() {
         printImage: subItem.printImage,
         previewImages: subItem.previewImages,
         categoryLogo: subItem.categoryLogo,
+        // Referenz-Ordner mit übernehmen
+        referenceFolderId: subItem.referenceFolderId,
+        referenceFolderName: subItem.referenceFolderName,
       };
     });
     
@@ -111,6 +120,9 @@ export default function NewChecklistScreen() {
       printImage: item.printImage,
       previewImages: item.previewImages,
       categoryLogo: item.categoryLogo,
+      // Referenz-Ordner mit übernehmen
+      referenceFolderId: item.referenceFolderId,
+      referenceFolderName: item.referenceFolderName,
     };
   };
 

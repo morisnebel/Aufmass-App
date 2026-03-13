@@ -452,68 +452,74 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.actionButtons}>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={() => router.push('/projects/new')}
-          >
-            <Ionicons name="add" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Neues Projekt</Text>
-          </TouchableOpacity>
+        {/* Primary action - Neues Projekt */}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.push('/projects/new')}
+        >
+          <Ionicons name="add-circle" size={22} color="#fff" />
+          <Text style={styles.primaryButtonText}>Neues Projekt</Text>
+        </TouchableOpacity>
 
+        {/* Quick action grid */}
+        <View style={styles.quickGrid}>
           <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+            style={styles.quickButton}
             onPress={() => router.push('/customers/')}
           >
-            <Ionicons name="people" size={24} color="#1976d2" />
-            <Text style={styles.secondaryButtonText}>Kunden verwalten</Text>
+            <View style={[styles.quickIconContainer, { backgroundColor: '#e3f2fd' }]}>
+              <Ionicons name="people" size={20} color="#1976d2" />
+            </View>
+            <Text style={styles.quickButtonText}>Kunden</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+            style={styles.quickButton}
             onPress={() => router.push('/checklists/templates')}
           >
-            <Ionicons name="list" size={24} color="#1976d2" />
-            <Text style={styles.secondaryButtonText}>Checklisten</Text>
+            <View style={[styles.quickIconContainer, { backgroundColor: '#f3e5f5' }]}>
+              <Ionicons name="checkbox-outline" size={20} color="#7b1fa2" />
+            </View>
+            <Text style={styles.quickButtonText}>Checklisten</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.referenceButton]}
+            style={styles.quickButton}
             onPress={() => router.push('/references/')}
           >
-            <Ionicons name="folder-open" size={24} color="#ff9800" />
-            <Text style={styles.referenceButtonText}>Referenz Fotos</Text>
+            <View style={[styles.quickIconContainer, { backgroundColor: '#fff3e0' }]}>
+              <Ionicons name="images" size={20} color="#f57c00" />
+            </View>
+            <Text style={styles.quickButtonText}>Referenzen</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+            style={styles.quickButton}
             onPress={() => router.push('/settings')}
           >
-            <Ionicons name="settings-outline" size={24} color="#1976d2" />
-            <Text style={styles.secondaryButtonText}>Einstellungen</Text>
+            <View style={[styles.quickIconContainer, { backgroundColor: '#eceff1' }]}>
+              <Ionicons name="settings-outline" size={20} color="#546e7a" />
+            </View>
+            <Text style={styles.quickButtonText}>Einstellungen</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Import and Sort Buttons */}
-        <View style={styles.importSortRow}>
+        {/* Sort and Import row */}
+        <View style={styles.utilityRow}>
           <TouchableOpacity
-            style={styles.sortButton}
+            style={styles.utilityButton}
             onPress={changeSortOrder}
           >
-            <Ionicons name="swap-vertical" size={20} color="#1976d2" />
-            <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
+            <Ionicons name="swap-vertical" size={16} color="#1976d2" />
+            <Text style={styles.utilityButtonText}>{getSortLabel()}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.importButton}
+            style={[styles.utilityButton, styles.importUtilityButton]}
             onPress={importProjectFile}
           >
-            <Ionicons name="cloud-download" size={20} color="#2e7d32" />
-            <Text style={styles.importButtonText}>Importieren</Text>
+            <Ionicons name="download-outline" size={16} color="#2e7d32" />
+            <Text style={[styles.utilityButtonText, { color: '#2e7d32' }]}>Import</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -620,9 +626,81 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionButtons: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1976d2',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  quickButton: {
+    width: '23%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  quickIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  quickButtonText: {
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  utilityRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  utilityButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingVertical: 8,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  importUtilityButton: {
+    borderColor: '#c8e6c9',
+    backgroundColor: '#f1f8e9',
+  },
+  utilityButtonText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  // Legacy styles kept for compatibility
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
@@ -636,9 +714,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     gap: 8,
-  },
-  primaryButton: {
-    backgroundColor: '#1976d2',
   },
   secondaryButton: {
     backgroundColor: '#fff',

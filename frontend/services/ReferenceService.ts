@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import { File, Directory, Paths } from 'expo-file-system';
 
 // Storage Keys
 const KEYS = {
@@ -32,22 +32,28 @@ const generateId = (): string => {
 };
 
 // Get the reference photos directory
-const getReferencesDirectory = (): string => {
-  // Use documentDirectory which is accessible in iOS Files app
-  return `${FileSystem.documentDirectory}ReferenzFotos/`;
+const getReferencesDirectory = (): Directory => {
+  return new Directory(Paths.document, 'ReferenzFotos');
 };
 
 // Ensure the references directory exists
-const ensureDirectoryExists = async (folderId?: string): Promise<string> => {
+const ensureDirectoryExists = async (folderId?: string): Promise<Directory> => {
   const baseDir = getReferencesDirectory();
-  const targetDir = folderId ? `${baseDir}${folderId}/` : baseDir;
   
-  const dirInfo = await FileSystem.getInfoAsync(targetDir);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+  // Create base directory if not exists
+  if (!(await baseDir.exists())) {
+    await baseDir.create();
   }
   
-  return targetDir;
+  if (folderId) {
+    const folderDir = new Directory(baseDir, folderId);
+    if (!(await folderDir.exists())) {
+      await folderDir.create();
+    }
+    return folderDir;
+  }
+  
+  return baseDir;
 };
 
 // Reference Service
@@ -140,10 +146,10 @@ export const ReferenceService = {
       }
       
       // Delete physical directory
-      const folderDir = `${getReferencesDirectory()}${id}/`;
-      const dirInfo = await FileSystem.getInfoAsync(folderDir);
-      if (dirInfo.exists) {
-        await FileSystem.deleteAsync(folderDir, { idempotent: true });
+      const baseDir = getReferencesDirectory();
+      const folderDir = new Directory(baseDir, id);
+      if (await folderDir.exists()) {
+        await folderDir.delete();
       }
       
       // Remove from storage
@@ -190,18 +196,17 @@ export const ReferenceService = {
       const photoId = generateId();
       const extension = sourceUri.split('.').pop()?.toLowerCase() || 'jpg';
       const filename = `${photoId}.${extension}`;
-      const targetUri = `${folderDir}${filename}`;
       
-      // Copy file to references directory
-      await FileSystem.copyAsync({
-        from: sourceUri,
-        to: targetUri,
-      });
+      // Create source file and copy to destination
+      const sourceFile = new File(sourceUri);
+      const destFile = new File(folderDir, filename);
+      
+      await sourceFile.copy(destFile);
       
       const newPhoto: ReferencePhoto = {
         id: photoId,
         folder_id: folderId,
-        uri: targetUri,
+        uri: destFile.uri,
         original_uri: sourceUri,
         source,
         created_at: new Date().toISOString(),
@@ -229,9 +234,9 @@ export const ReferenceService = {
       
       if (photo) {
         // Delete physical file
-        const fileInfo = await FileSystem.getInfoAsync(photo.uri);
-        if (fileInfo.exists) {
-          await FileSystem.deleteAsync(photo.uri, { idempotent: true });
+        const file = new File(photo.uri);
+        if (await file.exists()) {
+          await file.delete();
         }
       }
       
@@ -261,18 +266,16 @@ export const ReferenceService = {
       
       // Move physical file
       const filename = photo.uri.split('/').pop() || `${photo.id}.jpg`;
-      const newUri = `${targetDir}${filename}`;
+      const sourceFile = new File(photo.uri);
+      const destFile = new File(targetDir, filename);
       
-      await FileSystem.moveAsync({
-        from: photo.uri,
-        to: newUri,
-      });
+      await sourceFile.move(destFile);
       
       // Update photo record
       photos[photoIndex] = {
         ...photo,
         folder_id: targetFolderId,
-        uri: newUri,
+        uri: destFile.uri,
       };
       
       await AsyncStorage.setItem(KEYS.REFERENCE_PHOTOS, JSON.stringify(photos));
@@ -289,27 +292,18 @@ export const ReferenceService = {
   // ============ UTILITY ============
 
   // Get storage info
-  getStorageInfo: async (): Promise<{ folderCount: number; photoCount: number; totalSize: number }> => {
+  getStorageInfo: async (): Promise<{ folderCount: number; photoCount: number }> => {
     try {
       const folders = await ReferenceService.getAllFolders();
       const photos = await ReferenceService.getAllPhotos();
       
-      let totalSize = 0;
-      for (const photo of photos) {
-        const fileInfo = await FileSystem.getInfoAsync(photo.uri);
-        if (fileInfo.exists && 'size' in fileInfo) {
-          totalSize += fileInfo.size || 0;
-        }
-      }
-      
       return {
         folderCount: folders.length,
         photoCount: photos.length,
-        totalSize,
       };
     } catch (error) {
       console.error('Error getting storage info:', error);
-      return { folderCount: 0, photoCount: 0, totalSize: 0 };
+      return { folderCount: 0, photoCount: 0 };
     }
   },
 
@@ -318,9 +312,8 @@ export const ReferenceService = {
     try {
       // Delete all files
       const baseDir = getReferencesDirectory();
-      const dirInfo = await FileSystem.getInfoAsync(baseDir);
-      if (dirInfo.exists) {
-        await FileSystem.deleteAsync(baseDir, { idempotent: true });
+      if (await baseDir.exists()) {
+        await baseDir.delete();
       }
       
       // Clear storage

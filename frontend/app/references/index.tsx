@@ -17,7 +17,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 
 const { width: screenWidth } = Dimensions.get('window');

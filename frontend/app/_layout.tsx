@@ -100,6 +100,10 @@ export default function RootLayout() {
           name="calculator/edit" 
           options={{ title: 'Flächenkalkulator', headerShown: false }} 
         />
+        <Stack.Screen 
+          name="references/index" 
+          options={{ title: 'Referenz Fotos', headerShown: false }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

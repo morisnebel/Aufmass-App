@@ -5426,7 +5426,7 @@ export default function ProjectDetailScreen() {
             <View style={styles.imageModalHeader}>
               <Text style={styles.imageModalTitle}>{imagePreviewModal.title}</Text>
               <TouchableOpacity onPress={() => setImagePreviewModal({ ...imagePreviewModal, visible: false })}>
-                <Ionicons name="close" size={28} color="#333" />
+                <Ionicons name="close" size={28} color="#fff" />
               </TouchableOpacity>
             </View>
             
@@ -5445,7 +5445,7 @@ export default function ProjectDetailScreen() {
                       onPress={() => setCurrentImageIndex(Math.max(0, currentImageIndex - 1))}
                       disabled={currentImageIndex === 0}
                     >
-                      <Ionicons name="chevron-back" size={30} color={currentImageIndex === 0 ? '#ccc' : '#1976d2'} />
+                      <Ionicons name="chevron-back" size={36} color={currentImageIndex === 0 ? '#666' : '#fff'} />
                     </TouchableOpacity>
                     
                     <Text style={styles.imageCounter}>
@@ -5457,7 +5457,7 @@ export default function ProjectDetailScreen() {
                       onPress={() => setCurrentImageIndex(Math.min(imagePreviewModal.images.length - 1, currentImageIndex + 1))}
                       disabled={currentImageIndex === imagePreviewModal.images.length - 1}
                     >
-                      <Ionicons name="chevron-forward" size={30} color={currentImageIndex === imagePreviewModal.images.length - 1 ? '#ccc' : '#1976d2'} />
+                      <Ionicons name="chevron-forward" size={36} color={currentImageIndex === imagePreviewModal.images.length - 1 ? '#666' : '#fff'} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -6762,9 +6762,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imageModalContent: {
-    width: '95%',
-    maxHeight: '90%',
-    backgroundColor: '#fff',
+    width: '98%',
+    maxHeight: '95%',
+    backgroundColor: '#000',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -6772,40 +6772,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    padding: 12,
+    backgroundColor: '#000',
   },
   imageModalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#fff',
     flex: 1,
   },
   imageModalBody: {
-    padding: 16,
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
   },
   fullPreviewImage: {
     width: '100%',
-    height: 400,
+    height: 600,
   },
   imageNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    gap: 20,
+    paddingVertical: 16,
+    gap: 30,
+    backgroundColor: '#000',
   },
   imageNavButton: {
-    padding: 8,
+    padding: 12,
   },
   imageNavButtonDisabled: {
     opacity: 0.5,
   },
   imageCounter: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
   },
   // Documents Section Styles
   documentsSection: {

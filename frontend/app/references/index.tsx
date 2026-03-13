@@ -330,7 +330,11 @@ export default function ReferencesScreen() {
         setShowPhotoModal(true);
       }}
     >
-      <Image source={{ uri: item.uri }} style={styles.photoThumbnail} />
+      <Image 
+        source={{ uri: item.uri }} 
+        style={styles.photoThumbnail} 
+        resizeMode="cover"
+      />
       {item.name && (
         <View style={styles.photoNameBadge}>
           <Text style={styles.photoNameText} numberOfLines={1}>{item.name}</Text>
@@ -540,9 +544,23 @@ export default function ReferencesScreen() {
       </Modal>
 
       {/* Photo Detail Modal */}
-      <Modal visible={showPhotoModal} transparent animationType="fade" onRequestClose={() => { setShowPhotoModal(false); setSelectedPhoto(null); }}>
+      <Modal 
+        visible={showPhotoModal} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => { 
+          setShowPhotoModal(false); 
+          setTimeout(() => setSelectedPhoto(null), 100);
+        }}
+      >
         <View style={styles.photoModalOverlay}>
-          <TouchableOpacity style={styles.photoModalClose} onPress={() => { setShowPhotoModal(false); setSelectedPhoto(null); }}>
+          <TouchableOpacity 
+            style={styles.photoModalClose} 
+            onPress={() => { 
+              setShowPhotoModal(false); 
+              setTimeout(() => setSelectedPhoto(null), 100);
+            }}
+          >
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {selectedPhoto && (

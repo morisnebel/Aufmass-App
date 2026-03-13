@@ -326,12 +326,12 @@ export default function ReferencesScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} key={currentFolder ? 'photo-view' : 'folder-view'}>
       {renderHeader()}
 
       {currentFolder ? (
         // Photo view inside folder
-        <>
+        <View style={styles.contentContainer}>
           {/* Add photo buttons */}
           <View style={styles.addPhotoButtons}>
             <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromCamera}>
@@ -356,7 +356,7 @@ export default function ReferencesScreen() {
             </View>
           ) : (
             <FlatList
-              key="photos-grid"
+              key={`photos-${currentFolder.id}`}
               data={photos}
               renderItem={renderPhotoItem}
               keyExtractor={(item) => item.id}
@@ -364,10 +364,10 @@ export default function ReferencesScreen() {
               contentContainerStyle={styles.photoGrid}
             />
           )}
-        </>
+        </View>
       ) : (
         // Folder view
-        <>
+        <View style={styles.contentContainer}>
           <TouchableOpacity
             style={styles.newFolderButton}
             onPress={() => {
@@ -388,7 +388,7 @@ export default function ReferencesScreen() {
             </View>
           ) : (
             <FlatList
-              key="folders-grid"
+              key="folders-list"
               data={folders}
               renderItem={renderFolderItem}
               keyExtractor={(item) => item.id}
@@ -396,7 +396,7 @@ export default function ReferencesScreen() {
               contentContainerStyle={styles.folderGrid}
             />
           )}
-        </>
+        </View>
       )}
 
       {/* New Folder Modal */}
@@ -539,6 +539,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  contentContainer: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,

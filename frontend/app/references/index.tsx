@@ -238,63 +238,35 @@ export default function ReferencesScreen() {
   };
 
   // Link external folder - iOS doesn't support folder selection, so we use a workaround
+  const [showLinkFolderModal, setShowLinkFolderModal] = useState(false);
+  const [linkFolderName, setLinkFolderName] = useState('');
+  
   const linkExternalFolder = async () => {
-    Alert.alert(
-      'Externen Ordner verknüpfen',
-      'iOS erlaubt keinen direkten Zugriff auf externe Ordner.\n\nWählen Sie eine Option:',
-      [
-        {
-          text: 'Abbrechen',
-          style: 'cancel',
-        },
-        {
-          text: 'Bilder auswählen',
-          onPress: async () => {
-            try {
-              // Let user select images from Files app
-              const result = await DocumentPicker.getDocumentAsync({
-                type: ['image/*'],
-                copyToCacheDirectory: false,
-                multiple: true,
-              });
-              
-              if (!result.canceled && result.assets.length > 0) {
-                // Get the parent folder path from first image
-                const firstUri = result.assets[0].uri;
-                const folderPath = firstUri.substring(0, firstUri.lastIndexOf('/'));
-                const folderName = result.assets[0].name?.split('/')[0] || 'Externer Ordner';
-                
-                // Create a virtual folder and show the images
-                setCurrentExternalFolder({
-                  id: 'temp-' + Date.now(),
-                  name: folderName,
-                  uri: folderPath,
-                  linked_at: new Date().toISOString(),
-                });
-                setExternalPhotos(result.assets.map(a => a.uri));
-                setLoading(false);
-              }
-            } catch (error) {
-              console.error('Error selecting images:', error);
-              Alert.alert('Fehler', 'Bilder konnten nicht ausgewählt werden');
-            }
-          },
-        },
-        {
-          text: 'In Dateien öffnen',
-          onPress: async () => {
-            // Open Files app
-            const filesAppUrl = 'shareddocuments://';
-            const canOpen = await Linking.canOpenURL(filesAppUrl);
-            if (canOpen) {
-              await Linking.openURL(filesAppUrl);
-            } else {
-              Alert.alert('Info', 'Die Dateien-App konnte nicht geöffnet werden.');
-            }
-          },
-        },
-      ]
-    );
+    // Show modal to enter folder name first
+    setLinkFolderName('');
+    setShowLinkFolderModal(true);
+  };
+  
+  const saveLinkFolder = async () => {
+    if (!linkFolderName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie einen Namen für die Verknüpfung ein');
+      return;
+    }
+    
+    try {
+      // Save the link with user-provided name
+      await ReferenceService.addExternalFolder(linkFolderName.trim(), '');
+      setShowLinkFolderModal(false);
+      setLinkFolderName('');
+      loadData();
+      Alert.alert(
+        'Erfolg', 
+        `Verknüpfung "${linkFolderName.trim()}" wurde erstellt.\n\nTippen Sie darauf, um Bilder aus der Dateien-App auszuwählen.`
+      );
+    } catch (error) {
+      console.error('Error saving link:', error);
+      Alert.alert('Fehler', 'Verknüpfung konnte nicht gespeichert werden');
+    }
   };
 
   // Unlink external folder
@@ -1070,6 +1042,40 @@ export default function ReferencesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Link External Folder Modal */}
+      <Modal visible={showLinkFolderModal} transparent animationType="fade">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Externe Verknüpfung erstellen</Text>
+            <Text style={styles.linkFolderHint}>
+              Geben Sie einen Namen für die Verknüpfung ein (z.B. "USB Jacobi" oder "iCloud Fotos").
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Name der Verknüpfung"
+              placeholderTextColor="#999"
+              value={linkFolderName}
+              onChangeText={setLinkFolderName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => { setShowLinkFolderModal(false); setLinkFolderName(''); }}
+              >
+                <Text style={styles.modalButtonCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonConfirm]} onPress={saveLinkFolder}>
+                <Text style={styles.modalButtonConfirmText}>Erstellen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -1177,4 +1183,7 @@ const styles = StyleSheet.create({
   moveBreadcrumbItem: { fontSize: 12, color: '#1976d2', marginHorizontal: 2 },
   moveHereButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8f5e9', paddingVertical: 10, borderRadius: 8, marginBottom: 10, gap: 6 },
   moveHereButtonText: { color: '#4caf50', fontSize: 13, fontWeight: '600' },
+  
+  // Link Folder Modal
+  linkFolderHint: { fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center', lineHeight: 18 },
 });

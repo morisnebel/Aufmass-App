@@ -40,14 +40,14 @@ const getReferencesDirectory = (): Directory => {
 const ensureDirectoryExists = async (folderId?: string): Promise<Directory> => {
   const baseDir = getReferencesDirectory();
   
-  // Create base directory if not exists
-  if (!(await baseDir.exists())) {
+  // Create base directory if not exists (exists is a property, not a method)
+  if (!baseDir.exists) {
     await baseDir.create();
   }
   
   if (folderId) {
     const folderDir = new Directory(baseDir, folderId);
-    if (!(await folderDir.exists())) {
+    if (!folderDir.exists) {
       await folderDir.create();
     }
     return folderDir;
@@ -148,7 +148,7 @@ export const ReferenceService = {
       // Delete physical directory
       const baseDir = getReferencesDirectory();
       const folderDir = new Directory(baseDir, id);
-      if (await folderDir.exists()) {
+      if (folderDir.exists) {
         await folderDir.delete();
       }
       
@@ -235,7 +235,7 @@ export const ReferenceService = {
       if (photo) {
         // Delete physical file
         const file = new File(photo.uri);
-        if (await file.exists()) {
+        if (file.exists) {
           await file.delete();
         }
       }
@@ -312,7 +312,7 @@ export const ReferenceService = {
     try {
       // Delete all files
       const baseDir = getReferencesDirectory();
-      if (await baseDir.exists()) {
+      if (baseDir.exists) {
         await baseDir.delete();
       }
       

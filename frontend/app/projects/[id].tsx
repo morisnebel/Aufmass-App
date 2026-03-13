@@ -6763,7 +6763,7 @@ const styles = StyleSheet.create({
   },
   imageModalContent: {
     width: '98%',
-    height: '85%',
+    height: '92%',
     backgroundColor: '#000',
     borderRadius: 12,
     overflow: 'hidden',

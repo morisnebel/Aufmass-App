@@ -1267,45 +1267,31 @@ export default function ProjectDetailScreen() {
       `;
     };
     
-    // Erzeuge Seiten für jede Größen-Gruppe
+    // Erzeuge Seiten für jede Größen-Gruppe - ohne erzwungene Seitenumbrüche
     let photosHtml = '';
     
     if (photos.length > 0) {
-      const pages: string[] = [];
+      const sections: string[] = [];
       
-      // Klein: 9 pro Seite (3x3)
+      // Klein: 3x3 Grid
       if (smallPhotos.length > 0) {
-        for (let i = 0; i < smallPhotos.length; i += 9) {
-          const pagePhotos = smallPhotos.slice(i, i + 9);
-          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
-          const needsPageBreak = i > 0 ? 'photos-page-break' : '';
-          pages.push(`<div class="photos-page photos-page-small ${needsPageBreak}">${photosInPage}</div>`);
-        }
+        const photosInSection = smallPhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
+        sections.push(`<div class="photos-section photos-section-small">${photosInSection}</div>`);
       }
       
-      // Mittel: 4 pro Seite (2x2)
+      // Mittel: 2x2 Grid
       if (mediumPhotos.length > 0) {
-        for (let i = 0; i < mediumPhotos.length; i += 4) {
-          const pagePhotos = mediumPhotos.slice(i, i + 4);
-          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
-          // Seitenumbruch nur wenn es schon andere Seiten gibt oder nicht die erste Medium-Gruppe
-          const needsPageBreak = (pages.length > 0 || i > 0) ? 'photos-page-break' : '';
-          pages.push(`<div class="photos-page photos-page-medium ${needsPageBreak}">${photosInPage}</div>`);
-        }
+        const photosInSection = mediumPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
+        sections.push(`<div class="photos-section photos-section-medium">${photosInSection}</div>`);
       }
       
-      // Groß: 2 pro Seite (1x2 übereinander)
+      // Groß: 1 Spalte (übereinander)
       if (largePhotos.length > 0) {
-        for (let i = 0; i < largePhotos.length; i += 2) {
-          const pagePhotos = largePhotos.slice(i, i + 2);
-          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
-          // Seitenumbruch nur wenn es schon andere Seiten gibt oder nicht die erste Large-Gruppe
-          const needsPageBreak = (pages.length > 0 || i > 0) ? 'photos-page-break' : '';
-          pages.push(`<div class="photos-page photos-page-large ${needsPageBreak}">${photosInPage}</div>`);
-        }
+        const photosInSection = largePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
+        sections.push(`<div class="photos-section photos-section-large">${photosInSection}</div>`);
       }
       
-      photosHtml = pages.join('');
+      photosHtml = sections.join('');
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
     }
@@ -2178,51 +2164,43 @@ export default function ProjectDetailScreen() {
               /* page-break-before removed for compact layout */
             }
             /* Foto-Layouts für Druck */
-            .photos-page {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
+            .photos-section {
+              margin-bottom: 15px !important;
             }
-            .photos-page-break {
-              page-break-before: always !important;
-              break-before: page !important;
-            }
-            .photos-page-small {
+            .photos-section-small {
               display: grid !important;
               grid-template-columns: repeat(3, 1fr) !important;
               gap: 8px !important;
             }
-            .photos-page-small .photo-item {
-              max-height: 220px !important;
+            .photos-section-small .photo-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
-            .photos-page-small .photo-item img {
+            .photos-section-small .photo-item img {
               max-height: 180px !important;
             }
-            .photos-page-medium {
+            .photos-section-medium {
               display: grid !important;
               grid-template-columns: repeat(2, 1fr) !important;
               gap: 12px !important;
             }
-            .photos-page-medium .photo-item {
-              max-height: 320px !important;
+            .photos-section-medium .photo-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
-            .photos-page-medium .photo-item img {
+            .photos-section-medium .photo-item img {
               max-height: 280px !important;
             }
-            .photos-page-large {
+            .photos-section-large {
               display: flex !important;
               flex-direction: column !important;
               gap: 15px !important;
             }
-            .photos-page-large .photo-item {
-              max-height: 380px !important;
+            .photos-section-large .photo-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
-            .photos-page-large .photo-item img {
+            .photos-section-large .photo-item img {
               max-height: 340px !important;
             }
             .photo-item {
@@ -2782,63 +2760,59 @@ export default function ProjectDetailScreen() {
             object-fit: contain;
           }
           /* Neue Foto-Seiten Layouts */
-          .photos-page {
-            page-break-inside: avoid;
-            break-inside: avoid;
+          .photos-section {
             margin-bottom: 15px;
           }
-          /* Klein: 3x3 Grid = 9 Fotos pro Seite */
-          .photos-page-small {
+          /* Klein: 3 Spalten Grid */
+          .photos-section-small {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
           }
-          .photos-page-small .photo-item {
-            max-height: 220px;
+          .photos-section-small .photo-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
-          .photos-page-small .photo-item img {
+          .photos-section-small .photo-item img {
             max-height: 180px;
             object-fit: contain;
           }
           .photo-grid-small {
             width: 100%;
           }
-          /* Mittel: 2x2 Grid = 4 Fotos pro Seite */
-          .photos-page-medium {
+          /* Mittel: 2 Spalten Grid */
+          .photos-section-medium {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
           }
-          .photos-page-medium .photo-item {
-            max-height: 320px;
+          .photos-section-medium .photo-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
-          .photos-page-medium .photo-item img {
+          .photos-section-medium .photo-item img {
             max-height: 280px;
             object-fit: contain;
           }
           .photo-grid-medium {
             width: 100%;
           }
-          /* Groß: 1 Spalte = 2 Fotos pro Seite (übereinander) */
-          .photos-page-large {
+          /* Groß: 1 Spalte (übereinander) */
+          .photos-section-large {
             display: flex;
             flex-direction: column;
             gap: 15px;
           }
-          .photos-page-large .photo-item {
-            max-height: 380px;
+          .photos-section-large .photo-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
-          .photos-page-large .photo-item img {
+          .photos-section-large .photo-item img {
             max-height: 340px;
             object-fit: contain;
           }
           .photo-grid-large {
             width: 100%;
-          }
-          /* Seitenumbruch nur wenn nötig */
-          .photos-page-break {
-            page-break-before: always;
-            break-before: page;
           }
           /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
           .sketches-container-iphone {

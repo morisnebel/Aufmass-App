@@ -51,6 +51,16 @@ German (Deutsch)
 ## What's Been Implemented
 
 ### Session: December 2025 (Current)
+- ✅ **REFERENZ FOTOS TOOL IMPLEMENTIERT**:
+  - Neuer Screen `/app/frontend/app/references/index.tsx`
+  - Service `/app/frontend/services/ReferenceService.ts` für Datenverwaltung
+  - Globale Ordner-Verwaltung (erstellen, umbenennen, löschen)
+  - Foto-Import via: Kamera, Galerie, Dateien-App (USB, iCloud, etc.)
+  - Fotos zwischen Ordnern verschieben
+  - Speicherung im iOS "Dateien"-Ordner (documentDirectory)
+  - Button auf Hauptbildschirm hinzugefügt (orange Styling)
+- ✅ **BILD-ZUSCHNITT FIX** (bestätigt):
+  - Koordinaten-Berechnung für `resizeMode="contain"` korrigiert
 - ✅ **NOTIZ-BUTTON IMPLEMENTIERT (wie in Flächenberechnung)**:
   - Neuer DrawMode 'memo' hinzugefügt
   - Zeichnet Annotation mit rotem Ankerpunkt, gestrichelter Linie und Textlabel

@@ -480,6 +480,16 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.button, styles.referenceButton]}
+            onPress={() => router.push('/references/')}
+          >
+            <Ionicons name="folder-open" size={24} color="#ff9800" />
+            <Text style={styles.referenceButtonText}>Referenz Fotos</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
             onPress={() => router.push('/settings')}
           >
@@ -683,6 +693,16 @@ const styles = StyleSheet.create({
   },
   importButtonText: {
     color: '#2e7d32',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  referenceButton: {
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ff9800',
+  },
+  referenceButtonText: {
+    color: '#e65100',
     fontSize: 14,
     fontWeight: '600',
   },

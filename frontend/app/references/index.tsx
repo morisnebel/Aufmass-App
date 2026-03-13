@@ -99,8 +99,14 @@ export default function ReferencesScreen() {
     }
   };
 
+  // Load data only when folder changes, not on every state update
   useFocusEffect(
     useCallback(() => {
+      // Reset external folder view when navigating
+      if (currentExternalFolder) {
+        setCurrentExternalFolder(null);
+        setExternalPhotos([]);
+      }
       loadData();
     }, [currentFolder?.id])
   );
@@ -231,58 +237,64 @@ export default function ReferencesScreen() {
     }
   };
 
-  // Link external folder - user selects a folder directly
+  // Link external folder - iOS doesn't support folder selection, so we use a workaround
   const linkExternalFolder = async () => {
-    try {
-      // Try to select a folder directly (iOS 14+)
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['public.folder'],
-        copyToCacheDirectory: false,
-      });
-      
-      if (!result.canceled && result.assets[0]) {
-        const folderUri = result.assets[0].uri;
-        const folderName = result.assets[0].name || 'Externer Ordner';
-        
-        await ReferenceService.addExternalFolder(folderName, folderUri);
-        loadData();
-        Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft.\n\nTippe auf den Ordner um ihn in der Dateien-App zu öffnen.`);
-      }
-    } catch (error) {
-      console.error('Error linking external folder:', error);
-      // Fallback: Ask user to select a file from the folder
-      Alert.alert(
-        'Ordner verknüpfen',
-        'Ordnerauswahl wird nicht unterstützt.\n\nAlternativ: Wählen Sie eine beliebige Datei aus dem Ordner, den Sie verknüpfen möchten.',
-        [
-          { text: 'Abbrechen', style: 'cancel' },
-          {
-            text: 'Datei wählen',
-            onPress: async () => {
-              try {
-                const fileResult = await DocumentPicker.getDocumentAsync({
-                  type: ['*/*'],
-                  copyToCacheDirectory: false,
-                });
+    Alert.alert(
+      'Externen Ordner verknüpfen',
+      'iOS erlaubt keinen direkten Zugriff auf externe Ordner.\n\nWählen Sie eine Option:',
+      [
+        {
+          text: 'Abbrechen',
+          style: 'cancel',
+        },
+        {
+          text: 'Bilder auswählen',
+          onPress: async () => {
+            try {
+              // Let user select images from Files app
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['image/*'],
+                copyToCacheDirectory: false,
+                multiple: true,
+              });
+              
+              if (!result.canceled && result.assets.length > 0) {
+                // Get the parent folder path from first image
+                const firstUri = result.assets[0].uri;
+                const folderPath = firstUri.substring(0, firstUri.lastIndexOf('/'));
+                const folderName = result.assets[0].name?.split('/')[0] || 'Externer Ordner';
                 
-                if (!fileResult.canceled && fileResult.assets[0]) {
-                  const fileUri = fileResult.assets[0].uri;
-                  // Get parent folder path
-                  const folderUri = fileUri.substring(0, fileUri.lastIndexOf('/'));
-                  const folderName = decodeURIComponent(folderUri.substring(folderUri.lastIndexOf('/') + 1)) || 'Externer Ordner';
-                  
-                  await ReferenceService.addExternalFolder(folderName, folderUri);
-                  loadData();
-                  Alert.alert('Erfolg', `Ordner "${folderName}" wurde verknüpft.`);
-                }
-              } catch (err) {
-                Alert.alert('Fehler', 'Verknüpfung fehlgeschlagen');
+                // Create a virtual folder and show the images
+                setCurrentExternalFolder({
+                  id: 'temp-' + Date.now(),
+                  name: folderName,
+                  uri: folderPath,
+                  linked_at: new Date().toISOString(),
+                });
+                setExternalPhotos(result.assets.map(a => a.uri));
+                setLoading(false);
               }
-            },
+            } catch (error) {
+              console.error('Error selecting images:', error);
+              Alert.alert('Fehler', 'Bilder konnten nicht ausgewählt werden');
+            }
           },
-        ]
-      );
-    }
+        },
+        {
+          text: 'In Dateien öffnen',
+          onPress: async () => {
+            // Open Files app
+            const filesAppUrl = 'shareddocuments://';
+            const canOpen = await Linking.canOpenURL(filesAppUrl);
+            if (canOpen) {
+              await Linking.openURL(filesAppUrl);
+            } else {
+              Alert.alert('Info', 'Die Dateien-App konnte nicht geöffnet werden.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Unlink external folder
@@ -304,51 +316,63 @@ export default function ReferencesScreen() {
     );
   };
 
-  // Open external folder in Files app
+  // Open external folder - load images and show in app
   const openExternalFolder = async (folder: ExternalFolder) => {
     try {
-      // Try to open the folder URI in the Files app
-      const folderUri = folder.uri;
+      setLoading(true);
       
-      // On iOS, we can try to open the shareddocuments URL
-      // Convert file:// to shareddocuments:// scheme
-      let urlToOpen = folderUri;
-      
-      if (folderUri.startsWith('file://')) {
-        urlToOpen = folderUri.replace('file://', 'shareddocuments://');
-      }
-      
-      const canOpen = await Linking.canOpenURL(urlToOpen);
-      
-      if (canOpen) {
-        await Linking.openURL(urlToOpen);
-      } else {
-        // Fallback: Try opening the Files app directly
-        const filesAppUrl = 'shareddocuments://';
-        const canOpenFiles = await Linking.canOpenURL(filesAppUrl);
-        
-        if (canOpenFiles) {
-          await Linking.openURL(filesAppUrl);
-          Alert.alert(
-            'Ordner öffnen',
-            `Bitte navigieren Sie manuell zu:\n\n${decodeURIComponent(folder.name)}\n\nPfad: ${decodeURIComponent(folderUri)}`,
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert(
-            'Ordner-Pfad',
-            `Öffnen Sie die "Dateien"-App und navigieren Sie zu:\n\n${decodeURIComponent(folderUri)}`,
-            [{ text: 'OK' }]
-          );
-        }
-      }
+      // Ask user to select images from the folder again (iOS requires re-selection)
+      Alert.alert(
+        folder.name,
+        'Wählen Sie die Bilder aus diesem Ordner, die Sie anzeigen möchten.',
+        [
+          { 
+            text: 'Abbrechen', 
+            style: 'cancel',
+            onPress: () => setLoading(false)
+          },
+          {
+            text: 'Bilder wählen',
+            onPress: async () => {
+              try {
+                const result = await DocumentPicker.getDocumentAsync({
+                  type: ['image/*'],
+                  copyToCacheDirectory: false,
+                  multiple: true,
+                });
+                
+                if (!result.canceled && result.assets.length > 0) {
+                  const imageUris = result.assets.map(a => a.uri);
+                  setExternalPhotos(imageUris);
+                  setCurrentExternalFolder(folder);
+                }
+                setLoading(false);
+              } catch (error) {
+                console.error('Error selecting images:', error);
+                Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
+                setLoading(false);
+              }
+            },
+          },
+          {
+            text: 'In Dateien öffnen',
+            onPress: async () => {
+              setLoading(false);
+              // Try to open in Files app
+              const filesAppUrl = 'shareddocuments://';
+              const canOpen = await Linking.canOpenURL(filesAppUrl);
+              if (canOpen) {
+                await Linking.openURL(filesAppUrl);
+              }
+              Alert.alert('Hinweis', `Navigieren Sie zu:\n\n${folder.name}`);
+            },
+          },
+        ]
+      );
     } catch (error) {
       console.error('Error opening external folder:', error);
-      Alert.alert(
-        'Ordner-Pfad',
-        `Öffnen Sie die "Dateien"-App und navigieren Sie zu:\n\n${decodeURIComponent(folder.uri)}`,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden');
+      setLoading(false);
     }
   };
 
@@ -893,15 +917,17 @@ export default function ReferencesScreen() {
         animationType="fade" 
         onRequestClose={() => { 
           setShowPhotoModal(false); 
-          setTimeout(() => setSelectedPhoto(null), 100);
+        }}
+        onDismiss={() => {
+          // Clear selected photo after modal animation completes
+          setSelectedPhoto(null);
         }}
       >
         <View style={styles.photoModalOverlay}>
           <TouchableOpacity 
             style={styles.photoModalClose} 
             onPress={() => { 
-              setShowPhotoModal(false); 
-              setTimeout(() => setSelectedPhoto(null), 100);
+              setShowPhotoModal(false);
             }}
           >
             <Ionicons name="close" size={28} color="#fff" />
@@ -913,20 +939,23 @@ export default function ReferencesScreen() {
                 style={styles.photoModalImage} 
                 resizeMode="contain"
               />
-              <View style={styles.photoModalActions}>
-                <TouchableOpacity style={styles.photoActionButton} onPress={() => { setEditPhotoName(selectedPhoto.name || ''); setShowEditPhotoModal(true); setShowPhotoModal(false); }}>
-                  <Ionicons name="pencil" size={20} color="#1976d2" />
-                  <Text style={styles.photoActionText}>Name</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.photoActionButton} onPress={() => { setShowMoveModal(true); setShowPhotoModal(false); }}>
-                  <Ionicons name="folder-open" size={20} color="#4caf50" />
-                  <Text style={styles.photoActionText}>Verschieben</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.photoActionButton, { backgroundColor: '#ffebee' }]} onPress={deletePhoto}>
-                  <Ionicons name="trash" size={20} color="#f44336" />
-                  <Text style={[styles.photoActionText, { color: '#f44336' }]}>Löschen</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Only show actions for local photos, not external ones */}
+              {!selectedPhoto.id.startsWith('ext-') && (
+                <View style={styles.photoModalActions}>
+                  <TouchableOpacity style={styles.photoActionButton} onPress={() => { setEditPhotoName(selectedPhoto.name || ''); setShowEditPhotoModal(true); setShowPhotoModal(false); }}>
+                    <Ionicons name="pencil" size={20} color="#1976d2" />
+                    <Text style={styles.photoActionText}>Name</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.photoActionButton} onPress={() => { setShowMoveModal(true); setShowPhotoModal(false); }}>
+                    <Ionicons name="folder-open" size={20} color="#4caf50" />
+                    <Text style={styles.photoActionText}>Verschieben</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.photoActionButton, { backgroundColor: '#ffebee' }]} onPress={deletePhoto}>
+                    <Ionicons name="trash" size={20} color="#f44336" />
+                    <Text style={[styles.photoActionText, { color: '#f44336' }]}>Löschen</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -1080,7 +1109,7 @@ const styles = StyleSheet.create({
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   folderCard: { width: FOLDER_SIZE, backgroundColor: '#fff', borderRadius: 8, padding: 8, margin: 4, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2 },
   folderIconContainer: { width: FOLDER_SIZE - 24, height: FOLDER_SIZE - 24, justifyContent: 'center', alignItems: 'center', borderRadius: 6, overflow: 'hidden', backgroundColor: '#f5f5f5' },
-  folderThumbnail: { width: '100%', height: '100%' },
+  folderThumbnail: { width: FOLDER_SIZE - 24, height: FOLDER_SIZE - 24, borderRadius: 6 },
   folderName: { fontSize: 11, fontWeight: '600', color: '#333', textAlign: 'center', marginTop: 4 },
   folderMeta: { fontSize: 9, color: '#999', marginTop: 2 },
   

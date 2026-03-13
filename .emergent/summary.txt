@@ -1,143 +1,153 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to enhance their Flächen-Kalkulator (Area Calculator) app by enabling the editing of existing shapes. This involved two primary requirements:
-1.  To move an entire drawn shape (a ) as a single unit using a central handle.
-2.  To change the stroke width and color of a drawn shape after it has been created.
+The user's initial goal was to fix a bug in their Flächen-Kalkulator (Area Calculator) app related to image cropping, which was successfully resolved.
 
-After the agent successfully implemented the shape movement feature, the user introduced a new, high-priority bug:
-3.  The image cropping functionality is not working correctly. When a user defines a crop area, the resulting image has far too much cut off from the top, ignoring the user's selection.
+Immediately after, the user requested a major new feature: a Referenz Fotos (Reference Photos) tool. The requirements for this feature evolved significantly throughout the session:
+1.  A dedicated screen to manage photo folders, separate from the main projects.
+2.  Ability to create local folders and subfolders on the device.
+3.  Add photos from the device camera, gallery, or Files app.
+4.  Manage photos: rename, move between folders, delete.
+5.  Set a custom thumbnail for folders (e.g., a company logo) from the gallery. This thumbnail should not be saved as a separate photo inside the folder.
+6.  A global search function to find photos by name across all folders.
+7.  A modern UI with smaller, grid-based folder icons.
+8.  **Crucially**, a way to access photos from an external USB stick to save device storage. This evolved into a requirement to link an external folder and view its contents within the app.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app. The entire drawing and state logic is contained within a single monolithic file: .
-- The Polygone tool allows users to draw shapes, which are stored as  elements.
-- The ability to select a drawn polyline and move its individual corner points is functional.
-- The feature to move an entire polyline shape via a central drag handle has been implemented and confirmed as working correctly by the user.
-- The interaction logic has been refined so that only the central handle moves the entire shape, while corner points move individually and clicking on lines/surfaces only selects the shape.
-- An unverified feature to edit the stroke and color of polylines via a double-click modal exists.
-- A fix for an image cropping bug has just been implemented but is awaiting user verification.
+The application is a React Native/Expo app.
+- The main screen () has been refactored with a modern, responsive grid layout for its buttons.
+- A new, complex feature screen exists at  for Referenz Fotos.
+- This feature is supported by a service layer at  which handles all file and folder logic using .
+- **Local Folder Functionality:** Users can create nested folders, add photos from the gallery/camera, rename/move/delete photos, and set custom thumbnails for folders.
+- **UI:** The UI includes multiple modals for creating/renaming folders, renaming photos, and moving photos between folders (with a navigable folder hierarchy).  has been implemented for input modals.
+- **External Storage (In Progress):** An initial implementation for linking and exporting folders is present but non-functional and was being actively worked on.
 
 **Last working item**:
-The agent worked on fixing a bug in the image cropping functionality where the output was incorrectly cropped.
+The agent was attempting to solve the core challenge of allowing the user to view photos from an external folder (e.g., on a USB stick) from within the app, which is restricted by the iOS security sandbox.
 
-- **Last item agent was working**: Fixing the image cropping logic in the  function within . The agent identified that  was causing coordinate calculation errors, as the crop coordinates were relative to a container with black bars, not the image itself. The fix adjusts the calculation to account for image offsets and scaling within the container.
-- **Status**: USER VERIFICATION PENDING
+- **Last item agent was working**: Implementing a workaround for the iOS sandbox limitation. The user wants to select an external folder and then browse its contents inside the app. Since persistent access is not allowed, the agent's last plan was to:
+    1.  Allow the user to select an external folder (using a  trick to select a folder).
+    2.  Save the *path* to this folder.
+    3.  When the user taps the linked folder in the app, re-open the  to that specific path, allowing the user to select the images, which would then be loaded and displayed within the app's UI.
+    The agent was modifying the  and  functions in  to implement this logic.
+- **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend manual testing. The agent has already restarted the server. The next step is to ask the user to test the cropping functionality again.
+- **Which testing method agent to use?**: Frontend testing agent. This feature is complex and involves native device capabilities (file system, document picker), making it a good candidate for the testing agent to verify the end-to-end flow on a device.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0)**: Fix inaccurate image cropping.
--   **Issue 2 (P1)**: Edit polyline stroke width and color.
--   **Issue 3 (P2)**: Verify fix for laggy drawing performance in the Sketch tool.
--   **Issue 4 (P3)**: Fix stale data on the main project list screen.
+-   **Issue 1 (P0)**: App freezes when closing the photo viewer modal.
+-   **Issue 2 (P1)**: The folder thumbnail with  is still being cropped incorrectly or the container is too large.
 
 **Issues Detail:**
--   **Issue 1: Fix inaccurate image cropping**
-    -   **Attempted fixes**: The agent identified that  caused the crop calculations to be incorrect. The  function in  was rewritten to correctly calculate the scale factor, offsets (, ), and crop dimensions relative to the actual scaled image, not its container. The Expo server has been restarted.
+-   **Issue 1: App freezes when closing the photo viewer modal**
+    -   **Attempted fixes**: The agent implemented a  on the state-setting function () when closing the modal. This was intended to prevent a race condition or a problematic re-render.
     -   **Next debug checklist**:
-        1.  Inform the user that the fix has been implemented and the server is ready.
-        2.  Ask the user to test the cropping feature again with the same image to see if the result now matches their selection.
-        3.  If the issue persists, add  inside the updated  function to log the calculated values (, , , , , , ) and compare them against the expected values.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is the user's current primary blocker. Fixing it will restore core functionality.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
+        1.  Verify if the  fix is still present in the code in .
+        2.  If the issue persists, the problem is likely deeper. Investigate the  hooks in . A  might be re-running the  function unnecessarily when  changes, causing a heavy re-render and a freeze.
+        3.  Refactor the modal closing logic to ensure no heavy operations are triggered.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical usability bug that makes viewing photos impossible.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
     -   **Blocked on other issue**: None.
 
--   **Issue 2: Edit polyline stroke width and color**
-    -   **Attempted fixes**: The agent implemented code to show an edit modal on double-click for  elements.
-    -   **Next debug checklist**: Once the cropping bug is confirmed as fixed, ask the user to double-click a drawn polyline and test if the modal appears and if changing color/stroke width works.
-    -   **Why fix this issue and what will be achieved with the fix?**: This fulfills one of the original core requests for shape editing.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: Blocked by Issue 1.
-
--   **Issue 3: Sketch drawing is laggy/choppy**
-    -   **Description**: A previously reported performance issue. A fix was implemented in a prior session, but user verification is still pending.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: Blocked by Issues 1 and 2.
-
--   **Issue 4: Stale data in project list ()**
-    -   **Description**: The project list on the home screen does not refresh after a project is modified.
-    -   **Next debug checklist**: Investigate the  hook in  to ensure it re-fetches data from .
-    -   **Status**: NOT STARTED
+-   **Issue 2: Folder thumbnail is not displayed correctly**
+    -   **Attempted fixes**: The agent changed  from  to  on the folder's thumbnail  component in . The agent also suspected caching issues and restarted the server multiple times.
+    -   **Next debug checklist**:
+        1.  Inspect the styles for the folder container () and the thumbnail image (, ) in  and .
+        2.  Ensure that the container has a fixed size and  is correctly applied.
+        3.  The issue might be that the image container itself is resizing to the image's aspect ratio instead of the image resizing to the container. Hard-code the width and height on the  style itself, not just the parent .
+    -   **Why fix this issue and what will be achieved with the fix?**: Fixes a visual bug that makes the UI look unprofessional and broken.
+    -   **Status**: IN PROGRESS
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: Blocked by higher priority issues.
+    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   None.
+-   **Task 1 (P0)**: Complete the Link External Folder functionality.
+    -   **Where to resume**: Resume work on the  and  functions in .
+    -   **What will be achieved with this?**: This is the user's primary goal for the feature – accessing photos from external storage like a USB stick to save device space.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Frontend
+    -   **Blocked on something**: The inherent security limitations of the iOS sandbox. The proposed workaround needs to be implemented and its user experience validated.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P1**: Implement Maße über Polygone (Measurements via Polygons) button functionality.
--   **P1**: Implement Notizen zur Skizze (Notes for Sketch) button functionality.
+-   **P1**: Fully implement the Export/Import functionality. The buttons and service placeholders exist, but the logic to zip folders and import them is not complete. This depends on  and .
+-   **P2**: Verify that the stale data bug on the main project list () from the original handoff is resolved after the UI refactoring.
 
 **Future Tasks:**
--   **P2**: Create a new TestFlight build.
--   **P2**: Implement a Pro/Base version split with in-app purchases.
--   **P3**: Add a price calculation feature.
--   **P4**: Re-implement iCloud Sync.
--   **P4**: Fix a PDF preview bug with dashed lines.
+-   Implement the original pending features from the Flächen-Kalkulator app:
+    -   Edit polyline stroke width and color.
+    -   Implement Maße über Polygone (Measurements via Polygons) button.
+    -   Implement Notizen zur Skizze (Notes for Sketch) button.
+-   Create a new TestFlight build.
+-   Implement a Pro/Base version split with in-app purchases.
+-   Add a price calculation feature.
+-   Re-implement iCloud Sync.
+-   Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   **Polyline Movement Implemented**: Successfully added a central handle to  elements to allow moving the entire shape as a single unit. This feature was verified and approved by the user.
--   **Interaction Logic Refined**: Modified the  function in  to prevent the entire shape from being moved when a line segment is dragged, restricting that behavior to the new central handle only.
-
-**Earlier issues found/mentioned but not fixed**
--   All known pending issues are captured in the **All Pending/In progress Issue list**.
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Expo Tunnel/Server Instability.
--   **Recurrence count**: High. The agent had to restart the server multiple times in this session to sync changes.
--   **Status**: RESOLVED (for now). The agent successfully restarted the server and provided a working link. This remains a high-risk area for future interactions.
+-   **Referenz Fotos Feature Created**: Built the core feature from scratch, including a new screen () and service ().
+-   **Home Screen UI Modernized**: Refactored  with a modern, responsive grid layout.
+-   **Local Folder Management**: Implemented creation, sub-folder nesting, and UI for local folders.
+-   **Photo Management**: Implemented adding photos from camera/gallery, renaming, moving between folders, and deleting.
+-   **Custom Folder Thumbnails**: Implemented a feature to select an image from the gallery as a folder's thumbnail, storing only its URI.
+-   **Navigable Move Modal**: Created a modal for moving photos that allows navigating through the entire subfolder hierarchy.
+-   **Bug Fixes**:
+    -   Resolved an error from the deprecated   API.
+    -   Fixed a  crash () by refactoring the view structure.
+    -   Fixed keyboard overlap issues in all input modals using .
+    -   Corrected image aspect ratios for photo thumbnails using .
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   React Native & Expo
--    for rendering
--    for touch input
--   Image cropping logic with 
--   Coordinate transformation logic to handle  visual discrepancies.
-
-**key DB schema**
--   N/A (Client-side application using AsyncStorage).
-
-**changes in tech stack**
--   None.
+-   ****: Used extensively for creating, reading, and managing files and directories. The agent struggled with and corrected its usage of the async API (adding ) and property vs. method calls ().
+-   ****: For selecting photos from the device gallery.
+-   ****: For accessing the Files app. Key challenge: it cannot select directories on iOS.
+-   ****: For the export functionality.
+-   ****: To open the iOS Files app at a specific path.
+-   **iOS Sandboxing**: A critical conceptual blocker preventing direct, persistent access to external file system directories.
+-   **React Native State Management**: Complex state management in  with multiple  hooks for modals, selections, and data.
+-   ****: To prevent the on-screen keyboard from hiding input fields.
 
 **All files of reference**
--   : The only file modified in this session.
+-   : The primary file worked on. It contains all the UI and logic for the new Referenz Fotos feature and has become very large and complex.
+-   : The service layer created to abstract file system operations for the new feature.
+-   : The main app screen, which was refactored for a modern UI.
+-   : The global stylesheet, updated with many new styles for the feature.
+-   : Created to configure the header for the references route.
 
 **Areas that need refactoring**:
--   : This file is now over 4000 lines. Its complexity is a significant liability, making debugging and development difficult. It should be broken down into smaller components and custom hooks.
+-    is now over 1000 lines long and is a classic monolithic component. It manages complex state for data, UI (multiple modals), and user interactions. It is becoming difficult to maintain and debug. It should be broken down into smaller, reusable components (e.g., , , , , ) and custom hooks (e.g., , ).
 
 **key api endpoints**
 -   N/A (Client-side application).
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **IMMEDIATE TASK (P0)**: The agent has implemented a fix for the image cropping bug and restarted the server. Your first action must be to inform the user and ask them to test the cropping functionality to verify the fix.
--   **Verification Workflow**: After the cropping bug is confirmed fixed, guide the user to test the next pending feature: editing a polyline's stroke and color by double-clicking it.
--   **Expo Instability**: The Expo server connection is unreliable. Be prepared to restart it (frontend: ERROR (no such process)
-frontend: ERROR (no such process)) if the user reports not seeing your changes.
-
-**documents and test reports created in this job**
--   None.
+-   **Primary Blocker**: The main task is to deliver the Link External Folder functionality. You must address the iOS sandboxing limitation. The user's goal is to tap a linked folder in the app and see its contents *inside the app*. The last proposed solution (re-opening the document picker for image selection) might not meet user expectations. You should re-confirm the desired workflow with the user before proceeding. **A good first step would be to propose Option A again (tapping the link opens the Files app) as it's the most straightforward and reliable solution.**
+-   **Fragile Codebase**: The file  is very large and complex. Make changes carefully and consider refactoring it into smaller pieces as you work.
+-   **Recurring Bugs**: Pay close attention to the app freezing when closing modals and the incorrect display of folder thumbnails. These have been persistent issues.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**:  (that's how I wanted it 👍 now I have one more point for today... we have to adjust the cropping a bit...) - **STATUS**: User confirmed the polyline move fix and immediately raised the cropping bug.
-2.  **User**:  (yes that's good, can we now set it so that the polygon no longer moves when I tap a line...) - **STATUS**: Addressed and completed. The agent refined the logic.
-3.  **User**:  (expo doesn't have the change yet) - **STATUS**: Resolved. This was from the previous session and was the first thing the agent fixed.
+1.  **User**: Asks if it's possible to save folders to a USB stick to save space. (PENDING)
+2.  **User**: Expresses a vision for export/import and having a connected USB stick's folders appear directly in the app. (PENDING)
+3.  **User**: Agrees to try the agent's proposed implementation of local/external/export sections. (IN PROGRESS)
+4.  **User**: Asks the agent to proceed with the next steps of implementation. (IN PROGRESS)
+5.  **User**: Reports that the layout is broken after the agent's implementation. (ADDRESSED)
+6.  **User**: Reports that the Link Folder feature only lets them pick a file, not a folder, and shows an error. (IN PROGRESS)
+7.  **User**: Clarifies the misunderstanding: they want a persistent link to an external folder to browse its contents. (PENDING)
+8.  **User**: Agrees to try Option A proposed by the agent (tapping the link opens the native Files app). (IN PROGRESS)
+9.  **User**: Reports that the Link function still doesn't work as expected for selecting a folder. (IN PROGRESS)
+10. **User**: Re-clarifies with a screenshot their exact goal: select the Jacobi folder itself and then browse its images inside the app. (PENDING - This is the current active request).
 
 **Project Health Check:**
--   **Broken**: The image cropping feature is functionally broken. A fix has been implemented but awaits user verification.
+- **In Progress**: The core local functionality of the new Referenz Fotos feature is working, but it is blocked by two critical usability bugs (freezing, layout) and the complex, unfinished implementation of the primary requirement (external folder access).
 
 **3rd Party Integrations**
 -   
@@ -210,9 +220,14 @@ frontend: ERROR (no such process)) if the user reports not seeing your changes.
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[21:47:44]   Run a command with --help for more info 💡
-[21:47:44]     $ expo start --help
-[21:47:44]
+[12:11:40]   Run a command with --help for more info 💡
+[12:11:40]     $ expo start --help
+[12:11:40]
+-   
+-   
+-   
+-   
+-   
 -   
 -   
 
@@ -220,10 +235,4 @@ frontend: ERROR (no such process)) if the user reports not seeing your changes.
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: None.
-
-**Credentials to test flow:**
--   N/A.
-
-**What agent forgot to execute**
--   The agent performed well in this session, correctly prioritizing the user's feedback, addressing the Expo sync issue, implementing the requested refinement, and then immediately pivoting to debug the new cropping bug. No tasks were forgotten.</analysis>
+-   **Known regressions**: None.</analysis>

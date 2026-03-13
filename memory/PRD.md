@@ -59,6 +59,10 @@ German (Deutsch)
   - Fotos zwischen Ordnern verschieben
   - Speicherung im iOS "Dateien"-Ordner (documentDirectory)
   - Button auf Hauptbildschirm hinzugefügt (orange Styling)
+- ✅ **BUG FIXES (Dezember 2025)**:
+  - **App-Einfrieren beim Modal-Schließen** behoben: `setTimeout` entfernt, `onDismiss` Callback für sauberes State-Cleanup hinzugefügt
+  - **Ordner-Thumbnail Anzeige** korrigiert: Fixe Größe für Thumbnail-Bild gesetzt
+  - **Externe Ordner-Verknüpfung** verbessert: iOS erlaubt keine Ordner-Auswahl, daher neuer Workflow mit Bild-Auswahl und Files-App-Integration
 - ✅ **BILD-ZUSCHNITT FIX** (bestätigt):
   - Koordinaten-Berechnung für `resizeMode="contain"` korrigiert
 - ✅ **NOTIZ-BUTTON IMPLEMENTIERT (wie in Flächenberechnung)**:
@@ -168,7 +172,7 @@ German (Deutsch)
 ## Environment Configuration
 - **EXPO_TOKEN**: Required for Expo Go tunnel authentication
 - **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://crop-fix-test.preview.emergentagent.com
+- **Preview URL**: https://area-calc-refs.preview.emergentagent.com
 
 ## Testing Notes
 - Use Expo Go with `exp://polygon-area.preview.emergentagent.com`

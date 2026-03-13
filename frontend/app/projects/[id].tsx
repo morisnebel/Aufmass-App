@@ -1237,7 +1237,7 @@ export default function ProjectDetailScreen() {
       }
     });
     
-    // Hilfsfunktion um Fotos-HTML zu generieren
+    // Hilfsfunktion um Fotos-HTML zu generieren - mit inline styles für zuverlässiges Drucken
     const generatePhotoHtml = (photo: typeof photos[0], sizeClass: string) => {
       let annotationSvg = '';
       if ((photo as any).annotations) {
@@ -1256,39 +1256,44 @@ export default function ProjectDetailScreen() {
         }
       }
       
+      // Bestimme max-height basierend auf Größe
+      let maxImgHeight = '280px';
+      if (sizeClass === 'photo-grid-small') maxImgHeight = '180px';
+      if (sizeClass === 'photo-grid-large') maxImgHeight = '340px';
+      
       return `
-        <div class="photo-item ${sizeClass}">
-          <div class="photo-wrapper">
-            <img src="${photo.image_data}" alt="Foto" />
+        <div class="photo-item ${sizeClass}" style="page-break-inside: avoid; break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
+          <div class="photo-wrapper" style="position: relative; display: block; width: 100%;">
+            <img src="${photo.image_data}" alt="Foto" style="display: block; width: 100%; height: auto; max-height: ${maxImgHeight}; object-fit: contain; background: #f5f5f5;" />
             ${annotationSvg}
           </div>
-          ${photo.description ? `<p>${photo.description}</p>` : ''}
+          ${photo.description ? `<p style="margin: 0; padding: 8px; font-size: 10px; color: #666; background: #f8f9fa;">${photo.description}</p>` : ''}
         </div>
       `;
     };
     
-    // Erzeuge Seiten für jede Größen-Gruppe - ohne erzwungene Seitenumbrüche
+    // Erzeuge Seiten für jede Größen-Gruppe - mit inline styles für zuverlässiges Drucken
     let photosHtml = '';
     
     if (photos.length > 0) {
       const sections: string[] = [];
       
-      // Klein: 3x3 Grid
+      // Klein: 3 Spalten Grid - inline styles
       if (smallPhotos.length > 0) {
         const photosInSection = smallPhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
-        sections.push(`<div class="photos-section photos-section-small">${photosInSection}</div>`);
+        sections.push(`<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px;">${photosInSection}</div>`);
       }
       
-      // Mittel: 2x2 Grid
+      // Mittel: 2 Spalten Grid - inline styles
       if (mediumPhotos.length > 0) {
         const photosInSection = mediumPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
-        sections.push(`<div class="photos-section photos-section-medium">${photosInSection}</div>`);
+        sections.push(`<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px;">${photosInSection}</div>`);
       }
       
-      // Groß: 1 Spalte (übereinander)
+      // Groß: 1 Spalte (übereinander) - inline styles
       if (largePhotos.length > 0) {
         const photosInSection = largePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
-        sections.push(`<div class="photos-section photos-section-large">${photosInSection}</div>`);
+        sections.push(`<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px;">${photosInSection}</div>`);
       }
       
       photosHtml = sections.join('');

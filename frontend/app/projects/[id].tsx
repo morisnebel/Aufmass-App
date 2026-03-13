@@ -1216,29 +1216,14 @@ export default function ProjectDetailScreen() {
       : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
-    // Neue Logik: Fotos werden basierend auf ihrer Größe in Seiten gruppiert
-    // Klein (small): 9 pro Seite (3x3)
-    // Mittel (medium): 4 pro Seite (2x2)
-    // Groß (large): 2 pro Seite (1x2 übereinander)
-    
-    // Gruppiere Fotos nach Größe
-    const smallPhotos: typeof photos = [];
-    const mediumPhotos: typeof photos = [];
-    const largePhotos: typeof photos = [];
-    
-    photos.forEach(photo => {
-      const size = (photo as any).pdf_size || 'medium';
-      if (size === 'small') {
-        smallPhotos.push(photo);
-      } else if (size === 'large' || size === 'full') {
-        largePhotos.push(photo);
-      } else {
-        mediumPhotos.push(photo);
-      }
-    });
+    // Neue Logik: Fotos bleiben in der ursprünglichen Reihenfolge
+    // Jedes Foto bekommt page-break-inside: avoid
+    // Die Größe bestimmt nur wie viel Platz das Foto einnimmt
     
     // Hilfsfunktion um Fotos-HTML zu generieren - mit inline styles für zuverlässiges Drucken
-    const generatePhotoHtml = (photo: typeof photos[0], sizeClass: string) => {
+    const generatePhotoHtml = (photo: typeof photos[0]) => {
+      const size = (photo as any).pdf_size || 'medium';
+      
       let annotationSvg = '';
       if ((photo as any).annotations) {
         try {
@@ -1256,60 +1241,39 @@ export default function ProjectDetailScreen() {
         }
       }
       
-      // Bestimme max-height basierend auf Größe
+      // Bestimme Breite und max-height basierend auf Größe
+      let width = '48%'; // medium default
       let maxImgHeight = '280px';
-      if (sizeClass === 'photo-grid-small') maxImgHeight = '180px';
-      if (sizeClass === 'photo-grid-large') maxImgHeight = '340px';
+      let display = 'inline-block';
+      
+      if (size === 'small') {
+        width = '31%';
+        maxImgHeight = '180px';
+      } else if (size === 'large' || size === 'full') {
+        width = '100%';
+        maxImgHeight = '400px';
+        display = 'block';
+      }
       
       return `
-        <div class="photo-item ${sizeClass}" style="page-break-inside: avoid; break-inside: avoid; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
-          <div class="photo-wrapper" style="position: relative; display: block; width: 100%;">
-            <img src="${photo.image_data}" alt="Foto" style="display: block; width: 100%; height: auto; max-height: ${maxImgHeight}; object-fit: contain; background: #f5f5f5;" />
-            ${annotationSvg}
+        <div style="display: ${display}; width: ${width}; vertical-align: top; margin: 0 1% 10px 0; page-break-inside: avoid; break-inside: avoid;">
+          <div style="border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; background: #fff;">
+            <div style="position: relative; display: block; width: 100%;">
+              <img src="${photo.image_data}" alt="Foto" style="display: block; width: 100%; height: auto; max-height: ${maxImgHeight}; object-fit: contain; background: #f5f5f5;" />
+              ${annotationSvg}
+            </div>
+            ${photo.description ? `<p style="margin: 0; padding: 8px; font-size: 10px; color: #666; background: #f8f9fa;">${photo.description}</p>` : ''}
           </div>
-          ${photo.description ? `<p style="margin: 0; padding: 8px; font-size: 10px; color: #666; background: #f8f9fa;">${photo.description}</p>` : ''}
         </div>
       `;
     };
     
-    // Erzeuge Seiten für jede Größen-Gruppe - mit inline styles für zuverlässiges Drucken
-    // Fotos werden in Gruppen aufgeteilt, die garantiert auf eine Seite passen
+    // Erzeuge Fotos in der ursprünglichen Reihenfolge
     let photosHtml = '';
     
     if (photos.length > 0) {
-      const sections: string[] = [];
-      
-      // Klein: 6 pro Seite (2 Reihen à 3) - sicherer als 9
-      if (smallPhotos.length > 0) {
-        for (let i = 0; i < smallPhotos.length; i += 6) {
-          const groupPhotos = smallPhotos.slice(i, i + 6);
-          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
-          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
-          sections.push(`<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
-        }
-      }
-      
-      // Mittel: 2 pro Seite (1 Reihe à 2) - sicherer als 4
-      if (mediumPhotos.length > 0) {
-        for (let i = 0; i < mediumPhotos.length; i += 2) {
-          const groupPhotos = mediumPhotos.slice(i, i + 2);
-          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
-          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
-          sections.push(`<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
-        }
-      }
-      
-      // Groß: 2 pro Seite (übereinander)
-      if (largePhotos.length > 0) {
-        for (let i = 0; i < largePhotos.length; i += 2) {
-          const groupPhotos = largePhotos.slice(i, i + 2);
-          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
-          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
-          sections.push(`<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
-        }
-      }
-      
-      photosHtml = sections.join('');
+      const photoItems = photos.map(photo => generatePhotoHtml(photo)).join('');
+      photosHtml = `<div style="font-size: 0;">${photoItems}</div>`;
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
     }

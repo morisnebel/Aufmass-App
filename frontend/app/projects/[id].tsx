@@ -6763,7 +6763,7 @@ const styles = StyleSheet.create({
   },
   imageModalContent: {
     width: '98%',
-    height: '92%',
+    height: '88%',
     backgroundColor: '#000',
     borderRadius: 12,
     overflow: 'hidden',
@@ -6790,24 +6790,27 @@ const styles = StyleSheet.create({
   },
   fullPreviewImage: {
     width: '100%',
-    height: '100%',
+    height: '85%',
   },
   imageNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 30,
+    paddingVertical: 20,
+    paddingBottom: 30,
+    gap: 40,
     backgroundColor: '#000',
   },
   imageNavButton: {
     padding: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 25,
   },
   imageNavButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.3,
   },
   imageCounter: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#fff',
     fontWeight: '600',
   },

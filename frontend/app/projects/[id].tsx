@@ -2177,6 +2177,62 @@ export default function ProjectDetailScreen() {
             .checklists-page-break {
               /* page-break-before removed for compact layout */
             }
+            /* Foto-Layouts für Druck */
+            .photos-page {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photos-page-break {
+              page-break-before: always !important;
+              break-before: page !important;
+            }
+            .photos-page-small {
+              display: grid !important;
+              grid-template-columns: repeat(3, 1fr) !important;
+              gap: 8px !important;
+            }
+            .photos-page-small .photo-item {
+              max-height: 220px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photos-page-small .photo-item img {
+              max-height: 180px !important;
+            }
+            .photos-page-medium {
+              display: grid !important;
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 12px !important;
+            }
+            .photos-page-medium .photo-item {
+              max-height: 320px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photos-page-medium .photo-item img {
+              max-height: 280px !important;
+            }
+            .photos-page-large {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 15px !important;
+            }
+            .photos-page-large .photo-item {
+              max-height: 380px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photos-page-large .photo-item img {
+              max-height: 340px !important;
+            }
+            .photo-item {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photo-item img {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
           }
           * {
             box-sizing: border-box;

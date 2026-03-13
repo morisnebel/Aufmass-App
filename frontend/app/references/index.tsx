@@ -13,6 +13,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -230,45 +231,31 @@ export default function ReferencesScreen() {
     }
   };
 
-  // Link external folder - select multiple images from Files app
+  // Link external folder - user selects any file from the folder to get the folder path
   const linkExternalFolder = async () => {
     try {
-      // Ask user how to add images
       Alert.alert(
-        'Externe Bilder verknüpfen',
-        'Wählen Sie Bilder aus der Dateien-App (USB-Stick, iCloud, etc.)',
+        'Externen Ordner verknüpfen',
+        'Wählen Sie eine beliebige Datei aus dem Ordner, den Sie verknüpfen möchten. Der übergeordnete Ordner wird dann gespeichert.',
         [
           { text: 'Abbrechen', style: 'cancel' },
           {
-            text: 'Bilder wählen',
+            text: 'Datei wählen',
             onPress: async () => {
               const result = await DocumentPicker.getDocumentAsync({
-                type: ['image/*'],
+                type: ['*/*'],
                 copyToCacheDirectory: false,
-                multiple: true,
               });
               
-              if (!result.canceled && result.assets.length > 0) {
-                // Ask for folder name
-                Alert.prompt(
-                  'Ordnername',
-                  'Geben Sie einen Namen für diesen externen Ordner ein:',
-                  [
-                    { text: 'Abbrechen', style: 'cancel' },
-                    {
-                      text: 'Erstellen',
-                      onPress: async (folderName) => {
-                        const name = folderName?.trim() || `Extern (${result.assets.length} Bilder)`;
-                        const uris = result.assets.map(a => a.uri).join('|||');
-                        await ReferenceService.addExternalFolder(name, uris);
-                        loadData();
-                        Alert.alert('Erfolg', `${result.assets.length} Bilder verknüpft`);
-                      },
-                    },
-                  ],
-                  'plain-text',
-                  'Externe Bilder'
-                );
+              if (!result.canceled && result.assets[0]) {
+                const fileUri = result.assets[0].uri;
+                // Get parent folder path by removing the filename
+                const folderUri = fileUri.substring(0, fileUri.lastIndexOf('/'));
+                const folderName = folderUri.substring(folderUri.lastIndexOf('/') + 1) || 'Externer Ordner';
+                
+                await ReferenceService.addExternalFolder(decodeURIComponent(folderName), folderUri);
+                loadData();
+                Alert.alert('Erfolg', `Ordner "${decodeURIComponent(folderName)}" wurde verknüpft.\n\nTippe auf den Ordner um ihn in der Dateien-App zu öffnen.`);
               }
             },
           },
@@ -276,7 +263,7 @@ export default function ReferencesScreen() {
       );
     } catch (error) {
       console.error('Error linking external folder:', error);
-      Alert.alert('Fehler', 'Bilder konnten nicht verknüpft werden');
+      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
     }
   };
 
@@ -299,27 +286,51 @@ export default function ReferencesScreen() {
     );
   };
 
-  // Open external folder and show stored photos
+  // Open external folder in Files app
   const openExternalFolder = async (folder: ExternalFolder) => {
     try {
-      setCurrentExternalFolder(folder);
-      setLoading(true);
+      // Try to open the folder URI in the Files app
+      const folderUri = folder.uri;
       
-      // URIs are stored separated by |||
-      const uris = folder.uri.split('|||').filter(uri => uri.trim());
+      // On iOS, we can try to open the shareddocuments URL
+      // Convert file:// to shareddocuments:// scheme
+      let urlToOpen = folderUri;
       
-      if (uris.length > 0) {
-        setExternalPhotos(uris);
+      if (folderUri.startsWith('file://')) {
+        urlToOpen = folderUri.replace('file://', 'shareddocuments://');
+      }
+      
+      const canOpen = await Linking.canOpenURL(urlToOpen);
+      
+      if (canOpen) {
+        await Linking.openURL(urlToOpen);
       } else {
-        Alert.alert('Fehler', 'Keine Bilder in diesem Ordner');
-        setCurrentExternalFolder(null);
+        // Fallback: Try opening the Files app directly
+        const filesAppUrl = 'shareddocuments://';
+        const canOpenFiles = await Linking.canOpenURL(filesAppUrl);
+        
+        if (canOpenFiles) {
+          await Linking.openURL(filesAppUrl);
+          Alert.alert(
+            'Ordner öffnen',
+            `Bitte navigieren Sie manuell zu:\n\n${decodeURIComponent(folder.name)}\n\nPfad: ${decodeURIComponent(folderUri)}`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Ordner-Pfad',
+            `Öffnen Sie die "Dateien"-App und navigieren Sie zu:\n\n${decodeURIComponent(folderUri)}`,
+            [{ text: 'OK' }]
+          );
+        }
       }
     } catch (error) {
       console.error('Error opening external folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden');
-      setCurrentExternalFolder(null);
-    } finally {
-      setLoading(false);
+      Alert.alert(
+        'Ordner-Pfad',
+        `Öffnen Sie die "Dateien"-App und navigieren Sie zu:\n\n${decodeURIComponent(folder.uri)}`,
+        [{ text: 'OK' }]
+      );
     }
   };
 

@@ -39,9 +39,9 @@ interface DrawPath {
 
 // PDF-Größen Optionen
 const PDF_SIZES = [
-  { value: 'small', label: 'Klein', icon: 'apps-outline', description: '3 pro Zeile' },
-  { value: 'medium', label: 'Mittel', icon: 'grid-outline', description: '2 pro Zeile' },
-  { value: 'large', label: 'Groß', icon: 'square-outline', description: '1 pro Zeile' },
+  { value: 'small', label: 'Klein', icon: 'apps-outline', description: '9 pro Seite (3x3)' },
+  { value: 'medium', label: 'Mittel', icon: 'grid-outline', description: '4 pro Seite (2x2)' },
+  { value: 'large', label: 'Groß', icon: 'square-outline', description: '2 pro Seite (1x2)' },
 ];
 
 export default function AnnotatePhotoScreen() {

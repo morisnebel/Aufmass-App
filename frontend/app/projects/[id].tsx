@@ -1216,23 +1216,29 @@ export default function ProjectDetailScreen() {
       : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
-    // iPhone: 2 Fotos nebeneinander pro Zeile, max 4 pro Seite
-    // iPad: normale Größenlogik
-    const isIpadForPhotos = Platform.OS === 'ios' && Platform.isPad;
+    // Neue Logik: Fotos werden basierend auf ihrer Größe in Seiten gruppiert
+    // Klein (small): 9 pro Seite (3x3)
+    // Mittel (medium): 4 pro Seite (2x2)
+    // Groß (large): 2 pro Seite (1x2 übereinander)
     
-    const photoItems = photos.map((photo, index) => {
+    // Gruppiere Fotos nach Größe
+    const smallPhotos: typeof photos = [];
+    const mediumPhotos: typeof photos = [];
+    const largePhotos: typeof photos = [];
+    
+    photos.forEach(photo => {
       const size = (photo as any).pdf_size || 'medium';
-      
-      // iPhone: Alle Fotos als Grid-Items (2 pro Zeile)
-      // iPad: Normale Größenlogik
-      let sizeClass = isIpadForPhotos ? 'photo-medium' : 'photo-iphone';
-      if (isIpadForPhotos) {
-        if (size === 'small') sizeClass = 'photo-small';
-        if (size === 'large') sizeClass = 'photo-large';
-        if (size === 'full') sizeClass = 'photo-large';
+      if (size === 'small') {
+        smallPhotos.push(photo);
+      } else if (size === 'large' || size === 'full') {
+        largePhotos.push(photo);
+      } else {
+        mediumPhotos.push(photo);
       }
-      
-      // Generate annotation SVG overlay if annotations exist
+    });
+    
+    // Hilfsfunktion um Fotos-HTML zu generieren
+    const generatePhotoHtml = (photo: typeof photos[0], sizeClass: string) => {
       let annotationSvg = '';
       if ((photo as any).annotations) {
         try {
@@ -1240,12 +1246,9 @@ export default function ProjectDetailScreen() {
           if (annotationData.paths && annotationData.paths.length > 0) {
             const canvasWidth = annotationData.canvasWidth || 400;
             const canvasHeight = annotationData.canvasHeight || 300;
-            
-            // Build SVG paths for annotations
             const svgPaths = annotationData.paths.map((p: any) => 
               `<path d="${p.path}" stroke="${p.color || '#FF0000'}" stroke-width="${p.strokeWidth || 3}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
             ).join('');
-            
             annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgPaths}</svg>`;
           }
         } catch (e) {
@@ -1262,34 +1265,42 @@ export default function ProjectDetailScreen() {
           ${photo.description ? `<p>${photo.description}</p>` : ''}
         </div>
       `;
-    });
+    };
     
-    // iPhone: Fotos in Gruppen von 4 aufteilen (jede Gruppe = 1 Seite)
-    // iPad: Fotos in Gruppen von 4 aufteilen für sauberen Seitenumbruch
+    // Erzeuge Seiten für jede Größen-Gruppe
     let photosHtml = '';
+    
     if (photos.length > 0) {
-      // Beide: Gruppen von 4 Fotos pro Seite (2 Zeilen à 2 Fotos)
-      const photosPerPage = 4;
-      const photoGroups: string[][] = [];
-      for (let i = 0; i < photoItems.length; i += photosPerPage) {
-        photoGroups.push(photoItems.slice(i, i + photosPerPage));
+      const pages: string[] = [];
+      
+      // Klein: 9 pro Seite (3x3)
+      if (smallPhotos.length > 0) {
+        for (let i = 0; i < smallPhotos.length; i += 9) {
+          const pagePhotos = smallPhotos.slice(i, i + 9);
+          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
+          pages.push(`<div class="photos-page photos-page-small">${photosInPage}</div>`);
+        }
       }
       
-      if (isIpadForPhotos) {
-        // iPad: Gruppen mit page-break
-        photosHtml = photoGroups.map((group, groupIndex) => `
-          <div class="photos-page-group" style="page-break-inside: avoid; ${groupIndex > 0 ? 'page-break-before: always;' : ''}">
-            <div class="photos-container">${group.join('')}</div>
-          </div>
-        `).join('');
-      } else {
-        // iPhone: Gruppen mit explizitem Seitenumbruch
-        photosHtml = photoGroups.map((group, groupIndex) => `
-          <div class="photos-container-iphone ${groupIndex > 0 ? 'photos-new-page' : ''}">
-            ${group.join('')}
-          </div>
-        `).join('');
+      // Mittel: 4 pro Seite (2x2)
+      if (mediumPhotos.length > 0) {
+        for (let i = 0; i < mediumPhotos.length; i += 4) {
+          const pagePhotos = mediumPhotos.slice(i, i + 4);
+          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
+          pages.push(`<div class="photos-page photos-page-medium">${photosInPage}</div>`);
+        }
       }
+      
+      // Groß: 2 pro Seite (1x2 übereinander)
+      if (largePhotos.length > 0) {
+        for (let i = 0; i < largePhotos.length; i += 2) {
+          const pagePhotos = largePhotos.slice(i, i + 2);
+          const photosInPage = pagePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
+          pages.push(`<div class="photos-page photos-page-large">${photosInPage}</div>`);
+        }
+      }
+      
+      photosHtml = pages.join('');
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
     }
@@ -2708,6 +2719,79 @@ export default function ProjectDetailScreen() {
           .photos-page-group .photo-item img {
             max-height: 280px;
             object-fit: contain;
+          }
+          /* Neue Foto-Seiten Layouts */
+          .photos-page {
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-bottom: 20px;
+          }
+          .photos-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+          /* Klein: 3x3 Grid = 9 Fotos pro Seite */
+          .photos-page-small {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+            height: 95vh;
+            max-height: 800px;
+          }
+          .photos-page-small .photo-item {
+            height: 100%;
+            max-height: 250px;
+          }
+          .photos-page-small .photo-item img {
+            max-height: 200px;
+            object-fit: contain;
+          }
+          .photo-grid-small {
+            width: 100%;
+            height: 100%;
+          }
+          /* Mittel: 2x2 Grid = 4 Fotos pro Seite */
+          .photos-page-medium {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 12px;
+            height: 95vh;
+            max-height: 800px;
+          }
+          .photos-page-medium .photo-item {
+            height: 100%;
+            max-height: 380px;
+          }
+          .photos-page-medium .photo-item img {
+            max-height: 340px;
+            object-fit: contain;
+          }
+          .photo-grid-medium {
+            width: 100%;
+            height: 100%;
+          }
+          /* Groß: 1x2 Grid = 2 Fotos pro Seite (übereinander) */
+          .photos-page-large {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: 95vh;
+            max-height: 800px;
+          }
+          .photos-page-large .photo-item {
+            flex: 1;
+            max-height: 48%;
+          }
+          .photos-page-large .photo-item img {
+            max-height: 350px;
+            object-fit: contain;
+          }
+          .photo-grid-large {
+            width: 100%;
           }
           /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
           .sketches-container-iphone {

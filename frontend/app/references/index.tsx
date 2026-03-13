@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   Alert,
   Modal,
   TextInput,
@@ -52,6 +51,7 @@ export default function ReferencesScreen() {
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolder, setEditingFolder] = useState<ReferenceFolder | null>(null);
   const [editPhotoName, setEditPhotoName] = useState('');
+  const [allFoldersForMove, setAllFoldersForMove] = useState<ReferenceFolder[]>([]);
 
   // Load data
   const loadData = async () => {
@@ -70,6 +70,10 @@ export default function ReferencesScreen() {
       } else {
         setPhotos([]);
       }
+      
+      // Load all folders for move modal
+      const allFolders = await ReferenceService.getAllFolders();
+      setAllFoldersForMove(allFolders);
     } catch (error) {
       console.error('Error loading reference data:', error);
       Alert.alert('Fehler', 'Daten konnten nicht geladen werden');
@@ -250,9 +254,10 @@ export default function ReferencesScreen() {
     Alert.alert('Erfolg', 'Foto wurde verschoben');
   };
 
-  // Render functions
-  const renderFolderItem = ({ item }: { item: ReferenceFolder }) => (
+  // Render folder item
+  const renderFolderItem = (item: ReferenceFolder) => (
     <TouchableOpacity
+      key={item.id}
       style={styles.folderCard}
       onPress={() => navigateToFolder(item)}
       onLongPress={() => {
@@ -279,14 +284,16 @@ export default function ReferencesScreen() {
       </View>
       <Text style={styles.folderName} numberOfLines={2}>{item.name}</Text>
       <Text style={styles.folderMeta}>
-        {(item.subfolder_count || 0) > 0 && `${item.subfolder_count} `}
+        {(item.subfolder_count || 0) > 0 && `${item.subfolder_count} · `}
         {item.photo_count || 0} Fotos
       </Text>
     </TouchableOpacity>
   );
 
-  const renderPhotoItem = ({ item }: { item: ReferencePhoto }) => (
+  // Render photo item
+  const renderPhotoItem = (item: ReferencePhoto) => (
     <TouchableOpacity
+      key={item.id}
       style={styles.photoItem}
       onPress={() => {
         setSelectedPhoto(item);
@@ -302,8 +309,10 @@ export default function ReferencesScreen() {
     </TouchableOpacity>
   );
 
-  const renderSearchResult = ({ item }: { item: ReferencePhoto }) => (
+  // Render search result
+  const renderSearchResult = (item: ReferencePhoto) => (
     <TouchableOpacity
+      key={item.id}
       style={styles.searchResultItem}
       onPress={() => {
         setSelectedPhoto(item);
@@ -316,28 +325,6 @@ export default function ReferencesScreen() {
       </View>
     </TouchableOpacity>
   );
-
-  // Breadcrumb
-  const renderBreadcrumb = () => {
-    if (folderStack.length === 0) return null;
-    return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.breadcrumb}>
-        <TouchableOpacity onPress={() => setFolderStack([])}>
-          <Text style={styles.breadcrumbItem}>Start</Text>
-        </TouchableOpacity>
-        {folderStack.map((folder, index) => (
-          <View key={folder.id} style={styles.breadcrumbRow}>
-            <Ionicons name="chevron-forward" size={14} color="#999" />
-            <TouchableOpacity onPress={() => setFolderStack(folderStack.slice(0, index + 1))}>
-              <Text style={[styles.breadcrumbItem, index === folderStack.length - 1 && styles.breadcrumbActive]}>
-                {folder.name}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    );
-  };
 
   if (loading && folders.length === 0 && photos.length === 0) {
     return (
@@ -393,101 +380,103 @@ export default function ReferencesScreen() {
 
       {/* Search Results */}
       {showSearch && searchQuery.length > 0 ? (
-        <View style={styles.contentContainer}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer}>
           {searchResults.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color="#ccc" />
               <Text style={styles.emptyText}>Keine Fotos gefunden</Text>
             </View>
           ) : (
-            <FlatList
-              data={searchResults}
-              renderItem={renderSearchResult}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.searchResultsList}
-            />
+            searchResults.map(renderSearchResult)
           )}
-        </View>
+        </ScrollView>
       ) : (
-        <>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer}>
           {/* Breadcrumb */}
-          {renderBreadcrumb()}
+          {folderStack.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.breadcrumb}>
+              <TouchableOpacity onPress={() => setFolderStack([])}>
+                <Text style={styles.breadcrumbItem}>Start</Text>
+              </TouchableOpacity>
+              {folderStack.map((folder, index) => (
+                <View key={folder.id} style={styles.breadcrumbRow}>
+                  <Ionicons name="chevron-forward" size={14} color="#999" />
+                  <TouchableOpacity onPress={() => setFolderStack(folderStack.slice(0, index + 1))}>
+                    <Text style={[styles.breadcrumbItem, index === folderStack.length - 1 && styles.breadcrumbActive]}>
+                      {folder.name}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
 
-          {/* Content */}
-          <View style={styles.contentContainer}>
-            {/* New Folder Button */}
-            <TouchableOpacity
-              style={styles.newFolderButton}
-              onPress={() => {
-                setEditingFolder(null);
-                setNewFolderName('');
-                setShowNewFolderModal(true);
-              }}
-            >
-              <Ionicons name="add" size={18} color="#1976d2" />
-              <Text style={styles.newFolderButtonText}>
-                {currentFolder ? 'Unterordner' : 'Neuer Ordner'}
+          {/* New Folder Button */}
+          <TouchableOpacity
+            style={styles.newFolderButton}
+            onPress={() => {
+              setEditingFolder(null);
+              setNewFolderName('');
+              setShowNewFolderModal(true);
+            }}
+          >
+            <Ionicons name="add" size={18} color="#1976d2" />
+            <Text style={styles.newFolderButtonText}>
+              {currentFolder ? 'Unterordner erstellen' : 'Neuer Ordner'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Add Photo Buttons (only in folders) */}
+          {currentFolder && (
+            <View style={styles.addPhotoButtons}>
+              <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromCamera}>
+                <Ionicons name="camera" size={18} color="#1976d2" />
+                <Text style={styles.addPhotoButtonText}>Kamera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromGallery}>
+                <Ionicons name="images" size={18} color="#1976d2" />
+                <Text style={styles.addPhotoButtonText}>Galerie</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromFiles}>
+                <Ionicons name="folder-open" size={18} color="#1976d2" />
+                <Text style={styles.addPhotoButtonText}>Dateien</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Folders Grid */}
+          {folders.length > 0 && (
+            <>
+              {currentFolder && <Text style={styles.sectionTitle}>Unterordner ({folders.length})</Text>}
+              <View style={styles.gridContainer}>
+                {folders.map(renderFolderItem)}
+              </View>
+            </>
+          )}
+
+          {/* Photos Grid */}
+          {photos.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Fotos ({photos.length})</Text>
+              <View style={styles.photoGridContainer}>
+                {photos.map(renderPhotoItem)}
+              </View>
+            </>
+          )}
+
+          {/* Empty State */}
+          {folders.length === 0 && photos.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="folder-open-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>
+                {currentFolder ? 'Ordner ist leer' : 'Keine Ordner vorhanden'}
               </Text>
-            </TouchableOpacity>
-
-            {/* Add Photo Buttons (only in folders) */}
-            {currentFolder && (
-              <View style={styles.addPhotoButtons}>
-                <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromCamera}>
-                  <Ionicons name="camera" size={18} color="#1976d2" />
-                  <Text style={styles.addPhotoButtonText}>Kamera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromGallery}>
-                  <Ionicons name="images" size={18} color="#1976d2" />
-                  <Text style={styles.addPhotoButtonText}>Galerie</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.addPhotoButton} onPress={addPhotoFromFiles}>
-                  <Ionicons name="folder-open" size={18} color="#1976d2" />
-                  <Text style={styles.addPhotoButtonText}>Dateien</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Folders Grid */}
-            {folders.length > 0 && (
-              <FlatList
-                key={`folders-${currentFolder?.id || 'root'}`}
-                data={folders}
-                renderItem={renderFolderItem}
-                keyExtractor={(item) => item.id}
-                numColumns={FOLDER_COLUMNS}
-                contentContainerStyle={styles.folderGrid}
-                scrollEnabled={false}
-              />
-            )}
-
-            {/* Photos Grid */}
-            {photos.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>Fotos ({photos.length})</Text>
-                <FlatList
-                  key={`photos-${currentFolder?.id || 'none'}`}
-                  data={photos}
-                  renderItem={renderPhotoItem}
-                  keyExtractor={(item) => item.id}
-                  numColumns={PHOTO_COLUMNS}
-                  contentContainerStyle={styles.photoGrid}
-                  scrollEnabled={false}
-                />
-              </>
-            )}
-
-            {/* Empty State */}
-            {folders.length === 0 && photos.length === 0 && (
-              <View style={styles.emptyState}>
-                <Ionicons name="folder-open-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  {currentFolder ? 'Ordner ist leer' : 'Keine Ordner vorhanden'}
-                </Text>
-              </View>
-            )}
-          </View>
-        </>
+              <Text style={styles.emptySubtext}>
+                {currentFolder ? 'Fügen Sie Fotos oder Unterordner hinzu' : 'Erstellen Sie Ihren ersten Ordner'}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
       )}
 
       {/* New/Edit Folder Modal */}
@@ -582,17 +571,18 @@ export default function ReferencesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.moveModalContent}>
             <Text style={styles.modalTitle}>Verschieben nach...</Text>
-            <FlatList
-              data={folders.filter(f => f.id !== currentFolder?.id)}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.moveFolderItem} onPress={() => movePhotoToFolder(item.id)}>
-                  <Ionicons name="folder" size={20} color="#ffa726" />
-                  <Text style={styles.moveFolderName}>{item.name}</Text>
-                </TouchableOpacity>
+            <ScrollView style={styles.moveFolderList}>
+              {allFoldersForMove.filter(f => f.id !== currentFolder?.id).length === 0 ? (
+                <Text style={styles.noFoldersText}>Keine anderen Ordner vorhanden</Text>
+              ) : (
+                allFoldersForMove.filter(f => f.id !== currentFolder?.id).map(item => (
+                  <TouchableOpacity key={item.id} style={styles.moveFolderItem} onPress={() => movePhotoToFolder(item.id)}>
+                    <Ionicons name="folder" size={20} color="#ffa726" />
+                    <Text style={styles.moveFolderName}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))
               )}
-              ListEmptyComponent={<Text style={styles.noFoldersText}>Keine anderen Ordner</Text>}
-            />
+            </ScrollView>
             <TouchableOpacity style={styles.moveCancelButton} onPress={() => setShowMoveModal(false)}>
               <Text style={styles.moveCancelButtonText}>Abbrechen</Text>
             </TouchableOpacity>
@@ -605,7 +595,8 @@ export default function ReferencesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  contentContainer: { flex: 1, padding: 12 },
+  scrollContent: { flex: 1 },
+  scrollContainer: { padding: 12, paddingBottom: 24 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
   // Header
@@ -616,16 +607,15 @@ const styles = StyleSheet.create({
   searchButton: { padding: 6 },
   
   // Search
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, marginTop: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, gap: 8 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 12, marginTop: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, gap: 8 },
   searchInput: { flex: 1, fontSize: 14, color: '#333' },
-  searchResultsList: { padding: 4 },
   searchResultItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 8, marginBottom: 8, borderRadius: 8 },
   searchResultImage: { width: 50, height: 50, borderRadius: 6 },
   searchResultInfo: { flex: 1, marginLeft: 12 },
   searchResultName: { fontSize: 14, fontWeight: '500', color: '#333' },
   
   // Breadcrumb
-  breadcrumb: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row' },
+  breadcrumb: { backgroundColor: '#fff', marginBottom: 12, paddingHorizontal: 8, paddingVertical: 8, borderRadius: 8, flexDirection: 'row' },
   breadcrumbRow: { flexDirection: 'row', alignItems: 'center' },
   breadcrumbItem: { fontSize: 13, color: '#1976d2', marginHorizontal: 4 },
   breadcrumbActive: { fontWeight: '600', color: '#333' },
@@ -635,7 +625,7 @@ const styles = StyleSheet.create({
   newFolderButtonText: { color: '#1976d2', fontSize: 13, fontWeight: '600' },
   
   // Folder Grid
-  folderGrid: { paddingBottom: 8 },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   folderCard: { width: FOLDER_SIZE, backgroundColor: '#fff', borderRadius: 8, padding: 8, margin: 4, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2 },
   folderIconContainer: { width: FOLDER_SIZE - 24, height: FOLDER_SIZE - 24, justifyContent: 'center', alignItems: 'center', borderRadius: 6, overflow: 'hidden', backgroundColor: '#f5f5f5' },
   folderThumbnail: { width: '100%', height: '100%' },
@@ -649,15 +639,16 @@ const styles = StyleSheet.create({
   
   // Photos Grid
   sectionTitle: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8, marginTop: 4 },
-  photoGrid: { paddingBottom: 8 },
+  photoGridContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   photoItem: { width: PHOTO_SIZE, height: PHOTO_SIZE, margin: 4, borderRadius: 6, overflow: 'hidden' },
   photoThumbnail: { width: '100%', height: '100%' },
   photoNameBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', padding: 3 },
   photoNameText: { fontSize: 9, color: '#fff', textAlign: 'center' },
   
   // Empty State
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 14, color: '#999', marginTop: 12 },
+  emptySubtext: { fontSize: 12, color: '#bbb', marginTop: 4 },
   
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -681,6 +672,7 @@ const styles = StyleSheet.create({
   
   // Move Modal
   moveModalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '100%', maxWidth: 340, maxHeight: '60%' },
+  moveFolderList: { maxHeight: 300 },
   moveFolderItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#eee', gap: 10 },
   moveFolderName: { flex: 1, fontSize: 14, color: '#333' },
   noFoldersText: { textAlign: 'center', color: '#999', paddingVertical: 16 },

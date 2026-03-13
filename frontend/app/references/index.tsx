@@ -54,6 +54,8 @@ export default function ReferencesScreen() {
   const [editingFolder, setEditingFolder] = useState<ReferenceFolder | null>(null);
   const [editPhotoName, setEditPhotoName] = useState('');
   const [allFoldersForMove, setAllFoldersForMove] = useState<ReferenceFolder[]>([]);
+  const [moveModalParentId, setMoveModalParentId] = useState<string | undefined>(undefined);
+  const [moveModalPath, setMoveModalPath] = useState<ReferenceFolder[]>([]);
 
   // Load data
   const loadData = async () => {
@@ -617,23 +619,81 @@ export default function ReferencesScreen() {
       </Modal>
 
       {/* Move Photo Modal */}
-      <Modal visible={showMoveModal} transparent animationType="slide">
+      <Modal visible={showMoveModal} transparent animationType="slide" onRequestClose={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.moveModalContent}>
             <Text style={styles.modalTitle}>Verschieben nach...</Text>
+            
+            {/* Breadcrumb for move modal */}
+            {moveModalPath.length > 0 && (
+              <View style={styles.moveBreadcrumb}>
+                <TouchableOpacity onPress={() => { setMoveModalParentId(undefined); setMoveModalPath([]); }}>
+                  <Text style={styles.moveBreadcrumbItem}>Start</Text>
+                </TouchableOpacity>
+                {moveModalPath.map((folder, index) => (
+                  <View key={folder.id} style={styles.breadcrumbRow}>
+                    <Ionicons name="chevron-forward" size={12} color="#999" />
+                    <TouchableOpacity onPress={() => {
+                      setMoveModalPath(moveModalPath.slice(0, index + 1));
+                      setMoveModalParentId(folder.id);
+                    }}>
+                      <Text style={[styles.moveBreadcrumbItem, index === moveModalPath.length - 1 && styles.breadcrumbActive]}>
+                        {folder.name}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+            
+            {/* Move here button if in subfolder */}
+            {moveModalParentId && moveModalParentId !== currentFolder?.id && (
+              <TouchableOpacity 
+                style={styles.moveHereButton} 
+                onPress={() => movePhotoToFolder(moveModalParentId)}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
+                <Text style={styles.moveHereButtonText}>Hierher verschieben</Text>
+              </TouchableOpacity>
+            )}
+            
             <ScrollView style={styles.moveFolderList}>
-              {allFoldersForMove.filter(f => f.id !== currentFolder?.id).length === 0 ? (
-                <Text style={styles.noFoldersText}>Keine anderen Ordner vorhanden</Text>
+              {allFoldersForMove
+                .filter(f => f.parent_id === moveModalParentId && f.id !== currentFolder?.id)
+                .length === 0 ? (
+                <Text style={styles.noFoldersText}>
+                  {moveModalParentId ? 'Keine Unterordner' : 'Keine Ordner vorhanden'}
+                </Text>
               ) : (
-                allFoldersForMove.filter(f => f.id !== currentFolder?.id).map(item => (
-                  <TouchableOpacity key={item.id} style={styles.moveFolderItem} onPress={() => movePhotoToFolder(item.id)}>
-                    <Ionicons name="folder" size={20} color="#ffa726" />
-                    <Text style={styles.moveFolderName}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))
+                allFoldersForMove
+                  .filter(f => f.parent_id === moveModalParentId && f.id !== currentFolder?.id)
+                  .map(item => {
+                    const hasSubfolders = allFoldersForMove.some(f => f.parent_id === item.id);
+                    return (
+                      <TouchableOpacity 
+                        key={item.id} 
+                        style={styles.moveFolderItem} 
+                        onPress={() => {
+                          if (hasSubfolders) {
+                            setMoveModalPath([...moveModalPath, item]);
+                            setMoveModalParentId(item.id);
+                          } else {
+                            movePhotoToFolder(item.id);
+                          }
+                        }}
+                        onLongPress={() => movePhotoToFolder(item.id)}
+                      >
+                        <Ionicons name="folder" size={20} color="#ffa726" />
+                        <Text style={styles.moveFolderName}>{item.name}</Text>
+                        {hasSubfolders && (
+                          <Ionicons name="chevron-forward" size={18} color="#999" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })
               )}
             </ScrollView>
-            <TouchableOpacity style={styles.moveCancelButton} onPress={() => setShowMoveModal(false)}>
+            <TouchableOpacity style={styles.moveCancelButton} onPress={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); }}>
               <Text style={styles.moveCancelButtonText}>Abbrechen</Text>
             </TouchableOpacity>
           </View>
@@ -722,11 +782,15 @@ const styles = StyleSheet.create({
   photoActionText: { fontSize: 10, fontWeight: '500', color: '#333' },
   
   // Move Modal
-  moveModalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '100%', maxWidth: 340, maxHeight: '60%' },
-  moveFolderList: { maxHeight: 300 },
+  moveModalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '100%', maxWidth: 340, maxHeight: '70%' },
+  moveFolderList: { maxHeight: 250 },
   moveFolderItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#eee', gap: 10 },
   moveFolderName: { flex: 1, fontSize: 14, color: '#333' },
   noFoldersText: { textAlign: 'center', color: '#999', paddingVertical: 16 },
   moveCancelButton: { marginTop: 12, paddingVertical: 10, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center' },
   moveCancelButtonText: { color: '#666', fontSize: 14, fontWeight: '600' },
+  moveBreadcrumb: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', padding: 8, borderRadius: 6, marginBottom: 10, flexWrap: 'wrap' },
+  moveBreadcrumbItem: { fontSize: 12, color: '#1976d2', marginHorizontal: 2 },
+  moveHereButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8f5e9', paddingVertical: 10, borderRadius: 8, marginBottom: 10, gap: 6 },
+  moveHereButtonText: { color: '#4caf50', fontSize: 13, fontWeight: '600' },
 });

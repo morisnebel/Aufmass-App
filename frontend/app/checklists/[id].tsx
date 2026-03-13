@@ -278,10 +278,10 @@ export default function EditChecklistScreen() {
         siblings = parent?.subItems || [];
       }
       
-      // Finde den nächsten nicht-abgehakten Unterpunkt
+      // Finde den nächsten Punkt mit Unterpunkten (unabhängig ob abgehakt)
       for (let i = currentIndex + 1; i < siblings.length; i++) {
         const nextItem = siblings[i];
-        if (!nextItem.checked && nextItem.subItems && nextItem.subItems.length > 0) {
+        if (nextItem.subItems && nextItem.subItems.length > 0) {
           // Öffne diesen Unterpunkt (entferne aus collapsedPaths)
           const nextPath = [...parentPath, i];
           const nextPathKey = nextPath.join('-');

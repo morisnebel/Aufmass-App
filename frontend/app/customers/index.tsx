@@ -384,6 +384,15 @@ export default function CustomersScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header mit Zurück-Button (immer sichtbar, nicht nur im selectMode) */}
+      <View style={styles.mainHeader}>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButtonMain}>
+          <Ionicons name="arrow-back" size={24} color="#1976d2" />
+        </TouchableOpacity>
+        <Text style={styles.mainHeaderTitle}>Kunden</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      
       {selectMode && (
         <View style={styles.selectModeHeader}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -683,6 +692,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  mainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButtonMain: {
+    padding: 8,
+    marginRight: 8,
+  },
+  mainHeaderTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
   centerContainer: {
     flex: 1,

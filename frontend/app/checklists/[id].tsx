@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ChecklistService, ProjectService } from '../../services/LocalStorage';
+import { ChecklistService, ProjectService, ChecklistTemplateService } from '../../services/LocalStorage';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {
@@ -33,6 +33,13 @@ interface RecursiveItem {
   note?: string;
   measurements?: Measurement[];
   subItems?: RecursiveItem[];
+  // Bild-Felder
+  printImage?: string;
+  previewImages?: string[];
+  categoryLogo?: string;
+  // Referenz-Ordner Felder
+  referenceFolderId?: string;
+  referenceFolderName?: string;
 }
 
 interface Checklist {
@@ -181,6 +188,13 @@ export default function EditChecklistScreen() {
                   note: sub.note || '',
                   measurements: sub.measurements || [],
                   subItems: sub.subItems ? convertItems(sub.subItems) : [],
+                  // Bild-Daten mit kopieren
+                  printImage: sub.printImage,
+                  previewImages: sub.previewImages,
+                  categoryLogo: sub.categoryLogo,
+                  // Referenz-Ordner mit kopieren
+                  referenceFolderId: sub.referenceFolderId,
+                  referenceFolderName: sub.referenceFolderName,
                 };
               });
             }
@@ -190,6 +204,13 @@ export default function EditChecklistScreen() {
               note: item.note || '',
               measurements: item.measurements || [],
               subItems: subItems,
+              // Bild-Daten mit kopieren
+              printImage: item.printImage,
+              previewImages: item.previewImages,
+              categoryLogo: item.categoryLogo,
+              // Referenz-Ordner mit kopieren
+              referenceFolderId: item.referenceFolderId,
+              referenceFolderName: item.referenceFolderName,
             };
           });
         };
@@ -269,20 +290,28 @@ export default function EditChecklistScreen() {
       if (currentItem && currentItem.subItems && currentItem.subItems.length > 0) {
         const currentPathKey = path.join('-');
         
-        // Prüfe ob das aktuelle Item selbst eingeklappt ist
+        // Sammle alle Pfade, die aufgeklappt werden sollen
+        const pathsToExpand: string[] = [];
+        
+        // Immer das aktuelle Item aufklappen (falls eingeklappt)
         if (collapsedPaths.has(currentPathKey)) {
-          // Öffne das aktuelle Item selbst
-          setCollapsedPaths(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(currentPathKey);
-            return newSet;
-          });
-        } else {
-          // Das Item ist bereits offen - öffne den ersten Unterpunkt
+          pathsToExpand.push(currentPathKey);
+        }
+        
+        // Zusätzlich den ersten Unterpunkt aufklappen, wenn er Unterpunkte hat
+        const firstChild = currentItem.subItems[0];
+        if (firstChild && firstChild.subItems && firstChild.subItems.length > 0) {
           const firstChildPath = [...path, 0].join('-');
+          if (collapsedPaths.has(firstChildPath)) {
+            pathsToExpand.push(firstChildPath);
+          }
+        }
+        
+        // Alle gesammelten Pfade aufklappen
+        if (pathsToExpand.length > 0) {
           setCollapsedPaths(prev => {
             const newSet = new Set(prev);
-            newSet.delete(firstChildPath);
+            pathsToExpand.forEach(p => newSet.delete(p));
             return newSet;
           });
         }
@@ -491,7 +520,7 @@ export default function EditChecklistScreen() {
   };
 
   // Neuen Unterpunkt bestätigen und hinzufügen
-  const confirmNewSubItem = (path: number[]) => {
+  const confirmNewSubItem = async (path: number[]) => {
     if (!checklist) return;
     
     const pathKey = path.join('-');
@@ -507,17 +536,64 @@ export default function EditChecklistScreen() {
       return;
     }
     
-    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
-      if (path.length === 0) return null;
-      if (path.length === 1) return items[path[0]];
-      const [first, ...rest] = path;
+    const getItemAtPath = (items: RecursiveItem[], pathArr: number[]): RecursiveItem | null => {
+      if (pathArr.length === 0) return null;
+      if (pathArr.length === 1) return items[pathArr[0]];
+      const [first, ...rest] = pathArr;
       return getItemAtPath(items[first].subItems || [], rest);
     };
     
     const item = getItemAtPath(checklist.items, path);
     if (!item) return;
     
-    const newSubItems = [...(item.subItems || []), { text, checked: false, subItems: [] }];
+    // Versuche, Bilder-Daten aus der Vorlage zu laden
+    let newSubItem: RecursiveItem = { text, checked: false, subItems: [] };
+    
+    try {
+      // Lade die ursprüngliche Vorlage
+      const template = await ChecklistTemplateService.getById(checklist.template_id);
+      if (template) {
+        // Suche rekursiv nach einem Item mit dem gleichen Text
+        const findItemInTemplate = (items: any[], searchText: string): any | null => {
+          for (const templateItem of items) {
+            if (typeof templateItem === 'string') {
+              if (templateItem.toLowerCase() === searchText.toLowerCase()) {
+                return { text: templateItem };
+              }
+            } else {
+              if (templateItem.text?.toLowerCase() === searchText.toLowerCase()) {
+                return templateItem;
+              }
+              // Rekursiv in Unterpunkten suchen
+              if (templateItem.subItems) {
+                const found = findItemInTemplate(templateItem.subItems, searchText);
+                if (found) return found;
+              }
+            }
+          }
+          return null;
+        };
+        
+        const templateItem = findItemInTemplate(template.items, text);
+        if (templateItem) {
+          // Übernehme Bilder-Daten aus der Vorlage
+          newSubItem = {
+            text: templateItem.text || text,
+            checked: false,
+            subItems: [],
+            printImage: templateItem.printImage,
+            previewImages: templateItem.previewImages,
+            categoryLogo: templateItem.categoryLogo,
+            referenceFolderId: templateItem.referenceFolderId,
+            referenceFolderName: templateItem.referenceFolderName,
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error loading template for images:', error);
+    }
+    
+    const newSubItems = [...(item.subItems || []), newSubItem];
     const newItems = updateItemAtPath(checklist.items, path, { subItems: newSubItems });
     
     setChecklist({ ...checklist, items: newItems });
@@ -677,6 +753,13 @@ export default function EditChecklistScreen() {
       checked: false, // Beim Kopieren als unchecked setzen
       note: obj.note || '',
       subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+      // Bild-Daten mit kopieren
+      printImage: obj.printImage,
+      previewImages: obj.previewImages,
+      categoryLogo: obj.categoryLogo,
+      // Referenz-Ordner mit kopieren
+      referenceFolderId: obj.referenceFolderId,
+      referenceFolderName: obj.referenceFolderName,
     });
     
     setCopiedItem(deepCopy(item));
@@ -696,6 +779,13 @@ export default function EditChecklistScreen() {
       checked: obj.checked,
       note: obj.note || '',
       subItems: obj.subItems ? obj.subItems.map(deepCopy) : [],
+      // Bild-Daten mit kopieren
+      printImage: obj.printImage,
+      previewImages: obj.previewImages,
+      categoryLogo: obj.categoryLogo,
+      // Referenz-Ordner mit kopieren
+      referenceFolderId: obj.referenceFolderId,
+      referenceFolderName: obj.referenceFolderName,
     });
     
     const itemToInsert = deepCopy(copiedItem);

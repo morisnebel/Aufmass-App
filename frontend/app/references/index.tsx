@@ -235,6 +235,32 @@ export default function ReferencesScreen() {
     Alert.alert('Erfolg', 'Vorschaubild wurde gesetzt');
     setShowPhotoModal(false);
     setSelectedPhoto(null);
+    loadData();
+  };
+
+  // Set folder thumbnail from gallery
+  const setFolderThumbnailFromGallery = async (folder: ReferenceFolder) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      try {
+        // Add photo to folder and set as thumbnail
+        const photo = await ReferenceService.addPhoto(folder.id, result.assets[0].uri, 'gallery');
+        await ReferenceService.setFolderThumbnail(folder.id, photo.id);
+        loadData();
+        Alert.alert('Erfolg', 'Vorschaubild wurde gesetzt');
+      } catch (error) {
+        Alert.alert('Fehler', 'Vorschaubild konnte nicht gesetzt werden');
+      }
+    }
   };
 
   const savePhotoName = async () => {
@@ -263,6 +289,10 @@ export default function ReferencesScreen() {
       onLongPress={() => {
         Alert.alert(item.name, 'Was möchten Sie tun?', [
           { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: 'Vorschaubild',
+            onPress: () => setFolderThumbnailFromGallery(item),
+          },
           {
             text: 'Umbenennen',
             onPress: () => {
@@ -510,14 +540,18 @@ export default function ReferencesScreen() {
       </Modal>
 
       {/* Photo Detail Modal */}
-      <Modal visible={showPhotoModal} transparent animationType="fade">
+      <Modal visible={showPhotoModal} transparent animationType="fade" onRequestClose={() => { setShowPhotoModal(false); setSelectedPhoto(null); }}>
         <View style={styles.photoModalOverlay}>
           <TouchableOpacity style={styles.photoModalClose} onPress={() => { setShowPhotoModal(false); setSelectedPhoto(null); }}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {selectedPhoto && (
-            <>
-              <Image source={{ uri: selectedPhoto.uri }} style={styles.photoModalImage} resizeMode="contain" />
+            <View style={styles.photoModalContent}>
+              <Image 
+                source={{ uri: selectedPhoto.uri }} 
+                style={styles.photoModalImage} 
+                resizeMode="contain"
+              />
               <View style={styles.photoModalActions}>
                 <TouchableOpacity style={styles.photoActionButton} onPress={() => { setEditPhotoName(selectedPhoto.name || ''); setShowEditPhotoModal(true); }}>
                   <Ionicons name="pencil" size={20} color="#1976d2" />
@@ -536,7 +570,7 @@ export default function ReferencesScreen() {
                   <Text style={[styles.photoActionText, { color: '#f44336' }]}>Löschen</Text>
                 </TouchableOpacity>
               </View>
-            </>
+            </View>
           )}
         </View>
       </Modal>
@@ -664,6 +698,7 @@ const styles = StyleSheet.create({
   
   // Photo Modal
   photoModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  photoModalContent: { flex: 1 },
   photoModalClose: { position: 'absolute', top: 50, right: 16, zIndex: 10, padding: 8 },
   photoModalImage: { flex: 1, width: '100%' },
   photoModalActions: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 8, gap: 6 },

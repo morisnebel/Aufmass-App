@@ -2771,7 +2771,6 @@ export default function ProjectDetailScreen() {
             flex: 0 0 100%;
             max-width: 100%;
             margin-bottom: 15px;
-            page-break-before: always !important;
           }
           .sketch-item img {
             max-height: 500px;

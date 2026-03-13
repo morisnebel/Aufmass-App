@@ -356,6 +356,7 @@ export default function ReferencesScreen() {
             </View>
           ) : (
             <FlatList
+              key="photos-grid"
               data={photos}
               renderItem={renderPhotoItem}
               keyExtractor={(item) => item.id}
@@ -387,6 +388,7 @@ export default function ReferencesScreen() {
             </View>
           ) : (
             <FlatList
+              key="folders-grid"
               data={folders}
               renderItem={renderFolderItem}
               keyExtractor={(item) => item.id}

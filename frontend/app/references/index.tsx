@@ -288,63 +288,23 @@ export default function ReferencesScreen() {
     );
   };
 
-  // Open external folder - load images and show in app
+  // Open external folder - directly open DocumentPicker
   const openExternalFolder = async (folder: ExternalFolder) => {
     try {
-      setLoading(true);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: false,
+        multiple: true,
+      });
       
-      // Ask user to select images from the folder again (iOS requires re-selection)
-      Alert.alert(
-        folder.name,
-        'Wählen Sie die Bilder aus diesem Ordner, die Sie anzeigen möchten.',
-        [
-          { 
-            text: 'Abbrechen', 
-            style: 'cancel',
-            onPress: () => setLoading(false)
-          },
-          {
-            text: 'Ordner/Bilder wählen',
-            onPress: async () => {
-              try {
-                const result = await DocumentPicker.getDocumentAsync({
-                  type: ['image/*'],
-                  copyToCacheDirectory: false,
-                  multiple: true,
-                });
-                
-                if (!result.canceled && result.assets.length > 0) {
-                  const imageUris = result.assets.map(a => a.uri);
-                  setExternalPhotos(imageUris);
-                  setCurrentExternalFolder(folder);
-                }
-                setLoading(false);
-              } catch (error) {
-                console.error('Error selecting images:', error);
-                Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
-                setLoading(false);
-              }
-            },
-          },
-          {
-            text: 'In Dateien öffnen',
-            onPress: async () => {
-              setLoading(false);
-              // Try to open in Files app
-              const filesAppUrl = 'shareddocuments://';
-              const canOpen = await Linking.canOpenURL(filesAppUrl);
-              if (canOpen) {
-                await Linking.openURL(filesAppUrl);
-              }
-              Alert.alert('Hinweis', `Navigieren Sie zu:\n\n${folder.name}`);
-            },
-          },
-        ]
-      );
+      if (!result.canceled && result.assets.length > 0) {
+        const imageUris = result.assets.map(a => a.uri);
+        setExternalPhotos(imageUris);
+        setCurrentExternalFolder(folder);
+      }
     } catch (error) {
-      console.error('Error opening external folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht geöffnet werden');
-      setLoading(false);
+      console.error('Error selecting images:', error);
+      Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
     }
   };
 
@@ -806,16 +766,10 @@ export default function ReferencesScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Externe Ordner (USB/Cloud)</Text>
               </View>
-              <View style={styles.externalButtonsRow}>
-                <TouchableOpacity style={styles.linkExternalButton} onPress={linkExternalFolder}>
-                  <Ionicons name="link" size={16} color="#2196f3" />
-                  <Text style={styles.linkExternalButtonText}>Verknüpfen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.importButton} onPress={importFolder}>
-                  <Ionicons name="download" size={16} color="#4caf50" />
-                  <Text style={styles.importButtonText}>Importieren</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={styles.linkExternalButtonFull} onPress={linkExternalFolder}>
+                <Ionicons name="add-circle-outline" size={18} color="#2196f3" />
+                <Text style={styles.linkExternalButtonText}>Neue Verknüpfung erstellen</Text>
+              </TouchableOpacity>
               {externalFolders.length > 0 && (
                 <View style={styles.gridContainer}>
                   {externalFolders.map(renderExternalFolderItem)}
@@ -1126,6 +1080,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
   externalButtonsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   linkExternalButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6 },
+  linkExternalButtonFull: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderWidth: 1, borderColor: '#2196f3', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6, marginBottom: 12 },
   linkExternalButtonText: { color: '#2196f3', fontSize: 12, fontWeight: '600' },
   importButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: '#4caf50', borderStyle: 'dashed', paddingVertical: 10, borderRadius: 8, gap: 6 },
   importButtonText: { color: '#4caf50', fontSize: 12, fontWeight: '600' },

@@ -1273,27 +1273,40 @@ export default function ProjectDetailScreen() {
     };
     
     // Erzeuge Seiten für jede Größen-Gruppe - mit inline styles für zuverlässiges Drucken
+    // Fotos werden in Gruppen aufgeteilt, die garantiert auf eine Seite passen
     let photosHtml = '';
     
     if (photos.length > 0) {
       const sections: string[] = [];
       
-      // Klein: 3 Spalten Grid - inline styles
+      // Klein: 6 pro Seite (2 Reihen à 3) - sicherer als 9
       if (smallPhotos.length > 0) {
-        const photosInSection = smallPhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
-        sections.push(`<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px;">${photosInSection}</div>`);
+        for (let i = 0; i < smallPhotos.length; i += 6) {
+          const groupPhotos = smallPhotos.slice(i, i + 6);
+          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-small')).join('');
+          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
+          sections.push(`<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
+        }
       }
       
-      // Mittel: 2 Spalten Grid - inline styles
+      // Mittel: 4 pro Seite (2 Reihen à 2)
       if (mediumPhotos.length > 0) {
-        const photosInSection = mediumPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
-        sections.push(`<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px;">${photosInSection}</div>`);
+        for (let i = 0; i < mediumPhotos.length; i += 4) {
+          const groupPhotos = mediumPhotos.slice(i, i + 4);
+          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-medium')).join('');
+          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
+          sections.push(`<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
+        }
       }
       
-      // Groß: 1 Spalte (übereinander) - inline styles
+      // Groß: 2 pro Seite (übereinander)
       if (largePhotos.length > 0) {
-        const photosInSection = largePhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
-        sections.push(`<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px;">${photosInSection}</div>`);
+        for (let i = 0; i < largePhotos.length; i += 2) {
+          const groupPhotos = largePhotos.slice(i, i + 2);
+          const photosInSection = groupPhotos.map(p => generatePhotoHtml(p, 'photo-grid-large')).join('');
+          const pageBreak = sections.length > 0 ? 'page-break-before: always;' : '';
+          sections.push(`<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; ${pageBreak}">${photosInSection}</div>`);
+        }
       }
       
       photosHtml = sections.join('');

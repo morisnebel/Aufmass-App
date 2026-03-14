@@ -69,6 +69,10 @@ export default function RootLayout() {
           options={{ title: 'Checklisten-Vorlagen' }} 
         />
         <Stack.Screen 
+          name="checklists/edit-template" 
+          options={{ title: 'Checkliste erstellen' }} 
+        />
+        <Stack.Screen 
           name="checklists/new" 
           options={{ title: 'Neue Checkliste' }} 
         />

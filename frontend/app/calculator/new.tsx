@@ -3708,7 +3708,14 @@ export default function AreaCalculatorEditor() {
             
             <TouchableOpacity
               style={[styles.toolButtonLarge, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolButtonActive, { backgroundColor: (fixedAngle !== null || fixedLength !== '') ? '#4CAF50' : (snapToAngles ? '#4CAF50' : '#f5f5f5') }]}
-              onPress={() => setShowAngleModal(true)}
+              onPress={() => {
+                // Automatisch Polygon-Modus aktivieren
+                if (mode !== 'polygon') {
+                  setMode('polygon');
+                  setCurrentPoints([]);
+                }
+                setShowAngleModal(true);
+              }}
             >
               <AngleIcon size={20} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#4CAF50'} />
               <Text style={[styles.toolLabel, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive, { fontSize: 7 }]}>Fläche/Winkel</Text>

@@ -622,7 +622,17 @@ export interface ChecklistTemplate {
 export const ChecklistTemplateService = {
   getAll: async (): Promise<ChecklistTemplate[]> => {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
-    // Return default templates if none exist
+    // Just return whatever is stored - no automatic default templates
+    // This allows users to delete all templates if they want
+    return templates;
+  },
+  
+  // Initialize default templates only on first app launch
+  initializeDefaults: async (): Promise<void> => {
+    const hasInitialized = await storage.getItem('TEMPLATES_INITIALIZED');
+    if (hasInitialized) return;
+    
+    const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
     if (templates.length === 0) {
       const defaultTemplates: ChecklistTemplate[] = [
         {
@@ -651,9 +661,8 @@ export const ChecklistTemplateService = {
         },
       ];
       await setItems(KEYS.CHECKLIST_TEMPLATES, defaultTemplates);
-      return defaultTemplates;
     }
-    return templates;
+    await storage.setItem('TEMPLATES_INITIALIZED', 'true');
   },
 
   getById: async (id: string): Promise<ChecklistTemplate | null> => {

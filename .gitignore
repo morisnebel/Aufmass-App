@@ -73,3 +73,7 @@ agenthub/agents/youtube/db
 *.deb
 *.dylib
 
+-e 
+# Environment files
+*.env
+*.env.*

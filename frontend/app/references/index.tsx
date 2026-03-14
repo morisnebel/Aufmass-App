@@ -56,6 +56,7 @@ export default function ReferencesScreen() {
   
   // Edit state
   const [selectedPhoto, setSelectedPhoto] = useState<ReferencePhoto | null>(null);
+  const [photoToMove, setPhotoToMove] = useState<ReferencePhoto | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolder, setEditingFolder] = useState<ReferenceFolder | null>(null);
   const [editPhotoName, setEditPhotoName] = useState('');
@@ -468,7 +469,7 @@ export default function ReferencesScreen() {
   };
 
   const movePhotoToFolder = async (targetFolderId: string) => {
-    if (!selectedPhoto) {
+    if (!photoToMove) {
       Alert.alert('Fehler', 'Kein Foto ausgewählt');
       return;
     }
@@ -477,10 +478,11 @@ export default function ReferencesScreen() {
       return;
     }
     try {
-      await ReferenceService.movePhoto(selectedPhoto.id, targetFolderId);
+      await ReferenceService.movePhoto(photoToMove.id, targetFolderId);
       setShowMoveModal(false);
       setMoveModalParentId(undefined);
       setMoveModalPath([]);
+      setPhotoToMove(null);
       setShowPhotoModal(false);
       setSelectedPhoto(null);
       loadData();
@@ -861,10 +863,10 @@ export default function ReferencesScreen() {
         animationType="fade" 
         onRequestClose={() => { 
           setShowPhotoModal(false); 
-        }}
-        onDismiss={() => {
-          // Clear selected photo after modal animation completes
-          setSelectedPhoto(null);
+          // Nur löschen wenn kein Move-Modal offen ist
+          if (!showMoveModal) {
+            setSelectedPhoto(null);
+          }
         }}
       >
         <View style={styles.photoModalOverlay}>
@@ -872,6 +874,10 @@ export default function ReferencesScreen() {
             style={styles.photoModalClose} 
             onPress={() => { 
               setShowPhotoModal(false);
+              // Nur löschen wenn kein Move-Modal offen ist
+              if (!showMoveModal) {
+                setSelectedPhoto(null);
+              }
             }}
           >
             <Ionicons name="close" size={28} color="#fff" />
@@ -890,7 +896,7 @@ export default function ReferencesScreen() {
                     <Ionicons name="pencil" size={20} color="#1976d2" />
                     <Text style={styles.photoActionText}>Name</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.photoActionButton} onPress={() => { setShowMoveModal(true); setShowPhotoModal(false); }}>
+                  <TouchableOpacity style={styles.photoActionButton} onPress={() => { setPhotoToMove(selectedPhoto); setShowMoveModal(true); setShowPhotoModal(false); }}>
                     <Ionicons name="folder-open" size={20} color="#4caf50" />
                     <Text style={styles.photoActionText}>Verschieben</Text>
                   </TouchableOpacity>
@@ -934,7 +940,7 @@ export default function ReferencesScreen() {
       </Modal>
 
       {/* Move Photo Modal */}
-      <Modal visible={showMoveModal} transparent animationType="slide" onRequestClose={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); }}>
+      <Modal visible={showMoveModal} transparent animationType="slide" onRequestClose={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); setPhotoToMove(null); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.moveModalContent}>
             <Text style={styles.modalTitle}>Verschieben nach...</Text>
@@ -1004,7 +1010,7 @@ export default function ReferencesScreen() {
                   })
               )}
             </ScrollView>
-            <TouchableOpacity style={styles.moveCancelButton} onPress={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); }}>
+            <TouchableOpacity style={styles.moveCancelButton} onPress={() => { setShowMoveModal(false); setMoveModalParentId(undefined); setMoveModalPath([]); setPhotoToMove(null); }}>
               <Text style={styles.moveCancelButtonText}>Abbrechen</Text>
             </TouchableOpacity>
           </View>

@@ -7870,26 +7870,26 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
-      {/* Angle Settings Modal - Draggable - Positioniert links, Hintergrund transparent für Interaktion */}
-      <Modal visible={showAngleModal} transparent animationType="fade">
-        <View style={{ flex: 1, pointerEvents: 'box-none' }}>
-          <Animated.View 
-            style={[
-              styles.modalContent, 
-              { 
-                maxWidth: 300, 
-                position: 'absolute',
-                left: 10,
-                top: 140,
-                transform: angleModalPosition.getTranslateTransform(),
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 10,
-              }
-            ]}
-          >
+      {/* Angle Settings Panel - Floating, kein Modal - erlaubt Interaktion mit Zeichenfläche */}
+      {showAngleModal && (
+        <Animated.View 
+          style={[
+            styles.modalContent, 
+            { 
+              maxWidth: 300, 
+              position: 'absolute',
+              left: 10,
+              top: 140,
+              zIndex: 1000,
+              transform: angleModalPosition.getTranslateTransform(),
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 10,
+            }
+          ]}
+        >
             {/* Drag Handle */}
             <View {...angleModalPanResponder.panHandlers} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -8336,8 +8336,7 @@ export default function AreaCalculatorEditor() {
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
-      </Modal>
+      )}
 
       {/* Taschenrechner Modal */}
       <Modal visible={showCalculatorModal} transparent animationType="fade">

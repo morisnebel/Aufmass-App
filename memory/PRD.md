@@ -1,215 +1,112 @@
-# AUFMASSPROFI DACH - Product Requirements Document
+# Projekt-Management App - PRD
 
 ## Original Problem Statement
-Build a comprehensive application for managing roofing projects with:
-- Checklist templates management
-- A powerful "Flächen-Kalkulator" (Area Calculator) tool
-- Photo annotation and management
-- PDF export functionality
+React Native/Expo App für Projektmanagement mit Checklisten, Sketch-Editor, Flächen-Kalkulator und PDF-Export. Fokus auf UI/UX-Verbesserungen und Benutzerfreundlichkeit auf iPhone und iPad.
 
-## User Language
-German (Deutsch)
+## User Personas
+- Handwerker/Projektmanager die vor Ort Aufmaße erfassen
+- Benutzen primär iPad, aber auch iPhone für schnelle Zugriffe
 
-## Core Features
-
-### 1. Area Calculator (Flächen-Kalkulator)
-- Draw main polygons (total area) and subtraction polygons (openings)
-- Set scale for drawing canvas
-- Calculate and display net area
-- Line/edge management with categories
-- Angle snapping and direct length input
-- Movable numpad for dimension input
-- Annotation tools (shapes, text boxes, memo pointers)
-- Pinch-to-zoom and pan
-- Background image support
-- Undo/Redo functionality
-
-### 2. Photo Management
-- Add photos to projects
-- Photo annotation with drawing tools
-- Save photos to device gallery (via Share in Expo Go, direct in production)
-- Multi-select mode for batch operations
-
-### 3. PDF Export
-- Project documentation export
-- Customizable layout
-- Compact, ink-friendly headers and summary boxes
-- Include drawings, annotations, and reference images
-
-### 4. Checklist Management
-- Create and manage checklist templates
-- Template logos and category logos
-- Sub-items with images
+## Core Requirements
+1. Checklisten mit verschachtelten Unterpunkten
+2. Sketch-Editor für Zeichnungen und Maße
+3. Flächen-Kalkulator für Aufmaße
+4. PDF-Export mit Fotos und Skizzen
+5. Referenz-Foto Verwaltung
+6. Kundenverwaltung mit Kontakt-Synchronisation
 
 ## Tech Stack
-- **Frontend**: React Native / Expo
-- **Storage**: AsyncStorage (local)
-- **PDF**: expo-print
-- **File System**: expo-file-system, expo-media-library
-- **Navigation**: expo-router
+- React Native / Expo
+- AsyncStorage für lokale Datenhaltung
+- react-native-svg für Sketch-Editor
+- expo-print, expo-sharing für PDF-Export
+
+---
 
 ## What's Been Implemented
 
-### Session: December 2025 (Numpad für Projekt-Notizen)
-- ✅ **NUMPAD FÜR PROJEKT-BEMERKUNGEN IMPLEMENTIERT**:
-  - Neuer Toggle-Button neben dem "Zusätzliche Bemerkungen" Eingabefeld
-  - Vollständiges Numpad mit Zahlen, Operatoren (+, -, ×, ÷) und Einheiten (m, cm, mm, m², lfm, Stk, €, %)
-  - Buchstaben-Modus (ABC) mit QWERTZ-Layout und Caps-Lock
-  - Aktionstasten: C (Clear), Leerzeichen, Enter (↵), Backspace (⌫)
-  - State Management: `showRemarksNumpad`, `remarksNumpadMode`, `remarksNumpadCaps`
-  - Handler: `handleRemarksNumpadPress` für alle Tasteneingaben
-  - Vollständige StyleSheet-Definitionen für alle Numpad-Komponenten
-  - **Datei**: `/app/frontend/app/projects/[id].tsx`
+### Dezember 2024
 
-### Session: December 2025 (Previous - Latest Update)
-- ✅ **SKIZZEN-EDITOR FIX - Bild-Resize-Handles**:
-  - **Problem**: Die grünen Resize/Move-Punkte waren zu weit vom Bild entfernt
-  - **Ursache**: Bilder wurden mit festen Dimensionen (200x200 oder 250x250) eingefügt, unabhängig vom tatsächlichen Seitenverhältnis
-  - **Fix**: Alle vier Bild-Einfüge-Funktionen aktualisiert mit korrekter Seitenverhältnis-Berechnung:
-    - `insertProjectPhoto` - bereits vorhanden
-    - `addImageElement` - bereits vorhanden
-    - `insertImage` - jetzt mit asset.width/height Berechnung
-    - `takePhotoAndInsert` - jetzt mit asset.width/height Berechnung
-  - **Datei**: `/app/frontend/app/sketches/draw.tsx`
+**Checklisten-Layout Fix (Aktuell)**
+- Labels (Firmenlogo, Druckbild, Vorschau, Referenz) werden jetzt OBERHALB der Unterpunkte gerendert
+- Datei: `/app/frontend/app/checklists/edit-template.tsx`
 
-- ✅ **KRITISCHER BUG FIX - Bilder-Daten in Checklisten**:
-  - **Problem**: Beim Erstellen einer Checkliste aus einem Template mit Teil-Auswahl wurden printImage, previewImages und referenceFolderId nicht übertragen
-  - **Ursache**: Die `convertItems` Funktion in `/app/frontend/app/checklists/[id].tsx` hat die Bild-Felder beim Laden nicht kopiert
-  - **Fix 1**: `convertItems` Funktion erweitert - kopiert jetzt alle Bild-Felder (printImage, previewImages, categoryLogo, referenceFolderId, referenceFolderName)
-  - **Fix 2**: `RecursiveItem` Interface erweitert mit allen Bild-Feldern
-  - **Fix 3**: Beide `deepCopy` Funktionen aktualisiert für korrektes Kopieren der Bilder
-  - **Fix 4**: Fehlender Import von `ChecklistTemplateService` hinzugefügt
-- ✅ **AUTO-EXPAND BUG FIX**:
-  - **Problem**: Auto-Expand funktionierte nicht für das erste/oberste Element in der Checkliste
-  - **Fix**: `toggleItemChecked` Funktion überarbeitet - klappt jetzt sowohl das aktuelle Item als auch den ersten Unterpunkt (wenn vorhanden) auf
-  - **Datei**: `/app/frontend/app/checklists/[id].tsx`
+**PDF Generation Overhaul**
+- Fotos werden nicht mehr über Seitenumbrüche geteilt
+- Flexible inline-block Layout mit page-break Protection
+- Datei: `/app/frontend/components/ProjectPDF.tsx`
 
-### Session: December 2025 (Previous)
-- ✅ **REFERENZ FOTOS TOOL IMPLEMENTIERT**:
-  - Neuer Screen `/app/frontend/app/references/index.tsx`
-  - Service `/app/frontend/services/ReferenceService.ts` für Datenverwaltung
-  - Globale Ordner-Verwaltung (erstellen, umbenennen, löschen)
-  - Foto-Import via: Kamera, Galerie, Dateien-App (USB, iCloud, etc.)
-  - Fotos zwischen Ordnern verschieben
-  - Speicherung im iOS "Dateien"-Ordner (documentDirectory)
-  - Button auf Hauptbildschirm hinzugefügt (orange Styling)
-- ✅ **BUG FIXES (Dezember 2025)**:
-  - **App-Einfrieren beim Modal-Schließen** behoben: `setTimeout` entfernt, `onDismiss` Callback für sauberes State-Cleanup hinzugefügt
-  - **Ordner-Thumbnail Anzeige** korrigiert: Fixe Größe für Thumbnail-Bild gesetzt
-  - **Externe Ordner-Verknüpfung** verbessert: iOS erlaubt keine Ordner-Auswahl, daher neuer Workflow mit Bild-Auswahl und Files-App-Integration
-- ✅ **BILD-ZUSCHNITT FIX** (bestätigt):
-  - Koordinaten-Berechnung für `resizeMode="contain"` korrigiert
-- ✅ **NOTIZ-BUTTON IMPLEMENTIERT (wie in Flächenberechnung)**:
-  - Neuer DrawMode 'memo' hinzugefügt
-  - Zeichnet Annotation mit rotem Ankerpunkt, gestrichelter Linie und Textlabel
-  - Modal zum Eingeben des Notiz-Textes
-  - Bearbeitungsmodus für Memo-Elemente (Text, Schriftgröße, Farbe ändern)
-  - Button in Toolbar mit korrektem Icon und Styling
-- ✅ **PROJEKTFOTOS-FUNKTION IMPLEMENTIERT**: 
-  - Modal für Projektfotos-Auswahl hinzugefügt
-  - Fotos aus dem Projekt können ausgewählt und in die Skizze eingefügt werden
-  - Button "Projektfotos" ist jetzt voll funktionsfähig
-- ✅ **BEARBEITUNGSMODUS BUG BEHOBEN**: 
-  - `selectDrawMode` schaltet jetzt auch bei 'select' den Zoom-Modus aus
-  - Elemente können wieder ausgewählt und bearbeitet werden
-- ✅ **ZOOM/ZEICHNEN KOORDINATEN FIX**:
-  - Bei Auswahl eines Werkzeugs wird automatisch der Zoom deaktiviert
-  - Zoom wird auf 100% zurückgesetzt bevor gezeichnet/bearbeitet wird
+**iPhone Responsiveness**
+- Home-Screen Layout angepasst für kleine Bildschirme
+- Sketch-Editor Toolbar scrollbar gemacht
+- Settings-Seite optimiert
 
-### Session: March 10, 2026
-- ✅ **TOOLBAR REDESIGN MIT LABELS**: Toolbar komplett umgestaltet mit Beschriftungen unter den Buttons:
-  - "Hand" → "Bearbeiten"
-  - "Stift" → "Stift"
-  - "Linie, Kreis, Rechteck" → "Formen" (gruppiert)
-  - "Maßlinie" + "Maße über Polygone" (gruppiert)
-  - "Memo" + "Text" + "Notiz zur Skizze" (gruppiert)
-  - "Galeriefotos"
-  - "Projektfotos" (jetzt implementiert)
-  - "neues Foto"
-  - "Fotobearbeitung"
-- ✅ **MEMO-PFEIL TEXT-STYLING FIX**: Der Rahmen um den Memo-Text passt sich jetzt an die Strichdicke des Pfeils an (proportional 1/3 der Linienstärke)
+**Navigation & UI**
+- Header mit "Zurück"-Buttons in Kundenverwaltung
+- Kontakt-Synchronisation (Update, nicht nur Create)
+- Photo Import/Export Buttons redesigned
 
-### Session: March 9, 2026
-- ✅ Implemented manual Zoom-Toggle Button ("Zoom an/aus") in der Toolbar
-  - Grün = Zoom-Modus aktiv (pinch-to-zoom und pan funktionieren)
-  - Rot = Zoom aus (Zeichnen/Bearbeiten aktiv)
-- ✅ Automatische Umschaltung: Bei Auswahl eines Zeichenwerkzeugs wird Zoom automatisch deaktiviert
-- ✅ 100%-Button repariert: Setzt Zoom-Level und Position korrekt zurück
-- ✅ ScrollView korrekt an zoomMode gebunden (scrollEnabled und pinchGestureEnabled)
+**Sketch Editor UX**
+- Toolbar-Border Bug behoben
+- "Position"-Tool deaktiviert sich automatisch
+- Resize-Handles verschwinden bei Tool-Wechsel
 
-### Session: December 2025
-- ✅ **KRITISCHER BUG BEHOBEN**: Koordinatenberechnung beim Zeichnen/Bearbeiten auf gezoomter Leinwand
-  - `onTouchMove` und `onTouchEnd` verwendeten falsche Formel (panOffset statt scrollOffset)
-  - Alle Touch-Handler verwenden jetzt konsistent: `((touch.locationX) + scrollOffset.x) / scale`
-- ✅ **100%-Button verbessert** gemäß Benutzeranforderung:
-  - Zeigt dynamischen Zoom-Prozentsatz (z.B. "150%")
-  - "100%" statisch darunter angezeigt
-  - Grüne Hintergrundfarbe bei genau 100% Zoom
-  - Button ist jetzt immer sichtbar (nicht nur wenn gezoomt)
-  - Reset setzt auch scrollOffset zurück
+**Area Calculator UX**
+- "+Punkt"/"-Punkt" deaktivieren sich automatisch
+- Modal zu Floating Panel geändert (nicht blockierend)
+- Default-Tool: "Fläche Poly"
 
-### Session: March 8, 2026
-- ✅ Fixed Expo development environment (EXPO_TOKEN authentication)
-- ✅ Implemented "Save to Gallery" feature with Share fallback for Expo Go
-- ✅ Photo annotation zoom/pan overhaul with ScrollView
-- ✅ Toolbar redesign with custom SVG icons
-- ✅ Calculator modal implementation
-- ✅ PDF export styling refinements
-- ✅ UI reorganization (header buttons, navigation tabs)
-
-## Known Limitations
-- **Expo Go**: FileSystem directories (documentDirectory, cacheDirectory) are null
-  - Workaround: Use Share sheet to save images
-  - Resolution: Works properly in TestFlight/production builds
+---
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- ✅ **BILD-ZUSCHNITT FIX** (Dezember 2025):
-  - Koordinaten-Berechnung korrigiert für `resizeMode="contain"`
-  - Offset und Skalierung werden jetzt korrekt berechnet
-  - Vom Benutzer als "perfekt" bestätigt
-- ✅ **POLYLINE VERSCHIEBEN** (Dezember 2025):
-  - Zentraler Handle zum Verschieben der gesamten Form implementiert
-  - Interaktionslogik verfeinert (nur zentraler Handle verschiebt, Eckpunkte einzeln)
-  - Vom Benutzer bestätigt
-- ✅ **PROJEKTADRESSEN-MODAL LABELS** (Dezember 2025):
-  - Labels für alle Eingabefelder hinzugefügt (Bezeichnung, Beschreibung, Objektname, Straße, PLZ, Ort, Ansprechpartner, Telefon, E-Mail)
-- ✅ **CODE CLEANUP** (Dezember 2025):
-  - Ungenutzte `annotate.tsx` Datei entfernt
-- ⏳ **BENUTZERTEST ERFORDERLICH**: 
-  - **Polyline Strich/Farbe bearbeiten** (Doppelklick auf Form)
-  - Sketch-Zeichnung Leistung prüfen
+### P0 (Kritisch)
+- [x] Checklisten-Layout Fix
 
-### P1 (High Priority)
-- "Maße über Polygone" Button implementieren
-- "Notizen zur Skizze" Button Funktionalität vervollständigen (Modal existiert bereits)
+### P1 (Hoch)
+- [ ] App friert ein beim Schließen des Foto-Viewers
+- [ ] Polygon-Messlinie Fix verifizieren
 
-### P2 (Medium Priority)
-- Create new TestFlight build
-- Implement Pro/Base version split with in-app purchases
+### P2 (Mittel)
+- [ ] Ordner-Thumbnail wird nicht korrekt angezeigt
+- [ ] PDF-Layout Fix verifizieren
 
-### P3 (Lower Priority)
-- Price calculation feature based on areas/lengths
+### P3 (Niedrig/Backlog)
+- [ ] Flächen-Kalkulator erweiterte Funktionen
+- [ ] Neuer TestFlight Build
+- [ ] Pro/Base Version Split mit In-App Käufen
+- [ ] Preis-Kalkulation Feature
+- [ ] iCloud Sync neu implementieren
+- [ ] PDF Preview Bug mit gestrichelten Linien
 
-### P4 (Backlog)
-- Re-implement iCloud Sync
-- Fix dashed lines rendering in PDF preview
+---
 
 ## Key Files
-- `/app/frontend/app/sketches/draw.tsx` - Hauptdatei für Skizzen-Tool mit Zoom-Toggle, Zeichenwerkzeugen und Toolbar
-- `/app/frontend/app/calculator/new.tsx` - Calculator with toolbar and modal
-- `/app/frontend/app/projects/[id].tsx` - Project details with photo management
-- `/app/frontend/app/photos/annotate.tsx` - Photo annotation with zoom/draw
-- `/app/frontend/app/_layout.tsx` - Navigation layout configuration
 
-## Environment Configuration
-- **EXPO_TOKEN**: Required for Expo Go tunnel authentication
-- **EXPO_TUNNEL_SUBDOMAIN**: polygon-area
-- **Preview URL**: https://numpad-integration.preview.emergentagent.com
+### Checklisten
+- `/app/frontend/app/checklists/[id].tsx` - Checklisten-Editor (Runtime)
+- `/app/frontend/app/checklists/edit-template.tsx` - Vorlagen-Editor
+- `/app/frontend/app/checklists/new.tsx` - Neue Checkliste erstellen
 
-## Testing Notes
-- Use Expo Go with `exp://polygon-area.preview.emergentagent.com`
-- Photo gallery save requires Share sheet in Expo Go
-- Full functionality available in TestFlight builds
-- **WICHTIG**: Nach jeder Änderung Expo Go komplett schließen und neu öffnen!
+### Sketch & Area
+- `/app/frontend/app/sketches/draw.tsx` - Sketch-Editor
+- `/app/frontend/app/area/index.tsx` - Flächen-Kalkulator
+
+### PDF & Export
+- `/app/frontend/components/ProjectPDF.tsx` - PDF-Generation
+
+### Referenzen & Fotos
+- `/app/frontend/app/references/index.tsx` - Foto-Verwaltung (Bug: Freeze beim Schließen)
+
+### Services
+- `/app/frontend/services/LocalStorage.ts` - AsyncStorage Operations
+
+---
+
+## Known Issues
+
+1. **App Freeze bei Photo Viewer Close** - `onClose` Handler in `references/index.tsx`
+2. **Folder Thumbnail Display** - Image resizeMode/style in `references/index.tsx`
+
+## User Language
+German (Deutsch)

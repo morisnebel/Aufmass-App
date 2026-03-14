@@ -624,16 +624,7 @@ export default function EditTemplateScreen() {
           </View>
         </View>
 
-        {/* Unterpunkte rekursiv rendern (wenn nicht eingeklappt) */}
-        {hasSubItems && !collapsed && (
-          <View style={styles.subItemsSection}>
-            {item.subItems.map((subItem, subIndex) => 
-              renderItem(subItem, [...path, subIndex], depth + 1)
-            )}
-          </View>
-        )}
-        
-        {/* Bild-Bereich - Labels über den Buttons */}
+        {/* Bild-Bereich - Labels ÜBER den Unterpunkten, damit sie beim Item bleiben */}
         <View style={styles.imageSection}>
           <View style={styles.imageFieldsRow}>
             {/* Logo für Hauptpunkte (Kategorien) */}
@@ -721,6 +712,15 @@ export default function EditTemplateScreen() {
             </View>
           </View>
         </View>
+
+        {/* Unterpunkte rekursiv rendern (NACH den Bild-Labels, wenn nicht eingeklappt) */}
+        {hasSubItems && !collapsed && (
+          <View style={styles.subItemsSection}>
+            {item.subItems.map((subItem, subIndex) => 
+              renderItem(subItem, [...path, subIndex], depth + 1)
+            )}
+          </View>
+        )}
         </View>
         
         {/* Anzeige wenn eingeklappt */}

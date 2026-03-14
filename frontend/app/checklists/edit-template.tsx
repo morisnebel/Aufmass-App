@@ -721,8 +721,7 @@ export default function EditTemplateScreen() {
             )}
           </View>
         )}
-        </View>
-        
+
         {/* Anzeige wenn eingeklappt */}
         {hasSubItems && collapsed && (
           <TouchableOpacity 

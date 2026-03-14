@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
@@ -40,6 +40,7 @@ interface ChecklistTemplate {
 
 export default function EditTemplateScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { templateId } = useLocalSearchParams();
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
@@ -62,6 +63,13 @@ export default function EditTemplateScreen() {
   const [currentReferenceFolder, setCurrentReferenceFolder] = useState<ReferenceFolder | null>(null);
   const [referenceTargetPath, setReferenceTargetPath] = useState<number[]>([]);
   const [loadingReferences, setLoadingReferences] = useState(false);
+
+  // Header-Titel setzen
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: templateId ? 'Checkliste bearbeiten' : 'Checkliste erstellen',
+    });
+  }, [navigation, templateId]);
 
   useEffect(() => {
     if (templateId) {
@@ -691,7 +699,7 @@ export default function EditTemplateScreen() {
             </View>
 
             {/* Referenz-Ordner Verknüpfung */}
-            <View style={styles.imageFieldColumn}>
+            <View style={styles.referenceFieldColumn}>
               <Text style={styles.imageLabelTop}>Referenz</Text>
               {item.referenceFolderId ? (
                 <View style={styles.linkedFolderContainer}>
@@ -1192,6 +1200,10 @@ const styles = StyleSheet.create({
     minWidth: 90,
     maxWidth: 140,
   },
+  referenceFieldColumn: {
+    alignItems: 'center',
+    minWidth: 180,
+  },
   imageLabelTop: {
     fontSize: 10,
     color: '#666',
@@ -1360,6 +1372,7 @@ const styles = StyleSheet.create({
   // Reference Folder Modal Styles
   referenceBtn: {
     backgroundColor: '#e3f2fd',
+    minWidth: 160,
   },
   referenceFolderModalContent: {
     width: '95%',
@@ -1482,7 +1495,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
     gap: 6,
-    minWidth: 100,
+    minWidth: 160,
   },
   linkedFolderInfo: {
     flexDirection: 'row',
@@ -1494,7 +1507,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#1976d2',
     fontWeight: '600',
-    maxWidth: 100,
+    maxWidth: 120,
   },
   unlinkBtn: {
     marginLeft: 4,

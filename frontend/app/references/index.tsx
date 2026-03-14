@@ -468,13 +468,27 @@ export default function ReferencesScreen() {
   };
 
   const movePhotoToFolder = async (targetFolderId: string) => {
-    if (!selectedPhoto) return;
-    await ReferenceService.movePhoto(selectedPhoto.id, targetFolderId);
-    setShowMoveModal(false);
-    setShowPhotoModal(false);
-    setSelectedPhoto(null);
-    loadData();
-    Alert.alert('Erfolg', 'Foto wurde verschoben');
+    if (!selectedPhoto) {
+      Alert.alert('Fehler', 'Kein Foto ausgewählt');
+      return;
+    }
+    if (!targetFolderId) {
+      Alert.alert('Fehler', 'Kein Zielordner ausgewählt');
+      return;
+    }
+    try {
+      await ReferenceService.movePhoto(selectedPhoto.id, targetFolderId);
+      setShowMoveModal(false);
+      setMoveModalParentId(undefined);
+      setMoveModalPath([]);
+      setShowPhotoModal(false);
+      setSelectedPhoto(null);
+      loadData();
+      Alert.alert('Erfolg', 'Foto wurde verschoben');
+    } catch (error) {
+      console.error('Error moving photo:', error);
+      Alert.alert('Fehler', 'Foto konnte nicht verschoben werden');
+    }
   };
 
   // Render folder item

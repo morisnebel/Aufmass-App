@@ -347,18 +347,32 @@ export const ReferenceService = {
       // Ensure target directory exists
       const targetDir = await ensureDirectoryExists(targetFolderId);
       
-      // Move physical file
+      // Move physical file using expo-file-system
       const filename = photo.uri.split('/').pop() || `${photo.id}.jpg`;
-      const sourceFile = new File(photo.uri);
-      const destFile = new File(targetDir, filename);
+      const newUri = `${targetDir}${filename}`;
       
-      await sourceFile.move(destFile);
+      try {
+        const sourceFile = new File(photo.uri);
+        const destFile = new File(newUri);
+        await sourceFile.move(destFile);
+      } catch (fileError) {
+        console.log('File move error, trying copy+delete:', fileError);
+        // Fallback: copy then delete
+        const sourceFile = new File(photo.uri);
+        const destFile = new File(newUri);
+        await sourceFile.copy(destFile);
+        try {
+          await sourceFile.delete();
+        } catch (deleteError) {
+          console.log('Could not delete original file:', deleteError);
+        }
+      }
       
       // Update photo record
       photos[photoIndex] = {
         ...photo,
         folder_id: targetFolderId,
-        uri: destFile.uri,
+        uri: newUri,
       };
       
       await AsyncStorage.setItem(KEYS.REFERENCE_PHOTOS, JSON.stringify(photos));

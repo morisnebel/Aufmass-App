@@ -1,107 +1,104 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to add a Referenz Fotos (Reference Photos) feature. The scope later expanded to include integrating these photos with checklists, significant UI/UX improvements, bug fixes, and enhancing the sketch editor.
+The user's initial goal was to add a Referenz Fotos feature. The scope expanded to include integrating photos with checklists, significant UI/UX improvements for iPhone responsiveness, bug fixes, and enhancing the sketch and area calculator editors.
 
-The previous agent implemented a fix for polygon measurement lines in the sketch editor. The user then requested a numpad for the notes section. After initially investigating the sketch editor notes (which already had a numpad), the user clarified with a screenshot that the request was for the **Project Notes** section (). The agent then began scaffolding the numpad implementation in the correct file.
+Most recently, the user requested a layout change in the checklists. They want the labels/controls for a checklist item (like Firmenlogo, Druckbild) to appear **above** the text input field, so that adding sub-items doesn't separate the controls from their parent item. The previous agent misunderstood this and implemented a different layout change. This caused confusion, and the user's last action was to ask for help rolling back to a previous version, stating irgendwie ist da ein Clan-setup bitte hilf mir (somehow there is a clan-setup, please help me).
 
 **PRODUCT REQUIREMENTS:**
-1.  **Add Numpad to Project Notes (Current):** Integrate a numpad into the Notiz tab on the project details screen for direct numerical input.
-2.  **Fix Polygon Measurement Line Placement:** Adjust rendering logic to place measurement lines on the outside of polygon edges. (Implemented, awaiting verification).
-3.  **Integrate Reference Photos with Checklists:** Link reference folders to checklist items.
-4.  **Reorder Checklists:** Add controls to change the order of checklists.
-5.  **Improve Checklist Workflow:** Checking off a checklist item should automatically expand its first sub-item.
-6.  **UI/UX Refinements:**
-    *   Fix the layout of photos and sketches in the PDF preview. (Implemented, awaiting verification).
-7.  **Critical Bug Fix:** Ensure associated data (images, folder links) is correctly carried over when creating a new checklist from a partial template.
+1.  **Resolve User's Rollback Request (Current Blocker):** Help the user get back to a known stable state before proceeding with new changes.
+2.  **Fix Checklist Item Layout:** Move the control labels (Firmenlogo, Druckbild, etc.) to be *above* the corresponding checklist item's text input.
+3.  **Fix Recurring Bugs:**
+    *   App freezes when closing the photo viewer modal.
+    *   Folder thumbnail is not displayed correctly in Referenz Fotos.
+4.  **Get User Verification** for the polygon measurement line fix implemented in a previous session.
+5.  **Future Work:**
+    *   Enhance Flächen-Kalkulator (Area Calculator).
+    *   Create a new TestFlight build.
+    *   Implement a Pro/Base version split with in-app purchases.
+    *   Add a price calculation feature.
+    *   Re-implement iCloud Sync.
+    *   Fix a PDF preview bug with dashed lines.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a React Native/Expo app using AsyncStorage for data persistence. It features project management, checklists, a sketch editor, and PDF export.
-
-The last agent first investigated the numpad request and correctly identified it was already implemented in the sketch editor (). After the user clarified the request was for the project notes, the agent began work on . The agent successfully added the React state (, ), JSX for the toggle button and numpad panel, and the necessary styles for the new UI elements. The core logic to handle numpad input is not yet implemented.
+The application is a React Native/Expo app for project management, featuring checklists, a sketch editor, an area calculator, and PDF export, using AsyncStorage for data persistence. The agent has implemented numerous UI/UX improvements for both iPhone and iPad, fixed the PDF photo layout, and improved the usability of the sketch and area calculator tools. However, the last interaction ended with the user confused about the state of the app after a misunderstood implementation on the checklist page, leading to a request for a rollback.
 
 **Last working item**:
-The agent was adding a numpad to the Zusätzliche Bemerkungen (Additional Comments) section on the project details page.
+The agent's last action was responding to the user's request for help with a rollback. The user was confused by the result of the agent's attempt to modify the checklist layout.
 
-- **Last item agent was working**: Adding the UI and state for a numpad in . The agent added state variables, a  for the input, the JSX for the  and  panel, and the required styles. The functionality to handle key presses is missing.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: Manual testing. After implementing the input handler, the agent needs to visually verify that the numpad appears and correctly appends digits to the notes field.
-- **User Testing Done**: N
+- **Last item agent was working**: Addressing the user's confusion and request to roll back the codebase to a previous state. The agent provided two options: using the platform's Rollback feature or having the agent manually revert the changes.
+- **Status**: BLOCKED
+- **Agent Testing Done**: N/A
+- **Which testing method agent to use?**: N/A - The agent must first communicate with the user to resolve the rollback request.
+- **User Testing Done**: N/A
 
 **All Pending/In progress Issue list**:
--   **Issue 1 (P0)**: Complete Numpad integration into the Project Notes section.
--   **Issue 2 (P1)**: Polygon measurement line fix is awaiting user verification.
--   **Issue 3 (P2)**: PDF photo and sketch layout fix is awaiting user verification.
--   **Issue 4 (P3)**: App freezes when closing the photo viewer modal.
--   **Issue 5 (P4)**: Folder thumbnail is not displayed correctly in Referenz Fotos.
+-   **Issue 1 (P0)**: User is confused by the current app state and has requested a rollback.
+-   **Issue 2 (P1)**: The layout of checklist items is incorrect; control labels are not grouped with their input field.
+-   **Issue 3 (P2)**: App freezes when closing the photo viewer modal (recurring critical bug).
+-   **Issue 4 (P3)**: Folder thumbnail is not displayed correctly in Referenz Fotos (recurring visual bug).
 
 **Issues Detail:**
--   **Issue 1: Complete Numpad integration into the Project Notes.**
-    -   **Attempted fixes**: The agent added state (, ), JSX for the button and panel, and styles to .
+-   **Issue 1: User requested a rollback.**
+    -   **Attempted fixes**: The agent offered two ways to revert: via the platform's rollback feature or by having the agent manually undo the changes.
     -   **Next debug checklist**:
-        1.  Implement an  function in .
-        2.  This function should take a  as input and append it to the  state.
-        3.  Ensure the  is used to maintain focus and allow seamless typing.
-        4.  Visually test the complete flow on the project details page.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a direct feature request from the user to improve data entry efficiency.
-    -   **Status**: IN PROGRESS
+        1.  Wait for the user's response on how they want to proceed.
+        2.  Confirm with the user if they have used the platform's rollback feature.
+        3.  If not, and if the user agrees, revert the recent changes made to .
+        4.  Ensure the user has a stable, working version before attempting any new changes.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker. The user cannot proceed until their confidence in the app's state is restored.
+    -   **Status**: BLOCKED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
+    -   **Blocked on other issue**: This issue is blocking all other work.
 
--   **Issue 2: Polygon measurement lines fix is awaiting user verification.**
-    -   **Attempted fixes**: A robust geometric solution using the polygon's centroid was implemented in .
-    -   **Next debug checklist**: Ask the user to test the feature in the sketch editor.
-    -   **Why fix this issue and what will be achieved with the fix?**: Improves the clarity and professionalism of sketches.
-    -   **Status**: USER VERIFICATION PENDING
+-   **Issue 2: Fix Checklist Item Layout.**
+    -   **Attempted fixes**: The agent misunderstood the request and changed the layout of the controls themselves, which confused the user. This change needs to be reverted.
+    -   **Next debug checklist**:
+        1.  Once the rollback is resolved, view .
+        2.  Locate the JSX that renders a single checklist item.
+        3.  Move the view containing the controls (Firmenlogo, Druckbild, etc.) from below the text input to above it.
+        4.  Verify that adding a sub-item does not displace the controls from their parent item.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a direct usability request from the user to improve the clarity and structure of the checklists.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
+    -   **Blocked on other issue**: User requested a rollback.
 
--   **Issue 3: PDF photo and sketch layout is incorrect.**
-    -   **Attempted fixes**: CSS was modified in .
-    -   **Next debug checklist**: Instruct the user to completely close and restart the Expo Go app, then generate a new Projekt-PDF to confirm the fix.
-    -   **Why fix this issue and what will be achieved with the fix?**: Fixes unprofessional output in a core feature.
-    -   **Status**: USER VERIFICATION PENDING
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
-
--   **Issue 4: App freezes when closing the photo viewer modal.**
+-   **Issue 3: App freezes when closing the photo viewer modal.**
     -   **Attempted fixes**: None.
-    -   **Next debug checklist**: Investigate the  handler in .
-    -   **Why fix this issue and what will be achieved with this?**: This is a critical usability bug.
+    -   **Next debug checklist**: Investigate the  handler and component state management in .
+    -   **Why fix this issue and what will be achieved with this?**: This is a critical usability bug that hinders the Referenz Fotos feature.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
+    -   **Blocked on other issue**: User requested a rollback.
 
--   **Issue 5: Folder thumbnail is not displayed correctly.**
+-   **Issue 4: Folder thumbnail is not displayed correctly.**
     -   **Attempted fixes**: None.
-    -   **Next debug checklist**: Inspect  component styles in .
+    -   **Next debug checklist**: Inspect the  component styles (, dimensions) for thumbnails in .
     -   **Why fix this issue and what will be achieved with this?**: Minor visual bug affecting UI polish.
     -   **Status**: NOT STARTED
     -   **Is recurring issue?**: Y
     -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on other issue**: None.
+    -   **Blocked on other issue**: User requested a rollback.
 
 **In progress Task List**:
--   **Task 1: Finish Numpad Integration in Project Notes**
-    -   **Where to resume**: In , implement the  handler to process input from the numpad buttons and update the notes .
-    -   **What will be achieved with this?**: Users will be able to input numbers into the project notes via a dedicated on-screen numpad.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on something**: None.
+-   **Task 1: Resolve User's Rollback Request**
+    -   **Where to resume**: Awaiting user's decision on how to proceed after the agent offered rollback options.
+    -   **What will be achieved with this?**: Unblock development by restoring a stable codebase state for the user.
+    -   **Status**: BLOCKED
+    -   **Should Test frontend/backend/both after fix?**: N/A
+    -   **Blocked on something**: User decision.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **P0**: Get user verification for the Polygon Measurement Line fix (Issue 2).
--   **P1**: Get user verification for the PDF layout fix (Issue 3).
--   **P2**: Fix the recurring issues: App freezing on modal close (Issue 4) and incorrect folder thumbnail display (Issue 5).
+-   **P0**: Fix Checklist Item Layout in .
+-   **P1**: Fix the recurring bug: App freezing on modal close ().
+-   **P2**: Fix the recurring bug: Incorrect folder thumbnail display ().
+-   **P3**: Get user verification for the Polygon Measurement Line fix.
 
 **Future Tasks:**
--   Implement Flächen-Kalkulator (Area Calculator) features.
 -   Create a new TestFlight build.
 -   Implement a Pro/Base version split with in-app purchases.
 -   Add a price calculation feature.
@@ -109,24 +106,33 @@ The agent was adding a numpad to the Zusätzliche Bemerkungen (Additional Commen
 -   Fix a PDF preview bug with dashed lines.
 
 **Completed work in this session**
--   **Numpad Scaffolding for Project Notes**: Added React state, refs, JSX components (button, numpad panel), and styles for the numpad in . The core logic is pending.
--   **Numpad Investigation**: Confirmed that the numpad feature requested by the user was for the Project Notes page, not the Sketch Editor notes page (which already had the feature).
+- **PDF Generation Fix**: Resolved a major issue where photos were cut off between pages in the generated PDF. The final implementation uses a flexible  layout that flows correctly, which the user confirmed is working well.
+- **Sketch Editor UX ()**:
+    - Fixed the iPhone toolbar layout by making it scrollable.
+    - Implemented logic to automatically deactivate the Position tool when another tool is selected, and to hide the selection handles (green dots).
+- **Area Calculator UX ()**:
+    - Converted the blocking angle/length modal into a non-blocking, draggable, floating panel.
+    - Implemented logic to auto-deactivate the +Punkt and -Punkt tools when other tools are chosen.
+    - Set the default drawing mode to Fläche/Poly for a more intuitive start.
+- **iPhone Responsiveness**: Adjusted layouts on the Home screen, sketch editor, and settings page to be more usable on smaller screens.
+- **Navigation**: Added Back buttons and headers to the customer management screens (, , ).
+- **Contact Sync**: Implemented a workflow to ask the user for confirmation before updating an imported device contact with new data.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: App freezes when closing the photo viewer modal**
-    -   **Debug checklist**: Check the  handler in . Suspected cause is a race condition or heavy re-render.
-    -   **Why to solve this issue and what will be achieved with this?**: Critical usability bug.
+    -   **Debug checklist**: Check the  handler and state management in .
+    -   **Why to solve this issue and what will be achieved with this?**: Fixes a critical usability bug.
     -   **Should Test frontend/backend/both after fix**: Frontend
     -   **Is recurring issue?**: Y
 -   **Issue 2: Folder thumbnail is not displayed correctly**
     -   **Debug checklist**: Inspect  styles (, dimensions) for thumbnails in .
-    -   **Why to solve this issue and what will be achieved with this?**: Visual bug that makes the UI look unprofessional.
+    -   **Why to solve this issue and what will be achieved with this?**: Fixes a visual bug that makes the UI look unprofessional.
     -   **Should Test frontend/backend/both after fix**: Frontend
     -   **Is recurring issue?**: Y
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: App freezing on modal close and incorrect thumbnail display.
--   **Recurrence count**: 2+
+-   **Issue recurrence in previous fork**: App freezing on photo modal close and incorrect thumbnail display.
+-   **Recurrence count**: 3+
 -   **Status**: NOT STARTED
 
 **Code Architecture**
@@ -134,10 +140,12 @@ The agent was adding a numpad to the Zusätzliche Bemerkungen (Additional Commen
 
 **Key Technical Concepts**
 -   React Native & Expo
--   
--   React State management (, )
--   
--   Data Persistence via AsyncStorage
+-   State Management: , , 
+-    for sketching
+-    for draggable UI
+-   Dynamic styling with  and 
+-   HTML/CSS for PDF generation via 
+-   Client-side data persistence with 
 
 **key DB schema**
 N/A (Client-side application with AsyncStorage).
@@ -146,40 +154,48 @@ N/A (Client-side application with AsyncStorage).
 None.
 
 **All files of reference**
--   : **(CRITICAL)** The file currently being modified to add the numpad to the project notes. The input handling logic needs to be implemented.
--   : Contains the completed polygon line fix, which is pending user verification.
--   : Contains PDF layout fixes that are awaiting user verification.
--   : Location of the two recurring bugs (modal freeze, thumbnail display).
+-   : **(CRITICAL FOR NEXT TASK)** This is where the checklist item layout must be fixed by moving the control row above the text input.
+-   : Contains the finalized PDF layout logic for photos.
+-   : Contains the improved toolbar and tool interaction logic.
+-   : Contains the improved floating panel and tool interaction logic for the area calculator.
+-   : Location of the long-standing modal freeze and thumbnail display bugs.
 
 **Areas that need refactoring**:
--   The  component is over 3500 lines long and remains a maintenance challenge.
--   The agent created a new, duplicated  implementation inside . The numpad logic and UI should be extracted from  and this file into a single, reusable component to avoid code duplication and improve maintainability.
+-   The large, monolithic files  (sketch editor) and  (area calculator) are difficult to maintain. Common logic for tool selection, state management, and UI components should be extracted into reusable hooks and components.
+-   The agent's first attempt at the checklist layout change was incorrect. The next agent must ensure the fix is implemented cleanly by simply reordering the existing JSX elements.
 
 **key api endpoints**
 N/A.
 
 **Critical Info for New Agent**
 -   **You MUST continue all user communication in German.**
--   **Top Priority**: Finish the numpad implementation in . This requires creating the  handler function to append digits to the Zusätzliche Bemerkungen .
--   **Second Priority**: After the numpad is working, guide the user to verify the two completed-but-unverified fixes: 1) the polygon measurement lines, and 2) the PDF layout. For the PDF fix, remind the user to **fully close and restart the Expo Go app**.
--   **Refactoring Opportunity**: The current path is creating a duplicate Numpad. The next agent should consider refactoring the Numpad into a reusable component instead of continuing with the duplicated implementation.
+-   **IMMEDIATE BLOCKER:** The user is confused and has asked for help with a rollback (Clan-setup). Your first action must be to address this. Confirm with the user how they wish to proceed (platform rollback vs. agent revert). Do not start any new work until the user confirms they are on a stable version they understand.
+-   **Next Task (after unblocking):** Fix the checklist item layout in . The user wants the row of controls (Firmenlogo, Druckbild, etc.) to be **ABOVE** the text input for that item.
+-   **User has rolled back before.** Be aware that the user might use the platform's rollback feature, which could erase your work. Always confirm the state of relevant files before making changes.
 
 **documents and test reports created in this job**
 None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: wollen wir bei Notiz auch noch das numpad einfügen (should we also insert the numpad in the notes) + screenshot showing the Project Notes tab. (IN PROGRESS)
-2.  **User**: ja (yes). (COMPLETED - approval for the agent's initial plan)
-3.  **User**: können wir hier bei der Einabe auch das numpad mit integrieren falls das iPad mit dem leaser verbunden ist (Can we also integrate the numpad here for input if the iPad is connected to the laser). (This was for sketch notes, which was found to be already implemented).
+1.  **User**: Asks to start Expo. (Completed)
+2.  **User**: Reports issue with checklist labels being separated from their input field when a new sub-item is added, and wants the labels to be positioned *above* the input field. (In Progress)
+3.  **User**: Provides a screenshot to clarify the checklist layout issue, emphasizing that the labels and input field should stay together. (In Progress)
+4.  **User**: kannst du mir irgendwie helfen das ich zu meiner letzten version zurück komme irgendwie ist da ein Clan-setup bitte hilf mir (Can you help me get back to my last version? There's some kind of clan setup, please help me). **(PENDING - CRITICAL BLOCKER)**
+5.  **User**: Says thank you and goodbye for the day. (Completed)
+6.  **User**: Asks to start Expo in the morning. (Completed)
+7.  **User**: Reports that the default tool in the area calculator is still the angle button. (Fixed)
+8.  **User**: Requests that the default tool in the area calculator be Fläche/Poly. (Fixed)
+9.  **User**: Reports that after changing the calculator panel to a floating view, they can't interact with the canvas. (Fixed)
+10. **User**: Asks to make the calculator modal smaller so it doesn't block the canvas. (Fixed)
 
 **Project Health Check:**
 -   **Broken**:
-    -   Numpad integration in Project Notes is incomplete (input logic is missing).
-    -   The app freezes when closing the photo viewer modal.
-    -   Folder thumbnails are not displayed correctly.
+    -   The current state is confusing to the user, who has requested a rollback.
+    -   The checklist item layout does not match the user's latest requirement.
+    -   The app freezes when closing the photo viewer modal (recurring bug).
+    -   Folder thumbnails are not displayed correctly (recurring bug).
 -   **Mocked**:
-    -   The fix for polygon measurement line placement is implemented but awaits user verification.
-    -   The fix for the PDF photo and sketch layout is implemented but awaits user verification.
+    -   The polygon measurement line fix from a previous session is still awaiting user verification.
 
 **3rd Party Integrations**
 -   
@@ -252,9 +268,10 @@ None.
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[18:10:31]   Run a command with --help for more info 💡
-[18:10:31]     $ expo start --help
-[18:10:31]
+[11:57:51]   Run a command with --help for more info 💡
+[11:57:51]     $ expo start --help
+[11:57:51]
+-   
 -   
 -   
 -   
@@ -267,10 +284,10 @@ None.
 -   **Testing agent used after significant changes**: NO
 -   **Troubleshoot agent used after agent stuck in loop**: NO
 -   **Test files created**: []
--   **Known regressions**: Two issues from a previous fork (modal freeze, thumbnail display) remain unresolved.
+-   **Known regressions**: The app freezing on photo modal close and incorrect thumbnail display are long-standing, unresolved issues.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
--   The agent did not abstract the existing numpad logic from  into a reusable component. Instead, it started duplicating the component, state, and styles in , which will increase future maintenance overhead. The next agent should address this by creating a shared component.</analysis>
+-   The previous agent misunderstood the user's request for the checklist layout change and implemented an incorrect solution. This confused the user and led to the current blocked state. The agent should have analyzed the user's screenshot and explanation more carefully before coding.</analysis>

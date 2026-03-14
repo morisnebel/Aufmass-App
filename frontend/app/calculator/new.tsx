@@ -397,7 +397,7 @@ export default function AreaCalculatorEditor() {
   const [guideLinesVisible, setGuideLinesVisible] = useState(true);
   const [selectedGuideLineId, setSelectedGuideLineId] = useState<string | null>(null);
   const [draggingGuidePoint, setDraggingGuidePoint] = useState<{ guideId: string; point: 'start' | 'end' | 'middle' } | null>(null);
-  const [snapToAngles, setSnapToAngles] = useState(true); // Winkel-Einrasten (0°, 45°, 90°)
+  const [snapToAngles, setSnapToAngles] = useState(false); // Winkel-Einrasten (0°, 45°, 90°)
   const [showAngleModal, setShowAngleModal] = useState(false); // Modal für Winkel-Einstellung
   const [fixedAngle, setFixedAngle] = useState<number | null>(null); // Fester Winkel für nächste Linie
   const [angleInputText, setAngleInputText] = useState(''); // Texteingabe für Winkel (erlaubt Minus)

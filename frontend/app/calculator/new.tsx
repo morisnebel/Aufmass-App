@@ -513,7 +513,7 @@ export default function AreaCalculatorEditor() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   
   // Drawing state
-  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'deduction_rect' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('select');
+  const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'deduction_rect' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('polygon');
   const [currentPoints, setCurrentPoints] = useState<AreaPoint[]>([]);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [selectedLineIndex, setSelectedLineIndex] = useState<{ polygonId: string; pointIndex: number } | null>(null);

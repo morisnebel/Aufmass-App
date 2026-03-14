@@ -4941,10 +4941,12 @@ export default function ProjectDetailScreen() {
                   {/* Delete Button */}
                   <TouchableOpacity
                     style={styles.checklistDeleteButton}
-                    onPress={() => {
+                    onPress={(e) => {
+                      e.stopPropagation();
                       setChecklistToDelete(checklist.id);
                       setDeleteChecklistModalVisible(true);
                     }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons name="trash" size={18} color="#fff" />
                   </TouchableOpacity>
@@ -6985,8 +6987,9 @@ const styles = StyleSheet.create({
     right: 8,
     backgroundColor: 'rgba(244, 67, 54, 0.9)',
     borderRadius: 16,
-    padding: 6,
-    zIndex: 10,
+    padding: 8,
+    zIndex: 100,
+    elevation: 100,
   },
   moreItemsText: {
     fontSize: 12,

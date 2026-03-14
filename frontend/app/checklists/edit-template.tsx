@@ -677,28 +677,7 @@ export default function EditTemplateScreen() {
               )}
             </View>
             
-            {/* Vorschau-Galerie (nur zur Beratung, nicht gedruckt) */}
-            <View style={styles.imageFieldColumn}>
-              <Text style={styles.imageLabelTop}>Vorschau</Text>
-              <View style={styles.previewImagesContainer}>
-                {(item.previewImages || []).map((img, idx) => (
-                  <View key={idx} style={styles.imagePreviewContainer}>
-                    <TouchableOpacity onPress={() => openImagePreview(item.previewImages || [], item.text || 'Vorschau', idx)}>
-                      <Image source={{ uri: img }} style={styles.smallThumbnail} resizeMode="contain" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.removeImageBtnSmall} onPress={() => removeImage(path, 'preview', idx)}>
-                      <Ionicons name="close-circle" size={16} color="#f44336" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity style={styles.addImageBtn} onPress={() => pickImage(path, 'preview')}>
-                  <Ionicons name="images-outline" size={16} color="#ff9800" />
-                  <Text style={styles.addImageText}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Referenz-Ordner Verknüpfung */}
+            {/* Referenz-Ordner Verknüpfung - VOR Vorschau für besseres Layout */}
             <View style={styles.referenceFieldColumn}>
               <Text style={styles.imageLabelTop}>Referenz</Text>
               {item.referenceFolderId ? (
@@ -717,6 +696,27 @@ export default function EditTemplateScreen() {
                   <Text style={[styles.addImageText, { color: '#2196f3' }]}>Ordner verknüpfen</Text>
                 </TouchableOpacity>
               )}
+            </View>
+
+            {/* Vorschau-Galerie (nur zur Beratung, nicht gedruckt) - NACH Referenz, mehr Platz */}
+            <View style={styles.previewFieldColumn}>
+              <Text style={styles.imageLabelTop}>Vorschau</Text>
+              <View style={styles.previewImagesContainer}>
+                {(item.previewImages || []).map((img, idx) => (
+                  <View key={idx} style={styles.imagePreviewContainer}>
+                    <TouchableOpacity onPress={() => openImagePreview(item.previewImages || [], item.text || 'Vorschau', idx)}>
+                      <Image source={{ uri: img }} style={styles.smallThumbnail} resizeMode="contain" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.removeImageBtnSmall} onPress={() => removeImage(path, 'preview', idx)}>
+                      <Ionicons name="close-circle" size={16} color="#f44336" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.addImageBtn} onPress={() => pickImage(path, 'preview')}>
+                  <Ionicons name="images-outline" size={16} color="#ff9800" />
+                  <Text style={styles.addImageText}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1210,6 +1210,11 @@ const styles = StyleSheet.create({
   referenceFieldColumn: {
     alignItems: 'center',
     minWidth: 180,
+  },
+  previewFieldColumn: {
+    alignItems: 'flex-start',
+    flex: 1,
+    minWidth: 120,
   },
   imageLabelTop: {
     fontSize: 10,

@@ -975,14 +975,10 @@ export default function ReferencesScreen() {
                         key={item.id} 
                         style={styles.moveFolderItem} 
                         onPress={() => {
-                          if (hasSubfolders) {
-                            setMoveModalPath([...moveModalPath, item]);
-                            setMoveModalParentId(item.id);
-                          } else {
-                            movePhotoToFolder(item.id);
-                          }
+                          // Immer in den Ordner navigieren (tippen)
+                          setMoveModalPath([...moveModalPath, item]);
+                          setMoveModalParentId(item.id);
                         }}
-                        onLongPress={() => movePhotoToFolder(item.id)}
                       >
                         <Ionicons name="folder" size={20} color="#ffa726" />
                         <Text style={styles.moveFolderName}>{item.name}</Text>

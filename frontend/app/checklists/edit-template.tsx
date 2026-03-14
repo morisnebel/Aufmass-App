@@ -14,7 +14,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
@@ -767,11 +767,17 @@ export default function EditTemplateScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Zwischenablage-Anzeige */}
+    <>
+      <Stack.Screen 
+        options={{ 
+          title: templateId ? 'Checkliste bearbeiten' : 'Checkliste erstellen' 
+        }} 
+      />
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Zwischenablage-Anzeige */}
       {copiedItem && (
         <View style={styles.clipboardBar}>
           <Ionicons name="clipboard" size={16} color="#ff9800" />
@@ -998,6 +1004,7 @@ export default function EditTemplateScreen() {
         </View>
       </Modal>
     </KeyboardAvoidingView>
+    </>
   );
 }
 
@@ -1502,12 +1509,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     flex: 1,
+    minWidth: 100,
   },
   linkedFolderName: {
     fontSize: 12,
     color: '#1976d2',
     fontWeight: '600',
-    maxWidth: 120,
+    flex: 1,
   },
   unlinkBtn: {
     marginLeft: 4,

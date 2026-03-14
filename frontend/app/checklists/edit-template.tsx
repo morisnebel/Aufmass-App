@@ -721,7 +721,6 @@ export default function EditTemplateScreen() {
             </View>
           </View>
         </View>
-        </View>
         
         {/* Anzeige wenn eingeklappt */}
         {hasSubItems && collapsed && (

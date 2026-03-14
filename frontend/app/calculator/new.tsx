@@ -7870,13 +7870,24 @@ export default function AreaCalculatorEditor() {
         </View>
       </Modal>
 
-      {/* Angle Settings Modal - Draggable */}
+      {/* Angle Settings Modal - Draggable - Positioniert links, Hintergrund transparent für Interaktion */}
       <Modal visible={showAngleModal} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { justifyContent: 'flex-start', paddingTop: 80 }]}>
+        <View style={{ flex: 1, pointerEvents: 'box-none' }}>
           <Animated.View 
             style={[
               styles.modalContent, 
-              { maxWidth: 340, transform: angleModalPosition.getTranslateTransform() }
+              { 
+                maxWidth: 300, 
+                position: 'absolute',
+                left: 10,
+                top: 140,
+                transform: angleModalPosition.getTranslateTransform(),
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 10,
+              }
             ]}
           >
             {/* Drag Handle */}

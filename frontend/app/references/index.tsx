@@ -967,8 +967,8 @@ export default function ReferencesScreen() {
               </View>
             )}
             
-            {/* Move here button if in subfolder */}
-            {moveModalParentId && moveModalParentId !== currentFolder?.id && (
+            {/* Move here button if in subfolder and not current folder */}
+            {moveModalParentId && moveModalParentId !== currentFolder?.id && moveModalParentId !== photoToMove?.folder_id && (
               <TouchableOpacity 
                 style={styles.moveHereButton} 
                 onPress={() => movePhotoToFolder(moveModalParentId)}
@@ -980,28 +980,31 @@ export default function ReferencesScreen() {
             
             <ScrollView style={styles.moveFolderList}>
               {allFoldersForMove
-                .filter(f => f.parent_id === moveModalParentId && f.id !== currentFolder?.id)
+                .filter(f => f.parent_id === moveModalParentId)
                 .length === 0 ? (
                 <Text style={styles.noFoldersText}>
                   {moveModalParentId ? 'Keine Unterordner' : 'Keine Ordner vorhanden'}
                 </Text>
               ) : (
                 allFoldersForMove
-                  .filter(f => f.parent_id === moveModalParentId && f.id !== currentFolder?.id)
+                  .filter(f => f.parent_id === moveModalParentId)
                   .map(item => {
                     const hasSubfolders = allFoldersForMove.some(f => f.parent_id === item.id);
+                    const isCurrentFolder = item.id === currentFolder?.id || item.id === photoToMove?.folder_id;
                     return (
                       <TouchableOpacity 
                         key={item.id} 
-                        style={styles.moveFolderItem} 
+                        style={[styles.moveFolderItem, isCurrentFolder && styles.moveFolderItemCurrent]} 
                         onPress={() => {
                           // Immer in den Ordner navigieren (tippen)
                           setMoveModalPath([...moveModalPath, item]);
                           setMoveModalParentId(item.id);
                         }}
                       >
-                        <Ionicons name="folder" size={20} color="#ffa726" />
-                        <Text style={styles.moveFolderName}>{item.name}</Text>
+                        <Ionicons name="folder" size={20} color={isCurrentFolder ? '#999' : '#ffa726'} />
+                        <Text style={[styles.moveFolderName, isCurrentFolder && styles.moveFolderNameCurrent]}>
+                          {item.name}{isCurrentFolder ? ' (aktuell)' : ''}
+                        </Text>
                         {hasSubfolders && (
                           <Ionicons name="chevron-forward" size={18} color="#999" />
                         )}
@@ -1152,7 +1155,9 @@ const styles = StyleSheet.create({
   moveModalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 16, width: '100%', maxWidth: 340, maxHeight: '70%' },
   moveFolderList: { maxHeight: 250 },
   moveFolderItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#eee', gap: 10 },
+  moveFolderItemCurrent: { backgroundColor: '#f5f5f5' },
   moveFolderName: { flex: 1, fontSize: 14, color: '#333' },
+  moveFolderNameCurrent: { color: '#999', fontStyle: 'italic' },
   noFoldersText: { textAlign: 'center', color: '#999', paddingVertical: 16 },
   moveCancelButton: { marginTop: 12, paddingVertical: 10, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center' },
   moveCancelButtonText: { color: '#666', fontSize: 14, fontWeight: '600' },

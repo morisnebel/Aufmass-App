@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -36,6 +36,7 @@ export default function CustomersScreen() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingAddress, setEditingAddress] = useState<ProjectAddress | null>(null);
+  const [addressObjectNumber, setAddressObjectNumber] = useState(''); // OBJ-26001
   const [addressName, setAddressName] = useState('');
   const [addressDescription, setAddressDescription] = useState('');
   const [addressObjectName, setAddressObjectName] = useState('');
@@ -111,6 +112,7 @@ export default function CustomersScreen() {
   };
 
   const resetAddressForm = () => {
+    setAddressObjectNumber('');
     setAddressName('');
     setAddressDescription('');
     setAddressObjectName('');
@@ -125,6 +127,7 @@ export default function CustomersScreen() {
 
   const editAddress = (address: ProjectAddress) => {
     setEditingAddress(address);
+    setAddressObjectNumber(address.object_number || '');
     setAddressName(address.name);
     setAddressDescription(address.description || '');
     setAddressObjectName(address.objectName || '');
@@ -148,7 +151,7 @@ export default function CustomersScreen() {
       // Bestehende Adresse aktualisieren
       const updatedAddresses = addresses.map(a => 
         a.id === editingAddress.id 
-          ? { ...a, name: addressName, description: addressDescription || undefined, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
+          ? { ...a, object_number: addressObjectNumber || a.object_number, name: addressName, description: addressDescription || undefined, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
           : a
       );
       await CustomerService.update(selectedCustomer.id, { 
@@ -156,9 +159,11 @@ export default function CustomersScreen() {
         projectAddresses: updatedAddresses 
       });
     } else {
-      // Neue Adresse hinzufügen
+      // Neue Adresse hinzufügen - automatische Objektnummer generieren
+      const autoObjectNumber = addressObjectNumber || await generateObjectNumber();
       const newAddress: ProjectAddress = {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        object_number: autoObjectNumber,
         name: addressName,
         description: addressDescription || undefined,
         objectName: addressObjectName || undefined,
@@ -607,7 +612,12 @@ export default function CustomersScreen() {
                     style={styles.addressItemContent}
                     onPress={() => goToAufmass(address)}
                   >
-                    <Text style={styles.addressItemName}>{address.name}</Text>
+                    <View style={styles.addressItemHeader}>
+                      {address.object_number && (
+                        <Text style={styles.objectNumberBadge}>{address.object_number}</Text>
+                      )}
+                      <Text style={styles.addressItemName}>{address.name}</Text>
+                    </View>
                     {address.objectName && (
                       <Text style={styles.addressItemObjectName}>{address.objectName}</Text>
                     )}
@@ -667,6 +677,16 @@ export default function CustomersScreen() {
               <Text style={styles.addressFormTitle}>
                 {editingAddress ? 'Adresse bearbeiten' : 'Neue Adresse hinzufügen'}
               </Text>
+              
+              <Text style={styles.fieldLabel}>Objektnummer (optional)</Text>
+              <TextInput
+                style={styles.addressInput}
+                placeholder="Wird automatisch vergeben (z.B. OBJ-26001)"
+                value={addressObjectNumber}
+                onChangeText={setAddressObjectNumber}
+                placeholderTextColor="#999"
+              />
+              <Text style={styles.fieldHint}>Leer lassen für automatische Vergabe</Text>
               
               <Text style={styles.fieldLabel}>Bezeichnung *</Text>
               <TextInput
@@ -1181,6 +1201,13 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  fieldHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
   addressList: {
     flex: 1,
     padding: 16,
@@ -1199,6 +1226,20 @@ const styles = StyleSheet.create({
   },
   addressItemContent: {
     flex: 1,
+  },
+  addressItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  objectNumberBadge: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#ff9800',
+    backgroundColor: '#fff3e0',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 3,
   },
   addressItemName: {
     fontSize: 15,

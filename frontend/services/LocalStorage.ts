@@ -189,6 +189,7 @@ const setItems = async <T>(key: string, items: T[]): Promise<void> => {
 // ============ CUSTOMERS ============
 export interface ProjectAddress {
   id: string;
+  object_number?: string; // OBJ-26001 format - auto-generated
   name: string; // Bezeichnung z.B. "Haupthaus", "Garage"
   description?: string; // Beschreibung
   objectName?: string; // Objektname
@@ -264,6 +265,32 @@ const generateProjectNumber = async (): Promise<string> => {
       const numPart = p.project_number?.substring(prefix.length) || '0';
       return parseInt(numPart, 10) || 0;
     });
+  
+  const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+  return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+};
+
+// Helper function to generate next object number
+export const generateObjectNumber = async (): Promise<string> => {
+  const yearPrefix = new Date().getFullYear().toString().slice(-2); // e.g., "26" for 2026
+  const prefix = `OBJ-${yearPrefix}`;
+  
+  const customers = await getItems<Customer>(KEYS.CUSTOMERS);
+  const existingNumbers: number[] = [];
+  
+  // Collect all object numbers from all customers' project addresses
+  for (const customer of customers) {
+    const addresses = customer.projectAddresses || [];
+    for (const addr of addresses) {
+      if (addr.object_number?.startsWith(prefix)) {
+        const numPart = addr.object_number.substring(prefix.length);
+        const num = parseInt(numPart, 10);
+        if (!isNaN(num)) {
+          existingNumbers.push(num);
+        }
+      }
+    }
+  }
   
   const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
   return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;

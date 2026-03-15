@@ -913,15 +913,10 @@ export default function CustomersScreen() {
                         <View style={styles.projectItemActions}>
                           <TouchableOpacity
                             style={styles.projectEditButton}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              startEditProject(project);
-                            }}
+                            onPress={() => startEditProject(project)}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           >
-                            <Ionicons name="pencil" size={18} color="#1976d2" />
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => navigateToProject(project)}>
-                            <Ionicons name="chevron-forward" size={20} color="#999" />
+                            <Ionicons name="create-outline" size={22} color="#1976d2" />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1465,9 +1460,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   projectEditButton: {
-    padding: 8,
+    padding: 10,
     backgroundColor: '#e3f2fd',
     borderRadius: 8,
+    marginLeft: 10,
   },
   projectEditForm: {
     padding: 14,

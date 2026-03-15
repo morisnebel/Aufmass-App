@@ -306,7 +306,15 @@ export default function CustomersScreen() {
   };
 
   // Project Management Functions
-  const openProjectsModal = (customer: Customer) => {
+  const openProjectsModal = async (customer: Customer) => {
+    // Reload projects to ensure we have the latest data
+    try {
+      const projectData = await ProjectService.getAll();
+      setProjects(projectData);
+      console.log('Projects loaded for modal:', projectData.filter(p => p.customer_id === customer.id));
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
     setProjectsCustomer(customer);
     setEditingProject(null);
     setShowProjectsModal(true);
@@ -419,32 +427,38 @@ export default function CustomersScreen() {
       </TouchableOpacity>
       {!selectMode && (
       <View style={styles.customerActions}>
-        {/* Projekte-Button */}
+        {/* Projekte-Button mit Label */}
         <TouchableOpacity
-          style={styles.projectsButton}
+          style={styles.actionButtonWithLabel}
           onPress={() => openProjectsModal(item)}
         >
-          <Ionicons name="folder-open" size={22} color="#9c27b0" />
-          {projects.filter(p => p.customer_id === item.id).length > 0 && (
-            <View style={styles.projectsBadge}>
-              <Text style={styles.projectsBadgeText}>
-                {projects.filter(p => p.customer_id === item.id).length}
-              </Text>
-            </View>
-          )}
+          <View style={styles.iconContainer}>
+            <Ionicons name="folder-open" size={22} color="#9c27b0" />
+            {projects.filter(p => p.customer_id === item.id).length > 0 && (
+              <View style={styles.projectsBadge}>
+                <Text style={styles.projectsBadgeText}>
+                  {projects.filter(p => p.customer_id === item.id).length}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.actionButtonLabel}>Projekte</Text>
         </TouchableOpacity>
         
-        {/* Adressen-Button */}
+        {/* Objekte/Adressen-Button mit Label */}
         <TouchableOpacity
-          style={styles.addressButton}
+          style={styles.actionButtonWithLabel}
           onPress={() => openAddressModal(item)}
         >
-          <Ionicons name="home" size={22} color="#ff9800" />
-          {(item.projectAddresses?.length || 0) > 0 && (
-            <View style={styles.addressBadge}>
-              <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
-            </View>
-          )}
+          <View style={styles.iconContainer}>
+            <Ionicons name="home" size={22} color="#ff9800" />
+            {(item.projectAddresses?.length || 0) > 0 && (
+              <View style={styles.addressBadge}>
+                <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.actionButtonLabel}>Objekte</Text>
         </TouchableOpacity>
         
         {/* Neues Projekt Button */}
@@ -876,11 +890,11 @@ export default function CustomersScreen() {
                       </View>
                     ) : (
                       // View Mode
-                      <TouchableOpacity
-                        style={styles.projectItemContent}
-                        onPress={() => navigateToProject(project)}
-                      >
-                        <View style={styles.projectItemInfo}>
+                      <View style={styles.projectItemContent}>
+                        <TouchableOpacity
+                          style={styles.projectItemInfo}
+                          onPress={() => navigateToProject(project)}
+                        >
                           <View style={styles.projectItemHeader}>
                             {project.project_number && (
                               <Text style={styles.projectItemNumber}>{project.project_number}</Text>
@@ -895,17 +909,22 @@ export default function CustomersScreen() {
                           <Text style={styles.projectItemStatus}>
                             Status: {project.status}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                         <View style={styles.projectItemActions}>
                           <TouchableOpacity
                             style={styles.projectEditButton}
-                            onPress={() => startEditProject(project)}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              startEditProject(project);
+                            }}
                           >
                             <Ionicons name="pencil" size={18} color="#1976d2" />
                           </TouchableOpacity>
-                          <Ionicons name="chevron-forward" size={20} color="#999" />
+                          <TouchableOpacity onPress={() => navigateToProject(project)}>
+                            <Ionicons name="chevron-forward" size={20} color="#999" />
+                          </TouchableOpacity>
                         </View>
-                      </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 ))
@@ -1329,6 +1348,20 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   // Projects Button and Modal Styles
+  actionButtonWithLabel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  iconContainer: {
+    position: 'relative',
+    padding: 4,
+  },
+  actionButtonLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+  },
   projectsButton: {
     padding: 8,
     position: 'relative',

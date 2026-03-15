@@ -797,10 +797,10 @@ export default function CustomersScreen() {
         transparent={true}
         onRequestClose={() => setShowProjectsModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+        <View style={styles.projectsModalOverlay}>
+          <View style={styles.projectsModalContent}>
+            <View style={styles.projectsModalHeader}>
+              <Text style={styles.projectsModalTitle}>
                 Projekte von {projectsCustomer?.name}
               </Text>
               <TouchableOpacity 
@@ -808,13 +808,13 @@ export default function CustomersScreen() {
                   setShowProjectsModal(false);
                   cancelEditProject();
                 }}
-                style={styles.modalClose}
+                style={styles.projectsModalClose}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close-circle" size={28} color="#666" />
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.projectsScrollView}>
+            <ScrollView style={styles.projectsScrollView} contentContainerStyle={styles.projectsScrollContent}>
               {getCustomerProjects().length === 0 ? (
                 <View style={styles.noProjectsContainer}>
                   <Ionicons name="folder-open-outline" size={48} color="#ccc" />
@@ -1380,7 +1380,40 @@ const styles = StyleSheet.create({
   },
   projectsScrollView: {
     flex: 1,
+  },
+  projectsScrollContent: {
     padding: 16,
+  },
+  // Projects Modal Styles
+  projectsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 60,
+  },
+  projectsModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    flex: 1,
+    maxHeight: '80%',
+  },
+  projectsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  projectsModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  projectsModalClose: {
+    padding: 4,
   },
   noProjectsContainer: {
     alignItems: 'center',

@@ -981,6 +981,7 @@ export default function ProjectDetailScreen() {
     const bauherrEmail = project?.bauherr_email || customer?.email || '';
     
     // Build objekt info - alle Felder
+    const objektNumber = project?.objekt_number || ''; // OBJ-26001
     const objektName = project?.objekt_name || '';
     const objektAddressName = project?.objekt_address_name || ''; // z.B. "Haupthaus"
     const objektStreet = project?.objekt_street || '';
@@ -3121,9 +3122,12 @@ export default function ProjectDetailScreen() {
               <span class="info-label">Status:</span>
               <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
-            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail) ? `
+            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 9px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px;">Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}</h4>
+                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 9px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px;">
+                  ${objektNumber ? `<span style="font-size: 8px; font-weight: 600; color: #ff9800; background: #fff3e0; padding: 1px 3px; border-radius: 2px; margin-right: 4px;">${objektNumber}</span>` : ''}
+                  Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}
+                </h4>
                 ${objektName ? `
                   <div class="info-row">
                     <span class="info-label">Name:</span>

@@ -48,6 +48,15 @@ export default function CustomersScreen() {
   
   // Projects für Aufmaß-Navigation
   const [projects, setProjects] = useState<Project[]>([]);
+  
+  // Projects Modal state
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [projectsCustomer, setProjectsCustomer] = useState<Customer | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editProjectNumber, setEditProjectNumber] = useState('');
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectDescription, setEditProjectDescription] = useState('');
+  const [savingProject, setSavingProject] = useState(false);
   const loadCustomers = async () => {
     try {
       const [customerData, projectData] = await Promise.all([
@@ -296,6 +305,68 @@ export default function CustomersScreen() {
     }
   };
 
+  // Project Management Functions
+  const openProjectsModal = (customer: Customer) => {
+    setProjectsCustomer(customer);
+    setEditingProject(null);
+    setShowProjectsModal(true);
+  };
+
+  const getCustomerProjects = () => {
+    if (!projectsCustomer) return [];
+    return projects.filter(p => p.customer_id === projectsCustomer.id);
+  };
+
+  const startEditProject = (project: Project) => {
+    setEditingProject(project);
+    setEditProjectNumber(project.project_number || '');
+    setEditProjectName(project.name || '');
+    setEditProjectDescription(project.description || '');
+  };
+
+  const cancelEditProject = () => {
+    setEditingProject(null);
+    setEditProjectNumber('');
+    setEditProjectName('');
+    setEditProjectDescription('');
+  };
+
+  const saveProjectChanges = async () => {
+    if (!editingProject) return;
+    
+    if (!editProjectName.trim()) {
+      Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');
+      return;
+    }
+    
+    setSavingProject(true);
+    try {
+      await ProjectService.update(editingProject.id, {
+        ...editingProject,
+        project_number: editProjectNumber || undefined,
+        name: editProjectName,
+        description: editProjectDescription || undefined,
+      });
+      
+      // Reload projects
+      const projectData = await ProjectService.getAll();
+      setProjects(projectData);
+      
+      cancelEditProject();
+      Alert.alert('Erfolg', 'Projekt wurde aktualisiert');
+    } catch (error) {
+      console.error('Error saving project:', error);
+      Alert.alert('Fehler', 'Projekt konnte nicht gespeichert werden');
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  const navigateToProject = (project: Project) => {
+    setShowProjectsModal(false);
+    router.push(`/projects/${project.id}`);
+  };
+
   const filteredCustomers = customers.filter(customer =>
     customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -348,6 +419,21 @@ export default function CustomersScreen() {
       </TouchableOpacity>
       {!selectMode && (
       <View style={styles.customerActions}>
+        {/* Projekte-Button */}
+        <TouchableOpacity
+          style={styles.projectsButton}
+          onPress={() => openProjectsModal(item)}
+        >
+          <Ionicons name="folder-open" size={22} color="#9c27b0" />
+          {projects.filter(p => p.customer_id === item.id).length > 0 && (
+            <View style={styles.projectsBadge}>
+              <Text style={styles.projectsBadgeText}>
+                {projects.filter(p => p.customer_id === item.id).length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        
         {/* Adressen-Button */}
         <TouchableOpacity
           style={styles.addressButton}
@@ -685,6 +771,145 @@ export default function CustomersScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Projects Modal */}
+      <Modal
+        visible={showProjectsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowProjectsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Projekte von {projectsCustomer?.name}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowProjectsModal(false);
+                  cancelEditProject();
+                }}
+                style={styles.modalClose}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.projectsScrollView}>
+              {getCustomerProjects().length === 0 ? (
+                <View style={styles.noProjectsContainer}>
+                  <Ionicons name="folder-open-outline" size={48} color="#ccc" />
+                  <Text style={styles.noProjectsText}>Keine Projekte vorhanden</Text>
+                  <TouchableOpacity
+                    style={styles.createProjectButton}
+                    onPress={() => {
+                      setShowProjectsModal(false);
+                      router.push(`/projects/new?customer_id=${projectsCustomer?.id}`);
+                    }}
+                  >
+                    <Ionicons name="add-circle" size={20} color="#fff" />
+                    <Text style={styles.createProjectButtonText}>Neues Projekt erstellen</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                getCustomerProjects().map((project) => (
+                  <View key={project.id} style={styles.projectItem}>
+                    {editingProject?.id === project.id ? (
+                      // Edit Mode
+                      <View style={styles.projectEditForm}>
+                        <Text style={styles.projectEditLabel}>Projektnummer</Text>
+                        <TextInput
+                          style={styles.projectEditInput}
+                          placeholder="z.B. PR-26001"
+                          value={editProjectNumber}
+                          onChangeText={setEditProjectNumber}
+                          placeholderTextColor="#999"
+                        />
+                        
+                        <Text style={styles.projectEditLabel}>Projektname *</Text>
+                        <TextInput
+                          style={styles.projectEditInput}
+                          placeholder="Projektname"
+                          value={editProjectName}
+                          onChangeText={setEditProjectName}
+                          placeholderTextColor="#999"
+                        />
+                        
+                        <Text style={styles.projectEditLabel}>Beschreibung</Text>
+                        <TextInput
+                          style={[styles.projectEditInput, styles.projectEditTextarea]}
+                          placeholder="Beschreibung"
+                          value={editProjectDescription}
+                          onChangeText={setEditProjectDescription}
+                          multiline
+                          numberOfLines={3}
+                          placeholderTextColor="#999"
+                        />
+                        
+                        <View style={styles.projectEditButtons}>
+                          <TouchableOpacity
+                            style={styles.projectCancelButton}
+                            onPress={cancelEditProject}
+                          >
+                            <Text style={styles.projectCancelButtonText}>Abbrechen</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.projectSaveButton}
+                            onPress={saveProjectChanges}
+                            disabled={savingProject}
+                          >
+                            {savingProject ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <>
+                                <Ionicons name="checkmark" size={18} color="#fff" />
+                                <Text style={styles.projectSaveButtonText}>Speichern</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      // View Mode
+                      <TouchableOpacity
+                        style={styles.projectItemContent}
+                        onPress={() => navigateToProject(project)}
+                      >
+                        <View style={styles.projectItemInfo}>
+                          <View style={styles.projectItemHeader}>
+                            {project.project_number && (
+                              <Text style={styles.projectItemNumber}>{project.project_number}</Text>
+                            )}
+                            <Text style={styles.projectItemName}>{project.name}</Text>
+                          </View>
+                          {project.description && (
+                            <Text style={styles.projectItemDescription} numberOfLines={1}>
+                              {project.description}
+                            </Text>
+                          )}
+                          <Text style={styles.projectItemStatus}>
+                            Status: {project.status}
+                          </Text>
+                        </View>
+                        <View style={styles.projectItemActions}>
+                          <TouchableOpacity
+                            style={styles.projectEditButton}
+                            onPress={() => startEditProject(project)}
+                          >
+                            <Ionicons name="pencil" size={18} color="#1976d2" />
+                          </TouchableOpacity>
+                          <Ionicons name="chevron-forward" size={20} color="#999" />
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1102,5 +1327,166 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginLeft: 8,
+  },
+  // Projects Button and Modal Styles
+  projectsButton: {
+    padding: 8,
+    position: 'relative',
+  },
+  projectsBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#9c27b0',
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  projectsBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  projectsScrollView: {
+    flex: 1,
+    padding: 16,
+  },
+  noProjectsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  noProjectsText: {
+    color: '#999',
+    fontSize: 16,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  createProjectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4caf50',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  createProjectButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  projectItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  projectItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+  },
+  projectItemInfo: {
+    flex: 1,
+  },
+  projectItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  projectItemNumber: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4caf50',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  projectItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flexShrink: 1,
+  },
+  projectItemDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+  },
+  projectItemStatus: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  projectItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  projectEditButton: {
+    padding: 8,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+  },
+  projectEditForm: {
+    padding: 14,
+  },
+  projectEditLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  projectEditInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    backgroundColor: '#fff',
+  },
+  projectEditTextarea: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  projectEditButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 16,
+  },
+  projectCancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  projectCancelButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  projectSaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#1976d2',
+    gap: 6,
+  },
+  projectSaveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

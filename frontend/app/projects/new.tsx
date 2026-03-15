@@ -84,6 +84,7 @@ function extractContactData(contact: Contacts.Contact) {
 export default function NewProjectScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ customer_id?: string }>();
+  const [projectNumber, setProjectNumber] = useState(''); // PR-26001 etc.
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -617,6 +618,7 @@ export default function NewProjectScreen() {
         description: description || undefined,
         customer_id: customerId,
         status: 'aktiv',
+        project_number: projectNumber || undefined,
         bauherr_name: selectedCustomer?.name || undefined,
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,
@@ -662,6 +664,17 @@ export default function NewProjectScreen() {
     >
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Projektnummer (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Wird automatisch vergeben (z.B. PR-26001)"
+              value={projectNumber}
+              onChangeText={setProjectNumber}
+            />
+            <Text style={styles.fieldHint}>Leer lassen für automatische Vergabe</Text>
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Projektname *</Text>
             <TextInput
@@ -1853,5 +1866,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

@@ -325,7 +325,12 @@ export default function CustomersScreen() {
           </Text>
         </View>
         <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{item.name || 'Unbekannt'}</Text>
+          <View style={styles.customerNameRow}>
+            {item.customer_number && (
+              <Text style={styles.customerNumber}>{item.customer_number}</Text>
+            )}
+            <Text style={styles.customerName}>{item.name || 'Unbekannt'}</Text>
+          </View>
           {item.email && (
             <Text style={styles.customerDetail}>
               <Ionicons name="mail" size={12} color="#666" /> {item.email}
@@ -786,11 +791,25 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  customerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  customerNumber: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1976d2',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   customerName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 2,
   },
   customerDetail: {
     fontSize: 13,

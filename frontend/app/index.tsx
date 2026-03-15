@@ -411,7 +411,7 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.versionCode}>Aufmassprofi_15.03.2026_08:05</Text>
+        <Text style={styles.versionCode}>Aufmassprofi_15.03.2026_08:45</Text>
       </View>
 
       {/* Suchleiste */}

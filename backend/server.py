@@ -44,6 +44,7 @@ def serialize_doc(doc):
 # Models
 class Customer(BaseModel):
     id: Optional[str] = None
+    customer_number: Optional[str] = None  # KD-25001 format
     name: str
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -118,6 +119,7 @@ class CompanySettings(BaseModel):
 
 class Project(BaseModel):
     id: Optional[str] = None
+    project_number: Optional[str] = None  # PR-25001 format
     customer_id: str
     name: str
     description: Optional[str] = None
@@ -140,10 +142,66 @@ class Project(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+# Helper functions for auto-generating numbers
+async def generate_customer_number() -> str:
+    """Generate next customer number in format KD-YYNNN (e.g., KD-25001)"""
+    year_prefix = datetime.utcnow().strftime("%y")  # e.g., "25" for 2025
+    prefix = f"KD-{year_prefix}"
+    
+    # Find the highest existing number for this year
+    customers = await db.customers.find(
+        {"customer_number": {"$regex": f"^{prefix}"}}
+    ).to_list(1000)
+    
+    if not customers:
+        return f"{prefix}001"
+    
+    # Extract numbers and find max
+    max_num = 0
+    for c in customers:
+        num_str = c.get("customer_number", "")
+        if num_str.startswith(prefix):
+            try:
+                num = int(num_str[len(prefix):])
+                max_num = max(max_num, num)
+            except ValueError:
+                pass
+    
+    return f"{prefix}{str(max_num + 1).zfill(3)}"
+
+async def generate_project_number() -> str:
+    """Generate next project number in format PR-YYNNN (e.g., PR-25001)"""
+    year_prefix = datetime.utcnow().strftime("%y")  # e.g., "25" for 2025
+    prefix = f"PR-{year_prefix}"
+    
+    # Find the highest existing number for this year
+    projects = await db.projects.find(
+        {"project_number": {"$regex": f"^{prefix}"}}
+    ).to_list(1000)
+    
+    if not projects:
+        return f"{prefix}001"
+    
+    # Extract numbers and find max
+    max_num = 0
+    for p in projects:
+        num_str = p.get("project_number", "")
+        if num_str.startswith(prefix):
+            try:
+                num = int(num_str[len(prefix):])
+                max_num = max(max_num, num)
+            except ValueError:
+                pass
+    
+    return f"{prefix}{str(max_num + 1).zfill(3)}"
+
 # Customer endpoints
 @api_router.post("/customers", response_model=Customer)
 async def create_customer(customer: Customer):
     customer_dict = customer.dict(exclude={'id'})
+    # Auto-generate customer number if not provided
+    if not customer_dict.get('customer_number'):
+        customer_dict['customer_number'] = await generate_customer_number()
     result = await db.customers.insert_one(customer_dict)
     customer_dict['id'] = str(result.inserted_id)
     return Customer(**customer_dict)
@@ -183,6 +241,9 @@ async def delete_customer(customer_id: str):
 @api_router.post("/projects", response_model=Project)
 async def create_project(project: Project):
     project_dict = project.dict(exclude={'id'})
+    # Auto-generate project number if not provided
+    if not project_dict.get('project_number'):
+        project_dict['project_number'] = await generate_project_number()
     result = await db.projects.insert_one(project_dict)
     project_dict['id'] = str(result.inserted_id)
     return Project(**project_dict)

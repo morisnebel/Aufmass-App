@@ -81,6 +81,7 @@ export default function NewCustomerScreen() {
   const router = useRouter();
   
   // Form state - neue erweiterte Felder
+  const [customerNumber, setCustomerNumber] = useState(''); // KD-26001 etc.
   const [salutation, setSalutation] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -282,6 +283,7 @@ export default function NewCustomerScreen() {
         city: city || undefined,
         address: fullAddress || undefined,
         importedContactId: importedContactId || undefined,
+        customer_number: customerNumber || undefined,
       });
       
       // Handle contact synchronization
@@ -443,6 +445,18 @@ export default function NewCustomerScreen() {
             <Ionicons name="people" size={20} color="#1976d2" />
             <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
           </Pressable>
+
+          {/* Kundennummer */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Kundennummer (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Wird automatisch vergeben (z.B. KD-26001)"
+              value={customerNumber}
+              onChangeText={setCustomerNumber}
+            />
+            <Text style={styles.fieldHint}>Leer lassen für automatische Vergabe</Text>
+          </View>
 
           {/* Anrede */}
           <View style={styles.inputGroup}>
@@ -934,5 +948,11 @@ const styles = StyleSheet.create({
   salutationOptionSelected: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

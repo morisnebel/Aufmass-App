@@ -215,6 +215,7 @@ export interface Customer {
   city?: string; // Ort
   address?: string; // Legacy: kombinierte Adresse (für Abwärtskompatibilität)
   notes?: string;
+  customer_number?: string; // KD-25001 format - auto-generated
   importedContactId?: string; // ID des importierten Telefonkontakts für Synchronisation
   projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;
@@ -234,6 +235,40 @@ export function generateFullAddress(street?: string, zip?: string, city?: string
   return [addressLine, cityLine].filter(Boolean).join(', ');
 }
 
+// Helper function to generate next customer number
+const generateCustomerNumber = async (): Promise<string> => {
+  const yearPrefix = new Date().getFullYear().toString().slice(-2); // e.g., "26" for 2026
+  const prefix = `KD-${yearPrefix}`;
+  
+  const customers = await getItems<Customer>(KEYS.CUSTOMERS);
+  const existingNumbers = customers
+    .filter(c => c.customer_number?.startsWith(prefix))
+    .map(c => {
+      const numPart = c.customer_number?.substring(prefix.length) || '0';
+      return parseInt(numPart, 10) || 0;
+    });
+  
+  const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+  return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+};
+
+// Helper function to generate next project number
+const generateProjectNumber = async (): Promise<string> => {
+  const yearPrefix = new Date().getFullYear().toString().slice(-2); // e.g., "26" for 2026
+  const prefix = `PR-${yearPrefix}`;
+  
+  const projects = await getItems<Project>(KEYS.PROJECTS);
+  const existingNumbers = projects
+    .filter(p => p.project_number?.startsWith(prefix))
+    .map(p => {
+      const numPart = p.project_number?.substring(prefix.length) || '0';
+      return parseInt(numPart, 10) || 0;
+    });
+  
+  const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+  return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+};
+
 export const CustomerService = {
   getAll: async (): Promise<Customer[]> => {
     return getItems<Customer>(KEYS.CUSTOMERS);
@@ -246,9 +281,12 @@ export const CustomerService = {
 
   create: async (data: Omit<Customer, 'id' | 'created_at' | 'updated_at'>): Promise<Customer> => {
     const customers = await getItems<Customer>(KEYS.CUSTOMERS);
+    // Auto-generate customer number if not provided
+    const customerNumber = data.customer_number || await generateCustomerNumber();
     const newCustomer: Customer = {
       ...data,
       id: generateId(),
+      customer_number: customerNumber,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -277,6 +315,7 @@ export const CustomerService = {
 // ============ PROJECTS ============
 export interface Project {
   id: string;
+  project_number?: string; // PR-25001 format - auto-generated
   customer_id: string;
   name: string;
   description?: string;
@@ -325,9 +364,12 @@ export const ProjectService = {
 
   create: async (data: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<Project> => {
     const projects = await getItems<Project>(KEYS.PROJECTS);
+    // Auto-generate project number if not provided
+    const projectNumber = data.project_number || await generateProjectNumber();
     const newProject: Project = {
       ...data,
       id: generateId(),
+      project_number: projectNumber,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

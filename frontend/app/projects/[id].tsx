@@ -36,6 +36,7 @@ const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
 
 interface Project {
   id: string;
+  project_number?: string; // PR-26001 format
   name: string;
   description?: string;
   customer_id: string;
@@ -66,6 +67,7 @@ interface Project {
 
 interface Customer {
   id: string;
+  customer_number?: string; // KD-26001 format
   name: string;
   email?: string;
   phone?: string;
@@ -3092,7 +3094,10 @@ export default function ProjectDetailScreen() {
             <h3>Projekt</h3>
             <div class="info-row">
               <span class="info-label">Name:</span>
-              <span class="info-value">${project?.name || '-'}</span>
+              <span class="info-value">
+                ${project?.project_number ? `<span style="font-size: 9px; font-weight: 600; color: #4caf50; background: #e8f5e9; padding: 1px 4px; border-radius: 3px; margin-right: 6px;">${project.project_number}</span>` : ''}
+                ${project?.name || '-'}
+              </span>
             </div>
             ${project?.description ? `
               <div class="info-row">
@@ -3152,7 +3157,10 @@ export default function ProjectDetailScreen() {
             ${bauherrName ? `
               <div class="info-row">
                 <span class="info-label">Name:</span>
-                <span class="info-value">${bauherrName}</span>
+                <span class="info-value">
+                  ${customer?.customer_number ? `<span style="font-size: 8px; font-weight: 600; color: #1976d2; background: #e3f2fd; padding: 1px 3px; border-radius: 2px; margin-right: 4px;">${customer.customer_number}</span>` : ''}
+                  ${bauherrName}
+                </span>
               </div>
             ` : ''}
             ${bauherrStreet ? `
@@ -3842,7 +3850,12 @@ export default function ProjectDetailScreen() {
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Projekt:</Text>
-                <Text style={styles.infoValue}>{project.name}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1}}>
+                  {project.project_number && (
+                    <Text style={{fontSize: 11, fontWeight: '600', color: '#4caf50', backgroundColor: '#e8f5e9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4}}>{project.project_number}</Text>
+                  )}
+                  <Text style={styles.infoValue}>{project.name}</Text>
+                </View>
               </View>
               {project.description && (
                 <View style={styles.infoRow}>
@@ -3864,7 +3877,12 @@ export default function ProjectDetailScreen() {
               <Text style={styles.subSectionTitle}>Bauherr</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Name:</Text>
-                <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1}}>
+                  {customer?.customer_number && (
+                    <Text style={{fontSize: 10, fontWeight: '600', color: '#1976d2', backgroundColor: '#e3f2fd', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3}}>{customer.customer_number}</Text>
+                  )}
+                  <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
+                </View>
               </View>
               {(project?.bauherr_phone || customer?.phone) && (
                 <View style={styles.infoRow}>

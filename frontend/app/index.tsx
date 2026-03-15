@@ -355,6 +355,7 @@ export default function HomeScreen() {
     const statusColor = getStatusColor(item.status);
     // Kundenname: erst aus Customer, dann aus bauherr_name des Projekts
     const displayCustomerName = customer?.name || (item as any).bauherr_name;
+    const customerNumber = customer?.customer_number;
     return (
       <TouchableOpacity
         style={styles.projectCard}
@@ -363,9 +364,19 @@ export default function HomeScreen() {
         <View style={styles.projectHeader}>
           <Ionicons name="folder" size={24} color={statusColor} />
           <View style={styles.projectInfo}>
-            <Text style={styles.projectName}>{item.name}</Text>
+            <View style={styles.projectNameRow}>
+              {item.project_number && (
+                <Text style={styles.projectNumber}>{item.project_number}</Text>
+              )}
+              <Text style={styles.projectName}>{item.name}</Text>
+            </View>
             {displayCustomerName && (
-              <Text style={styles.customerName}>{displayCustomerName}</Text>
+              <View style={styles.customerNameRow}>
+                {customerNumber && (
+                  <Text style={styles.customerNumberSmall}>{customerNumber}</Text>
+                )}
+                <Text style={styles.customerName}>{displayCustomerName}</Text>
+              </View>
             )}
           </View>
           <TouchableOpacity
@@ -411,7 +422,7 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.versionCode}>Aufmassprofi_15.03.2026_08:45</Text>
+        <Text style={styles.versionCode}>Aufmassprofi_15.03.2026_09:00</Text>
       </View>
 
       {/* Suchleiste */}
@@ -941,15 +952,44 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  projectNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  projectNumber: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4caf50',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   projectName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    flexShrink: 1,
+  },
+  customerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  customerNumberSmall: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#1976d2',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
   },
   customerName: {
     fontSize: 14,
     color: '#666',
-    marginTop: 2,
   },
   deleteButton: {
     padding: 8,

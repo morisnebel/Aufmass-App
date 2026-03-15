@@ -54,6 +54,7 @@ interface Project {
   bauherr_plz?: string;
   bauherr_city?: string;
   // Objektadresse (separate Felder)
+  objekt_number?: string; // OBJ-26001 format
   objekt_name?: string;
   objekt_description?: string; // Beschreibung der Objektadresse
   objekt_street?: string;
@@ -185,10 +186,12 @@ export default function ProjectDetailScreen() {
   
   // Project edit modal state
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [editProjectNumber, setEditProjectNumber] = useState(''); // PR-26001
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState('');
   // Bauherr edit fields (separate) - erweitert für Anrede, Vorname, Nachname
+  const [editCustomerNumber, setEditCustomerNumber] = useState(''); // KD-26001
   const [editBauherrSalutation, setEditBauherrSalutation] = useState('');
   const [editBauherrFirstName, setEditBauherrFirstName] = useState('');
   const [editBauherrLastName, setEditBauherrLastName] = useState('');
@@ -201,6 +204,7 @@ export default function ProjectDetailScreen() {
   // Anrede-Picker Modal für Bauherr
   const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
   // Objektadresse edit fields (separate)
+  const [editObjektNumber, setEditObjektNumber] = useState(''); // OBJ-26001
   const [editObjektName, setEditObjektName] = useState('');
   const [editObjektDescription, setEditObjektDescription] = useState('');
   const [editObjektStreet, setEditObjektStreet] = useState('');
@@ -647,6 +651,8 @@ export default function ProjectDetailScreen() {
   // Open edit project modal with current values
   const openEditProjectModal = () => {
     if (project) {
+      // Project numbers
+      setEditProjectNumber(project.project_number || '');
       setEditProjectName(project.name);
       setEditProjectDescription(project.description || '');
       setEditProjectStatus(project.status);
@@ -654,7 +660,8 @@ export default function ProjectDetailScreen() {
       // Parse customer address as fallback
       const customerAddr = parseCustomerAddress(customer?.address);
       
-      // Bauherr data - use project-specific or fall back to customer (mit separaten Feldern)
+      // Customer number and Bauherr data - use project-specific or fall back to customer (mit separaten Feldern)
+      setEditCustomerNumber(customer?.customer_number || '');
       setEditBauherrSalutation(project.bauherr_salutation || customer?.salutation || '');
       setEditBauherrFirstName(project.bauherr_first_name || customer?.firstName || '');
       setEditBauherrLastName(project.bauherr_last_name || customer?.lastName || '');
@@ -666,6 +673,7 @@ export default function ProjectDetailScreen() {
       setEditBauherrCity(project.bauherr_city || customer?.city || customerAddr.city || '');
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
+      setEditObjektNumber(project.objekt_number || '');
       setEditObjektName(project.objekt_name || '');
       setEditObjektDescription(project.objekt_description || '');
       setEditObjektStreet(project.objekt_street || '');
@@ -694,6 +702,7 @@ export default function ProjectDetailScreen() {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
       await ProjectService.update(projectId, {
+        project_number: editProjectNumber || undefined,
         name: editProjectName,
         description: editProjectDescription || undefined,
         status: editProjectStatus,
@@ -710,6 +719,7 @@ export default function ProjectDetailScreen() {
         bauherr_plz: editBauherrPlz || undefined,
         bauherr_city: editBauherrCity || undefined,
         // Objektadresse (separate fields)
+        objekt_number: editObjektNumber || undefined,
         objekt_name: editObjektName || undefined,
         objekt_description: editObjektDescription || undefined,
         objekt_street: editObjektStreet || undefined,
@@ -746,6 +756,7 @@ export default function ProjectDetailScreen() {
               zip: editBauherrPlz || existingCustomer.zip,
               city: editBauherrCity || existingCustomer.city,
               address: newAddress,
+              customer_number: editCustomerNumber || existingCustomer.customer_number,
             });
           }
         } catch (syncError) {
@@ -3918,9 +3929,14 @@ export default function ProjectDetailScreen() {
               {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email) && (
                 <>
                   <View style={styles.sectionDivider} />
-                  <Text style={styles.subSectionTitle}>
-                    Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
-                  </Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                    {project?.objekt_number && (
+                      <Text style={{fontSize: 11, fontWeight: '600', color: '#ff9800', backgroundColor: '#fff3e0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4}}>{project.objekt_number}</Text>
+                    )}
+                    <Text style={styles.subSectionTitle}>
+                      Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
+                    </Text>
+                  </View>
                   {project?.objekt_name && (
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Name:</Text>
@@ -5550,6 +5566,16 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.editSectionTitle}>Projekt</Text>
                   
                   <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>PN (Projektnummer)</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editProjectNumber}
+                      onChangeText={setEditProjectNumber}
+                      placeholder="z.B. PR-26001"
+                    />
+                  </View>
+                  
+                  <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Name *</Text>
                     <TextInput
                       style={styles.compactInput}
@@ -5598,6 +5624,16 @@ export default function ProjectDetailScreen() {
                 {/* Rechte Spalte */}
                 <View style={styles.editFormColumn}>
                   <Text style={styles.editSectionTitle}>Bauherr</Text>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>KN (Kundennummer)</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editCustomerNumber}
+                      onChangeText={setEditCustomerNumber}
+                      placeholder="z.B. KD-26001"
+                    />
+                  </View>
                   
                   <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Anrede</Text>
@@ -5702,6 +5738,16 @@ export default function ProjectDetailScreen() {
                   </View>
 
                   <Text style={styles.editSectionTitle}>Objektadresse (optional)</Text>
+                  
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>OBJ (Objektnummer)</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editObjektNumber}
+                      onChangeText={setEditObjektNumber}
+                      placeholder="z.B. OBJ-26001"
+                    />
+                  </View>
                   
                   <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Name</Text>

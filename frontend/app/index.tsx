@@ -411,6 +411,7 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
+        <Text style={styles.versionCode}>Aufmassprofi_15.03.2026_08:05</Text>
       </View>
 
       {/* Suchleiste */}
@@ -581,6 +582,12 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 20,
+  },
+  versionCode: {
+    color: '#ffffff',
+    fontSize: 12,
+    marginTop: 8,
+    opacity: 0.8,
   },
   searchContainer: {
     flexDirection: 'row',

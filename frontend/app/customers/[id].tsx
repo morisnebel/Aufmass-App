@@ -86,6 +86,7 @@ export default function EditCustomerScreen() {
   const isValidCustomerId = customerId && customerId !== 'index' && customerId !== 'new';
   
   // Form state - neue erweiterte Felder
+  const [customerNumber, setCustomerNumber] = useState('');
   const [salutation, setSalutation] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -149,6 +150,7 @@ export default function EditCustomerScreen() {
       console.log('Loaded customer:', customer);
       
       if (customer && !isImportingRef.current) {
+        setCustomerNumber(customer.customer_number || '');
         setSalutation(customer.salutation || '');
         setFirstName(customer.firstName || '');
         setLastName(customer.lastName || '');
@@ -356,6 +358,7 @@ export default function EditCustomerScreen() {
       }
       
       await CustomerService.update(customerId, {
+        customer_number: customerNumber,
         salutation: salutation,
         firstName: firstName,
         lastName: lastName,
@@ -589,6 +592,24 @@ export default function EditCustomerScreen() {
             <Ionicons name="person-add" size={20} color="#1976d2" />
             <Text style={styles.importButtonText}>Daten importieren / Schnelleingabe</Text>
           </Pressable>
+
+          {/* Kundennummer */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Kundennummer</Text>
+            <View style={styles.customerNumberContainer}>
+              {customerNumber ? (
+                <View style={styles.customerNumberBadge}>
+                  <Text style={styles.customerNumberBadgeText}>{customerNumber}</Text>
+                </View>
+              ) : null}
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="z.B. KD-26001"
+                value={customerNumber}
+                onChangeText={setCustomerNumber}
+              />
+            </View>
+          </View>
 
           {/* Anrede */}
           <View style={styles.inputGroup}>
@@ -1163,6 +1184,23 @@ const styles = StyleSheet.create({
     color: '#4caf50',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Customer Number Styles
+  customerNumberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  customerNumberBadge: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  customerNumberBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
   },
   // Import Options Modal
   modalOverlay: {

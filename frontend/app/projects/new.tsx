@@ -664,15 +664,16 @@ export default function NewProjectScreen() {
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,
         bauherr_address: selectedCustomer?.address || undefined,
-        // Objektadresse
+        // Objektadresse - übernehme object_number von der gespeicherten Adresse
+        objekt_number: selectedProjectAddress?.object_number || undefined,
         objekt_address_name: objektAddressName || savedAddressName || undefined,
-        objekt_name: objektName || undefined,
-        objekt_street: objektStreet || undefined,
-        objekt_plz: objektPlz || undefined,
-        objekt_city: objektCity || undefined,
-        objekt_contact_person: objektContactPerson || undefined,
-        objekt_phone: objektPhone || undefined,
-        objekt_email: objektEmail || undefined,
+        objekt_name: objektName || selectedProjectAddress?.objectName || undefined,
+        objekt_street: objektStreet || selectedProjectAddress?.street || undefined,
+        objekt_plz: objektPlz || selectedProjectAddress?.zip || undefined,
+        objekt_city: objektCity || selectedProjectAddress?.city || undefined,
+        objekt_contact_person: objektContactPerson || selectedProjectAddress?.contactPerson || undefined,
+        objekt_phone: objektPhone || selectedProjectAddress?.phone || undefined,
+        objekt_email: objektEmail || selectedProjectAddress?.email || undefined,
       });
       
       setLoading(false);
@@ -1316,12 +1317,17 @@ export default function NewProjectScreen() {
                     />
                   </View>
                   <View style={styles.addressPickerItemInfo}>
-                    <Text style={[
-                      styles.addressPickerItemName,
-                      selectedProjectAddress?.id === address.id && styles.addressPickerItemNameSelected
-                    ]}>
-                      {address.name}
-                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                      {address.object_number && (
+                        <Text style={{fontSize: 10, fontWeight: '600', color: '#ff9800', backgroundColor: '#fff3e0', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3}}>{address.object_number}</Text>
+                      )}
+                      <Text style={[
+                        styles.addressPickerItemName,
+                        selectedProjectAddress?.id === address.id && styles.addressPickerItemNameSelected
+                      ]}>
+                        {address.name}
+                      </Text>
+                    </View>
                     <Text style={styles.addressPickerItemDetails}>
                       {address.street}
                       {address.street && (address.zip || address.city) ? ', ' : ''}

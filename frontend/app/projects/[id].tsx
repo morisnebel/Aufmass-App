@@ -875,6 +875,7 @@ export default function ProjectDetailScreen() {
                           addr.id === matchingAddress!.id
                             ? { 
                                 ...addr, 
+                                object_number: editObjektNumber || addr.object_number, // Objektnummer synchronisieren
                                 name: editProjectName || addr.name, // Bezeichnung = Projektname (wenn geändert)
                                 objectName: editObjektName || undefined,
                                 description: editProjectDescription || undefined, // Projekt-Beschreibung synchronisieren

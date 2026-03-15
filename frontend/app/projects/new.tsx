@@ -550,30 +550,49 @@ export default function NewProjectScreen() {
       return;
     }
 
+    // Wenn bereits eine gespeicherte Adresse ausgewählt wurde, direkt speichern
+    if (selectedProjectAddress) {
+      saveProject(null);
+      return;
+    }
+
     // Prüfen ob eine neue Objektadresse eingegeben wurde (nicht aus gespeicherten Adressen)
-    const hasNewAddress = (objektStreet || objektPlz || objektCity) && !selectedProjectAddress;
+    const hasNewAddress = (objektStreet || objektPlz || objektCity);
     
     if (hasNewAddress && selectedCustomer) {
-      // Frage ob die Adresse beim Kunden gespeichert werden soll
-      Alert.alert(
-        'Adresse speichern?',
-        'Möchten Sie diese Objektadresse auch beim Kunden für zukünftige Projekte speichern?',
-        [
-          {
-            text: 'Nein',
-            style: 'cancel',
-            onPress: () => saveProject(null),
-          },
-          {
-            text: 'Ja',
-            onPress: () => {
-              // Modal für Adressbezeichnung öffnen
-              setNewAddressName('');
-              setShowSaveAddressModal(true);
-            },
-          },
-        ]
+      // Prüfe ob diese Adresse bereits beim Kunden existiert
+      const existingAddresses = selectedCustomer.projectAddresses || [];
+      const addressAlreadyExists = existingAddresses.some(addr => 
+        addr.street === objektStreet && 
+        addr.zip === objektPlz && 
+        addr.city === objektCity
       );
+      
+      if (addressAlreadyExists) {
+        // Adresse existiert bereits, direkt Projekt erstellen
+        saveProject(null);
+      } else {
+        // Frage ob die Adresse beim Kunden gespeichert werden soll
+        Alert.alert(
+          'Adresse speichern?',
+          'Möchten Sie diese Objektadresse auch beim Kunden für zukünftige Projekte speichern?',
+          [
+            {
+              text: 'Nein',
+              style: 'cancel',
+              onPress: () => saveProject(null),
+            },
+            {
+              text: 'Ja',
+              onPress: () => {
+                // Modal für Adressbezeichnung öffnen
+                setNewAddressName('');
+                setShowSaveAddressModal(true);
+              },
+            },
+          ]
+        );
+      }
     } else {
       saveProject(null);
     }
@@ -592,25 +611,47 @@ export default function NewProjectScreen() {
       let savedAddressName = selectedProjectAddress?.name;
       
       if (saveAddressWithName && selectedCustomer) {
-        const newAddress: ProjectAddress = {
-          id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-          name: saveAddressWithName,
-          objectName: objektName || undefined,
-          street: objektStreet,
-          zip: objektPlz,
-          city: objektCity,
-          contactPerson: objektContactPerson || undefined,
-          phone: objektPhone || undefined,
-          email: objektEmail || undefined,
-        };
-        
-        const existingAddresses = selectedCustomer.projectAddresses || [];
-        await CustomerService.update(selectedCustomer.id, {
-          ...selectedCustomer,
-          projectAddresses: [...existingAddresses, newAddress],
-        });
-        
-        savedAddressName = saveAddressWithName;
+        try {
+          const newAddress: ProjectAddress = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            name: saveAddressWithName,
+            objectName: objektName || undefined,
+            street: objektStreet,
+            zip: objektPlz,
+            city: objektCity,
+            contactPerson: objektContactPerson || undefined,
+            phone: objektPhone || undefined,
+            email: objektEmail || undefined,
+          };
+          
+          const existingAddresses = selectedCustomer.projectAddresses || [];
+          
+          // Prüfe ob Adresse schon existiert (zur Sicherheit)
+          const addressExists = existingAddresses.some(addr => 
+            addr.street === objektStreet && 
+            addr.zip === objektPlz && 
+            addr.city === objektCity
+          );
+          
+          if (!addressExists) {
+            await CustomerService.update(selectedCustomer.id, {
+              ...selectedCustomer,
+              projectAddresses: [...existingAddresses, newAddress],
+            });
+            savedAddressName = saveAddressWithName;
+          } else {
+            // Adresse existiert bereits, verwende den existierenden Namen
+            const existingAddr = existingAddresses.find(addr => 
+              addr.street === objektStreet && 
+              addr.zip === objektPlz && 
+              addr.city === objektCity
+            );
+            savedAddressName = existingAddr?.name || saveAddressWithName;
+          }
+        } catch (addrError) {
+          console.error('Error saving address to customer:', addrError);
+          // Fahre trotzdem mit Projekt-Erstellung fort
+        }
       }
       
       const newProject = await ProjectService.create({
@@ -634,6 +675,8 @@ export default function NewProjectScreen() {
         objekt_email: objektEmail || undefined,
       });
       
+      setLoading(false);
+      
       const successMessage = saveAddressWithName 
         ? 'Projekt wurde erstellt und Adresse beim Kunden gespeichert'
         : 'Projekt wurde erstellt';
@@ -643,9 +686,8 @@ export default function NewProjectScreen() {
       ]);
     } catch (error) {
       console.error('Error creating project:', error);
-      Alert.alert('Fehler', 'Projekt konnte nicht erstellt werden');
-    } finally {
       setLoading(false);
+      Alert.alert('Fehler', 'Projekt konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
     }
   };
 

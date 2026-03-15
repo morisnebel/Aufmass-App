@@ -3105,12 +3105,15 @@ export default function ProjectDetailScreen() {
         <div class="info-grid">
           <div class="info-box">
             <h3>Projekt</h3>
+            ${project?.project_number ? `
+              <div class="info-row">
+                <span class="info-label">Projekt Nr.:</span>
+                <span class="info-value" style="color: #4caf50; font-weight: 600;">${project.project_number}</span>
+              </div>
+            ` : ''}
             <div class="info-row">
               <span class="info-label">Name:</span>
-              <span class="info-value">
-                ${project?.project_number ? `<span style="font-size: 9px; font-weight: 600; color: #4caf50; background: #e8f5e9; padding: 1px 4px; border-radius: 3px; margin-right: 6px;">${project.project_number}</span>` : ''}
-                ${project?.name || '-'}
-              </span>
+              <span class="info-value">${project?.name || '-'}</span>
             </div>
             ${project?.description ? `
               <div class="info-row">
@@ -3125,9 +3128,14 @@ export default function ProjectDetailScreen() {
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
                 <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 9px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px;">
-                  ${objektNumber ? `<span style="font-size: 8px; font-weight: 600; color: #ff9800; background: #fff3e0; padding: 1px 3px; border-radius: 2px; margin-right: 4px;">${objektNumber}</span>` : ''}
                   Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}
                 </h4>
+                ${objektNumber ? `
+                  <div class="info-row">
+                    <span class="info-label">Objekt Nr.:</span>
+                    <span class="info-value" style="color: #ff9800; font-weight: 600;">${objektNumber}</span>
+                  </div>
+                ` : ''}
                 ${objektName ? `
                   <div class="info-row">
                     <span class="info-label">Name:</span>
@@ -3170,13 +3178,16 @@ export default function ProjectDetailScreen() {
           
           <div class="info-box">
             <h3>Bauherr</h3>
+            ${customer?.customer_number ? `
+              <div class="info-row">
+                <span class="info-label">Kunden Nr.:</span>
+                <span class="info-value" style="color: #1976d2; font-weight: 600;">${customer.customer_number}</span>
+              </div>
+            ` : ''}
             ${bauherrName ? `
               <div class="info-row">
                 <span class="info-label">Name:</span>
-                <span class="info-value">
-                  ${customer?.customer_number ? `<span style="font-size: 8px; font-weight: 600; color: #1976d2; background: #e3f2fd; padding: 1px 3px; border-radius: 2px; margin-right: 4px;">${customer.customer_number}</span>` : ''}
-                  ${bauherrName}
-                </span>
+                <span class="info-value">${bauherrName}</span>
               </div>
             ` : ''}
             ${bauherrStreet ? `
@@ -3864,14 +3875,16 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.editButtonText}>Bearbeiten</Text>
                 </TouchableOpacity>
               </View>
+              {/* Projektnummer */}
+              {project.project_number && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Projekt Nr.:</Text>
+                  <Text style={[styles.infoValue, {color: '#4caf50', fontWeight: '600'}]}>{project.project_number}</Text>
+                </View>
+              )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Projekt:</Text>
-                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1}}>
-                  {project.project_number && (
-                    <Text style={{fontSize: 11, fontWeight: '600', color: '#4caf50', backgroundColor: '#e8f5e9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4}}>{project.project_number}</Text>
-                  )}
-                  <Text style={styles.infoValue}>{project.name}</Text>
-                </View>
+                <Text style={styles.infoValue}>{project.name}</Text>
               </View>
               {project.description && (
                 <View style={styles.infoRow}>
@@ -3891,14 +3904,16 @@ export default function ProjectDetailScreen() {
               {/* Bauherr-Daten */}
               <View style={styles.sectionDivider} />
               <Text style={styles.subSectionTitle}>Bauherr</Text>
+              {/* Kundennummer */}
+              {customer?.customer_number && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Kunden Nr.:</Text>
+                  <Text style={[styles.infoValue, {color: '#1976d2', fontWeight: '600'}]}>{customer.customer_number}</Text>
+                </View>
+              )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Name:</Text>
-                <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1}}>
-                  {customer?.customer_number && (
-                    <Text style={{fontSize: 10, fontWeight: '600', color: '#1976d2', backgroundColor: '#e3f2fd', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3}}>{customer.customer_number}</Text>
-                  )}
-                  <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
-                </View>
+                <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
               </View>
               {(project?.bauherr_phone || customer?.phone) && (
                 <View style={styles.infoRow}>
@@ -3931,17 +3946,19 @@ export default function ProjectDetailScreen() {
               )}
               
               {/* Objektadresse (separate Felder) */}
-              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email) && (
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email || project?.objekt_number) && (
                 <>
                   <View style={styles.sectionDivider} />
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                    {project?.objekt_number && (
-                      <Text style={{fontSize: 11, fontWeight: '600', color: '#ff9800', backgroundColor: '#fff3e0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4}}>{project.objekt_number}</Text>
-                    )}
-                    <Text style={styles.subSectionTitle}>
-                      Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
-                    </Text>
-                  </View>
+                  <Text style={styles.subSectionTitle}>
+                    Objektadresse{project?.objekt_address_name ? ` (${project.objekt_address_name})` : ''}
+                  </Text>
+                  {/* Objektnummer */}
+                  {project?.objekt_number && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Objekt Nr.:</Text>
+                      <Text style={[styles.infoValue, {color: '#ff9800', fontWeight: '600'}]}>{project.objekt_number}</Text>
+                    </View>
+                  )}
                   {project?.objekt_name && (
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Name:</Text>

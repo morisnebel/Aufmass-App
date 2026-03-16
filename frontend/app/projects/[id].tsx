@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicate, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicate, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -699,7 +699,14 @@ export default function ProjectDetailScreen() {
       setEditObjektEmail(project.objekt_email || '');
       
       // Projektart-Überschrift
-      setEditProjectType(project.project_type || '');
+      // Wenn Projekt bereits eine Projektart hat, nutze diese
+      // Sonst lade die zuletzt verwendete Projektart
+      if (project.project_type) {
+        setEditProjectType(project.project_type);
+      } else {
+        const lastUsed = await getLastUsedProjectType();
+        setEditProjectType(lastUsed || '');
+      }
       setEditProjectTypeDate(project.project_type_date || '');
       
       setShowEditProjectModal(true);
@@ -825,6 +832,11 @@ export default function ProjectDetailScreen() {
         project_type: editProjectType || undefined,
         project_type_date: editProjectTypeDate || undefined,
       });
+
+      // Speichere die zuletzt verwendete Projektart
+      if (editProjectType) {
+        await setLastUsedProjectType(editProjectType);
+      }
 
       // Synchronisiere Bauherr-Daten mit Kundenstamm
       if (project?.customer_id) {
@@ -2521,26 +2533,25 @@ export default function ProjectDetailScreen() {
           /* Projektart-Überschrift - passt sich an Header-Farbe an */
           .project-type-header {
             background: ${headerBgColor};
-            border: 2px solid ${pdfColor.color};
-            border-radius: 8px;
-            padding: 12px 20px;
-            margin-bottom: 16px;
+            border: 1px solid ${pdfColor.color};
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-bottom: 12px;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
           }
           .project-type-icon {
             color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
-            font-size: 16px;
+            font-size: 12px;
           }
           .project-type-text {
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 12px;
+            font-weight: 600;
             color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
           }
           .roof-card, .checklist-card {
             background: #f8f9fa;
@@ -4011,6 +4022,29 @@ export default function ProjectDetailScreen() {
                 </View>
               </View>
               
+              {/* Projektart Section - GANZ OBEN */}
+              <View style={styles.sectionDivider} />
+              <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Projektart:</Text>
+                <Text style={styles.infoValue}>{project?.project_type || '(nicht gesetzt)'}</Text>
+              </View>
+              {project?.project_type_date && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Datum:</Text>
+                  <Text style={styles.infoValue}>{new Date(project.project_type_date).toLocaleDateString('de-DE')}</Text>
+                </View>
+              )}
+              {project?.project_type && (
+                <View style={styles.projectTypePreviewInInfo}>
+                  <Ionicons name="ribbon" size={18} color="#1976d2" />
+                  <Text style={styles.projectTypePreviewInInfoText}>
+                    {project.project_type}
+                    {project.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
+                  </Text>
+                </View>
+              )}
+              
               {/* Bauherr-Daten */}
               <View style={styles.sectionDivider} />
               <Text style={styles.subSectionTitle}>Bauherr</Text>
@@ -4102,29 +4136,6 @@ export default function ProjectDetailScreen() {
                     </View>
                   )}
                 </>
-              )}
-              
-              {/* Projektart Section in Projektinformationen */}
-              <View style={styles.sectionDivider} />
-              <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Projektart:</Text>
-                <Text style={styles.infoValue}>{project?.project_type || '(nicht gesetzt)'}</Text>
-              </View>
-              {project?.project_type_date && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Datum:</Text>
-                  <Text style={styles.infoValue}>{new Date(project.project_type_date).toLocaleDateString('de-DE')}</Text>
-                </View>
-              )}
-              {project?.project_type && (
-                <View style={styles.projectTypePreviewInInfo}>
-                  <Ionicons name="ribbon" size={18} color="#1976d2" />
-                  <Text style={styles.projectTypePreviewInInfoText}>
-                    {project.project_type}
-                    {project.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
-                  </Text>
-                </View>
               )}
             </View>
 

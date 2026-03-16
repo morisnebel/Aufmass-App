@@ -379,6 +379,26 @@ export const getNextAvailableObjectNumber = async (customerId?: string): Promise
   return generateObjectNumber();
 };
 
+// ============ LAST USED PROJECT TYPE ============
+const LAST_PROJECT_TYPE_KEY = 'aufmass_last_project_type';
+
+export const setLastUsedProjectType = async (projectType: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(LAST_PROJECT_TYPE_KEY, projectType);
+  } catch (error) {
+    console.error('Error saving last project type:', error);
+  }
+};
+
+export const getLastUsedProjectType = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(LAST_PROJECT_TYPE_KEY);
+  } catch (error) {
+    console.error('Error loading last project type:', error);
+    return null;
+  }
+};
+
 export const CustomerService = {
   getAll: async (): Promise<Customer[]> => {
     return getItems<Customer>(KEYS.CUSTOMERS);

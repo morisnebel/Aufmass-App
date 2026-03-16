@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
+import PdfThumbnail from 'react-native-pdf-thumbnail';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -1793,27 +1794,33 @@ export default function DrawSketchScreen() {
       
       console.log('[importFromFiles] Selected file:', file.name, mimeType);
 
-      // Wenn es ein PDF ist, zeige eine Info-Meldung
+      // Wenn es ein PDF ist, konvertiere es zu einem Bild
       if (mimeType === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
-        Alert.alert(
-          'PDF importieren',
-          'PDFs können nicht direkt eingefügt werden. Bitte machen Sie einen Screenshot des PDFs oder exportieren Sie es als Bild.',
-          [
-            { text: 'OK', style: 'default' },
-            { 
-              text: 'Bild aus Dateien wählen', 
-              onPress: () => importImageFromFiles()
-            }
-          ]
-        );
-        return;
+        try {
+          console.log('[importFromFiles] Converting PDF to image...');
+          // Generiere Thumbnail der ersten Seite
+          const { uri, width, height } = await PdfThumbnail.generate(fileUri, 0);
+          console.log('[importFromFiles] PDF converted successfully:', uri, width, height);
+          
+          await insertImageFromUri(uri);
+          return;
+        } catch (pdfError) {
+          console.error('[importFromFiles] PDF conversion error:', pdfError);
+          // Fallback: Zeige Info-Meldung wenn Konvertierung fehlschlägt
+          Alert.alert(
+            'PDF Import',
+            'Das PDF konnte nicht automatisch konvertiert werden. Dies funktioniert nur in der TestFlight/App Store Version, nicht in Expo Go.\n\nAlternativ: Machen Sie einen Screenshot des PDFs.',
+            [{ text: 'OK', style: 'default' }]
+          );
+          return;
+        }
       }
 
       // Wenn es ein Bild ist, füge es direkt ein
       if (mimeType.startsWith('image/')) {
         await insertImageFromUri(fileUri);
       } else {
-        showAlert('Fehler', 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.).');
+        showAlert('Fehler', 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.) oder PDF.');
       }
     } catch (error) {
       console.error('Error importing from files:', error);

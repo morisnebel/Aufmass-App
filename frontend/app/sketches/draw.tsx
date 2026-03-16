@@ -23,6 +23,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from '
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as DocumentPicker from 'expo-document-picker';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -1770,6 +1771,129 @@ export default function DrawSketchScreen() {
       }
     } catch (error) {
       console.error('Error inserting image:', error);
+      showAlert('Fehler', 'Bild konnte nicht eingefügt werden');
+    }
+  };
+
+  // Import document/image from Files app
+  const importFromFiles = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const file = result.assets[0];
+      const fileUri = file.uri;
+      const mimeType = file.mimeType || '';
+      
+      console.log('[importFromFiles] Selected file:', file.name, mimeType);
+
+      // Wenn es ein PDF ist, zeige eine Info-Meldung
+      if (mimeType === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
+        Alert.alert(
+          'PDF importieren',
+          'PDFs können nicht direkt eingefügt werden. Bitte machen Sie einen Screenshot des PDFs oder exportieren Sie es als Bild.',
+          [
+            { text: 'OK', style: 'default' },
+            { 
+              text: 'Bild aus Dateien wählen', 
+              onPress: () => importImageFromFiles()
+            }
+          ]
+        );
+        return;
+      }
+
+      // Wenn es ein Bild ist, füge es direkt ein
+      if (mimeType.startsWith('image/')) {
+        await insertImageFromUri(fileUri);
+      } else {
+        showAlert('Fehler', 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.).');
+      }
+    } catch (error) {
+      console.error('Error importing from files:', error);
+      showAlert('Fehler', 'Datei konnte nicht importiert werden');
+    }
+  };
+
+  // Import only images from Files
+  const importImageFromFiles = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const file = result.assets[0];
+      await insertImageFromUri(file.uri);
+    } catch (error) {
+      console.error('Error importing image from files:', error);
+      showAlert('Fehler', 'Bild konnte nicht importiert werden');
+    }
+  };
+
+  // Helper function to insert image from URI
+  const insertImageFromUri = async (uri: string) => {
+    try {
+      // Manipulate image to get base64
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1200 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+
+      if (!manipResult.base64) {
+        throw new Error('Konnte kein Base64 generieren');
+      }
+
+      const base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+      
+      // Berechne Seitenverhältnis
+      const imgWidth = manipResult.width || 200;
+      const imgHeight = manipResult.height || 200;
+      const maxWidth = 400;
+      const maxHeight = 300;
+      const aspectRatio = imgWidth / imgHeight;
+      
+      let finalWidth, finalHeight;
+      if (aspectRatio > maxWidth / maxHeight) {
+        finalWidth = maxWidth;
+        finalHeight = maxWidth / aspectRatio;
+      } else {
+        finalHeight = maxHeight;
+        finalWidth = maxHeight * aspectRatio;
+      }
+      
+      const newElement: DrawElement = {
+        id: generateId(),
+        type: 'image',
+        data: { uri: base64Image },
+        color: '#000000',
+        strokeWidth: 0,
+        x: 100,
+        y: 100,
+        width: finalWidth,
+        height: finalHeight,
+        rotation: 0,
+      };
+      const newElements = [...elements, newElement];
+      addToHistory(newElements);
+      setSelectedElementId(newElement.id);
+      setPhotoEditMode(true);
+      selectDrawMode('select');
+      
+      showAlert('Erfolg', 'Bild wurde eingefügt');
+    } catch (error) {
+      console.error('Error inserting image from URI:', error);
       showAlert('Fehler', 'Bild konnte nicht eingefügt werden');
     }
   };
@@ -4187,6 +4311,14 @@ export default function DrawSketchScreen() {
             <Ionicons name="image" size={20} color="#9C27B0" />
           </TouchableOpacity>
           <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Galerie</Text>
+        </View>
+
+        {/* 3.5 Bild aus Dateien */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); importFromFiles(); }}>
+            <Ionicons name="document" size={20} color="#FF5722" />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabelWide}>Aus{'\n'}Dateien</Text>
         </View>
 
         {/* 4. Foto Position */}

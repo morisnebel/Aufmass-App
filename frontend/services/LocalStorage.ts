@@ -343,7 +343,12 @@ export const generateObjectNumberForCustomer = async (customerId: string): Promi
 // Check if customer number already exists
 export const isCustomerNumberDuplicate = async (number: string, excludeId?: string): Promise<boolean> => {
   const customers = await getItems<Customer>(KEYS.CUSTOMERS);
-  return customers.some(c => c.customer_number === number && c.id !== excludeId);
+  console.log('[DEBUG] isCustomerNumberDuplicate - checking:', number, 'exclude:', excludeId);
+  console.log('[DEBUG] All customer numbers:', customers.map(c => ({ id: c.id, num: c.customer_number })));
+  
+  const result = customers.some(c => c.customer_number === number && c.id !== excludeId);
+  console.log('[DEBUG] isCustomerNumberDuplicate - result:', result);
+  return result;
 };
 
 // Check if project number already exists

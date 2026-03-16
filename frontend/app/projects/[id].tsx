@@ -743,18 +743,21 @@ export default function ProjectDetailScreen() {
     }
     
     // Prüfe Kundennummer
-    if (editCustomerNumber && project?.customer_id) {
-      const customer = await CustomerService.getById(project.customer_id);
-      if (customer && editCustomerNumber !== customer.customer_number) {
-        const isDupe = await isCustomerNumberDuplicate(editCustomerNumber, project.customer_id);
-        if (isDupe) {
-          duplicateChecks.push({
-            field: 'Kundennummer',
-            number: editCustomerNumber,
-            isDuplicate: true,
-            getNewNumber: getNextAvailableCustomerNumber
-          });
-        }
+    if (editCustomerNumber) {
+      console.log('[DEBUG] Checking customer number:', editCustomerNumber);
+      console.log('[DEBUG] customer_id:', project?.customer_id);
+      
+      // Prüfe ob die Nummer bereits von einem ANDEREN Kunden verwendet wird
+      const isDupe = await isCustomerNumberDuplicate(editCustomerNumber, project?.customer_id);
+      console.log('[DEBUG] isCustomerNumberDuplicate result:', isDupe);
+      
+      if (isDupe) {
+        duplicateChecks.push({
+          field: 'Kundennummer',
+          number: editCustomerNumber,
+          isDuplicate: true,
+          getNewNumber: getNextAvailableCustomerNumber
+        });
       }
     }
     

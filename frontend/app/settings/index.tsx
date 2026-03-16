@@ -35,6 +35,7 @@ interface CompanySettings {
   pdf_checklist_columns: number; // 1, 2, oder 3 Spalten
   pdf_header_color: string; // Hintergrundfarbe für PDF-Header
   pdf_header_style: 'filled' | 'outline'; // Voll oder nur Rahmen
+  project_type_options: string[]; // Projektart-Überschriften
 }
 
 // Verfügbare Farboptionen für PDF-Header
@@ -73,7 +74,11 @@ export default function SettingsScreen() {
     pdf_checklist_columns: 2, // Standard: 2 Spalten
     pdf_header_color: 'blue', // Standard: Blau
     pdf_header_style: 'filled', // Standard: Volle Farbe
+    project_type_options: [], // Projektart-Überschriften
   });
+  
+  // Neuer Projektart-Eintrag
+  const [newProjectType, setNewProjectType] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -427,6 +432,64 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* Projektart-Überschriften Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Projektart-Überschriften</Text>
+            <Text style={styles.sublabel}>
+              Definieren Sie hier die Überschriften, die bei Projekten ausgewählt werden können (z.B. "Sturmschaden", "Wartung", "Neueindeckung").
+            </Text>
+            
+            {/* Liste der vorhandenen Überschriften */}
+            <View style={styles.projectTypeList}>
+              {(settings.project_type_options || []).map((option, index) => (
+                <View key={index} style={styles.projectTypeItem}>
+                  <Ionicons name="document-text-outline" size={20} color="#1976d2" />
+                  <Text style={styles.projectTypeText}>{option}</Text>
+                  <TouchableOpacity
+                    style={styles.projectTypeDeleteButton}
+                    onPress={() => {
+                      const newOptions = [...(settings.project_type_options || [])];
+                      newOptions.splice(index, 1);
+                      setSettings({ ...settings, project_type_options: newOptions });
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={22} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {(settings.project_type_options || []).length === 0 && (
+                <Text style={styles.emptyListText}>Keine Überschriften definiert</Text>
+              )}
+            </View>
+            
+            {/* Neue Überschrift hinzufügen */}
+            <View style={styles.addProjectTypeContainer}>
+              <TextInput
+                style={styles.addProjectTypeInput}
+                value={newProjectType}
+                onChangeText={setNewProjectType}
+                placeholder="Neue Überschrift eingeben..."
+                placeholderTextColor="#999"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addProjectTypeButton,
+                  !newProjectType.trim() && styles.addProjectTypeButtonDisabled
+                ]}
+                onPress={() => {
+                  if (newProjectType.trim()) {
+                    const newOptions = [...(settings.project_type_options || []), newProjectType.trim()];
+                    setSettings({ ...settings, project_type_options: newOptions });
+                    setNewProjectType('');
+                  }
+                }}
+                disabled={!newProjectType.trim()}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Zurücksetzen Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Daten zurücksetzen</Text>
@@ -461,6 +524,7 @@ export default function SettingsScreen() {
                           pdf_checklist_columns: 2,
                           pdf_header_color: 'blue',
                           pdf_header_style: 'filled',
+                          project_type_options: [],
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },
@@ -815,5 +879,57 @@ const styles = StyleSheet.create({
   styleLabelActive: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  // Projektart-Überschriften Styles
+  projectTypeList: {
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  projectTypeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  projectTypeText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+  },
+  projectTypeDeleteButton: {
+    padding: 4,
+  },
+  emptyListText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  addProjectTypeContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  addProjectTypeInput: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  addProjectTypeButton: {
+    backgroundColor: '#1976d2',
+    borderRadius: 8,
+    width: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addProjectTypeButtonDisabled: {
+    backgroundColor: '#ccc',
   },
 });

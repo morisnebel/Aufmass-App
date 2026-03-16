@@ -348,6 +348,9 @@ export interface Project {
   description?: string;
   address?: string;
   status: string;
+  // Projektart (Überschrift für PDF)
+  project_type?: string; // z.B. "Sturmschaden", "Wartung", "Neueindeckung"
+  project_type_date?: string; // Optionales Datum für die Überschrift (ISO-String)
   // Bauherr-Daten
   bauherr_salutation?: string;
   bauherr_firstName?: string;
@@ -773,6 +776,8 @@ export interface Settings {
   company_email?: string;
   company_logo?: string;
   tax_rate?: number;
+  // Projektart-Überschriften (für Auswahlfeld)
+  project_type_options?: string[]; // z.B. ["Sturmschaden", "Wartung", "Neueindeckung", "Reparatur"]
 }
 
 export const SettingsService = {

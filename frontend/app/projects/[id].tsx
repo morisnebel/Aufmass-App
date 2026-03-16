@@ -42,6 +42,9 @@ interface Project {
   customer_id: string;
   status: string;
   remarks?: string;
+  // Projektart (Überschrift für PDF)
+  project_type?: string; // z.B. "Sturmschaden", "Wartung"
+  project_type_date?: string; // Optionales Datum (ISO-String)
   // Bauherr-Daten (separate Felder) - erweitert für Anrede, Vorname, Nachname
   bauherr_salutation?: string; // Anrede
   bauherr_first_name?: string; // Vorname
@@ -213,6 +216,12 @@ export default function ProjectDetailScreen() {
   const [editObjektContactPerson, setEditObjektContactPerson] = useState('');
   const [editObjektPhone, setEditObjektPhone] = useState('');
   const [editObjektEmail, setEditObjektEmail] = useState('');
+  // Projektart-Überschrift Felder
+  const [editProjectType, setEditProjectType] = useState('');
+  const [editProjectTypeDate, setEditProjectTypeDate] = useState('');
+  const [showProjectTypePicker, setShowProjectTypePicker] = useState(false);
+  const [showProjectTypeDatePicker, setShowProjectTypeDatePicker] = useState(false);
+  const [projectTypeOptions, setProjectTypeOptions] = useState<string[]>([]);
   const [isSavingProject, setIsSavingProject] = useState(false);
   
   // PDF Preview state
@@ -286,7 +295,7 @@ export default function ProjectDetailScreen() {
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
-      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData] = await Promise.all([
+      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData, settingsData] = await Promise.all([
         ProjectService.getById(projectId),
         RoofService.getByProjectId(projectId),
         PhotoService.getByProjectId(projectId),
@@ -294,7 +303,13 @@ export default function ProjectDetailScreen() {
         ChecklistService.getByProjectId(projectId),
         DocumentService.getByProjectId(projectId),
         AreaCalculationService.getByProjectId(projectId),
+        SettingsService.get(),
       ]);
+
+      // Lade Projektart-Optionen aus den Einstellungen
+      if (settingsData?.project_type_options) {
+        setProjectTypeOptions(settingsData.project_type_options);
+      }
 
       if (projectData) {
         setProject(projectData);
@@ -683,6 +698,10 @@ export default function ProjectDetailScreen() {
       setEditObjektPhone(project.objekt_phone || '');
       setEditObjektEmail(project.objekt_email || '');
       
+      // Projektart-Überschrift
+      setEditProjectType(project.project_type || '');
+      setEditProjectTypeDate(project.project_type_date || '');
+      
       setShowEditProjectModal(true);
     }
   };
@@ -729,6 +748,9 @@ export default function ProjectDetailScreen() {
         objekt_phone: editObjektPhone || undefined,
         objekt_email: editObjektEmail || undefined,
         objekt_address_name: editProjectName || project?.objekt_address_name || undefined, // Projektname = Bezeichnung
+        // Projektart-Überschrift
+        project_type: editProjectType || undefined,
+        project_type_date: editProjectTypeDate || undefined,
       });
 
       // Synchronisiere Bauherr-Daten mit Kundenstamm
@@ -2423,6 +2445,30 @@ export default function ProjectDetailScreen() {
             text-transform: uppercase;
             letter-spacing: 0.3px;
           }
+          /* Projektart-Überschrift */
+          .project-type-header {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px solid #1976d2;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 16px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+          }
+          .project-type-icon {
+            color: #1976d2;
+            font-size: 16px;
+          }
+          .project-type-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1976d2;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
           .roof-card, .checklist-card {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
@@ -3223,20 +3269,13 @@ export default function ProjectDetailScreen() {
           </div>
         </div>
         
-        <div class="stats-grid">
-          <div class="stat-box">
-            <div class="stat-value">${roofs.length}</div>
-            <div class="stat-label">Dachflächen</div>
+        ${project?.project_type ? `
+          <div class="project-type-header">
+            <span class="project-type-icon">★</span>
+            <span class="project-type-text">${project.project_type}${project.project_type_date ? ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}` : ''}</span>
+            <span class="project-type-icon">★</span>
           </div>
-          <div class="stat-box">
-            <div class="stat-value">${pdfTotalArea.toFixed(2)} m²</div>
-            <div class="stat-label">Gesamtfläche</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value">${photos.length}</div>
-            <div class="stat-label">Fotos</div>
-          </div>
-        </div>
+        ` : ''}
         
         <div class="roofs-section">
           <h2>Dachflächen</h2>
@@ -3995,21 +4034,18 @@ export default function ProjectDetailScreen() {
               )}
             </View>
 
-            {/* Statistik-Karte */}
-            <View style={styles.statsCard}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{roofs.length}</Text>
-                <Text style={styles.statLabel}>Dachflächen</Text>
+            {/* Projektart-Überschrift (anstelle der Statistik-Karte) */}
+            {project?.project_type && (
+              <View style={styles.projectTypeHeader}>
+                <View style={styles.projectTypeHeaderInner}>
+                  <Ionicons name="ribbon" size={24} color="#1976d2" />
+                  <Text style={styles.projectTypeHeaderText}>
+                    {project.project_type}
+                    {project.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{totalArea.toFixed(2)} m²</Text>
-                <Text style={styles.statLabel}>Gesamtfläche</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{photos.length}</Text>
-                <Text style={styles.statLabel}>Fotos</Text>
-              </View>
-            </View>
+            )}
           </View>
         )}
 
@@ -5848,6 +5884,85 @@ export default function ProjectDetailScreen() {
                   </View>
                 </View>
               </View>
+              
+              {/* Projektart-Überschrift */}
+              <View style={styles.editFormFullWidth}>
+                <Text style={styles.editSectionTitle}>Projektart / Überschrift für PDF</Text>
+                
+                <View style={styles.projectTypeEditRow}>
+                  <View style={styles.projectTypeEditPicker}>
+                    <Text style={styles.compactLabel}>Projektart</Text>
+                    <TouchableOpacity 
+                      style={styles.compactPickerButton}
+                      onPress={() => setShowProjectTypePicker(true)}
+                    >
+                      <Text style={editProjectType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                        {editProjectType || 'Projektart auswählen...'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.projectTypeEditDate}>
+                    <Text style={styles.compactLabel}>Datum (optional)</Text>
+                    <TouchableOpacity 
+                      style={styles.compactPickerButton}
+                      onPress={() => {
+                        if (editProjectTypeDate) {
+                          // Datum löschen wenn bereits gesetzt
+                          Alert.alert(
+                            'Datum',
+                            'Was möchten Sie tun?',
+                            [
+                              { text: 'Abbrechen', style: 'cancel' },
+                              { 
+                                text: 'Datum löschen', 
+                                style: 'destructive',
+                                onPress: () => setEditProjectTypeDate('')
+                              },
+                              {
+                                text: 'Ändern',
+                                onPress: () => setShowProjectTypeDatePicker(true)
+                              }
+                            ]
+                          );
+                        } else {
+                          setShowProjectTypeDatePicker(true);
+                        }
+                      }}
+                    >
+                      <Text style={editProjectTypeDate ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                        {editProjectTypeDate 
+                          ? new Date(editProjectTypeDate).toLocaleDateString('de-DE')
+                          : 'Datum auswählen...'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {editProjectType && (
+                    <TouchableOpacity
+                      style={styles.projectTypeClearButton}
+                      onPress={() => {
+                        setEditProjectType('');
+                        setEditProjectTypeDate('');
+                      }}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#f44336" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                {editProjectType && (
+                  <View style={styles.projectTypePreview}>
+                    <Text style={styles.projectTypePreviewLabel}>Vorschau:</Text>
+                    <Text style={styles.projectTypePreviewText}>
+                      {editProjectType}
+                      {editProjectTypeDate && ` vom ${new Date(editProjectTypeDate).toLocaleDateString('de-DE')}`}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </ScrollView>
 
             <View style={styles.editModalButtons}>
@@ -5907,6 +6022,120 @@ export default function ProjectDetailScreen() {
               >
                 <Text style={styles.salutationOptionText}>Keine Anrede</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Projektart Picker */}
+        {showProjectTypePicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowProjectTypePicker(false)}
+            />
+            <View style={[styles.salutationPickerContent, { maxHeight: 400 }]}>
+              <Text style={styles.salutationModalTitle}>Projektart auswählen</Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {projectTypeOptions.length === 0 ? (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Ionicons name="alert-circle-outline" size={40} color="#999" />
+                    <Text style={{ color: '#666', marginTop: 10, textAlign: 'center' }}>
+                      Keine Projektarten definiert.{'\n'}Bitte in den Einstellungen hinzufügen.
+                    </Text>
+                  </View>
+                ) : (
+                  projectTypeOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={styles.salutationOption}
+                      onPress={() => {
+                        setEditProjectType(option);
+                        setShowProjectTypePicker(false);
+                      }}
+                    >
+                      <Text style={[
+                        styles.salutationOptionText,
+                        editProjectType === option && styles.salutationOptionSelected
+                      ]}>{option}</Text>
+                      {editProjectType === option && (
+                        <Ionicons name="checkmark" size={20} color="#1976d2" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.salutationOption, { borderTopWidth: 1, borderTopColor: '#e0e0e0' }]}
+                onPress={() => {
+                  setEditProjectType('');
+                  setShowProjectTypePicker(false);
+                }}
+              >
+                <Text style={styles.salutationOptionText}>Keine Projektart</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Datum Picker - Simple Date Selection */}
+        {showProjectTypeDatePicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowProjectTypeDatePicker(false)}
+            />
+            <View style={[styles.salutationPickerContent, { padding: 20 }]}>
+              <Text style={styles.salutationModalTitle}>Datum eingeben</Text>
+              <View style={{ marginTop: 10 }}>
+                <TextInput
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#ddd',
+                    borderRadius: 8,
+                    padding: 12,
+                    fontSize: 16,
+                    textAlign: 'center',
+                  }}
+                  placeholder="TT.MM.JJJJ"
+                  keyboardType="numeric"
+                  defaultValue={editProjectTypeDate ? new Date(editProjectTypeDate).toLocaleDateString('de-DE') : ''}
+                  onSubmitEditing={(e) => {
+                    const dateStr = e.nativeEvent.text;
+                    // Parse German date format DD.MM.YYYY
+                    const parts = dateStr.split('.');
+                    if (parts.length === 3) {
+                      const day = parseInt(parts[0], 10);
+                      const month = parseInt(parts[1], 10) - 1;
+                      const year = parseInt(parts[2], 10);
+                      const date = new Date(year, month, day);
+                      if (!isNaN(date.getTime())) {
+                        setEditProjectTypeDate(date.toISOString());
+                      }
+                    }
+                    setShowProjectTypeDatePicker(false);
+                  }}
+                />
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#e0e0e0', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    onPress={() => setShowProjectTypeDatePicker(false)}
+                  >
+                    <Text style={{ color: '#333' }}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#1976d2', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    onPress={() => {
+                      // Set today's date
+                      setEditProjectTypeDate(new Date().toISOString());
+                      setShowProjectTypeDatePicker(false);
+                    }}
+                  >
+                    <Text style={{ color: '#fff' }}>Heute</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
         )}
@@ -7882,5 +8111,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  // Projektart-Überschrift Header (für Overview)
+  projectTypeHeader: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginTop: 0,
+  },
+  projectTypeHeaderInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  projectTypeHeaderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    textAlign: 'center',
+  },
+  // Projektart-Überschrift Edit (für Modal)
+  editFormFullWidth: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  projectTypeEditRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-end',
+    marginTop: 8,
+  },
+  projectTypeEditPicker: {
+    flex: 2,
+  },
+  projectTypeEditDate: {
+    flex: 1,
+  },
+  projectTypeClearButton: {
+    padding: 8,
+    marginBottom: 4,
+  },
+  projectTypePreview: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  projectTypePreviewLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  projectTypePreviewText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
+    flex: 1,
   },
 });

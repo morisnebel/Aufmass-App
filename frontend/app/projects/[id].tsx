@@ -2445,10 +2445,10 @@ export default function ProjectDetailScreen() {
             text-transform: uppercase;
             letter-spacing: 0.3px;
           }
-          /* Projektart-Überschrift */
+          /* Projektart-Überschrift - passt sich an Header-Farbe an */
           .project-type-header {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border: 2px solid #1976d2;
+            background: ${headerBgColor};
+            border: 2px solid ${pdfColor.color};
             border-radius: 8px;
             padding: 12px 20px;
             margin-bottom: 16px;
@@ -2459,13 +2459,13 @@ export default function ProjectDetailScreen() {
             gap: 12px;
           }
           .project-type-icon {
-            color: #1976d2;
+            color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
             font-size: 16px;
           }
           .project-type-text {
             font-size: 16px;
             font-weight: 700;
-            color: #1976d2;
+            color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
             text-transform: uppercase;
             letter-spacing: 1px;
           }
@@ -3271,9 +3271,7 @@ export default function ProjectDetailScreen() {
         
         ${project?.project_type ? `
           <div class="project-type-header">
-            <span class="project-type-icon">★</span>
             <span class="project-type-text">${project.project_type}${project.project_type_date ? ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}` : ''}</span>
-            <span class="project-type-icon">★</span>
           </div>
         ` : ''}
         
@@ -5700,6 +5698,84 @@ export default function ProjectDetailScreen() {
                       ))}
                     </View>
                   </View>
+                  
+                  {/* Projektart-Überschrift - OBEN */}
+                  <View style={styles.projectTypeEditSection}>
+                    <Text style={styles.editSectionTitle}>Projektart / Überschrift</Text>
+                    
+                    <View style={styles.projectTypeEditRow}>
+                      <View style={styles.projectTypeEditPicker}>
+                        <Text style={styles.compactLabel}>Projektart</Text>
+                        <TouchableOpacity 
+                          style={styles.compactPickerButton}
+                          onPress={() => setShowProjectTypePicker(true)}
+                        >
+                          <Text style={editProjectType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                            {editProjectType || 'Projektart auswählen...'}
+                          </Text>
+                          <Ionicons name="chevron-down" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      <View style={styles.projectTypeEditDate}>
+                        <Text style={styles.compactLabel}>Datum (optional)</Text>
+                        <TouchableOpacity 
+                          style={styles.compactPickerButton}
+                          onPress={() => {
+                            if (editProjectTypeDate) {
+                              Alert.alert(
+                                'Datum',
+                                'Was möchten Sie tun?',
+                                [
+                                  { text: 'Abbrechen', style: 'cancel' },
+                                  { 
+                                    text: 'Datum löschen', 
+                                    style: 'destructive',
+                                    onPress: () => setEditProjectTypeDate('')
+                                  },
+                                  {
+                                    text: 'Ändern',
+                                    onPress: () => setShowProjectTypeDatePicker(true)
+                                  }
+                                ]
+                              );
+                            } else {
+                              setShowProjectTypeDatePicker(true);
+                            }
+                          }}
+                        >
+                          <Text style={editProjectTypeDate ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                            {editProjectTypeDate 
+                              ? new Date(editProjectTypeDate).toLocaleDateString('de-DE')
+                              : 'Datum auswählen...'}
+                          </Text>
+                          <Ionicons name="calendar-outline" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      {editProjectType && (
+                        <TouchableOpacity
+                          style={styles.projectTypeClearButton}
+                          onPress={() => {
+                            setEditProjectType('');
+                            setEditProjectTypeDate('');
+                          }}
+                        >
+                          <Ionicons name="close-circle" size={24} color="#f44336" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    
+                    {editProjectType && (
+                      <View style={styles.projectTypePreview}>
+                        <Text style={styles.projectTypePreviewLabel}>Vorschau:</Text>
+                        <Text style={styles.projectTypePreviewText}>
+                          {editProjectType}
+                          {editProjectTypeDate && ` vom ${new Date(editProjectTypeDate).toLocaleDateString('de-DE')}`}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 {/* Rechte Spalte */}
@@ -5906,85 +5982,6 @@ export default function ProjectDetailScreen() {
                     </View>
                   </View>
                 </View>
-              </View>
-              
-              {/* Projektart-Überschrift */}
-              <View style={styles.editFormFullWidth}>
-                <Text style={styles.editSectionTitle}>Projektart / Überschrift für PDF</Text>
-                
-                <View style={styles.projectTypeEditRow}>
-                  <View style={styles.projectTypeEditPicker}>
-                    <Text style={styles.compactLabel}>Projektart</Text>
-                    <TouchableOpacity 
-                      style={styles.compactPickerButton}
-                      onPress={() => setShowProjectTypePicker(true)}
-                    >
-                      <Text style={editProjectType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
-                        {editProjectType || 'Projektart auswählen...'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <View style={styles.projectTypeEditDate}>
-                    <Text style={styles.compactLabel}>Datum (optional)</Text>
-                    <TouchableOpacity 
-                      style={styles.compactPickerButton}
-                      onPress={() => {
-                        if (editProjectTypeDate) {
-                          // Datum löschen wenn bereits gesetzt
-                          Alert.alert(
-                            'Datum',
-                            'Was möchten Sie tun?',
-                            [
-                              { text: 'Abbrechen', style: 'cancel' },
-                              { 
-                                text: 'Datum löschen', 
-                                style: 'destructive',
-                                onPress: () => setEditProjectTypeDate('')
-                              },
-                              {
-                                text: 'Ändern',
-                                onPress: () => setShowProjectTypeDatePicker(true)
-                              }
-                            ]
-                          );
-                        } else {
-                          setShowProjectTypeDatePicker(true);
-                        }
-                      }}
-                    >
-                      <Text style={editProjectTypeDate ? styles.compactPickerText : styles.compactPickerPlaceholder}>
-                        {editProjectTypeDate 
-                          ? new Date(editProjectTypeDate).toLocaleDateString('de-DE')
-                          : 'Datum auswählen...'}
-                      </Text>
-                      <Ionicons name="calendar-outline" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {editProjectType && (
-                    <TouchableOpacity
-                      style={styles.projectTypeClearButton}
-                      onPress={() => {
-                        setEditProjectType('');
-                        setEditProjectTypeDate('');
-                      }}
-                    >
-                      <Ionicons name="close-circle" size={24} color="#f44336" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                
-                {editProjectType && (
-                  <View style={styles.projectTypePreview}>
-                    <Text style={styles.projectTypePreviewLabel}>Vorschau:</Text>
-                    <Text style={styles.projectTypePreviewText}>
-                      {editProjectType}
-                      {editProjectTypeDate && ` vom ${new Date(editProjectTypeDate).toLocaleDateString('de-DE')}`}
-                    </Text>
-                  </View>
-                )}
               </View>
             </ScrollView>
 
@@ -8218,5 +8215,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1976d2',
     flex: 1,
+  },
+  // Projektart Edit Section (oben im Modal)
+  projectTypeEditSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
 });

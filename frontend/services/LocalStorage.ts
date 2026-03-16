@@ -308,6 +308,7 @@ export const generateObjectNumber = async (): Promise<string> => {
 };
 
 // Generate object number for a specific customer (sequential per customer)
+// Jeder Kunde startet bei OBJ-26001, OBJ-26002, etc.
 export const generateObjectNumberForCustomer = async (customerId: string): Promise<string> => {
   const yearPrefix = new Date().getFullYear().toString().slice(-2);
   const prefix = `OBJ-${yearPrefix}`;
@@ -317,25 +318,32 @@ export const generateObjectNumberForCustomer = async (customerId: string): Promi
   );
   
   if (!customer) {
-    // Fallback to global numbering if customer not found
-    return generateObjectNumber();
+    // Neuer Kunde ohne Adressen - starte bei 001
+    return `${prefix}001`;
   }
   
   const addresses = customer.projectAddresses || [];
+  
+  // Wenn Kunde keine Adressen hat, starte bei 001
+  if (addresses.length === 0) {
+    return `${prefix}001`;
+  }
+  
   const existingNumbers = addresses
     .filter(addr => addr.object_number?.startsWith(prefix))
     .map(addr => {
       const numPart = addr.object_number?.substring(prefix.length) || '0';
       return parseInt(numPart, 10) || 0;
-    });
+    })
+    .filter(num => num > 0);
   
-  // If customer has no objects yet, check global max to avoid conflicts
+  // Wenn keine gültigen Nummern gefunden, starte bei 001
   if (existingNumbers.length === 0) {
-    const globalNum = await generateObjectNumber();
-    return globalNum;
+    return `${prefix}001`;
   }
   
   const maxNum = Math.max(...existingNumbers);
+  console.log(`[generateObjectNumberForCustomer] Customer: ${customerId}, existing: ${existingNumbers.join(',')}, next: ${maxNum + 1}`);
   return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
 };
 

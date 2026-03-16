@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicate, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -717,11 +717,84 @@ export default function ProjectDetailScreen() {
       return;
     }
 
+    const projectId = Array.isArray(id) ? id[0] : id;
+    
+    // Duplikat-Prüfungen
+    const duplicateChecks: { field: string; number: string; isDuplicate: boolean; getNewNumber: () => Promise<string> }[] = [];
+    
+    // Prüfe Projektnummer
+    if (editProjectNumber && editProjectNumber !== project?.project_number) {
+      const isDupe = await isProjectNumberDuplicate(editProjectNumber, projectId);
+      if (isDupe) {
+        duplicateChecks.push({
+          field: 'Projektnummer',
+          number: editProjectNumber,
+          isDuplicate: true,
+          getNewNumber: getNextAvailableProjectNumber
+        });
+      }
+    }
+    
+    // Prüfe Kundennummer
+    if (editCustomerNumber && project?.customer_id) {
+      const customer = await CustomerService.getById(project.customer_id);
+      if (customer && editCustomerNumber !== customer.customer_number) {
+        const isDupe = await isCustomerNumberDuplicate(editCustomerNumber, project.customer_id);
+        if (isDupe) {
+          duplicateChecks.push({
+            field: 'Kundennummer',
+            number: editCustomerNumber,
+            isDuplicate: true,
+            getNewNumber: getNextAvailableCustomerNumber
+          });
+        }
+      }
+    }
+    
+    // Wenn Duplikate gefunden wurden, zeige Dialog
+    if (duplicateChecks.length > 0) {
+      const dupeList = duplicateChecks.map(d => `${d.field}: "${d.number}"`).join('\n');
+      Alert.alert(
+        'Nummern bereits vergeben',
+        `Folgende Nummern existieren bereits:\n${dupeList}\n\nWas möchten Sie tun?`,
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          { 
+            text: 'Trotzdem behalten', 
+            onPress: () => doSaveProject(editProjectNumber, editCustomerNumber, editObjektNumber)
+          },
+          {
+            text: 'Neue Nummern vergeben',
+            onPress: async () => {
+              let newProjectNum = editProjectNumber;
+              let newCustomerNum = editCustomerNumber;
+              
+              for (const check of duplicateChecks) {
+                if (check.field === 'Projektnummer') {
+                  newProjectNum = await check.getNewNumber();
+                } else if (check.field === 'Kundennummer') {
+                  newCustomerNum = await check.getNewNumber();
+                }
+              }
+              doSaveProject(newProjectNum, newCustomerNum, editObjektNumber);
+            }
+          }
+        ]
+      );
+      return;
+    }
+    
+    // Keine Duplikate, direkt speichern
+    await doSaveProject(editProjectNumber, editCustomerNumber, editObjektNumber);
+  };
+
+  const doSaveProject = async (projectNumber: string, customerNumber: string, objektNumber: string) => {
+    const projectId = Array.isArray(id) ? id[0] : id;
+
     setIsSavingProject(true);
     try {
-      const projectId = Array.isArray(id) ? id[0] : id;
       await ProjectService.update(projectId, {
-        project_number: editProjectNumber || undefined,
+        project_number: projectNumber || undefined,
         name: editProjectName,
         description: editProjectDescription || undefined,
         status: editProjectStatus,
@@ -738,7 +811,7 @@ export default function ProjectDetailScreen() {
         bauherr_plz: editBauherrPlz || undefined,
         bauherr_city: editBauherrCity || undefined,
         // Objektadresse (separate fields)
-        objekt_number: editObjektNumber || undefined,
+        objekt_number: objektNumber || undefined,
         objekt_name: editObjektName || undefined,
         objekt_description: editObjektDescription || undefined,
         objekt_street: editObjektStreet || undefined,
@@ -778,7 +851,7 @@ export default function ProjectDetailScreen() {
               zip: editBauherrPlz || existingCustomer.zip,
               city: editBauherrCity || existingCustomer.city,
               address: newAddress,
-              customer_number: editCustomerNumber || existingCustomer.customer_number,
+              customer_number: customerNumber || existingCustomer.customer_number,
             });
           }
         } catch (syncError) {

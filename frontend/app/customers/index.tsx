@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber } from '../../services/LocalStorage';
+import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber, isCustomerNumberDuplicate, isObjectNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -147,11 +147,53 @@ export default function CustomersScreen() {
 
     const addresses = selectedCustomer.projectAddresses || [];
     
+    // Duplikat-Prüfung für Objektnummer
+    const objectNumToCheck = addressObjectNumber;
+    if (objectNumToCheck) {
+      const isDuplicate = await isObjectNumberDuplicate(
+        objectNumToCheck, 
+        selectedCustomer.id, 
+        editingAddress?.id
+      );
+      
+      if (isDuplicate) {
+        Alert.alert(
+          'Objektnummer bereits vergeben',
+          `Die Objektnummer "${objectNumToCheck}" existiert bereits. Was möchten Sie tun?`,
+          [
+            { text: 'Abbrechen', style: 'cancel' },
+            { 
+              text: 'Trotzdem behalten', 
+              onPress: () => saveAddressWithNumber(objectNumToCheck)
+            },
+            {
+              text: 'Neue Nummer vergeben',
+              onPress: async () => {
+                const newNumber = await getNextAvailableObjectNumber(selectedCustomer.id);
+                saveAddressWithNumber(newNumber);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
+    // Kein Duplikat, normal speichern
+    const finalObjectNumber = addressObjectNumber || await getNextAvailableObjectNumber(selectedCustomer.id);
+    await saveAddressWithNumber(finalObjectNumber);
+  };
+  
+  const saveAddressWithNumber = async (objectNumber: string) => {
+    if (!selectedCustomer) return;
+    
+    const addresses = selectedCustomer.projectAddresses || [];
+    
     if (editingAddress) {
       // Bestehende Adresse aktualisieren
       const updatedAddresses = addresses.map(a => 
         a.id === editingAddress.id 
-          ? { ...a, object_number: addressObjectNumber || a.object_number, name: addressName, description: addressDescription || undefined, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
+          ? { ...a, object_number: objectNumber, name: addressName, description: addressDescription || undefined, objectName: addressObjectName || undefined, street: addressStreet, zip: addressZip, city: addressCity, contactPerson: addressContactPerson || undefined, phone: addressPhone || undefined, email: addressEmail || undefined }
           : a
       );
       await CustomerService.update(selectedCustomer.id, { 
@@ -159,11 +201,10 @@ export default function CustomersScreen() {
         projectAddresses: updatedAddresses 
       });
     } else {
-      // Neue Adresse hinzufügen - automatische Objektnummer generieren
-      const autoObjectNumber = addressObjectNumber || await generateObjectNumber();
+      // Neue Adresse hinzufügen
       const newAddress: ProjectAddress = {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-        object_number: autoObjectNumber,
+        object_number: objectNumber,
         name: addressName,
         description: addressDescription || undefined,
         objectName: addressObjectName || undefined,
@@ -352,11 +393,43 @@ export default function CustomersScreen() {
       return;
     }
     
+    // Duplikat-Prüfung für Projektnummer
+    if (editProjectNumber && editProjectNumber !== editingProject.project_number) {
+      const isDuplicate = await isProjectNumberDuplicate(editProjectNumber, editingProject.id);
+      if (isDuplicate) {
+        Alert.alert(
+          'Projektnummer bereits vergeben',
+          `Die Projektnummer "${editProjectNumber}" existiert bereits. Was möchten Sie tun?`,
+          [
+            { text: 'Abbrechen', style: 'cancel' },
+            { 
+              text: 'Trotzdem behalten', 
+              onPress: () => doSaveProjectChanges(editProjectNumber)
+            },
+            {
+              text: 'Neue Nummer vergeben',
+              onPress: async () => {
+                const newNumber = await getNextAvailableProjectNumber();
+                doSaveProjectChanges(newNumber);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
+    await doSaveProjectChanges(editProjectNumber);
+  };
+  
+  const doSaveProjectChanges = async (projectNumber: string) => {
+    if (!editingProject) return;
+    
     setSavingProject(true);
     try {
       await ProjectService.update(editingProject.id, {
         ...editingProject,
-        project_number: editProjectNumber || undefined,
+        project_number: projectNumber || undefined,
         name: editProjectName,
         description: editProjectDescription || undefined,
       });

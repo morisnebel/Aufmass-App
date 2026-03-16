@@ -758,6 +758,19 @@ export default function ProjectDetailScreen() {
       }
     }
     
+    // Prüfe Objektnummer
+    if (editObjektNumber && editObjektNumber !== project?.objekt_number) {
+      const isDupe = await isObjectNumberDuplicate(editObjektNumber);
+      if (isDupe) {
+        duplicateChecks.push({
+          field: 'Objektnummer',
+          number: editObjektNumber,
+          isDuplicate: true,
+          getNewNumber: () => getNextAvailableObjectNumber(project?.customer_id)
+        });
+      }
+    }
+    
     // Wenn Duplikate gefunden wurden, zeige Dialog
     if (duplicateChecks.length > 0) {
       const dupeList = duplicateChecks.map(d => `${d.field}: "${d.number}"`).join('\n');
@@ -775,15 +788,18 @@ export default function ProjectDetailScreen() {
             onPress: async () => {
               let newProjectNum = editProjectNumber;
               let newCustomerNum = editCustomerNumber;
+              let newObjektNum = editObjektNumber;
               
               for (const check of duplicateChecks) {
                 if (check.field === 'Projektnummer') {
                   newProjectNum = await check.getNewNumber();
                 } else if (check.field === 'Kundennummer') {
                   newCustomerNum = await check.getNewNumber();
+                } else if (check.field === 'Objektnummer') {
+                  newObjektNum = await check.getNewNumber();
                 }
               }
-              doSaveProject(newProjectNum, newCustomerNum, editObjektNumber);
+              doSaveProject(newProjectNum, newCustomerNum, newObjektNum);
             }
           }
         ]

@@ -312,6 +312,8 @@ export default function ProjectDetailScreen() {
       }
 
       if (projectData) {
+        console.log('[DEBUG loadProjectData] project_type:', projectData.project_type);
+        console.log('[DEBUG loadProjectData] project_type_date:', projectData.project_type_date);
         setProject(projectData);
         setRemarks(projectData.remarks || '');
         
@@ -893,7 +895,9 @@ export default function ProjectDetailScreen() {
       }
 
       setShowEditProjectModal(false);
+      console.log('[DEBUG] Projekt gespeichert, lade Daten neu...');
       await loadProjectData();
+      console.log('[DEBUG] Daten neu geladen, project_type:', project?.project_type);
 
       // Prüfe ob eine passende Projektadresse beim Kunden existiert und frage nach Sync
       console.log('=== SYNC CHECK ===');

@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
-import { CustomerService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+import { CustomerService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -264,6 +264,37 @@ export default function NewCustomerScreen() {
   };
 
   const saveCustomer = async (saveToContacts: boolean, updateExisting: boolean = false) => {
+    // Duplikat-Prüfung für Kundennummer
+    if (customerNumber) {
+      const isDuplicate = await isCustomerNumberDuplicate(customerNumber);
+      if (isDuplicate) {
+        Alert.alert(
+          'Kundennummer bereits vergeben',
+          `Die Kundennummer "${customerNumber}" existiert bereits. Was möchten Sie tun?`,
+          [
+            { text: 'Abbrechen', style: 'cancel' },
+            { 
+              text: 'Trotzdem verwenden', 
+              onPress: () => doSaveCustomer(saveToContacts, updateExisting, customerNumber)
+            },
+            {
+              text: 'Automatisch vergeben',
+              onPress: async () => {
+                const newNumber = await getNextAvailableCustomerNumber();
+                doSaveCustomer(saveToContacts, updateExisting, newNumber);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
+    // Keine Duplikate, normal speichern
+    await doSaveCustomer(saveToContacts, updateExisting, customerNumber || undefined);
+  };
+  
+  const doSaveCustomer = async (saveToContacts: boolean, updateExisting: boolean, finalCustomerNumber: string | undefined) => {
     setLoading(true);
     try {
       // Generiere den vollständigen Namen und die kombinierte Adresse
@@ -283,7 +314,7 @@ export default function NewCustomerScreen() {
         city: city || undefined,
         address: fullAddress || undefined,
         importedContactId: importedContactId || undefined,
-        customer_number: customerNumber || undefined,
+        customer_number: finalCustomerNumber,
       });
       
       // Handle contact synchronization

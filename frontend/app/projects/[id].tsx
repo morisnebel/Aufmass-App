@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicate, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -758,9 +758,10 @@ export default function ProjectDetailScreen() {
       }
     }
     
-    // Prüfe Objektnummer
-    if (editObjektNumber && editObjektNumber !== project?.objekt_number) {
-      const isDupe = await isObjectNumberDuplicate(editObjektNumber);
+    // Prüfe Objektnummer (nur innerhalb des Kunden)
+    if (editObjektNumber && editObjektNumber !== project?.objekt_number && project?.customer_id) {
+      const projectId = Array.isArray(id) ? id[0] : id;
+      const isDupe = await isObjectNumberDuplicateInProject(editObjektNumber, project.customer_id, projectId);
       if (isDupe) {
         duplicateChecks.push({
           field: 'Objektnummer',

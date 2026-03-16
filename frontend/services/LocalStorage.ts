@@ -242,15 +242,26 @@ const generateCustomerNumber = async (): Promise<string> => {
   const prefix = `KD-${yearPrefix}`;
   
   const customers = await getItems<Customer>(KEYS.CUSTOMERS);
-  const existingNumbers = customers
-    .filter(c => c.customer_number?.startsWith(prefix))
-    .map(c => {
-      const numPart = c.customer_number?.substring(prefix.length) || '0';
-      return parseInt(numPart, 10) || 0;
-    });
   
+  // Collect all existing numbers
+  const existingNumbers: number[] = [];
+  for (const c of customers) {
+    if (c.customer_number?.startsWith(prefix)) {
+      const numPart = c.customer_number.substring(prefix.length);
+      const num = parseInt(numPart, 10);
+      if (!isNaN(num)) {
+        existingNumbers.push(num);
+      }
+    }
+  }
+  
+  // Find the next available number (not just max + 1, but first gap or max + 1)
   const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
-  return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+  const nextNum = maxNum + 1;
+  
+  console.log(`[generateCustomerNumber] Existing numbers: ${existingNumbers.join(', ')}, Next: ${nextNum}`);
+  
+  return `${prefix}${String(nextNum).padStart(3, '0')}`;
 };
 
 // Helper function to generate next project number
@@ -341,23 +352,60 @@ export const isProjectNumberDuplicate = async (number: string, excludeId?: strin
   return projects.some(p => p.project_number === number && p.id !== excludeId);
 };
 
-// Check if object number already exists (across all customers)
-export const isObjectNumberDuplicate = async (number: string, excludeCustomerId?: string, excludeAddressId?: string): Promise<boolean> => {
+// Check if object number already exists WITHIN A CUSTOMER (not globally)
+// Each customer can have their own sequence: OBJ-26001, OBJ-26002, etc.
+export const isObjectNumberDuplicate = async (
+  number: string, 
+  customerId: string, 
+  excludeAddressId?: string
+): Promise<boolean> => {
   const customers = await getItems<Customer>(KEYS.CUSTOMERS);
-  for (const customer of customers) {
-    const addresses = customer.projectAddresses || [];
-    for (const addr of addresses) {
-      if (addr.object_number === number) {
-        // If we're updating, exclude the current address
-        if (excludeCustomerId && excludeAddressId) {
-          if (customer.id === excludeCustomerId && addr.id === excludeAddressId) {
-            continue;
-          }
-        }
-        return true;
+  const customer = customers.find(c => c.id === customerId);
+  
+  if (!customer) return false;
+  
+  const addresses = customer.projectAddresses || [];
+  for (const addr of addresses) {
+    if (addr.object_number === number) {
+      // If we're updating, exclude the current address
+      if (excludeAddressId && addr.id === excludeAddressId) {
+        continue;
       }
+      return true;
     }
   }
+  return false;
+};
+
+// Check if object number exists in ANY customer (for project objekt_number field)
+export const isObjectNumberDuplicateInProject = async (
+  number: string,
+  customerId: string,
+  currentProjectId?: string
+): Promise<boolean> => {
+  // First check if it exists in the customer's addresses
+  const customers = await getItems<Customer>(KEYS.CUSTOMERS);
+  const customer = customers.find(c => c.id === customerId);
+  
+  if (customer) {
+    const addresses = customer.projectAddresses || [];
+    const existsInAddresses = addresses.some(addr => addr.object_number === number);
+    if (existsInAddresses) {
+      // It's fine if it exists in customer's addresses - that's where it should come from
+      return false;
+    }
+  }
+  
+  // Check if another project (not this customer) uses this number
+  const projects = await getItems<Project>(KEYS.PROJECTS);
+  for (const proj of projects) {
+    if (proj.id === currentProjectId) continue;
+    if (proj.customer_id === customerId) continue; // Same customer is OK
+    if (proj.objekt_number === number) {
+      return true; // Different customer uses this number
+    }
+  }
+  
   return false;
 };
 

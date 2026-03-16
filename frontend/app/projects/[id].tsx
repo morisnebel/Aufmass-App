@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import * as Print from 'expo-print';
@@ -223,6 +224,8 @@ export default function ProjectDetailScreen() {
   const [showProjectTypeDatePicker, setShowProjectTypeDatePicker] = useState(false);
   const [projectTypeOptions, setProjectTypeOptions] = useState<string[]>([]);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [lastUsedProjectType, setLastUsedProjectTypeState] = useState<string | null>(null);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   
   // PDF Preview state
   const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
@@ -309,6 +312,12 @@ export default function ProjectDetailScreen() {
       // Lade Projektart-Optionen aus den Einstellungen
       if (settingsData?.project_type_options) {
         setProjectTypeOptions(settingsData.project_type_options);
+      }
+
+      // Lade die zuletzt verwendete Projektart
+      const lastUsed = await getLastUsedProjectType();
+      if (lastUsed) {
+        setLastUsedProjectTypeState(lastUsed);
       }
 
       if (projectData) {
@@ -4055,21 +4064,41 @@ export default function ProjectDetailScreen() {
               <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Projektart:</Text>
-                <Text style={styles.infoValue}>{project?.project_type || '(nicht gesetzt)'}</Text>
+                <Text style={[styles.infoValue, !project?.project_type && lastUsedProjectType && { color: '#999', fontStyle: 'italic' }]}>
+                  {project?.project_type || lastUsedProjectType || '(nicht gesetzt)'}
+                  {!project?.project_type && lastUsedProjectType && ' (Vorschlag)'}
+                </Text>
               </View>
-              {project?.project_type_date && (
+              {(project?.project_type_date) && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Datum:</Text>
                   <Text style={styles.infoValue}>{new Date(project.project_type_date).toLocaleDateString('de-DE')}</Text>
                 </View>
               )}
-              {project?.project_type && (
-                <View style={styles.projectTypePreviewInInfo}>
-                  <Ionicons name="ribbon" size={18} color="#1976d2" />
-                  <Text style={styles.projectTypePreviewInInfoText}>
-                    {project.project_type}
-                    {project.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
+              {(project?.project_type || lastUsedProjectType) && (
+                <View style={[styles.projectTypePreviewInInfo, !project?.project_type && { borderColor: '#999', borderLeftColor: '#999' }]}>
+                  <Ionicons name="ribbon" size={18} color={project?.project_type ? "#1976d2" : "#999"} />
+                  <Text style={[styles.projectTypePreviewInInfoText, !project?.project_type && { color: '#999' }]}>
+                    {project?.project_type || lastUsedProjectType}
+                    {project?.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
                   </Text>
+                  {!project?.project_type && (
+                    <TouchableOpacity 
+                      style={styles.quickSaveButton}
+                      onPress={async () => {
+                        // Schnell speichern der Projektart
+                        const projectId = Array.isArray(id) ? id[0] : id;
+                        await ProjectService.update(projectId, {
+                          ...project,
+                          project_type: lastUsedProjectType || undefined,
+                        });
+                        await loadProjectData();
+                      }}
+                    >
+                      <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
+                      <Text style={styles.quickSaveButtonText}>Übernehmen</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
               
@@ -6210,7 +6239,7 @@ export default function ProjectDetailScreen() {
           </View>
         )}
 
-        {/* Datum Picker - Simple Date Selection */}
+        {/* Datum Picker - Native iOS/Android DateTimePicker */}
         {showProjectTypeDatePicker && (
           <View style={styles.salutationPickerOverlay}>
             <TouchableOpacity 
@@ -6219,52 +6248,38 @@ export default function ProjectDetailScreen() {
               onPress={() => setShowProjectTypeDatePicker(false)}
             />
             <View style={[styles.salutationPickerContent, { padding: 20 }]}>
-              <Text style={styles.salutationModalTitle}>Datum eingeben</Text>
-              <View style={{ marginTop: 10 }}>
-                <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#ddd',
-                    borderRadius: 8,
-                    padding: 12,
-                    fontSize: 16,
-                    textAlign: 'center',
-                  }}
-                  placeholder="TT.MM.JJJJ"
-                  keyboardType="numeric"
-                  defaultValue={editProjectTypeDate ? new Date(editProjectTypeDate).toLocaleDateString('de-DE') : ''}
-                  onSubmitEditing={(e) => {
-                    const dateStr = e.nativeEvent.text;
-                    // Parse German date format DD.MM.YYYY
-                    const parts = dateStr.split('.');
-                    if (parts.length === 3) {
-                      const day = parseInt(parts[0], 10);
-                      const month = parseInt(parts[1], 10) - 1;
-                      const year = parseInt(parts[2], 10);
-                      const date = new Date(year, month, day);
-                      if (!isNaN(date.getTime())) {
-                        setEditProjectTypeDate(date.toISOString());
-                      }
+              <Text style={styles.salutationModalTitle}>Datum auswählen</Text>
+              <View style={{ marginTop: 10, alignItems: 'center' }}>
+                <DateTimePicker
+                  value={editProjectTypeDate ? new Date(editProjectTypeDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedDate) => {
+                    if (Platform.OS === 'android') {
+                      setShowProjectTypeDatePicker(false);
                     }
-                    setShowProjectTypeDatePicker(false);
+                    if (selectedDate) {
+                      setEditProjectTypeDate(selectedDate.toISOString());
+                    }
                   }}
+                  locale="de-DE"
+                  style={{ width: '100%', height: 150 }}
                 />
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 15, width: '100%' }}>
                   <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: '#e0e0e0', padding: 12, borderRadius: 8, alignItems: 'center' }}
-                    onPress={() => setShowProjectTypeDatePicker(false)}
-                  >
-                    <Text style={{ color: '#333' }}>Abbrechen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: '#1976d2', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    style={{ flex: 1, backgroundColor: '#f44336', padding: 12, borderRadius: 8, alignItems: 'center' }}
                     onPress={() => {
-                      // Set today's date
-                      setEditProjectTypeDate(new Date().toISOString());
+                      setEditProjectTypeDate('');
                       setShowProjectTypeDatePicker(false);
                     }}
                   >
-                    <Text style={{ color: '#fff' }}>Heute</Text>
+                    <Text style={{ color: '#fff' }}>Löschen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#1976d2', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    onPress={() => setShowProjectTypeDatePicker(false)}
+                  >
+                    <Text style={{ color: '#fff' }}>Fertig</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -8327,6 +8342,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1976d2',
     flex: 1,
+  },
+  quickSaveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+    gap: 4,
+  },
+  quickSaveButtonText: {
+    fontSize: 12,
+    color: '#4caf50',
+    fontWeight: '600',
   },
   // Projektart Edit Section (oben im Modal)
   projectTypeEditSection: {

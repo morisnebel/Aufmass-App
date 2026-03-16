@@ -4032,6 +4032,29 @@ export default function ProjectDetailScreen() {
                   )}
                 </>
               )}
+              
+              {/* Projektart Section in Projektinformationen */}
+              <View style={styles.sectionDivider} />
+              <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Projektart:</Text>
+                <Text style={styles.infoValue}>{project?.project_type || '(nicht gesetzt)'}</Text>
+              </View>
+              {project?.project_type_date && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Datum:</Text>
+                  <Text style={styles.infoValue}>{new Date(project.project_type_date).toLocaleDateString('de-DE')}</Text>
+                </View>
+              )}
+              {project?.project_type && (
+                <View style={styles.projectTypePreviewInInfo}>
+                  <Ionicons name="ribbon" size={18} color="#1976d2" />
+                  <Text style={styles.projectTypePreviewInInfoText}>
+                    {project.project_type}
+                    {project.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Projektart-Überschrift (anstelle der Statistik-Karte) */}
@@ -8173,6 +8196,24 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   projectTypePreviewText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
+    flex: 1,
+  },
+  // Projektart in Projektinformationen
+  projectTypePreviewInInfo: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1976d2',
+  },
+  projectTypePreviewInInfoText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1976d2',

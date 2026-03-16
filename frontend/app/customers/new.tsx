@@ -264,10 +264,16 @@ export default function NewCustomerScreen() {
   };
 
   const saveCustomer = async (saveToContacts: boolean, updateExisting: boolean = false) => {
+    console.log('[DEBUG] saveCustomer aufgerufen mit customerNumber:', customerNumber);
+    
     // Duplikat-Prüfung für Kundennummer
     if (customerNumber) {
+      console.log('[DEBUG] Prüfe Kundennummer auf Duplikat:', customerNumber);
       const isDuplicate = await isCustomerNumberDuplicate(customerNumber);
+      console.log('[DEBUG] isDuplicate Ergebnis:', isDuplicate);
+      
       if (isDuplicate) {
+        console.log('[DEBUG] Duplikat gefunden! Zeige Dialog...');
         Alert.alert(
           'Kundennummer bereits vergeben',
           `Die Kundennummer "${customerNumber}" existiert bereits. Was möchten Sie tun?`,
@@ -291,6 +297,7 @@ export default function NewCustomerScreen() {
     }
     
     // Keine Duplikate, normal speichern
+    console.log('[DEBUG] Kein Duplikat, speichere direkt...');
     await doSaveCustomer(saveToContacts, updateExisting, customerNumber || undefined);
   };
   

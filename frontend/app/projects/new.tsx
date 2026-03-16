@@ -21,7 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CustomerService, ProjectService, Customer, ProjectAddress } from '../../services/LocalStorage';
+import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';
 
 // Customer type is imported from LocalStorage service
 
@@ -606,6 +606,40 @@ export default function NewProjectScreen() {
 
   const saveProject = async (saveAddressWithName: string | null) => {
     setLoading(true);
+    
+    // Duplikat-Prüfung für Projektnummer
+    if (projectNumber) {
+      const isDuplicate = await isProjectNumberDuplicate(projectNumber);
+      if (isDuplicate) {
+        setLoading(false);
+        Alert.alert(
+          'Projektnummer bereits vergeben',
+          `Die Projektnummer "${projectNumber}" existiert bereits. Was möchten Sie tun?`,
+          [
+            { text: 'Abbrechen', style: 'cancel' },
+            { 
+              text: 'Trotzdem verwenden', 
+              onPress: () => doSaveProject(saveAddressWithName, projectNumber)
+            },
+            {
+              text: 'Automatisch vergeben',
+              onPress: async () => {
+                const newNumber = await getNextAvailableProjectNumber();
+                doSaveProject(saveAddressWithName, newNumber);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
+    // Keine Duplikate, normal speichern
+    await doSaveProject(saveAddressWithName, projectNumber || undefined);
+  };
+  
+  const doSaveProject = async (saveAddressWithName: string | null, finalProjectNumber: string | undefined) => {
+    setLoading(true);
     try {
       // Wenn eine neue Adresse gespeichert werden soll
       let savedAddressName = selectedProjectAddress?.name;
@@ -659,7 +693,7 @@ export default function NewProjectScreen() {
         description: description || undefined,
         customer_id: customerId,
         status: 'aktiv',
-        project_number: projectNumber || undefined,
+        project_number: finalProjectNumber || undefined,
         bauherr_name: selectedCustomer?.name || undefined,
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,

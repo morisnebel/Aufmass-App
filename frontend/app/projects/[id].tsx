@@ -664,7 +664,7 @@ export default function ProjectDetailScreen() {
   };
 
   // Open edit project modal with current values
-  const openEditProjectModal = () => {
+  const openEditProjectModal = async () => {
     if (project) {
       // Project numbers
       setEditProjectNumber(project.project_number || '');

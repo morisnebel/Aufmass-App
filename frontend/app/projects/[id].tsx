@@ -3379,15 +3379,19 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
+        ${roofs.length > 0 ? `
         <div class="roofs-section">
           <h2>Dachflächen</h2>
           ${roofsHtml}
         </div>
+        ` : ''}
         
+        ${checklists.length > 0 ? `
         <div class="checklists-section checklists-page-break">
           <h2>Checklisten</h2>
           ${checklistsHtml}
         </div>
+        ` : ''}
         </div><!-- end .page -->
         
         ${photos.length > 0 ? `

@@ -3228,13 +3228,13 @@ export default function ProjectDetailScreen() {
             font-size: 8px;
           }
           .footer {
-            margin-top: 10px;
-            padding-top: 5px;
+            margin-top: 5px;
+            padding: 3px 0;
             border-top: 1px solid ${accentColor};
-            font-size: 7px;
-            color: #666;
+            font-size: 6px;
+            color: #999;
             text-align: center;
-            font-weight: 500;
+            font-weight: 400;
             page-break-inside: avoid;
             page-break-before: avoid;
             break-before: avoid;
@@ -3244,6 +3244,14 @@ export default function ProjectDetailScreen() {
           .footer-container {
             page-break-inside: avoid;
             break-inside: avoid;
+          }
+          /* Footer im Druck nur anzeigen wenn genug Platz - sonst verstecken */
+          @media print {
+            .footer {
+              /* Footer wird nur gedruckt wenn er auf die Seite passt */
+              orphans: 3;
+              widows: 3;
+            }
           }
           .page-break {
             page-break-before: always;

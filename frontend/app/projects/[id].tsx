@@ -2269,11 +2269,11 @@ export default function ProjectDetailScreen() {
             .page {
               background: #fff;
               width: 210mm;
-              min-height: 297mm;
+              min-height: auto; /* Entfernt: war 297mm - erlaubt Fotos/Skizzen auf erste Seite */
               padding: 15mm;
-              margin: 0 auto 10px auto;
+              margin: 0 auto 0 auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-              border-radius: 2px;
+              border-radius: 2px 2px 0 0;
               position: relative;
             }
             .page-break {
@@ -2288,6 +2288,20 @@ export default function ProjectDetailScreen() {
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
               position: relative;
+            }
+            /* Optionaler Seitenumbruch - fließt mit vorherigem Inhalt */
+            .optional-break {
+              background: #fff;
+              width: 210mm;
+              padding: 0 15mm 15mm 15mm;
+              margin: 0 auto 10px auto;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              border-radius: 0 0 2px 2px;
+              position: relative;
+            }
+            /* Letzter Container bekommt Margin-Bottom */
+            .optional-break:last-child {
+              margin-bottom: 10px;
             }
           }
           @media print {
@@ -2320,6 +2334,17 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
+            }
+            /* Optionaler Seitenumbruch - nur wenn nötig, nicht erzwungen */
+            .optional-break {
+              width: auto;
+              min-height: auto;
+              padding: 0mm 5mm;
+              margin: 0;
+              box-shadow: none;
+              border-radius: 0;
+              page-break-before: auto;
+              page-break-inside: avoid;
             }
             .remarks-page {
               page-break-before: always;
@@ -3446,7 +3471,7 @@ export default function ProjectDetailScreen() {
         </div><!-- end .page -->
         
         ${photos.length > 0 ? `
-          <div class="new-page">
+          <div class="optional-break">
             <div class="photos-section">
               <h2>Fotos</h2>
               ${photosHtml}
@@ -3468,7 +3493,7 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${sketches.length > 0 ? `
-          <div class="new-page">
+          <div class="optional-break">
             <div class="sketches-section">
               <h2>Skizzen</h2>
               ${sketchesHtml}

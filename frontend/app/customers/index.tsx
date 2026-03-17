@@ -11,6 +11,7 @@ import {
   Modal,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +23,10 @@ export default function CustomersScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const selectMode = params.selectMode === 'true';
+  
+  // iPhone vs iPad Erkennung - für unterschiedliches Layout
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
   
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -460,9 +465,9 @@ export default function CustomersScreen() {
   );
 
   const renderCustomer = ({ item }: { item: Customer }) => (
-    <View style={styles.customerCard}>
+    <View style={[styles.customerCard, isPhone && styles.customerCardPhone]}>
       <TouchableOpacity
-        style={styles.customerMainArea}
+        style={[styles.customerMainArea, isPhone && styles.customerMainAreaPhone]}
         onPress={async () => {
           if (selectMode) {
             // Im Auswahlmodus: Kunde in AsyncStorage speichern und zurück navigieren
@@ -476,26 +481,26 @@ export default function CustomersScreen() {
           }
         }}
       >
-        <View style={styles.customerAvatar}>
-          <Text style={styles.customerInitial}>
+        <View style={[styles.customerAvatar, isPhone && styles.customerAvatarPhone]}>
+          <Text style={[styles.customerInitial, isPhone && styles.customerInitialPhone]}>
             {item.name?.charAt(0).toUpperCase() || '?'}
           </Text>
         </View>
         <View style={styles.customerInfo}>
           <View style={styles.customerNameRow}>
             {item.customer_number && (
-              <Text style={styles.customerNumber}>{item.customer_number}</Text>
+              <Text style={[styles.customerNumber, isPhone && styles.customerNumberPhone]}>{item.customer_number}</Text>
             )}
-            <Text style={styles.customerName}>{item.name || 'Unbekannt'}</Text>
+            <Text style={[styles.customerName, isPhone && styles.customerNamePhone]} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
           </View>
           {item.email && (
-            <Text style={styles.customerDetail}>
-              <Ionicons name="mail" size={12} color="#666" /> {item.email}
+            <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone]} numberOfLines={1} ellipsizeMode="tail">
+              <Ionicons name="mail" size={isPhone ? 10 : 12} color="#666" /> {item.email}
             </Text>
           )}
           {item.phone && (
-            <Text style={styles.customerDetail}>
-              <Ionicons name="call" size={12} color="#666" /> {item.phone}
+            <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone]} numberOfLines={1} ellipsizeMode="tail">
+              <Ionicons name="call" size={isPhone ? 10 : 12} color="#666" /> {item.phone}
             </Text>
           )}
         </View>
@@ -504,14 +509,14 @@ export default function CustomersScreen() {
         )}
       </TouchableOpacity>
       {!selectMode && (
-      <View style={styles.customerActions}>
+      <View style={[styles.customerActions, isPhone && styles.customerActionsPhone]}>
         {/* Projekte-Button mit Label */}
         <TouchableOpacity
-          style={styles.actionButtonWithLabel}
+          style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
           onPress={() => openProjectsModal(item)}
         >
           <View style={styles.iconContainer}>
-            <Ionicons name="folder-open" size={22} color="#9c27b0" />
+            <Ionicons name="folder-open" size={isPhone ? 18 : 22} color="#9c27b0" />
             {projects.filter(p => p.customer_id === item.id).length > 0 && (
               <View style={styles.projectsBadge}>
                 <Text style={styles.projectsBadgeText}>
@@ -520,23 +525,23 @@ export default function CustomersScreen() {
               </View>
             )}
           </View>
-          <Text style={styles.actionButtonLabel}>Projekte</Text>
+          {!isPhone && <Text style={styles.actionButtonLabel}>Projekte</Text>}
         </TouchableOpacity>
         
         {/* Objekte/Adressen-Button mit Label */}
         <TouchableOpacity
-          style={styles.actionButtonWithLabel}
+          style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
           onPress={() => openAddressModal(item)}
         >
           <View style={styles.iconContainer}>
-            <Ionicons name="home" size={22} color="#ff9800" />
+            <Ionicons name="home" size={isPhone ? 18 : 22} color="#ff9800" />
             {(item.projectAddresses?.length || 0) > 0 && (
               <View style={styles.addressBadge}>
                 <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.actionButtonLabel}>Objekte</Text>
+          {!isPhone && <Text style={styles.actionButtonLabel}>Objekte</Text>}
         </TouchableOpacity>
         
         {/* Neues Projekt Button */}
@@ -544,13 +549,13 @@ export default function CustomersScreen() {
           style={styles.newProjectButton}
           onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
         >
-          <Ionicons name="add-circle" size={28} color="#4caf50" />
+          <Ionicons name="add-circle" size={isPhone ? 22 : 28} color="#4caf50" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => openDeleteModal(item)}
           style={styles.deleteButton}
         >
-          <Ionicons name="trash-outline" size={20} color="#f44336" />
+          <Ionicons name="trash-outline" size={isPhone ? 16 : 20} color="#f44336" />
         </TouchableOpacity>
       </View>
       )}
@@ -1101,10 +1106,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  customerCardPhone: {
+    padding: 8,
+  },
   customerMainArea: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  customerMainAreaPhone: {
+    flex: 1,
   },
   customerAvatar: {
     width: 50,
@@ -1114,10 +1125,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  customerAvatarPhone: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
   customerInitial: {
     color: '#fff',
     fontSize: 22,
     fontWeight: '600',
+  },
+  customerInitialPhone: {
+    fontSize: 16,
   },
   customerInfo: {
     flex: 1,
@@ -1138,20 +1157,38 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
+  customerNumberPhone: {
+    fontSize: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
   customerName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+    flexShrink: 1,
+  },
+  customerNamePhone: {
+    fontSize: 14,
   },
   customerDetail: {
     fontSize: 13,
     color: '#666',
     marginTop: 2,
   },
+  customerDetailPhone: {
+    fontSize: 11,
+  },
   customerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  customerActionsPhone: {
+    gap: 2,
+  },
+  actionButtonWithLabelPhone: {
+    paddingHorizontal: 4,
   },
   newProjectButton: {
     padding: 4,

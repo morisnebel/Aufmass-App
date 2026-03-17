@@ -1144,8 +1144,11 @@ export default function ProjectDetailScreen() {
     
     // PDF Layout Einstellungen
     const checklistColumns = (settings as any).pdf_checklist_columns || 2;
+    console.log('[PDF DEBUG] checklistColumns setting:', (settings as any).pdf_checklist_columns);
+    console.log('[PDF DEBUG] checklistColumns used:', checklistColumns);
     // Feste Spaltenanzahl statt auto-fit
     const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+    console.log('[PDF DEBUG] gridColumns:', gridColumns);
     
     // Farb-Optionen für alle Bereiche
     const colorOptions: { [key: string]: { color: string; textColor: string } } = {

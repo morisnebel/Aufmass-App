@@ -1724,11 +1724,13 @@ const styles = StyleSheet.create({
   },
   checklistTextPhone: {
     flex: 1,
-    fontSize: 13,
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#222',
   },
   checklistTextCheckedPhone: {
-    color: '#4caf50',
+    color: '#2e7d32',
+    fontWeight: '600',
   },
   collapseButtonPhone: {
     padding: 2,

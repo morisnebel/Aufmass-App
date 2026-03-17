@@ -1138,8 +1138,10 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   itemInputPhone: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '600',
     padding: 6,
+    color: '#222',
   },
   collapseButton: {
     padding: 4,

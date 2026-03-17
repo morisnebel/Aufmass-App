@@ -2269,11 +2269,11 @@ export default function ProjectDetailScreen() {
             .page {
               background: #fff;
               width: 210mm;
-              min-height: auto; /* Entfernt: war 297mm - erlaubt Fotos/Skizzen auf erste Seite */
+              min-height: auto; /* Keine feste Höhe - Inhalt bestimmt die Höhe */
               padding: 15mm;
-              margin: 0 auto 0 auto;
+              margin: 0 auto 10px auto;
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-              border-radius: 2px 2px 0 0;
+              border-radius: 2px;
               position: relative;
             }
             .page-break {
@@ -2288,20 +2288,6 @@ export default function ProjectDetailScreen() {
               box-shadow: 0 4px 12px rgba(0,0,0,0.15);
               border-radius: 2px;
               position: relative;
-            }
-            /* Optionaler Seitenumbruch - fließt mit vorherigem Inhalt */
-            .optional-break {
-              background: #fff;
-              width: 210mm;
-              padding: 0 15mm 15mm 15mm;
-              margin: 0 auto 10px auto;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-              border-radius: 0 0 2px 2px;
-              position: relative;
-            }
-            /* Letzter Container bekommt Margin-Bottom */
-            .optional-break:last-child {
-              margin-bottom: 10px;
             }
           }
           @media print {
@@ -2334,17 +2320,6 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
-            }
-            /* Optionaler Seitenumbruch - nur wenn nötig, nicht erzwungen */
-            .optional-break {
-              width: auto;
-              min-height: auto;
-              padding: 0mm 5mm;
-              margin: 0;
-              box-shadow: none;
-              border-radius: 0;
-              page-break-before: auto;
-              page-break-inside: avoid;
             }
             .remarks-page {
               page-break-before: always;
@@ -3468,51 +3443,35 @@ export default function ProjectDetailScreen() {
           ${checklistsHtml}
         </div>
         ` : ''}
-        </div><!-- end .page -->
         
         ${photos.length > 0 ? `
-          <div class="optional-break">
-            <div class="photos-section">
-              <h2>Fotos</h2>
-              ${photosHtml}
-            </div>
-            ${sketches.length === 0 ? `
-              ${(remarks || project?.remarks) ? `
-                <div class="remarks-section" style="margin-top: 30px;">
-                  <h2>Bemerkungen</h2>
-                  <div class="remarks-box">
-                    ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
-                  </div>
-                </div>
-              ` : ''}
-              <div class="footer">
-                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-              </div>
-            ` : ''}
+          <div class="photos-section">
+            <h2>Fotos</h2>
+            ${photosHtml}
           </div>
         ` : ''}
         
         ${sketches.length > 0 ? `
-          <div class="optional-break">
-            <div class="sketches-section">
-              <h2>Skizzen</h2>
-              ${sketchesHtml}
-            </div>
-            ${areaCalculations.length === 0 ? `
-              ${(remarks || project?.remarks) ? `
-                <div class="remarks-section" style="margin-top: 30px;">
-                  <h2>Bemerkungen</h2>
-                  <div class="remarks-box">
-                    ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
-                  </div>
-                </div>
-              ` : ''}
-              <div class="footer">
-                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-              </div>
-            ` : ''}
+          <div class="sketches-section">
+            <h2>Skizzen</h2>
+            ${sketchesHtml}
           </div>
         ` : ''}
+        
+        ${areaCalculations.length === 0 && (photos.length > 0 || sketches.length > 0) ? `
+          ${(remarks || project?.remarks) ? `
+            <div class="remarks-section" style="margin-top: 30px;">
+              <h2>Bemerkungen</h2>
+              <div class="remarks-box">
+                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+              </div>
+            </div>
+          ` : ''}
+          <div class="footer">
+            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+          </div>
+        ` : ''}
+        </div><!-- end .page -->
         
         ${areaCalculations.length > 0 ? `
           <div class="new-page">

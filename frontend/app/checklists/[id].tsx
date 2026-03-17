@@ -908,11 +908,11 @@ export default function EditChecklistScreen() {
         { marginLeft: depth * indentSize },
         // Auf iPhone: farbige Linie links statt Einrückung
         isPhone && depth > 0 && { 
-          borderLeftWidth: 3, 
+          borderLeftWidth: 2, 
           borderLeftColor: depthColor,
-          paddingLeft: 8,
-          marginLeft: 4,
-          marginTop: 2,
+          paddingLeft: 4,
+          marginLeft: 2,
+          marginTop: 1,
         }
       ]}>
         {/* Bearbeitungsmodus */}
@@ -937,6 +937,104 @@ export default function EditChecklistScreen() {
           </View>
         ) : (
           /* Normaler Anzeigemodus */
+          isPhone ? (
+            /* iPhone: Kompaktes vertikales Layout */
+            <View style={[
+              styles.checklistItemPhone,
+              item.checked && styles.checklistItemCheckedPhone,
+            ]}>
+              {/* Obere Zeile: Checkbox + Text */}
+              <TouchableOpacity 
+                style={styles.itemTopRowPhone}
+                onPress={() => startEditing(path, item.text)}
+                activeOpacity={0.7}
+              >
+                <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchablePhone}>
+                  <Ionicons
+                    name={item.checked ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={item.checked ? '#4caf50' : '#666'}
+                  />
+                </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.checklistTextPhone,
+                    item.checked && styles.checklistTextCheckedPhone,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {item.text}
+                </Text>
+                {/* Einklappen-Indikator */}
+                {hasSubItems && (
+                  <TouchableOpacity
+                    onPress={() => toggleCollapse(path)}
+                    style={styles.collapseButtonPhone}
+                  >
+                    <Ionicons 
+                      name={isCollapsed(path) ? "chevron-forward" : "chevron-down"} 
+                      size={16} 
+                      color="#666" 
+                    />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+              
+              {/* Untere Zeile: Action Buttons */}
+              <View style={styles.itemActionsRowPhone}>
+                <TouchableOpacity 
+                  onPress={() => moveItemUp(path)}
+                  style={[styles.actionBtnPhone, path[path.length - 1] === 0 && styles.actionButtonDisabled]}
+                  disabled={path[path.length - 1] === 0}
+                >
+                  <Ionicons name="arrow-up" size={14} color={path[path.length - 1] === 0 ? '#ccc' : '#666'} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => moveItemDown(path)}
+                  style={styles.actionBtnPhone}
+                >
+                  <Ionicons name="arrow-down" size={14} color="#666" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => copyItem(path)}
+                  style={styles.actionBtnPhone}
+                >
+                  <Ionicons name="copy-outline" size={14} color="#ff9800" />
+                </TouchableOpacity>
+                {copiedItem && (
+                  <TouchableOpacity 
+                    onPress={() => pasteItemAfter(path)}
+                    style={styles.actionBtnPhone}
+                  >
+                    <Ionicons name="clipboard-outline" size={14} color="#4caf50" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity 
+                  onPress={() => {
+                    Alert.alert(
+                      'Löschen',
+                      `"${item.text}" wirklich löschen?`,
+                      [
+                        { text: 'Abbrechen', style: 'cancel' },
+                        { text: 'Löschen', style: 'destructive', onPress: () => deleteItem(path) }
+                      ]
+                    );
+                  }}
+                  style={styles.actionBtnPhone}
+                >
+                  <Ionicons name="trash-outline" size={14} color="#f44336" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Hinweis auf Unterpunkte wenn eingeklappt */}
+              {hasSubItems && isCollapsed(path) && (
+                <Text style={styles.subItemsHintPhone}>
+                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+                </Text>
+              )}
+            </View>
+          ) : (
+          /* iPad: Normales horizontales Layout */
           <View style={[
             styles.checklistItem,
             item.checked && styles.checklistItemChecked,
@@ -1062,6 +1160,7 @@ export default function EditChecklistScreen() {
               )}
             </View>
           </View>
+          )}
         )}
 
         {/* Expanded Content - nur wenn abgehakt und nicht eingeklappt */}
@@ -1601,6 +1700,55 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fff8',
     borderWidth: 1,
     borderColor: '#4caf50',
+  },
+  // iPhone-spezifische kompakte Styles
+  checklistItemPhone: {
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    padding: 6,
+    marginBottom: 2,
+  },
+  checklistItemCheckedPhone: {
+    backgroundColor: '#f8fff8',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  itemTopRowPhone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxTouchablePhone: {
+    padding: 2,
+    marginRight: 6,
+  },
+  checklistTextPhone: {
+    flex: 1,
+    fontSize: 13,
+    color: '#333',
+  },
+  checklistTextCheckedPhone: {
+    color: '#4caf50',
+  },
+  collapseButtonPhone: {
+    padding: 2,
+  },
+  itemActionsRowPhone: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 8,
+  },
+  actionBtnPhone: {
+    padding: 4,
+  },
+  subItemsHintPhone: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   subItemCard: {
     backgroundColor: '#fafafa',

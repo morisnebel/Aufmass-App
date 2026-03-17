@@ -586,11 +586,11 @@ export default function EditTemplateScreen() {
         { marginLeft: depth * indentSize },
         // Auf iPhone: farbige Linie links statt Einrückung
         isPhone && depth > 0 && { 
-          borderLeftWidth: 3, 
+          borderLeftWidth: 2, 
           borderLeftColor: depthColor,
-          paddingLeft: 8,
-          marginLeft: 4,
-          marginTop: 2,
+          paddingLeft: 4,
+          marginLeft: 2,
+          marginTop: 1,
         }
       ]}>
         {/* Item Header mit Eingabefeld */}

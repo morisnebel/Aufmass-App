@@ -1184,7 +1184,7 @@ export default function EditChecklistScreen() {
                 <TextInput
                   style={styles.newSubItemInput}
                   placeholder="Neuen Unterpunkt eingeben..."
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#888"
                   value={newSubItemTexts[path.join('-')] || ''}
                   onChangeText={(text) => setNewSubItemTexts(prev => ({ ...prev, [path.join('-')]: text }))}
                   onSubmitEditing={() => confirmNewSubItem(path)}

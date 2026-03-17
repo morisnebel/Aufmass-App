@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://aufmass-roofer.preview.emergentagent.com/api"
+BACKEND_URL = "https://dachaufmass-app.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

@@ -1147,8 +1147,7 @@ export default function ProjectDetailScreen() {
     // Feste Spaltenanzahl statt auto-fit
     const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
     
-    // PDF Farb-Einstellungen
-    const pdfColorId = (settings as any).pdf_header_color || 'blue';
+    // Farb-Optionen für alle Bereiche
     const colorOptions: { [key: string]: { color: string; textColor: string } } = {
       blue: { color: '#1976d2', textColor: '#ffffff' },
       light_blue: { color: '#bbdefb', textColor: '#1565c0' },
@@ -1161,16 +1160,55 @@ export default function ProjectDetailScreen() {
       black: { color: '#212121', textColor: '#ffffff' },
       white: { color: '#ffffff', textColor: '#333333' },
     };
-    const pdfColor = colorOptions[pdfColorId] || colorOptions.blue;
-    const pdfHeaderStyle = settings?.pdf_header_style || 'filled';
+    
+    // Größen-Mapping für Schrift und Padding
+    const sizeMapping = {
+      small: { fontSize: 14, padding: 6, h1Size: 14, h2Size: 10 },
+      medium: { fontSize: 16, padding: 8, h1Size: 16, h2Size: 11 },
+      large: { fontSize: 20, padding: 12, h1Size: 20, h2Size: 13 },
+    };
+    
+    // ===== HEADER SECTION SETTINGS =====
+    const headerColorId = (settings as any).pdf_header_section_color || (settings as any).pdf_header_color || 'blue';
+    const headerStyleSetting = (settings as any).pdf_header_section_style || (settings as any).pdf_header_style || 'filled';
+    const headerSizeSetting = (settings as any).pdf_header_size || 'medium';
+    const headerColor = colorOptions[headerColorId] || colorOptions.blue;
+    const headerSize = sizeMapping[headerSizeSetting as keyof typeof sizeMapping] || sizeMapping.medium;
     
     // Header-Farben basierend auf Stil
-    const headerBgColor = pdfHeaderStyle === 'outline' ? '#ffffff' : pdfColor.color;
-    const headerTextColor = pdfHeaderStyle === 'outline' ? pdfColor.color : pdfColor.textColor;
-    const headerBorderStyle = pdfHeaderStyle === 'outline' ? `border: 2px solid ${pdfColor.color};` : '';
+    const headerBgColor = headerStyleSetting === 'outline' ? '#ffffff' : headerColor.color;
+    const headerTextColor = headerStyleSetting === 'outline' ? headerColor.color : headerColor.textColor;
+    const headerBorderStyle = headerStyleSetting === 'outline' ? `border: 2px solid ${headerColor.color};` : '';
     
-    // Akzentfarbe für Überschriften im Dokument (immer die gewählte Farbe, nie weiß)
-    const accentColor = pdfColor.color;
+    // ===== PROJECT TYPE (HEADLINE) SECTION SETTINGS =====
+    const projectTypeColorId = (settings as any).pdf_project_type_color || headerColorId;
+    const projectTypeStyleSetting = (settings as any).pdf_project_type_style || headerStyleSetting;
+    const projectTypeSizeSetting = (settings as any).pdf_project_type_size || 'medium';
+    const projectTypeColor = colorOptions[projectTypeColorId] || colorOptions.blue;
+    const projectTypeSize = sizeMapping[projectTypeSizeSetting as keyof typeof sizeMapping] || sizeMapping.medium;
+    
+    // Project Type-Farben basierend auf Stil
+    const projectTypeBgColor = projectTypeStyleSetting === 'outline' ? '#ffffff' : projectTypeColor.color;
+    const projectTypeTextColor = projectTypeStyleSetting === 'outline' ? projectTypeColor.color : projectTypeColor.textColor;
+    const projectTypeBorderStyle = projectTypeStyleSetting === 'outline' ? `border: 2px solid ${projectTypeColor.color};` : `border: 1px solid ${projectTypeColor.color};`;
+    
+    // ===== TOOLS SECTION SETTINGS (Info, Fotos, Skizzen, etc.) =====
+    const toolsColorId = (settings as any).pdf_tools_color || headerColorId;
+    const toolsStyleSetting = (settings as any).pdf_tools_style || 'filled';
+    const toolsSizeSetting = (settings as any).pdf_tools_size || 'medium';
+    const toolsColor = colorOptions[toolsColorId] || colorOptions.blue;
+    const toolsSize = sizeMapping[toolsSizeSetting as keyof typeof sizeMapping] || sizeMapping.medium;
+    
+    // Tools-Farben (für Section Headers)
+    const toolsAccentColor = toolsColor.color;
+    const toolsBgColor = toolsStyleSetting === 'outline' ? '#ffffff' : toolsColor.color;
+    const toolsTextColor = toolsStyleSetting === 'outline' ? toolsColor.color : toolsColor.textColor;
+    
+    // Legacy: Akzentfarbe für Überschriften im Dokument (verwendet jetzt Tools-Farbe)
+    const accentColor = toolsAccentColor;
+    // Legacy: Altes pdfColor für Abwärtskompatibilität
+    const pdfColor = headerColor;
+    const pdfHeaderStyle = headerStyleSetting;
     
     // Format date
     const formatDate = (dateStr: string) => {
@@ -2364,7 +2402,7 @@ export default function ProjectDetailScreen() {
           .header {
             background: ${headerBgColor};
             color: ${headerTextColor};
-            padding: 8px 12px;
+            padding: ${headerSize.padding}px ${headerSize.padding + 4}px;
             margin: 0 0 10px 0;
             border-radius: 0;
             display: flex;
@@ -2391,7 +2429,7 @@ export default function ProjectDetailScreen() {
           }
           .header h1 {
             margin: 0;
-            font-size: 16px;
+            font-size: ${headerSize.h1Size}px;
             font-weight: 600;
           }
           .header .date {
@@ -2408,12 +2446,12 @@ export default function ProjectDetailScreen() {
             line-height: 1.2;
           }
           h2 {
-            color: ${accentColor};
-            border-bottom: 1px solid ${accentColor};
+            color: ${toolsAccentColor};
+            border-bottom: 1px solid ${toolsAccentColor};
             padding-bottom: 3px;
             margin-top: 12px;
             margin-bottom: 8px;
-            font-size: 11px;
+            font-size: ${toolsSize.h2Size}px;
             page-break-after: avoid;
             page-break-inside: avoid;
           }
@@ -2563,12 +2601,12 @@ export default function ProjectDetailScreen() {
             text-transform: uppercase;
             letter-spacing: 0.3px;
           }
-          /* Projektart-Überschrift - passt sich an Header-Farbe an */
+          /* Projektart-Überschrift - eigene Farb- und Stil-Einstellungen */
           .project-type-header {
-            background: ${headerBgColor};
-            border: 1px solid ${pdfColor.color};
+            background: ${projectTypeBgColor};
+            ${projectTypeBorderStyle}
             border-radius: 4px;
-            padding: 6px 12px;
+            padding: ${projectTypeSize.padding}px ${projectTypeSize.padding + 4}px;
             margin-bottom: 12px;
             text-align: center;
             display: flex;
@@ -2576,13 +2614,13 @@ export default function ProjectDetailScreen() {
             justify-content: center;
           }
           .project-type-icon {
-            color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
-            font-size: 12px;
+            color: ${projectTypeTextColor};
+            font-size: ${projectTypeSize.fontSize - 2}px;
           }
           .project-type-text {
-            font-size: 12px;
+            font-size: ${projectTypeSize.fontSize}px;
             font-weight: 600;
-            color: ${pdfHeaderStyle === 'outline' ? pdfColor.color : '#fff'};
+            color: ${projectTypeTextColor};
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }

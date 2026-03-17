@@ -33,13 +33,20 @@ interface CompanySettings {
   logo_data: string | null;
   bluetooth_mode: boolean;
   pdf_checklist_columns: number; // 1, 2, oder 3 Spalten
-  pdf_header_color: string; // Hintergrundfarbe für PDF-Header
-  pdf_header_style: 'filled' | 'outline'; // Voll oder nur Rahmen
-  project_type_options: string[]; // Projektart-Überschriften
-  // Neue Größen-Einstellungen für PDF-Layout
-  pdf_header_size: 'small' | 'medium' | 'large'; // Größe des Headers
-  pdf_project_type_size: 'small' | 'medium' | 'large'; // Größe der Projektart-Überschrift
-  pdf_tools_size: 'small' | 'medium' | 'large'; // Größe der Tool-Bereiche
+  // Alte globale Einstellungen (für Abwärtskompatibilität)
+  pdf_header_color: string;
+  pdf_header_style: 'filled' | 'outline';
+  project_type_options: string[];
+  // Neue Layout-Einstellungen pro Bereich
+  pdf_header_size: 'small' | 'medium' | 'large';
+  pdf_header_section_color: string;
+  pdf_header_section_style: 'filled' | 'outline';
+  pdf_project_type_size: 'small' | 'medium' | 'large';
+  pdf_project_type_color: string;
+  pdf_project_type_style: 'filled' | 'outline';
+  pdf_tools_size: 'small' | 'medium' | 'large';
+  pdf_tools_color: string;
+  pdf_tools_style: 'filled' | 'outline';
 }
 
 // Größen-Optionen für PDF-Layout
@@ -47,6 +54,12 @@ const PDF_SIZE_OPTIONS = [
   { id: 'small', label: 'Klein' },
   { id: 'medium', label: 'Mittel' },
   { id: 'large', label: 'Groß' },
+];
+
+// Style-Optionen für PDF-Layout
+const PDF_STYLE_OPTIONS = [
+  { id: 'filled', label: 'Volle Farbe' },
+  { id: 'outline', label: 'Nur Rahmen' },
 ];
 
 // Verfügbare Farboptionen für PDF-Header
@@ -82,13 +95,20 @@ export default function SettingsScreen() {
     author_name: '',
     logo_data: null,
     bluetooth_mode: false,
-    pdf_checklist_columns: 2, // Standard: 2 Spalten
-    pdf_header_color: 'blue', // Standard: Blau
-    pdf_header_style: 'filled', // Standard: Volle Farbe
-    project_type_options: [], // Projektart-Überschriften
-    pdf_header_size: 'medium', // Standard: Mittel
-    pdf_project_type_size: 'medium', // Standard: Mittel
-    pdf_tools_size: 'medium', // Standard: Mittel
+    pdf_checklist_columns: 2,
+    pdf_header_color: 'blue',
+    pdf_header_style: 'filled',
+    project_type_options: [],
+    // Neue Layout-Einstellungen
+    pdf_header_size: 'medium',
+    pdf_header_section_color: 'blue',
+    pdf_header_section_style: 'filled',
+    pdf_project_type_size: 'medium',
+    pdf_project_type_color: 'blue',
+    pdf_project_type_style: 'filled',
+    pdf_tools_size: 'medium',
+    pdf_tools_color: 'blue',
+    pdf_tools_style: 'filled',
   });
   
   // Für die Bereichsauswahl
@@ -503,20 +523,46 @@ export default function SettingsScreen() {
                   <Text style={styles.layoutSectionInfo}>
                     <Ionicons name="information-circle" size={14} color="#666" /> Firmendaten und Logo im PDF-Kopf
                   </Text>
+                  
+                  {/* Größe */}
+                  <Text style={styles.layoutSubLabel}>Größe:</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
                         key={size.id}
-                        style={[
-                          styles.sizeButton,
-                          settings.pdf_header_size === size.id && styles.sizeButtonActive
-                        ]}
+                        style={[styles.sizeButton, settings.pdf_header_size === size.id && styles.sizeButtonActive]}
                         onPress={() => setSettings({ ...settings, pdf_header_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_header_size === size.id && styles.sizeButtonTextActive]}>
-                          {size.label}
-                        </Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_header_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  {/* Farbe */}
+                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
+                    {PDF_COLOR_OPTIONS.map((color) => (
+                      <TouchableOpacity
+                        key={color.id}
+                        style={[styles.colorButtonSmall, settings.pdf_header_section_color === color.id && styles.colorButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_header_section_color: color.id })}
+                      >
+                        <View style={[styles.colorPreviewSmall, { backgroundColor: color.color }]} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  
+                  {/* Stil */}
+                  <Text style={styles.layoutSubLabel}>Stil:</Text>
+                  <View style={styles.styleButtonsRow}>
+                    {PDF_STYLE_OPTIONS.map((style) => (
+                      <TouchableOpacity
+                        key={style.id}
+                        style={[styles.styleButtonSmall, settings.pdf_header_section_style === style.id && styles.styleButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_header_section_style: style.id as 'filled' | 'outline' })}
+                      >
+                        <Text style={[styles.styleButtonSmallText, settings.pdf_header_section_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -528,20 +574,46 @@ export default function SettingsScreen() {
                   <Text style={styles.layoutSectionInfo}>
                     <Ionicons name="information-circle" size={14} color="#666" /> Projektart-Überschrift (z.B. "Sturmschaden")
                   </Text>
+                  
+                  {/* Größe */}
+                  <Text style={styles.layoutSubLabel}>Größe:</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
                         key={size.id}
-                        style={[
-                          styles.sizeButton,
-                          settings.pdf_project_type_size === size.id && styles.sizeButtonActive
-                        ]}
+                        style={[styles.sizeButton, settings.pdf_project_type_size === size.id && styles.sizeButtonActive]}
                         onPress={() => setSettings({ ...settings, pdf_project_type_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_project_type_size === size.id && styles.sizeButtonTextActive]}>
-                          {size.label}
-                        </Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_project_type_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  {/* Farbe */}
+                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
+                    {PDF_COLOR_OPTIONS.map((color) => (
+                      <TouchableOpacity
+                        key={color.id}
+                        style={[styles.colorButtonSmall, settings.pdf_project_type_color === color.id && styles.colorButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_project_type_color: color.id })}
+                      >
+                        <View style={[styles.colorPreviewSmall, { backgroundColor: color.color }]} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  
+                  {/* Stil */}
+                  <Text style={styles.layoutSubLabel}>Stil:</Text>
+                  <View style={styles.styleButtonsRow}>
+                    {PDF_STYLE_OPTIONS.map((style) => (
+                      <TouchableOpacity
+                        key={style.id}
+                        style={[styles.styleButtonSmall, settings.pdf_project_type_style === style.id && styles.styleButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_project_type_style: style.id as 'filled' | 'outline' })}
+                      >
+                        <Text style={[styles.styleButtonSmallText, settings.pdf_project_type_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -553,20 +625,46 @@ export default function SettingsScreen() {
                   <Text style={styles.layoutSectionInfo}>
                     <Ionicons name="information-circle" size={14} color="#666" /> Info, Fotos, Skizzen, Flächen, Dach, Liste, Notiz, Doku
                   </Text>
+                  
+                  {/* Größe */}
+                  <Text style={styles.layoutSubLabel}>Größe:</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
                         key={size.id}
-                        style={[
-                          styles.sizeButton,
-                          settings.pdf_tools_size === size.id && styles.sizeButtonActive
-                        ]}
+                        style={[styles.sizeButton, settings.pdf_tools_size === size.id && styles.sizeButtonActive]}
                         onPress={() => setSettings({ ...settings, pdf_tools_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_tools_size === size.id && styles.sizeButtonTextActive]}>
-                          {size.label}
-                        </Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_tools_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  {/* Farbe */}
+                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
+                    {PDF_COLOR_OPTIONS.map((color) => (
+                      <TouchableOpacity
+                        key={color.id}
+                        style={[styles.colorButtonSmall, settings.pdf_tools_color === color.id && styles.colorButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_tools_color: color.id })}
+                      >
+                        <View style={[styles.colorPreviewSmall, { backgroundColor: color.color }]} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  
+                  {/* Stil */}
+                  <Text style={styles.layoutSubLabel}>Stil:</Text>
+                  <View style={styles.styleButtonsRow}>
+                    {PDF_STYLE_OPTIONS.map((style) => (
+                      <TouchableOpacity
+                        key={style.id}
+                        style={[styles.styleButtonSmall, settings.pdf_tools_style === style.id && styles.styleButtonSmallActive]}
+                        onPress={() => setSettings({ ...settings, pdf_tools_style: style.id as 'filled' | 'outline' })}
+                      >
+                        <Text style={[styles.styleButtonSmallText, settings.pdf_tools_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -668,9 +766,17 @@ export default function SettingsScreen() {
                           pdf_header_color: 'blue',
                           pdf_header_style: 'filled',
                           project_type_options: [],
+                          // Layout-Größen
                           pdf_header_size: 'medium',
                           pdf_project_type_size: 'medium',
                           pdf_tools_size: 'medium',
+                          // Layout-Farben (je Bereich)
+                          pdf_header_section_color: 'blue',
+                          pdf_header_section_style: 'filled',
+                          pdf_project_type_color: 'blue',
+                          pdf_project_type_style: 'filled',
+                          pdf_tools_color: 'blue',
+                          pdf_tools_style: 'filled',
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },
@@ -1184,6 +1290,62 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   sizeButtonTextActive: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  // Neue Styles für Layout-Farben und Stil-Auswahl
+  layoutSubLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#444',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  colorScrollRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  colorButtonSmall: {
+    padding: 6,
+    marginRight: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorButtonSmallActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  colorPreviewSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  styleButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  styleButtonSmall: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  styleButtonSmallActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  styleButtonSmallText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  styleButtonSmallTextActive: {
     color: '#1976d2',
     fontWeight: '600',
   },

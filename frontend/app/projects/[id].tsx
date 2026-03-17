@@ -2742,7 +2742,7 @@ export default function ProjectDetailScreen() {
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {
             display: grid;
-            grid-template-columns: ${gridColumns};
+            grid-template-columns: repeat(${checklistColumns}, 1fr);
             gap: 8px;
           }
           .pdf-categories-grid::after {
@@ -2837,7 +2837,7 @@ export default function ProjectDetailScreen() {
           }
           .pdf-level1-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(${checklistColumns}, 1fr);
             gap: 3px;
           }
           .pdf-level1-container {

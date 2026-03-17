@@ -2738,7 +2738,9 @@ export default function ProjectDetailScreen() {
           }
           /* Grid container for categories - configurable columns */
           .pdf-categories-grid {
-            display: block;
+            display: grid;
+            grid-template-columns: ${gridColumns};
+            gap: 8px;
           }
           .pdf-categories-grid::after {
             content: "";
@@ -2754,27 +2756,22 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             box-sizing: border-box;
-            margin-bottom: 6px;
           }
-          /* Spalten-Layout basierend auf Einstellung */
+          /* Spalten-Layout basierend auf Einstellung - Fallback für alte Browser */
           .pdf-category-section.cols-1 {
             width: 100%;
           }
           .pdf-category-section.cols-2 {
-            width: calc(50% - 4px);
-            float: left;
-            margin-right: 8px;
+            /* Grid kümmert sich um die Breite */
           }
           .pdf-category-section.cols-2:nth-child(2n) {
-            margin-right: 0;
+            /* Grid kümmert sich um die Margins */
           }
           .pdf-category-section.cols-3 {
-            width: calc(33.33% - 5px);
-            float: left;
-            margin-right: 8px;
+            /* Grid kümmert sich um die Breite */
           }
           .pdf-category-section.cols-3:nth-child(3n) {
-            margin-right: 0;
+            /* Grid kümmert sich um die Margins */
           }
           .pdf-category-header {
             display: flex;

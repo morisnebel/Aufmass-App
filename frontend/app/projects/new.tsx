@@ -21,7 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';
+import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
 
 // Customer type is imported from LocalStorage service
 
@@ -643,6 +643,16 @@ export default function NewProjectScreen() {
     try {
       // Wenn eine neue Adresse gespeichert werden soll
       let savedAddressName = selectedProjectAddress?.name;
+      let objectNumberToUse = selectedProjectAddress?.object_number;
+      
+      // Prüfen ob eine neue Objektadresse eingegeben wurde (nicht aus gespeicherten Adressen)
+      const hasNewAddress = (objektStreet || objektPlz || objektCity) && !selectedProjectAddress;
+      
+      // Wenn neue Adresse und noch keine object_number, generiere eine
+      if (hasNewAddress && !objectNumberToUse && customerId) {
+        objectNumberToUse = await getNextAvailableObjectNumber(customerId);
+        console.log('[doSaveProject] Generated new object_number:', objectNumberToUse);
+      }
       
       if (saveAddressWithName && selectedCustomer) {
         try {
@@ -656,6 +666,7 @@ export default function NewProjectScreen() {
             contactPerson: objektContactPerson || undefined,
             phone: objektPhone || undefined,
             email: objektEmail || undefined,
+            object_number: objectNumberToUse || undefined, // Neue Objektnummer auch bei der Adresse speichern
           };
           
           const existingAddresses = selectedCustomer.projectAddresses || [];
@@ -674,13 +685,17 @@ export default function NewProjectScreen() {
             });
             savedAddressName = saveAddressWithName;
           } else {
-            // Adresse existiert bereits, verwende den existierenden Namen
+            // Adresse existiert bereits, verwende den existierenden Namen und Nummer
             const existingAddr = existingAddresses.find(addr => 
               addr.street === objektStreet && 
               addr.zip === objektPlz && 
               addr.city === objektCity
             );
             savedAddressName = existingAddr?.name || saveAddressWithName;
+            // Verwende die existierende object_number falls vorhanden
+            if (existingAddr?.object_number) {
+              objectNumberToUse = existingAddr.object_number;
+            }
           }
         } catch (addrError) {
           console.error('Error saving address to customer:', addrError);
@@ -698,8 +713,8 @@ export default function NewProjectScreen() {
         bauherr_phone: selectedCustomer?.phone || undefined,
         bauherr_email: selectedCustomer?.email || undefined,
         bauherr_address: selectedCustomer?.address || undefined,
-        // Objektadresse - übernehme object_number von der gespeicherten Adresse
-        objekt_number: selectedProjectAddress?.object_number || undefined,
+        // Objektadresse - verwende generierte oder existierende object_number
+        objekt_number: objectNumberToUse || undefined,
         objekt_address_name: objektAddressName || savedAddressName || undefined,
         objekt_name: objektName || selectedProjectAddress?.objectName || undefined,
         objekt_street: objektStreet || selectedProjectAddress?.street || undefined,

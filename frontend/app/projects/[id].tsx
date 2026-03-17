@@ -1161,11 +1161,11 @@ export default function ProjectDetailScreen() {
       white: { color: '#ffffff', textColor: '#333333' },
     };
     
-    // Größen-Mapping für Schrift und Padding
+    // Größen-Mapping für Schrift und Padding - deutlichere Unterschiede
     const sizeMapping = {
-      small: { fontSize: 14, padding: 6, h1Size: 14, h2Size: 10 },
-      medium: { fontSize: 16, padding: 8, h1Size: 16, h2Size: 11 },
-      large: { fontSize: 20, padding: 12, h1Size: 20, h2Size: 13 },
+      small: { fontSize: 10, padding: 4, h1Size: 12, h2Size: 9 },
+      medium: { fontSize: 14, padding: 8, h1Size: 16, h2Size: 11 },
+      large: { fontSize: 18, padding: 14, h1Size: 22, h2Size: 14 },
     };
     
     // ===== HEADER SECTION SETTINGS =====

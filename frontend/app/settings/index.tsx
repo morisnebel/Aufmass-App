@@ -592,19 +592,10 @@ export default function SettingsScreen() {
                     ))}
                   </ScrollView>
                   
-                  {/* Stil */}
-                  <Text style={styles.layoutSubLabel}>Stil:</Text>
-                  <View style={styles.styleButtonsRow}>
-                    {PDF_STYLE_OPTIONS.map((style) => (
-                      <TouchableOpacity
-                        key={style.id}
-                        style={[styles.styleButtonSmall, settings.pdf_tools_style === style.id && styles.styleButtonSmallActive]}
-                        onPress={() => setSettings({ ...settings, pdf_tools_style: style.id as 'filled' | 'outline' })}
-                      >
-                        <Text style={[styles.styleButtonSmallText, settings.pdf_tools_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  {/* Hinweis: Kein Stil bei Tools, da diese nur Unterstreichung haben */}
+                  <Text style={styles.layoutHint}>
+                    <Ionicons name="information-circle-outline" size={12} color="#999" /> Tools-Überschriften haben keinen Rahmen, daher keine Stil-Auswahl.
+                  </Text>
                 </>
               )}
             </View>
@@ -1285,5 +1276,14 @@ const styles = StyleSheet.create({
   styleButtonSmallTextActive: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  layoutHint: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
 });

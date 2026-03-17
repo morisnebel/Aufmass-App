@@ -3228,13 +3228,22 @@ export default function ProjectDetailScreen() {
             font-size: 8px;
           }
           .footer {
-            margin-top: 15px;
-            padding-top: 8px;
+            margin-top: 10px;
+            padding-top: 5px;
             border-top: 1px solid ${accentColor};
-            font-size: 8px;
+            font-size: 7px;
             color: #666;
             text-align: center;
             font-weight: 500;
+            page-break-inside: avoid;
+            page-break-before: avoid;
+            break-before: avoid;
+            break-inside: avoid;
+          }
+          /* Wrapper um den letzten Inhalt und Footer, um sie zusammenzuhalten */
+          .footer-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
           .page-break {
             page-break-before: always;
@@ -3455,26 +3464,7 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${areaCalculations.length === 0 && (photos.length > 0 || sketches.length > 0) ? `
-          ${(remarks || project?.remarks) ? `
-            <div class="remarks-section" style="margin-top: 30px;">
-              <h2>Bemerkungen</h2>
-              <div class="remarks-box">
-                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
-              </div>
-            </div>
-          ` : ''}
-          <div class="footer">
-            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
-          </div>
-        ` : ''}
-        </div><!-- end .page -->
-        
-        ${areaCalculations.length > 0 ? `
-          <div class="new-page">
-            <div class="area-calcs-section">
-              <h2>Flächenberechnungen</h2>
-              ${generateCombinedAreaCalcs()}
-            </div>
+          <div class="footer-container">
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">
                 <h2>Bemerkungen</h2>
@@ -3488,18 +3478,43 @@ export default function ProjectDetailScreen() {
             </div>
           </div>
         ` : ''}
+        </div><!-- end .page -->
         
-        ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `
-          ${(remarks || project?.remarks) ? `
-            <div class="remarks-section" style="margin-top: 30px;">
-              <h2>Bemerkungen</h2>
-              <div class="remarks-box">
-                ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+        ${areaCalculations.length > 0 ? `
+          <div class="new-page">
+            <div class="area-calcs-section">
+              <h2>Flächenberechnungen</h2>
+              ${generateCombinedAreaCalcs()}
+            </div>
+            <div class="footer-container">
+              ${(remarks || project?.remarks) ? `
+                <div class="remarks-section" style="margin-top: 30px;">
+                  <h2>Bemerkungen</h2>
+                  <div class="remarks-box">
+                    ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+                  </div>
+                </div>
+              ` : ''}
+              <div class="footer">
+                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
               </div>
             </div>
-          ` : ''}
-          <div class="footer">
-            Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+          </div>
+        ` : ''}
+        
+        ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `
+          <div class="footer-container">
+            ${(remarks || project?.remarks) ? `
+              <div class="remarks-section" style="margin-top: 30px;">
+                <h2>Bemerkungen</h2>
+                <div class="remarks-box">
+                  ${(remarks || project?.remarks || '').replace(/\n/g, '<br/>')}
+                </div>
+              </div>
+            ` : ''}
+            <div class="footer">
+              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+            </div>
           </div>
         ` : ''}
       </body>

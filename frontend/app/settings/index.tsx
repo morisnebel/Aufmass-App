@@ -36,7 +36,18 @@ interface CompanySettings {
   pdf_header_color: string; // Hintergrundfarbe für PDF-Header
   pdf_header_style: 'filled' | 'outline'; // Voll oder nur Rahmen
   project_type_options: string[]; // Projektart-Überschriften
+  // Neue Größen-Einstellungen für PDF-Layout
+  pdf_header_size: 'small' | 'medium' | 'large'; // Größe des Headers
+  pdf_project_type_size: 'small' | 'medium' | 'large'; // Größe der Projektart-Überschrift
+  pdf_tools_size: 'small' | 'medium' | 'large'; // Größe der Tool-Bereiche
 }
+
+// Größen-Optionen für PDF-Layout
+const PDF_SIZE_OPTIONS = [
+  { id: 'small', label: 'Klein' },
+  { id: 'medium', label: 'Mittel' },
+  { id: 'large', label: 'Groß' },
+];
 
 // Verfügbare Farboptionen für PDF-Header
 const PDF_COLOR_OPTIONS = [
@@ -75,7 +86,13 @@ export default function SettingsScreen() {
     pdf_header_color: 'blue', // Standard: Blau
     pdf_header_style: 'filled', // Standard: Volle Farbe
     project_type_options: [], // Projektart-Überschriften
+    pdf_header_size: 'medium', // Standard: Mittel
+    pdf_project_type_size: 'medium', // Standard: Mittel
+    pdf_tools_size: 'medium', // Standard: Mittel
   });
+  
+  // Für die Bereichsauswahl
+  const [selectedLayoutSection, setSelectedLayoutSection] = useState<'header' | 'project_type' | 'tools'>('header');
   
   // Neuer Projektart-Eintrag
   const [newProjectType, setNewProjectType] = useState('');
@@ -156,6 +173,21 @@ export default function SettingsScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1976d2" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Einstellungen</Text>
+        <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Speichern</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           {/* Logo Section */}
@@ -432,6 +464,117 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* PDF Layout Größen Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>PDF Layout-Größen</Text>
+            <Text style={styles.sublabel}>
+              Passen Sie die Größe der verschiedenen Bereiche im PDF an (klein, mittel, groß).
+            </Text>
+            
+            {/* Bereichsauswahl-Tabs */}
+            <View style={styles.layoutTabsContainer}>
+              <TouchableOpacity
+                style={[styles.layoutTab, selectedLayoutSection === 'header' && styles.layoutTabActive]}
+                onPress={() => setSelectedLayoutSection('header')}
+              >
+                <Ionicons name="document-text" size={18} color={selectedLayoutSection === 'header' ? '#fff' : '#666'} />
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'header' && styles.layoutTabTextActive]}>Header</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.layoutTab, selectedLayoutSection === 'project_type' && styles.layoutTabActive]}
+                onPress={() => setSelectedLayoutSection('project_type')}
+              >
+                <Ionicons name="ribbon" size={18} color={selectedLayoutSection === 'project_type' ? '#fff' : '#666'} />
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'project_type' && styles.layoutTabTextActive]}>Überschrift</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.layoutTab, selectedLayoutSection === 'tools' && styles.layoutTabActive]}
+                onPress={() => setSelectedLayoutSection('tools')}
+              >
+                <Ionicons name="construct" size={18} color={selectedLayoutSection === 'tools' ? '#fff' : '#666'} />
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'tools' && styles.layoutTabTextActive]}>Tools</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Größen-Auswahl basierend auf ausgewähltem Bereich */}
+            <View style={styles.layoutSizeContainer}>
+              {selectedLayoutSection === 'header' && (
+                <>
+                  <Text style={styles.layoutSectionInfo}>
+                    <Ionicons name="information-circle" size={14} color="#666" /> Firmendaten und Logo im PDF-Kopf
+                  </Text>
+                  <View style={styles.sizeButtonsRow}>
+                    {PDF_SIZE_OPTIONS.map((size) => (
+                      <TouchableOpacity
+                        key={size.id}
+                        style={[
+                          styles.sizeButton,
+                          settings.pdf_header_size === size.id && styles.sizeButtonActive
+                        ]}
+                        onPress={() => setSettings({ ...settings, pdf_header_size: size.id as 'small' | 'medium' | 'large' })}
+                      >
+                        <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
+                        <Text style={[styles.sizeButtonText, settings.pdf_header_size === size.id && styles.sizeButtonTextActive]}>
+                          {size.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+              
+              {selectedLayoutSection === 'project_type' && (
+                <>
+                  <Text style={styles.layoutSectionInfo}>
+                    <Ionicons name="information-circle" size={14} color="#666" /> Projektart-Überschrift (z.B. "Sturmschaden")
+                  </Text>
+                  <View style={styles.sizeButtonsRow}>
+                    {PDF_SIZE_OPTIONS.map((size) => (
+                      <TouchableOpacity
+                        key={size.id}
+                        style={[
+                          styles.sizeButton,
+                          settings.pdf_project_type_size === size.id && styles.sizeButtonActive
+                        ]}
+                        onPress={() => setSettings({ ...settings, pdf_project_type_size: size.id as 'small' | 'medium' | 'large' })}
+                      >
+                        <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
+                        <Text style={[styles.sizeButtonText, settings.pdf_project_type_size === size.id && styles.sizeButtonTextActive]}>
+                          {size.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+              
+              {selectedLayoutSection === 'tools' && (
+                <>
+                  <Text style={styles.layoutSectionInfo}>
+                    <Ionicons name="information-circle" size={14} color="#666" /> Info, Fotos, Skizzen, Flächen, Dach, Liste, Notiz, Doku
+                  </Text>
+                  <View style={styles.sizeButtonsRow}>
+                    {PDF_SIZE_OPTIONS.map((size) => (
+                      <TouchableOpacity
+                        key={size.id}
+                        style={[
+                          styles.sizeButton,
+                          settings.pdf_tools_size === size.id && styles.sizeButtonActive
+                        ]}
+                        onPress={() => setSettings({ ...settings, pdf_tools_size: size.id as 'small' | 'medium' | 'large' })}
+                      >
+                        <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
+                        <Text style={[styles.sizeButtonText, settings.pdf_tools_size === size.id && styles.sizeButtonTextActive]}>
+                          {size.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+
           {/* Projektart-Überschriften Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Projektart-Überschriften</Text>
@@ -525,6 +668,9 @@ export default function SettingsScreen() {
                           pdf_header_color: 'blue',
                           pdf_header_style: 'filled',
                           project_type_options: [],
+                          pdf_header_size: 'medium',
+                          pdf_project_type_size: 'medium',
+                          pdf_tools_size: 'medium',
                         });
                         Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },
@@ -931,5 +1077,114 @@ const styles = StyleSheet.create({
   },
   addProjectTypeButtonDisabled: {
     backgroundColor: '#ccc',
+  },
+  // Header Styles
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  saveButton: {
+    backgroundColor: '#1976d2',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  // Layout-Größen Styles
+  layoutTabsContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  layoutTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    gap: 6,
+  },
+  layoutTabActive: {
+    backgroundColor: '#1976d2',
+  },
+  layoutTabText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  layoutTabTextActive: {
+    color: '#fff',
+  },
+  layoutSizeContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+  },
+  layoutSectionInfo: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
+  },
+  sizeButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  sizeButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  sizeButtonActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  sizePreview: {
+    width: '100%',
+    backgroundColor: '#1976d2',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  sizePreviewSmall: {
+    height: 20,
+  },
+  sizePreviewMedium: {
+    height: 30,
+  },
+  sizePreviewLarge: {
+    height: 40,
+  },
+  sizeButtonText: {
+    fontSize: 13,
+    color: '#666',
+  },
+  sizeButtonTextActive: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });

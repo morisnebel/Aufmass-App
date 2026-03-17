@@ -942,6 +942,10 @@ export interface Settings {
   tax_rate?: number;
   // Projektart-Überschriften (für Auswahlfeld)
   project_type_options?: string[]; // z.B. ["Sturmschaden", "Wartung", "Neueindeckung", "Reparatur"]
+  // PDF Layout Größen
+  pdf_header_size?: 'small' | 'medium' | 'large';
+  pdf_project_type_size?: 'small' | 'medium' | 'large';
+  pdf_tools_size?: 'small' | 'medium' | 'large';
 }
 
 export const SettingsService = {

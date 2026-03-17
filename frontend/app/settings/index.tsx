@@ -419,69 +419,6 @@ export default function SettingsScreen() {
                 ))}
               </View>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>PDF Kopfzeilen-Farbe</Text>
-              <Text style={styles.sublabel}>Wählen Sie eine Farbe für den PDF-Header</Text>
-              <View style={[styles.colorSelector, isPhone && styles.colorSelectorPhone]}>
-                {PDF_COLOR_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[
-                      styles.colorOption,
-                      isPhone && styles.colorOptionPhone,
-                      settings.pdf_header_color === option.id && styles.colorOptionActive
-                    ]}
-                    onPress={() => setSettings({ ...settings, pdf_header_color: option.id })}
-                  >
-                    <View style={[styles.colorPreview, isPhone && styles.colorPreviewPhone, { backgroundColor: option.color }]}>
-                      {settings.pdf_header_color === option.id && (
-                        <Ionicons name="checkmark" size={isPhone ? 12 : 16} color={option.textColor} />
-                      )}
-                    </View>
-                    <Text style={[
-                      styles.colorLabel,
-                      isPhone && styles.colorLabelPhone,
-                      settings.pdf_header_color === option.id && styles.colorLabelActive
-                    ]}>
-                      {isPhone ? option.label.split(' ')[0] : option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>PDF Kopfzeilen-Stil</Text>
-              <Text style={styles.sublabel}>Rahmen spart Druckertinte</Text>
-              <View style={styles.styleSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.styleOption,
-                    settings.pdf_header_style === 'filled' && styles.styleOptionActive
-                  ]}
-                  onPress={() => setSettings({ ...settings, pdf_header_style: 'filled' })}
-                >
-                  <View style={[styles.stylePreviewFilled, { backgroundColor: PDF_COLOR_OPTIONS.find(o => o.id === settings.pdf_header_color)?.color || '#1976d2' }]} />
-                  <Text style={[styles.styleLabel, settings.pdf_header_style === 'filled' && styles.styleLabelActive]}>
-                    Volle Farbe
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.styleOption,
-                    settings.pdf_header_style === 'outline' && styles.styleOptionActive
-                  ]}
-                  onPress={() => setSettings({ ...settings, pdf_header_style: 'outline' })}
-                >
-                  <View style={[styles.stylePreviewOutline, { borderColor: PDF_COLOR_OPTIONS.find(o => o.id === settings.pdf_header_color)?.color || '#1976d2' }]} />
-                  <Text style={[styles.styleLabel, settings.pdf_header_style === 'outline' && styles.styleLabelActive]}>
-                    Nur Rahmen
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
 
           {/* PDF Layout Größen Section */}
@@ -498,7 +435,7 @@ export default function SettingsScreen() {
                 onPress={() => setSelectedLayoutSection('header')}
               >
                 <Ionicons name="document-text" size={18} color={selectedLayoutSection === 'header' ? '#fff' : '#666'} />
-                <Text style={[styles.layoutTabText, selectedLayoutSection === 'header' && styles.layoutTabTextActive]}>Header</Text>
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'header' && styles.layoutTabTextActive]}>Kopfzeile</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.layoutTab, selectedLayoutSection === 'project_type' && styles.layoutTabActive]}

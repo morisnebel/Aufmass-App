@@ -895,11 +895,26 @@ export default function EditChecklistScreen() {
     const pathKey = path.join('-');
     const isEditing = editingItems.hasOwnProperty(pathKey);
     
-    // Einrückung: weniger auf iPhone
-    const indentSize = isPhone ? 8 : 16;
+    // Einrückung: Auf iPhone KEINE Einrückung, stattdessen farbige Linie links
+    const indentSize = isPhone ? 0 : 16;
+    
+    // Farben für verschiedene Ebenen (für iPhone)
+    const depthColors = ['#1976d2', '#9c27b0', '#ff9800', '#4caf50', '#f44336'];
+    const depthColor = depthColors[Math.min(depth, depthColors.length - 1)];
     
     return (
-      <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * indentSize }]}>
+      <View key={path.join('-')} style={[
+        styles.itemWrapper, 
+        { marginLeft: depth * indentSize },
+        // Auf iPhone: farbige Linie links statt Einrückung
+        isPhone && depth > 0 && { 
+          borderLeftWidth: 3, 
+          borderLeftColor: depthColor,
+          paddingLeft: 8,
+          marginLeft: 4,
+          marginTop: 2,
+        }
+      ]}>
         {/* Bearbeitungsmodus */}
         {isEditing ? (
           <View style={styles.editingContainer}>

@@ -573,11 +573,26 @@ export default function EditTemplateScreen() {
     const collapsed = isCollapsed(path);
     const pathKey = path.join('-');
     
-    // Einrückung: weniger auf iPhone
-    const indentSize = isPhone ? 10 : 20;
+    // Einrückung: Auf iPhone KEINE Einrückung, stattdessen farbige Linie links
+    const indentSize = isPhone ? 0 : 20;
+    
+    // Farben für verschiedene Ebenen (für iPhone)
+    const depthColors = ['#1976d2', '#9c27b0', '#ff9800', '#4caf50', '#f44336'];
+    const depthColor = depthColors[Math.min(depth, depthColors.length - 1)];
     
     return (
-      <View key={pathKey} style={[styles.itemContainer, { marginLeft: depth * indentSize }]}>
+      <View key={pathKey} style={[
+        styles.itemContainer, 
+        { marginLeft: depth * indentSize },
+        // Auf iPhone: farbige Linie links statt Einrückung
+        isPhone && depth > 0 && { 
+          borderLeftWidth: 3, 
+          borderLeftColor: depthColor,
+          paddingLeft: 8,
+          marginLeft: 4,
+          marginTop: 2,
+        }
+      ]}>
         {/* Item Header mit Eingabefeld */}
         <View style={styles.itemHeader}>
           {depth > 0 && (

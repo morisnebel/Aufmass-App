@@ -6308,7 +6308,7 @@ export default function ProjectDetailScreen() {
             />
             <View style={[styles.salutationPickerContent, { padding: 20 }]}>
               <Text style={styles.salutationModalTitle}>Datum auswählen</Text>
-              <View style={{ marginTop: 10, alignItems: 'center' }}>
+              <View style={{ marginTop: 10, alignItems: 'center', backgroundColor: '#fff' }}>
                 <DateTimePicker
                   value={editProjectTypeDate ? new Date(editProjectTypeDate) : new Date()}
                   mode="date"
@@ -6322,7 +6322,9 @@ export default function ProjectDetailScreen() {
                     }
                   }}
                   locale="de-DE"
-                  style={{ width: '100%', height: 150 }}
+                  themeVariant="light"
+                  accentColor="#1976d2"
+                  style={{ width: '100%', height: 180, backgroundColor: '#fff' }}
                 />
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 15, width: '100%' }}>
                   <TouchableOpacity

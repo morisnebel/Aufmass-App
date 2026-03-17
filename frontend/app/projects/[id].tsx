@@ -143,6 +143,7 @@ export default function ProjectDetailScreen() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
+  const [checklistColumns, setChecklistColumns] = useState<number>(2);
   const [loading, setLoading] = useState(true);
   
   // Determine initial tab from URL parameter
@@ -312,6 +313,11 @@ export default function ProjectDetailScreen() {
       // Lade Projektart-Optionen aus den Einstellungen
       if (settingsData?.project_type_options) {
         setProjectTypeOptions(settingsData.project_type_options);
+      }
+      
+      // Lade Checklisten-Spalten-Einstellung
+      if (settingsData?.pdf_checklist_columns) {
+        setChecklistColumns(settingsData.pdf_checklist_columns);
       }
 
       // Lade die zuletzt verwendete Projektart
@@ -1144,11 +1150,8 @@ export default function ProjectDetailScreen() {
     
     // PDF Layout Einstellungen
     const checklistColumns = (settings as any).pdf_checklist_columns || 2;
-    console.log('[PDF DEBUG] checklistColumns setting:', (settings as any).pdf_checklist_columns);
-    console.log('[PDF DEBUG] checklistColumns used:', checklistColumns);
     // Feste Spaltenanzahl statt auto-fit
     const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
-    console.log('[PDF DEBUG] gridColumns:', gridColumns);
     
     // Farb-Optionen für alle Bereiche
     const colorOptions: { [key: string]: { color: string; textColor: string } } = {
@@ -1378,7 +1381,7 @@ export default function ProjectDetailScreen() {
                 })()}
               </div>
             ` : ''}
-            <div class="pdf-level1-grid" style="display: grid; grid-template-columns: repeat(${checklistColumns}, 1fr); gap: 3px;">${containersHtml}</div>
+            <div class="pdf-level1-grid" style="display: grid; grid-template-columns: repeat(${checklistColumns}, 1fr); gap: 3px; width: 100%;">${containersHtml}</div>
           </div>
         `;
       }).join('');
@@ -2759,22 +2762,13 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             box-sizing: border-box;
-          }
-          /* Spalten-Layout basierend auf Einstellung - Fallback für alte Browser */
-          .pdf-category-section.cols-1 {
             width: 100%;
           }
-          .pdf-category-section.cols-2 {
-            /* Grid kümmert sich um die Breite */
-          }
-          .pdf-category-section.cols-2:nth-child(2n) {
-            /* Grid kümmert sich um die Margins */
-          }
+          /* Spalten-Layout basierend auf Einstellung */
+          .pdf-category-section.cols-1,
+          .pdf-category-section.cols-2,
           .pdf-category-section.cols-3 {
-            /* Grid kümmert sich um die Breite */
-          }
-          .pdf-category-section.cols-3:nth-child(3n) {
-            /* Grid kümmert sich um die Margins */
+            width: 100%;
           }
           .pdf-category-header {
             display: flex;
@@ -5020,7 +5014,11 @@ export default function ProjectDetailScreen() {
                           
                           {/* Grid mit Level 1 Containern */}
                           {checkedLevel1Items.length > 0 ? (
-                            <View style={styles.level1Grid}>
+                            <View style={[styles.level1Grid, { 
+                              flexDirection: 'row',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }]}>
                               {checkedLevel1Items.map((level1Item: any, l1Index: number) => {
                                 // Finde den Original-Index für korrekte Nummerierung
                                 const originalIndex = level1Items.indexOf(level1Item);
@@ -5031,8 +5029,16 @@ export default function ProjectDetailScreen() {
                                   ? flattenDeepSubItems(level1Item.subItems, containerPrefix)
                                   : [];
                                 
+                                // Dynamische Breite basierend auf Spaltenanzahl
+                                const itemWidth = checklistColumns === 1 ? '100%' : 
+                                                  checklistColumns === 2 ? '48%' : '31%';
+                                
                                 return (
-                                  <View key={`l1-${catIndex}-${l1Index}`} style={styles.level1Container}>
+                                  <View key={`l1-${catIndex}-${l1Index}`} style={[styles.level1Container, {
+                                    minWidth: itemWidth,
+                                    maxWidth: checklistColumns === 1 ? '100%' : itemWidth,
+                                    flexBasis: itemWidth,
+                                  }]}>
                                     {/* Container-Überschrift (z.B. 1.1 Test 1.1) */}
                                     <View style={styles.level1Header}>
                                       <Text style={styles.level1Prefix}>{containerPrefix}</Text>
@@ -7278,19 +7284,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   level1Grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    // Dynamische Werte werden inline gesetzt basierend auf checklistColumns
   },
   level1Container: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 10,
-    minWidth: '48%',
-    maxWidth: '100%',
     flexGrow: 1,
     flexShrink: 0,
-    flexBasis: '48%',
     borderLeftWidth: 4,
     borderLeftColor: '#1976d2',
     shadowColor: '#000',

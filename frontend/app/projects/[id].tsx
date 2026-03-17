@@ -1378,7 +1378,7 @@ export default function ProjectDetailScreen() {
                 })()}
               </div>
             ` : ''}
-            <div class="pdf-level1-grid">${containersHtml}</div>
+            <div class="pdf-level1-grid" style="display: grid; grid-template-columns: repeat(${checklistColumns}, 1fr); gap: 3px;">${containersHtml}</div>
           </div>
         `;
       }).join('');

@@ -1160,8 +1160,9 @@ export default function EditChecklistScreen() {
               )}
             </View>
           </View>
-          )}
-        )}
+          )
+        )
+        }
 
         {/* Expanded Content - nur wenn abgehakt und nicht eingeklappt */}
         {item.checked && !isCollapsed(path) && (

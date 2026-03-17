@@ -594,7 +594,7 @@ export default function CustomersScreen() {
           <Ionicons name="search" size={20} color="#666" />
           <TextInput
             style={styles.searchInput}
-            placeholderTextColor="#888" placeholder="Kunden suchen..."
+            placeholderTextColor="#999" placeholder="Kunden suchen..."
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -759,7 +759,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Objektnummer (optional)</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholderTextColor="#888" placeholder="Wird automatisch vergeben (z.B. OBJ-26001)"
+                placeholderTextColor="#999" placeholder="Wird automatisch vergeben (z.B. OBJ-26001)"
                 value={addressObjectNumber}
                 onChangeText={setAddressObjectNumber}
                 placeholderTextColor="#999"
@@ -769,7 +769,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Bezeichnung *</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholderTextColor="#888" placeholder="z.B. Haupthaus, Garage"
+                placeholderTextColor="#999" placeholder="z.B. Haupthaus, Garage"
                 value={addressName}
                 onChangeText={setAddressName}
                 placeholderTextColor="#999"
@@ -778,7 +778,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Beschreibung</Text>
               <TextInput
                 style={[styles.addressInput, styles.textArea]}
-                placeholderTextColor="#888" placeholder="Optional"
+                placeholderTextColor="#999" placeholder="Optional"
                 value={addressDescription}
                 onChangeText={setAddressDescription}
                 multiline
@@ -789,7 +789,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Objektname</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholderTextColor="#888" placeholder="Optional"
+                placeholderTextColor="#999" placeholder="Optional"
                 value={addressObjectName}
                 onChangeText={setAddressObjectName}
                 placeholderTextColor="#999"
@@ -798,7 +798,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Straße und Hausnummer</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholderTextColor="#888" placeholder="Straße und Hausnummer"
+                placeholderTextColor="#999" placeholder="Straße und Hausnummer"
                 value={addressStreet}
                 onChangeText={setAddressStreet}
                 placeholderTextColor="#999"
@@ -809,7 +809,7 @@ export default function CustomersScreen() {
                   <Text style={styles.fieldLabel}>PLZ</Text>
                   <TextInput
                     style={styles.addressInput}
-                    placeholderTextColor="#888" placeholder="PLZ"
+                    placeholderTextColor="#999" placeholder="PLZ"
                     value={addressZip}
                     onChangeText={setAddressZip}
                     keyboardType="number-pad"
@@ -820,7 +820,7 @@ export default function CustomersScreen() {
                   <Text style={styles.fieldLabel}>Ort</Text>
                   <TextInput
                     style={styles.addressInput}
-                    placeholderTextColor="#888" placeholder="Stadt"
+                    placeholderTextColor="#999" placeholder="Stadt"
                     value={addressCity}
                     onChangeText={setAddressCity}
                     placeholderTextColor="#999"
@@ -831,7 +831,7 @@ export default function CustomersScreen() {
               <Text style={styles.fieldLabel}>Ansprechpartner</Text>
               <TextInput
                 style={styles.addressInput}
-                placeholderTextColor="#888" placeholder="Ansprechpartner"
+                placeholderTextColor="#999" placeholder="Ansprechpartner"
                 value={addressContactPerson}
                 onChangeText={setAddressContactPerson}
                 placeholderTextColor="#999"
@@ -842,7 +842,7 @@ export default function CustomersScreen() {
                   <Text style={styles.fieldLabel}>Telefon</Text>
                   <TextInput
                     style={styles.addressInput}
-                    placeholderTextColor="#888" placeholder="Telefon"
+                    placeholderTextColor="#999" placeholder="Telefon"
                     value={addressPhone}
                     onChangeText={setAddressPhone}
                     keyboardType="phone-pad"
@@ -853,7 +853,7 @@ export default function CustomersScreen() {
                   <Text style={styles.fieldLabel}>E-Mail</Text>
                   <TextInput
                     style={styles.addressInput}
-                    placeholderTextColor="#888" placeholder="E-Mail"
+                    placeholderTextColor="#999" placeholder="E-Mail"
                     value={addressEmail}
                     onChangeText={setAddressEmail}
                     keyboardType="email-address"
@@ -937,7 +937,7 @@ export default function CustomersScreen() {
                         <Text style={styles.projectEditLabel}>Projektnummer</Text>
                         <TextInput
                           style={styles.projectEditInput}
-                          placeholderTextColor="#888" placeholder="z.B. PR-26001"
+                          placeholderTextColor="#999" placeholder="z.B. PR-26001"
                           value={editProjectNumber}
                           onChangeText={setEditProjectNumber}
                           placeholderTextColor="#999"
@@ -946,7 +946,7 @@ export default function CustomersScreen() {
                         <Text style={styles.projectEditLabel}>Projektname *</Text>
                         <TextInput
                           style={styles.projectEditInput}
-                          placeholderTextColor="#888" placeholder="Projektname"
+                          placeholderTextColor="#999" placeholder="Projektname"
                           value={editProjectName}
                           onChangeText={setEditProjectName}
                           placeholderTextColor="#999"
@@ -955,7 +955,7 @@ export default function CustomersScreen() {
                         <Text style={styles.projectEditLabel}>Beschreibung</Text>
                         <TextInput
                           style={[styles.projectEditInput, styles.projectEditTextarea]}
-                          placeholderTextColor="#888" placeholder="Beschreibung"
+                          placeholderTextColor="#999" placeholder="Beschreibung"
                           value={editProjectDescription}
                           onChangeText={setEditProjectDescription}
                           multiline

@@ -760,7 +760,7 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>Projektnummer (optional)</Text>
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="Wird automatisch vergeben (z.B. PR-26001)"
+              placeholderTextColor="#999" placeholder="Wird automatisch vergeben (z.B. PR-26001)"
               value={projectNumber}
               onChangeText={setProjectNumber}
             />
@@ -771,7 +771,7 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>Projektname *</Text>
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="z.B. Dachsanierung Hauptstraße"
+              placeholderTextColor="#999" placeholder="z.B. Dachsanierung Hauptstraße"
               value={name}
               onChangeText={setName}
             />
@@ -849,7 +849,7 @@ export default function NewProjectScreen() {
             </Text>
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
+              placeholderTextColor="#999" placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
               value={objektAddressName}
               onChangeText={(text) => {
                 setObjektAddressName(text);
@@ -858,7 +858,7 @@ export default function NewProjectScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="Objektname (optional)"
+              placeholderTextColor="#999" placeholder="Objektname (optional)"
               value={objektName}
               onChangeText={(text) => {
                 setObjektName(text);
@@ -867,7 +867,7 @@ export default function NewProjectScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="Straße und Hausnummer"
+              placeholderTextColor="#999" placeholder="Straße und Hausnummer"
               value={objektStreet}
               onChangeText={(text) => {
                 setObjektStreet(text);
@@ -877,7 +877,7 @@ export default function NewProjectScreen() {
             <View style={styles.addressRow}>
               <TextInput
                 style={[styles.input, styles.plzInput]}
-                placeholderTextColor="#888" placeholder="PLZ"
+                placeholderTextColor="#999" placeholder="PLZ"
                 value={objektPlz}
                 onChangeText={(text) => {
                   setObjektPlz(text);
@@ -887,7 +887,7 @@ export default function NewProjectScreen() {
               />
               <TextInput
                 style={[styles.input, styles.cityInput]}
-                placeholderTextColor="#888" placeholder="Ort"
+                placeholderTextColor="#999" placeholder="Ort"
                 value={objektCity}
                 onChangeText={(text) => {
                   setObjektCity(text);
@@ -899,7 +899,7 @@ export default function NewProjectScreen() {
             {/* Ansprechpartner */}
             <TextInput
               style={styles.input}
-              placeholderTextColor="#888" placeholder="Ansprechpartner"
+              placeholderTextColor="#999" placeholder="Ansprechpartner"
               value={objektContactPerson}
               onChangeText={(text) => {
                 setObjektContactPerson(text);
@@ -911,7 +911,7 @@ export default function NewProjectScreen() {
             <View style={styles.addressRow}>
               <TextInput
                 style={[styles.input, { flex: 1, marginRight: 8 }]}
-                placeholderTextColor="#888" placeholder="Telefon"
+                placeholderTextColor="#999" placeholder="Telefon"
                 value={objektPhone}
                 onChangeText={(text) => {
                   setObjektPhone(text);
@@ -921,7 +921,7 @@ export default function NewProjectScreen() {
               />
               <TextInput
                 style={[styles.input, { flex: 1.5 }]}
-                placeholderTextColor="#888" placeholder="E-Mail"
+                placeholderTextColor="#999" placeholder="E-Mail"
                 value={objektEmail}
                 onChangeText={(text) => {
                   setObjektEmail(text);
@@ -937,7 +937,7 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>Beschreibung</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholderTextColor="#888" placeholder="Projektbeschreibung..."
+              placeholderTextColor="#999" placeholder="Projektbeschreibung..."
               value={description}
               onChangeText={setDescription}
               multiline
@@ -996,7 +996,7 @@ export default function NewProjectScreen() {
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholderTextColor="#888" placeholder="Kunde suchen..."
+                placeholderTextColor="#999" placeholder="Kunde suchen..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -1139,7 +1139,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Vorname *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="Vorname"
+                  placeholderTextColor="#999" placeholder="Vorname"
                   value={newCustomerFirstName}
                   onChangeText={setNewCustomerFirstName}
                 />
@@ -1149,7 +1149,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Nachname *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="Nachname"
+                  placeholderTextColor="#999" placeholder="Nachname"
                   value={newCustomerLastName}
                   onChangeText={setNewCustomerLastName}
                 />
@@ -1159,7 +1159,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>E-Mail</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="E-Mail-Adresse"
+                  placeholderTextColor="#999" placeholder="E-Mail-Adresse"
                   value={newCustomerEmail}
                   onChangeText={setNewCustomerEmail}
                   keyboardType="email-address"
@@ -1171,7 +1171,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Telefon</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="Telefonnummer"
+                  placeholderTextColor="#999" placeholder="Telefonnummer"
                   value={newCustomerPhone}
                   onChangeText={setNewCustomerPhone}
                   keyboardType="default"
@@ -1183,7 +1183,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Handynummer</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="Handynummer"
+                  placeholderTextColor="#999" placeholder="Handynummer"
                   value={newCustomerMobile}
                   onChangeText={setNewCustomerMobile}
                   keyboardType="default"
@@ -1195,7 +1195,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Straße</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#888" placeholder="Straße und Hausnummer"
+                  placeholderTextColor="#999" placeholder="Straße und Hausnummer"
                   value={newCustomerStreet}
                   onChangeText={setNewCustomerStreet}
                 />
@@ -1206,7 +1206,7 @@ export default function NewProjectScreen() {
                   <Text style={styles.formLabel}>PLZ</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholderTextColor="#888" placeholder="PLZ"
+                    placeholderTextColor="#999" placeholder="PLZ"
                     value={newCustomerPlz}
                     onChangeText={setNewCustomerPlz}
                     keyboardType="number-pad"
@@ -1216,7 +1216,7 @@ export default function NewProjectScreen() {
                   <Text style={styles.formLabel}>Ort</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholderTextColor="#888" placeholder="Ort"
+                    placeholderTextColor="#999" placeholder="Ort"
                     value={newCustomerCity}
                     onChangeText={setNewCustomerCity}
                   />
@@ -1277,7 +1277,7 @@ export default function NewProjectScreen() {
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholderTextColor="#888" placeholder="Kontakt suchen..."
+                placeholderTextColor="#999" placeholder="Kontakt suchen..."
                 value={contactSearchQuery}
                 onChangeText={setContactSearchQuery}
                 autoFocus
@@ -1419,7 +1419,7 @@ export default function NewProjectScreen() {
             
             <TextInput
               style={styles.saveAddressModalInput}
-              placeholderTextColor="#888" placeholder="z.B. Haupthaus"
+              placeholderTextColor="#999" placeholder="z.B. Haupthaus"
               value={newAddressName}
               onChangeText={setNewAddressName}
               autoFocus

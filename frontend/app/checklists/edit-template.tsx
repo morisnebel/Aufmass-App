@@ -623,7 +623,7 @@ export default function EditTemplateScreen() {
               isPhone && styles.itemInputPhone,
             ]}
             placeholder={isMainItem ? `Hauptpunkt ${path[0] + 1}` : `Unterpunkt`}
-            placeholderTextColor="#888"
+            placeholderTextColor="#999"
             value={item.text}
             onChangeText={(text) => updateItemText(path, text)}
           />
@@ -824,7 +824,7 @@ export default function EditTemplateScreen() {
               <TextInput
                 style={[styles.input, styles.templateNameInput]}
                 placeholder="z.B. Dachinspektion"
-                placeholderTextColor="#888"
+                placeholderTextColor="#999"
                 value={templateName}
                 onChangeText={setTemplateName}
               />

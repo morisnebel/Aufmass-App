@@ -5281,7 +5281,7 @@ export default function ProjectDetailScreen() {
                 <TextInput
                   ref={remarksInputRef}
                   style={[styles.remarksInput, { flex: 1 }]}
-                  placeholder="Bemerkungen eingeben..."
+                  placeholderTextColor="#666" placeholder="Bemerkungen eingeben..."
                   value={remarks}
                   onChangeText={setRemarks}
                   multiline
@@ -5850,7 +5850,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editProjectNumber}
                       onChangeText={setEditProjectNumber}
-                      placeholder="z.B. PR-26001"
+                      placeholderTextColor="#666" placeholder="z.B. PR-26001"
                     />
                   </View>
                   
@@ -5860,7 +5860,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editProjectName}
                       onChangeText={setEditProjectName}
-                      placeholder="Projektname"
+                      placeholderTextColor="#666" placeholder="Projektname"
                     />
                   </View>
 
@@ -5870,7 +5870,7 @@ export default function ProjectDetailScreen() {
                       style={[styles.compactInput, styles.compactTextArea]}
                       value={editProjectDescription}
                       onChangeText={setEditProjectDescription}
-                      placeholder="Beschreibung"
+                      placeholderTextColor="#666" placeholder="Beschreibung"
                       multiline
                       numberOfLines={2}
                     />
@@ -5988,7 +5988,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editCustomerNumber}
                       onChangeText={setEditCustomerNumber}
-                      placeholder="z.B. KD-26001"
+                      placeholderTextColor="#666" placeholder="z.B. KD-26001"
                     />
                   </View>
                   
@@ -6012,7 +6012,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editBauherrFirstName}
                         onChangeText={setEditBauherrFirstName}
-                        placeholder="Vorname"
+                        placeholderTextColor="#666" placeholder="Vorname"
                       />
                     </View>
                     <View style={styles.cityInput}>
@@ -6021,7 +6021,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editBauherrLastName}
                         onChangeText={setEditBauherrLastName}
-                        placeholder="Nachname"
+                        placeholderTextColor="#666" placeholder="Nachname"
                       />
                     </View>
                   </View>
@@ -6033,7 +6033,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editBauherrPhone}
                         onChangeText={setEditBauherrPhone}
-                        placeholder="Festnetz"
+                        placeholderTextColor="#666" placeholder="Festnetz"
                         keyboardType="phone-pad"
                       />
                     </View>
@@ -6043,7 +6043,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editBauherrMobile}
                         onChangeText={setEditBauherrMobile}
-                        placeholder="Handynummer"
+                        placeholderTextColor="#666" placeholder="Handynummer"
                         keyboardType="phone-pad"
                       />
                     </View>
@@ -6055,7 +6055,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editBauherrEmail}
                       onChangeText={setEditBauherrEmail}
-                      placeholder="E-Mail"
+                      placeholderTextColor="#666" placeholder="E-Mail"
                       keyboardType="email-address"
                       autoCapitalize="none"
                     />
@@ -6069,7 +6069,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editBauherrStreet}
                       onChangeText={setEditBauherrStreet}
-                      placeholder="Straße und Hausnummer"
+                      placeholderTextColor="#666" placeholder="Straße und Hausnummer"
                     />
                   </View>
 
@@ -6079,7 +6079,7 @@ export default function ProjectDetailScreen() {
                       style={[styles.compactInput, { width: 120 }]}
                       value={editBauherrPlz}
                       onChangeText={setEditBauherrPlz}
-                      placeholder="PLZ"
+                      placeholderTextColor="#666" placeholder="PLZ"
                       keyboardType="number-pad"
                     />
                   </View>
@@ -6090,7 +6090,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editBauherrCity}
                       onChangeText={setEditBauherrCity}
-                      placeholder="Ort (inkl. Ortsteil)"
+                      placeholderTextColor="#666" placeholder="Ort (inkl. Ortsteil)"
                     />
                   </View>
 
@@ -6102,7 +6102,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editObjektNumber}
                       onChangeText={setEditObjektNumber}
-                      placeholder="z.B. OBJ-26001"
+                      placeholderTextColor="#666" placeholder="z.B. OBJ-26001"
                     />
                   </View>
                   
@@ -6112,7 +6112,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editObjektName}
                       onChangeText={setEditObjektName}
-                      placeholder="z.B. Herr Müller"
+                      placeholderTextColor="#666" placeholder="z.B. Herr Müller"
                     />
                   </View>
 
@@ -6122,7 +6122,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editObjektStreet}
                       onChangeText={setEditObjektStreet}
-                      placeholder="Falls abweichend"
+                      placeholderTextColor="#666" placeholder="Falls abweichend"
                     />
                   </View>
 
@@ -6133,7 +6133,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editObjektPlz}
                         onChangeText={setEditObjektPlz}
-                        placeholder="PLZ"
+                        placeholderTextColor="#666" placeholder="PLZ"
                         keyboardType="number-pad"
                       />
                     </View>
@@ -6143,7 +6143,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editObjektCity}
                         onChangeText={setEditObjektCity}
-                        placeholder="Ort"
+                        placeholderTextColor="#666" placeholder="Ort"
                       />
                     </View>
                   </View>
@@ -6154,7 +6154,7 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editObjektContactPerson}
                       onChangeText={setEditObjektContactPerson}
-                      placeholder="Name des Ansprechpartners"
+                      placeholderTextColor="#666" placeholder="Name des Ansprechpartners"
                     />
                   </View>
                   
@@ -6165,7 +6165,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editObjektPhone}
                         onChangeText={setEditObjektPhone}
-                        placeholder="Telefon"
+                        placeholderTextColor="#666" placeholder="Telefon"
                         keyboardType="phone-pad"
                       />
                     </View>
@@ -6175,7 +6175,7 @@ export default function ProjectDetailScreen() {
                         style={styles.compactInput}
                         value={editObjektEmail}
                         onChangeText={setEditObjektEmail}
-                        placeholder="E-Mail"
+                        placeholderTextColor="#666" placeholder="E-Mail"
                         keyboardType="email-address"
                         autoCapitalize="none"
                       />

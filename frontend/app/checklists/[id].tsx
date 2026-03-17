@@ -895,8 +895,11 @@ export default function EditChecklistScreen() {
     const pathKey = path.join('-');
     const isEditing = editingItems.hasOwnProperty(pathKey);
     
+    // Einrückung: weniger auf iPhone
+    const indentSize = isPhone ? 8 : 16;
+    
     return (
-      <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * 16 }]}>
+      <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * indentSize }]}>
         {/* Bearbeitungsmodus */}
         {isEditing ? (
           <View style={styles.editingContainer}>

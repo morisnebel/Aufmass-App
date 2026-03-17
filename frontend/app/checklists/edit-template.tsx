@@ -13,6 +13,7 @@ import {
   Image,
   Modal,
   FlatList,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +43,11 @@ export default function EditTemplateScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { templateId } = useLocalSearchParams();
+  
+  // iPhone vs iPad Erkennung - für unterschiedliches Layout
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
+  
   const [template, setTemplate] = useState<ChecklistTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [templateLogo, setTemplateLogo] = useState<string | undefined>(undefined);
@@ -567,8 +573,11 @@ export default function EditTemplateScreen() {
     const collapsed = isCollapsed(path);
     const pathKey = path.join('-');
     
+    // Einrückung: weniger auf iPhone
+    const indentSize = isPhone ? 10 : 20;
+    
     return (
-      <View key={pathKey} style={[styles.itemContainer, { marginLeft: depth * 20 }]}>
+      <View key={pathKey} style={[styles.itemContainer, { marginLeft: depth * indentSize }]}>
         {/* Item Header mit Eingabefeld */}
         <View style={styles.itemHeader}>
           {depth > 0 && (
@@ -585,7 +594,7 @@ export default function EditTemplateScreen() {
             >
               <Ionicons 
                 name={collapsed ? "chevron-forward" : "chevron-down"} 
-                size={18} 
+                size={isPhone ? 14 : 18} 
                 color="#666" 
               />
             </TouchableOpacity>
@@ -596,6 +605,7 @@ export default function EditTemplateScreen() {
               styles.itemInput,
               !isMainItem && styles.subItemInput,
               hasSubItems && styles.itemInputWithCollapse,
+              isPhone && styles.itemInputPhone,
             ]}
             placeholder={isMainItem ? `Hauptpunkt ${path[0] + 1}` : `Unterpunkt`}
             value={item.text}
@@ -603,31 +613,31 @@ export default function EditTemplateScreen() {
           />
           
           {/* Action Buttons */}
-          <View style={styles.itemActions}>
+          <View style={[styles.itemActions, isPhone && styles.itemActionsPhone]}>
             {/* Kopieren Button */}
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               onPress={() => copyItem(path)}
             >
-              <Ionicons name="copy-outline" size={18} color="#ff9800" />
+              <Ionicons name="copy-outline" size={isPhone ? 14 : 18} color="#ff9800" />
             </TouchableOpacity>
             
             {/* Einfügen Button (nur wenn etwas kopiert wurde) */}
             {copiedItem && (
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
                 onPress={() => pasteItemAfter(path)}
               >
-                <Ionicons name="clipboard-outline" size={18} color="#4caf50" />
+                <Ionicons name="clipboard-outline" size={isPhone ? 14 : 18} color="#4caf50" />
               </TouchableOpacity>
             )}
             
             {/* Löschen Button */}
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               onPress={() => removeItem(path)}
             >
-              <Ionicons name="trash-outline" size={18} color="#f44336" />
+              <Ionicons name="trash-outline" size={isPhone ? 14 : 18} color="#f44336" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1103,7 +1113,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  itemActionsPhone: {
+    gap: 1,
+  },
   actionButton: {
+    padding: 6,
+  },
+  actionButtonPhone: {
+    padding: 3,
+  },
+  itemInputPhone: {
+    fontSize: 13,
     padding: 6,
   },
   collapseButton: {

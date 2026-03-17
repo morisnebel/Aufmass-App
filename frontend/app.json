@@ -48,7 +48,8 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "./plugins/withICloudConfig"
+      "./plugins/withICloudConfig",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

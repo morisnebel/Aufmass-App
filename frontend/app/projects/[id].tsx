@@ -15,6 +15,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -135,6 +136,11 @@ interface Checklist {
 export default function ProjectDetailScreen() {
   const router = useRouter();
   const { id, tab } = useLocalSearchParams();
+  
+  // iPhone vs iPad Erkennung - für unterschiedliches Layout
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
+  
   const [project, setProject] = useState<Project | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [roofs, setRoofs] = useState<Roof[]>([]);
@@ -5833,7 +5839,7 @@ export default function ProjectDetailScreen() {
               contentContainerStyle={styles.editModalScrollContent}
               keyboardShouldPersistTaps="handled"
             >
-              <View style={styles.editFormRow}>
+              <View style={[styles.editFormRow, isPhone && styles.editFormRowPhone]}>
                 {/* Linke Spalte */}
                 <View style={styles.editFormColumn}>
                   <Text style={styles.editSectionTitle}>Projekt</Text>
@@ -7535,6 +7541,10 @@ const styles = StyleSheet.create({
   editFormRow: {
     flexDirection: 'row',
     gap: 16,
+  },
+  editFormRowPhone: {
+    flexDirection: 'column',
+    gap: 8,
   },
   editFormColumn: {
     flex: 1,

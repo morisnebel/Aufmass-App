@@ -15,6 +15,7 @@ import {
   PanResponder,
   Animated,
   Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,6 +54,11 @@ interface Checklist {
 export default function EditChecklistScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  
+  // iPhone vs iPad Erkennung - für unterschiedliches Layout
+  const { width: screenWidth } = useWindowDimensions();
+  const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
+  
   const [checklist, setChecklist] = useState<Checklist | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -965,49 +971,51 @@ export default function EditChecklistScreen() {
             </TouchableOpacity>
             
             {/* Action Buttons */}
-            <View style={styles.itemActions}>
+            <View style={[styles.itemActions, isPhone && styles.itemActionsPhone]}>
               {/* Nach oben verschieben */}
               <TouchableOpacity 
                 onPress={() => moveItemUp(path)}
-                style={[styles.actionButton, path[path.length - 1] === 0 && styles.actionButtonDisabled]}
+                style={[styles.actionButton, isPhone && styles.actionButtonPhone, path[path.length - 1] === 0 && styles.actionButtonDisabled]}
                 disabled={path[path.length - 1] === 0}
               >
-                <Ionicons name="chevron-up" size={18} color={path[path.length - 1] === 0 ? '#ccc' : '#666'} />
+                <Ionicons name="chevron-up" size={isPhone ? 14 : 18} color={path[path.length - 1] === 0 ? '#ccc' : '#666'} />
               </TouchableOpacity>
               
               {/* Nach unten verschieben */}
               <TouchableOpacity 
                 onPress={() => moveItemDown(path)}
-                style={styles.actionButton}
+                style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               >
-                <Ionicons name="chevron-down" size={18} color="#666" />
+                <Ionicons name="chevron-down" size={isPhone ? 14 : 18} color="#666" />
               </TouchableOpacity>
               
               {/* Kopieren Button */}
               <TouchableOpacity 
                 onPress={() => copyItem(path)}
-                style={styles.actionButton}
+                style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               >
-                <Ionicons name="copy-outline" size={18} color="#ff9800" />
+                <Ionicons name="copy-outline" size={isPhone ? 14 : 18} color="#ff9800" />
               </TouchableOpacity>
               
               {/* Einfügen Button (nur wenn etwas kopiert wurde) */}
               {copiedItem && (
                 <TouchableOpacity 
                   onPress={() => pasteItemAfter(path)}
-                  style={styles.actionButton}
+                  style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
                 >
-                  <Ionicons name="clipboard-outline" size={18} color="#4caf50" />
+                  <Ionicons name="clipboard-outline" size={isPhone ? 14 : 18} color="#4caf50" />
                 </TouchableOpacity>
               )}
               
-              {/* Bearbeiten Button */}
-              <TouchableOpacity 
-                onPress={() => startEditing(path, item.text)}
-                style={styles.actionButton}
-              >
-                <Ionicons name="pencil" size={18} color="#1976d2" />
-              </TouchableOpacity>
+              {/* Bearbeiten Button - nur auf iPad (auf iPhone tippt man auf Text) */}
+              {!isPhone && (
+                <TouchableOpacity 
+                  onPress={() => startEditing(path, item.text)}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="pencil" size={18} color="#1976d2" />
+                </TouchableOpacity>
+              )}
               
               {/* Löschen Button */}
               <TouchableOpacity 
@@ -1021,16 +1029,16 @@ export default function EditChecklistScreen() {
                     ]
                   );
                 }}
-                style={styles.actionButton}
+                style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               >
-                <Ionicons name="trash-outline" size={18} color="#f44336" />
+                <Ionicons name="trash-outline" size={isPhone ? 14 : 18} color="#f44336" />
               </TouchableOpacity>
               
               {/* Pfeil-Icon zeigt an dass es aufklappbar ist */}
               {hasSubItems && (
                 <Ionicons
                   name={item.checked ? 'chevron-down' : 'chevron-forward'}
-                  size={20}
+                  size={isPhone ? 16 : 20}
                   color="#999"
                 />
               )}
@@ -1592,8 +1600,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  itemActionsPhone: {
+    gap: 1,
+  },
   actionButton: {
     padding: 6,
+  },
+  actionButtonPhone: {
+    padding: 3,
   },
   actionButtonDisabled: {
     opacity: 0.4,

@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "AUFMASSPROFI DACH",
+    "slug": "frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "frontend",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a1628"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aufmassprofi.dach",
+      "buildNumber": "20",
+      "infoPlist": {
+        "NSContactsUsageDescription": "Kunden als Kontakte speichern",
+        "NSPhotoLibraryUsageDescription": "Fotos in der Galerie speichern",
+        "NSPhotoLibraryAddUsageDescription": "Aufmaß-Fotos in der Galerie speichern",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.aufmassprofi.dach",
+          "iCloud.com.aufmassprofi.dach"
+        ],
+        "com.apple.developer.icloud-services": [
+          "CloudKit",
+          "CloudKit"
+        ],
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.aufmassprofi.dach"
+      },
+      "usesIcloudStorage": true
+    },
+    "android": {
+      "package": "com.aufmassprofi.dach",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0a1628"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-file-system",
+      "expo-document-picker",
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "./plugins/withICloudConfig"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "159413b4-c5be-4afa-9038-b6ba91a4ea1c"
+      }
+    },
+    "owner": "morisnebel"
+  }
+}

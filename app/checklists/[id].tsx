@@ -1,0 +1,904 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { ChecklistService, ProjectService } from '../../services/LocalStorage';
+
+// Rekursive Struktur für verschachtelte Unterpunkte
+interface RecursiveItem {
+  text: string;
+  checked: boolean;
+  note?: string;
+  subItems?: RecursiveItem[];
+}
+
+interface Checklist {
+  id: string;
+  project_id: string;
+  template_id: string;
+  template_name: string;
+  items: RecursiveItem[];
+}
+
+export default function EditChecklistScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const [checklist, setChecklist] = useState<Checklist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  // State für neue Unterpunkt-Eingaben (path -> text)
+  const [newSubItemTexts, setNewSubItemTexts] = useState<{[key: string]: string}>({});
+  // State um zu tracken welche Eingabefelder offen sind
+  const [openInputs, setOpenInputs] = useState<Set<string>>(new Set());
+  // State für Bearbeitungsmodus (path -> text)
+  const [editingItems, setEditingItems] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    loadChecklist();
+  }, [id]);
+
+  // Auto-Save wenn die Seite verlassen wird
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Wird aufgerufen wenn die Seite verlassen wird
+        if (hasChanges && checklist) {
+          saveChecklistSilent();
+        }
+      };
+    }, [hasChanges, checklist])
+  );
+
+  const loadChecklist = async () => {
+    try {
+      const projects = await ProjectService.getAll();
+      let foundChecklist = null;
+      const checklistId = Array.isArray(id) ? id[0] : id;
+      
+      for (const project of projects) {
+        const checklists = await ChecklistService.getByProjectId(project.id);
+        const cl = checklists.find((c: any) => c.id === checklistId);
+        if (cl) {
+          foundChecklist = cl;
+          break;
+        }
+      }
+      
+      if (foundChecklist) {
+        // Konvertiere Items zu rekursiver Struktur
+        const convertItems = (items: any[]): RecursiveItem[] => {
+          return items.map((item: any) => {
+            let subItems: RecursiveItem[] = [];
+            if (item.subItems && Array.isArray(item.subItems)) {
+              subItems = item.subItems.map((sub: any) => {
+                if (typeof sub === 'string') {
+                  return { text: sub, checked: false, subItems: [] };
+                }
+                return {
+                  text: sub.text || '',
+                  checked: sub.checked || false,
+                  note: sub.note || '',
+                  subItems: sub.subItems ? convertItems(sub.subItems) : [],
+                };
+              });
+            }
+            return {
+              text: item.text || '',
+              checked: item.checked || false,
+              note: item.note || '',
+              subItems: subItems,
+            };
+          });
+        };
+        
+        setChecklist({
+          ...foundChecklist,
+          items: convertItems(foundChecklist.items),
+        });
+      } else {
+        Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');
+      }
+    } catch (error) {
+      console.error('Error loading checklist:', error);
+      Alert.alert('Fehler', 'Checkliste konnte nicht geladen werden');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Rekursiv einen Item an einem Pfad updaten
+  const updateItemAtPath = (items: RecursiveItem[], path: number[], updates: Partial<RecursiveItem>): RecursiveItem[] => {
+    const newItems = [...items];
+    if (path.length === 1) {
+      newItems[path[0]] = { ...newItems[path[0]], ...updates };
+    } else {
+      const [first, ...rest] = path;
+      newItems[first] = {
+        ...newItems[first],
+        subItems: updateItemAtPath(newItems[first].subItems || [], rest, updates),
+      };
+    }
+    return newItems;
+  };
+
+  // Toggle checked status und automatisch aufklappen
+  const toggleItemChecked = (path: number[]) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newChecked = !item.checked;
+    const newItems = updateItemAtPath(checklist.items, path, { checked: newChecked });
+    
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Notiz updaten
+  const updateNote = (path: number[], note: string) => {
+    if (!checklist) return;
+    const newItems = updateItemAtPath(checklist.items, path, { note });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Neuen Unterpunkt hinzufügen
+  const addSubItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    // Öffne das Eingabefeld für diesen Pfad
+    const pathKey = path.join('-');
+    setOpenInputs(prev => new Set(prev).add(pathKey));
+    setNewSubItemTexts(prev => ({ ...prev, [pathKey]: '' }));
+  };
+
+  // Neuen Unterpunkt bestätigen und hinzufügen
+  const confirmNewSubItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    const pathKey = path.join('-');
+    const text = newSubItemTexts[pathKey]?.trim();
+    
+    if (!text) {
+      // Eingabefeld schließen wenn leer
+      setOpenInputs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pathKey);
+        return newSet;
+      });
+      return;
+    }
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return;
+    
+    const newSubItems = [...(item.subItems || []), { text, checked: false, subItems: [] }];
+    const newItems = updateItemAtPath(checklist.items, path, { subItems: newSubItems });
+    
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+    
+    // Eingabefeld leeren aber offen lassen für weitere Eingaben
+    setNewSubItemTexts(prev => ({ ...prev, [pathKey]: '' }));
+  };
+
+  // Eingabefeld schließen
+  const cancelNewSubItem = (path: number[]) => {
+    const pathKey = path.join('-');
+    setOpenInputs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(pathKey);
+      return newSet;
+    });
+    setNewSubItemTexts(prev => {
+      const newTexts = { ...prev };
+      delete newTexts[pathKey];
+      return newTexts;
+    });
+  };
+
+  // Bearbeitungsmodus starten
+  const startEditing = (path: number[], currentText: string) => {
+    const pathKey = path.join('-');
+    setEditingItems(prev => ({ ...prev, [pathKey]: currentText }));
+  };
+
+  // Bearbeitung bestätigen
+  const confirmEditing = (path: number[]) => {
+    if (!checklist) return;
+    const pathKey = path.join('-');
+    const newText = editingItems[pathKey]?.trim();
+    
+    if (newText) {
+      const newItems = updateItemAtPath(checklist.items, path, { text: newText });
+      setChecklist({ ...checklist, items: newItems });
+      setHasChanges(true);
+    }
+    
+    // Bearbeitungsmodus beenden
+    setEditingItems(prev => {
+      const newEditing = { ...prev };
+      delete newEditing[pathKey];
+      return newEditing;
+    });
+  };
+
+  // Bearbeitung abbrechen
+  const cancelEditing = (path: number[]) => {
+    const pathKey = path.join('-');
+    setEditingItems(prev => {
+      const newEditing = { ...prev };
+      delete newEditing[pathKey];
+      return newEditing;
+    });
+  };
+
+  // Item löschen (Hauptpunkt oder Unterpunkt)
+  const deleteItem = (path: number[]) => {
+    if (!checklist) return;
+    
+    if (path.length === 1) {
+      // Hauptpunkt löschen
+      const newItems = checklist.items.filter((_, i) => i !== path[0]);
+      setChecklist({ ...checklist, items: newItems });
+    } else {
+      // Unterpunkt löschen
+      const parentPath = path.slice(0, -1);
+      const subIndex = path[path.length - 1];
+      
+      const getItemAtPath = (items: RecursiveItem[], p: number[]): RecursiveItem | null => {
+        if (p.length === 0) return null;
+        if (p.length === 1) return items[p[0]];
+        const [first, ...rest] = p;
+        return getItemAtPath(items[first].subItems || [], rest);
+      };
+      
+      const parentItem = getItemAtPath(checklist.items, parentPath);
+      if (!parentItem || !parentItem.subItems) return;
+      
+      const newSubItems = parentItem.subItems.filter((_, i) => i !== subIndex);
+      const newItems = updateItemAtPath(checklist.items, parentPath, { subItems: newSubItems });
+      setChecklist({ ...checklist, items: newItems });
+    }
+    
+    setHasChanges(true);
+  };
+
+  // Unterpunkt-Text updaten (für legacy)
+  const updateSubItemText = (path: number[], text: string) => {
+    if (!checklist) return;
+    const newItems = updateItemAtPath(checklist.items, path, { text });
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Unterpunkt löschen (legacy - jetzt durch deleteItem ersetzt)
+  const removeSubItem = (parentPath: number[], subIndex: number) => {
+    if (!checklist) return;
+    
+    const getItemAtPath = (items: RecursiveItem[], path: number[]): RecursiveItem | null => {
+      if (path.length === 0) return null;
+      if (path.length === 1) return items[path[0]];
+      const [first, ...rest] = path;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const parentItem = getItemAtPath(checklist.items, parentPath);
+    if (!parentItem || !parentItem.subItems) return;
+    
+    const newSubItems = parentItem.subItems.filter((_, i) => i !== subIndex);
+    const newItems = updateItemAtPath(checklist.items, parentPath, { subItems: newSubItems });
+    
+    setChecklist({ ...checklist, items: newItems });
+    setHasChanges(true);
+  };
+
+  // Stilles Speichern (ohne Alert) mit Retry
+  const saveChecklistSilent = async (retries = 3) => {
+    if (!checklist || saving) return;
+    
+    for (let i = 0; i < retries; i++) {
+      try {
+        await ChecklistService.update(checklist.id, checklist);
+        setHasChanges(false);
+        return; // Erfolgreich gespeichert
+      } catch (error) {
+        if (i === retries - 1) {
+          console.error('Error auto-saving checklist after retries:', error);
+        } else {
+          // Warte kurz vor dem nächsten Versuch
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+  };
+
+  // Manuelles Speichern mit Feedback und Retry
+  const handleSave = async () => {
+    if (!checklist) return;
+
+    setSaving(true);
+    let success = false;
+    
+    for (let i = 0; i < 3; i++) {
+      try {
+        await ChecklistService.update(checklist.id, checklist);
+        setHasChanges(false);
+        success = true;
+        break;
+      } catch (error) {
+        if (i < 2) {
+          // Warte kurz vor dem nächsten Versuch
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.error('Error saving checklist:', error);
+        }
+      }
+    }
+    
+    setSaving(false);
+    
+    if (success) {
+      Alert.alert('Erfolg', 'Checkliste wurde gespeichert', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } else {
+      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden. Bitte prüfe deine Internetverbindung.');
+    }
+  };
+
+  // Rekursive Render-Funktion für Items
+  const renderItem = (item: RecursiveItem, path: number[], depth: number = 0) => {
+    const hasSubItems = item.subItems && item.subItems.length > 0;
+    const isMainItem = depth === 0;
+    const pathKey = path.join('-');
+    const isEditing = editingItems.hasOwnProperty(pathKey);
+    
+    return (
+      <View key={path.join('-')} style={[styles.itemWrapper, { marginLeft: depth * 16 }]}>
+        {/* Bearbeitungsmodus */}
+        {isEditing ? (
+          <View style={styles.editingContainer}>
+            <TextInput
+              style={styles.editingInput}
+              value={editingItems[pathKey]}
+              onChangeText={(text) => setEditingItems(prev => ({ ...prev, [pathKey]: text }))}
+              onSubmitEditing={() => confirmEditing(path)}
+              autoFocus
+              multiline
+            />
+            <View style={styles.editingButtons}>
+              <TouchableOpacity onPress={() => confirmEditing(path)} style={styles.editConfirmButton}>
+                <Ionicons name="checkmark-circle" size={28} color="#4caf50" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => cancelEditing(path)} style={styles.editCancelButton}>
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          /* Normaler Anzeigemodus */
+          <View style={[
+            styles.checklistItem,
+            item.checked && styles.checklistItemChecked,
+            !isMainItem && styles.subItemCard,
+          ]}>
+            {/* Checkbox */}
+            <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchable}>
+              <Ionicons
+                name={item.checked ? 'checkbox' : 'square-outline'}
+                size={isMainItem ? 28 : 22}
+                color={item.checked ? '#4caf50' : '#666'}
+              />
+            </TouchableOpacity>
+            
+            {/* Text - Tippen zum Bearbeiten */}
+            <TouchableOpacity 
+              style={styles.itemContent}
+              onPress={() => startEditing(path, item.text)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  isMainItem ? styles.checklistText : styles.subItemText,
+                  item.checked && (isMainItem ? styles.checklistTextChecked : styles.subItemTextChecked),
+                ]}
+              >
+                {item.text}
+              </Text>
+              
+              {/* Hinweis auf Unterpunkte wenn nicht abgehakt */}
+              {hasSubItems && !item.checked && (
+                <Text style={styles.subItemsHint}>
+                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* Action Buttons */}
+            <View style={styles.itemActions}>
+              {/* Bearbeiten Button */}
+              <TouchableOpacity 
+                onPress={() => startEditing(path, item.text)}
+                style={styles.actionButton}
+              >
+                <Ionicons name="pencil" size={18} color="#1976d2" />
+              </TouchableOpacity>
+              
+              {/* Löschen Button */}
+              <TouchableOpacity 
+                onPress={() => {
+                  Alert.alert(
+                    'Löschen',
+                    `"${item.text}" wirklich löschen?`,
+                    [
+                      { text: 'Abbrechen', style: 'cancel' },
+                      { text: 'Löschen', style: 'destructive', onPress: () => deleteItem(path) }
+                    ]
+                  );
+                }}
+                style={styles.actionButton}
+              >
+                <Ionicons name="trash-outline" size={18} color="#f44336" />
+              </TouchableOpacity>
+              
+              {/* Pfeil-Icon zeigt an dass es aufklappbar ist */}
+              {hasSubItems && (
+                <Ionicons
+                  name={item.checked ? 'chevron-down' : 'chevron-forward'}
+                  size={20}
+                  color="#999"
+                />
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Expanded Content - nur wenn abgehakt */}
+        {item.checked && (
+          <View style={[styles.expandedContent, { marginLeft: 8 }]}>
+            {/* Vorhandene Unterpunkte rekursiv rendern */}
+            {hasSubItems && (
+              <View style={styles.subItemsContainer}>
+                {item.subItems!.map((subItem, subIndex) => (
+                  <View key={subIndex}>
+                    {renderItem(subItem, [...path, subIndex], depth + 1)}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Eingabefeld für neuen Unterpunkt */}
+            {openInputs.has(path.join('-')) && (
+              <View style={styles.newSubItemRow}>
+                <TextInput
+                  style={styles.newSubItemInput}
+                  placeholder="Neuen Unterpunkt eingeben..."
+                  value={newSubItemTexts[path.join('-')] || ''}
+                  onChangeText={(text) => setNewSubItemTexts(prev => ({ ...prev, [path.join('-')]: text }))}
+                  onSubmitEditing={() => confirmNewSubItem(path)}
+                  returnKeyType="done"
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => confirmNewSubItem(path)}
+                  style={styles.confirmSubButton}
+                >
+                  <Ionicons name="checkmark-circle" size={28} color="#4caf50" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => cancelNewSubItem(path)}
+                  style={styles.removeSubButton}
+                >
+                  <Ionicons name="close-circle" size={28} color="#999" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Button zum Hinzufügen von Unterpunkten */}
+            {!openInputs.has(path.join('-')) && (
+              <TouchableOpacity
+                style={styles.addSubItemButton}
+                onPress={() => addSubItem(path)}
+              >
+                <Ionicons name="add" size={18} color="#1976d2" />
+                <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Notiz-Feld nur für Hauptpunkte */}
+            {isMainItem && (
+              <View style={styles.noteContainer}>
+                <View style={styles.noteHeader}>
+                  <Ionicons name="create-outline" size={18} color="#666" />
+                  <Text style={styles.noteLabel}>Notiz</Text>
+                </View>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Notiz hinzufügen..."
+                  value={item.note || ''}
+                  onChangeText={(text) => updateNote(path, text)}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Zähle alle abgehakten Items (rekursiv)
+  const countChecked = (items: RecursiveItem[]): { checked: number; total: number } => {
+    let checked = 0;
+    let total = 0;
+    
+    items.forEach(item => {
+      total++;
+      if (item.checked) checked++;
+      if (item.subItems && item.subItems.length > 0) {
+        const subCount = countChecked(item.subItems);
+        checked += subCount.checked;
+        total += subCount.total;
+      }
+    });
+    
+    return { checked, total };
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#1976d2" />
+      </View>
+    );
+  }
+
+  if (!checklist) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyText}>Checkliste nicht gefunden</Text>
+      </View>
+    );
+  }
+
+  const { checked: completedCount, total: totalCount } = countChecked(checklist.items);
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{checklist.template_name}</Text>
+        {hasChanges && (
+          <Text style={styles.unsavedHint}>Nicht gespeicherte Änderungen</Text>
+        )}
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${progress}%` },
+            ]}
+          />
+        </View>
+        <Text style={styles.progressText}>
+          {completedCount} von {totalCount} erledigt ({Math.round(progress)}%)
+        </Text>
+      </View>
+
+      <ScrollView style={styles.checklistContainer} keyboardShouldPersistTaps="handled">
+        <View style={styles.checklistContent}>
+          {checklist.items.map((item, index) => renderItem(item, [index], 0))}
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.buttonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Ionicons name="checkmark-circle" size={24} color="#fff" />
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Wird gespeichert...' : 'Speichern & Zurück'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  header: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  unsavedHint: {
+    fontSize: 12,
+    color: '#ff9800',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4caf50',
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  checklistContainer: {
+    flex: 1,
+  },
+  checklistContent: {
+    padding: 16,
+  },
+  itemWrapper: {
+    marginBottom: 12,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  checklistItemChecked: {
+    backgroundColor: '#f8fff8',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  subItemCard: {
+    backgroundColor: '#fafafa',
+    shadowOpacity: 0.05,
+    elevation: 1,
+  },
+  checkboxTouchable: {
+    padding: 4,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButton: {
+    padding: 6,
+  },
+  editingContainer: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1976d2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  editingInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 50,
+    textAlignVertical: 'top',
+  },
+  editingButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 8,
+  },
+  editConfirmButton: {
+    padding: 4,
+  },
+  editCancelButton: {
+    padding: 4,
+  },
+  checklistText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  checklistTextChecked: {
+    color: '#4caf50',
+    fontWeight: '600',
+  },
+  subItemText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  subItemTextChecked: {
+    color: '#4caf50',
+    fontWeight: '500',
+  },
+  subItemsHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  expandedContent: {
+    marginTop: 8,
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: '#4caf50',
+  },
+  subItemsContainer: {
+    marginBottom: 8,
+  },
+  subItemConnector: {
+    width: 16,
+    alignItems: 'center',
+  },
+  connectorLine: {
+    width: 12,
+    height: 2,
+    backgroundColor: '#ddd',
+  },
+  newSubItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 8,
+  },
+  newSubItemInput: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 14,
+  },
+  removeSubButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  confirmSubButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  addSubItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  addSubItemText: {
+    color: '#1976d2',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  noteContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 4,
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  noteLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  noteInput: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  footer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    backgroundColor: '#1976d2',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+  },
+});

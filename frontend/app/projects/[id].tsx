@@ -2523,6 +2523,7 @@ export default function ProjectDetailScreen() {
           .checklists-section {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            width: 100%;
           }
           .checklists-section h2 {
             page-break-after: avoid !important;
@@ -2742,11 +2743,12 @@ export default function ProjectDetailScreen() {
             margin-left: auto;
             background: #f5f5f5;
           }
-          /* Grid container for categories - configurable columns */
+          /* Grid container for categories - IMMER 1 Spalte, da Level-1 Items das Grid haben */
           .pdf-categories-grid {
             display: grid;
-            grid-template-columns: repeat(${checklistColumns}, 1fr);
+            grid-template-columns: 1fr;
             gap: 8px;
+            width: 100%;
           }
           .pdf-categories-grid::after {
             content: "";

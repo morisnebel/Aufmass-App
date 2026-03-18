@@ -510,8 +510,8 @@ export default function EditTemplateScreen() {
     if (!Features.maxChecklistItems || item.subItems.length >= Features.maxChecklistItems) {
       if (item.subItems.length >= 5) {
         Alert.alert(
-          'Basis Version', 
-          'In der Basis Version können maximal 5 Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.',
+          'Basic Version', 
+          'In der Basic Version können maximal 5 Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.',
           [{ text: 'OK' }]
         );
         return;
@@ -810,7 +810,7 @@ export default function EditTemplateScreen() {
         {!collapsed && depth === 0 && Features.maxChecklistItems < 100 && item.subItems.length >= Features.maxChecklistItems && (
           <View style={styles.limitReachedBoxSmall}>
             <Ionicons name="information-circle" size={14} color="#f57c00" />
-            <Text style={styles.limitReachedTextSmall}>Max. {Features.maxChecklistItems} Unterpunkte (Basis)</Text>
+            <Text style={styles.limitReachedTextSmall}>Max. {Features.maxChecklistItems} Unterpunkte (Basic)</Text>
           </View>
         )}
       </View>
@@ -906,7 +906,7 @@ export default function EditTemplateScreen() {
             <View style={styles.limitReachedBox}>
               <Ionicons name="information-circle" size={20} color="#f57c00" />
               <Text style={styles.limitReachedText}>
-                Maximum von {Features.maxMainItems} Hauptpunkten erreicht (Basis Version)
+                Maximum von {Features.maxMainItems} Hauptpunkten erreicht (Basic Version)
               </Text>
             </View>
             )}

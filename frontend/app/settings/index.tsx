@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SettingsService } from '../../services/LocalStorage';
 import * as ImagePicker from 'expo-image-picker';
+import { isPro, AppName } from '../../services/FeatureFlags';
 
 interface CompanySettings {
   company_name: string;
@@ -214,27 +215,44 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Logo</Text>
             <View style={styles.logoContainer}>
-              {settings.logo_data ? (
-                <View style={styles.logoPreview}>
+              {/* Basic Version: Festes Aufmassprofi Logo */}
+              {!isPro ? (
+                <View style={styles.logoPreviewBasic}>
                   <Image
-                    source={{ uri: settings.logo_data }}
+                    source={require('../../assets/images/icon.png')}
                     style={styles.logoImage}
                     resizeMode="contain"
                   />
-                  <TouchableOpacity style={styles.removeLogoButton} onPress={removeLogo}>
-                    <Ionicons name="close-circle" size={24} color="#f44336" />
-                  </TouchableOpacity>
+                  <View style={styles.basicLogoOverlay}>
+                    <Text style={styles.basicLogoText}>{AppName}</Text>
+                    <Text style={styles.basicLogoHint}>Eigenes Logo in Pro Version</Text>
+                  </View>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.uploadLogoButton} onPress={pickLogo}>
-                  <Ionicons name="cloud-upload-outline" size={40} color="#1976d2" />
-                  <Text style={styles.uploadLogoText}>Logo hochladen</Text>
-                </TouchableOpacity>
-              )}
-              {settings.logo_data && (
-                <TouchableOpacity style={styles.changeLogoButton} onPress={pickLogo}>
-                  <Text style={styles.changeLogoText}>Logo ändern</Text>
-                </TouchableOpacity>
+                <>
+                  {settings.logo_data ? (
+                    <View style={styles.logoPreview}>
+                      <Image
+                        source={{ uri: settings.logo_data }}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                      />
+                      <TouchableOpacity style={styles.removeLogoButton} onPress={removeLogo}>
+                        <Ionicons name="close-circle" size={24} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.uploadLogoButton} onPress={pickLogo}>
+                      <Ionicons name="cloud-upload-outline" size={40} color="#1976d2" />
+                      <Text style={styles.uploadLogoText}>Logo hochladen</Text>
+                    </TouchableOpacity>
+                  )}
+                  {settings.logo_data && (
+                    <TouchableOpacity style={styles.changeLogoButton} onPress={pickLogo}>
+                      <Text style={styles.changeLogoText}>Logo ändern</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           </View>
@@ -749,6 +767,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  logoPreviewBasic: {
+    position: 'relative',
+    width: 200,
+    height: 150,
+    backgroundColor: '#0a1628',
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  basicLogoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  basicLogoText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  basicLogoHint: {
+    color: '#90caf9',
+    fontSize: 10,
+    marginTop: 2,
   },
   logoImage: {
     width: '100%',

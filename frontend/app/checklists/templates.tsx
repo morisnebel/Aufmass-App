@@ -278,8 +278,8 @@ export default function ChecklistTemplatesScreen() {
     // Basis-Version: Max 3 Vorlagen
     if (Features.maxTemplates < 100 && templates.length >= Features.maxTemplates) {
       Alert.alert(
-        'Basis Version',
-        `In der Basis Version können maximal ${Features.maxTemplates} Vorlagen erstellt werden. Upgrade auf Pro für unbegrenzte Vorlagen.`,
+        'Basic Version',
+        `In der Basic Version können maximal ${Features.maxTemplates} Vorlagen erstellt werden. Upgrade auf Pro für unbegrenzte Vorlagen.`,
         [{ text: 'OK' }]
       );
       return;
@@ -446,7 +446,7 @@ export default function ChecklistTemplatesScreen() {
         {/* Limit-Hinweis für Basis */}
         {Features.maxTemplates < 100 && (
           <Text style={styles.limitHint}>
-            {templates.length}/{Features.maxTemplates} Vorlagen (Basis Version)
+            {templates.length}/{Features.maxTemplates} Vorlagen (Basic Version)
           </Text>
         )}
       </View>

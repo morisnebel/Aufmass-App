@@ -23,10 +23,11 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
+import { isPro } from '../../services/FeatureFlags';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
-import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
+import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
@@ -1152,8 +1153,28 @@ export default function ProjectDetailScreen() {
     const companyCity = settings.city || '';
     const companyPhone = settings.phone || '';
     const companyEmail = settings.email || '';
-    const companyLogo = settings.logo_data || '';
     const authorName = settings.author_name || '';
+    
+    // Logo: In Basic Version das Aufmassprofi-Logo verwenden
+    let companyLogo = '';
+    if (isPro) {
+      // Pro Version: Benutzer-Logo aus Einstellungen
+      companyLogo = settings.logo_data || '';
+    } else {
+      // Basic Version: Aufmassprofi Logo laden
+      try {
+        const Asset = require('expo-asset').Asset;
+        const iconAsset = Asset.fromModule(require('../../assets/images/icon.png'));
+        await iconAsset.downloadAsync();
+        if (iconAsset.localUri) {
+          const base64 = await readAsStringAsync(iconAsset.localUri, { encoding: 'base64' });
+          companyLogo = `data:image/png;base64,${base64}`;
+        }
+      } catch (e) {
+        console.log('Could not load Basic logo for PDF:', e);
+        companyLogo = '';
+      }
+    }
     
     // PDF Layout Einstellungen
     const checklistColumns = (settings as any).pdf_checklist_columns || 2;

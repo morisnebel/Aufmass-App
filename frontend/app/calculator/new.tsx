@@ -116,6 +116,10 @@ export default function AreaCalculatorEditor() {
   const calculationId = params.id as string | undefined;
   const projectIdParam = params.projectId as string | undefined;
   
+  // Phone/Tablet detection
+  const isPhone = Platform.OS === 'ios' ? !(Platform as any).isPad : true;
+  const { width: screenWidth } = Dimensions.get('window');
+  
   // State
   const [projectId, setProjectId] = useState<string | undefined>(projectIdParam);
   const [name, setName] = useState('Neue Berechnung');
@@ -3672,7 +3676,243 @@ export default function AreaCalculatorEditor() {
         </TouchableOpacity>
       </View>
 
-      {/* Toolbar - Neu organisiert mit Spalten */}
+      {/* Toolbar - Scrollbar auf iPhone, Spalten auf iPad */}
+      {isPhone ? (
+        // iPhone: Kompakte, scrollbare Toolbar mit allen Buttons
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={true} 
+          style={styles.toolbarPhone}
+          contentContainerStyle={styles.toolbarPhoneContent}
+        >
+          {/* Konstruktion */}
+          <View style={styles.toolbarPhoneSection}>
+            <Text style={styles.toolbarPhoneSectionTitle}>KONSTRUKTION</Text>
+            <View style={styles.toolbarPhoneButtons}>
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'select' && { backgroundColor: '#2196F3' }]}
+                onPress={() => { selectMode('select'); setCurrentPoints([]); }}
+              >
+                <Ionicons name="hand-left" size={16} color={mode === 'select' ? '#fff' : '#2196F3'} />
+                <Text style={[styles.toolLabelPhone, mode === 'select' && styles.toolLabelActive]}>Auswahl</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'scale' && styles.toolButtonActive]}
+                onPress={() => { 
+                  selectMode('scale'); 
+                  setCurrentPoints([]); 
+                  setScaleReference({ startPoint: null, endPoint: null, realLength: 1 });
+                }}
+              >
+                <ScaleIcon size={16} color={mode === 'scale' ? '#fff' : '#666'} />
+                <Text style={[styles.toolLabelPhone, mode === 'scale' && styles.toolLabelActive]}>Maßstab</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'polygon' && { backgroundColor: '#4CAF50' }]}
+                onPress={() => { selectMode('polygon'); setCurrentPoints([]); }}
+              >
+                <AreaIcon size={16} color={mode === 'polygon' ? '#fff' : '#4CAF50'} />
+                <Text style={[styles.toolLabelPhone, mode === 'polygon' && styles.toolLabelActive]}>Fläche</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, (snapToAngles || fixedAngle !== null || fixedLength !== '') && { backgroundColor: '#4CAF50' }]}
+                onPress={() => {
+                  if (mode !== 'polygon') {
+                    setMode('polygon');
+                    setCurrentPoints([]);
+                  }
+                  setShowAngleModal(true);
+                }}
+              >
+                <AngleIcon size={16} color={(snapToAngles || fixedAngle !== null || fixedLength !== '') ? '#fff' : '#4CAF50'} />
+                <Text style={[styles.toolLabelPhone, (snapToAngles || fixedAngle !== null || fixedLength !== '') && styles.toolLabelActive]}>Winkel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, addPointMode && { backgroundColor: '#E91E63' }]}
+                onPress={() => {
+                  setAddPointMode(!addPointMode);
+                  setDeletePointMode(false);
+                }}
+              >
+                <Ionicons name="add-outline" size={16} color={addPointMode ? '#fff' : '#E91E63'} />
+                <Text style={[styles.toolLabelPhone, addPointMode && styles.toolLabelActive]}>+Punkt</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, deletePointMode && { backgroundColor: '#f44336' }]}
+                onPress={() => {
+                  setDeletePointMode(!deletePointMode);
+                  setAddPointMode(false);
+                }}
+              >
+                <Ionicons name="remove-outline" size={16} color={deletePointMode ? '#fff' : '#f44336'} />
+                <Text style={[styles.toolLabelPhone, deletePointMode && styles.toolLabelActive]}>-Punkt</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'deduction' && { backgroundColor: '#f44336' }]}
+                onPress={() => { selectMode('deduction'); setCurrentPoints([]); }}
+              >
+                <DeductionAreaIcon size={16} color={mode === 'deduction' ? '#fff' : '#f44336'} />
+                <Text style={[styles.toolLabelPhone, mode === 'deduction' && styles.toolLabelActive]}>Abzug</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'deduction_rect' && { backgroundColor: '#f44336' }]}
+                onPress={() => { selectMode('deduction_rect'); setCurrentPoints([]); setDeductionRectStart(null); setDeductionRectEnd(null); }}
+              >
+                <DeductionRectIcon size={16} color={mode === 'deduction_rect' ? '#fff' : '#f44336'} />
+                <Text style={[styles.toolLabelPhone, mode === 'deduction_rect' && styles.toolLabelActive]}>Rechteck</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={styles.toolSeparatorPhone} />
+          
+          {/* Hilfslinien */}
+          <View style={styles.toolbarPhoneSection}>
+            <Text style={styles.toolbarPhoneSectionTitle}>HILFSLINIEN</Text>
+            <View style={styles.toolbarPhoneButtons}>
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'guideline' && { backgroundColor: '#FF9800' }]}
+                onPress={() => { selectMode('guideline'); setCurrentPoints([]); }}
+              >
+                <Ionicons name="analytics-outline" size={16} color={mode === 'guideline' ? '#fff' : '#FF9800'} />
+                <Text style={[styles.toolLabelPhone, mode === 'guideline' && styles.toolLabelActive]}>Linie</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'parallel' && { backgroundColor: '#9C27B0' }]}
+                onPress={() => { selectMode('parallel'); setCurrentPoints([]); }}
+              >
+                <Ionicons name="reorder-two-outline" size={16} color={mode === 'parallel' ? '#fff' : '#9C27B0'} />
+                <Text style={[styles.toolLabelPhone, mode === 'parallel' && styles.toolLabelActive]}>Parallel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, gridEnabled && styles.toolButtonActive]}
+                onPress={() => setGridEnabled(!gridEnabled)}
+                onLongPress={() => setShowGridSizeModal(true)}
+              >
+                <Ionicons name="grid-outline" size={16} color={gridEnabled ? '#fff' : '#666'} />
+                <Text style={[styles.toolLabelPhone, gridEnabled && styles.toolLabelActive]}>Raster</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={styles.toolSeparatorPhone} />
+          
+          {/* Optionen */}
+          <View style={styles.toolbarPhoneSection}>
+            <Text style={styles.toolbarPhoneSectionTitle}>OPTIONEN</Text>
+            <View style={styles.toolbarPhoneButtons}>
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, showEdgeLengths && styles.toolButtonActive]}
+                onPress={() => setShowEdgeLengths(!showEdgeLengths)}
+              >
+                <Ionicons name="code-working-outline" size={16} color={showEdgeLengths ? '#fff' : '#666'} />
+                <Text style={[styles.toolLabelPhone, showEdgeLengths && styles.toolLabelActive]}>Maße</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, showPolygonAngles && styles.toolButtonActive]}
+                onPress={() => setShowPolygonAngles(!showPolygonAngles)}
+              >
+                <Ionicons name="triangle-outline" size={16} color={showPolygonAngles ? '#fff' : '#666'} />
+                <Text style={[styles.toolLabelPhone, showPolygonAngles && styles.toolLabelActive]}>Winkel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.toolButtonPhone}
+                onPress={resetView}
+              >
+                <Ionicons name="scan-outline" size={16} color="#666" />
+                <Text style={styles.toolLabelPhone}>{Math.round(zoomLevel * 100)}%</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={styles.toolSeparatorPhone} />
+          
+          {/* Elemente */}
+          <View style={styles.toolbarPhoneSection}>
+            <Text style={styles.toolbarPhoneSectionTitle}>ELEMENTE</Text>
+            <View style={styles.toolbarPhoneButtons}>
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'annotation_text' && { backgroundColor: '#E91E63' }]}
+                onPress={() => { selectMode('annotation_text'); setCurrentPoints([]); }}
+              >
+                <Ionicons name="text-outline" size={16} color={mode === 'annotation_text' ? '#fff' : '#E91E63'} />
+                <Text style={[styles.toolLabelPhone, mode === 'annotation_text' && styles.toolLabelActive]}>Text</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, mode === 'annotation_memo' && { backgroundColor: '#FF5722' }]}
+                onPress={() => { selectMode('annotation_memo'); setCurrentPoints([]); setPendingMemoPointer(null); }}
+              >
+                <Ionicons name="chatbox-outline" size={16} color={mode === 'annotation_memo' ? '#fff' : '#FF5722'} />
+                <Text style={[styles.toolLabelPhone, mode === 'annotation_memo' && styles.toolLabelActive]}>Notiz</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && { backgroundColor: '#673AB7' }]}
+                onPress={() => setShowShapesModal(true)}
+              >
+                <Ionicons name="ellipse-outline" size={16} color={(mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') ? '#fff' : '#673AB7'} />
+                <Text style={[styles.toolLabelPhone, (mode === 'annotation_rect' || mode === 'annotation_circle' || mode === 'annotation_arrow' || mode === 'annotation_line') && styles.toolLabelActive]}>Formen</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.toolButtonPhone, backgroundImage && { backgroundColor: '#8BC34A' }]}
+                onPress={() => setShowBgImageModal(true)}
+              >
+                <Ionicons name="image-outline" size={16} color={backgroundImage ? '#fff' : '#8BC34A'} />
+                <Text style={[styles.toolLabelPhone, backgroundImage && { color: '#fff' }]}>Bild</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Kontextuelle Buttons für iPhone */}
+          {currentPoints.length > 0 && (
+            <>
+              <View style={styles.toolSeparatorPhone} />
+              <View style={styles.toolbarPhoneSection}>
+                <Text style={styles.toolbarPhoneSectionTitle}>AKTION</Text>
+                <View style={styles.toolbarPhoneButtons}>
+                  <TouchableOpacity style={styles.toolButtonPhone} onPress={undoLastPoint}>
+                    <Ionicons name="arrow-undo" size={16} color="#666" />
+                    <Text style={styles.toolLabelPhone}>Zurück</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.toolButtonPhone, { backgroundColor: '#f44336' }]} onPress={cancelCurrentPolygon}>
+                    <Ionicons name="close" size={16} color="#fff" />
+                    <Text style={[styles.toolLabelPhone, { color: '#fff' }]}>Abbruch</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          )}
+          
+          {selectedPolygonId && mode === 'select' && (
+            <>
+              <View style={styles.toolSeparatorPhone} />
+              <View style={styles.toolbarPhoneSection}>
+                <Text style={styles.toolbarPhoneSectionTitle}>AUSWAHL</Text>
+                <View style={styles.toolbarPhoneButtons}>
+                  <TouchableOpacity style={[styles.toolButtonPhone, { backgroundColor: '#f44336' }]} onPress={deleteSelectedPolygon}>
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={[styles.toolLabelPhone, { color: '#fff' }]}>Löschen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      ) : (
+      // iPad: Originale Spalten-Toolbar
       <View style={styles.toolbar}>
         {/* Spalte 1: Konstruktion */}
         <View style={styles.toolbarSection}>
@@ -4067,6 +4307,7 @@ export default function AreaCalculatorEditor() {
           </>
         )}
       </View>
+      )}
 
       {/* Canvas */}
       <View 
@@ -9252,6 +9493,54 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#e0e0e0',
     marginHorizontal: 8,
+  },
+  // iPhone Toolbar Styles
+  toolbarPhone: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    maxHeight: 90,
+  },
+  toolbarPhoneContent: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  toolbarPhoneSection: {
+    alignItems: 'flex-start',
+  },
+  toolbarPhoneSectionTitle: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#999',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  toolbarPhoneButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  toolButtonPhone: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    minWidth: 50,
+  },
+  toolLabelPhone: {
+    fontSize: 9,
+    color: '#666',
+    marginTop: 2,
+  },
+  toolSeparatorPhone: {
+    width: 1,
+    height: 50,
+    backgroundColor: '#e0e0e0',
+    marginHorizontal: 12,
+    alignSelf: 'center',
   },
   calcButton: {
     flex: 1,

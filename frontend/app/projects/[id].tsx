@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
+import { Features } from '../../services/FeatureFlags';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -3889,10 +3890,13 @@ export default function ProjectDetailScreen() {
           <Ionicons name="document-text" size={20} color="#1976d2" />
           <Text style={styles.actionButtonText}>Projekt-PDF</Text>
         </TouchableOpacity>
+        {/* Projekt exportieren - nur in Pro Version */}
+        {Features.showProjektExport && (
         <TouchableOpacity style={styles.actionButton} onPress={exportProjectFile}>
           <Ionicons name="cloud-upload" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>PDF-Export</Text>
+          <Text style={styles.actionButtonText}>Projekt exportieren</Text>
         </TouchableOpacity>
+        )}
       </View>
 
       {/* Modern Colorful Tabs */}
@@ -3961,7 +3965,8 @@ export default function ProjectDetailScreen() {
             )}
           </TouchableOpacity>
           
-          {/* 4. Flächen - Orange */}
+          {/* 4. Flächen - Orange - nur in Pro */}
+          {Features.showFlaechenTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'calculator' && styles.tabPillActive]}
             onPress={() => setActiveTab('calculator')}
@@ -3982,8 +3987,10 @@ export default function ProjectDetailScreen() {
               </View>
             )}
           </TouchableOpacity>
+          )}
           
-          {/* 5. Dach - Rot */}
+          {/* 5. Dach - Rot - nur in Pro */}
+          {Features.showDachTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'roofs' && styles.tabPillActive]}
             onPress={() => setActiveTab('roofs')}
@@ -4004,6 +4011,7 @@ export default function ProjectDetailScreen() {
               </View>
             )}
           </TouchableOpacity>
+          )}
           
           {/* 6. Liste - Türkis */}
           <TouchableOpacity
@@ -4042,7 +4050,8 @@ export default function ProjectDetailScreen() {
             </Text>
           </TouchableOpacity>
           
-          {/* 8. Doku - Indigo */}
+          {/* 8. Doku - Indigo - nur in Pro */}
+          {Features.showDokuTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'documents' && styles.tabPillActive]}
             onPress={() => setActiveTab('documents')}
@@ -4063,6 +4072,7 @@ export default function ProjectDetailScreen() {
               </View>
             )}
           </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
 

@@ -23,6 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Features } from '../services/FeatureFlags';
 
 // Status-Optionen
 const STATUS_OPTIONS = [
@@ -752,6 +753,8 @@ export default function HomeScreen() {
             <Text style={styles.utilityButtonText}>{getSortLabel()}</Text>
           </TouchableOpacity>
 
+          {/* Import Button - nur in Pro Version */}
+          {Features.showImportButton && (
           <TouchableOpacity
             style={[styles.utilityButton, styles.importUtilityButton]}
             onPress={importProjectFile}
@@ -759,7 +762,10 @@ export default function HomeScreen() {
             <Ionicons name="download-outline" size={16} color="#2e7d32" />
             <Text style={[styles.utilityButtonText, { color: '#2e7d32' }]}>Import</Text>
           </TouchableOpacity>
+          )}
           
+          {/* Verschieben Button - nur in Pro Version */}
+          {Features.showVerschiebenButton && (
           <TouchableOpacity
             style={[styles.utilityButton, selectionMode && styles.utilityButtonActive]}
             onPress={toggleSelectionMode}
@@ -773,10 +779,11 @@ export default function HomeScreen() {
               {selectionMode ? 'Abbrechen' : 'Verschieben'}
             </Text>
           </TouchableOpacity>
+          )}
         </View>
         
-        {/* Multi-Select Action Row - nur wenn Selection Mode aktiv */}
-        {selectionMode && (
+        {/* Multi-Select Action Row - nur wenn Selection Mode aktiv und Pro Version */}
+        {Features.showVerschiebenButton && selectionMode && (
         <View style={styles.multiSelectRow}>
           <TouchableOpacity
             style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}

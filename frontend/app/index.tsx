@@ -141,10 +141,10 @@ export default function HomeScreen() {
         
         const customer = customers[project.customer_id];
         const [roofs, photos, sketches, checklists] = await Promise.all([
-          RoofService.getByProject(projectId),
-          PhotoService.getByProject(projectId),
-          SketchService.getByProject(projectId),
-          ChecklistService.getByProject(projectId),
+          RoofService.getByProjectId(projectId),
+          PhotoService.getByProjectId(projectId),
+          SketchService.getByProjectId(projectId),
+          ChecklistService.getByProjectId(projectId),
         ]);
         
         exportDataArray.push({

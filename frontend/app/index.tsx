@@ -759,87 +759,85 @@ export default function HomeScreen() {
             <Ionicons name="download-outline" size={16} color="#2e7d32" />
             <Text style={[styles.utilityButtonText, { color: '#2e7d32' }]}>Import</Text>
           </TouchableOpacity>
-        </View>
-        
-        {/* Multi-Select Action Row */}
-        <View style={styles.multiSelectRow}>
+          
           <TouchableOpacity
-            style={[styles.multiSelectButton, selectionMode && styles.multiSelectButtonActive]}
+            style={[styles.utilityButton, selectionMode && styles.utilityButtonActive]}
             onPress={toggleSelectionMode}
           >
             <Ionicons 
-              name={selectionMode ? "close-circle" : "checkbox-outline"} 
+              name={selectionMode ? "close-circle" : "swap-horizontal"} 
               size={16} 
-              color={selectionMode ? "#fff" : "#666"} 
+              color={selectionMode ? "#fff" : "#9c27b0"} 
             />
-            <Text style={[styles.multiSelectButtonText, selectionMode && { color: '#fff' }]}>
-              {selectionMode ? 'Abbrechen' : 'Auswählen'}
+            <Text style={[styles.utilityButtonText, { color: selectionMode ? '#fff' : '#9c27b0' }]}>
+              {selectionMode ? 'Abbrechen' : 'Verschieben'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Multi-Select Action Row - nur wenn Selection Mode aktiv */}
+        {selectionMode && (
+        <View style={styles.multiSelectRow}>
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
+            onPress={selectedProjects.size === filteredProjects.length ? deselectAllProjects : selectAllProjects}
+          >
+            <Ionicons 
+              name={selectedProjects.size === filteredProjects.length ? "checkbox" : "checkbox-outline"} 
+              size={16} 
+              color="#1976d2" 
+            />
+            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>
+              {selectedProjects.size > 0 ? `(${selectedProjects.size})` : 'Alle'}
             </Text>
           </TouchableOpacity>
           
-          {selectionMode && (
-            <>
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
-                onPress={selectedProjects.size === filteredProjects.length ? deselectAllProjects : selectAllProjects}
-              >
-                <Ionicons 
-                  name={selectedProjects.size === filteredProjects.length ? "checkbox" : "checkbox-outline"} 
-                  size={16} 
-                  color="#1976d2" 
-                />
-                <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>
-                  {selectedProjects.size > 0 ? `(${selectedProjects.size})` : 'Alle'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
-                onPress={exportSelectedProjects}
-                disabled={selectedProjects.size === 0}
-              >
-                <Ionicons name="share-outline" size={16} color="#2e7d32" />
-                <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>Export</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
-                onPress={() => moveSelectedToStatus('aktiv')}
-                disabled={selectedProjects.size === 0}
-              >
-                <Ionicons name="play-circle-outline" size={16} color="#4caf50" />
-                <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Aktiv</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
-                onPress={() => moveSelectedToStatus('abgeschlossen')}
-                disabled={selectedProjects.size === 0}
-              >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
-                <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Fertig</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#fff3e0' }]}
-                onPress={() => moveSelectedToStatus('abgebrochen')}
-                disabled={selectedProjects.size === 0}
-              >
-                <Ionicons name="close-circle-outline" size={16} color="#f57c00" />
-                <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>Abgebr.</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.multiSelectButton, { backgroundColor: '#ffebee' }]}
-                onPress={deleteSelectedProjects}
-                disabled={selectedProjects.size === 0}
-              >
-                <Ionicons name="trash-outline" size={16} color="#f44336" />
-                <Text style={[styles.multiSelectButtonText, { color: '#f44336' }]}>Löschen</Text>
-              </TouchableOpacity>
-            </>
-          )}
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
+            onPress={exportSelectedProjects}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="share-outline" size={16} color="#2e7d32" />
+            <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>Export</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
+            onPress={() => moveSelectedToStatus('aktiv')}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="play-circle-outline" size={16} color="#4caf50" />
+            <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Aktiv</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
+            onPress={() => moveSelectedToStatus('abgeschlossen')}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
+            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Fertig</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#fff3e0' }]}
+            onPress={() => moveSelectedToStatus('abgebrochen')}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="close-circle-outline" size={16} color="#f57c00" />
+            <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>Abgebr.</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#ffebee' }]}
+            onPress={deleteSelectedProjects}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="trash-outline" size={16} color="#f44336" />
+            <Text style={[styles.multiSelectButtonText, { color: '#f44336' }]}>Löschen</Text>
+          </TouchableOpacity>
         </View>
+        )}
       </View>
       
       {/* Processing Overlay */}
@@ -1045,6 +1043,10 @@ const styles = StyleSheet.create({
   importUtilityButton: {
     borderColor: '#c8e6c9',
     backgroundColor: '#f1f8e9',
+  },
+  utilityButtonActive: {
+    borderColor: '#9c27b0',
+    backgroundColor: '#9c27b0',
   },
   utilityButtonText: {
     fontSize: 12,

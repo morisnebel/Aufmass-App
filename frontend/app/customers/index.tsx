@@ -487,12 +487,22 @@ export default function CustomersScreen() {
           </Text>
         </View>
         <View style={styles.customerInfo}>
-          <View style={styles.customerNameRow}>
-            {item.customer_number && (
-              <Text style={[styles.customerNumber, isPhone && styles.customerNumberPhone]}>{item.customer_number}</Text>
-            )}
-            <Text style={[styles.customerName, isPhone && styles.customerNamePhone]} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
-          </View>
+          {/* iPhone: Kundennummer über dem Namen, iPad: nebeneinander */}
+          {isPhone ? (
+            <View style={styles.customerNameColumnPhone}>
+              {item.customer_number && (
+                <Text style={styles.customerNumberAbove}>{item.customer_number}</Text>
+              )}
+              <Text style={styles.customerNamePhone} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
+            </View>
+          ) : (
+            <View style={styles.customerNameRow}>
+              {item.customer_number && (
+                <Text style={styles.customerNumber}>{item.customer_number}</Text>
+              )}
+              <Text style={styles.customerName} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
+            </View>
+          )}
           {item.email && (
             <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone]} numberOfLines={1} ellipsizeMode="tail">
               <Ionicons name="mail" size={isPhone ? 10 : 12} color="#666" /> {item.email}
@@ -1148,6 +1158,21 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 2,
   },
+  customerNameColumnPhone: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  customerNumberAbove: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#1976d2',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+    marginBottom: 2,
+  },
   customerNumber: {
     fontSize: 12,
     fontWeight: '600',
@@ -1170,6 +1195,8 @@ const styles = StyleSheet.create({
   },
   customerNamePhone: {
     fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
   },
   customerDetail: {
     fontSize: 13,

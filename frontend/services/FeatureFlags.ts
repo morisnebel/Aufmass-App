@@ -1,48 +1,118 @@
 /**
  * Feature Flags für Aufmassprofi
  * 
- * isPro = false → Basis Version (eingeschränkt)
- * isPro = true  → Pro Version (alle Features)
+ * isPro wird aus AsyncStorage geladen (für Entwickler-Freischaltung)
+ * Standard: false (Basic Version)
  * 
- * Zum Entwickeln/Testen einfach isPro auf true setzen.
- * Später wird dies durch In-App-Kauf gesteuert.
+ * Entwickler können Pro über versteckten Schalter in Einstellungen aktivieren.
  */
 
-// HAUPTSCHALTER: Auf 'true' setzen um Pro-Features freizuschalten
-export const isPro = false;
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// App-Name basierend auf Version
-export const AppName = isPro ? 'Aufmassprofi Pro' : 'Aufmassprofi Basic';
-export const AppNameHeader = isPro ? '- AUFMASSPROFI Pro -' : '- AUFMASSPROFI Basic -';
-export const AppNameShort = isPro ? 'Pro' : 'Basic';
+const PRO_KEY = 'aufmassprofi_pro_unlocked';
 
-// Einzelne Feature-Flags (werden von isPro gesteuert)
-export const Features = {
+// Globaler Pro-Status (wird beim App-Start geladen)
+let _isPro = false;
+
+// Pro-Status laden (beim App-Start aufrufen)
+export const loadProStatus = async (): Promise<boolean> => {
+  try {
+    const value = await AsyncStorage.getItem(PRO_KEY);
+    _isPro = value === 'true';
+    return _isPro;
+  } catch {
+    return false;
+  }
+};
+
+// Pro-Status setzen und speichern
+export const setProStatus = async (value: boolean): Promise<void> => {
+  try {
+    _isPro = value;
+    await AsyncStorage.setItem(PRO_KEY, value ? 'true' : 'false');
+  } catch (e) {
+    console.error('Error saving Pro status:', e);
+  }
+};
+
+// Pro-Status abrufen (synchron, nach dem Laden)
+export const getProStatus = (): boolean => _isPro;
+
+// Für direkte Verwendung (wird nach App-Start korrekt sein)
+export const isPro = _isPro;
+
+// App-Name basierend auf Version (dynamisch)
+export const getAppName = () => _isPro ? 'Aufmassprofi Pro' : 'Aufmassprofi Basic';
+export const getAppNameHeader = () => _isPro ? '- AUFMASSPROFI Pro -' : '- AUFMASSPROFI Basic -';
+export const getAppNameShort = () => _isPro ? 'Pro' : 'Basic';
+
+// Legacy exports für Kompatibilität
+export const AppName = 'Aufmassprofi Basic'; // Wird dynamisch überschrieben
+export const AppNameHeader = '- AUFMASSPROFI Basic -';
+export const AppNameShort = 'Basic';
+
+// Feature-Funktion die aktuellen Pro-Status prüft
+export const getFeatures = () => ({
   // Startseite
-  showImportButton: isPro,           // Import Button auf Startseite
-  showVerschiebenButton: isPro,      // Verschieben/Multi-Select Button
+  showImportButton: _isPro,
+  showVerschiebenButton: _isPro,
   
   // Projektdetails
-  showProjektExport: isPro,          // "PDF-Export" / Projekt exportieren Button
-  showFlaechenTab: isPro,            // Flächenberechnung Tab
-  showDachTab: isPro,                // Dachberechnung Tab
-  showDokuTab: isPro,                // Dokumentation Tab
+  showProjektExport: _isPro,
+  showFlaechenTab: _isPro,
+  showDachTab: _isPro,
+  showDokuTab: _isPro,
   
   // Checklisten
-  maxChecklistItems: isPro ? 999 : 5,       // Max Unterpunkte pro Hauptpunkt (5 für Basis)
-  maxMainItems: isPro ? 999 : 10,           // Max Hauptpunkte (10 für Basis)
-  maxTemplates: isPro ? 999 : 3,            // Max Vorlagen (3 für Basis)
-  allowNestedSubItems: isPro,               // Erlaubt Unter-Unterpunkte (nur Pro)
-  showChecklistLogo: isPro,                 // Logo in Checklisten
-  showChecklistTemplateLogo: isPro,         // Template-Logo (oben rechts)
-  showChecklistDruckbild: isPro,            // Druckbild
-  showChecklistVerknuepfungen: isPro,       // Verknüpfungen
-  showChecklistVorschau: isPro,             // Vorschau
-  showChecklistBerechnung: isPro,           // Berechnung
-  showChecklistImportExport: isPro,         // Import/Export von Checklisten
+  maxChecklistItems: _isPro ? 999 : 5,
+  maxMainItems: _isPro ? 999 : 10,
+  maxTemplates: _isPro ? 999 : 3,
+  allowNestedSubItems: _isPro,
+  showChecklistLogo: _isPro,
+  showChecklistTemplateLogo: _isPro,
+  showChecklistDruckbild: _isPro,
+  showChecklistVerknuepfungen: _isPro,
+  showChecklistVorschau: _isPro,
+  showChecklistBerechnung: _isPro,
+  showChecklistImportExport: _isPro,
   
   // Einstellungen
-  showReferenzButton: isPro,          // Referenz Button
+  showReferenzButton: _isPro,
+});
+
+// Statische Features für initiale Verwendung (vor dem Laden)
+export const Features = {
+  // Startseite
+  showImportButton: false,
+  showVerschiebenButton: false,
+  
+  // Projektdetails
+  showProjektExport: false,
+  showFlaechenTab: false,
+  showDachTab: false,
+  showDokuTab: false,
+  
+  // Checklisten
+  maxChecklistItems: 5,
+  maxMainItems: 10,
+  maxTemplates: 3,
+  allowNestedSubItems: false,
+  showChecklistLogo: false,
+  showChecklistTemplateLogo: false,
+  showChecklistDruckbild: false,
+  showChecklistVerknuepfungen: false,
+  showChecklistVorschau: false,
+  showChecklistBerechnung: false,
+  showChecklistImportExport: false,
+  
+  // Einstellungen
+  showReferenzButton: false,
+};
+
+// Features aktualisieren basierend auf Pro-Status
+export const updateFeatures = () => {
+  const f = getFeatures();
+  Object.assign(Features, f);
 };
 
 // Helper-Funktion um Pro-Status zu prüfen

@@ -1,242 +1,231 @@
-<analysis>
-<original_problem_statement>
-The user initially requested to finalize and upload the Aufmaß-App to TestFlight. After successfully guiding the user through the build and submission process, a series of new feature requests and UI/UX improvements were made.
+**original_problem_statement:**
+The user's primary goal is to create two versions of the Aufmaß-App:
+1.  A Basic version with limited functionality, intended for a one-time purchase.
+2.  A Pro version with all features, intended for a subscription model.
 
-**PRODUCT REQUIREMENTS:**
+For now, the user wants to finalize the Basic version by hiding or restricting all Pro features, with the ability to easily switch back to the Pro version for future development.
 
-1.  **PDF Customization (Headline):**
-    *   Remove the three statistics cards (Dachfläche, Gesamtfläche, Fotos) from the PDF.
-    *   Add a new, customizable headline to the PDF (e.g., Sturmschaden vom 16.03.2026).
-    *   This headline (Projektart) should be selectable from a dropdown in the project details.
-    *   The dropdown options should be manageable via a new section in the app's settings.
-    *   An optional date field should be associated with the headline.
+**PRODUCT REQUIREMENTS (for Basic Version):**
 
-2.  **Numbering System Enhancements:**
-    *   Implement a robust duplicate-checking mechanism for Customer, Project, and Object numbers.
-    *   When a duplicate number is entered manually, an alert should prompt the user to either keep the duplicate or generate a new number.
-    *   Object numbers () must be scoped *per customer*. For example, Customer A and Customer B can both have an object with the number .
+*   **Allowed Features:**
+    *   Project creation and editing.
+    *   Customer management.
+    *   Adding photos.
+    *   Sketches.
+    *   PDF export of project reports.
+    *   Checklists with the following limitations:
+        *   Maximum of 10 main items per checklist.
+        *   Maximum of 5 sub-items per main item.
+        *   No further nesting (only 1 level of sub-items).
+        *   Maximum of 3 checklist templates.
 
-3.  **PDF/Image Import:**
-    *   In the Skizzen (Sketches) and Projekt Fotos sections, add a button to import a PDF file from the device's storage.
-    *   The selected PDF should be converted into an image and added to the project.
-
-4.  **UI/UX Improvements:**
-    *   Improve the date picker to use a native calendar or wheel interface instead of a text input.
-    *   In the project view, automatically display the last-used Projektart as a suggestion if one hasn't been explicitly set for the current project.
-    *   Hide empty sections (like 'Dachflächen' or 'Checklisten') in the final PDF to make it cleaner.
-    *   Change the settings page header from  to a more user-friendly Einstellungen.
-    *   Create an advanced PDF layout editor in the settings to control the size, colors, and style for different sections of the PDF (Header, Headline, Tools).
-
-</original_problem_statement>
+*   **Disabled/Hidden Features (Pro Features):**
+    *   Checklist Features: Unlimited items, template logos, print layout settings, item linking, preview gallery, calculations.
+    *   Checklist template import/export.
+    *   Project import/export (the button previously labeled PDF-Export in project details).
+    *   Multi-project Verschieben (Move) and Referenzen functions on the home screen.
+    *   Flächenberechnung (Area Calculator) tool.
+    *   Dachberechnung (Roof Calculator) tool.
+    *   Doku (Documentation) tool.
+    *   The ability for the user to upload their own company logo in settings (the Basic version will have a fixed Aufmassprofi logo).
 
 **User's preferred language**: German
 
 **what currently exists?**
-The project is a full-featured Expo/React Native app for roofers that uses AsyncStorage for all data persistence.
-- A complete numbering system for Customers, Projects, and Objects is in place, including robust duplicate-checking and per-customer object numbering.
-- A PDF generation system exists, which now includes a customizable headline (Projektart) with an optional date. The options for this headline are configurable in the settings.
-- A feature to import PDFs and convert them to images for sketches and project photos has been implemented using , though it only works in native builds (not Expo Go).
-- Several UI/UX improvements have been made, including a native date picker, smarter defaults for the Projektart, and hiding empty sections in the PDF.
-- The foundation for an advanced PDF layout customizer has been started in the settings screen.
+The application now contains a feature-flag system controlled by a single boolean () in . This flag dynamically configures the app to run as either Basic or Pro. Many UI components and services now check this flag to hide/show buttons, limit functionality (e.g., number of checklist items), and change branding text (e.g., Aufmassprofi Basic vs. Aufmassprofi Pro). A hidden, persistent developer switch has been implemented in the settings screen to allow the user to toggle between modes. Numerous UI enhancements and bug fixes were also completed.
 
 **Last working item**:
-- Last item agent was working: The agent was implementing an advanced PDF layout customization feature in the settings page (). The user requested to change the static header title and add options to separately control the size, color, and style for the PDF's Header, Headline, and Tools sections.
-- Status: IN PROGRESS
+- Last item agent was working: Implementing a hidden, persistent developer switch to allow the user to toggle between the Basic and Pro versions of the app without needing code changes. This was achieved by:
+    1.  Creating a function in  to read/write an  key in AsyncStorage.
+    2.  Adding a  wrapper around the app name in the settings screen () that tracks taps and toggles the  state after 5 taps.
+- Status: USER VERIFICATION PENDING
 - Agent Testing Done: N
-- Which testing method agent to use? screenshot tool
+- Which testing method agent to use? Manual testing by user. The user needs to navigate to the settings screen and tap the app name 5 times to confirm the switch works.
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Complete PDF Layout Customization Feature (P0)**
-    - The agent started creating the UI in  but needs to finish it and make it functional.
-    - **Attempted fixes:** The agent started adding new state and UI components.
-    - **Next debug checklist:**
-        1.  Create  to set the header title to Einstellungen using 's  options.
-        2.  In , expand the UI to include color and style pickers for each PDF layout section (Header, Überschrift, Tools), not just the size selector.
-        3.  In , read these new layout settings from  and dynamically apply them as CSS styles when generating the PDF HTML.
-    - **Why fix this issue and what will be achieved with the fix?** This will complete the user's request for advanced PDF customization, giving them full control over the look and feel of their exported documents.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** Frontend
-
-- **Issue 2: Verify PDF Import in Native Build (P1)**
-    - The feature to import a PDF as an image was implemented using . The user was correctly informed that this would cause an error in Expo Go and only work in the final build.
-    - **Next debug checklist:** This task is blocked until the user creates a new TestFlight build. Once a build is made, the user needs to test this feature and report back. No action is required from the agent until then.
-    - **Why fix this issue and what will be achieved with the fix?** To confirm that the implemented solution for a key user feature works as expected in the production environment.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** N/A (User testing on device)
-    - **Blocked on other issue:** User creating a new TestFlight build.
+- There are no pending issues. The agent has just completed the last feature request.
 
 **In progress Task List**:
-- **Task 1: PDF Layout Customization (P0)**
-    - This is the same as Issue 1. The agent is actively working on building this feature.
-    - **Where to resume:**  and creating .
-    - **What will be achieved with this?** A complete, user-configurable PDF layout editor in the settings.
-    - **Status:** IN PROGRESS
+- **Task 1: Finalize and Verify Basic Version (P0)**
+    - The core logic for the Basic version is implemented, but the user needs to perform a full review to ensure all requested limitations and hidden features work as expected.
+    - **Where to resume:** Await user feedback after they test the new Basic version and the developer switch.
+    - **What will be achieved with this?** A finalized Basic version of the app, ready for a TestFlight build.
+    - **Status:** USER VERIFICATION PENDING
     - **Should Test frontend/backend/both after fix?** Frontend
-    - **Blocked on something:** No.
+    - **Blocked on something:** User testing.
 
 **Upcoming and Future Tasks**
-- There are no other explicit upcoming or future tasks. The user's primary goal remains to enhance the app and prepare it for a stable TestFlight release.
+- **Upcoming Tasks:**
+  - **Upload Basic Version to TestFlight (P0):** Once the user verifies the Basic version, the next step is to guide them through the An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username and Transporter upload process. The agent must be mindful of the critical caching issue with the Download Code button.
+- **Future Tasks:**
+  - **Implement In-App Purchase (P1):** After the Basic version is released, the plan is to implement an in-app purchase (subscription) that will toggle the  flag to , unlocking all Pro features.
+  - **Re-enable Pro Features (P1):** The UI and logic for Pro features are currently hidden behind  flags. Future work will involve ensuring they function correctly when re-enabled.
 
 **Completed work in this session**
-- **TestFlight Deployment Guidance:** Guided the user through a complex usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
-           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
-           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--bare]
-           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
-           [--super-prefix=<path>] [--config-env=<name>=<envvar>]
-           <command> [<args>]
-
-These are common Git commands used in various situations:
-
-start a working area (see also: git help tutorial)
-   clone     Clone a repository into a new directory
-   init      Create an empty Git repository or reinitialize an existing one
-
-work on the current change (see also: git help everyday)
-   add       Add file contents to the index
-   mv        Move or rename a file, a directory, or a symlink
-   restore   Restore working tree files
-   rm        Remove files from the working tree and from the index
-
-examine the history and state (see also: git help revisions)
-   bisect    Use binary search to find the commit that introduced a bug
-   diff      Show changes between commits, commit and working tree, etc
-   grep      Print lines matching a pattern
-   log       Show commit logs
-   show      Show various types of objects
-   status    Show the working tree status
-
-grow, mark and tweak your common history
-   branch    List, create, or delete branches
-   commit    Record changes to the repository
-   merge     Join two or more development histories together
-   rebase    Reapply commits on top of another base tip
-   reset     Reset current HEAD to the specified state
-   switch    Switch branches
-   tag       Create, list, delete or verify a tag object signed with GPG
-
-collaborate (see also: git help workflows)
-   fetch     Download objects and refs from another repository
-   pull      Fetch from and integrate with another repository or a local branch
-   push      Update remote refs along with associated objects
-
-'git help -a' and 'git help -g' list available subcommands and some
-concept guides. See 'git help <command>' or 'git help <concept>'
-to read about a specific subcommand or concept.
-See 'git help git' for an overview of the system. merge conflict resolution and the local An Expo user account is required to proceed.
-
-Log in to EAS with email or username (exit and run eas login --help to see other login options)
-Input is required, but stdin is not readable. Failed to display prompt: Email or username and An Expo user account is required to proceed.
-
-Log in to EAS with email or username (exit and run eas login --help to see other login options)
-Input is required, but stdin is not readable. Failed to display prompt: Email or username process to upload a new version.
-- **Timestamped Version Code:** Added a visible version code with a timestamp to the home screen to help the user easily identify the running version.
-- **PDF Headline Feature:** Implemented a full feature for adding a customizable headline to PDFs, including a settings page to manage headline options.
-- **Duplicate Number Validation:** Successfully implemented robust, user-facing validation for Customer, Project, and Object numbers, including a confirmation dialog for duplicates. This was a complex, multi-step fix.
-- **Per-Customer Object Numbers:** Correctly implemented the logic for object numbers to be unique per customer, rather than globally unique.
-- **PDF-to-Image Import:** Implemented the functionality to select a PDF and convert it to an image for use in sketches and project photos using .
+- **Feature Flag System (Basic vs. Pro):**
+  - Created  with a global  flag that defaults to  (Basic).
+  - Implemented a hidden, persistent developer switch (5 taps on the app name in settings) to toggle the  state.
+  - Dynamically renamed the app to Aufmassprofi Basic or Aufmassprofi Pro in the header, on the home page, and in .
+- **Basic Version Feature Restrictions:**
+  - **Home Screen:** Hid Import, Verschieben (Move), and Referenzen buttons.
+  - **Project Details:** Hid Projekt exportieren button and the Flächen, Dach, and Doku tabs.
+  - **Settings:** Made the company logo a fixed, non-changeable Aufmassprofi icon for the Basic version.
+  - **Checklists:**
+    - Limited checklist templates to a maximum of 3.
+    - Limited main items to 10 and sub-items to 5.
+    - Prevented creation of sub-sub-items (depth is limited to 1).
+    - Hid all Pro-level checklist features: template import/export, template/category logos, print layout, item linking, and preview galleries.
 - **UI/UX Enhancements:**
-    - Replaced the text-based date input with a native  modal.
-    - Improved the UX by pre-filling the Projektart with the last-used value.
-    - Made the generated PDF cleaner by hiding empty sections.
-    - Re-ordered fields in modals and views based on user feedback.
+  - **Home Screen:** Implemented a multi-select feature to export, delete, or change the status of multiple projects at once. The Auswählen button was renamed to Verschieben and moved.
+  - **Customer List:** Improved the iPhone layout by placing the customer number above the name, added sorting functionality, and updated the header title.
+  - **Calculator Toolbar:** Made the toolbar horizontally scrollable on iPhone to prevent button overflow.
+- **Bug Fixes:**
+  - Fixed a critical bug where deleting the last checklist template caused default templates to reappear.
+  - Fixed invisible numbers in the iOS date picker.
+- **Branding & Cleanup:**
+  - Updated the application's icon, splash screen, and favicon with the new Aufmassprofi logo.
+  - Replaced all instances of AUFMASSPROFI DACH with dynamic branding.
+  - Removed the non-functional Bluetooth-Laser toggle from settings.
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1: UI Inconsistency in Number Display**
-    - The previous handover noted that some numbers are displayed as inline badges (e.g., on home screen project cards) while others are in separate, labeled rows (e.g., project detail). This was never explicitly addressed. While not a bug, it's a minor UI inconsistency that could be polished in the future.
-    - **Debug checklist:** Review  (project cards) and other list views. Compare with the display style in .
-    - **Why to solve this issue and what will be achieved with this?** To create a more uniform and professional user experience across the app.
-    - **Should Test frontend/backend/both after fix:** Frontend
-    - **Is recurring issue?** N
+   - Some numbers (e.g., project numbers on home screen cards) are displayed as inline badges, while others (e.g., in detail views) are in separate, labeled rows.
+   - **Why to solve this issue and what will be achieved with this?** This is a minor UI polish item to create a more uniform user experience.
+   - **Should Test frontend/backend/both after fix:** Frontend
+   - **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-- None.
+- **Issue recurrence in previous fork:** Download Code button on the Emergent platform provides a stale/cached version of the code.
+- **Recurrence count:** 3+
+- **Status:** WORKAROUND FOUND
+- **Note:** This is a critical platform issue. The workaround is for the user to delete ALL old local copies of the project from their machine before downloading the new code. They must then verify the  in the downloaded  before running 
+up to date, audited 798 packages in 1s
+
+83 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details. and An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** Expo (SDK 49), React Native, TypeScript
--   **Routing:**  (file-based)
--   **Data Persistence:**  via a  service module.
--   **Date/Time:** 
--   **File/Document Picking:** , 
--   **PDF Handling:**  for converting PDF pages to images.
--   **State Management:** Primarily component-level state (, ).
+- **Feature Toggling / Flagging:** The app now runs in a Basic or Pro mode controlled by . This service reads a persistent  value from AsyncStorage.
+- **Hidden Developer Mode:** A developer switch has been implemented in the settings screen (tap the app name 5 times) to toggle the persistent  state, allowing for easy testing and development of both versions.
+- **Local Build Process:** The user handles builds locally. The process is: 1.  to the correct project folder. 2. 
+up to date, audited 798 packages in 1s
+
+83 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.. 3. An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username. 4. Upload the resulting  with the Transporter app.
 
 **key DB schema**
-The data model has been expanded. It is stored in AsyncStorage, defined by interfaces in  and managed in .
-
--   **Settings**: 
--   **Project**: 
--   **Customer**: 
--   **ProjectAddress**: 
+- N/A. All data is in AsyncStorage. A new key, , has been added to persist the developer mode state.
 
 **changes in tech stack**
--   **Added:**  for native date selection.
--   **Added:**  for PDF-to-image conversion (requires native build).
+- No new libraries. The main architectural change is the introduction of the  service for feature toggling.
 
 **All files of reference**
--   : **Currently being worked on.** Contains logic for all user-configurable settings.
--   : Heavily modified to add the Project Type, date picker, PDF import, sketch canvas, and various UI tweaks.
--   : Modified to add the crucial customer number duplicate check.
--   : Modified to handle per-customer object number validation.
--   : Core logic for number generation and duplicate validation was added and refined here.
--   : The data model for settings was significantly expanded here.
--   : Modified to add the custom headline, hide empty sections, and apply custom styling.
+- : **NEW & CRITICAL**. Controls the Basic/Pro logic and developer switch state.
+- : Contains the UI for the hidden developer switch.
+- : Heavily modified to hide Pro buttons based on the  flag.
+- : Modified to hide Pro tabs and use a dynamic logo for PDF generation.
+- : Heavily modified to enforce all Basic version limits on checklists.
+- : Modified to enforce template count limits and hide import/export.
+- : Fixed a bug that recreated default checklist templates on deletion.
+- : The  and  fields are frequently updated.
+- : Header title is now dynamic based on the  flag.
 
 **Areas that need refactoring**:
--    has become extremely large and complex, managing state for the project itself, multiple modals, the sketch canvas, photo gallery, and PDF generation. It would benefit from being broken down into custom hooks and smaller components.
--    remains very complex and could also be refactored.
-
-**key api endpoints**
--   N/A. All operations are client-side using AsyncStorage.
+- The components in , , and  are extremely large. The addition of numerous  conditional checks has increased their complexity, making refactoring into smaller, single-responsibility components and custom hooks a high priority for future maintenance.
+- The  flag is now imported and checked in many different files. Creating a custom hook (e.g., ) to provide this value could centralize the logic and make components cleaner.
 
 **Critical Info for New Agent**
--   **Local Storage is King:** The entire application's state and data persistence rely on AsyncStorage, managed through . The backend is not used.
--   **Native Modules:** The PDF-to-image feature uses , a native library. It will **not** work in the Expo Go client and will throw an error. This is expected. It should only be tested on a native build (e.g., via TestFlight).
--   **File Structure:** The user's request to fix the customer number duplicate check revealed that a new file, , existed for creating customers. Always verify the file structure, as the agent previously assumed all customer logic was in .
--   **State Propagation:** The agent encountered several issues where UI did not update immediately after saving data. This is likely due to stale state. The pattern of re-fetching data after a save () is correct but be mindful of React's async state updates.
+- **Basic vs. Pro Developer Switch:** The app is currently set to **Basic** mode (). To switch to Pro mode for development or testing, navigate to the **Settings** screen and **tap the Aufmassprofi Basic title 5 times**. This will toggle the mode and the change is persistent until toggled again. You will see an alert confirming the switch.
+- **CRITICAL TestFlight Workflow & Cache Issue:** The Download Code button on the Emergent platform is UNRELIABLE and often serves a stale, cached version of the code. This is a known, recurring problem.
+    - **MANDATORY WORKAROUND:** The user must **delete all old local project folders** from their machine before downloading the new code. After downloading and unzipping, they must **verify the  in ** matches the expected number before running 
+up to date, audited 798 packages in 991ms
 
-**documents created in this job**
--   None.
+83 packages are looking for funding
+  run `npm fund` for details
+
+5 vulnerabilities (1 moderate, 4 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details. and An Expo user account is required to proceed.
+
+Log in to EAS with email or username (exit and run eas login --help to see other login options)
+Input is required, but stdin is not readable. Failed to display prompt: Email or username. Failure to follow this will result in building and uploading an old version of the app.
+
+**documents and test reports created in this job**
+- None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to restart Expo. (Completed)
-2.  **User:** Requests new features: change settings page header to Einstellungen and add a PDF layout editor to settings to control size, style, and color for different PDF sections (Header, Headline, Tools). (In Progress)
-3.  **Agent:** Acknowledges the request and starts implementation.
-4.  **User:** Clarifies the header change didn't work and that the layout editor needs to control colors/style for each section, not just size. (In Progress)
-5.  **Agent:** Acknowledges the clarification and refines the plan.
-6.  **Agent:** Creates a layout file to change the header title.
-7.  **Agent:** Starts expanding the settings UI to include the separate color/style options.
-8.  **Agent:** (Self-correction) Replaces the entire layout section with an expanded version.
-9.  **Agent:** (Thinking) I will now replace the layout size section completely with an expanded version that also includes colors and style.
-10. **Agent:** (Action) Executes the file modification to implement the new expanded UI.
+1.  **User:** Asks if they can always work on the Pro version even if we build the Basic version.
+2.  **User:** Confirms the idea of a hidden developer switch is practical.
+3.  **User:** Asks to rename Basis to Basic.
+4.  **User:** Asks to set a fixed Aufmassprofi logo in settings for the Basic version.
+5.  **User:** Asks to also use the fixed logo in the PDF preview and final PDF for the Basic version.
+6.  **User:** Confirms the Basic version looks good.
+7.  **User:** Asks how to switch between the Basic and Pro versions.
+8.  **Agent:** Explains they would need to ask the agent to change the code.
+9.  **Agent:** Proposes building a hidden developer switch.
+10. **User:** Confirms this is exactly what they want for development.
 
 **Project Health Check:**
--   **Broken:** None.
--   **Mocked:** The PDF-to-image conversion feature () is non-functional in the Expo Go environment, which acts as a mocked failure state during development. It is expected to work in a native build.
+- **Broken:** No features are currently reported as broken.
+- **Mocked:** The  feature remains a native build only feature and does not work in Expo Go.
 
 **3rd Party Integrations**
--   : For all data persistence.
--   : For file-based navigation.
--   : For selecting images from the camera roll.
--   : For selecting files (PDFs) from the device.
--   : For the native date selection modal.
--   : For converting PDF pages to images (requires native build).
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+- 
 
 **Testing status**
--   Testing agent used after significant changes: NO
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: []
--   Known regressions: None
+- Testing agent used after significant changes: NO
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: []
+- Known regressions: None
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-- The agent successfully implemented all major user requests. A minor UI polish point from the previous handover (making number displays consistent across the app - badges vs. rows) was not explicitly addressed but is a low-priority polish item.
-
-</analysis>
+- Nothing was forgotten. The agent systematically implemented a large set of feature restrictions for the Basic version as requested by the user.

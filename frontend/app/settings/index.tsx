@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SettingsService } from '../../services/LocalStorage';
 import * as ImagePicker from 'expo-image-picker';
-import { isPro, AppName } from '../../services/FeatureFlags';
+import { isPro, getAppName, getProStatus, setProStatus, loadProStatus, updateFeatures } from '../../services/FeatureFlags';
 
 interface CompanySettings {
   company_name: string;
@@ -117,10 +117,49 @@ export default function SettingsScreen() {
   
   // Neuer Projektart-Eintrag
   const [newProjectType, setNewProjectType] = useState('');
+  
+  // Versteckter Pro-Schalter
+  const [tapCount, setTapCount] = useState(0);
+  const [isProUnlocked, setIsProUnlocked] = useState(false);
+  const [lastTapTime, setLastTapTime] = useState(0);
 
   useEffect(() => {
     loadSettings();
+    // Pro-Status laden
+    loadProStatus().then((status) => {
+      setIsProUnlocked(status);
+      updateFeatures();
+    });
   }, []);
+  
+  // Versteckter Tap-Handler für Pro-Freischaltung
+  const handleVersionTap = async () => {
+    const now = Date.now();
+    // Reset wenn mehr als 2 Sekunden seit letztem Tap
+    if (now - lastTapTime > 2000) {
+      setTapCount(1);
+    } else {
+      setTapCount(prev => prev + 1);
+    }
+    setLastTapTime(now);
+    
+    // Bei 5 Taps: Pro umschalten
+    if (tapCount >= 4) {
+      const newStatus = !isProUnlocked;
+      await setProStatus(newStatus);
+      setIsProUnlocked(newStatus);
+      updateFeatures();
+      setTapCount(0);
+      
+      Alert.alert(
+        newStatus ? '🎉 Pro Version aktiviert!' : 'Basic Version aktiviert',
+        newStatus 
+          ? 'Alle Pro-Features sind jetzt freigeschaltet. Bitte starten Sie die App neu, um alle Änderungen zu sehen.'
+          : 'Die App wurde auf Basic Version zurückgesetzt. Bitte starten Sie die App neu.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const loadSettings = async () => {
     try {

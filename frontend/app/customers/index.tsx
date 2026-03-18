@@ -31,6 +31,7 @@ export default function CustomersScreen() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'number_asc' | 'number_desc' | 'date_desc' | 'date_asc'>('name_asc');
   
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -458,11 +459,53 @@ export default function CustomersScreen() {
     router.push(`/projects/${project.id}`);
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone?.includes(searchQuery)
-  );
+  // Sortier-Funktion
+  const getSortLabel = () => {
+    switch (sortBy) {
+      case 'name_asc': return 'Name A-Z';
+      case 'name_desc': return 'Name Z-A';
+      case 'number_asc': return 'KD-Nr. ↑';
+      case 'number_desc': return 'KD-Nr. ↓';
+      case 'date_desc': return 'Neueste';
+      case 'date_asc': return 'Älteste';
+      default: return 'Sortieren';
+    }
+  };
+
+  const changeSortOrder = () => {
+    const sortOptions: Array<'name_asc' | 'name_desc' | 'number_asc' | 'number_desc' | 'date_desc' | 'date_asc'> = [
+      'name_asc', 'name_desc', 'number_asc', 'number_desc', 'date_desc', 'date_asc'
+    ];
+    const currentIndex = sortOptions.indexOf(sortBy);
+    const nextIndex = (currentIndex + 1) % sortOptions.length;
+    setSortBy(sortOptions[nextIndex]);
+  };
+
+  const filteredCustomers = customers
+    .filter(customer =>
+      customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone?.includes(searchQuery) ||
+      customer.customer_number?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return (a.name || '').localeCompare(b.name || '', 'de');
+        case 'name_desc':
+          return (b.name || '').localeCompare(a.name || '', 'de');
+        case 'number_asc':
+          return (a.customer_number || 'ZZZ').localeCompare(b.customer_number || 'ZZZ');
+        case 'number_desc':
+          return (b.customer_number || '').localeCompare(a.customer_number || '');
+        case 'date_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'date_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
 
   const renderCustomer = ({ item }: { item: Customer }) => (
     <View style={[styles.customerCard, isPhone && styles.customerCardPhone]}>
@@ -587,7 +630,7 @@ export default function CustomersScreen() {
         <TouchableOpacity onPress={() => router.push('/')} style={styles.backButtonMain}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <Text style={styles.mainHeaderTitle}>Startseite</Text>
+        <Text style={styles.mainHeaderTitle}>Kundenliste</Text>
         <View style={{ width: 40 }} />
       </View>
       
@@ -596,7 +639,7 @@ export default function CustomersScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1976d2" />
           </TouchableOpacity>
-          <Text style={styles.selectModeTitle}>Projektformular</Text>
+          <Text style={styles.selectModeTitle}>Kunde auswählen</Text>
         </View>
       )}
       <View style={styles.header}>
@@ -615,6 +658,15 @@ export default function CustomersScreen() {
         >
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
+      </View>
+      
+      {/* Sortier-Button */}
+      <View style={styles.sortRow}>
+        <TouchableOpacity style={styles.sortButton} onPress={changeSortOrder}>
+          <Ionicons name="swap-vertical" size={16} color="#1976d2" />
+          <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
+        </TouchableOpacity>
+        <Text style={styles.customerCount}>{filteredCustomers.length} Kunden</Text>
       </View>
 
       {filteredCustomers.length === 0 ? (
@@ -1102,6 +1154,34 @@ const styles = StyleSheet.create({
   },
   customerList: {
     padding: 16,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    gap: 6,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#1976d2',
+  },
+  customerCount: {
+    fontSize: 12,
+    color: '#666',
   },
   customerCard: {
     flexDirection: 'row',

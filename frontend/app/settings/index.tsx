@@ -263,7 +263,7 @@ export default function SettingsScreen() {
             <Text style={styles.sectionTitle}>Logo</Text>
             <View style={styles.logoContainer}>
               {/* Basic Version: Festes Aufmassprofi Logo */}
-              {!isPro ? (
+              {!isProUnlocked ? (
                 <View style={styles.logoPreviewBasic}>
                   <Image
                     source={require('../../assets/images/icon.png')}

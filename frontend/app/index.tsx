@@ -235,7 +235,7 @@ export default function HomeScreen() {
       return;
     }
     
-    const statusLabel = newStatus === 'abgeschlossen' ? 'Fertig' : 'Abgebrochen';
+    const statusLabel = newStatus === 'abgeschlossen' ? 'Fertig' : (newStatus === 'aktiv' ? 'Aktiv' : 'Abgebrochen');
     
     Alert.alert(
       `Nach "${statusLabel}" verschieben`,
@@ -800,6 +800,15 @@ export default function HomeScreen() {
               >
                 <Ionicons name="share-outline" size={16} color="#2e7d32" />
                 <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>Export</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
+                onPress={() => moveSelectedToStatus('aktiv')}
+                disabled={selectedProjects.size === 0}
+              >
+                <Ionicons name="play-circle-outline" size={16} color="#4caf50" />
+                <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Aktiv</Text>
               </TouchableOpacity>
               
               <TouchableOpacity

@@ -263,7 +263,7 @@ export default function SettingsScreen() {
                     resizeMode="contain"
                   />
                   <View style={styles.basicLogoOverlay}>
-                    <Text style={styles.basicLogoText}>{AppName}</Text>
+                    <Text style={styles.basicLogoText}>{getAppName()}</Text>
                     <Text style={styles.basicLogoHint}>Eigenes Logo in Pro Version</Text>
                   </View>
                 </View>

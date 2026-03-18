@@ -29,13 +29,16 @@ export const Features = {
   showDokuTab: isPro,                // Dokumentation Tab
   
   // Checklisten
-  maxChecklistItems: isPro ? 999 : 5,  // Max Unterpunkte (5 für Basis)
-  showChecklistLogo: isPro,            // Logo in Checklisten
-  showChecklistDruckbild: isPro,       // Druckbild
-  showChecklistVerknuepfungen: isPro,  // Verknüpfungen
-  showChecklistVorschau: isPro,        // Vorschau
-  showChecklistBerechnung: isPro,      // Berechnung
-  showChecklistImportExport: isPro,    // Import/Export von Checklisten
+  maxChecklistItems: isPro ? 999 : 5,       // Max Unterpunkte pro Hauptpunkt (5 für Basis)
+  maxMainItems: isPro ? 999 : 10,           // Max Hauptpunkte (10 für Basis)
+  allowNestedSubItems: isPro,               // Erlaubt Unter-Unterpunkte (nur Pro)
+  showChecklistLogo: isPro,                 // Logo in Checklisten
+  showChecklistTemplateLogo: isPro,         // Template-Logo (oben rechts)
+  showChecklistDruckbild: isPro,            // Druckbild
+  showChecklistVerknuepfungen: isPro,       // Verknüpfungen
+  showChecklistVorschau: isPro,             // Vorschau
+  showChecklistBerechnung: isPro,           // Berechnung
+  showChecklistImportExport: isPro,         // Import/Export von Checklisten
   
   // Einstellungen
   showReferenzButton: isPro,          // Referenz Button

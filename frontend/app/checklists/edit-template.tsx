@@ -789,7 +789,13 @@ export default function EditTemplateScreen() {
         )}
 
         {/* Button zum Hinzufügen von Unterpunkten (nur wenn nicht eingeklappt) */}
+        {/* Basis: Keine Unter-Unterpunkte (depth > 0), max 5 pro Hauptpunkt */}
         {!collapsed && (
+          // In Basis-Version: Keine Verschachtelung unter Ebene 1
+          (Features.allowNestedSubItems || depth === 0) && 
+          // Limit-Prüfung: Max 5 Unterpunkte
+          (Features.maxChecklistItems >= 100 || item.subItems.length < Features.maxChecklistItems)
+        ) && (
           <TouchableOpacity
             style={[styles.addSubItemButton, { marginLeft: depth > 0 ? 24 : 0 }]}
             onPress={() => addSubItem(path)}
@@ -799,6 +805,13 @@ export default function EditTemplateScreen() {
               {depth === 0 ? 'Unterpunkt hinzufügen' : 'Weiteren Unterpunkt'}
             </Text>
           </TouchableOpacity>
+        )}
+        {/* Limit erreicht Hinweis - nur für Ebene 0 */}
+        {!collapsed && depth === 0 && Features.maxChecklistItems < 100 && item.subItems.length >= Features.maxChecklistItems && (
+          <View style={styles.limitReachedBoxSmall}>
+            <Ionicons name="information-circle" size={14} color="#f57c00" />
+            <Text style={styles.limitReachedTextSmall}>Max. {Features.maxChecklistItems} Unterpunkte (Basis)</Text>
+          </View>
         )}
       </View>
     );
@@ -848,6 +861,9 @@ export default function EditTemplateScreen() {
                 value={templateName}
                 onChangeText={setTemplateName}
               />
+              {/* Template Logo - nur in Pro */}
+              {Features.showChecklistTemplateLogo && (
+              <>
               {templateLogo ? (
                 <View style={styles.templateLogoContainer}>
                   <TouchableOpacity onPress={() => openImagePreview([templateLogo], templateName || 'Logo')}>
@@ -863,21 +879,37 @@ export default function EditTemplateScreen() {
                   <Text style={styles.addLogoText}>Logo</Text>
                 </TouchableOpacity>
               )}
+              </>
+              )}
             </View>
           </View>
 
           <View style={styles.itemsSection}>
             <Text style={styles.sectionTitle}>Checklisten-Punkte</Text>
             <Text style={styles.sectionHint}>
-              Erstellen Sie Hauptpunkte und fügen Sie beliebig viele Unterpunkte hinzu
+              {Features.maxMainItems < 100 
+                ? `Erstellen Sie bis zu ${Features.maxMainItems} Hauptpunkte mit je ${Features.maxChecklistItems} Unterpunkten`
+                : 'Erstellen Sie Hauptpunkte und fügen Sie beliebig viele Unterpunkte hinzu'
+              }
             </Text>
             
             {items.map((item, index) => renderItem(item, [index], 0))}
 
+            {/* Neuen Hauptpunkt Button - mit Limit-Prüfung */}
+            {(Features.maxMainItems >= 100 || items.length < Features.maxMainItems) && (
             <TouchableOpacity style={styles.addItemButton} onPress={addItem}>
               <Ionicons name="add-circle" size={24} color="#1976d2" />
               <Text style={styles.addItemText}>Neuen Hauptpunkt hinzufügen</Text>
             </TouchableOpacity>
+            )}
+            {Features.maxMainItems < 100 && items.length >= Features.maxMainItems && (
+            <View style={styles.limitReachedBox}>
+              <Ionicons name="information-circle" size={20} color="#f57c00" />
+              <Text style={styles.limitReachedText}>
+                Maximum von {Features.maxMainItems} Hauptpunkten erreicht (Basis Version)
+              </Text>
+            </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -1210,6 +1242,34 @@ const styles = StyleSheet.create({
   addSubItemText: {
     color: '#1976d2',
     fontSize: 13,
+  },
+  limitReachedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    padding: 12,
+    marginTop: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  limitReachedText: {
+    color: '#e65100',
+    fontSize: 13,
+    flex: 1,
+  },
+  limitReachedBoxSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 4,
+    borderRadius: 6,
+    gap: 6,
+  },
+  limitReachedTextSmall: {
+    color: '#e65100',
+    fontSize: 11,
   },
   addItemButton: {
     flexDirection: 'row',

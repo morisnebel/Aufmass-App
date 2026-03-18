@@ -23,6 +23,7 @@ import { copyAsync, deleteAsync, readAsStringAsync, writeAsStringAsync, cacheDir
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { Share } from 'react-native';
+import { Features } from '../../services/FeatureFlags';
 
 interface SubItem {
   text: string;
@@ -357,6 +358,8 @@ export default function ChecklistTemplatesScreen() {
       
       {/* Button Row - separate line for better touch targets */}
       <View style={styles.actionButtonRow}>
+        {/* Export Button - nur in Pro */}
+        {Features.showChecklistImportExport && (
         <TouchableOpacity 
           onPress={() => exportTemplate(item)}
           style={styles.actionButtonExport}
@@ -365,6 +368,7 @@ export default function ChecklistTemplatesScreen() {
           <Ionicons name="share-outline" size={20} color="#fff" />
           <Text style={styles.actionButtonTextExport}>Exportieren</Text>
         </TouchableOpacity>
+        )}
         
         <TouchableOpacity 
           onPress={() => router.push(`/checklists/edit-template?templateId=${item.id}`)}
@@ -413,6 +417,8 @@ export default function ChecklistTemplatesScreen() {
             <Text style={styles.addButtonText}>Neue Vorlage</Text>
           </TouchableOpacity>
           
+          {/* Import Button - nur in Pro */}
+          {Features.showChecklistImportExport && (
           <TouchableOpacity
             style={styles.importButton}
             onPress={importTemplate}
@@ -421,6 +427,7 @@ export default function ChecklistTemplatesScreen() {
             <Ionicons name="download-outline" size={24} color="#4caf50" />
             <Text style={styles.importButtonText}>Importieren</Text>
           </TouchableOpacity>
+          )}
         </View>
       </View>
 

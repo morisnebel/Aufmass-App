@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 import * as ImagePicker from 'expo-image-picker';
+import { Features } from '../../services/FeatureFlags';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {
@@ -505,6 +506,18 @@ export default function EditTemplateScreen() {
     const item = getItemAtPath(items, path);
     if (!item) return;
     
+    // Basis-Version: Max 5 Unterpunkte pro Hauptpunkt
+    if (!Features.maxChecklistItems || item.subItems.length >= Features.maxChecklistItems) {
+      if (item.subItems.length >= 5) {
+        Alert.alert(
+          'Basis Version', 
+          'In der Basis Version können maximal 5 Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    
     const newSubItems = [...item.subItems, { text: '', subItems: [] }];
     setItems(updateItemAtPath(items, path, { subItems: newSubItems }));
   };
@@ -659,10 +672,11 @@ export default function EditTemplateScreen() {
         </View>
 
         {/* Bild-Bereich - Labels ÜBER den Unterpunkten, damit sie beim Item bleiben */}
+        {/* In Basis-Version: Nur eingeschränkte Funktionen */}
         <View style={styles.imageSection}>
           <View style={styles.imageFieldsRow}>
-            {/* Logo für Hauptpunkte (Kategorien) */}
-            {isMainItem && (
+            {/* Logo für Hauptpunkte (Kategorien) - nur Pro */}
+            {Features.showChecklistLogo && isMainItem && (
               <View style={styles.imageFieldColumn}>
                 <Text style={styles.imageLabelTop}>Firmenlogo</Text>
                 {item.categoryLogo ? (
@@ -683,7 +697,8 @@ export default function EditTemplateScreen() {
               </View>
             )}
             
-            {/* Druckbild (wird im PDF gedruckt) */}
+            {/* Druckbild (wird im PDF gedruckt) - nur Pro */}
+            {Features.showChecklistDruckbild && (
             <View style={styles.imageFieldColumn}>
               <Text style={styles.imageLabelTop}>Druckbild</Text>
               {item.printImage ? (
@@ -702,8 +717,10 @@ export default function EditTemplateScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            )}
             
-            {/* Referenz-Ordner Verknüpfung - VOR Vorschau für besseres Layout */}
+            {/* Referenz-Ordner Verknüpfung - nur Pro */}
+            {Features.showChecklistVerknuepfungen && (
             <View style={styles.referenceFieldColumn}>
               <Text style={styles.imageLabelTop}>Referenz</Text>
               {item.referenceFolderId ? (
@@ -723,8 +740,10 @@ export default function EditTemplateScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            )}
 
-            {/* Vorschau-Galerie (nur zur Beratung, nicht gedruckt) - NACH Referenz, mehr Platz */}
+            {/* Vorschau-Galerie (nur zur Beratung, nicht gedruckt) - nur Pro */}
+            {Features.showChecklistVorschau && (
             <View style={styles.previewFieldColumn}>
               <Text style={styles.imageLabelTop}>Vorschau</Text>
               <View style={styles.previewImagesContainer}>
@@ -744,6 +763,7 @@ export default function EditTemplateScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            )}
           </View>
         </View>
 

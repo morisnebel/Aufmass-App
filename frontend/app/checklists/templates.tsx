@@ -275,6 +275,16 @@ export default function ChecklistTemplatesScreen() {
       return;
     }
 
+    // Basis-Version: Max 3 Vorlagen
+    if (Features.maxTemplates < 100 && templates.length >= Features.maxTemplates) {
+      Alert.alert(
+        'Basis Version',
+        `In der Basis Version können maximal ${Features.maxTemplates} Vorlagen erstellt werden. Upgrade auf Pro für unbegrenzte Vorlagen.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       const items = newTemplateItems
         .split('\n')
@@ -409,6 +419,8 @@ export default function ChecklistTemplatesScreen() {
         
         {/* Button Row */}
         <View style={styles.buttonRow}>
+          {/* Neue Vorlage Button - nur wenn unter dem Limit */}
+          {(Features.maxTemplates >= 100 || templates.length < Features.maxTemplates) && (
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setShowModal(true)}
@@ -416,6 +428,7 @@ export default function ChecklistTemplatesScreen() {
             <Ionicons name="add-circle" size={24} color="#1976d2" />
             <Text style={styles.addButtonText}>Neue Vorlage</Text>
           </TouchableOpacity>
+          )}
           
           {/* Import Button - nur in Pro */}
           {Features.showChecklistImportExport && (
@@ -429,6 +442,13 @@ export default function ChecklistTemplatesScreen() {
           </TouchableOpacity>
           )}
         </View>
+        
+        {/* Limit-Hinweis für Basis */}
+        {Features.maxTemplates < 100 && (
+          <Text style={styles.limitHint}>
+            {templates.length}/{Features.maxTemplates} Vorlagen (Basis Version)
+          </Text>
+        )}
       </View>
 
       <FlatList
@@ -675,6 +695,13 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  limitHint: {
+    fontSize: 12,
+    color: '#f57c00',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

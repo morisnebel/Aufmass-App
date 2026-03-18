@@ -31,6 +31,7 @@ export const Features = {
   // Checklisten
   maxChecklistItems: isPro ? 999 : 5,       // Max Unterpunkte pro Hauptpunkt (5 für Basis)
   maxMainItems: isPro ? 999 : 10,           // Max Hauptpunkte (10 für Basis)
+  maxTemplates: isPro ? 999 : 3,            // Max Vorlagen (3 für Basis)
   allowNestedSubItems: isPro,               // Erlaubt Unter-Unterpunkte (nur Pro)
   showChecklistLogo: isPro,                 // Logo in Checklisten
   showChecklistTemplateLogo: isPro,         // Template-Logo (oben rechts)

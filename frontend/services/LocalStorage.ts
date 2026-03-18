@@ -858,8 +858,15 @@ export interface ChecklistTemplate {
 export const ChecklistTemplateService = {
   getAll: async (): Promise<ChecklistTemplate[]> => {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
-    // Return default templates if none exist
-    if (templates.length === 0) {
+    // Keine Standard-Vorlagen mehr erstellen - leere Liste zurückgeben wenn keine vorhanden
+    return templates;
+  },
+  
+  // Einmalig Standard-Vorlagen erstellen (nur beim ersten App-Start)
+  initializeDefaults: async (): Promise<void> => {
+    const existingKey = await AsyncStorage.getItem(KEYS.CHECKLIST_TEMPLATES);
+    // Nur wenn noch nie Vorlagen existiert haben (key ist null, nicht leeres Array)
+    if (existingKey === null) {
       const defaultTemplates: ChecklistTemplate[] = [
         {
           id: 'default-1',
@@ -887,9 +894,7 @@ export const ChecklistTemplateService = {
         },
       ];
       await setItems(KEYS.CHECKLIST_TEMPLATES, defaultTemplates);
-      return defaultTemplates;
     }
-    return templates;
   },
 
   getById: async (id: string): Promise<ChecklistTemplate | null> => {

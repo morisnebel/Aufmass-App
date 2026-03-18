@@ -11,6 +11,11 @@
 // HAUPTSCHALTER: Auf 'true' setzen um Pro-Features freizuschalten
 export const isPro = false;
 
+// App-Name basierend auf Version
+export const AppName = isPro ? 'Aufmassprofi Pro' : 'Aufmassprofi Basis';
+export const AppNameHeader = isPro ? '- AUFMASSPROFI Pro -' : '- AUFMASSPROFI Basis -';
+export const AppNameShort = isPro ? 'Pro' : 'Basis';
+
 // Einzelne Feature-Flags (werden von isPro gesteuert)
 export const Features = {
   // Startseite

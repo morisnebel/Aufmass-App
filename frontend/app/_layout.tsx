@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, LogBox } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
+import { AppNameHeader } from '../services/FeatureFlags';
 
 // Ignore canvas render warnings from pdf.js in WebView
 LogBox.ignoreLogs([
@@ -28,7 +29,7 @@ export default function RootLayout() {
         <Stack.Screen 
           name="index" 
           options={{ 
-            title: '- AUFMASSPROFI -',
+            title: AppNameHeader,
             headerShown: true
           }} 
         />

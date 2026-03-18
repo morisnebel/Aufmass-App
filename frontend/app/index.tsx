@@ -23,7 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Features } from '../services/FeatureFlags';
+import { Features, AppName } from '../services/FeatureFlags';
 
 // Status-Optionen
 const STATUS_OPTIONS = [
@@ -642,7 +642,7 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.versionCode}>Version 1.0 - März 2026</Text>
+        <Text style={styles.versionCode}>{AppName}</Text>
       </View>
 
       {/* Suchleiste */}

@@ -21,7 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, Project, Customer } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import { readAsStringAsync } from 'expo-file-system/legacy';
+import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 // Status-Optionen
 const STATUS_OPTIONS = [
@@ -45,6 +46,11 @@ export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  
+  // Multi-Select Mode
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const loadData = async () => {
     try {
@@ -78,6 +84,189 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
+  };
+
+  // === MULTI-SELECT FUNCTIONS ===
+  
+  // Toggle selection mode
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      // Exit selection mode
+      setSelectionMode(false);
+      setSelectedProjects(new Set());
+    } else {
+      // Enter selection mode
+      setSelectionMode(true);
+    }
+  };
+  
+  // Toggle project selection
+  const toggleProjectSelection = (projectId: string) => {
+    setSelectedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+  
+  // Select all visible projects
+  const selectAllProjects = () => {
+    const allIds = new Set(filteredProjects.map(p => p.id));
+    setSelectedProjects(allIds);
+  };
+  
+  // Deselect all
+  const deselectAllProjects = () => {
+    setSelectedProjects(new Set());
+  };
+  
+  // Export selected projects
+  const exportSelectedProjects = async () => {
+    if (selectedProjects.size === 0) {
+      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const exportDataArray = [];
+      
+      for (const projectId of selectedProjects) {
+        const project = projects.find(p => p.id === projectId);
+        if (!project) continue;
+        
+        const customer = customers[project.customer_id];
+        const [roofs, photos, sketches, checklists] = await Promise.all([
+          RoofService.getByProject(projectId),
+          PhotoService.getByProject(projectId),
+          SketchService.getByProject(projectId),
+          ChecklistService.getByProject(projectId),
+        ]);
+        
+        exportDataArray.push({
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          project,
+          customer: customer || {},
+          roofs: roofs || [],
+          photos: photos || [],
+          sketches: sketches || [],
+          checklists: checklists || [],
+        });
+      }
+      
+      // Create combined export file
+      const combinedExport = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        projectCount: exportDataArray.length,
+        projects: exportDataArray,
+      };
+      
+      const jsonString = JSON.stringify(combinedExport, null, 2);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const fileUri = `${cacheDirectory}Projekte_${timestamp}_${selectedProjects.size}.aufmass`;
+      
+      await writeAsStringAsync(fileUri, jsonString);
+      
+      setIsProcessing(false);
+      
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/json',
+        dialogTitle: `${selectedProjects.size} Projekte exportieren`,
+      });
+      
+      // Exit selection mode after successful export
+      setSelectionMode(false);
+      setSelectedProjects(new Set());
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      setIsProcessing(false);
+      Alert.alert('Fehler', 'Export fehlgeschlagen');
+    }
+  };
+  
+  // Delete selected projects
+  const deleteSelectedProjects = async () => {
+    if (selectedProjects.size === 0) {
+      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      return;
+    }
+    
+    Alert.alert(
+      'Projekte löschen',
+      `Möchten Sie wirklich ${selectedProjects.size} Projekt(e) löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              for (const projectId of selectedProjects) {
+                await ProjectService.delete(projectId);
+              }
+              await loadData();
+              setSelectionMode(false);
+              setSelectedProjects(new Set());
+              Alert.alert('Erfolg', `${selectedProjects.size} Projekt(e) gelöscht`);
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Fehler', 'Löschen fehlgeschlagen');
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+  
+  // Move selected projects to status
+  const moveSelectedToStatus = async (newStatus: string) => {
+    if (selectedProjects.size === 0) {
+      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      return;
+    }
+    
+    const statusLabel = newStatus === 'abgeschlossen' ? 'Fertig' : 'Abgebrochen';
+    
+    Alert.alert(
+      `Nach "${statusLabel}" verschieben`,
+      `Möchten Sie ${selectedProjects.size} Projekt(e) nach "${statusLabel}" verschieben?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Verschieben',
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              for (const projectId of selectedProjects) {
+                const project = projects.find(p => p.id === projectId);
+                if (project) {
+                  await ProjectService.update(projectId, { status: newStatus });
+                }
+              }
+              await loadData();
+              setSelectionMode(false);
+              setSelectedProjects(new Set());
+              Alert.alert('Erfolg', `${selectedProjects.size} Projekt(e) verschoben`);
+            } catch (error) {
+              console.error('Status change error:', error);
+              Alert.alert('Fehler', 'Verschieben fehlgeschlagen');
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Import project from .aufmass file
@@ -356,13 +545,40 @@ export default function HomeScreen() {
     // Kundenname: erst aus Customer, dann aus bauherr_name des Projekts
     const displayCustomerName = customer?.name || (item as any).bauherr_name;
     const customerNumber = customer?.customer_number;
+    const isSelected = selectedProjects.has(item.id);
+    
     return (
       <TouchableOpacity
-        style={styles.projectCard}
-        onPress={() => router.push(`/projects/${item.id}`)}
+        style={[styles.projectCard, isSelected && styles.projectCardSelected]}
+        onPress={() => {
+          if (selectionMode) {
+            toggleProjectSelection(item.id);
+          } else {
+            router.push(`/projects/${item.id}`);
+          }
+        }}
+        onLongPress={() => {
+          if (!selectionMode) {
+            setSelectionMode(true);
+            toggleProjectSelection(item.id);
+          }
+        }}
       >
         <View style={styles.projectHeader}>
-          <Ionicons name="folder" size={24} color={statusColor} />
+          {selectionMode ? (
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => toggleProjectSelection(item.id)}
+            >
+              <Ionicons 
+                name={isSelected ? "checkbox" : "square-outline"} 
+                size={26} 
+                color={isSelected ? "#1976d2" : "#999"} 
+              />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="folder" size={24} color={statusColor} />
+          )}
           <View style={styles.projectInfo}>
             <View style={styles.projectNameRow}>
               {item.project_number && (
@@ -379,12 +595,14 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          <TouchableOpacity
-            onPress={() => deleteProject(item.id)}
-            style={styles.deleteButton}
-          >
-            <Ionicons name="trash-outline" size={20} color="#f44336" />
-          </TouchableOpacity>
+          {!selectionMode && (
+            <TouchableOpacity
+              onPress={() => deleteProject(item.id)}
+              style={styles.deleteButton}
+            >
+              <Ionicons name="trash-outline" size={20} color="#f44336" />
+            </TouchableOpacity>
+          )}
         </View>
         {item.description && (
           <Text style={styles.projectDescription}>{item.description}</Text>
@@ -392,10 +610,11 @@ export default function HomeScreen() {
         <View style={styles.projectFooter}>
           <TouchableOpacity 
             style={[styles.statusBadge, { backgroundColor: statusColor + '20', borderColor: statusColor }]}
-            onPress={() => changeProjectStatus(item.id, item.status)}
+            onPress={() => !selectionMode && changeProjectStatus(item.id, item.status)}
+            disabled={selectionMode}
           >
             <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
-            <Ionicons name="chevron-down" size={14} color={statusColor} />
+            {!selectionMode && <Ionicons name="chevron-down" size={14} color={statusColor} />}
           </TouchableOpacity>
           <Text style={styles.projectDate}>
             {new Date(item.created_at).toLocaleDateString('de-DE')}
@@ -541,7 +760,86 @@ export default function HomeScreen() {
             <Text style={[styles.utilityButtonText, { color: '#2e7d32' }]}>Import</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Multi-Select Action Row */}
+        <View style={styles.multiSelectRow}>
+          <TouchableOpacity
+            style={[styles.multiSelectButton, selectionMode && styles.multiSelectButtonActive]}
+            onPress={toggleSelectionMode}
+          >
+            <Ionicons 
+              name={selectionMode ? "close-circle" : "checkbox-outline"} 
+              size={16} 
+              color={selectionMode ? "#fff" : "#666"} 
+            />
+            <Text style={[styles.multiSelectButtonText, selectionMode && { color: '#fff' }]}>
+              {selectionMode ? 'Abbrechen' : 'Auswählen'}
+            </Text>
+          </TouchableOpacity>
+          
+          {selectionMode && (
+            <>
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
+                onPress={selectedProjects.size === filteredProjects.length ? deselectAllProjects : selectAllProjects}
+              >
+                <Ionicons 
+                  name={selectedProjects.size === filteredProjects.length ? "checkbox" : "checkbox-outline"} 
+                  size={16} 
+                  color="#1976d2" 
+                />
+                <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>
+                  {selectedProjects.size > 0 ? `(${selectedProjects.size})` : 'Alle'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
+                onPress={exportSelectedProjects}
+                disabled={selectedProjects.size === 0}
+              >
+                <Ionicons name="share-outline" size={16} color="#2e7d32" />
+                <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>Export</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
+                onPress={() => moveSelectedToStatus('abgeschlossen')}
+                disabled={selectedProjects.size === 0}
+              >
+                <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
+                <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Fertig</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#fff3e0' }]}
+                onPress={() => moveSelectedToStatus('abgebrochen')}
+                disabled={selectedProjects.size === 0}
+              >
+                <Ionicons name="close-circle-outline" size={16} color="#f57c00" />
+                <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>Abgebr.</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.multiSelectButton, { backgroundColor: '#ffebee' }]}
+                onPress={deleteSelectedProjects}
+                disabled={selectedProjects.size === 0}
+              >
+                <Ionicons name="trash-outline" size={16} color="#f44336" />
+                <Text style={[styles.multiSelectButtonText, { color: '#f44336' }]}>Löschen</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
+      
+      {/* Processing Overlay */}
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.processingText}>Verarbeite...</Text>
+        </View>
+      )}
 
       {filteredProjects.length === 0 ? (
         <View style={styles.emptyState}>
@@ -742,6 +1040,55 @@ const styles = StyleSheet.create({
   utilityButtonText: {
     fontSize: 12,
     color: '#1976d2',
+    fontWeight: '500',
+  },
+  // Multi-Select Styles
+  multiSelectRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  multiSelectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    gap: 4,
+  },
+  multiSelectButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  multiSelectButtonText: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
+  },
+  checkboxContainer: {
+    marginRight: 4,
+  },
+  projectCardSelected: {
+    borderColor: '#1976d2',
+    borderWidth: 2,
+    backgroundColor: '#e3f2fd',
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  processingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 12,
     fontWeight: '500',
   },
   // Legacy styles kept for compatibility

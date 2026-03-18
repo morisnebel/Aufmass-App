@@ -641,7 +641,7 @@ export default function HomeScreen() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.versionCode}>Aufmassprofi_17.03.2026_21:15</Text>
+        <Text style={styles.versionCode}>Version 1.0 - März 2026</Text>
       </View>
 
       {/* Suchleiste */}

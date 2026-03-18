@@ -135,16 +135,22 @@ export default function SettingsScreen() {
   // Versteckter Tap-Handler für Pro-Freischaltung
   const handleVersionTap = async () => {
     const now = Date.now();
+    let newTapCount: number;
+    
     // Reset wenn mehr als 2 Sekunden seit letztem Tap
     if (now - lastTapTime > 2000) {
-      setTapCount(1);
+      newTapCount = 1;
     } else {
-      setTapCount(prev => prev + 1);
+      newTapCount = tapCount + 1;
     }
+    
+    setTapCount(newTapCount);
     setLastTapTime(now);
     
+    console.log('Tap count:', newTapCount); // Debug
+    
     // Bei 5 Taps: Pro umschalten
-    if (tapCount >= 4) {
+    if (newTapCount >= 5) {
       const newStatus = !isProUnlocked;
       await setProStatus(newStatus);
       setIsProUnlocked(newStatus);

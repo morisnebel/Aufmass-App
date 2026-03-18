@@ -2252,7 +2252,7 @@ export default function ProjectDetailScreen() {
             
             <!-- Footer - kompakt -->
             <div style="text-align: center; font-size: 8px; color: #1976d2; font-weight: 600; margin-top: 12px; padding-top: 6px; border-top: 1px solid #1976d2;">
-              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         `;
@@ -3488,7 +3488,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             <div class="footer">
-              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         ` : ''}
@@ -3510,7 +3510,7 @@ export default function ProjectDetailScreen() {
                 </div>
               ` : ''}
               <div class="footer">
-                Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+                Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
               </div>
             </div>
           </div>
@@ -3527,7 +3527,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             <div class="footer">
-              Erstellt mit AUFMASSPROFI DACH • ${formatDate(new Date().toISOString())}
+              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         ` : ''}

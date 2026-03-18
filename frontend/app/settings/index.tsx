@@ -244,8 +244,8 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
-          <Text style={styles.headerTitle}>Einstellungen</Text>
+        <TouchableOpacity onPress={handleVersionTap} activeOpacity={0.6}>
+          <Text style={styles.headerTitle}>Einstellungen {tapCount > 0 ? `(${tapCount})` : ''}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
           {saving ? (

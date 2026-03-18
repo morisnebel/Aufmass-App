@@ -722,6 +722,8 @@ export default function HomeScreen() {
             <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Listen' : 'Checklisten'}</Text>
           </TouchableOpacity>
 
+          {/* Referenzen - nur in Pro Version */}
+          {Features.showReferenzButton && (
           <TouchableOpacity
             style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/references/')}
@@ -731,6 +733,7 @@ export default function HomeScreen() {
             </View>
             <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Referenz' : 'Referenzen'}</Text>
           </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.quickButton, isPhone && styles.quickButtonPhone]}

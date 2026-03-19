@@ -863,17 +863,15 @@ export default function SettingsScreen() {
                   style={styles.expertDeactivateButton}
                   onPress={handleDeactivatePro}
                 >
-                  <Ionicons name="close-circle-outline" size={20} color="#f44336" />
-                  <Text style={styles.expertDeactivateText}>Expertenmodus deaktivieren</Text>
+                  <Text style={styles.expertDeactivateText}>Deaktivieren</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.expertButton}
+                style={styles.expertButtonSmall}
                 onPress={() => setShowExpertModal(true)}
               >
-                <Ionicons name="key-outline" size={24} color="#fff" />
-                <Text style={styles.expertButtonText}>Mit Code freischalten</Text>
+                <Text style={styles.expertButtonSmallText}>Code eingeben</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1581,6 +1579,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  expertButtonSmall: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  expertButtonSmallText: {
+    color: '#888',
+    fontSize: 12,
   },
   expertActiveContainer: {
     flexDirection: 'row',

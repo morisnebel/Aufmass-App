@@ -850,14 +850,13 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Expertenmodus Section */}
-          <View style={[styles.section, { marginTop: 20 }]}>
-            <Text style={styles.sectionTitle}>Expertenmodus</Text>
+          {/* Expertenmodus Section - unauffällig */}
+          <View style={[styles.section, { marginTop: 20, paddingVertical: 8 }]}>
             {isProUnlocked ? (
               <View>
                 <View style={styles.expertActiveContainer}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4caf50" />
-                  <Text style={styles.expertActiveText}>Pro Version aktiv</Text>
+                  <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
+                  <Text style={styles.expertActiveText}>Pro aktiv</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.expertDeactivateButton}
@@ -871,7 +870,7 @@ export default function SettingsScreen() {
                 style={styles.expertButtonSmall}
                 onPress={() => setShowExpertModal(true)}
               >
-                <Text style={styles.expertButtonSmallText}>Code eingeben</Text>
+                <Text style={styles.expertButtonSmallText}>Erweitert...</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1582,16 +1581,12 @@ const styles = StyleSheet.create({
   },
   expertButtonSmall: {
     alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   expertButtonSmallText: {
-    color: '#888',
-    fontSize: 12,
+    color: '#bbb',
+    fontSize: 11,
   },
   expertActiveContainer: {
     flexDirection: 'row',

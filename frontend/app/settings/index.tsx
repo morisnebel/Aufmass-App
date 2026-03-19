@@ -122,6 +122,18 @@ export default function SettingsScreen() {
   const [tapCount, setTapCount] = useState(0);
   const [isProUnlocked, setIsProUnlocked] = useState(false);
   const [lastTapTime, setLastTapTime] = useState(0);
+  
+  // Expertenmodus
+  const [showExpertModal, setShowExpertModal] = useState(false);
+  const [expertCode, setExpertCode] = useState('');
+  const [showResetCodeModal, setShowResetCodeModal] = useState(false);
+  const [masterCode, setMasterCode] = useState('');
+  const [newExpertCode, setNewExpertCode] = useState('');
+  const [confirmNewCode, setConfirmNewCode] = useState('');
+  
+  // Standard Expert-Code (kann vom Nutzer geändert werden)
+  const DEFAULT_EXPERT_CODE = 'PROFI2024';
+  const MASTER_RESET_CODE = 'RESET-MASTER-8472'; // Geheimer Master-Code zum Zurücksetzen
 
   useEffect(() => {
     loadSettings();
@@ -130,14 +142,112 @@ export default function SettingsScreen() {
       setIsProUnlocked(status);
       updateFeatures();
     });
+    // Gespeicherten Expert-Code laden
+    loadExpertCode();
   }, []);
   
-  // Versteckter Tap-Handler für Pro-Freischaltung
+  // Expert-Code aus AsyncStorage laden
+  const loadExpertCode = async () => {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedCode = await AsyncStorage.getItem('aufmassprofi_expert_code');
+      if (savedCode) {
+        // Code existiert bereits
+      }
+    } catch (e) {
+      console.error('Error loading expert code:', e);
+    }
+  };
+  
+  // Expert-Code prüfen und Pro aktivieren
+  const handleExpertCodeSubmit = async () => {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedCode = await AsyncStorage.getItem('aufmassprofi_expert_code');
+      const correctCode = savedCode || DEFAULT_EXPERT_CODE;
+      
+      if (expertCode.toUpperCase() === correctCode.toUpperCase()) {
+        await setProStatus(true);
+        setIsProUnlocked(true);
+        updateFeatures();
+        setShowExpertModal(false);
+        setExpertCode('');
+        
+        Alert.alert(
+          '🎉 Expertenmodus aktiviert!',
+          'Alle Pro-Features sind jetzt freigeschaltet. Bitte starten Sie die App neu, um alle Änderungen zu sehen.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Falscher Code', 'Der eingegebene Code ist nicht korrekt.');
+      }
+    } catch (e) {
+      console.error('Error checking expert code:', e);
+    }
+  };
+  
+  // Pro deaktivieren (zurück zu Basic)
+  const handleDeactivatePro = async () => {
+    Alert.alert(
+      'Expertenmodus deaktivieren?',
+      'Möchten Sie wirklich zur Basic Version zurückkehren?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Deaktivieren',
+          style: 'destructive',
+          onPress: async () => {
+            await setProStatus(false);
+            setIsProUnlocked(false);
+            updateFeatures();
+            Alert.alert(
+              'Basic Version aktiviert',
+              'Die App wurde auf Basic Version zurückgesetzt. Bitte starten Sie die App neu.',
+              [{ text: 'OK' }]
+            );
+          }
+        }
+      ]
+    );
+  };
+  
+  // Master-Reset: Neuen Expert-Code setzen
+  const handleResetCode = async () => {
+    if (masterCode !== MASTER_RESET_CODE) {
+      Alert.alert('Falscher Master-Code', 'Der Master-Code ist nicht korrekt.');
+      return;
+    }
+    
+    if (newExpertCode.length < 4) {
+      Alert.alert('Code zu kurz', 'Der neue Code muss mindestens 4 Zeichen haben.');
+      return;
+    }
+    
+    if (newExpertCode !== confirmNewCode) {
+      Alert.alert('Codes stimmen nicht überein', 'Bitte geben Sie den neuen Code zweimal identisch ein.');
+      return;
+    }
+    
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.setItem('aufmassprofi_expert_code', newExpertCode.toUpperCase());
+      
+      setShowResetCodeModal(false);
+      setMasterCode('');
+      setNewExpertCode('');
+      setConfirmNewCode('');
+      
+      Alert.alert('✅ Code geändert', `Der neue Expert-Code wurde gespeichert: ${newExpertCode.toUpperCase()}`);
+    } catch (e) {
+      console.error('Error saving new expert code:', e);
+    }
+  };
+  
+  // Versteckter Tap-Handler für Code-Reset Modal (5x tippen auf "Einstellungen")
   const handleVersionTap = async () => {
     const now = Date.now();
     let newTapCount: number;
     
-    // Reset wenn mehr als 2 Sekunden seit letztem Tap
     if (now - lastTapTime > 2000) {
       newTapCount = 1;
     } else {
@@ -147,23 +257,10 @@ export default function SettingsScreen() {
     setTapCount(newTapCount);
     setLastTapTime(now);
     
-    console.log('Tap count:', newTapCount); // Debug
-    
-    // Bei 5 Taps: Pro umschalten
+    // Bei 5 Taps: Code-Reset Modal öffnen
     if (newTapCount >= 5) {
-      const newStatus = !isProUnlocked;
-      await setProStatus(newStatus);
-      setIsProUnlocked(newStatus);
-      updateFeatures();
       setTapCount(0);
-      
-      Alert.alert(
-        newStatus ? '🎉 Pro Version aktiviert!' : 'Basic Version aktiviert',
-        newStatus 
-          ? 'Alle Pro-Features sind jetzt freigeschaltet. Bitte starten Sie die App neu, um alle Änderungen zu sehen.'
-          : 'Die App wurde auf Basic Version zurückgesetzt. Bitte starten Sie die App neu.',
-        [{ text: 'OK' }]
-      );
+      setShowResetCodeModal(true);
     }
   };
 
@@ -244,8 +341,8 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleVersionTap} activeOpacity={0.6}>
-          <Text style={styles.headerTitle}>Einstellungen {tapCount > 0 ? `(${tapCount})` : ''}</Text>
+        <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
+          <Text style={styles.headerTitle}>Einstellungen</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
           {saving ? (
@@ -752,8 +849,127 @@ export default function SettingsScreen() {
               <Text style={styles.resetButtonText}>Alle Felder leeren</Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Expertenmodus Section */}
+          <View style={[styles.section, { marginTop: 20 }]}>
+            <Text style={styles.sectionTitle}>Expertenmodus</Text>
+            {isProUnlocked ? (
+              <View>
+                <View style={styles.expertActiveContainer}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4caf50" />
+                  <Text style={styles.expertActiveText}>Pro Version aktiv</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.expertDeactivateButton}
+                  onPress={handleDeactivatePro}
+                >
+                  <Ionicons name="close-circle-outline" size={20} color="#f44336" />
+                  <Text style={styles.expertDeactivateText}>Expertenmodus deaktivieren</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.expertButton}
+                onPress={() => setShowExpertModal(true)}
+              >
+                <Ionicons name="key-outline" size={24} color="#fff" />
+                <Text style={styles.expertButtonText}>Mit Code freischalten</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </ScrollView>
+      
+      {/* Expert Code Modal */}
+      {showExpertModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.expertModal}>
+            <Text style={styles.expertModalTitle}>Expertenmodus freischalten</Text>
+            <Text style={styles.expertModalSubtitle}>Geben Sie Ihren Freischaltcode ein:</Text>
+            <TextInput
+              style={styles.expertCodeInput}
+              value={expertCode}
+              onChangeText={setExpertCode}
+              placeholder="Code eingeben..."
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <View style={styles.expertModalButtons}>
+              <TouchableOpacity
+                style={styles.expertModalCancelButton}
+                onPress={() => {
+                  setShowExpertModal(false);
+                  setExpertCode('');
+                }}
+              >
+                <Text style={styles.expertModalCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.expertModalSubmitButton}
+                onPress={handleExpertCodeSubmit}
+              >
+                <Text style={styles.expertModalSubmitText}>Freischalten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+      
+      {/* Reset Code Modal (versteckt - 5x auf Einstellungen tippen) */}
+      {showResetCodeModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.expertModal}>
+            <Text style={styles.expertModalTitle}>Expert-Code zurücksetzen</Text>
+            <Text style={styles.expertModalSubtitle}>Master-Code:</Text>
+            <TextInput
+              style={styles.expertCodeInput}
+              value={masterCode}
+              onChangeText={setMasterCode}
+              placeholder="Master-Code..."
+              placeholderTextColor="#999"
+              secureTextEntry
+            />
+            <Text style={[styles.expertModalSubtitle, { marginTop: 15 }]}>Neuer Expert-Code:</Text>
+            <TextInput
+              style={styles.expertCodeInput}
+              value={newExpertCode}
+              onChangeText={setNewExpertCode}
+              placeholder="Neuer Code (min. 4 Zeichen)..."
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+            />
+            <Text style={[styles.expertModalSubtitle, { marginTop: 10 }]}>Code bestätigen:</Text>
+            <TextInput
+              style={styles.expertCodeInput}
+              value={confirmNewCode}
+              onChangeText={setConfirmNewCode}
+              placeholder="Code wiederholen..."
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+            />
+            <View style={styles.expertModalButtons}>
+              <TouchableOpacity
+                style={styles.expertModalCancelButton}
+                onPress={() => {
+                  setShowResetCodeModal(false);
+                  setMasterCode('');
+                  setNewExpertCode('');
+                  setConfirmNewCode('');
+                }}
+              >
+                <Text style={styles.expertModalCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.expertModalSubmitButton}
+                onPress={handleResetCode}
+              >
+                <Text style={styles.expertModalSubmitText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -1349,5 +1565,122 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+  },
+  // Expertenmodus Styles
+  expertButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff9800',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    gap: 10,
+  },
+  expertButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  expertActiveContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8f5e9',
+    padding: 16,
+    borderRadius: 10,
+    gap: 10,
+    marginBottom: 12,
+  },
+  expertActiveText: {
+    color: '#2e7d32',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  expertDeactivateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  expertDeactivateText: {
+    color: '#f44336',
+    fontSize: 14,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  expertModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  expertModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  expertModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  expertCodeInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 18,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  expertModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  expertModalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  expertModalCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  expertModalSubmitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#ff9800',
+    alignItems: 'center',
+  },
+  expertModalSubmitText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

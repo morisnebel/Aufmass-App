@@ -1678,7 +1678,7 @@ export default function DrawSketchScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
         base64: true,
       });
@@ -1704,7 +1704,7 @@ export default function DrawSketchScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
         base64: true,
       });
@@ -1724,7 +1724,7 @@ export default function DrawSketchScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.7,
         base64: true,
       });
@@ -1917,7 +1917,7 @@ export default function DrawSketchScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.7,
         base64: true,
       });

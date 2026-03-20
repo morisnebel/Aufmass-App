@@ -29,14 +29,29 @@ const { width } = Dimensions.get('window');
 // Key für Tool-Einstellungen
 const ANNOTATE_SETTINGS_KEY = 'aufmassprofi_annotate_settings';
 
-// Verfügbare Schriftarten
+// Verfügbare Schriftarten - Platform-spezifisch für React Native SVG
 type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
-const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = [
-  { id: 'System', label: 'Standard', style: 'System', svgFont: 'sans-serif' },
-  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'cursive, Comic Sans MS, sans-serif' },
-  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace, Courier New, Courier' },
-  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'serif, Times New Roman, Times' },
-];
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = Platform.select({
+  ios: [
+    { id: 'System', label: 'Standard', style: 'System', svgFont: 'Helvetica' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Snell Roundhand' },
+    { id: 'Monospace', label: 'Monospace', style: 'Courier', svgFont: 'Courier' },
+    { id: 'Serif', label: 'Serif', style: 'Georgia', svgFont: 'Times New Roman' },
+  ],
+  android: [
+    { id: 'System', label: 'Standard', style: 'normal', svgFont: 'Roboto' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'normal', svgFont: 'sans-serif-light' },
+    { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace' },
+    { id: 'Serif', label: 'Serif', style: 'normal', svgFont: 'serif' },
+  ],
+  default: [
+    // Web/Browser - CSS Schriftarten funktionieren hier
+    { id: 'System', label: 'Standard', style: 'system-ui, sans-serif', svgFont: 'system-ui, -apple-system, sans-serif' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Comic Sans MS, cursive, sans-serif' },
+    { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'Courier New, monospace' },
+    { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'Times New Roman, Georgia, serif' },
+  ],
+}) as { id: FontFamily; label: string; style: string; svgFont: string }[];
 
 interface DrawPath {
   path: string;
@@ -96,6 +111,17 @@ export default function AnnotatePhotoScreen() {
   const [textInput, setTextInput] = useState('');
   const [pendingTextPosition, setPendingTextPosition] = useState<{ x: number; y: number } | null>(null);
   const [drawMode, setDrawMode] = useState<'draw' | 'text'>('draw');
+  
+  // Text-Auswahl und Bearbeitung
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [isDraggingText, setIsDraggingText] = useState(false);
+  const [showEditTextModal, setShowEditTextModal] = useState(false);
+  const [editTextInput, setEditTextInput] = useState('');
+  const [editTextFontSize, setEditTextFontSize] = useState(20);
+  const [editTextColor, setEditTextColor] = useState('#000000');
+  const [editTextFontFamily, setEditTextFontFamily] = useState<FontFamily>('System');
+  const textDragStartRef = useRef({ x: 0, y: 0 });
+  const textOriginalPosRef = useRef({ x: 0, y: 0 });
   
   // Zoom & Pan
   const [scale, setScale] = useState(1);
@@ -344,11 +370,32 @@ export default function AnnotatePhotoScreen() {
     }
     
     if (touches.length === 1 && !isZooming && drawingEnabled) {
-      // Start drawing only if drawing is enabled
       const touch = touches[0];
-      // Koordinaten direkt verwenden - locationX/Y ist relativ zum SVG-Container
       const locationX = touch.locationX / scale;
       const locationY = touch.locationY / scale;
+      
+      // Im Text-Modus: Prüfe ob ein Text-Element getippt wurde
+      if (drawMode === 'text') {
+        const tappedText = findTextAtPosition(locationX, locationY);
+        if (tappedText) {
+          // Text gefunden - auswählen oder verschieben starten
+          if (selectedTextId === tappedText.id) {
+            // Bereits ausgewählt - Verschieben starten
+            startDraggingText(locationX, locationY);
+          } else {
+            // Neuen Text auswählen
+            selectTextElement(tappedText);
+          }
+          return;
+        } else if (selectedTextId) {
+          // Außerhalb eines Textes getippt - Auswahl aufheben
+          deselectText();
+        }
+        // Kein Text getippt - neuer Text wird bei handleTextModeTouch erstellt
+        return;
+      }
+      
+      // Im Zeichen-Modus: Normal zeichnen
       setCurrentPath(`M ${locationX} ${locationY}`);
     }
   };
@@ -364,12 +411,21 @@ export default function AnnotatePhotoScreen() {
       return;
     }
     
-    if (touches.length === 1 && !isZooming && currentPath && drawingEnabled) {
-      // Continue drawing only if drawing is enabled
+    if (touches.length === 1 && !isZooming && drawingEnabled) {
       const touch = touches[0];
       const locationX = touch.locationX / scale;
       const locationY = touch.locationY / scale;
-      setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+      
+      // Im Text-Modus: Text verschieben wenn aktiv
+      if (drawMode === 'text' && isDraggingText) {
+        moveText(locationX, locationY);
+        return;
+      }
+      
+      // Im Zeichen-Modus: Normal zeichnen
+      if (currentPath) {
+        setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+      }
     }
   };
 
@@ -379,6 +435,11 @@ export default function AnnotatePhotoScreen() {
     if (touches.length < 2) {
       setIsZooming(false);
       setInitialPinchDistance(null);
+    }
+    
+    // Text-Verschiebung beenden
+    if (isDraggingText) {
+      stopDraggingText();
     }
     
     if (touches.length === 0 && currentPath && currentPath.length > 0 && !isZooming && drawingEnabled) {
@@ -507,6 +568,118 @@ export default function AnnotatePhotoScreen() {
   const deleteLastText = () => {
     if (textElements.length > 0) {
       setTextElements(textElements.slice(0, -1));
+      setHasChanges(true);
+    }
+  };
+
+  // Text-Element finden bei Touch-Position
+  const findTextAtPosition = (x: number, y: number): TextElement | null => {
+    // Suche von oben (letztes Element) nach unten
+    for (let i = textElements.length - 1; i >= 0; i--) {
+      const textEl = textElements[i];
+      const textWidth = textEl.text.length * (textEl.fontSize * 0.6); // Ungefähre Textbreite
+      const textHeight = textEl.fontSize * 1.2;
+      const padding = 20; // Extra Padding für einfacheres Tippen
+      
+      if (
+        x >= textEl.x - padding &&
+        x <= textEl.x + textWidth + padding &&
+        y >= textEl.y - textHeight - padding &&
+        y <= textEl.y + padding
+      ) {
+        return textEl;
+      }
+    }
+    return null;
+  };
+
+  // Text-Element auswählen
+  const selectTextElement = (textEl: TextElement) => {
+    setSelectedTextId(textEl.id);
+    // Lade aktuelle Werte in den Bearbeitungsmodus
+    const fontFamilyId = FONT_FAMILIES.find(f => f.svgFont === textEl.fontFamily)?.id || 'System';
+    setEditTextInput(textEl.text);
+    setEditTextFontSize(textEl.fontSize);
+    setEditTextColor(textEl.color);
+    setEditTextFontFamily(fontFamilyId);
+  };
+
+  // Text-Auswahl aufheben
+  const deselectText = () => {
+    setSelectedTextId(null);
+    setIsDraggingText(false);
+  };
+
+  // Ausgewählten Text löschen
+  const deleteSelectedText = () => {
+    if (selectedTextId) {
+      setTextElements(textElements.filter(t => t.id !== selectedTextId));
+      setSelectedTextId(null);
+      setHasChanges(true);
+    }
+  };
+
+  // Text-Bearbeitung öffnen
+  const openEditTextModal = () => {
+    if (selectedTextId) {
+      setShowEditTextModal(true);
+    }
+  };
+
+  // Text-Bearbeitung speichern
+  const saveEditedText = () => {
+    if (!selectedTextId || !editTextInput.trim()) {
+      setShowEditTextModal(false);
+      return;
+    }
+
+    setTextElements(textElements.map(t => 
+      t.id === selectedTextId
+        ? {
+            ...t,
+            text: editTextInput.trim(),
+            fontSize: editTextFontSize,
+            color: editTextColor,
+            fontFamily: FONT_FAMILIES.find(f => f.id === editTextFontFamily)?.svgFont || 'sans-serif',
+          }
+        : t
+    ));
+    setHasChanges(true);
+    setShowEditTextModal(false);
+  };
+
+  // Text verschieben starten
+  const startDraggingText = (x: number, y: number) => {
+    const selectedText = textElements.find(t => t.id === selectedTextId);
+    if (selectedText) {
+      setIsDraggingText(true);
+      textDragStartRef.current = { x, y };
+      textOriginalPosRef.current = { x: selectedText.x, y: selectedText.y };
+    }
+  };
+
+  // Text verschieben
+  const moveText = (x: number, y: number) => {
+    if (isDraggingText && selectedTextId) {
+      const dx = x - textDragStartRef.current.x;
+      const dy = y - textDragStartRef.current.y;
+      
+      setTextElements(textElements.map(t =>
+        t.id === selectedTextId
+          ? {
+              ...t,
+              x: textOriginalPosRef.current.x + dx,
+              y: textOriginalPosRef.current.y + dy,
+            }
+          : t
+      ));
+    }
+  };
+
+  // Text verschieben beenden
+  const stopDraggingText = () => {
+    if (isDraggingText) {
+      setIsDraggingText(false);
       setHasChanges(true);
     }
   };
@@ -732,52 +905,77 @@ export default function AnnotatePhotoScreen() {
 
       {/* Zweite Toolbar-Zeile: Aktionen */}
       <View style={styles.actionsToolbar}>
-        <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || drawMode !== 'draw' || paths.length === 0}>
-          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'draw' && paths.length > 0 ? '#1976d2' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'draw' || paths.length === 0) && { color: '#ccc' }]}>Zeichnung</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={deleteLastText} disabled={!drawingEnabled || drawMode !== 'text' || textElements.length === 0}>
-          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'text' && textElements.length > 0 ? '#9C27B0' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'text' || textElements.length === 0) && { color: '#ccc' }]}>Text</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || (paths.length === 0 && textElements.length === 0)}>
-          <Ionicons name="trash-outline" size={20} color={drawingEnabled && (paths.length > 0 || textElements.length > 0) ? '#f44336' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || (paths.length === 0 && textElements.length === 0)) && { color: '#ccc' }]}>Alle</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.deletePhotoButton]} 
-          onPress={() => {
-            Alert.alert(
-              'Foto löschen',
-              'Möchten Sie dieses Foto komplett löschen?',
-              [
-                { text: 'Abbrechen', style: 'cancel' },
-                {
-                  text: 'Löschen',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await PhotoService.delete(photoId || '');
-                      Alert.alert('Erfolg', 'Foto wurde gelöscht', [
-                        { text: 'OK', onPress: () => router.back() },
-                      ]);
-                    } catch (error) {
-                      console.error('Error deleting photo:', error);
-                      Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
-                    }
-                  },
-                },
-              ]
-            );
-          }}
-        >
-          <Ionicons name="trash" size={20} color="#fff" />
-          <Text style={[styles.actionText, { color: '#fff' }]}>Foto</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={save}>
-          <Ionicons name="checkmark-circle" size={20} color="#fff" />
-          <Text style={[styles.actionText, { color: '#fff' }]}>Speichern</Text>
-        </TouchableOpacity>
+        {/* Text ausgewählt - Bearbeitungs-Buttons anzeigen */}
+        {selectedTextId && drawMode === 'text' ? (
+          <>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#e3f2fd' }]} onPress={openEditTextModal}>
+              <Ionicons name="create-outline" size={20} color="#1976d2" />
+              <Text style={[styles.actionText, { color: '#1976d2' }]}>Bearbeiten</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#ffebee' }]} onPress={deleteSelectedText}>
+              <Ionicons name="trash-outline" size={20} color="#f44336" />
+              <Text style={[styles.actionText, { color: '#f44336' }]}>Löschen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#f5f5f5' }]} onPress={deselectText}>
+              <Ionicons name="close-circle-outline" size={20} color="#666" />
+              <Text style={[styles.actionText, { color: '#666' }]}>Abbrechen</Text>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            <View style={styles.selectedTextHint}>
+              <Ionicons name="move" size={14} color="#1976d2" />
+              <Text style={styles.selectedTextHintText}>Ziehen zum Verschieben</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || drawMode !== 'draw' || paths.length === 0}>
+              <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'draw' && paths.length > 0 ? '#1976d2' : '#ccc'} />
+              <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'draw' || paths.length === 0) && { color: '#ccc' }]}>Zeichnung</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={deleteLastText} disabled={!drawingEnabled || drawMode !== 'text' || textElements.length === 0}>
+              <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'text' && textElements.length > 0 ? '#9C27B0' : '#ccc'} />
+              <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'text' || textElements.length === 0) && { color: '#ccc' }]}>Text</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || (paths.length === 0 && textElements.length === 0)}>
+              <Ionicons name="trash-outline" size={20} color={drawingEnabled && (paths.length > 0 || textElements.length > 0) ? '#f44336' : '#ccc'} />
+              <Text style={[styles.actionText, (!drawingEnabled || (paths.length === 0 && textElements.length === 0)) && { color: '#ccc' }]}>Alle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.deletePhotoButton]} 
+              onPress={() => {
+                Alert.alert(
+                  'Foto löschen',
+                  'Möchten Sie dieses Foto komplett löschen?',
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Löschen',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await PhotoService.delete(photoId || '');
+                          Alert.alert('Erfolg', 'Foto wurde gelöscht', [
+                            { text: 'OK', onPress: () => router.back() },
+                          ]);
+                        } catch (error) {
+                          console.error('Error deleting photo:', error);
+                          Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={[styles.actionText, { color: '#fff' }]}>Foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={save}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={[styles.actionText, { color: '#fff' }]}>Speichern</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* Beschreibung Eingabefeld */}
@@ -815,7 +1013,7 @@ export default function AnnotatePhotoScreen() {
           <View
             style={styles.svgContainer}
             onStartShouldSetResponder={() => drawingEnabled}
-            onMoveShouldSetResponder={() => drawingEnabled && drawMode === 'draw'}
+            onMoveShouldSetResponder={() => drawingEnabled && (drawMode === 'draw' || isDraggingText)}
             onResponderGrant={(event) => {
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
@@ -825,15 +1023,38 @@ export default function AnnotatePhotoScreen() {
                 lastDrawPointRef.current = { x: locationX, y: locationY };
                 setCurrentPath(`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
               } else if (drawingEnabled && drawMode === 'text') {
-                // Bei Text-Modus: Position merken und Modal öffnen
-                setPendingTextPosition({ x: locationX, y: locationY });
-                setShowTextModal(true);
+                // Im Text-Modus: Prüfe ob ein Text getippt wurde
+                const tappedText = findTextAtPosition(locationX, locationY);
+                if (tappedText) {
+                  if (selectedTextId === tappedText.id) {
+                    // Bereits ausgewählt - Verschieben starten
+                    startDraggingText(locationX, locationY);
+                  } else {
+                    // Neuen Text auswählen
+                    selectTextElement(tappedText);
+                  }
+                } else if (selectedTextId) {
+                  // Außerhalb getippt - Auswahl aufheben und neuen Text erstellen
+                  deselectText();
+                  setPendingTextPosition({ x: locationX, y: locationY });
+                  setShowTextModal(true);
+                } else {
+                  // Kein Text ausgewählt - neuen Text erstellen
+                  setPendingTextPosition({ x: locationX, y: locationY });
+                  setShowTextModal(true);
+                }
               }
             }}
             onResponderMove={(event) => {
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
+              
+              // Text verschieben
+              if (drawingEnabled && drawMode === 'text' && isDraggingText) {
+                moveText(locationX, locationY);
+                return;
+              }
               
               if (drawingEnabled && drawMode === 'draw' && currentPath) {
                 // Nur Punkte hinzufügen wenn Abstand groß genug (glattere Linien)
@@ -850,6 +1071,11 @@ export default function AnnotatePhotoScreen() {
               }
             }}
             onResponderRelease={() => {
+              // Text-Verschiebung beenden
+              if (isDraggingText) {
+                stopDraggingText();
+              }
+              
               if (drawingEnabled && drawMode === 'draw' && currentPath && currentPath.length > 0) {
                 const bounds = calculateBounds(currentPath);
                 setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
@@ -885,19 +1111,38 @@ export default function AnnotatePhotoScreen() {
                 />
               )}
               {/* Text elements */}
-              {textElements.map((textEl) => (
-                <SvgText
-                  key={textEl.id}
-                  x={textEl.x}
-                  y={textEl.y}
-                  fill={textEl.color}
-                  fontSize={textEl.fontSize}
-                  fontWeight={textEl.fontWeight}
-                  fontFamily={textEl.fontFamily}
-                >
-                  {textEl.text}
-                </SvgText>
-              ))}
+              {textElements.map((textEl) => {
+                const isSelected = selectedTextId === textEl.id;
+                const textWidth = textEl.text.length * (textEl.fontSize * 0.6);
+                const textHeight = textEl.fontSize * 1.2;
+                return (
+                  <G key={textEl.id}>
+                    {/* Auswahlrahmen wenn ausgewählt */}
+                    {isSelected && (
+                      <Path
+                        d={`M ${textEl.x - 5} ${textEl.y - textHeight - 5} 
+                            L ${textEl.x + textWidth + 5} ${textEl.y - textHeight - 5} 
+                            L ${textEl.x + textWidth + 5} ${textEl.y + 5} 
+                            L ${textEl.x - 5} ${textEl.y + 5} Z`}
+                        stroke="#1976d2"
+                        strokeWidth={2}
+                        strokeDasharray="5,3"
+                        fill="rgba(25, 118, 210, 0.1)"
+                      />
+                    )}
+                    <SvgText
+                      x={textEl.x}
+                      y={textEl.y}
+                      fill={textEl.color}
+                      fontSize={textEl.fontSize}
+                      fontWeight={textEl.fontWeight}
+                      fontFamily={textEl.fontFamily}
+                    >
+                      {textEl.text}
+                    </SvgText>
+                  </G>
+                );
+              })}
             </Svg>
           </View>
         </View>
@@ -998,6 +1243,105 @@ export default function AnnotatePhotoScreen() {
                 onPress={addTextElement}
               >
                 <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Text Edit Modal */}
+      <Modal visible={showEditTextModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Text bearbeiten</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editTextInput}
+              onChangeText={setEditTextInput}
+              placeholder="Text hier eingeben..."
+              multiline
+              autoFocus
+            />
+            
+            {/* Font Size Slider */}
+            <View style={styles.sliderContainer}>
+              <Text style={styles.modalLabel}>Schriftgröße: {editTextFontSize}px</Text>
+              <View style={styles.sliderRow}>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditTextFontSize(Math.max(10, editTextFontSize - 2))}
+                >
+                  <Text style={styles.sliderButtonText}>-</Text>
+                </TouchableOpacity>
+                <View style={styles.sliderTrack}>
+                  <View style={[styles.sliderFill, { width: `${((editTextFontSize - 10) / 50) * 100}%` }]} />
+                </View>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => setEditTextFontSize(Math.min(60, editTextFontSize + 2))}
+                >
+                  <Text style={styles.sliderButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Font Family Selection */}
+            <View style={styles.fontFamilyContainer}>
+              <Text style={styles.modalLabel}>Schriftart:</Text>
+              <View style={styles.fontFamilyButtons}>
+                {FONT_FAMILIES.map(font => (
+                  <TouchableOpacity
+                    key={font.id}
+                    style={[
+                      styles.fontFamilyButton,
+                      editTextFontFamily === font.id && styles.fontFamilyButtonActive
+                    ]}
+                    onPress={() => setEditTextFontFamily(font.id)}
+                  >
+                    <Text style={[
+                      styles.fontFamilyButtonText,
+                      { fontFamily: font.style },
+                      editTextFontFamily === font.id && styles.fontFamilyButtonTextActive
+                    ]}>
+                      {font.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            {/* Color Picker */}
+            <View style={styles.colorPickerContainer}>
+              <Text style={styles.modalLabel}>Farbe:</Text>
+              <View style={styles.colorGrid}>
+                {colors.map(c => (
+                  <TouchableOpacity
+                    key={c.color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: c.color },
+                      editTextColor === c.color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setEditTextColor(c.color)}
+                  />
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowEditTextModal(false);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={saveEditedText}
+              >
+                <Text style={styles.confirmButtonText}>Speichern</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1203,6 +1547,20 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#4caf50',
     marginLeft: 'auto',
+  },
+  // Text-Auswahl Hinweis
+  selectedTextHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+  },
+  selectedTextHintText: {
+    fontSize: 10,
+    color: '#1976d2',
   },
   // Alte Styles für Kompatibilität
   colorButton: {

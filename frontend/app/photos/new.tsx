@@ -74,7 +74,7 @@ export default function NewPhotoScreen() {
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
       base64: true,
     });

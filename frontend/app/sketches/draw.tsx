@@ -511,6 +511,12 @@ export default function DrawSketchScreen() {
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
   
+  // Polyline Label Offsets - Position relativ zum Zentrum (für Verschiebbarkeit)
+  const [labelOffsets, setLabelOffsets] = useState<{ [elementId: string]: { x: number; y: number } }>({});
+  // State für aktives Label-Ziehen
+  const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
+  const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+  
   // Aufmaß-Tool state
   const [showMeasurementTool, setShowMeasurementTool] = useState(false);
   const [measurementExpression, setMeasurementExpression] = useState('');
@@ -1282,6 +1288,13 @@ export default function DrawSketchScreen() {
               // Keine gespeicherte Position - auf Standard zurücksetzen
               setLegendPosition({ x: 0, y: 0 });
               legendPan.setValue({ x: 0, y: 0 });
+            }
+            // Label-Offsets laden wenn vorhanden
+            if (metadata.labelOffsets) {
+              console.log('Loading labelOffsets:', metadata.labelOffsets);
+              setLabelOffsets(metadata.labelOffsets);
+            } else {
+              setLabelOffsets({});
             }
           } catch (e) {
             console.error('Error parsing metadata:', e);
@@ -2125,6 +2138,17 @@ export default function DrawSketchScreen() {
       if (drawPointCountRef.current % 3 === 0) {
         setCurrentPath(currentPathRef.current);
       }
+    } else if (drawMode === 'select' && draggingLabelId) {
+      // Label-Verschiebung während des Ziehens
+      const dx = locationX - labelDragStartRef.current.x;
+      const dy = locationY - labelDragStartRef.current.y;
+      setLabelOffsets(prev => ({
+        ...prev,
+        [draggingLabelId]: {
+          x: labelDragStartRef.current.offsetX + dx,
+          y: labelDragStartRef.current.offsetY + dy,
+        },
+      }));
     } else if (drawMode === 'polygon' && currentPath) {
       setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
     } else if (startPoint && drawMode !== 'text') {
@@ -2176,6 +2200,9 @@ export default function DrawSketchScreen() {
       setResizeHandle(null);
       setDragStart(null);
       setOriginalElement(null);
+    } else if (drawMode === 'select' && draggingLabelId) {
+      // Label-Verschiebung beenden
+      setDraggingLabelId(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
       // locationX/Y sind bereits Canvas-Koordinaten
@@ -2520,6 +2547,21 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
+    // Zuerst prüfen: Klick auf ein Polyline-Label zum Verschieben?
+    const labelHit = findPolylineLabelAtPoint(locationX, locationY);
+    if (labelHit) {
+      // Label gefunden - Verschiebung starten
+      const currentOffset = labelOffsets[labelHit.elementId] || { x: 0, y: 0 };
+      setDraggingLabelId(labelHit.elementId);
+      labelDragStartRef.current = {
+        x: locationX,
+        y: locationY,
+        offsetX: currentOffset.x,
+        offsetY: currentOffset.y,
+      };
+      return;
+    }
+    
     // Check if clicking on transformation handles first
     if (selectedElementId) {
       const selectedEl = elements.find(el => el.id === selectedElementId);
@@ -2659,6 +2701,20 @@ export default function DrawSketchScreen() {
   };
 
   const handleSelectTouchMove = (locationX: number, locationY: number) => {
+    // Label-Verschiebung wenn aktiv
+    if (draggingLabelId) {
+      const dx = locationX - labelDragStartRef.current.x;
+      const dy = locationY - labelDragStartRef.current.y;
+      setLabelOffsets(prev => ({
+        ...prev,
+        [draggingLabelId]: {
+          x: labelDragStartRef.current.offsetX + dx,
+          y: labelDragStartRef.current.offsetY + dy,
+        },
+      }));
+      return;
+    }
+    
     if (!originalElement || !dragStart) return;
 
     const dx = locationX - dragStart.x;
@@ -2846,6 +2902,38 @@ export default function DrawSketchScreen() {
     });
 
     setElements(newElements);
+  };
+
+  // Find polyline label at point (für Label-Verschiebung)
+  const findPolylineLabelAtPoint = (x: number, y: number): { elementId: string; centerX: number; centerY: number } | null => {
+    // Durchsuche alle Polylines mit Maßen
+    const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
+    
+    for (const element of polylinesWithMeasurements) {
+      const points = element.data?.points;
+      if (!points || points.length < 2) continue;
+      
+      // Berechne Zentrum des Grundrisses
+      const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
+      const sumY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0);
+      const centerX = sumX / points.length;
+      const centerY = sumY / points.length;
+      
+      // Label-Offset aus State holen
+      const offset = labelOffsets[element.id] || { x: 0, y: 0 };
+      const labelX = centerX + offset.x;
+      const labelY = centerY + offset.y;
+      
+      // Prüfe ob der Punkt im Label-Bereich liegt (Radius 12 + 10 Toleranz)
+      const labelRadius = 22;
+      const distance = Math.sqrt(Math.pow(x - labelX, 2) + Math.pow(y - labelY, 2));
+      
+      if (distance <= labelRadius) {
+        return { elementId: element.id, centerX, centerY };
+      }
+    }
+    
+    return null;
   };
 
   // Find element at point
@@ -3654,7 +3742,7 @@ export default function DrawSketchScreen() {
               );
             })}
             
-            {/* Label (S1, S2, S3...) im Zentrum des Grundrisses */}
+            {/* Label (S1, S2, S3...) im Zentrum des Grundrisses - kleiner und verschiebbar */}
             {(() => {
               // Berechne Zentrum des Grundrisses
               const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
@@ -3671,28 +3759,44 @@ export default function DrawSketchScreen() {
               
               const labelText = `S${labelIndex + 1}`;
               
+              // Label-Offset aus State holen (falls vorhanden)
+              const offset = labelOffsets[element.id] || { x: 0, y: 0 };
+              const labelX = centerX + offset.x;
+              const labelY = centerY + offset.y;
+              
+              // Kleinere Größe: Radius 12 statt 18, Schriftgröße 10 statt 14
+              const labelRadius = 12;
+              const labelFontSize = 10;
+              
               return (
                 <G key={`label-${element.id}`}>
-                  {/* Hintergrund-Kreis für Label */}
+                  {/* Hintergrund-Kreis für Label - kleiner */}
                   <Circle
-                    cx={centerX}
-                    cy={centerY}
-                    r={18}
+                    cx={labelX}
+                    cy={labelY}
+                    r={labelRadius}
                     fill="#1976d2"
                     stroke="#fff"
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                   />
-                  {/* Label-Text */}
+                  {/* Label-Text - kleinere Schrift */}
                   <SvgText
-                    x={centerX}
-                    y={centerY + 5}
+                    x={labelX}
+                    y={labelY + 3.5}
                     fill="#fff"
-                    fontSize={14}
+                    fontSize={labelFontSize}
                     fontWeight="bold"
                     textAnchor="middle"
                   >
                     {labelText}
                   </SvgText>
+                  {/* Transparenter Kreis als Touch-Target für Verschieben (größer als sichtbarer Kreis) */}
+                  <Circle
+                    cx={labelX}
+                    cy={labelY}
+                    r={labelRadius + 10}
+                    fill="transparent"
+                  />
                 </G>
               );
             })()}
@@ -4235,6 +4339,7 @@ export default function DrawSketchScreen() {
         totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
         legendPosition, // Speichere Position der Übersicht-Legend
         notes, // Speichere die Notizen
+        labelOffsets, // Speichere Polyline-Label-Positionen
       };
 
       console.log('Saving sketch with', elements.length, 'elements');

@@ -1024,6 +1024,42 @@ export default function DrawSketchScreen() {
     setEditArrowFontSize(value);
     saveToolSizes('editArrowFontSize', value);
   }, [saveToolSizes]);
+
+  // Update-Funktionen für Text-Einstellungen
+  const updateLastTextFontSize = useCallback((value: number) => {
+    setLastTextFontSize(value);
+    saveToolSizes('lastTextFontSize', value);
+  }, [saveToolSizes]);
+
+  const updateLastTextColor = useCallback((value: string) => {
+    setLastTextColor(value);
+    const saveColor = async () => {
+      try {
+        const savedSizes = await AsyncStorage.getItem(TOOL_SIZES_KEY);
+        const sizes = savedSizes ? JSON.parse(savedSizes) : {};
+        sizes.lastTextColor = value;
+        await AsyncStorage.setItem(TOOL_SIZES_KEY, JSON.stringify(sizes));
+      } catch (error) {
+        console.log('Error saving text color:', error);
+      }
+    };
+    saveColor();
+  }, []);
+
+  const updateLastTextFontFamily = useCallback((value: FontFamily) => {
+    setLastTextFontFamily(value);
+    const saveFont = async () => {
+      try {
+        const savedSizes = await AsyncStorage.getItem(TOOL_SIZES_KEY);
+        const sizes = savedSizes ? JSON.parse(savedSizes) : {};
+        sizes.lastTextFontFamily = value;
+        await AsyncStorage.setItem(TOOL_SIZES_KEY, JSON.stringify(sizes));
+      } catch (error) {
+        console.log('Error saving font family:', error);
+      }
+    };
+    saveFont();
+  }, []);
   
   // Double tap detection
   const lastTapRef = useRef<{ time: number; elementId: string | null }>({ time: 0, elementId: null });
@@ -2304,14 +2340,15 @@ export default function DrawSketchScreen() {
         id: generateId(),
         type: 'text',
         data: { text: textInput },
-        color: drawColor,
+        color: lastTextColor,
         strokeWidth: 0,
         x: pendingPosition.x,
         y: pendingPosition.y,
         rotation: 0,
-        fontSize: 20,
+        fontSize: lastTextFontSize,
         fontWeight: 'bold',
         fontStyle: 'normal',
+        fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.style || 'System',
       };
       addToHistory([...elements, newElement]);
       setTextInput('');
@@ -5134,62 +5171,129 @@ export default function DrawSketchScreen() {
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Text eingeben</Text>
-            <TextInput
-              ref={textInputRef}
-              style={styles.modalInput}
-              value={textInput}
-              onChangeText={setTextInput}
-              placeholder="Text hier eingeben..."
-              multiline
-              autoFocus
-              showSoftInputOnFocus={!showModalNumpad}
-            />
-            
-            {/* Numpad Toggle */}
-            <TouchableOpacity 
-              style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
-              onPress={() => {
-                if (showModalNumpad) {
-                  closeModalNumpad();
-                } else {
-                  openModalNumpad(setTextInput, textInputRef);
-                }
-              }}
-            >
-              <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
-              <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
-                {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
-              </Text>
-              <View style={styles.bluetoothBadgeSmall}>
-                <Ionicons name="bluetooth" size={12} color="#4caf50" />
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Text eingeben</Text>
+              <TextInput
+                ref={textInputRef}
+                style={styles.modalInput}
+                value={textInput}
+                onChangeText={setTextInput}
+                placeholder="Text hier eingeben..."
+                multiline
+                autoFocus
+                showSoftInputOnFocus={!showModalNumpad}
+              />
+              
+              {/* Numpad Toggle */}
+              <TouchableOpacity 
+                style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
+                onPress={() => {
+                  if (showModalNumpad) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setTextInput, textInputRef);
+                  }
+                }}
+              >
+                <Ionicons name="calculator" size={18} color={showModalNumpad ? '#fff' : '#2196f3'} />
+                <Text style={[styles.numpadToggleBtnText, showModalNumpad && styles.numpadToggleBtnTextActive]}>
+                  {showModalNumpad ? 'Numpad ausblenden' : 'Numpad einblenden'}
+                </Text>
+                <View style={styles.bluetoothBadgeSmall}>
+                  <Ionicons name="bluetooth" size={12} color="#4caf50" />
+                </View>
+              </TouchableOpacity>
+              
+              {/* Font Size Slider */}
+              <View style={styles.sliderContainer}>
+                <Text style={styles.modalLabel}>Schriftgröße: {lastTextFontSize}px</Text>
+                <View style={styles.sliderRow}>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateLastTextFontSize(Math.max(10, lastTextFontSize - 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <View style={styles.sliderTrack}>
+                    <View style={[styles.sliderFill, { width: `${((lastTextFontSize - 10) / 50) * 100}%` }]} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.sliderButton} 
+                    onPress={() => updateLastTextFontSize(Math.min(60, lastTextFontSize + 2))}
+                  >
+                    <Text style={styles.sliderButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </TouchableOpacity>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowTextModal(false);
-                  setTextInput('');
-                  setPendingPosition(null);
-                  closeModalNumpad();
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => {
-                  addTextElement();
-                  closeModalNumpad();
-                }}
-              >
-                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
-              </TouchableOpacity>
+              
+              {/* Font Family Selection */}
+              <View style={styles.fontFamilyContainer}>
+                <Text style={styles.modalLabel}>Schriftart:</Text>
+                <View style={styles.fontFamilyButtons}>
+                  {FONT_FAMILIES.map(font => (
+                    <TouchableOpacity
+                      key={font.id}
+                      style={[
+                        styles.fontFamilyButton,
+                        lastTextFontFamily === font.id && styles.fontFamilyButtonActive
+                      ]}
+                      onPress={() => updateLastTextFontFamily(font.id)}
+                    >
+                      <Text style={[
+                        styles.fontFamilyButtonText,
+                        { fontFamily: font.style },
+                        lastTextFontFamily === font.id && styles.fontFamilyButtonTextActive
+                      ]}>
+                        {font.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              {/* Color Picker */}
+              <View style={styles.colorPickerContainer}>
+                <Text style={styles.modalLabel}>Farbe:</Text>
+                <View style={styles.colorGrid}>
+                  {colors.map(color => (
+                    <TouchableOpacity
+                      key={color}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        lastTextColor === color && styles.colorOptionSelected,
+                      ]}
+                      onPress={() => updateLastTextColor(color)}
+                    />
+                  ))}
+                </View>
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setShowTextModal(false);
+                    setTextInput('');
+                    setPendingPosition(null);
+                    closeModalNumpad();
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={() => {
+                    addTextElement();
+                    closeModalNumpad();
+                  }}
+                >
+                  <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
           {/* Numpad als floating Element INNERHALB des Modals */}
           {renderInModalNumpad()}
         </KeyboardAvoidingView>

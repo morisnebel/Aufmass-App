@@ -170,11 +170,11 @@ interface DrawElement {
 
 // Verfügbare Schriftarten
 type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
-const FONT_FAMILIES: { id: FontFamily; label: string; style: string }[] = [
-  { id: 'System', label: 'Standard', style: 'System' },
-  { id: 'Handschrift', label: 'Handschrift', style: 'cursive' },
-  { id: 'Monospace', label: 'Monospace', style: 'monospace' },
-  { id: 'Serif', label: 'Serif', style: 'serif' },
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = [
+  { id: 'System', label: 'Standard', style: 'System', svgFont: 'sans-serif' },
+  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'cursive, Comic Sans MS, sans-serif' },
+  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace, Courier New, Courier' },
+  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'serif, Times New Roman, Times' },
 ];
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';
@@ -2348,7 +2348,7 @@ export default function DrawSketchScreen() {
         fontSize: lastTextFontSize,
         fontWeight: 'bold',
         fontStyle: 'normal',
-        fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.style || 'System',
+        fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.svgFont || 'sans-serif',
       };
       addToHistory([...elements, newElement]);
       setTextInput('');
@@ -3211,6 +3211,7 @@ export default function DrawSketchScreen() {
               fontSize={element.fontSize || 20}
               fontWeight={element.fontWeight || 'bold'}
               fontStyle={element.fontStyle || 'normal'}
+              fontFamily={element.fontFamily || 'sans-serif'}
               transform={element.rotation ? `rotate(${element.rotation} ${element.x} ${element.y})` : undefined}
             >
               {element.data.text}

@@ -2769,7 +2769,7 @@ export default function DrawSketchScreen() {
         
         // Check for polyline point editing
         if (selectedEl.type === 'polyline' && selectedEl.data?.points) {
-          const pointRadius = 20; // Klick-Toleranz für Eckpunkte
+          const pointRadius = 8; // Klick-Toleranz für Eckpunkte - kleiner gemacht für iPhone
           for (let i = 0; i < selectedEl.data.points.length; i++) {
             const pt = selectedEl.data.points[i];
             const distance = Math.sqrt(

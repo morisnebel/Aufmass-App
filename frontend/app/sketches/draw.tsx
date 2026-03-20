@@ -5076,30 +5076,40 @@ export default function DrawSketchScreen() {
                 strokeLinejoin="round"
                 strokeDasharray="5,5"
               />
-              {/* Punkte anzeigen */}
-              {polylinePoints.map((pt, idx) => (
-                <Circle 
-                  key={`current-polyline-pt-${idx}`}
-                  cx={pt.x} 
-                  cy={pt.y} 
-                  r={8} 
-                  fill={idx === 0 ? '#4caf50' : '#2196f3'} 
-                  stroke="#fff" 
-                  strokeWidth={2} 
-                />
-              ))}
-              {/* Schließen-Indikator beim ersten Punkt */}
-              {polylinePoints.length >= 3 && (
-                <Circle 
-                  cx={polylinePoints[0].x} 
-                  cy={polylinePoints[0].y} 
-                  r={20} 
-                  fill="rgba(76, 175, 80, 0.3)" 
-                  stroke="#4caf50" 
-                  strokeWidth={2}
-                  strokeDasharray="3,3"
-                />
-              )}
+              {/* Punkte anzeigen - skaliert mit Zoom */}
+              {polylinePoints.map((pt, idx) => {
+                const baseRadius = 6;
+                const scaledRadius = Math.max(3, baseRadius / Math.max(scale, 0.5));
+                const scaledStroke = Math.max(1, 1.5 / Math.max(scale, 0.5));
+                return (
+                  <Circle 
+                    key={`current-polyline-pt-${idx}`}
+                    cx={pt.x} 
+                    cy={pt.y} 
+                    r={scaledRadius} 
+                    fill={idx === 0 ? '#4caf50' : '#2196f3'} 
+                    stroke="#fff" 
+                    strokeWidth={scaledStroke} 
+                  />
+                );
+              })}
+              {/* Schließen-Indikator beim ersten Punkt - skaliert */}
+              {polylinePoints.length >= 3 && (() => {
+                const baseCloseRadius = 16;
+                const scaledCloseRadius = Math.max(8, baseCloseRadius / Math.max(scale, 0.5));
+                const scaledCloseStroke = Math.max(1, 1.5 / Math.max(scale, 0.5));
+                return (
+                  <Circle 
+                    cx={polylinePoints[0].x} 
+                    cy={polylinePoints[0].y} 
+                    r={scaledCloseRadius} 
+                    fill="rgba(76, 175, 80, 0.3)" 
+                    stroke="#4caf50" 
+                    strokeWidth={scaledCloseStroke}
+                    strokeDasharray="3,3"
+                  />
+                );
+              })()}
             </>
           )}
         </Svg>

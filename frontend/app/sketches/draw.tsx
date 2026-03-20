@@ -3168,12 +3168,12 @@ export default function DrawSketchScreen() {
         if (points && points.length >= 2) {
           for (let j = 0; j < points.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
-            if (dist < 25) return el; // Erhöht für bessere Anwählbarkeit auf iPhone
+            if (dist < 35) return el; // Erhöht für bessere Anwählbarkeit auf iPhone
           }
           // Prüfe auch die schließende Linie wenn geschlossen
           if (el.data.closed && points.length >= 3) {
             const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
-            if (dist < 25) return el; // Erhöht für bessere Anwählbarkeit auf iPhone
+            if (dist < 35) return el; // Erhöht für bessere Anwählbarkeit auf iPhone
           }
         }
       } else if (el.type === 'path') {

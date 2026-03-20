@@ -4363,6 +4363,30 @@ export default function DrawSketchScreen() {
 
         {/* ========== ZEICHEN-TOOLS ========== */}
         
+        {/* Zoom an/aus Toggle - vor Bearbeiten */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[
+              styles.toolButtonInner, 
+              { 
+                backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
+                borderWidth: 2,
+                borderColor: zoomMode ? '#4caf50' : '#f44336',
+              }
+            ]}
+            onPress={() => setZoomMode(!zoomMode)}
+          >
+            <Ionicons 
+              name="search" 
+              size={18} 
+              color={zoomMode ? '#4caf50' : '#f44336'} 
+            />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: zoomMode ? '#4caf50' : '#f44336' }]}>
+            {zoomMode ? 'Zoom' : 'Zoom'}
+          </Text>
+        </View>
+        
         {/* 6. Hand - Bearbeiten */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
@@ -4594,33 +4618,6 @@ export default function DrawSketchScreen() {
                 marginTop: 1,
               }}>
                 Raster
-              </Text>
-            </TouchableOpacity>
-            
-            {/* Zoom an/aus Toggle - größerer Button */}
-            <TouchableOpacity
-              style={[
-                styles.toolButtonZoomSize, 
-                { 
-                  backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
-                  borderWidth: 2,
-                  borderColor: zoomMode ? '#4caf50' : '#f44336',
-                }
-              ]}
-              onPress={() => setZoomMode(!zoomMode)}
-            >
-              <Ionicons 
-                name="search" 
-                size={16} 
-                color={zoomMode ? '#4caf50' : '#f44336'} 
-              />
-              <Text style={{ 
-                fontSize: 8, 
-                fontWeight: 'bold', 
-                color: zoomMode ? '#4caf50' : '#f44336',
-                marginTop: 1,
-              }}>
-                {zoomMode ? 'Zoom an' : 'Zoom aus'}
               </Text>
             </TouchableOpacity>
           </View>

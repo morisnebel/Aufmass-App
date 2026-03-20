@@ -169,13 +169,30 @@ interface DrawElement {
 }
 
 // Verfügbare Schriftarten - Platform-spezifisch für React Native SVG
+// Android verwendet die generischen Namen die von react-native-svg unterstützt werden
+// iOS verwendet die nativen Systemschriftarten
 type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
-const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = [
-  { id: 'System', label: 'Standard', style: 'System', svgFont: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif' },
-  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive' },
-  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: Platform.OS === 'ios' ? 'Times New Roman' : 'serif' },
-];
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = Platform.select({
+  ios: [
+    { id: 'System', label: 'Standard', style: 'System', svgFont: 'Helvetica' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Snell Roundhand' },
+    { id: 'Monospace', label: 'Monospace', style: 'Courier', svgFont: 'Courier' },
+    { id: 'Serif', label: 'Serif', style: 'Georgia', svgFont: 'Times New Roman' },
+  ],
+  android: [
+    { id: 'System', label: 'Standard', style: 'normal', svgFont: 'Roboto' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'normal', svgFont: 'sans-serif-light' },
+    { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace' },
+    { id: 'Serif', label: 'Serif', style: 'normal', svgFont: 'serif' },
+  ],
+  default: [
+    // Web/Browser - CSS Schriftarten funktionieren hier
+    { id: 'System', label: 'Standard', style: 'system-ui, sans-serif', svgFont: 'system-ui, -apple-system, sans-serif' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Comic Sans MS, cursive, sans-serif' },
+    { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'Courier New, monospace' },
+    { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'Times New Roman, Georgia, serif' },
+  ],
+}) as { id: FontFamily; label: string; style: string; svgFont: string }[];
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';
 

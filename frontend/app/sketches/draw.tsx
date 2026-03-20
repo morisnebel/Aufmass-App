@@ -2796,11 +2796,12 @@ export default function DrawSketchScreen() {
         // Berechne Textbreite basierend auf Textlänge und Schriftgröße
         const fontSize = el.fontSize || 20;
         const textLength = el.data?.text?.length || 10;
-        const elW = el.width || Math.max(textLength * fontSize * 0.6, 60); // Mindestens 60px breit
-        const elH = el.height || Math.max(fontSize + 20, 50); // Mindestens 50px hoch
-        // Größere Hitbox für einfachere Auswahl (20px statt 10px Padding)
-        if (x >= elX - 20 && x <= elX + elW + 20 &&
-            y >= elY - fontSize - 20 && y <= elY + elH + 20) {
+        const elW = el.width || Math.max(textLength * fontSize * 0.7, 100); // Mindestens 100px breit
+        const elH = el.height || Math.max(fontSize * 1.5, 60); // Mindestens 60px hoch
+        // Sehr große Hitbox für einfache Auswahl (40px Padding)
+        const padding = 40;
+        if (x >= elX - padding && x <= elX + elW + padding &&
+            y >= elY - fontSize - padding && y <= elY + elH + padding) {
           return el;
         }
       } else if (el.type === 'image') {

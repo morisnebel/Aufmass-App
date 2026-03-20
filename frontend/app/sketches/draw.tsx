@@ -3656,7 +3656,6 @@ export default function DrawSketchScreen() {
               
               // Winkel der Linie
               const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-              const angleDeg = angle * 180 / Math.PI;
               
               // Berechne den Schwerpunkt (Centroid) des Polygons
               const centroidX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0) / points.length;
@@ -3675,18 +3674,27 @@ export default function DrawSketchScreen() {
               // Dann müssen wir die Normale umkehren, damit sie nach außen zeigt
               const dotProduct = normalX * towardsCenterX + normalY * towardsCenterY;
               
-              // Offset-Betrag
-              const offsetMagnitude = 20;
+              // Skalierte Größen basierend auf Zoom-Level
+              const baseOffsetMagnitude = 16;
+              const baseTickLength = 6;
+              const baseStrokeWidth = 1.2;
+              const baseFontSize = 11;
+              
+              const scaledOffsetMagnitude = Math.max(8, baseOffsetMagnitude / Math.max(scale, 0.5));
+              const scaledTickLength = Math.max(3, baseTickLength / Math.max(scale, 0.5));
+              const scaledStrokeWidth = Math.max(0.5, baseStrokeWidth / Math.max(scale, 0.5));
+              const scaledFontSize = Math.max(6, baseFontSize / Math.max(scale, 0.5));
               
               // Wenn dotProduct > 0, zeigt Normale nach innen -> umkehren
               // Wenn dotProduct < 0, zeigt Normale nach außen -> beibehalten
               const sign = dotProduct > 0 ? -1 : 1;
-              const offsetX = normalX * offsetMagnitude * sign;
-              const offsetY = normalY * offsetMagnitude * sign;
+              const offsetX = normalX * scaledOffsetMagnitude * sign;
+              const offsetY = normalY * scaledOffsetMagnitude * sign;
               
-              // Linienlänge für End-Striche
-              const lineLength = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-              const tickLength = 8;
+              // Text-Box Dimensionen - skaliert
+              const charWidth = scaledFontSize * 0.6;
+              const boxWidth = measurementText.length * charWidth + scaledFontSize * 0.6;
+              const boxHeight = scaledFontSize * 1.3;
               
               return (
                 <G key={`measure-${element.id}-${segIdx}`}>
@@ -3697,42 +3705,42 @@ export default function DrawSketchScreen() {
                     x2={p2.x + offsetX}
                     y2={p2.y + offsetY}
                     stroke="#1976d2"
-                    strokeWidth={1.5}
+                    strokeWidth={scaledStrokeWidth}
                   />
                   {/* End-Strich links */}
                   <Line
-                    x1={p1.x + offsetX - Math.sin(angle) * tickLength}
-                    y1={p1.y + offsetY + Math.cos(angle) * tickLength}
-                    x2={p1.x + offsetX + Math.sin(angle) * tickLength}
-                    y2={p1.y + offsetY - Math.cos(angle) * tickLength}
+                    x1={p1.x + offsetX - Math.sin(angle) * scaledTickLength}
+                    y1={p1.y + offsetY + Math.cos(angle) * scaledTickLength}
+                    x2={p1.x + offsetX + Math.sin(angle) * scaledTickLength}
+                    y2={p1.y + offsetY - Math.cos(angle) * scaledTickLength}
                     stroke="#1976d2"
-                    strokeWidth={1.5}
+                    strokeWidth={scaledStrokeWidth}
                   />
                   {/* End-Strich rechts */}
                   <Line
-                    x1={p2.x + offsetX - Math.sin(angle) * tickLength}
-                    y1={p2.y + offsetY + Math.cos(angle) * tickLength}
-                    x2={p2.x + offsetX + Math.sin(angle) * tickLength}
-                    y2={p2.y + offsetY - Math.cos(angle) * tickLength}
+                    x1={p2.x + offsetX - Math.sin(angle) * scaledTickLength}
+                    y1={p2.y + offsetY + Math.cos(angle) * scaledTickLength}
+                    x2={p2.x + offsetX + Math.sin(angle) * scaledTickLength}
+                    y2={p2.y + offsetY - Math.cos(angle) * scaledTickLength}
                     stroke="#1976d2"
-                    strokeWidth={1.5}
+                    strokeWidth={scaledStrokeWidth}
                   />
-                  {/* Hintergrund für Text */}
+                  {/* Hintergrund für Text - skaliert */}
                   <Rect
-                    x={midX + offsetX - measurementText.length * 4 - 4}
-                    y={midY + offsetY - 10}
-                    width={measurementText.length * 8 + 8}
-                    height={16}
+                    x={midX + offsetX - boxWidth / 2}
+                    y={midY + offsetY - boxHeight / 2}
+                    width={boxWidth}
+                    height={boxHeight}
                     fill="white"
                     rx={2}
                     ry={2}
                   />
-                  {/* Maß-Text */}
+                  {/* Maß-Text - skaliert */}
                   <SvgText
                     x={midX + offsetX}
-                    y={midY + offsetY + 3}
+                    y={midY + offsetY + scaledFontSize * 0.35}
                     fill="#1976d2"
-                    fontSize={12}
+                    fontSize={scaledFontSize}
                     fontWeight="bold"
                     textAnchor="middle"
                   >
@@ -3764,9 +3772,16 @@ export default function DrawSketchScreen() {
               const labelX = centerX + offset.x;
               const labelY = centerY + offset.y;
               
-              // Kleinere Größe: Radius 12 statt 18, Schriftgröße 10 statt 14
-              const labelRadius = 12;
-              const labelFontSize = 10;
+              // Skalierte Größen basierend auf Zoom-Level
+              const baseLabelRadius = 10;
+              const baseLabelFontSize = 9;
+              const baseLabelStroke = 1.2;
+              const baseLineStroke = 1.2;
+              
+              const scaledLabelRadius = Math.max(5, baseLabelRadius / Math.max(scale, 0.5));
+              const scaledLabelFontSize = Math.max(5, baseLabelFontSize / Math.max(scale, 0.5));
+              const scaledLabelStroke = Math.max(0.5, baseLabelStroke / Math.max(scale, 0.5));
+              const scaledLineStroke = Math.max(0.5, baseLineStroke / Math.max(scale, 0.5));
               
               // Verbindungslinie nur anzeigen wenn das Label verschoben wurde
               const hasOffset = offset.x !== 0 || offset.y !== 0;
@@ -3781,26 +3796,26 @@ export default function DrawSketchScreen() {
                       x2={labelX}
                       y2={labelY}
                       stroke="#1976d2"
-                      strokeWidth={1.5}
+                      strokeWidth={scaledLineStroke}
                       strokeDasharray="3,2"
                       opacity={0.7}
                     />
                   )}
-                  {/* Hintergrund-Kreis für Label - kleiner */}
+                  {/* Hintergrund-Kreis für Label - skaliert */}
                   <Circle
                     cx={labelX}
                     cy={labelY}
-                    r={labelRadius}
+                    r={scaledLabelRadius}
                     fill="#1976d2"
                     stroke="#fff"
-                    strokeWidth={1.5}
+                    strokeWidth={scaledLabelStroke}
                   />
-                  {/* Label-Text - kleinere Schrift */}
+                  {/* Label-Text - skaliert */}
                   <SvgText
                     x={labelX}
-                    y={labelY + 3.5}
+                    y={labelY + scaledLabelFontSize * 0.35}
                     fill="#fff"
-                    fontSize={labelFontSize}
+                    fontSize={scaledLabelFontSize}
                     fontWeight="bold"
                     textAnchor="middle"
                   >
@@ -3810,7 +3825,7 @@ export default function DrawSketchScreen() {
                   <Circle
                     cx={labelX}
                     cy={labelY}
-                    r={labelRadius + 10}
+                    r={scaledLabelRadius + 10}
                     fill="transparent"
                   />
                 </G>

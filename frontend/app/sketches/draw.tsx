@@ -194,7 +194,7 @@ const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: st
   ],
 }) as { id: FontFamily; label: string; style: string; svgFont: string }[];
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint';
 
 // Verschiebbare Summenbox-Komponente für jedes Polyline-Element
 interface DraggableTotalBoxProps {

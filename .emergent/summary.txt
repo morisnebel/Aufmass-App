@@ -1,122 +1,155 @@
-Analyse der Konversation und Übergabe-Zusammenfassung.
+**original_problem_statement:**
+The user wants to continue the development of a Measurement App (Aufmaß-App). The initial request was to fix an issue where custom fonts in SVG text elements were not rendering correctly on mobile devices.
 
-**original_problem_statement**:
-Der Benutzer meldete ursprünglich, dass die Schriftart () für SVG-Textelemente in der Zeichenkomponente () nicht korrekt gesetzt wurde. Er verwies auf eine ähnliche Implementierung in  als Beispiel für die korrekte Vorgehensweise.
+The user then provided a series of feature requests and improvements for the sketch and photo annotation tools:
+1.  Fix  for SVG text on mobile devices.
+2.  In the photo annotation screen, make added text elements editable and movable.
+3.  In the sketch screen, make the polygon ID labels (e.g., S1) smaller and movable.
+4.  Add a connecting line from the movable label to its corresponding polygon.
+5.  Make all interactive points (polygon corners, drawing points, center points) and measurement text/lines scale dynamically with the zoom level to avoid clutter.
+6.  Add a feature to insert new points into an existing polygon.
 
-Nach einer ersten Korrektur meldete der Benutzer, dass die Schriftart immer noch nicht geändert werden könne (die schriftart kann noch nicht geändert werden). Dies führte zu einer weiteren Untersuchung, bei der festgestellt wurde, dass die Funktionalität zum Bearbeiten von Schriftarten in bestehenden Textelementen fehlte.
-
-**User's preferred language**: German. The next agent MUST respond in German only.
+**User's preferred language**: German. The next agent MUST respond in German.
 
 **what currently exists?**
-Die Anwendung verfügt über eine Zeichenfunktion in . In dieser Komponente können Benutzer Text-Elemente auf einer Leinwand erstellen. Eine erste Korrektur wurde implementiert, um die -Eigenschaft für neu erstellte Text-Elemente korrekt zu setzen und im SVG zu rendern. Die Funktionalität zum *Bearbeiten* der Schriftart eines bereits existierenden Textes war jedoch fehlerhaft.
+The project is a full-stack application with an Expo (React Native) frontend and a FastAPI backend. It functions as a measurement tool for contractors, featuring a sophisticated SVG-based sketch editor () and a photo annotation tool ().
+
+Critically, all sketch and annotation data is currently saved only to the device's **LocalStorage** via . The backend API and MongoDB database exist but are not used for storing the user's drawings, which is a major architectural limitation.
 
 **Last working item**:
-*   **Last item agent was working**: Behebung des Problems, dass die Schriftart bestehender Textelemente nicht geändert werden konnte. Der Agent hat diagnostiziert, dass das Bearbeitungsmodal für Text () keine Benutzeroberfläche zur Auswahl der Schriftart enthielt und die Logik zum Speichern der geänderten Schriftart fehlte.
-*   **Status**: IN PROGRESS
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: Frontend testing agent oder screenshot tool, um zu überprüfen, ob das Bearbeitungsmodal jetzt die Schriftart-Optionen anzeigt und die Änderung der Schriftart funktioniert.
-*   **User Testing Done**: N
+*   **Last item agent was working:** Implementing a feature to add new points to an existing polygon in the sketch editor.
+*   **Status:** IN PROGRESS
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** Frontend testing agent. This is a new UI feature that requires interactive testing.
+*   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1**: Überprüfung der Korrektur für die Bearbeitung von Schriftarten (P0)
-
-**Issues Detail**:
-*   **Issue 1**: Überprüfung der Korrektur für die Bearbeitung von Schriftarten
-    *   **Attempted fixes**: Der Agent hat den Code in  an drei Stellen geändert:
-        1.  Beim Öffnen des Bearbeitungsmodals wird nun die aktuelle Schriftart des Elements in den State geladen.
-        2.  Die Benutzeroberfläche zur Schriftartauswahl wurde dem Bearbeitungsmodal hinzugefügt.
-        3.  Die Speicherlogik im Bearbeitungsmodal wurde erweitert, um die  zu aktualisieren.
-    *   **Next debug checklist**:
-        *   Verwenden Sie das  oder bitten Sie den Benutzer zu überprüfen, ob die Schriftartauswahl im Bearbeitungsmodal für Text sichtbar ist.
-        *   Testen Sie den End-to-End-Flow: Doppelklicken Sie auf ein Textelement, ändern Sie die Schriftart im Modal, speichern Sie und überprüfen Sie, ob die Schriftart auf der Leinwand korrekt aktualisiert wird.
-    *   **Why fix this issue and what will be achieved with the fix?**: Um die vom Benutzer gemeldete Hauptfunktionslücke zu schließen und eine intuitive Bearbeitung von Textelementen zu ermöglichen.
-    *   **Status**: IN PROGRESS
-    *   **Is recurring issue?**: Y (Das Thema Schriftarten wurde bereits zum zweiten Mal behandelt)
-    *   **Should Test frontend/backend/both after fix?**: Frontend
-    *   **Blocked on other issue**: None
+*   **Issue 1 (P0): Complete the Add Point to Polygon feature.**
+    *   **Description:** The user requested a new button, Polygonpunkt hinzufügen, that activates a mode to add new vertices to a selected polygon by clicking on its edges.
+    *   **Attempted fixes:** The agent has started by adding  to the  type definition in .
+    *   **Next debug checklist:**
+        1.  In , add a new  button to the toolbar. It should only be visible/enabled when a  element is selected.
+        2.  Update the  handler to check if  and if a polygon is selected.
+        3.  Implement logic to detect which segment of the selected polygon was clicked. This will involve iterating through the polygon's points and calculating the distance from the click to each line segment.
+        4.  Once the target segment is identified, calculate the new point's coordinates and insert it into the  array at the correct index.
+        5.  Update the element's state to trigger a re-render and ensure the change is added to the history stack for undo functionality.
+    *   **Why fix this issue and what will be achieved with the fix?** This will complete the user's request for more flexible polygon editing.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
-Keine.
+None.
 
-**Upcoming and Future Tasks**:
-Keine weiteren Aufgaben wurden in dieser Sitzung besprochen oder geplant.
+**Upcoming and Future Tasks**
+*   **Upcoming Tasks:**
+    *   **Task 1 (P1): Refactor Sketch data persistence to use the Backend API.**
+        *   **Where to resume:** Currently,  handles all sketch saving/loading. This needs to be replaced with API calls to the existing FastAPI endpoints ().
+        *   **What will be achieved with this?** This will enable sketches to be saved to the database, allowing for cross-device sync and data backup. It is a critical step towards making the application robust.
+        *   **Files:** Create  to encapsulate  or  calls. Modify  to use this new service.
+
+*   **Future Tasks:**
+    *   **Task 2 (P2): Refactor the  monolith.**
+        *   **Where to resume:** The file  is over 7700 lines long.
+        *   **What will be achieved with this?** Breaking it down into smaller components (e.g., , , ) and custom hooks (e.g., , ) will improve maintainability, reduce complexity, and make it easier to add new features.
 
 **Completed work in this session**
-*   **Liste aller abgeschlossenen Aufgaben mit Datei- und Methodennamen**:
-    *   Korrektur für die  bei der **Erstellung** neuer Textelemente in :
-        *   Die Konstante  wurde um eine -Eigenschaft erweitert.
-        *   Die Logik zur Erstellung von Textelementen wurde angepasst, um die  zu speichern.
-        *   Das SVG-Rendering () wurde aktualisiert, um die  zu verwenden.
+*   **Mobile Font Fix:** Corrected  in both  and  for proper rendering on Android and iOS.
+*   **Editable & Movable Photo Text:** Implemented full editability for text elements on the photo annotation screen, including selection, movement, editing content, and deletion.
+*   **Draggable Polygon Labels:** The S1, S2 labels in the sketch editor can now be moved independently from their polygons. Their positions are saved and loaded.
+*   **Connecting Line for Labels:** A line is now drawn from a moved label back to the center of its polygon for clarity.
+*   **Dynamic UI Scaling with Zoom:** Implemented scaling for multiple UI elements in the sketch editor based on the zoom level ( state):
+    *   Polygon corner points (editing handles).
+    *   Points shown during polygon creation.
+    *   Measurement lines and their text values.
+    *   Polygon ID labels (S1).
 
 **Earlier issues found/mentioned but not fixed**
-*   **Issue 1**: Linting- und TypeScript-Konfigurationsfehler.
-    *   **Debug checklist**:
-        *   Überprüfen Sie die Datei . Der Linter meldete einen  bei Zeile 52.
-        *   Der TypeScript-Compiler meldete Fehler wie  und . Überprüfen Sie die .
-    *   **Why to solve this issue and what will be achieved with this?**: Die Behebung dieser Fehler verbessert die Codequalität, stellt eine korrekte Kompilierung sicher und erleichtert die zukünftige Entwicklung.
-    *   **Should Test frontend/backend/both after fix?**: Frontend (um sicherzustellen, dass die Korrekturen keine Regressionen verursachen).
-    *   **Is recurring issue?**: N
+*   **Issue 1: ESLint Parsing Error.**
+    *   **Description:** The linter reported a  in . The agent skipped it as the app compiled correctly.
+    *   **Debug checklist:**
+        1.  Check the  or relevant config file for issues with TypeScript or JSX parsing.
+        2.  Verify the  definition in the file, as the error points directly to it.
+    *   **Why to solve this issue and what will be achieved with this?** Resolving this ensures the linting tool works correctly, which is important for maintaining code quality and catching actual errors in the future.
+    *   **Should Test frontend/backend/both after fix:** Frontend
+    *   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
-*   Keine, da die vorherige Übergabe-Zusammenfassung leer war.
+None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **React Native**: Das Framework für die mobile App.
-*   **Expo**: Toolchain für die Entwicklung mit React Native.
-*   **react-native-svg**: Bibliothek zur Darstellung von Vektorgrafiken (SVG), die für die Zeichenleinwand verwendet wird.
-*   **React Hooks**: ,  zur Verwaltung des Zustands der Komponente.
-*   **Modals**: Verwendung von  aus React Native für Benutzereingaben.
+*   **Frontend:** React Native with Expo.
+*   **Drawing/Sketching:**  is used extensively for the canvas, rendering paths, text, and interactive elements.
+*   **Backend:** Python with FastAPI.
+*   **Database:** MongoDB.
+*   **Data Persistence:** **Client-side  only.** The backend is not currently used for sketch storage.
+*   **State Management:** Local component state using React Hooks (, , etc.).
 
 **key DB schema**
-*   Nicht relevant für diese Sitzung.
+*   ** collection** (defined in  but not used by frontend):
+    *   
+    *    (base64 preview image)
+    *   
+    *    (A JSON string meant to hold all drawing elements, measurements, and UI state like label positions).
 
 **changes in tech stack**
-*   Keine.
+None in this session.
 
 **All files of reference**
-*   : Die zentrale Datei für die Zeichenfunktion, die umfassend bearbeitet wurde, um die Schriftart-Funktionalität zu implementieren und zu korrigieren.
-*   : Vom Benutzer als Referenz für die korrekte Implementierung der  in SVG-Texten genannt.
+*   : The main sketch editor file. **Heavily modified** in this session to add numerous features related to UI scaling and interactivity.
+*   : The photo annotation file. Modified to implement editable and movable text.
+*   : An important file to be aware of, as it's the **single source of truth for all user sketches**, despite a backend being available.
+*   : Defines the data models and API endpoints that **should** be used for data persistence.
 
 **Areas that need refactoring**:
-*   Die Datei  ist mit über 7500 Zeilen extrem groß und monolithisch. Sie enthält Zustandsverwaltung, Rendering-Logik, Event-Handler und mehrere Modale in einer einzigen Datei. Ein Refactoring in kleinere, wiederverwendbare Komponenten (z. B. , , , ) und benutzerdefinierte Hooks ist dringend zu empfehlen, um die Wartbarkeit zu verbessern.
+1.  **Data Persistence:** The highest priority is to replace the -based persistence with backend API calls to prevent data loss and enable multi-device use.
+2.  ** Component:** This file has become a monolith (over 7700 lines) and urgently needs to be broken down into smaller, reusable components and custom hooks to be manageable.
 
 **key api endpoints**
-*   Nicht relevant für diese Sitzung.
-
-**Critical Info for New Agent**
-*   Kommunizieren Sie ausschließlich auf Deutsch.
-*   Ihre erste Aufgabe ist es, die letzte Implementierung zu überprüfen: die Möglichkeit, die Schriftart bestehender Textelemente zu ändern. Der Code wurde geschrieben, aber nicht getestet.
-*   Die Datei  ist der zentrale Arbeitsbereich, aber sie ist sehr komplex und unübersichtlich. Seien Sie vorsichtig bei Änderungen.
-*   Es gibt ungelöste Linting- und TypeScript-Konfigurationsfehler, die ignoriert wurden, aber für eine saubere Codebasis behoben werden sollten.
-
-**documents and test reports created in this job**
-*   Keine.
-
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **die schriftart kann noch nicht geändert werden** - Der Benutzer meldet, dass das Ändern der Schriftart immer noch nicht funktioniert. (Status: IN PROGRESS)
-2.  **ja** - Der Benutzer bestätigt, dass die Analyse des Agenten korrekt ist und die Korrektur implementiert werden soll. (Status: Completed)
-3.  **das war der letzte stand...** - Der Benutzer gibt den initialen Kontext zum Problem und verweist auf eine fehlerhafte Implementierung in . (Status: Completed)
-4.  **Please use ask_human tool and confirm your plan now.** - Aufforderung des Benutzers, den Plan zu bestätigen. (Status: Completed)
-
-**Project Health Check:**
-*   **Broken**: Die Funktionalität zum Bearbeiten von Schriftarten war defekt. Eine Korrektur wurde implementiert, ist aber noch nicht verifiziert.
-*   **Mocked**: Keine.
-
-**3rd Party Integrations**
+The following backend endpoints exist in  but are NOT currently being used by the frontend for sketches:
+*   
+*   
+*   
 *   
 
+**Critical Info for New Agent**
+*   **Your immediate task is to implement the add point to polygon feature.** The user wants a button to enable a mode where they can click on a polygon's edge to add a new vertex.
+*   **The app's most significant flaw is that all sketches are saved in LocalStorage, not the backend.** You should propose fixing this as the next major task after completing the current feature request.
+*   The file  is huge. Be careful and precise with your edits. Use the search tool to locate functions and state variables before making changes.
+*   The  state variable in  is used to control the size of UI elements during zoom. You will likely need to use it.
+
+**documents and test reports created in this job**
+None.
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **Request:** Add a button to add new points to an existing polygon. (IN PROGRESS)
+2.  **Confirmation/Request:** Confirmed scaling works. Requested that measurement lines and text also scale with zoom. (DONE)
+3.  **Confirmation/Request:** Confirmed point scaling works. Requested that the polygon's center point and drawing points also scale with zoom. (DONE)
+4.  **Confirmation/Request:** Confirmed label change works. Requested that polyline points get smaller when zoomed and a line connects the label to the polygon. (DONE)
+5.  **Confirmation/Request:** Confirmed text editing in photos works. Requested that the 'S1' label in sketches be made smaller and movable. (DONE)
+6.  **Confirmation/Request:** Confirmed font fix in sketches works. Requested the same for photo annotations and to make text editable/movable. (DONE)
+7.  **Input:** Provided a choice regarding the font fix. (Handled)
+8.  **Initial Request:** Continue working on the app, specifically the font rendering issue in SVGs. (DONE)
+
+**Project Health Check:**
+*   **Broken:** The data persistence strategy is broken from a product perspective. Saving critical user data only to  is not a viable long-term solution.
+*   **Mocked:** N/A
+
+**3rd Party Integrations**
+None mentioned.
+
 **Testing status**
-*   **Testing agent used after significant changes**: NO
-*   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**: []
-*   **Known regressions**: Keine, aber die letzte Änderung ist ungetestet.
+*   **Testing agent used after significant changes:** NO
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None.
+*   **Known regressions:** None.
 
 **Credentials to test flow:**
-*   Nicht erforderlich.
+N/A
 
 **What agent forgot to execute**
-*   Der Agent hat die implementierte Korrektur für das Bearbeitungsmodal nicht getestet oder verifiziert.
-*   Der Agent hat die gemeldeten Linting- und TypeScript-Fehler ignoriert, anstatt sie zu beheben.
+*   The agent did not address a reported ESLint parsing error, dismissing it because the app still compiled. This should be investigated to ensure the development environment is healthy.
+*   While the agent identified the critical architectural flaw of using , it did not elevate its priority. This should have been highlighted to the user as an urgent refactoring task needed for app stability and functionality.

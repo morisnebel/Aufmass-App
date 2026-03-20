@@ -6818,6 +6818,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#333',
   },
+  // Font Family Selection
+  fontFamilyContainer: {
+    marginBottom: 16,
+  },
+  fontFamilyButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  fontFamilyButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+  fontFamilyButtonActive: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  fontFamilyButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  fontFamilyButtonTextActive: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
   // Polyline Steuerung
   // Kompakte, verschiebbare Polyline-Steuerung
   polylineControlsCompact: {

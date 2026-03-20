@@ -1537,7 +1537,7 @@ export default function EditChecklistScreen() {
                       ))}
                     </View>
                     <View style={styles.numpadRowCompact}>
-                      {['g','h','i','j','k','l'].map(k => (
+                      {['g','h','i','j','k','l','m'].map(k => (
                         <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
                           <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>

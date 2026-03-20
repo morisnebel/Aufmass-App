@@ -2793,10 +2793,14 @@ export default function DrawSketchScreen() {
       } else if (el.type === 'text') {
         const elX = el.x || 0;
         const elY = el.y || 0;
-        const elW = el.width || 100;
-        const elH = el.height || 30;
-        if (x >= elX - 10 && x <= elX + elW + 10 &&
-            y >= elY - 10 && y <= elY + elH + 10) {
+        // Berechne Textbreite basierend auf Textlänge und Schriftgröße
+        const fontSize = el.fontSize || 20;
+        const textLength = el.data?.text?.length || 10;
+        const elW = el.width || Math.max(textLength * fontSize * 0.6, 60); // Mindestens 60px breit
+        const elH = el.height || Math.max(fontSize + 20, 50); // Mindestens 50px hoch
+        // Größere Hitbox für einfachere Auswahl (20px statt 10px Padding)
+        if (x >= elX - 20 && x <= elX + elW + 20 &&
+            y >= elY - fontSize - 20 && y <= elY + elH + 20) {
           return el;
         }
       } else if (el.type === 'image') {

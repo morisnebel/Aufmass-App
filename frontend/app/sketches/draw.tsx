@@ -194,7 +194,7 @@ const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: st
   ],
 }) as { id: FontFamily; label: string; style: string; svgFont: string }[];
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint' | 'removePoint';
 
 // Verschiebbare Summenbox-Komponente für jedes Polyline-Element
 interface DraggableTotalBoxProps {
@@ -2111,9 +2111,191 @@ export default function DrawSketchScreen() {
       }
       
       setPolylinePoints([...polylinePoints, newPoint]);
+    } else if (drawMode === 'addPoint') {
+      // addPoint Modus: Punkt zu bestehender Polyline hinzufügen
+      handleAddPointTouch(locationX, locationY);
+    } else if (drawMode === 'removePoint') {
+      // removePoint Modus: Punkt aus bestehender Polyline entfernen
+      handleRemovePointTouch(locationX, locationY);
     } else {
       // Other drawing modes
       setStartPoint({ x: locationX, y: locationY });
+    }
+  };
+
+  // Handler für addPoint Modus - fügt Punkt zu bestehender Polyline hinzu
+  const handleAddPointTouch = (x: number, y: number) => {
+    // Zuerst: Prüfe ob eine Polyline ausgewählt ist
+    if (!selectedElementId) {
+      showAlert('Hinweis', 'Bitte wähle zuerst eine Polyline aus');
+      return;
+    }
+    
+    const selectedEl = elements.find(el => el.id === selectedElementId);
+    if (!selectedEl || selectedEl.type !== 'polyline') {
+      showAlert('Hinweis', 'Bitte wähle eine Polyline aus');
+      return;
+    }
+    
+    const points = selectedEl.data?.points;
+    if (!points || points.length < 2) {
+      showAlert('Hinweis', 'Ungültige Polyline');
+      return;
+    }
+    
+    // Prüfe ob Klick nahe einem Endpunkt ist (zum Anhängen)
+    const endpointRadius = 40;
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    
+    const distToFirst = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+    const distToLast = Math.sqrt(Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2));
+    
+    // Wenn nahe am ersten Punkt - Punkt am Anfang einfügen
+    if (distToFirst < endpointRadius && !selectedEl.data.closed) {
+      const newPoints = [{ x, y }, ...points];
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId) {
+          return { ...el, data: { ...el.data, points: newPoints } };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+      return;
+    }
+    
+    // Wenn nahe am letzten Punkt - Punkt am Ende anhängen
+    if (distToLast < endpointRadius && !selectedEl.data.closed) {
+      const newPoints = [...points, { x, y }];
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId) {
+          return { ...el, data: { ...el.data, points: newPoints } };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+      return;
+    }
+    
+    // Sonst: Prüfe ob Klick auf einer Kante ist (zum Einfügen)
+    let closestSegment = -1;
+    let minDist = Infinity;
+    let insertPoint = { x, y };
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+      
+      if (dist < minDist && dist < 30) {
+        minDist = dist;
+        closestSegment = i;
+        // Berechne den nächsten Punkt auf dem Segment
+        insertPoint = getClosestPointOnSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+      }
+    }
+    
+    // Prüfe auch die schließende Kante bei geschlossenen Polylines
+    if (selectedEl.data.closed && points.length >= 3) {
+      const p1 = points[points.length - 1];
+      const p2 = points[0];
+      const dist = distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+      
+      if (dist < minDist && dist < 30) {
+        minDist = dist;
+        closestSegment = points.length - 1; // Spezialindex für schließende Kante
+        insertPoint = getClosestPointOnSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+      }
+    }
+    
+    if (closestSegment >= 0) {
+      // Punkt auf der Kante einfügen
+      let newPoints: { x: number; y: number }[];
+      
+      if (closestSegment === points.length - 1 && selectedEl.data.closed) {
+        // Schließende Kante - füge am Ende ein
+        newPoints = [...points, insertPoint];
+      } else {
+        // Normale Kante - füge nach dem Segment ein
+        newPoints = [
+          ...points.slice(0, closestSegment + 1),
+          insertPoint,
+          ...points.slice(closestSegment + 1)
+        ];
+      }
+      
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId) {
+          return { ...el, data: { ...el.data, points: newPoints } };
+        }
+        return el;
+      });
+      addToHistory(newElements);
+    }
+  };
+
+  // Hilfsfunktion: Berechnet den nächsten Punkt auf einem Liniensegment
+  const getClosestPointOnSegment = (px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    
+    if (lenSq === 0) return { x: x1, y: y1 };
+    
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    
+    return {
+      x: x1 + t * dx,
+      y: y1 + t * dy
+    };
+  };
+
+  // Handler für removePoint Modus - entfernt Punkt aus bestehender Polyline
+  const handleRemovePointTouch = (x: number, y: number) => {
+    // Zuerst: Prüfe ob eine Polyline ausgewählt ist
+    if (!selectedElementId) {
+      showAlert('Hinweis', 'Bitte wähle zuerst eine Polyline aus');
+      return;
+    }
+    
+    const selectedEl = elements.find(el => el.id === selectedElementId);
+    if (!selectedEl || selectedEl.type !== 'polyline') {
+      showAlert('Hinweis', 'Bitte wähle eine Polyline aus');
+      return;
+    }
+    
+    const points = selectedEl.data?.points;
+    if (!points || points.length < 3) {
+      showAlert('Hinweis', 'Polyline muss mindestens 3 Punkte haben');
+      return;
+    }
+    
+    // Finde den nächsten Punkt zum Klick
+    const pointRadius = 30;
+    let closestIndex = -1;
+    let minDist = Infinity;
+    
+    for (let i = 0; i < points.length; i++) {
+      const pt = points[i];
+      const dist = Math.sqrt(Math.pow(x - pt.x, 2) + Math.pow(y - pt.y, 2));
+      if (dist < minDist && dist < pointRadius) {
+        minDist = dist;
+        closestIndex = i;
+      }
+    }
+    
+    if (closestIndex >= 0) {
+      // Punkt entfernen
+      const newPoints = points.filter((_: { x: number; y: number }, idx: number) => idx !== closestIndex);
+      
+      const newElements = elements.map(el => {
+        if (el.id === selectedElementId) {
+          return { ...el, data: { ...el.data, points: newPoints } };
+        }
+        return el;
+      });
+      addToHistory(newElements);
     }
   };
 
@@ -4726,9 +4908,9 @@ export default function DrawSketchScreen() {
                 </SvgText>
               </Svg>
             </TouchableOpacity>
-            {/* Polygon Maße Button - gleiche Breite wie Maßlinie */}
+            {/* Polygon Maße Button */}
             <TouchableOpacity
-              style={[styles.toolButtonInnerWide, drawMode === 'polyline' && styles.toolButtonActive]}
+              style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive]}
               onPress={() => {
                 selectDrawMode('polyline');
                 setPolylinePoints([]);
@@ -4736,10 +4918,26 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="git-network-outline" size={22} color={drawMode === 'polyline' ? '#fff' : '#333'} />
             </TouchableOpacity>
+            {/* Punkt hinzufügen Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'addPoint' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('addPoint')}
+            >
+              <Ionicons name="add-circle-outline" size={22} color={drawMode === 'addPoint' ? '#fff' : '#4caf50'} />
+            </TouchableOpacity>
+            {/* Punkt entfernen Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'removePoint' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('removePoint')}
+            >
+              <Ionicons name="remove-circle-outline" size={22} color={drawMode === 'removePoint' ? '#fff' : '#f44336'} />
+            </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maßlinie</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Polygone</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Polygon</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>+Pkt</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>-Pkt</Text>
           </View>
         </View>
 

@@ -517,6 +517,14 @@ export default function DrawSketchScreen() {
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
   
+  // Long-Press State für bessere Linien-Auswahl
+  const [longPressActive, setLongPressActive] = useState(false);
+  const [longPressPosition, setLongPressPosition] = useState<{ x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressPulseAnim = useRef(new Animated.Value(1)).current;
+  const LONG_PRESS_DURATION = 500; // 500ms für Long-Press
+  const LONG_PRESS_TOLERANCE = 80; // Viel größerer Suchradius bei Long-Press
+  
   // Aufmaß-Tool state
   const [showMeasurementTool, setShowMeasurementTool] = useState(false);
   const [measurementExpression, setMeasurementExpression] = useState('');
@@ -2308,6 +2316,20 @@ export default function DrawSketchScreen() {
     const locationX = touch.locationX || touch.pageX;
     const locationY = touch.locationY || touch.pageY;
 
+    // Long-Press Timer abbrechen wenn Finger sich bewegt (> 10px)
+    if (longPressTimerRef.current && longPressPosition) {
+      const moveDistance = Math.sqrt(
+        Math.pow(locationX - longPressPosition.x, 2) + 
+        Math.pow(locationY - longPressPosition.y, 2)
+      );
+      if (moveDistance > 10) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+        setLongPressPosition(null);
+        setLongPressActive(false);
+      }
+    }
+
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
     } else if (drawMode === 'pen' && currentPathRef.current) {
@@ -2342,6 +2364,14 @@ export default function DrawSketchScreen() {
   const onTouchEnd = (event: any) => {
     // Im Zoom-Modus keine Zeichnung
     if (zoomMode) return;
+    
+    // Long-Press Timer und State zurücksetzen
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setLongPressPosition(null);
+    setLongPressActive(false);
     
     if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
       // Verwende den kompletten Pfad aus dem Ref für maximale Genauigkeit
@@ -2729,6 +2759,16 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
+    // Long-Press Timer starten für bessere Linien-Auswahl
+    setLongPressPosition({ x: locationX, y: locationY });
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      // Long-Press erreicht - größeren Suchradius verwenden
+      handleLongPressSelection(locationX, locationY);
+    }, LONG_PRESS_DURATION);
+    
     // Zuerst prüfen: Klick auf ein Polyline-Label zum Verschieben?
     const labelHit = findPolylineLabelAtPoint(locationX, locationY);
     if (labelHit) {
@@ -3303,29 +3343,101 @@ export default function DrawSketchScreen() {
     const baseTolerance = 30;
     const dynamicTolerance = Math.max(15, baseTolerance / Math.max(scale, 0.5));
     
+    // Finde das NÄCHSTGELEGENE Segment (nicht das erste innerhalb der Toleranz)
+    let closestResult: { element: DrawElement; segmentIndex: number; distance: number } | null = null;
+    
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
       if (el.type === 'polyline') {
         const points = el.data.points;
         if (points && points.length >= 2) {
-          // Prüfe jedes Segment mit dynamischer Toleranz
+          // Prüfe jedes Segment
           for (let j = 0; j < points.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
-            if (dist < dynamicTolerance) {
-              return { element: el, segmentIndex: j };
+            if (dist < dynamicTolerance && (!closestResult || dist < closestResult.distance)) {
+              closestResult = { element: el, segmentIndex: j, distance: dist };
             }
           }
-          // Prüfe auch die schließende Linie wenn geschlossen
+          // WICHTIG: Prüfe auch die schließende Linie wenn geschlossen - mit GLEICHER Priorität!
           if (el.data.closed && points.length >= 3) {
             const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
-            if (dist < dynamicTolerance) {
-              return { element: el, segmentIndex: points.length - 1 }; // Index für Schlusslinie
+            if (dist < dynamicTolerance && (!closestResult || dist < closestResult.distance)) {
+              closestResult = { element: el, segmentIndex: points.length - 1, distance: dist }; // Index für Schlusslinie
             }
           }
         }
       }
     }
+    
+    if (closestResult) {
+      return { element: closestResult.element, segmentIndex: closestResult.segmentIndex };
+    }
     return null;
+  };
+
+  // Long-Press Auswahl mit größerem Suchradius
+  const handleLongPressSelection = (x: number, y: number) => {
+    // Visuelles Feedback - Pulsierender Kreis Animation starten
+    setLongPressActive(true);
+    
+    // Pulsierendes Feedback Animation
+    Animated.sequence([
+      Animated.timing(longPressPulseAnim, {
+        toValue: 1.5,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(longPressPulseAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Haptisches Feedback auf nativen Geräten (optional - wenn verfügbar)
+    // ReactNativeHapticFeedback könnte hier verwendet werden
+    
+    // Suche mit VIEL größerem Suchradius (LONG_PRESS_TOLERANCE = 80)
+    const largeTolerance = LONG_PRESS_TOLERANCE;
+    
+    // Suche nach Polyline-Segment mit großem Radius
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type === 'polyline') {
+        const points = el.data.points;
+        if (points && points.length >= 2) {
+          // Prüfe jedes Segment mit GROSSER Toleranz
+          for (let j = 0; j < points.length - 1; j++) {
+            const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
+            if (dist < largeTolerance) {
+              // Gefunden! Element und Segment auswählen
+              setSelectedLineSegment({ elementId: el.id, segmentIndex: j });
+              setSelectedElementId(el.id);
+              console.log(`Long-Press: Segment ${j} von Polyline ausgewählt (Distanz: ${dist.toFixed(1)})`);
+              return;
+            }
+          }
+          // WICHTIG: Prüfe auch die schließende Linie wenn geschlossen - mit gleicher großer Toleranz!
+          if (el.data.closed && points.length >= 3) {
+            const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
+            if (dist < largeTolerance) {
+              // Schlusslinie gefunden!
+              setSelectedLineSegment({ elementId: el.id, segmentIndex: points.length - 1 });
+              setSelectedElementId(el.id);
+              console.log(`Long-Press: Schlusslinie von Polyline ausgewählt (Distanz: ${dist.toFixed(1)})`);
+              return;
+            }
+          }
+        }
+      }
+    }
+    
+    // Falls keine Linie gefunden wurde, auch andere Elemente suchen
+    const element = findElementAtPoint(x, y, photoEditMode);
+    if (element) {
+      setSelectedElementId(element.id);
+      console.log(`Long-Press: Element ${element.type} ausgewählt`);
+    }
   };
 
   // Check transform handles
@@ -5345,6 +5457,29 @@ export default function DrawSketchScreen() {
             </View>
           )}
         </View>
+
+        {/* Long-Press visuelles Feedback */}
+        {longPressActive && longPressPosition && (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              left: longPressPosition.x - 40,
+              top: longPressPosition.y - 40,
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: 'rgba(33, 150, 243, 0.2)',
+              borderWidth: 3,
+              borderColor: '#2196f3',
+              justifyContent: 'center',
+              alignItems: 'center',
+              transform: [{ scale: longPressPulseAnim }],
+            }}
+            pointerEvents="none"
+          >
+            <Ionicons name="checkmark-circle" size={32} color="#2196f3" />
+          </Animated.View>
+        )}
 
       </View>
       </ScrollView>

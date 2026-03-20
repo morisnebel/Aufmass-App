@@ -168,13 +168,13 @@ interface DrawElement {
   fontFamily?: string;
 }
 
-// Verfügbare Schriftarten
+// Verfügbare Schriftarten - Platform-spezifisch für React Native SVG
 type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
 const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = [
-  { id: 'System', label: 'Standard', style: 'System', svgFont: 'sans-serif' },
-  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'cursive, Comic Sans MS, sans-serif' },
-  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace, Courier New, Courier' },
-  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'serif, Times New Roman, Times' },
+  { id: 'System', label: 'Standard', style: 'System', svgFont: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif' },
+  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive' },
+  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: Platform.OS === 'ios' ? 'Times New Roman' : 'serif' },
 ];
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';

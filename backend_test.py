@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Get backend URL from environment
-BACKEND_URL = "https://sketch-annotate-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-editor-mobile.preview.emergentagent.com/api"
 
 class AufmassAPITester:
     def __init__(self):

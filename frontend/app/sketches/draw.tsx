@@ -2753,7 +2753,7 @@ export default function DrawSketchScreen() {
           const points = selectedEl.data.points;
           const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
           const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
-          const centerRadius = 20; // Klick-Toleranz für Mittelpunkt
+          const centerRadius = 8; // Klick-Toleranz für Mittelpunkt - kleiner gemacht für iPhone
           const distanceToCenter = Math.sqrt(
             Math.pow(locationX - centerX, 2) + Math.pow(locationY - centerY, 2)
           );
@@ -4034,13 +4034,13 @@ export default function DrawSketchScreen() {
                 />
               );
             })}
-            {/* Mittelpunkt zum Verschieben des gesamten Polygons - auch skaliert */}
+            {/* Mittelpunkt zum Verschieben des gesamten Polygons - winzig klein um Linien nicht zu überdecken */}
             {isSelected && points.length >= 2 && (() => {
               const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
               const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
-              const scaledMoveRadius = Math.max(6, 12 / Math.max(scale, 0.5));
-              const scaledMoveStroke = Math.max(1, 2 / Math.max(scale, 0.5));
-              const scaledFontSize = Math.max(8, 14 / Math.max(scale, 0.5));
+              // Radius winzig klein gemacht (2 statt 12) damit Linien besser sichtbar sind auf iPhone
+              const scaledMoveRadius = Math.max(2, 2 / Math.max(scale, 0.5));
+              const scaledMoveStroke = Math.max(0.3, 0.5 / Math.max(scale, 0.5));
               
               return (
                 <G key="move-handle">
@@ -4052,16 +4052,6 @@ export default function DrawSketchScreen() {
                     stroke="#fff" 
                     strokeWidth={scaledMoveStroke} 
                   />
-                  <SvgText 
-                    x={centerX} 
-                    y={centerY + scaledFontSize * 0.35} 
-                    fill="#fff" 
-                    fontSize={scaledFontSize} 
-                    fontWeight="bold"
-                    textAnchor="middle"
-                  >
-                    ✥
-                  </SvgText>
                 </G>
               );
             })()}

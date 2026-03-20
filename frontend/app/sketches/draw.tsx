@@ -3768,8 +3768,24 @@ export default function DrawSketchScreen() {
               const labelRadius = 12;
               const labelFontSize = 10;
               
+              // Verbindungslinie nur anzeigen wenn das Label verschoben wurde
+              const hasOffset = offset.x !== 0 || offset.y !== 0;
+              
               return (
                 <G key={`label-${element.id}`}>
+                  {/* Verbindungslinie zum Zentrum wenn Label verschoben */}
+                  {hasOffset && (
+                    <Line
+                      x1={centerX}
+                      y1={centerY}
+                      x2={labelX}
+                      y2={labelY}
+                      stroke="#1976d2"
+                      strokeWidth={1.5}
+                      strokeDasharray="3,2"
+                      opacity={0.7}
+                    />
+                  )}
                   {/* Hintergrund-Kreis für Label - kleiner */}
                   <Circle
                     cx={labelX}
@@ -3801,37 +3817,49 @@ export default function DrawSketchScreen() {
               );
             })()}
             
-            {/* Punkte anzeigen wenn ausgewählt - größer und interaktiv */}
-            {isSelected && points.map((pt: { x: number; y: number }, idx: number) => (
-              <Circle 
-                key={`polyline-pt-${idx}`}
-                cx={pt.x} 
-                cy={pt.y} 
-                r={editingPolylinePoint === idx ? 12 : 8} 
-                fill={editingPolylinePoint === idx ? '#ff5722' : (idx === 0 ? '#4caf50' : '#2196f3')} 
-                stroke="#fff" 
-                strokeWidth={editingPolylinePoint === idx ? 3 : 2} 
-              />
-            ))}
-            {/* Mittelpunkt zum Verschieben des gesamten Polygons */}
+            {/* Punkte anzeigen wenn ausgewählt - skaliert mit Zoom */}
+            {isSelected && points.map((pt: { x: number; y: number }, idx: number) => {
+              // Größe wird durch Zoom-Level skaliert: größerer Zoom = kleinere Punkte
+              const baseRadius = editingPolylinePoint === idx ? 10 : 6;
+              const scaledRadius = Math.max(3, baseRadius / Math.max(scale, 0.5)); // Minimum 3px
+              const baseStroke = editingPolylinePoint === idx ? 2.5 : 1.5;
+              const scaledStroke = Math.max(1, baseStroke / Math.max(scale, 0.5));
+              
+              return (
+                <Circle 
+                  key={`polyline-pt-${idx}`}
+                  cx={pt.x} 
+                  cy={pt.y} 
+                  r={scaledRadius} 
+                  fill={editingPolylinePoint === idx ? '#ff5722' : (idx === 0 ? '#4caf50' : '#2196f3')} 
+                  stroke="#fff" 
+                  strokeWidth={scaledStroke} 
+                />
+              );
+            })}
+            {/* Mittelpunkt zum Verschieben des gesamten Polygons - auch skaliert */}
             {isSelected && points.length >= 2 && (() => {
               const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
               const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
+              const scaledMoveRadius = Math.max(6, 12 / Math.max(scale, 0.5));
+              const scaledMoveStroke = Math.max(1, 2 / Math.max(scale, 0.5));
+              const scaledFontSize = Math.max(8, 14 / Math.max(scale, 0.5));
+              
               return (
                 <G key="move-handle">
                   <Circle 
                     cx={centerX} 
                     cy={centerY} 
-                    r={14} 
+                    r={scaledMoveRadius} 
                     fill="#FF9800" 
                     stroke="#fff" 
-                    strokeWidth={3} 
+                    strokeWidth={scaledMoveStroke} 
                   />
                   <SvgText 
                     x={centerX} 
-                    y={centerY + 5} 
+                    y={centerY + scaledFontSize * 0.35} 
                     fill="#fff" 
-                    fontSize={16} 
+                    fontSize={scaledFontSize} 
                     fontWeight="bold"
                     textAnchor="middle"
                   >

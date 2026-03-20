@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://sketch-editor-mobile.preview.emergentagent.com/api"
+BACKEND_URL = "https://mobile-sketch-tune.preview.emergentagent.com/api"
 
 def log_test(message):
     """Log test messages with timestamp"""

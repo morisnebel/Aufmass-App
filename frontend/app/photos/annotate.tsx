@@ -11,18 +11,32 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, G } from 'react-native-svg';
+import Svg, { Path, G, Text as SvgText } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
 const { width } = Dimensions.get('window');
+
+// Key für Tool-Einstellungen
+const ANNOTATE_SETTINGS_KEY = 'aufmassprofi_annotate_settings';
+
+// Verfügbare Schriftarten
+type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string }[] = [
+  { id: 'System', label: 'Standard', style: 'System' },
+  { id: 'Handschrift', label: 'Handschrift', style: 'cursive' },
+  { id: 'Monospace', label: 'Monospace', style: 'monospace' },
+  { id: 'Serif', label: 'Serif', style: 'serif' },
+];
 
 interface DrawPath {
   path: string;
@@ -35,6 +49,17 @@ interface DrawPath {
     maxX: number;
     maxY: number;
   };
+}
+
+interface TextElement {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: 'normal' | 'bold';
 }
 
 // PDF-Größen Optionen
@@ -52,6 +77,7 @@ export default function AnnotatePhotoScreen() {
   const canvasRef = useRef(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [paths, setPaths] = useState<DrawPath[]>([]);
+  const [textElements, setTextElements] = useState<TextElement[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(3);
@@ -59,6 +85,17 @@ export default function AnnotatePhotoScreen() {
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
   const [pdfSize, setPdfSize] = useState<string>('medium');
   const [description, setDescription] = useState<string>('');
+  
+  // Text-Einstellungen (werden gespeichert)
+  const [lastTextFontSize, setLastTextFontSize] = useState(20);
+  const [lastTextColor, setLastTextColor] = useState('#000000');
+  const [lastTextFontFamily, setLastTextFontFamily] = useState<FontFamily>('System');
+  
+  // Text-Modal State
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [pendingTextPosition, setPendingTextPosition] = useState<{ x: number; y: number } | null>(null);
+  const [drawMode, setDrawMode] = useState<'draw' | 'text'>('draw');
   
   // Zoom & Pan
   const [scale, setScale] = useState(1);
@@ -85,6 +122,7 @@ export default function AnnotatePhotoScreen() {
   
   // Refs für aktuelle Werte (für Auto-Save Closure-Problem)
   const pathsRef = useRef(paths);
+  const textElementsRef = useRef(textElements);
   const descriptionRef = useRef(description);
   const pdfSizeRef = useRef(pdfSize);
   const imageUriRef = useRef(imageUri);
@@ -93,6 +131,10 @@ export default function AnnotatePhotoScreen() {
   useEffect(() => {
     pathsRef.current = paths;
   }, [paths]);
+  
+  useEffect(() => {
+    textElementsRef.current = textElements;
+  }, [textElements]);
   
   useEffect(() => {
     descriptionRef.current = description;
@@ -108,7 +150,63 @@ export default function AnnotatePhotoScreen() {
 
   useEffect(() => {
     loadPhoto();
+    loadSettings();
   }, [photoId]);
+
+  // Einstellungen aus AsyncStorage laden
+  const loadSettings = async () => {
+    try {
+      const savedSettings = await AsyncStorage.getItem(ANNOTATE_SETTINGS_KEY);
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        if (settings.drawColor) setDrawColor(settings.drawColor);
+        if (settings.strokeWidth) setStrokeWidth(settings.strokeWidth);
+        if (settings.lastTextFontSize) setLastTextFontSize(settings.lastTextFontSize);
+        if (settings.lastTextColor) setLastTextColor(settings.lastTextColor);
+        if (settings.lastTextFontFamily) setLastTextFontFamily(settings.lastTextFontFamily);
+      }
+    } catch (error) {
+      console.log('Error loading annotate settings:', error);
+    }
+  };
+
+  // Einstellungen speichern
+  const saveSettings = useCallback(async (key: string, value: any) => {
+    try {
+      const savedSettings = await AsyncStorage.getItem(ANNOTATE_SETTINGS_KEY);
+      const settings = savedSettings ? JSON.parse(savedSettings) : {};
+      settings[key] = value;
+      await AsyncStorage.setItem(ANNOTATE_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (error) {
+      console.log('Error saving annotate settings:', error);
+    }
+  }, []);
+
+  // Update-Funktionen mit Speicherung
+  const updateDrawColor = useCallback((color: string) => {
+    setDrawColor(color);
+    saveSettings('drawColor', color);
+  }, [saveSettings]);
+
+  const updateStrokeWidth = useCallback((sw: number) => {
+    setStrokeWidth(sw);
+    saveSettings('strokeWidth', sw);
+  }, [saveSettings]);
+
+  const updateLastTextFontSize = useCallback((value: number) => {
+    setLastTextFontSize(value);
+    saveSettings('lastTextFontSize', value);
+  }, [saveSettings]);
+
+  const updateLastTextColor = useCallback((value: string) => {
+    setLastTextColor(value);
+    saveSettings('lastTextColor', value);
+  }, [saveSettings]);
+
+  const updateLastTextFontFamily = useCallback((value: FontFamily) => {
+    setLastTextFontFamily(value);
+    saveSettings('lastTextFontFamily', value);
+  }, [saveSettings]);
 
   // Track changes for auto-save
   useEffect(() => {
@@ -137,12 +235,14 @@ export default function AnnotatePhotoScreen() {
   const autoSave = async () => {
     try {
       const currentPaths = pathsRef.current;
+      const currentTextElements = textElementsRef.current;
       const currentDescription = descriptionRef.current;
       const currentPdfSize = pdfSizeRef.current;
       const currentImageUri = imageUriRef.current;
       
       const annotationData = {
         paths: currentPaths,
+        textElements: currentTextElements,
         canvasWidth: canvasDimensions.width || width,
         canvasHeight: canvasDimensions.height || 400,
       };
@@ -156,7 +256,7 @@ export default function AnnotatePhotoScreen() {
         pdf_size: currentPdfSize,
       });
       
-      console.log('Auto-saved photo annotations, paths count:', currentPaths.length);
+      console.log('Auto-saved photo annotations, paths count:', currentPaths.length, 'texts count:', currentTextElements.length);
     } catch (error) {
       console.error('Error auto-saving:', error);
     }
@@ -186,6 +286,10 @@ export default function AnnotatePhotoScreen() {
               setPaths(annotationData.paths);
               // Store initial state for change detection
               initialPathsRef.current = JSON.stringify(annotationData.paths);
+            }
+            // Load text elements if available
+            if (annotationData.textElements && Array.isArray(annotationData.textElements)) {
+              setTextElements(annotationData.textElements);
             }
           } catch (e) {
             console.error('Error parsing annotations:', e);
@@ -361,12 +465,50 @@ export default function AnnotatePhotoScreen() {
   const clear = () => {
     Alert.alert(
       'Alle löschen',
-      'Möchten Sie alle Zeichnungen löschen?',
+      'Möchten Sie alle Zeichnungen und Texte löschen?',
       [
         { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Löschen', onPress: () => setPaths([]) },
+        { text: 'Löschen', onPress: () => {
+          setPaths([]);
+          setTextElements([]);
+        }},
       ]
     );
+  };
+
+  // Text-Element hinzufügen
+  const addTextElement = () => {
+    if (!textInput.trim() || !pendingTextPosition) {
+      setShowTextModal(false);
+      setTextInput('');
+      setPendingTextPosition(null);
+      return;
+    }
+
+    const newText: TextElement = {
+      id: `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      text: textInput.trim(),
+      x: pendingTextPosition.x,
+      y: pendingTextPosition.y,
+      color: lastTextColor,
+      fontSize: lastTextFontSize,
+      fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.style || 'System',
+      fontWeight: 'bold',
+    };
+
+    setTextElements([...textElements, newText]);
+    setHasChanges(true);
+    setShowTextModal(false);
+    setTextInput('');
+    setPendingTextPosition(null);
+  };
+
+  // Text löschen
+  const deleteLastText = () => {
+    if (textElements.length > 0) {
+      setTextElements(textElements.slice(0, -1));
+      setHasChanges(true);
+    }
   };
 
   const save = async () => {
@@ -376,6 +518,7 @@ export default function AnnotatePhotoScreen() {
       // Create annotation data with actual canvas dimensions for proper scaling in PDF
       const annotationData = {
         paths: paths,
+        textElements: textElements,
         canvasWidth: canvasDimensions.width || width, // Use measured dimensions
         canvasHeight: canvasDimensions.height || 400, // Fallback to reasonable default
       };
@@ -511,7 +654,7 @@ export default function AnnotatePhotoScreen() {
         {/* Rechte Seite: Farben, Strichstärke, Modus-Buttons */}
         <View style={styles.rightToolsRow}>
           {/* Farben - nur wenn im Zeichenmodus */}
-          {drawingEnabled && (
+          {drawingEnabled && drawMode === 'draw' && (
             <View style={styles.colorsRow}>
               {colors.map((c) => (
                 <TouchableOpacity
@@ -521,14 +664,14 @@ export default function AnnotatePhotoScreen() {
                     { backgroundColor: c.color },
                     drawColor === c.color && styles.colorButtonSmallActive,
                   ]}
-                  onPress={() => setDrawColor(c.color)}
+                  onPress={() => updateDrawColor(c.color)}
                 />
               ))}
             </View>
           )}
           
           {/* Strichstärke - nur wenn im Zeichenmodus */}
-          {drawingEnabled && (
+          {drawingEnabled && drawMode === 'draw' && (
             <View style={styles.strokeRow}>
               {[2, 4, 6, 8].map((sw) => (
                 <TouchableOpacity
@@ -537,7 +680,7 @@ export default function AnnotatePhotoScreen() {
                     styles.strokeButton,
                     strokeWidth === sw && styles.strokeButtonActive,
                   ]}
-                  onPress={() => setStrokeWidth(sw)}
+                  onPress={() => updateStrokeWidth(sw)}
                 >
                   <View style={[styles.strokePreview, { height: sw, backgroundColor: strokeWidth === sw ? '#fff' : '#1976d2' }]} />
                 </TouchableOpacity>
@@ -547,18 +690,41 @@ export default function AnnotatePhotoScreen() {
           
           {/* Zeichnen Toggle */}
           <TouchableOpacity 
-            style={[styles.drawToggleButton, drawingEnabled && styles.drawToggleButtonActive]} 
+            style={[styles.drawToggleButton, drawingEnabled && drawMode === 'draw' && styles.drawToggleButtonActive]} 
             onPress={() => {
-              setDrawingEnabled(!drawingEnabled);
-              if (!drawingEnabled) {
+              if (drawingEnabled && drawMode === 'draw') {
+                setDrawingEnabled(false);
+              } else {
+                setDrawingEnabled(true);
+                setDrawMode('draw');
                 setEditMode(false);
                 setSelectedPathIndex(null);
               }
             }}
           >
-            <Ionicons name={drawingEnabled ? "brush" : "brush-outline"} size={18} color={drawingEnabled ? '#fff' : '#4CAF50'} />
-            <Text style={[styles.drawToggleText, drawingEnabled && styles.drawToggleTextActive]}>
+            <Ionicons name={drawingEnabled && drawMode === 'draw' ? "brush" : "brush-outline"} size={18} color={drawingEnabled && drawMode === 'draw' ? '#fff' : '#4CAF50'} />
+            <Text style={[styles.drawToggleText, drawingEnabled && drawMode === 'draw' && styles.drawToggleTextActive]}>
               Zeichnen
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Text Toggle */}
+          <TouchableOpacity 
+            style={[styles.textToggleButton, drawingEnabled && drawMode === 'text' && styles.textToggleButtonActive]} 
+            onPress={() => {
+              if (drawingEnabled && drawMode === 'text') {
+                setDrawingEnabled(false);
+              } else {
+                setDrawingEnabled(true);
+                setDrawMode('text');
+                setEditMode(false);
+                setSelectedPathIndex(null);
+              }
+            }}
+          >
+            <Ionicons name={drawingEnabled && drawMode === 'text' ? "text" : "text-outline"} size={18} color={drawingEnabled && drawMode === 'text' ? '#fff' : '#9C27B0'} />
+            <Text style={[styles.textToggleText, drawingEnabled && drawMode === 'text' && styles.textToggleTextActive]}>
+              Text
             </Text>
           </TouchableOpacity>
         </View>
@@ -566,13 +732,17 @@ export default function AnnotatePhotoScreen() {
 
       {/* Zweite Toolbar-Zeile: Aktionen */}
       <View style={styles.actionsToolbar}>
-        <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || paths.length === 0}>
-          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && paths.length > 0 ? '#1976d2' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Rückgängig</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={undo} disabled={!drawingEnabled || drawMode !== 'draw' || paths.length === 0}>
+          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'draw' && paths.length > 0 ? '#1976d2' : '#ccc'} />
+          <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'draw' || paths.length === 0) && { color: '#ccc' }]}>Zeichnung</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || paths.length === 0}>
-          <Ionicons name="trash-outline" size={20} color={drawingEnabled && paths.length > 0 ? '#f44336' : '#ccc'} />
-          <Text style={[styles.actionText, (!drawingEnabled || paths.length === 0) && { color: '#ccc' }]}>Löschen</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={deleteLastText} disabled={!drawingEnabled || drawMode !== 'text' || textElements.length === 0}>
+          <Ionicons name="arrow-undo" size={20} color={drawingEnabled && drawMode === 'text' && textElements.length > 0 ? '#9C27B0' : '#ccc'} />
+          <Text style={[styles.actionText, (!drawingEnabled || drawMode !== 'text' || textElements.length === 0) && { color: '#ccc' }]}>Text</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={clear} disabled={!drawingEnabled || (paths.length === 0 && textElements.length === 0)}>
+          <Ionicons name="trash-outline" size={20} color={drawingEnabled && (paths.length > 0 || textElements.length > 0) ? '#f44336' : '#ccc'} />
+          <Text style={[styles.actionText, (!drawingEnabled || (paths.length === 0 && textElements.length === 0)) && { color: '#ccc' }]}>Alle</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.actionButton, styles.deletePhotoButton]} 
@@ -602,7 +772,7 @@ export default function AnnotatePhotoScreen() {
           }}
         >
           <Ionicons name="trash" size={20} color="#fff" />
-          <Text style={[styles.actionText, { color: '#fff' }]}>Foto löschen</Text>
+          <Text style={[styles.actionText, { color: '#fff' }]}>Foto</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={save}>
           <Ionicons name="checkmark-circle" size={20} color="#fff" />
@@ -645,15 +815,19 @@ export default function AnnotatePhotoScreen() {
           <View
             style={styles.svgContainer}
             onStartShouldSetResponder={() => drawingEnabled}
-            onMoveShouldSetResponder={() => drawingEnabled}
+            onMoveShouldSetResponder={() => drawingEnabled && drawMode === 'draw'}
             onResponderGrant={(event) => {
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
               
-              if (drawingEnabled) {
+              if (drawingEnabled && drawMode === 'draw') {
                 lastDrawPointRef.current = { x: locationX, y: locationY };
                 setCurrentPath(`M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`);
+              } else if (drawingEnabled && drawMode === 'text') {
+                // Bei Text-Modus: Position merken und Modal öffnen
+                setPendingTextPosition({ x: locationX, y: locationY });
+                setShowTextModal(true);
               }
             }}
             onResponderMove={(event) => {
@@ -661,7 +835,7 @@ export default function AnnotatePhotoScreen() {
               const locationX = touch.locationX;
               const locationY = touch.locationY;
               
-              if (drawingEnabled && currentPath) {
+              if (drawingEnabled && drawMode === 'draw' && currentPath) {
                 // Nur Punkte hinzufügen wenn Abstand groß genug (glattere Linien)
                 const lastPoint = lastDrawPointRef.current;
                 const distance = Math.sqrt(
@@ -676,7 +850,7 @@ export default function AnnotatePhotoScreen() {
               }
             }}
             onResponderRelease={() => {
-              if (drawingEnabled && currentPath && currentPath.length > 0) {
+              if (drawingEnabled && drawMode === 'draw' && currentPath && currentPath.length > 0) {
                 const bounds = calculateBounds(currentPath);
                 setPaths([...paths, { path: currentPath, color: drawColor, strokeWidth, bounds }]);
                 setCurrentPath('');
@@ -685,9 +859,10 @@ export default function AnnotatePhotoScreen() {
             }}
           >
             <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
+              {/* Draw paths */}
               {paths.map((p, index) => {
                 return (
-                  <G key={index}>
+                  <G key={`path-${index}`}>
                     <Path
                       d={p.path}
                       stroke={p.color}
@@ -709,10 +884,125 @@ export default function AnnotatePhotoScreen() {
                   strokeLinejoin="round"
                 />
               )}
+              {/* Text elements */}
+              {textElements.map((textEl) => (
+                <SvgText
+                  key={textEl.id}
+                  x={textEl.x}
+                  y={textEl.y}
+                  fill={textEl.color}
+                  fontSize={textEl.fontSize}
+                  fontWeight={textEl.fontWeight}
+                  fontFamily={textEl.fontFamily}
+                >
+                  {textEl.text}
+                </SvgText>
+              ))}
             </Svg>
           </View>
         </View>
       </ScrollView>
+
+      {/* Text Input Modal */}
+      <Modal visible={showTextModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Text eingeben</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={textInput}
+              onChangeText={setTextInput}
+              placeholder="Text hier eingeben..."
+              multiline
+              autoFocus
+            />
+            
+            {/* Font Size Slider */}
+            <View style={styles.sliderContainer}>
+              <Text style={styles.modalLabel}>Schriftgröße: {lastTextFontSize}px</Text>
+              <View style={styles.sliderRow}>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => updateLastTextFontSize(Math.max(10, lastTextFontSize - 2))}
+                >
+                  <Text style={styles.sliderButtonText}>-</Text>
+                </TouchableOpacity>
+                <View style={styles.sliderTrack}>
+                  <View style={[styles.sliderFill, { width: `${((lastTextFontSize - 10) / 50) * 100}%` }]} />
+                </View>
+                <TouchableOpacity 
+                  style={styles.sliderButton} 
+                  onPress={() => updateLastTextFontSize(Math.min(60, lastTextFontSize + 2))}
+                >
+                  <Text style={styles.sliderButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Font Family Selection */}
+            <View style={styles.fontFamilyContainer}>
+              <Text style={styles.modalLabel}>Schriftart:</Text>
+              <View style={styles.fontFamilyButtons}>
+                {FONT_FAMILIES.map(font => (
+                  <TouchableOpacity
+                    key={font.id}
+                    style={[
+                      styles.fontFamilyButton,
+                      lastTextFontFamily === font.id && styles.fontFamilyButtonActive
+                    ]}
+                    onPress={() => updateLastTextFontFamily(font.id)}
+                  >
+                    <Text style={[
+                      styles.fontFamilyButtonText,
+                      { fontFamily: font.style },
+                      lastTextFontFamily === font.id && styles.fontFamilyButtonTextActive
+                    ]}>
+                      {font.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            {/* Color Picker */}
+            <View style={styles.colorPickerContainer}>
+              <Text style={styles.modalLabel}>Farbe:</Text>
+              <View style={styles.colorGrid}>
+                {colors.map(c => (
+                  <TouchableOpacity
+                    key={c.color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: c.color },
+                      lastTextColor === c.color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => updateLastTextColor(c.color)}
+                  />
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowTextModal(false);
+                  setTextInput('');
+                  setPendingTextPosition(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={addTextElement}
+              >
+                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -1028,5 +1318,174 @@ const styles = StyleSheet.create({
   },
   canvas: {
     flex: 1,
+  },
+  // Text Toggle Button
+  textToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#9C27B0',
+    gap: 3,
+  },
+  textToggleButtonActive: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#7B1FA2',
+  },
+  textToggleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9C27B0',
+  },
+  textToggleTextActive: {
+    color: '#fff',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '90%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  sliderContainer: {
+    marginBottom: 16,
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sliderButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sliderButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  sliderTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    height: '100%',
+    backgroundColor: '#9C27B0',
+    borderRadius: 4,
+  },
+  fontFamilyContainer: {
+    marginBottom: 16,
+  },
+  fontFamilyButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  fontFamilyButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  fontFamilyButtonActive: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#7B1FA2',
+  },
+  fontFamilyButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  fontFamilyButtonTextActive: {
+    color: '#fff',
+  },
+  colorPickerContainer: {
+    marginBottom: 16,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  colorOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  colorOptionSelected: {
+    borderWidth: 3,
+    borderColor: '#9C27B0',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  confirmButton: {
+    backgroundColor: '#9C27B0',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

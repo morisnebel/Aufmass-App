@@ -857,8 +857,8 @@ export default function DrawSketchScreen() {
             </View>
             <View style={styles.modalNumpadRow}>
               {['z','ä','ö','ü','ß','-'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
+                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k)}>
+                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k}</Text>
                 </TouchableOpacity>
               ))}
             </View>

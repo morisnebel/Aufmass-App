@@ -31,11 +31,11 @@ const ANNOTATE_SETTINGS_KEY = 'aufmassprofi_annotate_settings';
 
 // Verfügbare Schriftarten
 type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
-const FONT_FAMILIES: { id: FontFamily; label: string; style: string }[] = [
-  { id: 'System', label: 'Standard', style: 'System' },
-  { id: 'Handschrift', label: 'Handschrift', style: 'cursive' },
-  { id: 'Monospace', label: 'Monospace', style: 'monospace' },
-  { id: 'Serif', label: 'Serif', style: 'serif' },
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = [
+  { id: 'System', label: 'Standard', style: 'System', svgFont: 'sans-serif' },
+  { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'cursive, Comic Sans MS, sans-serif' },
+  { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace, Courier New, Courier' },
+  { id: 'Serif', label: 'Serif', style: 'serif', svgFont: 'serif, Times New Roman, Times' },
 ];
 
 interface DrawPath {
@@ -492,7 +492,7 @@ export default function AnnotatePhotoScreen() {
       y: pendingTextPosition.y,
       color: lastTextColor,
       fontSize: lastTextFontSize,
-      fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.style || 'System',
+      fontFamily: FONT_FAMILIES.find(f => f.id === lastTextFontFamily)?.svgFont || 'sans-serif',
       fontWeight: 'bold',
     };
 

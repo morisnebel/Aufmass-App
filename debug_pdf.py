@@ -8,7 +8,7 @@ import json
 import base64
 from datetime import datetime
 
-BACKEND_URL = "https://mobile-sketch-tune.preview.emergentagent.com/api"
+BACKEND_URL = "https://sketch-editor-mobile-1.preview.emergentagent.com/api"
 
 def debug_pdf_export():
     """Debug PDF export with detailed logging"""

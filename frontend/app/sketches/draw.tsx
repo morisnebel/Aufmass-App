@@ -3297,17 +3297,17 @@ export default function DrawSketchScreen() {
       if (el.type === 'polyline') {
         const points = el.data.points;
         if (points && points.length >= 2) {
-          // Prüfe jedes Segment
+          // Prüfe jedes Segment - Toleranz 25 für gute Auswählbarkeit auf iPhone (nicht zu groß)
           for (let j = 0; j < points.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
-            if (dist < 20) {
+            if (dist < 25) {
               return { element: el, segmentIndex: j };
             }
           }
           // Prüfe auch die schließende Linie wenn geschlossen
           if (el.data.closed && points.length >= 3) {
             const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
-            if (dist < 20) {
+            if (dist < 25) {
               return { element: el, segmentIndex: points.length - 1 }; // Index für Schlusslinie
             }
           }

@@ -165,7 +165,17 @@ interface DrawElement {
   fontSize?: number;
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
 }
+
+// Verfügbare Schriftarten
+type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
+const FONT_FAMILIES: { id: FontFamily; label: string; style: string }[] = [
+  { id: 'System', label: 'Standard', style: 'System' },
+  { id: 'Handschrift', label: 'Handschrift', style: 'cursive' },
+  { id: 'Monospace', label: 'Monospace', style: 'monospace' },
+  { id: 'Serif', label: 'Serif', style: 'serif' },
+];
 
 type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop';
 
@@ -936,10 +946,16 @@ export default function DrawSketchScreen() {
   const [editStrokeWidth, setEditStrokeWidth] = useState(3);
   const [editFontWeight, setEditFontWeight] = useState<'normal' | 'bold'>('bold');
   const [editFontStyle, setEditFontStyle] = useState<'normal' | 'italic'>('normal');
+  const [editFontFamily, setEditFontFamily] = useState<FontFamily>('System');
   const [editArrowFontSize, setEditArrowFontSize] = useState(12);
   const [editArrowStrokeWidth, setEditArrowStrokeWidth] = useState(3);
   const [editPointerFontSize, setEditPointerFontSize] = useState(12);
   const [editPointerStrokeWidth, setEditPointerStrokeWidth] = useState(3);
+  
+  // Zuletzt verwendete Text-Einstellungen (werden gespeichert)
+  const [lastTextFontSize, setLastTextFontSize] = useState(20);
+  const [lastTextColor, setLastTextColor] = useState('#000000');
+  const [lastTextFontFamily, setLastTextFontFamily] = useState<FontFamily>('System');
 
   // Tool-Größen aus AsyncStorage laden beim Start
   useEffect(() => {
@@ -954,6 +970,10 @@ export default function DrawSketchScreen() {
           if (sizes.editArrowStrokeWidth) setEditArrowStrokeWidth(sizes.editArrowStrokeWidth);
           if (sizes.editArrowFontSize) setEditArrowFontSize(sizes.editArrowFontSize);
           if (sizes.strokeWidth) setStrokeWidth(sizes.strokeWidth);
+          // Text-Einstellungen laden
+          if (sizes.lastTextFontSize) setLastTextFontSize(sizes.lastTextFontSize);
+          if (sizes.lastTextColor) setLastTextColor(sizes.lastTextColor);
+          if (sizes.lastTextFontFamily) setLastTextFontFamily(sizes.lastTextFontFamily);
         }
       } catch (error) {
         console.log('Error loading tool sizes:', error);

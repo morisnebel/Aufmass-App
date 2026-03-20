@@ -914,6 +914,7 @@ export default function DrawSketchScreen() {
       fontSize: 16,
       fontWeight: 'bold',
       fontStyle: 'normal',
+      fontFamily: 'sans-serif',
     };
     
     const newElements = [...elements, newElement];
@@ -2588,6 +2589,10 @@ export default function DrawSketchScreen() {
           setEditFontSize(clickedElement.fontSize || 20);
           setEditFontWeight(clickedElement.fontWeight || 'bold');
           setEditFontStyle(clickedElement.fontStyle || 'normal');
+          // FontFamily aus dem Element laden (svgFont zurück zu FontFamily ID konvertieren)
+          const currentFontFamily = clickedElement.fontFamily || 'sans-serif';
+          const fontFamilyId = FONT_FAMILIES.find(f => f.svgFont === currentFontFamily)?.id || 'System';
+          setEditFontFamily(fontFamilyId);
           setDrawColor(clickedElement.color);
           setShowEditTextModal(true);
         } else if (clickedElement.type === 'arrow') {
@@ -6043,6 +6048,31 @@ export default function DrawSketchScreen() {
                 </View>
               </View>
               
+              {/* Font Family Selection */}
+              <View style={styles.fontFamilyContainer}>
+                <Text style={styles.modalLabel}>Schriftart:</Text>
+                <View style={styles.fontFamilyButtons}>
+                  {FONT_FAMILIES.map(font => (
+                    <TouchableOpacity
+                      key={font.id}
+                      style={[
+                        styles.fontFamilyButton,
+                        editFontFamily === font.id && styles.fontFamilyButtonActive
+                      ]}
+                      onPress={() => setEditFontFamily(font.id)}
+                    >
+                      <Text style={[
+                        styles.fontFamilyButtonText,
+                        { fontFamily: font.style },
+                        editFontFamily === font.id && styles.fontFamilyButtonTextActive
+                      ]}>
+                        {font.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
               <View style={styles.colorPickerContainer}>
                 <Text style={styles.modalLabel}>Farbe:</Text>
                 <View style={styles.colorGrid}>
@@ -6083,6 +6113,7 @@ export default function DrawSketchScreen() {
                             fontSize: editFontSize,
                             fontWeight: editFontWeight,
                             fontStyle: editFontStyle,
+                            fontFamily: FONT_FAMILIES.find(f => f.id === editFontFamily)?.svgFont || 'sans-serif',
                           };
                         }
                         return el;

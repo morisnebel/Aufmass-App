@@ -3164,16 +3164,21 @@ export default function DrawSketchScreen() {
         }
       } else if (el.type === 'polyline') {
         // Prüfe ob Punkt nahe einer Polyline-Linie ist
+        // Dynamische Toleranz basierend auf Zoom-Level für bessere Auswahl kleiner Polygone
+        // Bei scale > 1 (reingezoomt): kleinere Toleranz nötig (Objekte erscheinen größer)
+        // Bei scale < 1 (rausgezoomt): größere Toleranz nötig (Objekte erscheinen kleiner)
+        const baseTolerance = 30;
+        const dynamicTolerance = Math.max(15, baseTolerance / Math.max(scale, 0.5));
         const points = el.data.points;
         if (points && points.length >= 2) {
           for (let j = 0; j < points.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
-            if (dist < 25) return el; // Konsistent mit findPolylineSegmentAtPoint
+            if (dist < dynamicTolerance) return el;
           }
           // Prüfe auch die schließende Linie wenn geschlossen
           if (el.data.closed && points.length >= 3) {
             const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
-            if (dist < 25) return el; // Konsistent mit findPolylineSegmentAtPoint
+            if (dist < dynamicTolerance) return el;
           }
         }
       } else if (el.type === 'path') {
@@ -3292,22 +3297,28 @@ export default function DrawSketchScreen() {
 
   // Funktion um das spezifische Polyline-Segment zu finden
   const findPolylineSegmentAtPoint = (x: number, y: number): { element: DrawElement; segmentIndex: number } | null => {
+    // Dynamische Toleranz basierend auf Zoom-Level für bessere Auswahl kleiner Polygone
+    // Bei scale > 1 (reingezoomt): kleinere Toleranz nötig (Objekte erscheinen größer)
+    // Bei scale < 1 (rausgezoomt): größere Toleranz nötig (Objekte erscheinen kleiner)
+    const baseTolerance = 30;
+    const dynamicTolerance = Math.max(15, baseTolerance / Math.max(scale, 0.5));
+    
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
       if (el.type === 'polyline') {
         const points = el.data.points;
         if (points && points.length >= 2) {
-          // Prüfe jedes Segment - Toleranz 25 für gute Auswählbarkeit auf iPhone (nicht zu groß)
+          // Prüfe jedes Segment mit dynamischer Toleranz
           for (let j = 0; j < points.length - 1; j++) {
             const dist = distanceToLineSegment(x, y, points[j].x, points[j].y, points[j+1].x, points[j+1].y);
-            if (dist < 25) {
+            if (dist < dynamicTolerance) {
               return { element: el, segmentIndex: j };
             }
           }
           // Prüfe auch die schließende Linie wenn geschlossen
           if (el.data.closed && points.length >= 3) {
             const dist = distanceToLineSegment(x, y, points[points.length-1].x, points[points.length-1].y, points[0].x, points[0].y);
-            if (dist < 25) {
+            if (dist < dynamicTolerance) {
               return { element: el, segmentIndex: points.length - 1 }; // Index für Schlusslinie
             }
           }

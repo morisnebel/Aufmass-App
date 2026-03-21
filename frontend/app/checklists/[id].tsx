@@ -20,6 +20,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistService, ProjectService, ChecklistTemplateService } from '../../services/LocalStorage';
+import { getFeatures } from '../../services/FeatureFlags';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {
@@ -718,6 +719,34 @@ export default function EditChecklistScreen() {
     return collapsedPaths.has(path.join('-'));
   };
 
+  // Zähle alle direkten Unterpunkte eines Items (für Basic Version Limit)
+  const countSubItems = (item: RecursiveItem): number => {
+    return item.subItems?.length || 0;
+  };
+
+  // Prüfen ob noch Unterpunkte hinzugefügt werden dürfen
+  const canAddSubItem = (path: number[]): boolean => {
+    if (!checklist) return false;
+    const features = getFeatures();
+    
+    // Pro-Version: keine Begrenzung
+    if (features.maxChecklistItems >= 999) return true;
+    
+    // Basic Version: Zähle die direkten Unterpunkte des aktuellen Items
+    const getItemAtPath = (items: RecursiveItem[], pathArr: number[]): RecursiveItem | null => {
+      if (pathArr.length === 0) return null;
+      if (pathArr.length === 1) return items[pathArr[0]];
+      const [first, ...rest] = pathArr;
+      return getItemAtPath(items[first].subItems || [], rest);
+    };
+    
+    const item = getItemAtPath(checklist.items, path);
+    if (!item) return false;
+    
+    const currentCount = countSubItems(item);
+    return currentCount < features.maxChecklistItems;
+  };
+
   // Unterpunkt löschen (legacy - jetzt durch deleteItem ersetzt)
   const removeSubItem = (parentPath: number[], subIndex: number) => {
     if (!checklist) return;
@@ -1208,8 +1237,8 @@ export default function EditChecklistScreen() {
               </View>
             )}
 
-            {/* Button zum Hinzufügen von Unterpunkten */}
-            {!openInputs.has(path.join('-')) && (
+            {/* Button zum Hinzufügen von Unterpunkten - nur wenn Limit nicht erreicht */}
+            {!openInputs.has(path.join('-')) && canAddSubItem(path) && (
               <TouchableOpacity
                 style={styles.addSubItemButton}
                 onPress={() => addSubItem(path)}
@@ -1217,6 +1246,14 @@ export default function EditChecklistScreen() {
                 <Ionicons name="add" size={18} color="#1976d2" />
                 <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
               </TouchableOpacity>
+            )}
+            
+            {/* Hinweis wenn Limit erreicht (Basic Version) */}
+            {!openInputs.has(path.join('-')) && !canAddSubItem(path) && (
+              <View style={styles.limitReachedContainer}>
+                <Ionicons name="lock-closed" size={14} color="#999" />
+                <Text style={styles.limitReachedText}>Max. {getFeatures().maxChecklistItems} Unterpunkte (Basic)</Text>
+              </View>
             )}
 
             {/* Messungen anzeigen und hinzufügen */}
@@ -1910,6 +1947,24 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     fontSize: 14,
     fontWeight: '500',
+  },
+  limitReachedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  limitReachedText: {
+    color: '#999',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   noteContainer: {
     backgroundColor: '#fff',

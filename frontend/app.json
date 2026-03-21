@@ -50,6 +50,7 @@
       "expo-font",
       "expo-web-browser",
       "./plugins/withICloudConfig",
+      "./plugins/withExcludeCloudKitAndroid",
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

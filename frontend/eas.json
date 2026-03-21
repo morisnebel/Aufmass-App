@@ -11,13 +11,21 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_NO_CLOUDKIT": "true"
+        }
       },
       "ios": {
         "simulator": false
       }
     },
     "production": {
+      "android": {
+        "env": {
+          "EXPO_NO_CLOUDKIT": "true"
+        }
+      },
       "ios": {
         "simulator": false
       }

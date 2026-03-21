@@ -730,9 +730,17 @@ export default function EditChecklistScreen() {
     const features = getFeatures();
     
     // Pro-Version: keine Begrenzung
-    if (features.maxChecklistItems >= 999) return true;
+    if (features.allowNestedSubItems && features.maxChecklistItems >= 999) return true;
     
-    // Basic Version: Zähle die direkten Unterpunkte des aktuellen Items
+    // Basic Version: Keine verschachtelten Unterpunkte erlauben
+    // path.length == 1 bedeutet: wir sind auf einem Hauptitem (Tiefe 1)
+    // path.length > 1 bedeutet: wir sind bereits in einem Unterpunkt
+    if (!features.allowNestedSubItems && path.length > 1) {
+      // Basic Version erlaubt keine Unterpunkte von Unterpunkten
+      return false;
+    }
+    
+    // Zähle die direkten Unterpunkte des aktuellen Items
     const getItemAtPath = (items: RecursiveItem[], pathArr: number[]): RecursiveItem | null => {
       if (pathArr.length === 0) return null;
       if (pathArr.length === 1) return items[pathArr[0]];
@@ -1252,7 +1260,11 @@ export default function EditChecklistScreen() {
             {!openInputs.has(path.join('-')) && !canAddSubItem(path) && (
               <View style={styles.limitReachedContainer}>
                 <Ionicons name="lock-closed" size={14} color="#999" />
-                <Text style={styles.limitReachedText}>Max. {getFeatures().maxChecklistItems} Unterpunkte (Basic)</Text>
+                <Text style={styles.limitReachedText}>
+                  {path.length > 1 && !getFeatures().allowNestedSubItems 
+                    ? 'Verschachtelte Unterpunkte nur in Pro' 
+                    : `Max. ${getFeatures().maxChecklistItems} Unterpunkte (Basic)`}
+                </Text>
               </View>
             )}
 

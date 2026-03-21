@@ -4887,62 +4887,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Bearbeiten</Text>
         </View>
 
-        {/* 7. Stift */}
-        <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity
-            style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
-            onPress={() => selectDrawMode('pen')}
-          >
-            <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
-          </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Stift</Text>
-        </View>
-
-        {/* 8. Formen (Linie, Kreis, Rechteck) + Element löschen */}
-        <View style={styles.toolGroupWithLabel}>
-          <View style={styles.toolGroupRow}>
-            <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('line')}
-            >
-              <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('circle')}
-            >
-              <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('rect')}
-            >
-              <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
-            </TouchableOpacity>
-            {/* Element löschen Button */}
-            <TouchableOpacity
-              style={[styles.toolButtonInnerWide, !selectedElementId && styles.toolButtonDisabled]}
-              onPress={() => {
-                if (selectedElementId) {
-                  setShowDeleteConfirm(true);
-                }
-              }}
-              disabled={!selectedElementId}
-            >
-              <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Linie</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Kreis</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Rechteck</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1.4, textAlign: 'center' }]}>Element{'\n'}löschen</Text>
-          </View>
-        </View>
-
-        <View style={styles.separator} />
-
-        {/* ========== MAßLINIEN ========== */}
+        {/* ========== MAßLINIEN (nach Zoom & Bearbeiten) ========== */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             {/* Maßlinie Button */}
@@ -5016,6 +4961,59 @@ export default function DrawSketchScreen() {
         </View>
 
         <View style={styles.separator} />
+
+        {/* 7. Stift */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
+            onPress={() => selectDrawMode('pen')}
+          >
+            <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
+          </TouchableOpacity>
+          <Text style={styles.toolButtonLabel}>Stift</Text>
+        </View>
+
+        {/* 8. Formen (Linie, Kreis, Rechteck) + Element löschen */}
+        <View style={styles.toolGroupWithLabel}>
+          <View style={styles.toolGroupRow}>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('line')}
+            >
+              <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('circle')}
+            >
+              <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
+              onPress={() => selectDrawMode('rect')}
+            >
+              <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            {/* Element löschen Button */}
+            <TouchableOpacity
+              style={[styles.toolButtonInnerWide, !selectedElementId && styles.toolButtonDisabled]}
+              onPress={() => {
+                if (selectedElementId) {
+                  setShowDeleteConfirm(true);
+                }
+              }}
+              disabled={!selectedElementId}
+            >
+              <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.toolGroupLabelRow}>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Linie</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Kreis</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Rechteck</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1.4, textAlign: 'center' }]}>Element{'\n'}löschen</Text>
+          </View>
+        </View>
 
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}
         <View style={styles.toolGroupWithLabel}>

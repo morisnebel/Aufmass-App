@@ -1217,17 +1217,25 @@ export default function EditChecklistScreen() {
                 <TouchableOpacity 
                   onPress={() => toggleNoteField(path)}
                   style={[
-                    styles.actionButton, 
-                    isPhone && styles.actionButtonPhone,
-                    isNoteOpen(path) && styles.actionButtonActive,
-                    item.note && item.note.trim() && styles.actionButtonHasContent
+                    styles.labeledActionButton, 
+                    isPhone && styles.labeledActionButtonPhone,
+                    isNoteOpen(path) && styles.labeledActionButtonActive,
+                    item.note && item.note.trim() && styles.labeledActionButtonHasContent
                   ]}
                 >
                   <Ionicons 
                     name={item.note && item.note.trim() ? "document-text" : "document-text-outline"} 
-                    size={isPhone ? 14 : 18} 
+                    size={isPhone ? 14 : 16} 
                     color={isNoteOpen(path) ? '#fff' : (item.note && item.note.trim() ? '#4caf50' : '#9c27b0')} 
                   />
+                  <Text style={[
+                    styles.labeledActionText,
+                    isPhone && styles.labeledActionTextPhone,
+                    isNoteOpen(path) && styles.labeledActionTextActive,
+                    item.note && item.note.trim() && styles.labeledActionTextHasContent
+                  ]}>
+                    Notiz
+                  </Text>
                 </TouchableOpacity>
               )}
               
@@ -1236,17 +1244,25 @@ export default function EditChecklistScreen() {
                 <TouchableOpacity 
                   onPress={() => toggleMeasurementField(path)}
                   style={[
-                    styles.actionButton, 
-                    isPhone && styles.actionButtonPhone,
-                    isMeasurementOpen(path) && styles.actionButtonActive,
-                    item.measurements && item.measurements.length > 0 && styles.actionButtonHasContent
+                    styles.labeledActionButton, 
+                    isPhone && styles.labeledActionButtonPhone,
+                    isMeasurementOpen(path) && styles.labeledActionButtonActive,
+                    item.measurements && item.measurements.length > 0 && styles.labeledActionButtonHasContent
                   ]}
                 >
                   <Ionicons 
                     name={item.measurements && item.measurements.length > 0 ? "calculator" : "calculator-outline"} 
-                    size={isPhone ? 14 : 18} 
+                    size={isPhone ? 14 : 16} 
                     color={isMeasurementOpen(path) ? '#fff' : (item.measurements && item.measurements.length > 0 ? '#4caf50' : '#2196f3')} 
                   />
+                  <Text style={[
+                    styles.labeledActionText,
+                    isPhone && styles.labeledActionTextPhone,
+                    isMeasurementOpen(path) && styles.labeledActionTextActive,
+                    item.measurements && item.measurements.length > 0 && styles.labeledActionTextHasContent
+                  ]}>
+                    Messung
+                  </Text>
                 </TouchableOpacity>
               )}
               
@@ -1931,6 +1947,42 @@ const styles = StyleSheet.create({
   },
   actionButtonHasContent: {
     // Grüner Rand wenn Inhalt vorhanden
+  },
+  // Labeled Action Buttons (Notiz, Messung)
+  labeledActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+    gap: 4,
+  },
+  labeledActionButtonPhone: {
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+  },
+  labeledActionButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  labeledActionButtonHasContent: {
+    backgroundColor: '#e8f5e9',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  labeledActionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666',
+  },
+  labeledActionTextPhone: {
+    fontSize: 10,
+  },
+  labeledActionTextActive: {
+    color: '#fff',
+  },
+  labeledActionTextHasContent: {
+    color: '#4caf50',
   },
   closeSectionButton: {
     marginLeft: 'auto',

@@ -732,6 +732,12 @@ export default function EditChecklistScreen() {
         newSet.delete(pathKey);
       } else {
         newSet.add(pathKey);
+        // Wenn wir das Feld öffnen, stellen wir sicher dass das Item nicht collapsed ist
+        setCollapsedPaths(prevCollapsed => {
+          const newCollapsed = new Set(prevCollapsed);
+          newCollapsed.delete(pathKey);
+          return newCollapsed;
+        });
       }
       return newSet;
     });
@@ -751,6 +757,12 @@ export default function EditChecklistScreen() {
         newSet.delete(pathKey);
       } else {
         newSet.add(pathKey);
+        // Wenn wir das Feld öffnen, stellen wir sicher dass das Item nicht collapsed ist
+        setCollapsedPaths(prevCollapsed => {
+          const newCollapsed = new Set(prevCollapsed);
+          newCollapsed.delete(pathKey);
+          return newCollapsed;
+        });
       }
       return newSet;
     });
@@ -1514,6 +1526,82 @@ export default function EditChecklistScreen() {
                   editable={true}
                   showSoftInputOnFocus={true}
                 />
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Notiz-Feld - außerhalb des Expanded Content, damit es auch bei collapsed Items funktioniert */}
+        {item.checked && isNoteOpen(path) && isCollapsed(path) && (
+          <View style={[styles.noteContainer, { marginLeft: 8, marginTop: 4 }]}>
+            <View style={styles.noteHeader}>
+              <Ionicons name="document-text-outline" size={18} color="#9c27b0" />
+              <Text style={styles.noteLabel}>Notiz</Text>
+              <TouchableOpacity
+                style={styles.closeSectionButton}
+                onPress={() => toggleNoteField(path)}
+              >
+                <Ionicons name="close" size={20} color="#999" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Notiz hinzufügen..."
+              value={item.note || ''}
+              onChangeText={(text) => updateNote(path, text)}
+              multiline
+              numberOfLines={3}
+              editable={true}
+              showSoftInputOnFocus={true}
+            />
+          </View>
+        )}
+
+        {/* Messungs-Feld - außerhalb des Expanded Content, damit es auch bei collapsed Items funktioniert */}
+        {item.checked && isMeasurementOpen(path) && isCollapsed(path) && (
+          <View style={[styles.measurementSection, { marginLeft: 8, marginTop: 4 }]}>
+            <View style={styles.measurementHeader}>
+              <Ionicons name="calculator-outline" size={18} color="#2196f3" />
+              <Text style={styles.measurementLabel}>Messungen</Text>
+              <TouchableOpacity
+                style={styles.addMeasurementButton}
+                onPress={() => openMeasurementModal(path)}
+              >
+                <Ionicons name="add-circle" size={24} color="#2196f3" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeSectionButton}
+                onPress={() => toggleMeasurementField(path)}
+              >
+                <Ionicons name="close" size={20} color="#999" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Vorhandene Messungen */}
+            {item.measurements && item.measurements.length > 0 && (
+              <View style={styles.measurementsList}>
+                {item.measurements.map((m, mIndex) => {
+                  const expr = m.expression || (m as any).value?.toString() || '0';
+                  const result = m.result ?? (m as any).value ?? 0;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={mIndex} 
+                      style={styles.measurementChip}
+                      onPress={() => openEditMeasurementModal(path, mIndex, expr, m.unit)}
+                    >
+                      <Text style={styles.measurementChipText}>
+                        {formatExpression(expr)} = {result.toString().replace('.', ',')} {m.unit}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => removeMeasurement(path, mIndex)}
+                        style={styles.removeMeasurementButton}
+                      >
+                        <Ionicons name="close-circle" size={18} color="#f44336" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>

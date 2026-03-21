@@ -521,6 +521,7 @@ export default function DrawSketchScreen() {
   const [showMagnifier, setShowMagnifier] = useState(false);
   const [magnifierPosition, setMagnifierPosition] = useState<{ x: number; y: number } | null>(null);
   const [magnifierTargetPosition, setMagnifierTargetPosition] = useState<{ x: number; y: number } | null>(null);
+  const [magnifierSnapshot, setMagnifierSnapshot] = useState<string | null>(null);
   
   // Aufmaß-Tool state
   const [showMeasurementTool, setShowMeasurementTool] = useState(false);
@@ -2391,6 +2392,7 @@ export default function DrawSketchScreen() {
       setShowMagnifier(false);
       setMagnifierPosition(null);
       setMagnifierTargetPosition(null);
+      setMagnifierSnapshot(null);
     } else if (drawMode === 'select' && draggingLabelId) {
       // Label-Verschiebung beenden
       setDraggingLabelId(null);
@@ -2805,12 +2807,29 @@ export default function DrawSketchScreen() {
           // Lupe aktivieren für Maßlinien-Endpunkte (start/end handles)
           if ((selectedEl.type === 'line' || selectedEl.type === 'arrow' || selectedEl.type === 'pointer' || selectedEl.type === 'memo') &&
               (handle.handle === 'start' || handle.handle === 'end')) {
-            setShowMagnifier(true);
             // Position des Zielpunktes setzen
             const targetX = handle.handle === 'start' ? selectedEl.data.x1 : selectedEl.data.x2;
             const targetY = handle.handle === 'start' ? selectedEl.data.y1 : selectedEl.data.y2;
             setMagnifierTargetPosition({ x: targetX, y: targetY });
             setMagnifierPosition({ x: locationX, y: locationY });
+            
+            // Canvas-Snapshot für Lupe erstellen
+            if (canvasRef.current) {
+              captureRef(canvasRef.current, {
+                format: 'png',
+                quality: 0.8,
+                result: 'data-uri',
+              }).then((uri: string) => {
+                setMagnifierSnapshot(uri);
+                setShowMagnifier(true);
+              }).catch((err: Error) => {
+                console.log('Snapshot error:', err);
+                // Fallback: Lupe ohne Snapshot zeigen
+                setShowMagnifier(true);
+              });
+            } else {
+              setShowMagnifier(true);
+            }
           }
           
           return;
@@ -6776,40 +6795,63 @@ export default function DrawSketchScreen() {
             styles.magnifierOverlay,
             {
               left: magnifierPosition.x - 60,
-              top: magnifierPosition.y - 140, // Über dem Finger positionieren
+              top: magnifierPosition.y - 160, // Über dem Finger positionieren
             },
           ]}
           pointerEvents="none"
         >
           <View style={styles.magnifierContent}>
-            {/* Fadenkreuz im Lupen-Zentrum */}
-            <Svg width={100} height={100} style={styles.magnifierSvg}>
-              {/* Hintergrund */}
-              <Circle cx={50} cy={50} r={48} fill="rgba(255,255,255,0.95)" stroke="#1976d2" strokeWidth={2} />
+            {/* Runder Lupen-Container mit Bild */}
+            <View style={styles.magnifierCircle}>
+              {/* Canvas-Snapshot vergrößert - zeigt Bild + SVG-Zeichnungen */}
+              {magnifierSnapshot ? (
+                <View style={styles.magnifierImageContainer}>
+                  <RNImage
+                    source={{ uri: magnifierSnapshot }}
+                    style={{
+                      width: width * 2, // 2x vergrößert
+                      height: (height - 120) * 2,
+                      position: 'absolute',
+                      // Position so berechnen, dass der Zielpunkt zentriert ist
+                      left: -magnifierTargetPosition.x * 2 + 55,
+                      top: -magnifierTargetPosition.y * 2 + 55,
+                    }}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : backgroundImage ? (
+                <View style={styles.magnifierImageContainer}>
+                  <RNImage
+                    source={{ uri: backgroundImage }}
+                    style={{
+                      width: width * 2, // 2x vergrößert
+                      height: (height - 120) * 2,
+                      position: 'absolute',
+                      // Position so berechnen, dass der Zielpunkt zentriert ist
+                      left: -magnifierTargetPosition.x * 2 + 55,
+                      top: -magnifierTargetPosition.y * 2 + 55,
+                    }}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : (
+                <View style={styles.magnifierGridFallback}>
+                  <View style={styles.magnifierGridLine} />
+                  <View style={[styles.magnifierGridLine, styles.magnifierGridLineH]} />
+                </View>
+              )}
               
-              {/* Raster im Hintergrund */}
-              {[20, 35, 50, 65, 80].map((pos) => (
-                <G key={`grid-${pos}`}>
-                  <Line x1={pos} y1={10} x2={pos} y2={90} stroke="rgba(0,0,0,0.1)" strokeWidth={0.5} />
-                  <Line x1={10} y1={pos} x2={90} y2={pos} stroke="rgba(0,0,0,0.1)" strokeWidth={0.5} />
-                </G>
-              ))}
-              
-              {/* Fadenkreuz */}
-              <Line x1={50} y1={15} x2={50} y2={85} stroke="#f44336" strokeWidth={1.5} />
-              <Line x1={15} y1={50} x2={85} y2={50} stroke="#f44336" strokeWidth={1.5} />
-              
-              {/* Zentraler Punkt */}
-              <Circle cx={50} cy={50} r={4} fill="#f44336" />
-              
-              {/* Pfeilspitzen-Indikator (simuliert die Pfeilspitze) */}
-              <Path
-                d="M 50 35 L 45 45 L 55 45 Z"
-                fill="#1976d2"
-                stroke="#1976d2"
-                strokeWidth={1}
-              />
-            </Svg>
+              {/* Fadenkreuz-Overlay */}
+              <Svg width={110} height={110} style={styles.magnifierCrosshair}>
+                {/* Fadenkreuz */}
+                <Line x1={55} y1={10} x2={55} y2={100} stroke="#f44336" strokeWidth={1.5} />
+                <Line x1={10} y1={55} x2={100} y2={55} stroke="#f44336" strokeWidth={1.5} />
+                {/* Zentraler Kreis */}
+                <Circle cx={55} cy={55} r={5} fill="none" stroke="#f44336" strokeWidth={1.5} />
+                {/* Rahmen */}
+                <Circle cx={55} cy={55} r={52} fill="none" stroke="#1976d2" strokeWidth={3} />
+              </Svg>
+            </View>
             
             {/* Koordinaten-Anzeige */}
             <View style={styles.magnifierCoords}>
@@ -8056,11 +8098,42 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
   },
-  magnifierSvg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+  magnifierCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#1976d2',
+    backgroundColor: '#f5f5f5',
+  },
+  magnifierImageContainer: {
+    width: 110,
+    height: 110,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  magnifierGridFallback: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+  },
+  magnifierGridLine: {
+    position: 'absolute',
+    width: 1,
+    height: '100%',
+    backgroundColor: '#ddd',
+  },
+  magnifierGridLineH: {
+    width: '100%',
+    height: 1,
+  },
+  magnifierCrosshair: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   magnifierCoords: {
     flexDirection: 'row',

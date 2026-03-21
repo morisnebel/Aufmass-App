@@ -1,61 +1,254 @@
 <analysis>**original_problem_statement:**
-The user is facing a series of UI/UX issues with the sketch editor on the iPhone version of the application. The core problem is that polyline segments are difficult to select, especially when the polygons are small. This issue has persisted through several attempts to fix it by adjusting static touch tolerance values.
+The user was facing usability issues with the sketch editor on the iPhone version of the application. The core problem was that polyline segments were difficult to select, especially the closing segment of a polygon.
+
+The user initially requested two things:
+1.  Fix the underlying bug that makes the closing line of a polygon harder to select than other segments.
+2.  Introduce a new feature: if a user presses and holds on a line for 500ms (long-press), the line should be selected, using a larger touch tolerance to make it easier.
+
+However, after the agent improved the general selection logic, the user confirmed the selection works perfectly and requested the removal of the long-press feature.
 
 **PRODUCT REQUIREMENTS:**
-1.  Fix the polyline selection usability issues on iPhone by adjusting touch tolerance to work for polygons of all sizes.
-2.  (Future Task) Re-implement  and  modes to allow editing existing polylines in the sketch editor.
+1.  ~~Fix the polyline selection usability issues on iPhone by adjusting touch tolerance or fixing the detection logic for the closing segment of a polygon.~~ (Done)
+2.  ~~Implement a long-press feature (500ms delay).~~ (Implemented and subsequently removed per user request)
+3.  (Upcoming Task) Re-implement  and  modes to allow editing existing polylines in the sketch editor.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is a full-stack project with an Expo (React Native) frontend and a Python (FastAPI) backend. The user reported that previous fixes to touch tolerance for polylines were insufficient, especially for smaller shapes. In response, the agent identified that a static tolerance is not suitable for different zoom levels. The agent has now implemented a **dynamic touch tolerance** in the main sketch editor component (). This new logic adjusts the touch sensitivity based on the current zoom level ( variable), with the goal of making selection easier when zoomed in on small polygons.
+The application is a full-stack project with an Expo (React Native) frontend. The agent addressed a polyline selection bug by modifying the  function in . The logic was changed to find the *closest* line segment to the touch point, rather than the first one found within a tolerance radius. This change successfully fixed the user's issue.
+
+A long-press to select feature was also implemented but, upon testing, the user found the improved base selection logic was sufficient and requested the long-press feature be removed. The agent has begun the process of removing this feature from the code.
 
 **Last working item**:
--   **Last item agent was working:** The agent implemented a dynamic tolerance feature to address the difficulty of selecting small polygons. The agent modified the  and  functions in  to use a dynamic tolerance calculated with the formula . This makes the touch area larger when zoomed in (lower  value). After applying these changes, the agent restarted the Expo server.
--   **Status:** USER VERIFICATION PENDING
+-   **Last item agent was working:** Removing the now-unnecessary long-press to select feature from . The agent has removed the constant that enabled the feature and the code that initiated the long-press timer in . The remaining code related to the feature (the  function, timer clearing logic in /, and the visual feedback JSX) still needs to be removed to complete the cleanup.
+-   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Manual user testing. The agent must use the  tool to request user verification.
--   **User Testing Done:** N
+-   **Which testing method agent to use?** Manual testing by user after cleanup is complete.
+-   **User Testing Done:** N (for the cleanup)
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Polyline usability on iPhone (P0)**
-    *   **Description:** The polyline segments are difficult to select on small screens, particularly for smaller polygons.
-    *   **Attempted fixes:**
-        *   Static tolerance values of , , and  all failed to resolve the issue satisfactorily.
-        *   **Latest fix:** A dynamic tolerance  has been implemented in both  and  to adjust sensitivity based on zoom level.
-    *   **Next debug checklist:**
-        1.  Use the  tool to ask the user (in German) to test the polyline selection again, specifically with small polygons and by using the zoom function.
-        2.  If the user reports further issues, analyze the feedback and consider adjusting the formula (e.g., changing the base value of ).
-    *   **Why fix this issue and what will be achieved with the fix?** This will resolve a critical usability bug, making the core sketching feature functional and intuitive on mobile devices, regardless of the object's size on screen.
-    *   **Status:** USER VERIFICATION PENDING
-    *   **Is recurring issue?** Y
-    *   **Should Test frontend/backend/both after fix?** Frontend (Manual user testing)
-    *   **Blocked on other issue:** None
+There are no pending bugs. The main user-reported issue has been resolved.
 
 **In progress Task List**:
-There are no other tasks in progress.
+-   **Task 1: Complete removal of the Long-Press feature code (P0)**
+    -   **Where to resume:** The file  is partially cleaned. The following remnants of the long-press feature must be removed:
+        1.  The  function itself.
+        2.  The  clearing logic from  and .
+        3.  The state variables , , and .
+        4.  The JSX/View component that rendered the visual feedback (the blue circle).
+    -   **What will be achieved with this?** The code will be cleaned of the unused feature, making it more maintainable and reflecting the user's final decision.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend (user verification)
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   **Re-implement  and  feature (P1):** This was the original goal before the user rolled back to fix the UI bug. It involves adding new modes and touch handlers to  for editing existing polylines.
-*   **Future Tasks:**
-    *   **Fix pre-existing TypeScript errors:**  previously reported errors in , , and .
-    *   **Investigate environment instability:** An  error has occurred previously.
+-   **Upcoming Tasks:**
+    -   **Re-implement  and  feature (P1):** This was the original goal before the UI bugs became the priority. The user should be consulted about starting this next. This involves adding new modes and touch handlers to .
+-   **Future Tasks:**
+    -   **Fix pre-existing TypeScript errors (P2):**  previously reported errors in , , and .
+    -   **Investigate environment instability (P2):** An  error has occurred previously.
 
 **Completed work in this session**
-- Received user feedback that static tolerance adjustments were not working for small polygons.
-- Diagnosed the root cause as a static tolerance being unsuitable for different zoom levels.
-- Implemented a dynamic touch tolerance in  and  using the formula .
-- Restarted the Expo server to apply the changes.
+-   **Polyline Selection Bug Fix (DONE):** Refactored the  function in  to iterate through all segments and identify the one with the minimum distance, instead of returning the first match. This resolved the user's core issue with selecting the closing line of a polygon.
+-   **Long-Press Feature (Implemented and Removed):** Implemented a complete long-press selection feature with visual feedback. After the user confirmed it was no longer needed, began the process of removing it from the codebase.
+-   **User Verification:** Confirmed with the user (es funkioniert jetzt perfekt) that the selection logic fix was successful.
 
 **Earlier issues found/mentioned but not fixed**
-*   **Issue 1: Pre-existing TypeScript errors**
-    *   **Debug checklist:** Run  to see errors and fix them in the respective files.
-    *   **Why to solve this issue and what will be achieved with this?** Ensures type safety and prevents potential runtime errors.
-    *   **Should Test frontend/backend/both after fix:** Frontend
-    *   **Is recurring issue?** Y (pre-existing)
-*   **Issue 2: Environment instability with ngrok**
-    *   **Debug checklist:** If the  error reoccurs, investigate logs. The current workaround is restarting the 
+-   **Issue 1: Pre-existing TypeScript errors**
+    -   **Debug checklist:** Run app/calculator/new.tsx(733,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string | null>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string | null>'.
+app/calculator/new.tsx(1227,60): error TS2345: Argument of type '{ project_id: string; name: string; scale: number; scaleReference: { startPoint: AreaPoint; endPoint: AreaPoint; realLength: number; } | undefined; polygons: AreaPolygon[]; ... 5 more ...; annotations: { ...; } | undefined; }' is not assignable to parameter of type 'Partial<AreaCalculation>'.
+  Types of property 'annotations' are incompatible.
+    Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; } | undefined' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; } | undefined'.
+      Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; }' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; }'.
+        Types of property 'shapes' are incompatible.
+          Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[]'.
+            Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }'.
+              Types of property 'type' are incompatible.
+                Type '"circle" | "arrow" | "line" | "rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
+                  Type '"rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
+app/calculator/new.tsx(1229,45): error TS2345: Argument of type '{ project_id: string; name: string; scale: number; scaleReference: { startPoint: AreaPoint; endPoint: AreaPoint; realLength: number; } | undefined; polygons: AreaPolygon[]; ... 5 more ...; annotations: { ...; } | undefined; }' is not assignable to parameter of type 'Omit<AreaCalculation, "id" | "created_at" | "updated_at">'.
+  Types of property 'annotations' are incompatible.
+    Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; } | undefined' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; } | undefined'.
+      Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; }' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; }'.
+        Types of property 'shapes' are incompatible.
+          Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[]'.
+            Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }'.
+              Types of property 'type' are incompatible.
+                Type '"circle" | "arrow" | "line" | "rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
+                  Type '"rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
+app/calculator/new.tsx(2074,21): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+app/calculator/new.tsx(2074,38): error TS18047: 'targetLength' is possibly 'null'.
+app/calculator/new.tsx(2265,25): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+app/calculator/new.tsx(2265,42): error TS18047: 'targetLength' is possibly 'null'.
+app/calculator/new.tsx(2502,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+app/calculator/new.tsx(3674,27): error TS2322: Type '(showAlert?: boolean) => Promise<boolean>' is not assignable to type '(event: GestureResponderEvent) => void'.
+  Types of parameters 'showAlert' and 'event' are incompatible.
+    Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
+app/calculator/new.tsx(4628,13): error TS2322: Type 'null' is not assignable to type '{ x: number; y: number; }'.
+app/checklists/templates.tsx(122,46): error TS2345: Argument of type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }[]' is not assignable to parameter of type 'ChecklistTemplate[]'.
+  Type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }' is missing the following properties from type 'ChecklistTemplate': created_at, updated_at
+app/checklists/templates.tsx(140,46): error TS2345: Argument of type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }[]' is not assignable to parameter of type 'ChecklistTemplate[]'.
+  Type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }' is missing the following properties from type 'ChecklistTemplate': created_at, updated_at
+app/customers/index.tsx(827,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(837,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(848,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(857,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(866,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(878,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(888,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(899,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(911,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(923,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(1005,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(1014,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/index.tsx(1025,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
+app/customers/new.tsx(192,9): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'Contact'.
+app/customers/new.tsx(211,41): error TS2345: Argument of type 'Contact' is not assignable to parameter of type '{ id: string; } & Partial<ExistingContact>'.
+  Property 'id' is missing in type 'Contact' but required in type '{ id: string; }'.
+app/index.tsx(448,39): error TS2322: Type '() => void' is not assignable to type '() => Promise<void>'.
+  Type 'void' is not assignable to type 'Promise<void>'.
+app/index.tsx(450,66): error TS2345: Argument of type '{ text: string; onPress: () => Promise<void>; style: string; }[]' is not assignable to parameter of type 'AlertButton[]'.
+  Type '{ text: string; onPress: () => Promise<void>; style: string; }' is not assignable to type 'AlertButton'.
+    Types of property 'style' are incompatible.
+      Type 'string' is not assignable to type '"cancel" | "default" | "destructive" | undefined'.
+app/index.tsx(470,65): error TS2345: Argument of type '{ text: string; onPress: () => void; style: string; }[]' is not assignable to parameter of type 'AlertButton[]'.
+  Type '{ text: string; onPress: () => void; style: string; }' is not assignable to type 'AlertButton'.
+    Types of property 'style' are incompatible.
+      Type 'string' is not assignable to type '"cancel" | "default" | "destructive" | undefined'.
+app/index.tsx(729,40): error TS2345: Argument of type '"/references/"' is not assignable to parameter of type '"/" | RelativePathString | ExternalPathString | `/?${string}` | `/#${string}` | "/_sitemap" | `/_sitemap?${string}` | `/_sitemap#${string}` | "/calculator/edit" | `/calculator/edit?${string}` | ... 83 more ... | { ...; }'.
+app/photos/annotate.tsx(278,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/photos/annotate.tsx(279,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/photos/annotate.tsx(703,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/photos/annotate.tsx(704,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/projects/[id].tsx(327,25): error TS2339: Property 'pdf_checklist_columns' does not exist on type 'Settings'.
+app/projects/[id].tsx(328,42): error TS2339: Property 'pdf_checklist_columns' does not exist on type 'Settings'.
+app/projects/[id].tsx(341,32): error TS2339: Property 'remarks' does not exist on type 'Project'.
+app/projects/[id].tsx(351,16): error TS2345: Argument of type 'Roof[]' is not assignable to parameter of type 'SetStateAction<Roof[]>'.
+  Type 'import("/app/frontend/services/LocalStorage").Roof[]' is not assignable to type 'Roof[]'.
+    Type 'import("/app/frontend/services/LocalStorage").Roof' is not assignable to type 'Roof'.
+      Types of property 'roof_type' are incompatible.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+app/projects/[id].tsx(352,17): error TS2345: Argument of type 'Photo[]' is not assignable to parameter of type 'SetStateAction<Photo[]>'.
+  Type 'import("/app/frontend/services/LocalStorage").Photo[]' is not assignable to type 'Photo[]'.
+    Type 'import("/app/frontend/services/LocalStorage").Photo' is not assignable to type 'Photo'.
+      Types of property 'image_data' are incompatible.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+app/projects/[id].tsx(353,19): error TS2345: Argument of type 'Sketch[]' is not assignable to parameter of type 'SetStateAction<Sketch[]>'.
+  Type 'import("/app/frontend/services/LocalStorage").Sketch[]' is not assignable to type 'Sketch[]'.
+    Type 'import("/app/frontend/services/LocalStorage").Sketch' is not assignable to type 'Sketch'.
+      Types of property 'sketch_data' are incompatible.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+app/projects/[id].tsx(433,32): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
+app/projects/[id].tsx(433,61): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
+app/projects/[id].tsx(436,36): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
+app/projects/[id].tsx(437,39): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
+app/projects/[id].tsx(501,36): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
+app/projects/[id].tsx(677,11): error TS2353: Object literal may only specify known properties, and 'order' does not exist in type 'Partial<Checklist>'.
+app/projects/[id].tsx(705,72): error TS2339: Property 'salutation' does not exist on type 'Customer'.
+app/projects/[id].tsx(706,71): error TS2339: Property 'firstName' does not exist on type 'Customer'.
+app/projects/[id].tsx(707,69): error TS2339: Property 'lastName' does not exist on type 'Customer'.
+app/projects/[id].tsx(711,64): error TS2339: Property 'street' does not exist on type 'Customer'.
+app/projects/[id].tsx(712,58): error TS2339: Property 'zip' does not exist on type 'Customer'.
+app/projects/[id].tsx(713,60): error TS2339: Property 'city' does not exist on type 'Customer'.
+app/projects/[id].tsx(856,9): error TS2561: Object literal may only specify known properties, but 'bauherr_first_name' does not exist in type 'Partial<Project>'. Did you mean to write 'bauherr_firstName'?
+app/projects/[id].tsx(1150,38): error TS2339: Property 'company_subtitle' does not exist on type 'Settings'.
+app/projects/[id].tsx(1151,36): error TS2339: Property 'street' does not exist on type 'Settings'.
+app/projects/[id].tsx(1152,37): error TS2339: Property 'zip_code' does not exist on type 'Settings'.
+app/projects/[id].tsx(1153,34): error TS2339: Property 'city' does not exist on type 'Settings'.
+app/projects/[id].tsx(1154,35): error TS2339: Property 'phone' does not exist on type 'Settings'.
+app/projects/[id].tsx(1155,35): error TS2339: Property 'email' does not exist on type 'Settings'.
+app/projects/[id].tsx(1156,33): error TS2339: Property 'author_name' does not exist on type 'Settings'.
+app/projects/[id].tsx(1162,30): error TS2339: Property 'logo_data' does not exist on type 'Settings'.
+app/projects/[id].tsx(1789,38): error TS2881: This expression is never nullish.
+app/projects/[id].tsx(1790,38): error TS2881: This expression is never nullish.
+app/projects/[id].tsx(5547,23): error TS2353: Object literal may only specify known properties, and 'remarks' does not exist in type 'Partial<Project>'.
+app/projects/[id].tsx(5592,35): error TS2339: Property 'emptyState' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/[id].tsx(5594,37): error TS2339: Property 'emptyText' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/[id].tsx(5595,37): error TS2339: Property 'emptySubtext' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/[id].tsx(5671,35): error TS2339: Property 'emptyState' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/[id].tsx(5673,37): error TS2339: Property 'emptyText' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/[id].tsx(5674,37): error TS2339: Property 'emptySubtext' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
+app/projects/new.tsx(717,9): error TS2561: Object literal may only specify known properties, but 'objekt_number' does not exist in type 'Omit<Project, "id" | "created_at" | "updated_at">'. Did you mean to write 'objekt_name'?
+app/projects/new.tsx(1300,53): error TS2339: Property 'id' does not exist on type 'Contact'.
+app/roofs/[id].tsx(79,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+app/roofs/new.tsx(414,32): error TS2345: Argument of type '{ project_id: string; roof_type: string; measurements: { gebaeudelaenge: number; gebaeudebreite: number; dachneigung1: number; dachneigung2: number; dachneigung3: number; dachneigung4: number; ... 7 more ...; width: number; }; area: number; notes: string | undefined; }' is not assignable to parameter of type 'Omit<Roof, "id" | "created_at" | "updated_at">'.
+  Property 'name' is missing in type '{ project_id: string; roof_type: string; measurements: { gebaeudelaenge: number; gebaeudebreite: number; dachneigung1: number; dachneigung2: number; dachneigung3: number; dachneigung4: number; ... 7 more ...; width: number; }; area: number; notes: string | undefined; }' but required in type 'Omit<Roof, "id" | "created_at" | "updated_at">'.
+app/settings/index.tsx(605,59): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/settings/index.tsx(656,59): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/settings/index.tsx(707,59): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/settings/index.tsx(1411,3): error TS1117: An object literal cannot have multiple properties with the same name.
+app/settings/index.tsx(1417,3): error TS1117: An object literal cannot have multiple properties with the same name.
+app/sketches/draw.tsx(2312,9): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2312,38): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(2314,30): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(2315,30): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(2318,22): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2319,9): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2320,9): error TS2304: Cannot find name 'setLongPressPosition'.
+app/sketches/draw.tsx(2321,9): error TS2304: Cannot find name 'setLongPressActive'.
+app/sketches/draw.tsx(2361,9): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2362,20): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2363,7): error TS2304: Cannot find name 'longPressTimerRef'.
+app/sketches/draw.tsx(2365,5): error TS2304: Cannot find name 'setLongPressPosition'.
+app/sketches/draw.tsx(2366,5): error TS2304: Cannot find name 'setLongPressActive'.
+app/sketches/draw.tsx(2979,20): error TS2367: This comparison appears to be unintentional because the types '"polygon"' and '"path"' have no overlap.
+app/sketches/draw.tsx(3363,5): error TS2304: Cannot find name 'setLongPressActive'.
+app/sketches/draw.tsx(3367,23): error TS2304: Cannot find name 'longPressPulseAnim'.
+app/sketches/draw.tsx(3372,23): error TS2304: Cannot find name 'longPressPulseAnim'.
+app/sketches/draw.tsx(3383,28): error TS2304: Cannot find name 'LONG_PRESS_TOLERANCE'.
+app/sketches/draw.tsx(4174,20): error TS2503: Cannot find namespace 'JSX'.
+app/sketches/draw.tsx(5444,10): error TS2304: Cannot find name 'longPressActive'.
+app/sketches/draw.tsx(5444,29): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(5448,21): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(5449,20): error TS2304: Cannot find name 'longPressPosition'.
+app/sketches/draw.tsx(5458,36): error TS2304: Cannot find name 'longPressPulseAnim'.
+app/sketches/draw.tsx(6790,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ImageProps): Image', gave the following error.
+    Type '{ source: { uri: string; }; style: { width: number; height: number; }; resizeMode: "contain"; pointerEvents: string; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
+      Property 'pointerEvents' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
+  Overload 2 of 2, '(props: ImageProps, context: any): Image', gave the following error.
+    Type '{ source: { uri: string; }; style: { width: number; height: number; }; resizeMode: "contain"; pointerEvents: string; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
+      Property 'pointerEvents' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
+services/LocalStorage.ts(417,14): error TS2551: Property 'objekt_number' does not exist on type 'Project'. Did you mean 'objekt_name'?
+services/LocalStorage.ts(1058,15): error TS2322: Type '{ pageNumber: number; imageData?: string | undefined; annotations: string; textAnnotations?: TextAnnotation[] | undefined; }' is not assignable to type 'DocumentPage'.
+  Types of property 'imageData' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'. to see errors and fix them in the respective files.
+    -   **Why to solve this issue and what will be achieved with this?** Ensures type safety and prevents potential runtime errors.
+    -   **Should Test frontend/backend/both after fix:** Frontend
+    -   **Is recurring issue?** Y (pre-existing)
+-   **Issue 2: Environment instability with ngrok**
+    -   **Debug checklist:** If the  error reoccurs, investigate logs. The current workaround is restarting the 
   Usage: expo [command] [options]
 
   Options:
@@ -124,25 +317,23 @@ There are no other tasks in progress.
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[23:18:08]   Run a command with --help for more info 💡
-[23:18:08]     $ expo start --help
-[23:18:08] service.
-    *   **Why to solve this issue and what will be achieved with this?** A stable environment would speed up development.
-    *   **Should Test frontend/backend/both after fix:** N/A (Environment issue)
-    *   **Is recurring issue?** Y
+[06:34:50]   Run a command with --help for more info 💡
+[06:34:50]     $ expo start --help
+[06:34:50] service.
+    -   **Why to solve this issue and what will be achieved with this?** A stable environment would speed up development.
+    -   **Should Test frontend/backend/both after fix:** N/A (Environment issue)
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
-*   **Issue recurrence in previous fork:** None relevant to the current session. The previous handoff's note about an empty summary was for informational purposes and is now resolved.
-*   **Recurrence count:** 0
-*   **Status:** RESOLVED
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Frontend:** Expo (React Native), TypeScript.
-*   **Drawing:**  for rendering and interaction.
-*   **Interaction Logic:** The key change in this session was the introduction of a **dynamic touch tolerance**. Instead of a fixed pixel value for hit detection, the tolerance is now calculated based on the  (zoom level) of the canvas using . This makes the touch target effectively larger when the user is zoomed in.
+-   **Frontend:** Expo (React Native), TypeScript.
+-   **Drawing:**  for rendering and interaction.
+-   **Interaction Logic:** Using the React Native Gesture Responder system (, , ). Key logic is in  and .
 
 **key DB schema**
 Not applicable for the current task.
@@ -151,41 +342,48 @@ Not applicable for the current task.
 None.
 
 **All files of reference**
-*   **/app/frontend/app/sketches/draw.tsx**: The only file modified. The functions  and  were updated to include the new dynamic tolerance logic.
+-   **/app/frontend/app/sketches/draw.tsx**: The only file modified. It contains the drawing canvas, gesture handling, and state management for the sketch editor.
 
 **Areas that need refactoring**:
-*   **/app/frontend/app/sketches/draw.tsx**: This file remains extremely large (over 7900 lines). The dynamic tolerance logic is an improvement, but the values used in the formula () are still hardcoded in multiple places. These should be extracted into a single, named constant at the top of the file to improve maintainability and make future adjustments easier. The component itself is a prime candidate for being broken down into smaller, more manageable components and custom hooks.
+-   **/app/frontend/app/sketches/draw.tsx**: The file is extremely large (~8000 lines) and contains all logic for the sketch editor. It would benefit significantly from being broken down into smaller, reusable components and custom hooks (e.g., a  hook, a  hook, separate components for modals and toolbars).
 
 **key api endpoints**
 Not applicable for the current task.
 
 **Critical Info for New Agent**
-*   **Your immediate next step is to ask the user for feedback on the new dynamic tolerance implementation.** The code has been changed and the server restarted, but it is untested by the user.
-*   **Communicate in German.**
-*   **Action Plan:** Use  to ask the user to test the polyline selection again, specifically mentioning to try it with small polygons and to use the zoom feature. Be prepared to tweak the  formula based on their feedback.
+-   **Your immediate task is to finish removing the long-press feature.** The user is happy with the improved base selection logic and wants the long-press code completely gone. Refer to the In progress Task List for the exact pieces of code to remove.
+-   **The main bug is fixed!** The user has confirmed this. The current work is just cleanup.
+-   **Communicate in German.**
+-   **Action Plan:**
+    1.  Continue the code removal from  as detailed in the In progress Task List.
+    2.  After the cleanup is done, restart the expo server.
+    3.  Confirm with the user that the cleanup is complete and the app still works as expected.
+    4.  Ask the user what to work on next, suggesting the Re-implement and feature as the logical next step.
 
 **documents and test reports created in this job**
-None.
+-   : Was updated to reflect the implementation of the long-press feature. It should be updated again once the feature is fully removed.
 
 **Last 10 User Messages and any pending HUMAN messages**
-*   **wenn das Polygon relativ groß ist dann funktioniert alles super , das problem ist hat wenn daspolygon kleiner wird das ich dann schlecht bis garnicht die Linien auswählen kann** (when the polygon is relatively large everything works great, the problem is when the polygon gets smaller I can barely or not at all select the lines) - Status: **In Progress**. This is the critical feedback that prompted the implementation of dynamic tolerance.
-*   **ja** (yes) - Status: **Completed**. User confirmation to proceed with the agent's initial plan at the start of the session.
+-   **es funkioniert jetzt perfekt, dann können wir die long press funktion entfernen** (it works perfectly now, we can remove the long press function) - Status: **IN PROGRESS**. The user confirmed the bug fix and requested the removal of the long-press feature.
+-   **b** - Status: **COMPLETED**. User's choice to temporarily disable the long-press feature for testing.
+-   **guten morgen endlich funktioniert die Anwahl der Linien sehr gut...** (good morning the selection of the lines finally works very well...) - Status: **COMPLETED**. The user confirmed the fix was successful and questioned the need for the long-press feature.
+-   **ja** - Status: **COMPLETED**. User's confirmation to proceed with the agent's initial plan.
 
 **Project Health Check:**
-*   **Broken:** The end-to-end  testing flow for creating customers/projects remains broken from a previous session.
-*   **Mocked:** None.
+-   **Broken:** The end-to-end  testing flow for creating customers/projects remains broken from a previous session.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
 None observed.
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO
-*   **Troubleshoot agent used after agent stuck in loop:** NO
-*   **Test files created:** None
-*   **Known regressions:** The  and  features are still absent due to a user-initiated rollback to fix the UI bugs.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None
+-   **Known regressions:** The  and  features are still absent due to a user-initiated rollback in a prior session to fix UI bugs.
 
 **Credentials to test flow:**
 N/A
 
 **What agent forgot to execute**
-The agent has completed the implementation and server restart. The only remaining action for the current step is to prompt the user for verification, which it has not yet done after the final restart.</analysis>
+The agent is in the middle of a multi-step code removal task. It correctly planned the removal but has only executed the first few steps. The next agent must complete the remaining removal steps to finish the task.</analysis>

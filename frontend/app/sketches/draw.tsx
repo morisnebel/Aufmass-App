@@ -517,6 +517,11 @@ export default function DrawSketchScreen() {
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
   
+  // Lupen-Feature für präzises Positionieren von Handles
+  const [showMagnifier, setShowMagnifier] = useState(false);
+  const [magnifierPosition, setMagnifierPosition] = useState<{ x: number; y: number } | null>(null);
+  const [magnifierTargetPosition, setMagnifierTargetPosition] = useState<{ x: number; y: number } | null>(null);
+  
   // Aufmaß-Tool state
   const [showMeasurementTool, setShowMeasurementTool] = useState(false);
   const [measurementExpression, setMeasurementExpression] = useState('');
@@ -2382,6 +2387,10 @@ export default function DrawSketchScreen() {
       setResizeHandle(null);
       setDragStart(null);
       setOriginalElement(null);
+      // Lupe ausblenden
+      setShowMagnifier(false);
+      setMagnifierPosition(null);
+      setMagnifierTargetPosition(null);
     } else if (drawMode === 'select' && draggingLabelId) {
       // Label-Verschiebung beenden
       setDraggingLabelId(null);
@@ -2792,6 +2801,18 @@ export default function DrawSketchScreen() {
           setResizeHandle(handle.handle);
           setDragStart({ x: locationX, y: locationY });
           setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+          
+          // Lupe aktivieren für Maßlinien-Endpunkte (start/end handles)
+          if ((selectedEl.type === 'line' || selectedEl.type === 'arrow' || selectedEl.type === 'pointer' || selectedEl.type === 'memo') &&
+              (handle.handle === 'start' || handle.handle === 'end')) {
+            setShowMagnifier(true);
+            // Position des Zielpunktes setzen
+            const targetX = handle.handle === 'start' ? selectedEl.data.x1 : selectedEl.data.x2;
+            const targetY = handle.handle === 'start' ? selectedEl.data.y1 : selectedEl.data.y2;
+            setMagnifierTargetPosition({ x: targetX, y: targetY });
+            setMagnifierPosition({ x: locationX, y: locationY });
+          }
+          
           return;
         }
       }
@@ -3008,8 +3029,18 @@ export default function DrawSketchScreen() {
         } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer' || el.type === 'memo') {
           if (resizeHandle === 'start') {
             newEl.data = { ...el.data, x1: locationX, y1: locationY };
+            // Lupe-Position aktualisieren
+            if (showMagnifier) {
+              setMagnifierTargetPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX, y: locationY });
+            }
           } else if (resizeHandle === 'end') {
             newEl.data = { ...el.data, x2: locationX, y2: locationY };
+            // Lupe-Position aktualisieren
+            if (showMagnifier) {
+              setMagnifierTargetPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX, y: locationY });
+            }
           }
         } else if (el.type === 'rect') {
           let newData = { ...el.data };
@@ -4082,9 +4113,25 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // Render transformation handles
+  // Render transformation handles - mit dynamischer Skalierung basierend auf Zoom-Level
   const renderTransformHandles = (element: DrawElement) => {
     const handles: JSX.Element[] = [];
+    
+    // Skalierte Handle-Größen basierend auf Zoom-Level
+    // Kleinere Basis-Werte für kompaktere Handles
+    const baseHandleRadius = 5; // Kleiner als vorher (war 8)
+    const baseRotateRadius = 6; // Kleiner als vorher (war 10)
+    const baseStrokeWidth = 1.5;
+    const baseFontSize = 8;
+    const baseRotateFontSize = 10;
+    
+    // Skalierung: Bei Zoom > 1 werden Handles kleiner, bei Zoom < 1 werden sie größer
+    const scaledHandleRadius = Math.max(3, baseHandleRadius / Math.max(scale, 0.5));
+    const scaledRotateRadius = Math.max(4, baseRotateRadius / Math.max(scale, 0.5));
+    const scaledStrokeWidth = Math.max(0.5, baseStrokeWidth / Math.max(scale, 0.5));
+    const scaledFontSize = Math.max(5, baseFontSize / Math.max(scale, 0.5));
+    const scaledRotateFontSize = Math.max(6, baseRotateFontSize / Math.max(scale, 0.5));
+    const scaledRotateOffset = Math.max(15, 30 / Math.max(scale, 0.5));
     
     if (element.type === 'rect') {
       const { x, y, width: w, height: h } = element.data;
@@ -4102,8 +4149,8 @@ export default function DrawSketchScreen() {
       handlePositions.forEach((pos, idx) => {
         handles.push(
           <G key={`handle-${idx}`}>
-            <Circle cx={pos.x} cy={pos.y} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
-            <SvgText x={pos.x - 4} y={pos.y + 5} fill="#fff" fontSize={10}>{pos.label}</SvgText>
+            <Circle cx={pos.x} cy={pos.y} r={scaledHandleRadius} fill="#4caf50" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+            <SvgText x={pos.x - scaledFontSize * 0.4} y={pos.y + scaledFontSize * 0.5} fill="#fff" fontSize={scaledFontSize}>{pos.label}</SvgText>
           </G>
         );
       });
@@ -4111,38 +4158,38 @@ export default function DrawSketchScreen() {
       // Rotation handle
       handles.push(
         <G key="rotate">
-          <Circle cx={x + w / 2} cy={y - 30} r={10} fill="#FF9800" stroke="#fff" strokeWidth={2} />
-          <SvgText x={x + w / 2 - 5} y={y - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
+          <Circle cx={x + w / 2} cy={y - scaledRotateOffset} r={scaledRotateRadius} fill="#FF9800" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={x + w / 2 - scaledRotateFontSize * 0.4} y={y - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
     } else if (element.type === 'circle') {
       const { cx, cy, r } = element.data;
       handles.push(
         <G key="radius">
-          <Circle cx={cx + r} cy={cy} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
-          <SvgText x={cx + r - 4} y={cy + 5} fill="#fff" fontSize={10}>↔</SvgText>
+          <Circle cx={cx + r} cy={cy} r={scaledHandleRadius} fill="#4caf50" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={cx + r - scaledFontSize * 0.4} y={cy + scaledFontSize * 0.5} fill="#fff" fontSize={scaledFontSize}>↔</SvgText>
         </G>
       );
       handles.push(
         <G key="rotate">
-          <Circle cx={cx} cy={cy - r - 30} r={10} fill="#FF9800" stroke="#fff" strokeWidth={2} />
-          <SvgText x={cx - 5} y={cy - r - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
+          <Circle cx={cx} cy={cy - r - scaledRotateOffset} r={scaledRotateRadius} fill="#FF9800" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={cx - scaledRotateFontSize * 0.4} y={cy - r - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
     } else if (element.type === 'line' || element.type === 'arrow' || element.type === 'pointer' || element.type === 'memo') {
       const { x1, y1, x2, y2 } = element.data;
       handles.push(
-        <Circle key="start" cx={x1} cy={y1} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />
+        <Circle key="start" cx={x1} cy={y1} r={scaledHandleRadius} fill="#2196f3" stroke="#fff" strokeWidth={scaledStrokeWidth} />
       );
       handles.push(
-        <Circle key="end" cx={x2} cy={y2} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />
+        <Circle key="end" cx={x2} cy={y2} r={scaledHandleRadius} fill="#2196f3" stroke="#fff" strokeWidth={scaledStrokeWidth} />
       );
       const midX = (x1 + x2) / 2;
       const midY = (y1 + y2) / 2;
       handles.push(
         <G key="rotate">
-          <Circle cx={midX} cy={midY - 30} r={10} fill="#FF9800" stroke="#fff" strokeWidth={2} />
-          <SvgText x={midX - 5} y={midY - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
+          <Circle cx={midX} cy={midY - scaledRotateOffset} r={scaledRotateRadius} fill="#FF9800" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={midX - scaledRotateFontSize * 0.4} y={midY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
     } else if (element.type === 'image') {
@@ -4160,14 +4207,14 @@ export default function DrawSketchScreen() {
       
       corners.forEach((pos, idx) => {
         handles.push(
-          <Circle key={`corner-${idx}`} cx={pos.x} cy={pos.y} r={8} fill="#4caf50" stroke="#fff" strokeWidth={2} />
+          <Circle key={`corner-${idx}`} cx={pos.x} cy={pos.y} r={scaledHandleRadius} fill="#4caf50" stroke="#fff" strokeWidth={scaledStrokeWidth} />
         );
       });
       
       handles.push(
         <G key="rotate">
-          <Circle cx={imgX + imgW / 2} cy={imgY - 30} r={10} fill="#FF9800" stroke="#fff" strokeWidth={2} />
-          <SvgText x={imgX + imgW / 2 - 5} y={imgY - 30 + 5} fill="#fff" fontSize={12}>↻</SvgText>
+          <Circle cx={imgX + imgW / 2} cy={imgY - scaledRotateOffset} r={scaledRotateRadius} fill="#FF9800" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={imgX + imgW / 2 - scaledRotateFontSize * 0.4} y={imgY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
     }
@@ -6721,6 +6768,64 @@ export default function DrawSketchScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Lupe (Magnifier) Overlay für präzises Positionieren von Maßlinien-Endpunkten */}
+      {showMagnifier && magnifierPosition && magnifierTargetPosition && (
+        <View
+          style={[
+            styles.magnifierOverlay,
+            {
+              left: magnifierPosition.x - 60,
+              top: magnifierPosition.y - 140, // Über dem Finger positionieren
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={styles.magnifierContent}>
+            {/* Fadenkreuz im Lupen-Zentrum */}
+            <Svg width={100} height={100} style={styles.magnifierSvg}>
+              {/* Hintergrund */}
+              <Circle cx={50} cy={50} r={48} fill="rgba(255,255,255,0.95)" stroke="#1976d2" strokeWidth={2} />
+              
+              {/* Raster im Hintergrund */}
+              {[20, 35, 50, 65, 80].map((pos) => (
+                <G key={`grid-${pos}`}>
+                  <Line x1={pos} y1={10} x2={pos} y2={90} stroke="rgba(0,0,0,0.1)" strokeWidth={0.5} />
+                  <Line x1={10} y1={pos} x2={90} y2={pos} stroke="rgba(0,0,0,0.1)" strokeWidth={0.5} />
+                </G>
+              ))}
+              
+              {/* Fadenkreuz */}
+              <Line x1={50} y1={15} x2={50} y2={85} stroke="#f44336" strokeWidth={1.5} />
+              <Line x1={15} y1={50} x2={85} y2={50} stroke="#f44336" strokeWidth={1.5} />
+              
+              {/* Zentraler Punkt */}
+              <Circle cx={50} cy={50} r={4} fill="#f44336" />
+              
+              {/* Pfeilspitzen-Indikator (simuliert die Pfeilspitze) */}
+              <Path
+                d="M 50 35 L 45 45 L 55 45 Z"
+                fill="#1976d2"
+                stroke="#1976d2"
+                strokeWidth={1}
+              />
+            </Svg>
+            
+            {/* Koordinaten-Anzeige */}
+            <View style={styles.magnifierCoords}>
+              <Text style={styles.magnifierCoordsText}>
+                X: {Math.round(magnifierTargetPosition.x)}
+              </Text>
+              <Text style={styles.magnifierCoordsText}>
+                Y: {Math.round(magnifierTargetPosition.y)}
+              </Text>
+            </View>
+          </View>
+          
+          {/* Verbindungslinie zum Zielpunkt */}
+          <View style={styles.magnifierLine} />
+        </View>
+      )}
     </View>
   );
 }
@@ -7939,5 +8044,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Lupe (Magnifier) Styles
+  magnifierOverlay: {
+    position: 'absolute',
+    width: 120,
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  magnifierContent: {
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  magnifierSvg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  magnifierCoords: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(25, 118, 210, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+    gap: 8,
+  },
+  magnifierCoordsText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  magnifierLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: '#1976d2',
+    marginTop: 2,
   },
 });

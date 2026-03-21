@@ -3127,6 +3127,40 @@ export default function DrawSketchScreen() {
             newEl.width = newW;
             newEl.height = newH;
           }
+        } else if (el.type === 'text') {
+          // Text-Resize: Schriftgröße basierend auf Drag-Distanz ändern
+          const origFontSize = originalElement.fontSize || 20;
+          const origX = originalElement.x || 0;
+          const origY = originalElement.y || 0;
+          
+          // Berechne neue Schriftgröße basierend auf der Ziehrichtung
+          // Diagonale Handles: Größer = beide Richtungen positiv
+          let scaleFactor = 1;
+          
+          if (resizeHandle === 'bottom-right') {
+            // Ziehen nach rechts-unten vergrößert
+            scaleFactor = 1 + (dx + dy) / 200;
+          } else if (resizeHandle === 'top-left') {
+            // Ziehen nach links-oben vergrößert (umgekehrt)
+            scaleFactor = 1 + (-dx - dy) / 200;
+            // Position anpassen damit Text an gleicher Stelle bleibt
+            const newFontSize = Math.max(8, Math.min(200, origFontSize * scaleFactor));
+            const fontSizeDiff = newFontSize - origFontSize;
+            newEl.y = origY + fontSizeDiff;
+          } else if (resizeHandle === 'top-right') {
+            // Ziehen nach rechts-oben vergrößert
+            scaleFactor = 1 + (dx - dy) / 200;
+            const newFontSize = Math.max(8, Math.min(200, origFontSize * scaleFactor));
+            const fontSizeDiff = newFontSize - origFontSize;
+            newEl.y = origY + fontSizeDiff;
+          } else if (resizeHandle === 'bottom-left') {
+            // Ziehen nach links-unten vergrößert
+            scaleFactor = 1 + (-dx + dy) / 200;
+          }
+          
+          // Neue Schriftgröße berechnen mit Mindest- und Maximalgröße
+          const newFontSize = Math.max(8, Math.min(200, origFontSize * scaleFactor));
+          newEl.fontSize = Math.round(newFontSize);
         }
       }
 
@@ -3195,12 +3229,13 @@ export default function DrawSketchScreen() {
         // Berechne Textbreite basierend auf Textlänge und Schriftgröße
         const fontSize = el.fontSize || 20;
         const textLength = el.data?.text?.length || 10;
-        const elW = el.width || Math.max(textLength * fontSize * 0.7, 100); // Mindestens 100px breit
-        const elH = el.height || Math.max(fontSize * 1.5, 60); // Mindestens 60px hoch
-        // Sehr große Hitbox für einfache Auswahl (40px Padding)
-        const padding = 40;
+        const elW = el.width || Math.max(textLength * fontSize * 0.6, 50); // Realistischere Breite
+        const elH = fontSize * 1.2; // Höhe basierend auf Schriftgröße
+        // Kleineres Padding für präzisere Auswahl (10px)
+        const padding = 10;
+        // Text sitzt auf der Baseline, also Box nach oben verschieben
         if (x >= elX - padding && x <= elX + elW + padding &&
-            y >= elY - fontSize - padding && y <= elY + elH + padding) {
+            y >= elY - elH - padding && y <= elY + padding) {
           return el;
         }
       } else if (el.type === 'image') {
@@ -3441,6 +3476,35 @@ export default function DrawSketchScreen() {
         { x: elX, y: elY + elH, handle: 'bottom-left' },
         { x: elX + elW, y: elY + elH, handle: 'bottom-right' },
         { x: elX + elW / 2, y: elY - 30, handle: 'rotate' },
+      ];
+      
+      for (const h of handles) {
+        if (Math.sqrt(Math.pow(x - h.x, 2) + Math.pow(y - h.y, 2)) < handleRadius) {
+          return { type: h.handle === 'rotate' ? 'rotate' : 'resize', handle: h.handle };
+        }
+      }
+    } else if (element.type === 'text') {
+      // Text-Element: Handles für Resize und Rotate
+      const textX = element.x || 0;
+      const textY = element.y || 0;
+      const fontSize = element.fontSize || 20;
+      const text = element.data?.text || '';
+      
+      // Berechne Textabmessungen (gleich wie in renderTransformHandles)
+      const estimatedWidth = Math.max(text.length * fontSize * 0.6, 40);
+      const estimatedHeight = fontSize * 1.2;
+      
+      const boxX = textX - 5;
+      const boxY = textY - estimatedHeight;
+      const boxWidth = estimatedWidth + 10;
+      const boxHeight = estimatedHeight + 10;
+      
+      const handles = [
+        { x: boxX, y: boxY, handle: 'top-left' },
+        { x: boxX + boxWidth, y: boxY, handle: 'top-right' },
+        { x: boxX, y: boxY + boxHeight, handle: 'bottom-left' },
+        { x: boxX + boxWidth, y: boxY + boxHeight, handle: 'bottom-right' },
+        { x: boxX + boxWidth / 2, y: boxY - 30, handle: 'rotate' },
       ];
       
       for (const h of handles) {

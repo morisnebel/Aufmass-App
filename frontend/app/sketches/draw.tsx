@@ -4236,6 +4236,63 @@ export default function DrawSketchScreen() {
           <SvgText x={imgX + imgW / 2 - scaledRotateFontSize * 0.4} y={imgY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
+    } else if (element.type === 'text') {
+      // Text-Elemente: Bounding Box und Griffe anzeigen
+      const textX = element.x || 0;
+      const textY = element.y || 0;
+      const fontSize = element.fontSize || 20;
+      const text = element.data?.text || '';
+      
+      // Berechne ungefähre Textabmessungen
+      // Breite: ca. 0.6 * fontSize pro Zeichen (Schätzung)
+      // Höhe: fontSize
+      const estimatedWidth = Math.max(text.length * fontSize * 0.6, 40);
+      const estimatedHeight = fontSize * 1.2;
+      
+      // Bounding Box um den Text (Text sitzt auf der Baseline, also nach oben verschieben)
+      const boxX = textX - 5;
+      const boxY = textY - estimatedHeight;
+      const boxWidth = estimatedWidth + 10;
+      const boxHeight = estimatedHeight + 10;
+      
+      // Gestrichelte Bounding Box
+      handles.push(
+        <Rect
+          key="text-bounds"
+          x={boxX}
+          y={boxY}
+          width={boxWidth}
+          height={boxHeight}
+          fill="none"
+          stroke="#2196f3"
+          strokeWidth={scaledStrokeWidth * 1.5}
+          strokeDasharray={`${4 / Math.max(scale, 0.5)},${4 / Math.max(scale, 0.5)}`}
+        />
+      );
+      
+      // Eck-Griffe
+      const corners = [
+        { x: boxX, y: boxY, label: '↖' },
+        { x: boxX + boxWidth, y: boxY, label: '↗' },
+        { x: boxX, y: boxY + boxHeight, label: '↙' },
+        { x: boxX + boxWidth, y: boxY + boxHeight, label: '↘' },
+      ];
+      
+      corners.forEach((pos, idx) => {
+        handles.push(
+          <G key={`text-corner-${idx}`}>
+            <Circle cx={pos.x} cy={pos.y} r={scaledHandleRadius} fill="#2196f3" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          </G>
+        );
+      });
+      
+      // Rotations-Griff
+      handles.push(
+        <G key="text-rotate">
+          <Circle cx={boxX + boxWidth / 2} cy={boxY - scaledRotateOffset} r={scaledRotateRadius} fill="#FF9800" stroke="#fff" strokeWidth={scaledStrokeWidth} />
+          <SvgText x={boxX + boxWidth / 2 - scaledRotateFontSize * 0.4} y={boxY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
+        </G>
+      );
     }
     
     return <G>{handles}</G>;

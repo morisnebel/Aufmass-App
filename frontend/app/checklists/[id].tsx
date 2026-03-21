@@ -1363,6 +1363,106 @@ export default function EditChecklistScreen() {
         {/* Expanded Content - nur wenn abgehakt und nicht eingeklappt */}
         {item.checked && !isCollapsed(path) && (
           <View style={[styles.expandedContent, { marginLeft: 8 }]}>
+            {/* Notiz-Feld - ZUERST, direkt unter dem Hauptpunkt */}
+            {isNoteOpen(path) && (
+              <View style={styles.noteContainer}>
+                <View style={styles.noteHeader}>
+                  <Ionicons name="document-text-outline" size={18} color="#9c27b0" />
+                  <Text style={styles.noteLabel}>Notiz</Text>
+                  <TouchableOpacity
+                    style={styles.closeSectionButton}
+                    onPress={() => toggleNoteField(path)}
+                  >
+                    <Ionicons name="close" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Notiz hinzufügen..."
+                  value={item.note || ''}
+                  onChangeText={(text) => updateNote(path, text)}
+                  multiline
+                  numberOfLines={3}
+                  editable={true}
+                  showSoftInputOnFocus={true}
+                />
+              </View>
+            )}
+
+            {/* Messungen - ZUERST, direkt unter dem Hauptpunkt */}
+            {isMeasurementOpen(path) && (
+              <View style={styles.measurementSection}>
+                <View style={styles.measurementHeader}>
+                  <Ionicons name="calculator-outline" size={18} color="#2196f3" />
+                  <Text style={styles.measurementLabel}>Messungen</Text>
+                  <TouchableOpacity
+                    style={styles.addMeasurementButton}
+                    onPress={() => openMeasurementModal(path)}
+                  >
+                    <Ionicons name="add-circle" size={24} color="#2196f3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.closeSectionButton}
+                    onPress={() => toggleMeasurementField(path)}
+                  >
+                    <Ionicons name="close" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Vorhandene Messungen */}
+                {item.measurements && item.measurements.length > 0 && (
+                  <View style={styles.measurementsList}>
+                    {item.measurements.map((m, mIndex) => {
+                      const expr = m.expression || (m as any).value?.toString() || '0';
+                      const result = m.result ?? (m as any).value ?? 0;
+                      
+                      return (
+                        <TouchableOpacity 
+                          key={mIndex} 
+                          style={styles.measurementChip}
+                          onPress={() => openEditMeasurementModal(path, mIndex, expr, m.unit)}
+                        >
+                          <Text style={styles.measurementChipText}>
+                            {formatExpression(expr)} = {result.toString().replace('.', ',')} {m.unit}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => removeMeasurement(path, mIndex)}
+                            style={styles.removeMeasurementButton}
+                          >
+                            <Ionicons name="close-circle" size={18} color="#f44336" />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    
+                    {/* Summe pro Einheit anzeigen */}
+                    {(() => {
+                      const sumsByUnit: { [unit: string]: number } = {};
+                      item.measurements.forEach(m => {
+                        const result = m.result ?? (m as any).value ?? 0;
+                        sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + result;
+                      });
+                      const units = Object.keys(sumsByUnit);
+                      
+                      if (units.length > 0) {
+                        return (
+                          <View style={styles.measurementSumContainer}>
+                            <Text style={styles.measurementSumLabel}>Summen:</Text>
+                            {units.map(unit => (
+                              <Text key={unit} style={styles.measurementSumText}>
+                                {sumsByUnit[unit].toFixed(2).replace('.', ',')} {unit}
+                              </Text>
+                            ))}
+                          </View>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Vorhandene Unterpunkte rekursiv rendern */}
             {hasSubItems && (
               <View style={styles.subItemsContainer}>
@@ -1424,108 +1524,6 @@ export default function EditChecklistScreen() {
                     ? 'Verschachtelte Unterpunkte nur in Pro' 
                     : `Max. ${getFeatures().maxChecklistItems} Unterpunkte (Basic)`}
                 </Text>
-              </View>
-            )}
-
-            {/* Messungen anzeigen und hinzufügen - nur wenn Feld offen */}
-            {isMeasurementOpen(path) && (
-              <View style={styles.measurementSection}>
-                <View style={styles.measurementHeader}>
-                  <Ionicons name="calculator-outline" size={18} color="#2196f3" />
-                  <Text style={styles.measurementLabel}>Messungen</Text>
-                  <TouchableOpacity
-                    style={styles.addMeasurementButton}
-                    onPress={() => openMeasurementModal(path)}
-                  >
-                    <Ionicons name="add-circle" size={24} color="#2196f3" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.closeSectionButton}
-                    onPress={() => toggleMeasurementField(path)}
-                  >
-                    <Ionicons name="close" size={20} color="#999" />
-                  </TouchableOpacity>
-                </View>
-                
-                {/* Vorhandene Messungen */}
-                {item.measurements && item.measurements.length > 0 && (
-                  <View style={styles.measurementsList}>
-                    {item.measurements.map((m, mIndex) => {
-                      // Kompatibilität mit altem Format (value statt expression)
-                      const expr = m.expression || (m as any).value?.toString() || '0';
-                      const result = m.result ?? (m as any).value ?? 0;
-                      
-                      return (
-                        <TouchableOpacity 
-                          key={mIndex} 
-                          style={styles.measurementChip}
-                          onPress={() => openEditMeasurementModal(path, mIndex, expr, m.unit)}
-                        >
-                          <Text style={styles.measurementChipText}>
-                            {formatExpression(expr)} = {result.toString().replace('.', ',')} {m.unit}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => removeMeasurement(path, mIndex)}
-                            style={styles.removeMeasurementButton}
-                          >
-                            <Ionicons name="close-circle" size={18} color="#f44336" />
-                          </TouchableOpacity>
-                        </TouchableOpacity>
-                      );
-                    })}
-                    
-                    {/* Summe pro Einheit anzeigen */}
-                    {(() => {
-                      // Gruppiere nach Einheit
-                      const sumsByUnit: { [unit: string]: number } = {};
-                      item.measurements.forEach(m => {
-                        const result = m.result ?? (m as any).value ?? 0;
-                        sumsByUnit[m.unit] = (sumsByUnit[m.unit] || 0) + result;
-                      });
-                      const units = Object.keys(sumsByUnit);
-                      
-                      if (units.length > 0) {
-                        return (
-                          <View style={styles.measurementSumContainer}>
-                            <Text style={styles.measurementSumLabel}>Summen:</Text>
-                            {units.map(unit => (
-                              <Text key={unit} style={styles.measurementSumText}>
-                                {sumsByUnit[unit].toFixed(2).replace('.', ',')} {unit}
-                              </Text>
-                            ))}
-                          </View>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Notiz-Feld - für alle Items, nur wenn offen */}
-            {isNoteOpen(path) && (
-              <View style={styles.noteContainer}>
-                <View style={styles.noteHeader}>
-                  <Ionicons name="document-text-outline" size={18} color="#9c27b0" />
-                  <Text style={styles.noteLabel}>Notiz</Text>
-                  <TouchableOpacity
-                    style={styles.closeSectionButton}
-                    onPress={() => toggleNoteField(path)}
-                  >
-                    <Ionicons name="close" size={20} color="#999" />
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.noteInput}
-                  placeholder="Notiz hinzufügen..."
-                  value={item.note || ''}
-                  onChangeText={(text) => updateNote(path, text)}
-                  multiline
-                  numberOfLines={3}
-                  editable={true}
-                  showSoftInputOnFocus={true}
-                />
               </View>
             )}
           </View>

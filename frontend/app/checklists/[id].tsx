@@ -1088,6 +1088,57 @@ export default function EditChecklistScreen() {
                     <Ionicons name="clipboard-outline" size={14} color="#4caf50" />
                   </TouchableOpacity>
                 )}
+                
+                {/* Notiz Button für iPhone */}
+                {item.checked && (
+                  <TouchableOpacity 
+                    onPress={() => toggleNoteField(path)}
+                    style={[
+                      styles.labeledActionButtonPhone,
+                      isNoteOpen(path) && styles.labeledActionButtonActive,
+                      item.note && item.note.trim() && styles.labeledActionButtonHasContent
+                    ]}
+                  >
+                    <Ionicons 
+                      name={item.note && item.note.trim() ? "document-text" : "document-text-outline"} 
+                      size={12} 
+                      color={isNoteOpen(path) ? '#fff' : (item.note && item.note.trim() ? '#4caf50' : '#9c27b0')} 
+                    />
+                    <Text style={[
+                      styles.labeledActionTextPhone,
+                      isNoteOpen(path) && styles.labeledActionTextActive,
+                      item.note && item.note.trim() && styles.labeledActionTextHasContent
+                    ]}>
+                      Notiz
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                {/* Messung Button für iPhone */}
+                {item.checked && (
+                  <TouchableOpacity 
+                    onPress={() => toggleMeasurementField(path)}
+                    style={[
+                      styles.labeledActionButtonPhone,
+                      isMeasurementOpen(path) && styles.labeledActionButtonActive,
+                      item.measurements && item.measurements.length > 0 && styles.labeledActionButtonHasContent
+                    ]}
+                  >
+                    <Ionicons 
+                      name={item.measurements && item.measurements.length > 0 ? "calculator" : "calculator-outline"} 
+                      size={12} 
+                      color={isMeasurementOpen(path) ? '#fff' : (item.measurements && item.measurements.length > 0 ? '#4caf50' : '#2196f3')} 
+                    />
+                    <Text style={[
+                      styles.labeledActionTextPhone,
+                      isMeasurementOpen(path) && styles.labeledActionTextActive,
+                      item.measurements && item.measurements.length > 0 && styles.labeledActionTextHasContent
+                    ]}>
+                      Messung
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
                 <TouchableOpacity 
                   onPress={() => {
                     Alert.alert(
@@ -1959,8 +2010,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   labeledActionButtonPhone: {
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+    backgroundColor: '#f5f5f5',
+    gap: 2,
   },
   labeledActionButtonActive: {
     backgroundColor: '#1976d2',

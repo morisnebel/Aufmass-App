@@ -318,7 +318,7 @@ export default function DrawSketchScreen() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<DrawMode>('select');
   const [drawColor, setDrawColor] = useState('#FF0000');
-  const [strokeWidth, setStrokeWidth] = useState(3);
+  const [strokeWidth, setStrokeWidth] = useState(1);
   const [loading, setLoading] = useState(false);
   
   // Drawing state
@@ -5080,7 +5080,7 @@ export default function DrawSketchScreen() {
               <TouchableOpacity
                 key={w}
                 style={[styles.strokeWidthButtonSmall, strokeWidth === w && styles.strokeWidthButtonActive]}
-                onPress={() => setStrokeWidth(w)}
+                onPress={() => updateStrokeWidth(w)}
               >
                 <View style={[styles.strokeWidthDot, { width: w * 1.5, height: w * 1.5 }]} />
               </TouchableOpacity>

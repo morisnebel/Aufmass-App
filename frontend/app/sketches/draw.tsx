@@ -4960,6 +4960,22 @@ export default function DrawSketchScreen() {
           </View>
         </View>
 
+        {/* Element löschen Button - zwischen Maßlinien und Stift */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[styles.toolButtonInner, !selectedElementId && styles.toolButtonDisabled]}
+            onPress={() => {
+              if (selectedElementId) {
+                setShowDeleteConfirm(true);
+              }
+            }}
+            disabled={!selectedElementId}
+          >
+            <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#f44336' : '#ccc' }]}>Element{'\n'}löschen</Text>
+        </View>
+
         <View style={styles.separator} />
 
         {/* 7. Stift */}
@@ -4973,7 +4989,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>Stift</Text>
         </View>
 
-        {/* 8. Formen (Linie, Kreis, Rechteck) + Element löschen */}
+        {/* 8. Formen (Linie, Kreis, Rechteck) */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
@@ -4994,24 +5010,11 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
             </TouchableOpacity>
-            {/* Element löschen Button */}
-            <TouchableOpacity
-              style={[styles.toolButtonInnerWide, !selectedElementId && styles.toolButtonDisabled]}
-              onPress={() => {
-                if (selectedElementId) {
-                  setShowDeleteConfirm(true);
-                }
-              }}
-              disabled={!selectedElementId}
-            >
-              <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
-            </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Linie</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Kreis</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Rechteck</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1.4, textAlign: 'center' }]}>Element{'\n'}löschen</Text>
           </View>
         </View>
 

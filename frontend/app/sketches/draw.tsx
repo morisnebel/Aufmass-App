@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
-import PdfThumbnail from 'react-native-pdf-thumbnail';
+import PdfThumbnail from '../../utils/PdfThumbnailShim';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';

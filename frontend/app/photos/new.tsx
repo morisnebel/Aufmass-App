@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import PdfThumbnail from 'react-native-pdf-thumbnail';
+import PdfThumbnail from '../../utils/PdfThumbnailShim';
 import { PhotoService } from '../../services/LocalStorage';
 
 interface SelectedPhoto {

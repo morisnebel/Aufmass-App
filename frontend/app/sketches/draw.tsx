@@ -518,6 +518,8 @@ export default function DrawSketchScreen() {
   const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
   
   // Long-Press State für bessere Linien-Auswahl
+  // HINWEIS: Long-Press vorübergehend deaktiviert zum Testen - auf true setzen um zu reaktivieren
+  const LONG_PRESS_ENABLED = false; // <-- Hier auf true setzen um Long-Press wieder zu aktivieren
   const [longPressActive, setLongPressActive] = useState(false);
   const [longPressPosition, setLongPressPosition] = useState<{ x: number; y: number } | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2759,15 +2761,17 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => {
-    // Long-Press Timer starten für bessere Linien-Auswahl
-    setLongPressPosition({ x: locationX, y: locationY });
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
+    // Long-Press Timer starten für bessere Linien-Auswahl (nur wenn aktiviert)
+    if (LONG_PRESS_ENABLED) {
+      setLongPressPosition({ x: locationX, y: locationY });
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+      longPressTimerRef.current = setTimeout(() => {
+        // Long-Press erreicht - größeren Suchradius verwenden
+        handleLongPressSelection(locationX, locationY);
+      }, LONG_PRESS_DURATION);
     }
-    longPressTimerRef.current = setTimeout(() => {
-      // Long-Press erreicht - größeren Suchradius verwenden
-      handleLongPressSelection(locationX, locationY);
-    }, LONG_PRESS_DURATION);
     
     // Zuerst prüfen: Klick auf ein Polyline-Label zum Verschieben?
     const labelHit = findPolylineLabelAtPoint(locationX, locationY);

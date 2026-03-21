@@ -2792,6 +2792,29 @@ export default function DrawSketchScreen() {
               setDragMode('move');
               setDragStart({ x: locationX, y: locationY });
               setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+              
+              // Lupe aktivieren für Polygon-Eckpunkte
+              setMagnifierTargetPosition({ x: pt.x, y: pt.y });
+              setMagnifierPosition({ x: locationX, y: locationY });
+              
+              // Canvas-Snapshot für Lupe erstellen
+              if (canvasRef.current) {
+                captureRef(canvasRef.current, {
+                  format: 'png',
+                  quality: 0.8,
+                  result: 'data-uri',
+                }).then((uri: string) => {
+                  setMagnifierSnapshot(uri);
+                  setShowMagnifier(true);
+                }).catch((err: Error) => {
+                  console.log('Snapshot error:', err);
+                  // Fallback: Lupe ohne Snapshot zeigen
+                  setShowMagnifier(true);
+                });
+              } else {
+                setShowMagnifier(true);
+              }
+              
               return;
             }
           }
@@ -2958,6 +2981,15 @@ export default function DrawSketchScreen() {
             return pt;
           });
           newEl.data = { ...el.data, points: newPoints };
+          
+          // Lupe-Position aktualisieren für Polygon-Eckpunkte
+          if (showMagnifier) {
+            const currentPoint = originalElement.data.points[editingPolylinePoint];
+            const newX = currentPoint.x + dx;
+            const newY = currentPoint.y + dy;
+            setMagnifierTargetPosition({ x: newX, y: newY });
+            setMagnifierPosition({ x: locationX, y: locationY });
+          }
         } else if (el.type === 'path') {
           // Move path by shifting all coordinates
           const pathRegex = /([ML])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;

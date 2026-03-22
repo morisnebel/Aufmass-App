@@ -1770,22 +1770,41 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // Delete selected element
+  // Delete selected element (or entire angle group if part of one)
   const deleteSelectedElement = () => {
     if (selectedElementId) {
-      const newElements = elements.filter(el => el.id !== selectedElementId);
-      addToHistory(newElements);
+      // Prüfe ob das Element Teil einer Winkel-Gruppe ist
+      const baseId = getAngleGroupBaseId(selectedElementId);
       
-      // Auch die Maße für dieses Element löschen
-      if (lineSegmentMeasurements[selectedElementId]) {
-        setLineSegmentMeasurements(prev => {
-          const newMeasurements = { ...prev };
-          delete newMeasurements[selectedElementId];
-          return newMeasurements;
-        });
+      let newElements: DrawElement[];
+      let idsToDelete: string[];
+      
+      if (baseId) {
+        // Es ist ein Winkel-Element - lösche die ganze Gruppe
+        idsToDelete = getAngleGroupElementIds(baseId);
+        newElements = elements.filter(el => !idsToDelete.includes(el.id));
+      } else {
+        // Normales Element - nur dieses löschen
+        idsToDelete = [selectedElementId];
+        newElements = elements.filter(el => el.id !== selectedElementId);
       }
       
+      addToHistory(newElements);
+      
+      // Auch die Maße für diese Elemente löschen
+      idsToDelete.forEach(id => {
+        if (lineSegmentMeasurements[id]) {
+          setLineSegmentMeasurements(prev => {
+            const newMeasurements = { ...prev };
+            delete newMeasurements[id];
+            return newMeasurements;
+          });
+        }
+      });
+      
       setSelectedElementId(null);
+      setMovingGroupBaseId(null);
+      setOriginalGroupElements([]);
       setShowDeleteConfirm(false);
     }
   };
@@ -3327,10 +3346,14 @@ export default function DrawSketchScreen() {
           };
         } else if (el.type === 'path') {
           // Bogen (arc) - SVG Pfad verschieben
-          const pathRegex = /([MA])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
-          newEl.data = origEl.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
-            return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
-          });
+          // Arc-Pfad hat Format: M x1 y1 A rx ry x-axis-rotation large-arc-flag sweep-flag x2 y2
+          // Wir müssen M x1 y1 und die letzten x2 y2 vom A-Befehl verschieben
+          const arcRegex = /M\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+A\s+(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s+(\d)\s+(\d)\s+(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/;
+          const arcMatch = origEl.data.match(arcRegex);
+          if (arcMatch) {
+            const [_, mx, my, rx, ry, xAxisRot, largeArc, sweep, ax, ay] = arcMatch;
+            newEl.data = `M ${parseFloat(mx) + dx} ${parseFloat(my) + dy} A ${rx} ${ry} ${xAxisRot} ${largeArc} ${sweep} ${parseFloat(ax) + dx} ${parseFloat(ay) + dy}`;
+          }
         } else if (el.type === 'text') {
           // Text
           newEl.x = (origEl.x || 0) + dx;

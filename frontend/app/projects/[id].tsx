@@ -2425,15 +2425,23 @@ export default function ProjectDetailScreen() {
               max-width: 100% !important;
               height: auto !important;
             }
+            .sketch-item {
+              max-height: none !important;
+              overflow: visible !important;
+            }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 450px !important;
+              max-height: none !important;
               height: auto !important;
               object-fit: contain !important;
             }
+            .photo-item {
+              max-height: none !important;
+              overflow: visible !important;
+            }
             .photo-item img {
               max-width: 100% !important;
-              max-height: 350px !important;
+              max-height: none !important;
               height: auto !important;
               object-fit: contain !important;
             }
@@ -2451,7 +2459,24 @@ export default function ProjectDetailScreen() {
             .sketch-item, .photo-item {
               max-width: 100% !important;
               box-sizing: border-box !important;
-              overflow: hidden !important;
+              max-height: none !important;
+              overflow: visible !important;
+            }
+            /* iPhone Sketch Container - keine Höhenbeschränkung beim Drucken */
+            .sketch-iphone, .photo-iphone {
+              max-height: none !important;
+              overflow: visible !important;
+            }
+            .sketch-iphone img, .photo-iphone img {
+              max-height: none !important;
+            }
+            /* Container-Größen zurücksetzen für Druck */
+            .sketches-container-iphone {
+              display: block !important;
+            }
+            .sketches-container-iphone .sketch-item {
+              width: 100% !important;
+              max-height: none !important;
             }
           }
           * {

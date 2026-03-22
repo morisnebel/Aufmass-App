@@ -352,6 +352,9 @@ export default function DrawSketchScreen() {
   const canvasWidth = screenWidth;
   const canvasHeight = screenHeight - (isPhone ? 100 : 120);
   
+  // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
+  const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
   
@@ -1399,26 +1402,39 @@ export default function DrawSketchScreen() {
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
     // KOORDINATEN-BERECHNUNG:
-    // 1. Das protractorOverlay ist über dem GESAMTEN Bildschirm zentriert (justifyContent: center, alignItems: center)
-    // 2. Das Canvas beginnt aber UNTER dem Header/Toolbar (etwa 100-120px von oben)
-    // 3. protractorPosition ist der Offset von der Bildschirmmitte
+    // Das protractorOverlay liegt über dem gesamten Container.
+    // Der Protractor (300x300) ist zentriert, sein Mittelpunkt liegt in der Mitte des Bildschirms.
+    // protractorPosition ist die Verschiebung relativ zu dieser Mitte.
+    //
+    // Verwende canvasLayout für präzise Berechnung:
+    // canvasLayout.y ist die Y-Position des Canvas auf dem Bildschirm
     
-    // Bildschirm-Dimensionen
+    // Screen-Mitte (wo der Protractor zentriert ist)
     const screenCenterX = screenWidth / 2;
     const screenCenterY = screenHeight / 2;
     
-    // Position des Protractors auf dem Bildschirm (Mitte + Verschiebung)
+    // Position des Protractor-Mittelpunkts auf dem Bildschirm
     const protractorScreenX = screenCenterX + protractorPosition.x;
     const protractorScreenY = screenCenterY + protractorPosition.y;
     
-    // Das Canvas hat eine Höhe von screenHeight - 120 (ungefähr für die Toolbar)
-    // und beginnt nach der Toolbar. Wir müssen die Toolbar-Höhe abziehen.
-    const toolbarHeight = isPhone ? 100 : 120;
+    // Umrechnung auf Canvas-Koordinaten:
+    // Falls canvasLayout verfügbar, verwende präzise Werte
+    // Ansonsten Fallback auf geschätzte Werte
+    let centerX: number;
+    let centerY: number;
     
-    // Canvas-Koordinaten = Bildschirmkoordinaten relativ zum Canvas-Start
-    // Das Canvas beginnt bei y=toolbarHeight auf dem Bildschirm
-    const centerX = protractorScreenX;
-    const centerY = protractorScreenY - toolbarHeight;
+    if (canvasLayout) {
+      // Präzise Berechnung mit gemessenen Werten
+      centerX = protractorScreenX - canvasLayout.x;
+      centerY = protractorScreenY - canvasLayout.y;
+    } else {
+      // Fallback: Geschätzte Werte (weniger präzise)
+      const headerHeight = Platform.OS === 'ios' ? 62 : 24;
+      const toolbarHeight = 70;
+      const topOffset = headerHeight + toolbarHeight;
+      centerX = protractorScreenX;
+      centerY = protractorScreenY - topOffset;
+    }
     
     // Verwendbare Größe (vom Benutzer einstellbar)
     const arcRadius = protractorDrawSize * 0.6;  // Bogenradius
@@ -1565,7 +1581,7 @@ export default function DrawSketchScreen() {
     
     // Zeige Bestätigung
     showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
-  }, [elements, protractorAngle, protractorPosition, screenWidth, screenHeight, isPhone, protractorUseComplementary, protractorDrawSize, protractorMirrored]);
+  }, [elements, protractorAngle, protractorPosition, screenWidth, screenHeight, isPhone, protractorUseComplementary, protractorDrawSize, protractorMirrored, canvasLayout]);
 
   const undo = () => {
     if (historyIndex > 0) {
@@ -5694,6 +5710,12 @@ export default function DrawSketchScreen() {
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}
+          onLayout={(event) => {
+            // Speichere die Canvas-Position auf dem Bildschirm für präzise Koordinaten-Berechnung
+            event.target.measureInWindow((x, y, width, height) => {
+              setCanvasLayout({ x, y, width, height });
+            });
+          }}
         >
         <Svg
           ref={svgRef}
@@ -7354,33 +7376,51 @@ export default function DrawSketchScreen() {
                 {/* Mittelpunkt */}
                 <Circle cx={150} cy={150} r={6} fill="#FF5722" />
                 
-                {/* Referenzlinie (horizontal - blau) */}
-                <Line x1={150} y1={150} x2={290} y2={150} stroke="#2196f3" strokeWidth={3} />
-                
-                {/* Winkellinie (gedreht - orange) */}
+                {/* Referenzlinie (horizontal - blau) - gespiegelt wenn protractorMirrored */}
                 <Line 
                   x1={150} 
                   y1={150} 
-                  x2={150 + 140 * Math.cos(protractorAngle * Math.PI / 180)} 
+                  x2={protractorMirrored ? 10 : 290} 
+                  y2={150} 
+                  stroke="#2196f3" 
+                  strokeWidth={3} 
+                />
+                
+                {/* Winkellinie (gedreht - orange) - gespiegelt wenn protractorMirrored */}
+                <Line 
+                  x1={150} 
+                  y1={150} 
+                  x2={protractorMirrored 
+                    ? 150 - 140 * Math.cos(protractorAngle * Math.PI / 180)
+                    : 150 + 140 * Math.cos(protractorAngle * Math.PI / 180)} 
                   y2={150 + 140 * Math.sin(protractorAngle * Math.PI / 180)} 
                   stroke="#FF5722" 
                   strokeWidth={3} 
                 />
                 
-                {/* Winkelbogen */}
+                {/* Winkelbogen - gespiegelt wenn protractorMirrored */}
                 {protractorAngle !== 0 && (
                   <Path 
                     d={(() => {
                       const r = 50;
-                      const startAngle = 0;
                       const endAngle = protractorAngle * Math.PI / 180;
                       const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
                       const sweep = protractorAngle > 0 ? 1 : 0;
-                      const x1 = 150 + r;
-                      const y1 = 150;
-                      const x2 = 150 + r * Math.cos(endAngle);
-                      const y2 = 150 + r * Math.sin(endAngle);
-                      return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2} ${y2}`;
+                      if (protractorMirrored) {
+                        // Gespiegelt: Bogen nach links
+                        const x1 = 150 - r;
+                        const y1 = 150;
+                        const x2 = 150 - r * Math.cos(endAngle);
+                        const y2 = 150 + r * Math.sin(endAngle);
+                        return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep === 1 ? 0 : 1} ${x2} ${y2}`;
+                      } else {
+                        // Normal: Bogen nach rechts
+                        const x1 = 150 + r;
+                        const y1 = 150;
+                        const x2 = 150 + r * Math.cos(endAngle);
+                        const y2 = 150 + r * Math.sin(endAngle);
+                        return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2} ${y2}`;
+                      }
                     })()}
                     fill="none"
                     stroke="#4caf50"

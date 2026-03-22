@@ -1399,9 +1399,9 @@ export default function DrawSketchScreen() {
     const centerX = canvasWidth / 2 + protractorPosition.x;
     const centerY = canvasHeight / 2 + protractorPosition.y;
     
-    // Radius für den Winkelbogen auf dem Sketch
-    const arcRadius = 40;
-    const lineLength = 80;
+    // Größere Werte für bessere Sichtbarkeit
+    const arcRadius = 60;
+    const lineLength = 100;
     
     // Erstelle den Pfad für den Winkelbogen
     const endAngle = protractorAngle * Math.PI / 180;
@@ -1423,24 +1423,24 @@ export default function DrawSketchScreen() {
     // Erstelle die Elemente für den Winkel
     const newElements: DrawElement[] = [...elements];
     
-    // 1. Referenzlinie (horizontal)
+    // 1. Referenzlinie (horizontal) - korrektes Format für line-Elemente
     newElements.push({
       id: `${baseId}-ref-line`,
       type: 'line',
-      data: `M ${centerX} ${centerY} L ${centerX + lineLength} ${centerY}`,
+      data: { x1: centerX, y1: centerY, x2: centerX + lineLength, y2: centerY },
       color: '#2196f3',
-      strokeWidth: 2,
+      strokeWidth: 3,
     });
     
-    // 2. Winkellinie (gedreht)
+    // 2. Winkellinie (gedreht) - korrektes Format
     const endX = centerX + lineLength * Math.cos(endAngle);
     const endY = centerY + lineLength * Math.sin(endAngle);
     newElements.push({
       id: `${baseId}-angle-line`,
       type: 'line',
-      data: `M ${centerX} ${centerY} L ${endX} ${endY}`,
+      data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
       color: '#FF5722',
-      strokeWidth: 2,
+      strokeWidth: 3,
     });
     
     // 3. Winkelbogen (wenn Winkel > 0)
@@ -1450,22 +1450,22 @@ export default function DrawSketchScreen() {
         type: 'path',
         data: arcPath,
         color: '#4caf50',
-        strokeWidth: 2,
+        strokeWidth: 3,
       });
     }
     
-    // 4. Winkeltext
-    const textX = centerX + (arcRadius + 15) * Math.cos(endAngle / 2);
-    const textY = centerY + (arcRadius + 15) * Math.sin(endAngle / 2);
+    // 4. Winkeltext - größer und besser positioniert
+    const textX = centerX + (arcRadius + 25) * Math.cos(endAngle / 2);
+    const textY = centerY + (arcRadius + 25) * Math.sin(endAngle / 2);
     newElements.push({
       id: `${baseId}-text`,
       type: 'text',
-      data: `${protractorAngle}°`,
+      data: { text: `${protractorAngle}°` },
       color: '#FF5722',
       strokeWidth: 1,
       x: textX,
       y: textY,
-      fontSize: 14,
+      fontSize: 18,
       fontWeight: 'bold',
     });
     

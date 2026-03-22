@@ -3,7 +3,7 @@
     "name": "Aufmassprofi Basic",
     "slug": "frontend",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
@@ -38,7 +38,9 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"
       },
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "userInterfaceStyle": "automatic"
     },
     "web": {
       "bundler": "metro",
@@ -51,6 +53,7 @@
       "expo-web-browser",
       "./plugins/withICloudConfig",
       "./plugins/withExcludeCloudKitAndroid",
+      "./plugins/withAndroidFullScreen",
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

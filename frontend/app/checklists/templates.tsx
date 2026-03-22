@@ -257,6 +257,7 @@ export default function ChecklistTemplatesScreen() {
       await ChecklistTemplateService.create({
         name: finalName,
         items: template.items,
+        templateLogo: template.templateLogo,
       });
 
       await loadTemplates();

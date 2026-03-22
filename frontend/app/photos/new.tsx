@@ -52,20 +52,51 @@ export default function NewPhotoScreen() {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.8,
-      base64: true,
-      selectionLimit: 20,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        base64: true,
+        selectionLimit: 20,
+      });
 
-    if (!result.canceled && result.assets.length > 0) {
-      const newPhotos: SelectedPhoto[] = result.assets.map(asset => ({
-        uri: `data:image/jpeg;base64,${asset.base64}`,
-        description: '',
-      }));
-      setSelectedPhotos(prev => [...prev, ...newPhotos]);
+      if (!result.canceled && result.assets.length > 0) {
+        const newPhotos: SelectedPhoto[] = [];
+        
+        for (const asset of result.assets) {
+          let base64Image: string;
+          
+          if (asset.base64) {
+            base64Image = `data:image/jpeg;base64,${asset.base64}`;
+          } else if (asset.uri) {
+            // Fallback für Android: URI in base64 konvertieren
+            console.log('base64 not available for gallery image, converting from URI');
+            const manipResult = await ImageManipulator.manipulateAsync(
+              asset.uri,
+              [{ resize: { width: 1200 } }],
+              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            );
+            if (manipResult.base64) {
+              base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+            } else {
+              console.error('Failed to convert image to base64');
+              continue;
+            }
+          } else {
+            continue;
+          }
+          
+          newPhotos.push({ uri: base64Image, description: '' });
+        }
+        
+        if (newPhotos.length > 0) {
+          setSelectedPhotos(prev => [...prev, ...newPhotos]);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking images:', error);
+      Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
     }
   };
 
@@ -73,15 +104,44 @@ export default function NewPhotoScreen() {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 0.8,
-      base64: true,
-    });
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.8,
+        base64: true,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setSelectedPhotos(prev => [...prev, { uri: base64Image, description: '' }]);
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Android: base64 könnte undefined sein, dann URI als Fallback verwenden
+        // und mit ImageManipulator in base64 konvertieren
+        let base64Image: string;
+        
+        if (asset.base64) {
+          base64Image = `data:image/jpeg;base64,${asset.base64}`;
+        } else if (asset.uri) {
+          // Fallback: URI mit ImageManipulator in base64 konvertieren
+          console.log('base64 not available, converting from URI:', asset.uri);
+          const manipResult = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          if (manipResult.base64) {
+            base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+          } else {
+            throw new Error('Konnte Foto nicht in base64 konvertieren');
+          }
+        } else {
+          throw new Error('Kein Bild verfügbar');
+        }
+        
+        setSelectedPhotos(prev => [...prev, { uri: base64Image, description: '' }]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Fehler', 'Foto konnte nicht aufgenommen werden');
     }
   };
 

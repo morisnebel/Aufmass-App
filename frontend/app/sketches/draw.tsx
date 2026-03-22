@@ -5859,7 +5859,7 @@ export default function DrawSketchScreen() {
       >
         <View
           ref={canvasRef}
-          style={styles.canvasContainer}
+          style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
           onStartShouldSetResponder={() => true}
           onMoveShouldSetResponder={() => true}
           onResponderGrant={onTouchStart}
@@ -5874,8 +5874,8 @@ export default function DrawSketchScreen() {
         >
         <Svg
           ref={svgRef}
-          width={width}
-          height={height - 120}
+          width={screenWidth}
+          height={canvasHeight}
           style={styles.svg}
         >
           {/* Kästchenpapier Gitter - nur wenn kein Hintergrundbild und Gitter aktiviert */}
@@ -5899,8 +5899,8 @@ export default function DrawSketchScreen() {
               <Rect
                 x={0}
                 y={0}
-                width={width}
-                height={height - 120}
+                width={screenWidth}
+                height={canvasHeight}
                 fill="url(#gridPattern)"
               />
             </>
@@ -5912,8 +5912,8 @@ export default function DrawSketchScreen() {
               href={backgroundImage}
               x={0}
               y={0}
-              width={width}
-              height={height - 120}
+              width={screenWidth}
+              height={canvasHeight}
               preserveAspectRatio="xMidYMid meet"
               opacity={1}
             />

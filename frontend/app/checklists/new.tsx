@@ -179,23 +179,37 @@ export default function NewChecklistScreen() {
     try {
       const projId = Array.isArray(projectId) ? projectId[0] : projectId;
       
-      // Debug: Log checklist items to see if images are present
+      // Debug: Log all data
+      console.log('=== SAVING CHECKLIST ===');
+      console.log('projectId param:', projectId);
+      console.log('projId resolved:', projId);
+      console.log('selectedTemplate.id:', selectedTemplate.id);
+      console.log('selectedTemplate.name:', selectedTemplate.name);
+      console.log('checklistItems count:', checklistItems.length);
       console.log('Saving checklist items:', JSON.stringify(checklistItems, null, 2));
       
-      await ChecklistService.create({
-        project_id: projId || '',
+      if (!projId) {
+        console.error('ERROR: No project ID provided!');
+        Alert.alert('Fehler', 'Keine Projekt-ID vorhanden');
+        return;
+      }
+      
+      const result = await ChecklistService.create({
+        project_id: projId,
         template_id: selectedTemplate.id,
         template_name: selectedTemplate.name,
         templateLogo: (selectedTemplate as any).templateLogo,
         items: checklistItems,
       });
+      
+      console.log('Checklist created successfully:', result);
 
       Alert.alert('Erfolg', 'Checkliste wurde erstellt', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error('Error saving checklist:', error);
-      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden');
+      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden: ' + (error as Error).message);
     }
   };
 

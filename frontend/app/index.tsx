@@ -737,6 +737,16 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
+            onPress={() => router.push('/imagemeter/')}
+          >
+            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#e8f5e9' }]}>
+              <Ionicons name="camera" size={isPhone ? 18 : 20} color="#4CAF50" />
+            </View>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Foto' : 'Fotomessung'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
             onPress={() => router.push('/settings')}
           >
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>

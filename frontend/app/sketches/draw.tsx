@@ -538,6 +538,8 @@ export default function DrawSketchScreen() {
   const [protractorScale, setProtractorScale] = useState(1);
   const [showProtractorAngleInput, setShowProtractorAngleInput] = useState(false);
   const [protractorAngleInput, setProtractorAngleInput] = useState('0');
+  const [protractorUseComplementary, setProtractorUseComplementary] = useState(false); // Komplementärwinkel (180° - angle)
+  const [protractorDrawSize, setProtractorDrawSize] = useState(60); // Größe des gezeichneten Winkels (30-100)
   // Winkelmesser Position mit useState für bessere Web-Kompatibilität
   const [protractorPosition, setProtractorPosition] = useState({ x: 0, y: 0 });
   const protractorDragRef = useRef({ 
@@ -1395,25 +1397,50 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // Berechne die Position basierend auf der aktuellen Protractor-Position und dem Canvas-Zentrum
-    const centerX = canvasWidth / 2 + protractorPosition.x;
-    const centerY = canvasHeight / 2 + protractorPosition.y;
+    // Berechne die korrekte Position auf dem Canvas
+    // Der Protractor ist zentriert im Overlay, also müssen wir die Verschiebung zur Canvas-Position umrechnen
+    // Protractor-Mitte ist ursprünglich bei canvasWidth/2, canvasHeight/2
+    // Nach dem Verschieben ist sie bei canvasWidth/2 + protractorPosition.x, canvasHeight/2 + protractorPosition.y
+    // Aber wir müssen die Header-Höhe und andere Offsets berücksichtigen
     
-    // Größere Werte für bessere Sichtbarkeit
-    const arcRadius = 60;
-    const lineLength = 100;
+    // Die protractorPosition ist relativ zum Zentrum des Overlays
+    // Das Bild-Element beginnt normalerweise bei x:20, y:20
+    // Wir müssen die Position relativ zum Canvas berechnen
+    const canvasCenter = {
+      x: canvasWidth / 2,
+      y: (canvasHeight) / 2  // Canvas-Höhe ohne Header
+    };
+    
+    // Die finale Position auf dem Canvas
+    const centerX = canvasCenter.x + protractorPosition.x;
+    const centerY = canvasCenter.y + protractorPosition.y;
+    
+    // Verwendbare Größe (vom Benutzer einstellbar)
+    const arcRadius = protractorDrawSize * 0.6;  // Bogenradius
+    const lineLength = protractorDrawSize;  // Linienlänge
+    
+    // Berechne den anzuzeigenden Winkel
+    // Immer positive Werte verwenden
+    let displayAngle = Math.abs(protractorAngle);
+    
+    // Komplementärwinkel berechnen wenn gewünscht (für Innen/Außenwinkel)
+    if (protractorUseComplementary && displayAngle !== 0 && displayAngle !== 180) {
+      displayAngle = 180 - displayAngle;
+    }
     
     // Erstelle den Pfad für den Winkelbogen
-    const endAngle = protractorAngle * Math.PI / 180;
-    const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
-    const sweep = protractorAngle > 0 ? 1 : 0;
+    // Der tatsächliche Zeichenwinkel bleibt beim Original-Winkel
+    const drawAngle = protractorAngle;
+    const endAngle = drawAngle * Math.PI / 180;
+    const largeArc = Math.abs(drawAngle) > 180 ? 1 : 0;
+    const sweep = drawAngle > 0 ? 1 : 0;
     
     const arcX1 = centerX + arcRadius;
     const arcY1 = centerY;
     const arcX2 = centerX + arcRadius * Math.cos(endAngle);
     const arcY2 = centerY + arcRadius * Math.sin(endAngle);
     
-    const arcPath = protractorAngle !== 0 
+    const arcPath = drawAngle !== 0 
       ? `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`
       : '';
     
@@ -1443,7 +1470,7 @@ export default function DrawSketchScreen() {
       strokeWidth: 3,
     });
     
-    // 3. Winkelbogen (wenn Winkel > 0)
+    // 3. Winkelbogen (wenn Winkel != 0)
     if (arcPath) {
       newElements.push({
         id: `${baseId}-arc`,
@@ -1455,17 +1482,19 @@ export default function DrawSketchScreen() {
     }
     
     // 4. Winkeltext - größer und besser positioniert
-    const textX = centerX + (arcRadius + 25) * Math.cos(endAngle / 2);
-    const textY = centerY + (arcRadius + 25) * Math.sin(endAngle / 2);
+    // Text wird zwischen den beiden Linien positioniert
+    const textAngle = endAngle / 2;
+    const textX = centerX + (arcRadius + 15) * Math.cos(textAngle);
+    const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
     newElements.push({
       id: `${baseId}-text`,
       type: 'text',
-      data: { text: `${protractorAngle}°` },
+      data: { text: `${displayAngle}°` },
       color: '#FF5722',
       strokeWidth: 1,
       x: textX,
       y: textY,
-      fontSize: 18,
+      fontSize: Math.max(14, protractorDrawSize * 0.25),
       fontWeight: 'bold',
     });
     
@@ -1476,8 +1505,8 @@ export default function DrawSketchScreen() {
     setShowProtractor(false);
     
     // Zeige Bestätigung
-    showAlert('Winkel hinzugefügt', `${protractorAngle}° wurde zur Skizze hinzugefügt`);
-  }, [elements, protractorAngle, protractorPosition, canvasWidth, canvasHeight]);
+    showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
+  }, [elements, protractorAngle, protractorPosition, canvasWidth, canvasHeight, protractorUseComplementary, protractorDrawSize]);
 
   const undo = () => {
     if (historyIndex > 0) {
@@ -7309,7 +7338,9 @@ export default function DrawSketchScreen() {
                   fontWeight="bold" 
                   textAnchor="middle"
                 >
-                  {protractorAngle}°
+                  {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
+                    ? `${180 - Math.abs(protractorAngle)}°`
+                    : `${Math.abs(protractorAngle)}°`}
                 </SvgText>
               </Svg>
             </View>
@@ -7335,11 +7366,15 @@ export default function DrawSketchScreen() {
               <TouchableOpacity 
                 style={styles.protractorAngleBadge}
                 onPress={() => {
-                  setProtractorAngleInput(protractorAngle.toString());
+                  setProtractorAngleInput(Math.abs(protractorAngle).toString());
                   setShowProtractorAngleInput(true);
                 }}
               >
-                <Text style={styles.protractorAngleBadgeText}>{protractorAngle}°</Text>
+                <Text style={styles.protractorAngleBadgeText}>
+                  {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
+                    ? `${180 - Math.abs(protractorAngle)}°`
+                    : `${Math.abs(protractorAngle)}°`}
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -7356,18 +7391,47 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             </View>
             
+            {/* Komplementärwinkel-Umschalter und Größe */}
+            <View style={styles.protractorControlRow}>
+              <TouchableOpacity 
+                style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive]}
+                onPress={() => setProtractorUseComplementary(prev => !prev)}
+              >
+                <Ionicons name="swap-horizontal" size={16} color={protractorUseComplementary ? '#fff' : '#333'} />
+                <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive]}>
+                  {protractorUseComplementary ? 'Außen' : 'Innen'}
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={styles.protractorSizeControl}>
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorDrawSize(prev => Math.max(30, prev - 10))}
+                >
+                  <Ionicons name="remove" size={16} color="#333" />
+                </TouchableOpacity>
+                <Text style={styles.protractorSizeLabel}>Größe: {protractorDrawSize}px</Text>
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorDrawSize(prev => Math.min(120, prev + 10))}
+                >
+                  <Ionicons name="add" size={16} color="#333" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
             {/* Zoom und Reset */}
             <View style={styles.protractorControlRow}>
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorScale(prev => Math.max(0.5, prev - 0.2))}
+                onPress={() => setProtractorScale(prev => Math.max(0.3, prev - 0.1))}
               >
                 <Ionicons name="remove" size={20} color="#333" />
               </TouchableOpacity>
               <Text style={styles.protractorZoomLabel}>Zoom: {Math.round(protractorScale * 100)}%</Text>
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.2))}
+                onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.1))}
               >
                 <Ionicons name="add" size={20} color="#333" />
               </TouchableOpacity>
@@ -7377,6 +7441,8 @@ export default function DrawSketchScreen() {
                   setProtractorAngle(0);
                   setProtractorScale(1);
                   setProtractorPosition({ x: 0, y: 0 });
+                  setProtractorUseComplementary(false);
+                  setProtractorDrawSize(60);
                 }}
               >
                 <Text style={styles.protractorResetBtnText}>Reset</Text>
@@ -8816,6 +8882,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  protractorToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 4,
+  },
+  protractorToggleBtnActive: {
+    backgroundColor: '#9c27b0',
+  },
+  protractorToggleBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  protractorToggleBtnTextActive: {
+    color: '#fff',
+  },
+  protractorSizeControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  protractorControlBtnSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  protractorSizeLabel: {
+    fontSize: 12,
+    color: '#666',
+    minWidth: 70,
+    textAlign: 'center',
   },
   protractorInputModal: {
     position: 'absolute',

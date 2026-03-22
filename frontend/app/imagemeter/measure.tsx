@@ -242,7 +242,29 @@ export default function ImageMeterMeasureScreen() {
       return;
     }
     
-    // Modal für Längeneingabe öffnen
+    // Wenn Referenz gesetzt ist und normale Messung: automatisch berechnen
+    if (drawMode === 'line' && referenceScale) {
+      const calculatedLength = pixelLength / referenceScale;
+      
+      const newMeasurement: Measurement = {
+        id: `measurement_${Date.now()}`,
+        type: 'line',
+        startPoint: currentLine.start,
+        endPoint: currentLine.end,
+        pixelLength,
+        realLength: calculatedLength,
+        unit: calculatedLength >= 100 ? 'm' : 'cm',
+        label: undefined,
+      };
+      
+      setMeasurements(prev => [...prev, newMeasurement]);
+      setHasChanges(true);
+      setCurrentLine(null);
+      setDrawMode('none');
+      return;
+    }
+    
+    // Sonst: Modal für Längeneingabe öffnen (Referenz setzen oder manuelle Eingabe)
     setPendingMeasurement({
       start: currentLine.start,
       end: currentLine.end,

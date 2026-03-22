@@ -155,8 +155,11 @@ export default function ProjectDetailScreen() {
   const [loading, setLoading] = useState(true);
   
   // Determine initial tab from URL parameter
-  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' || tab === 'calculator') ? tab : 'overview';
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents' | 'calculator'>(initialTab);
+  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter') ? tab : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents' | 'calculator' | 'imagemeter'>(initialTab);
+  
+  // ImageMeter photos state
+  const [imagemeterPhotos, setImagemeterPhotos] = useState<any[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -354,6 +357,22 @@ export default function ProjectDetailScreen() {
       setChecklists(checklistsData);
       setDocuments(documentsData);
       setAreaCalculations(areaCalcsData);
+      
+      // Lade ImageMeter-Fotos für dieses Projekt
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const imagemeterData = await AsyncStorage.getItem('aufmassprofi_imagemeter_photos');
+        if (imagemeterData) {
+          const allImagemeterPhotos = JSON.parse(imagemeterData);
+          const projectImagemeterPhotos = allImagemeterPhotos.filter((p: any) => p.projectId === projectId);
+          setImagemeterPhotos(projectImagemeterPhotos);
+        } else {
+          setImagemeterPhotos([]);
+        }
+      } catch (e) {
+        console.error('Error loading imagemeter photos:', e);
+        setImagemeterPhotos([]);
+      }
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');
@@ -4057,6 +4076,28 @@ export default function ProjectDetailScreen() {
             )}
           </TouchableOpacity>
           
+          {/* 3.5 Fotomessung - Grün/Teal */}
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'imagemeter' && styles.tabPillActive]}
+            onPress={() => setActiveTab('imagemeter')}
+          >
+            <Ionicons 
+              name={activeTab === 'imagemeter' ? "analytics" : "analytics-outline"}
+              size={20} 
+              color="#14b8a6"
+            />
+            <Text style={[styles.tabPillText, activeTab === 'imagemeter' && styles.tabPillTextActive]}>
+              Messung
+            </Text>
+            {imagemeterPhotos.length > 0 && (
+              <View style={[styles.tabBadge, { backgroundColor: '#ccfbf1' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#14b8a6' }]}>
+                  {imagemeterPhotos.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          
           {/* 4. Flächen - Orange - nur in Pro */}
           {Features.showFlaechenTab && (
           <TouchableOpacity
@@ -5709,6 +5750,97 @@ export default function ProjectDetailScreen() {
                                 } catch (error) {
                                   console.error('Error deleting document:', error);
                                   Alert.alert('Fehler', 'Dokument konnte nicht gelöscht werden');
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#f44336" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'imagemeter' && (
+          <View style={styles.documentsSection}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push({
+                pathname: '/imagemeter/new',
+                params: { projectId: Array.isArray(id) ? id[0] : id },
+              })}
+            >
+              <Ionicons name="add-circle" size={24} color="#fff" />
+              <Text style={styles.addButtonText}>Neue Fotomessung</Text>
+            </TouchableOpacity>
+
+            {imagemeterPhotos.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="camera-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Keine Fotomessungen</Text>
+                <Text style={styles.emptySubtext}>
+                  Messen Sie direkt auf Fotos. Setzen Sie ein Referenzmaß für automatische Berechnungen.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.documentsGrid}>
+                {imagemeterPhotos.map((photo: any) => (
+                  <TouchableOpacity
+                    key={photo.id}
+                    style={styles.documentCard}
+                    onPress={() => router.push({
+                      pathname: '/imagemeter/measure',
+                      params: { id: photo.id },
+                    })}
+                  >
+                    <Image 
+                      source={{ uri: photo.imageUri }} 
+                      style={{ width: '100%', height: 100, borderRadius: 8, marginBottom: 8 }}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.documentName} numberOfLines={2}>{photo.name || 'Unbenannt'}</Text>
+                    <Text style={styles.calculatorResultText}>
+                      {photo.measurements?.length || 0} Messungen
+                    </Text>
+                    {photo.referenceScale && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Ionicons name="resize" size={12} color="#4CAF50" />
+                        <Text style={{ fontSize: 10, color: '#4CAF50', marginLeft: 4 }}>Kalibriert</Text>
+                      </View>
+                    )}
+                    <Text style={styles.documentDate}>
+                      {new Date(photo.updatedAt).toLocaleDateString('de-DE')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.deleteDocButton}
+                      onPress={() => {
+                        Alert.alert(
+                          'Fotomessung löschen',
+                          `Möchten Sie "${photo.name || 'Unbenannt'}" wirklich löschen?`,
+                          [
+                            { text: 'Abbrechen', style: 'cancel' },
+                            {
+                              text: 'Löschen',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                                  const data = await AsyncStorage.getItem('aufmassprofi_imagemeter_photos');
+                                  if (data) {
+                                    const allPhotos = JSON.parse(data);
+                                    const filtered = allPhotos.filter((p: any) => p.id !== photo.id);
+                                    await AsyncStorage.setItem('aufmassprofi_imagemeter_photos', JSON.stringify(filtered));
+                                    await loadProjectData();
+                                    Alert.alert('Erfolg', 'Fotomessung wurde gelöscht');
+                                  }
+                                } catch (error) {
+                                  console.error('Error deleting imagemeter photo:', error);
+                                  Alert.alert('Fehler', 'Löschen fehlgeschlagen');
                                 }
                               },
                             },

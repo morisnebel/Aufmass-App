@@ -338,6 +338,9 @@ export default function DrawSketchScreen() {
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [originalElement, setOriginalElement] = useState<DrawElement | null>(null);
+  // Für Winkel-Gruppen-Verschiebung: Speichert alle Original-Elemente der Gruppe
+  const [originalGroupElements, setOriginalGroupElements] = useState<DrawElement[]>([]);
+  const [movingGroupBaseId, setMovingGroupBaseId] = useState<string | null>(null);
   
   // Zoom & Pan - use dynamic dimensions
   const [scale, setScale] = useState(1);
@@ -1583,6 +1586,72 @@ export default function DrawSketchScreen() {
     showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
   }, [elements, protractorAngle, protractorPosition, screenWidth, screenHeight, isPhone, protractorUseComplementary, protractorDrawSize, protractorMirrored, canvasLayout]);
 
+  // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
+  // Winkel-Elemente haben IDs im Format: {baseId}-ref-line, {baseId}-angle-line, {baseId}-arc, {baseId}-text
+  
+  // Prüft ob ein Element Teil einer Winkel-Gruppe ist
+  const isAngleGroupElement = useCallback((elementId: string): boolean => {
+    return elementId.includes('-ref-line') || 
+           elementId.includes('-angle-line') || 
+           elementId.includes('-arc') || 
+           elementId.includes('-text');
+  }, []);
+  
+  // Extrahiert die Basis-ID aus einem Winkel-Element
+  const getAngleGroupBaseId = useCallback((elementId: string): string | null => {
+    const suffixes = ['-ref-line', '-angle-line', '-arc', '-text'];
+    for (const suffix of suffixes) {
+      if (elementId.endsWith(suffix)) {
+        return elementId.slice(0, -suffix.length);
+      }
+    }
+    return null;
+  }, []);
+  
+  // Findet alle Element-IDs einer Winkel-Gruppe
+  const getAngleGroupElementIds = useCallback((baseId: string): string[] => {
+    const suffixes = ['-ref-line', '-angle-line', '-arc', '-text'];
+    return suffixes.map(suffix => `${baseId}${suffix}`);
+  }, []);
+  
+  // Verschiebt eine komplette Winkel-Gruppe
+  const moveAngleGroup = useCallback((baseId: string, dx: number, dy: number, originalElements: DrawElement[]): DrawElement[] => {
+    const groupIds = getAngleGroupElementIds(baseId);
+    
+    return elements.map(el => {
+      if (!groupIds.includes(el.id)) return el;
+      
+      // Finde das Original-Element
+      const origEl = originalElements.find(oe => oe.id === el.id);
+      if (!origEl) return el;
+      
+      const newEl = { ...el };
+      
+      if (el.type === 'line') {
+        // Linien (ref-line, angle-line)
+        newEl.data = {
+          ...el.data,
+          x1: origEl.data.x1 + dx,
+          y1: origEl.data.y1 + dy,
+          x2: origEl.data.x2 + dx,
+          y2: origEl.data.y2 + dy,
+        };
+      } else if (el.type === 'path') {
+        // Bogen (arc) - SVG Pfad verschieben
+        const pathRegex = /([MA])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+        newEl.data = origEl.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
+          return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
+        });
+      } else if (el.type === 'text') {
+        // Text
+        newEl.x = (origEl.x || 0) + dx;
+        newEl.y = (origEl.y || 0) + dy;
+      }
+      
+      return newEl;
+    });
+  }, [elements, getAngleGroupElementIds]);
+
   const undo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
@@ -2629,12 +2698,18 @@ export default function DrawSketchScreen() {
       if (editingPolylinePoint !== null) {
         // Save polyline point edit to history
         addToHistory(elements);
+      } else if (movingGroupBaseId && originalGroupElements.length > 0) {
+        // Winkel-Gruppen-Bewegung abgeschlossen - zum History hinzufügen
+        addToHistory(elements);
       }
       setEditingPolylinePoint(null);
       setDragMode(null);
       setResizeHandle(null);
       setDragStart(null);
       setOriginalElement(null);
+      // Winkel-Gruppen-State zurücksetzen
+      setOriginalGroupElements([]);
+      setMovingGroupBaseId(null);
       // Lupe ausblenden
       setShowMagnifier(false);
       setMagnifierPosition(null);
@@ -3185,9 +3260,25 @@ export default function DrawSketchScreen() {
         setDragMode('move');
         setDragStart({ x: locationX, y: locationY });
         setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+        
+        // WINKEL-GRUPPEN-LOGIK: Prüfe ob das Element Teil einer Winkel-Gruppe ist
+        const baseId = getAngleGroupBaseId(clickedElement.id);
+        if (baseId) {
+          // Es ist ein Winkel-Element - speichere alle Gruppenelemente
+          const groupIds = getAngleGroupElementIds(baseId);
+          const groupElements = elements.filter(el => groupIds.includes(el.id));
+          setOriginalGroupElements(groupElements.map(el => JSON.parse(JSON.stringify(el))));
+          setMovingGroupBaseId(baseId);
+        } else {
+          // Kein Winkel-Element - Gruppen-State zurücksetzen
+          setOriginalGroupElements([]);
+          setMovingGroupBaseId(null);
+        }
       }
     } else {
       setSelectedElementId(null);
+      setOriginalGroupElements([]);
+      setMovingGroupBaseId(null);
       lastTapRef.current = { time: 0, elementId: null };
     }
   };
@@ -3211,6 +3302,47 @@ export default function DrawSketchScreen() {
 
     const dx = locationX - dragStart.x;
     const dy = locationY - dragStart.y;
+
+    // WINKEL-GRUPPEN-BEWEGUNG: Wenn wir eine Gruppe verschieben
+    if (movingGroupBaseId && originalGroupElements.length > 0 && dragMode === 'move') {
+      const groupIds = getAngleGroupElementIds(movingGroupBaseId);
+      
+      const newElements = elements.map(el => {
+        if (!groupIds.includes(el.id)) return el;
+        
+        // Finde das Original-Element
+        const origEl = originalGroupElements.find(oe => oe.id === el.id);
+        if (!origEl) return el;
+        
+        const newEl = { ...el };
+        
+        if (el.type === 'line') {
+          // Linien (ref-line, angle-line)
+          newEl.data = {
+            ...el.data,
+            x1: origEl.data.x1 + dx,
+            y1: origEl.data.y1 + dy,
+            x2: origEl.data.x2 + dx,
+            y2: origEl.data.y2 + dy,
+          };
+        } else if (el.type === 'path') {
+          // Bogen (arc) - SVG Pfad verschieben
+          const pathRegex = /([MA])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+          newEl.data = origEl.data.replace(pathRegex, (match: string, cmd: string, x: string, y: string) => {
+            return `${cmd} ${parseFloat(x) + dx} ${parseFloat(y) + dy}`;
+          });
+        } else if (el.type === 'text') {
+          // Text
+          newEl.x = (origEl.x || 0) + dx;
+          newEl.y = (origEl.y || 0) + dy;
+        }
+        
+        return newEl;
+      });
+      
+      setElements(newElements);
+      return;
+    }
 
     const newElements = elements.map(el => {
       if (el.id !== selectedElementId) return el;

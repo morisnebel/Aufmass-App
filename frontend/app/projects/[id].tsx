@@ -2420,9 +2420,55 @@ export default function ProjectDetailScreen() {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
+            /* KRITISCH: Verhindere Abschneiden von Inhalten beim Drucken */
+            img {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+            .sketch-item img {
+              max-width: 100% !important;
+              max-height: 450px !important;
+              height: auto !important;
+              object-fit: contain !important;
+            }
+            .photo-item img {
+              max-width: 100% !important;
+              max-height: 350px !important;
+              height: auto !important;
+              object-fit: contain !important;
+            }
+            svg {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+            .sketch-svg-container svg {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+            .sketches-container, .photos-container {
+              display: block !important;
+            }
+            .sketch-item, .photo-item {
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+            }
           }
           * {
             box-sizing: border-box;
+          }
+          /* Globale Überlauf-Kontrolle für alle Container */
+          .sketch-item, .photo-item {
+            overflow: hidden;
+            max-width: 100%;
+          }
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+          svg {
+            max-width: 100%;
+            height: auto;
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

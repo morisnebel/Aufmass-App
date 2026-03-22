@@ -539,6 +539,7 @@ export default function DrawSketchScreen() {
   const [showProtractorAngleInput, setShowProtractorAngleInput] = useState(false);
   const [protractorAngleInput, setProtractorAngleInput] = useState('0');
   const [protractorUseComplementary, setProtractorUseComplementary] = useState(false); // Komplementärwinkel (180° - angle)
+  const [protractorMirrored, setProtractorMirrored] = useState(false); // Horizontal spiegeln
   const [protractorDrawSize, setProtractorDrawSize] = useState(60); // Größe des gezeichneten Winkels (30-100)
   // Winkelmesser Position mit useState für bessere Web-Kompatibilität
   const [protractorPosition, setProtractorPosition] = useState({ x: 0, y: 0 });
@@ -1397,23 +1398,27 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // Berechne die korrekte Position auf dem Canvas
-    // Der Protractor ist zentriert im Overlay, also müssen wir die Verschiebung zur Canvas-Position umrechnen
-    // Protractor-Mitte ist ursprünglich bei canvasWidth/2, canvasHeight/2
-    // Nach dem Verschieben ist sie bei canvasWidth/2 + protractorPosition.x, canvasHeight/2 + protractorPosition.y
-    // Aber wir müssen die Header-Höhe und andere Offsets berücksichtigen
+    // KOORDINATEN-BERECHNUNG:
+    // 1. Das protractorOverlay ist über dem GESAMTEN Bildschirm zentriert (justifyContent: center, alignItems: center)
+    // 2. Das Canvas beginnt aber UNTER dem Header/Toolbar (etwa 100-120px von oben)
+    // 3. protractorPosition ist der Offset von der Bildschirmmitte
     
-    // Die protractorPosition ist relativ zum Zentrum des Overlays
-    // Das Bild-Element beginnt normalerweise bei x:20, y:20
-    // Wir müssen die Position relativ zum Canvas berechnen
-    const canvasCenter = {
-      x: canvasWidth / 2,
-      y: (canvasHeight) / 2  // Canvas-Höhe ohne Header
-    };
+    // Bildschirm-Dimensionen
+    const screenCenterX = screenWidth / 2;
+    const screenCenterY = screenHeight / 2;
     
-    // Die finale Position auf dem Canvas
-    const centerX = canvasCenter.x + protractorPosition.x;
-    const centerY = canvasCenter.y + protractorPosition.y;
+    // Position des Protractors auf dem Bildschirm (Mitte + Verschiebung)
+    const protractorScreenX = screenCenterX + protractorPosition.x;
+    const protractorScreenY = screenCenterY + protractorPosition.y;
+    
+    // Das Canvas hat eine Höhe von screenHeight - 120 (ungefähr für die Toolbar)
+    // und beginnt nach der Toolbar. Wir müssen die Toolbar-Höhe abziehen.
+    const toolbarHeight = isPhone ? 100 : 120;
+    
+    // Canvas-Koordinaten = Bildschirmkoordinaten relativ zum Canvas-Start
+    // Das Canvas beginnt bei y=toolbarHeight auf dem Bildschirm
+    const centerX = protractorScreenX;
+    const centerY = protractorScreenY - toolbarHeight;
     
     // Verwendbare Größe (vom Benutzer einstellbar)
     const arcRadius = protractorDrawSize * 0.6;  // Bogenradius
@@ -1428,21 +1433,15 @@ export default function DrawSketchScreen() {
       displayAngle = 180 - displayAngle;
     }
     
+    // Berechne ob gespiegelt oder nicht
+    const mirrorFactor = protractorMirrored ? -1 : 1;
+    
     // Erstelle den Pfad für den Winkelbogen
-    // Der tatsächliche Zeichenwinkel bleibt beim Original-Winkel
+    // Der tatsächliche Zeichenwinkel berücksichtigt die Spiegelung
     const drawAngle = protractorAngle;
     const endAngle = drawAngle * Math.PI / 180;
     const largeArc = Math.abs(drawAngle) > 180 ? 1 : 0;
-    const sweep = drawAngle > 0 ? 1 : 0;
-    
-    const arcX1 = centerX + arcRadius;
-    const arcY1 = centerY;
-    const arcX2 = centerX + arcRadius * Math.cos(endAngle);
-    const arcY2 = centerY + arcRadius * Math.sin(endAngle);
-    
-    const arcPath = drawAngle !== 0 
-      ? `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`
-      : '';
+    const sweep = (drawAngle > 0 ? 1 : 0) === (protractorMirrored ? 0 : 1) ? 1 : 0;
     
     // Generiere eindeutige IDs
     const baseId = Date.now().toString(36);
@@ -1450,53 +1449,113 @@ export default function DrawSketchScreen() {
     // Erstelle die Elemente für den Winkel
     const newElements: DrawElement[] = [...elements];
     
-    // 1. Referenzlinie (horizontal) - korrektes Format für line-Elemente
-    newElements.push({
-      id: `${baseId}-ref-line`,
-      type: 'line',
-      data: { x1: centerX, y1: centerY, x2: centerX + lineLength, y2: centerY },
-      color: '#2196f3',
-      strokeWidth: 3,
-    });
-    
-    // 2. Winkellinie (gedreht) - korrektes Format
-    const endX = centerX + lineLength * Math.cos(endAngle);
-    const endY = centerY + lineLength * Math.sin(endAngle);
-    newElements.push({
-      id: `${baseId}-angle-line`,
-      type: 'line',
-      data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
-      color: '#FF5722',
-      strokeWidth: 3,
-    });
-    
-    // 3. Winkelbogen (wenn Winkel != 0)
-    if (arcPath) {
+    if (protractorMirrored) {
+      // Gespiegelter Winkel - Referenzlinie nach links
+      // 1. Referenzlinie (horizontal nach links)
       newElements.push({
-        id: `${baseId}-arc`,
-        type: 'path',
-        data: arcPath,
-        color: '#4caf50',
+        id: `${baseId}-ref-line`,
+        type: 'line',
+        data: { x1: centerX, y1: centerY, x2: centerX - lineLength, y2: centerY },
+        color: '#2196f3',
         strokeWidth: 3,
       });
+      
+      // 2. Winkellinie (gedreht, gespiegelt)
+      const endX = centerX - lineLength * Math.cos(endAngle);
+      const endY = centerY + lineLength * Math.sin(endAngle);
+      newElements.push({
+        id: `${baseId}-angle-line`,
+        type: 'line',
+        data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
+        color: '#FF5722',
+        strokeWidth: 3,
+      });
+      
+      // 3. Winkelbogen (gespiegelt)
+      if (drawAngle !== 0) {
+        const arcX1 = centerX - arcRadius;
+        const arcY1 = centerY;
+        const arcX2 = centerX - arcRadius * Math.cos(endAngle);
+        const arcY2 = centerY + arcRadius * Math.sin(endAngle);
+        const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`;
+        newElements.push({
+          id: `${baseId}-arc`,
+          type: 'path',
+          data: arcPath,
+          color: '#4caf50',
+          strokeWidth: 3,
+        });
+      }
+      
+      // 4. Winkeltext
+      const textAngle = endAngle / 2;
+      const textX = centerX - (arcRadius + 15) * Math.cos(textAngle);
+      const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
+      newElements.push({
+        id: `${baseId}-text`,
+        type: 'text',
+        data: { text: `${displayAngle}°` },
+        color: '#FF5722',
+        strokeWidth: 1,
+        x: textX,
+        y: textY,
+        fontSize: Math.max(14, protractorDrawSize * 0.25),
+        fontWeight: 'bold',
+      });
+    } else {
+      // Normaler Winkel - Referenzlinie nach rechts
+      // 1. Referenzlinie (horizontal)
+      newElements.push({
+        id: `${baseId}-ref-line`,
+        type: 'line',
+        data: { x1: centerX, y1: centerY, x2: centerX + lineLength, y2: centerY },
+        color: '#2196f3',
+        strokeWidth: 3,
+      });
+      
+      // 2. Winkellinie (gedreht)
+      const endX = centerX + lineLength * Math.cos(endAngle);
+      const endY = centerY + lineLength * Math.sin(endAngle);
+      newElements.push({
+        id: `${baseId}-angle-line`,
+        type: 'line',
+        data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
+        color: '#FF5722',
+        strokeWidth: 3,
+      });
+      
+      // 3. Winkelbogen (wenn Winkel != 0)
+      if (drawAngle !== 0) {
+        const arcX1 = centerX + arcRadius;
+        const arcY1 = centerY;
+        const arcX2 = centerX + arcRadius * Math.cos(endAngle);
+        const arcY2 = centerY + arcRadius * Math.sin(endAngle);
+        const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${drawAngle > 0 ? 1 : 0} ${arcX2} ${arcY2}`;
+        newElements.push({
+          id: `${baseId}-arc`,
+          type: 'path',
+          data: arcPath,
+          color: '#4caf50',
+          strokeWidth: 3,
+        });
+      }
+      
+      // 4. Winkeltext
+      const textAngle = endAngle / 2;
+      const textX = centerX + (arcRadius + 15) * Math.cos(textAngle);
+      const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
+      newElements.push({
+        id: `${baseId}-text`,
+        type: 'text',
+        data: { text: `${displayAngle}°` },
+        color: '#FF5722',
+        strokeWidth: 1,
+        x: textX,
+        y: textY,
+        fontSize: Math.max(14, protractorDrawSize * 0.25),
+        fontWeight: 'bold',
+      });
     }
-    
-    // 4. Winkeltext - größer und besser positioniert
-    // Text wird zwischen den beiden Linien positioniert
-    const textAngle = endAngle / 2;
-    const textX = centerX + (arcRadius + 15) * Math.cos(textAngle);
-    const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
-    newElements.push({
-      id: `${baseId}-text`,
-      type: 'text',
-      data: { text: `${displayAngle}°` },
-      color: '#FF5722',
-      strokeWidth: 1,
-      x: textX,
-      y: textY,
-      fontSize: Math.max(14, protractorDrawSize * 0.25),
-      fontWeight: 'bold',
-    });
     
     // Füge zum History hinzu
     addToHistory(newElements);
@@ -1506,7 +1565,7 @@ export default function DrawSketchScreen() {
     
     // Zeige Bestätigung
     showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
-  }, [elements, protractorAngle, protractorPosition, canvasWidth, canvasHeight, protractorUseComplementary, protractorDrawSize]);
+  }, [elements, protractorAngle, protractorPosition, screenWidth, screenHeight, isPhone, protractorUseComplementary, protractorDrawSize, protractorMirrored]);
 
   const undo = () => {
     if (historyIndex > 0) {
@@ -7391,7 +7450,7 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             </View>
             
-            {/* Komplementärwinkel-Umschalter und Größe */}
+            {/* Komplementärwinkel-Umschalter, Spiegeln und Größe */}
             <View style={styles.protractorControlRow}>
               <TouchableOpacity 
                 style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive]}
@@ -7400,6 +7459,16 @@ export default function DrawSketchScreen() {
                 <Ionicons name="swap-horizontal" size={16} color={protractorUseComplementary ? '#fff' : '#333'} />
                 <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive]}>
                   {protractorUseComplementary ? 'Außen' : 'Innen'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.protractorToggleBtn, protractorMirrored && styles.protractorToggleBtnActive]}
+                onPress={() => setProtractorMirrored(prev => !prev)}
+              >
+                <Ionicons name="swap-vertical" size={16} color={protractorMirrored ? '#fff' : '#333'} />
+                <Text style={[styles.protractorToggleBtnText, protractorMirrored && styles.protractorToggleBtnTextActive]}>
+                  Spiegeln
                 </Text>
               </TouchableOpacity>
               
@@ -7442,6 +7511,7 @@ export default function DrawSketchScreen() {
                   setProtractorScale(1);
                   setProtractorPosition({ x: 0, y: 0 });
                   setProtractorUseComplementary(false);
+                  setProtractorMirrored(false);
                   setProtractorDrawSize(60);
                 }}
               >

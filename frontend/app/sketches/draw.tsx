@@ -532,6 +532,14 @@ export default function DrawSketchScreen() {
   const measurementInputRef = useRef<TextInput>(null);
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
   
+  // Winkelmesser-Tool state
+  const [showProtractor, setShowProtractor] = useState(false);
+  const [protractorAngle, setProtractorAngle] = useState(0);
+  const [protractorPosition, setProtractorPosition] = useState({ x: 200, y: 300 });
+  const [protractorScale, setProtractorScale] = useState(1);
+  const protractorRotation = useRef(new Animated.Value(0)).current;
+  const protractorPan = useRef(new Animated.ValueXY({ x: 200, y: 300 })).current;
+  
   // Numpad in Modals (für Arrow/Text/Pointer)
   const [showModalNumpad, setShowModalNumpad] = useState(false);
   const [modalNumpadMode, setModalNumpadMode] = useState<'numbers' | 'letters'>('numbers');
@@ -5171,6 +5179,32 @@ export default function DrawSketchScreen() {
           </View>
         </View>
 
+        {/* Winkelmesser */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
+            onPress={() => setShowProtractor(!showProtractor)}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24">
+              <Path 
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" 
+                fill="none"
+                stroke={showProtractor ? '#fff' : '#FF5722'}
+                strokeWidth={1.5}
+              />
+              <Line x1="12" y1="12" x2="12" y2="4" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="20" y2="12" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Path 
+                d="M12 8 A4 4 0 0 1 16 12" 
+                fill="none"
+                stroke={showProtractor ? '#fff' : '#FF5722'}
+                strokeWidth={1.5}
+              />
+            </Svg>
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>Winkel</Text>
+        </View>
+
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
@@ -7022,6 +7056,153 @@ export default function DrawSketchScreen() {
           <View style={styles.magnifierLine} />
         </View>
       )}
+
+      {/* Winkelmesser Overlay */}
+      {showProtractor && (
+        <View style={styles.protractorOverlay} pointerEvents="box-none">
+          <View 
+            style={[
+              styles.protractorContainer,
+              {
+                transform: [
+                  { translateX: protractorPosition.x - 150 },
+                  { translateY: protractorPosition.y - 150 },
+                  { rotate: `${protractorAngle}deg` },
+                  { scale: protractorScale },
+                ],
+              },
+            ]}
+            {...PanResponder.create({
+              onStartShouldSetPanResponder: () => true,
+              onMoveShouldSetPanResponder: () => true,
+              onPanResponderMove: (evt, gestureState) => {
+                setProtractorPosition(prev => ({
+                  x: prev.x + gestureState.dx / 10,
+                  y: prev.y + gestureState.dy / 10,
+                }));
+              },
+            }).panHandlers}
+          >
+            <Svg width={300} height={300} viewBox="0 0 300 300">
+              {/* Halbtransparenter Hintergrund */}
+              <Circle cx={150} cy={150} r={145} fill="rgba(255, 255, 255, 0.3)" stroke="#FF5722" strokeWidth={2} />
+              
+              {/* Gradmarkierungen */}
+              {Array.from({ length: 36 }, (_, i) => {
+                const angle = i * 10 * (Math.PI / 180);
+                const innerR = i % 9 === 0 ? 110 : 125;
+                const outerR = 140;
+                const x1 = 150 + innerR * Math.cos(angle - Math.PI / 2);
+                const y1 = 150 + innerR * Math.sin(angle - Math.PI / 2);
+                const x2 = 150 + outerR * Math.cos(angle - Math.PI / 2);
+                const y2 = 150 + outerR * Math.sin(angle - Math.PI / 2);
+                return (
+                  <Line 
+                    key={i} 
+                    x1={x1} y1={y1} x2={x2} y2={y2} 
+                    stroke="#333" 
+                    strokeWidth={i % 9 === 0 ? 2 : 1} 
+                  />
+                );
+              })}
+              
+              {/* Grad-Beschriftungen */}
+              {[0, 90, 180, 270].map((deg) => {
+                const angle = deg * (Math.PI / 180);
+                const r = 95;
+                const x = 150 + r * Math.cos(angle - Math.PI / 2);
+                const y = 150 + r * Math.sin(angle - Math.PI / 2);
+                return (
+                  <SvgText 
+                    key={deg} 
+                    x={x} y={y + 5} 
+                    fill="#333" 
+                    fontSize={14} 
+                    fontWeight="bold" 
+                    textAnchor="middle"
+                  >
+                    {deg}°
+                  </SvgText>
+                );
+              })}
+              
+              {/* Mittelpunkt */}
+              <Circle cx={150} cy={150} r={5} fill="#FF5722" />
+              
+              {/* Messlinien */}
+              <Line x1={150} y1={150} x2={150} y2={10} stroke="#FF5722" strokeWidth={3} />
+              <Line x1={150} y1={150} x2={290} y2={150} stroke="#2196f3" strokeWidth={3} />
+              
+              {/* Winkelbogen */}
+              <Path 
+                d={`M 150 110 A 40 40 0 0 1 190 150`}
+                fill="none"
+                stroke="#4caf50"
+                strokeWidth={3}
+              />
+              
+              {/* Winkel-Anzeige */}
+              <Rect x={125} y={60} width={50} height={24} fill="#fff" stroke="#333" strokeWidth={1} rx={4} />
+              <SvgText x={150} y={77} fill="#333" fontSize={14} fontWeight="bold" textAnchor="middle">
+                90°
+              </SvgText>
+            </Svg>
+            
+            {/* Drehregler */}
+            <View style={styles.protractorControls}>
+              <TouchableOpacity 
+                style={styles.protractorButton}
+                onPress={() => setProtractorAngle(prev => prev - 5)}
+              >
+                <Ionicons name="remove" size={20} color="#333" />
+              </TouchableOpacity>
+              <Text style={styles.protractorAngleText}>{protractorAngle}°</Text>
+              <TouchableOpacity 
+                style={styles.protractorButton}
+                onPress={() => setProtractorAngle(prev => prev + 5)}
+              >
+                <Ionicons name="add" size={20} color="#333" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Schließen-Button */}
+          <TouchableOpacity 
+            style={styles.protractorCloseButton}
+            onPress={() => setShowProtractor(false)}
+          >
+            <Ionicons name="close-circle" size={36} color="#f44336" />
+          </TouchableOpacity>
+          
+          {/* Zoom-Buttons */}
+          <View style={styles.protractorZoomButtons}>
+            <TouchableOpacity 
+              style={styles.protractorZoomButton}
+              onPress={() => setProtractorScale(prev => Math.max(0.5, prev - 0.1))}
+            >
+              <Ionicons name="remove-circle" size={32} color="#666" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.protractorZoomButton}
+              onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.1))}
+            >
+              <Ionicons name="add-circle" size={32} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Reset-Button */}
+          <TouchableOpacity 
+            style={styles.protractorResetButton}
+            onPress={() => {
+              setProtractorAngle(0);
+              setProtractorScale(1);
+              setProtractorPosition({ x: 200, y: 300 });
+            }}
+          >
+            <Text style={styles.protractorResetText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -8308,5 +8489,80 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: '#1976d2',
     marginTop: 2,
+  },
+  // Winkelmesser Styles
+  protractorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  protractorContainer: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  protractorControls: {
+    position: 'absolute',
+    bottom: -50,
+    left: '50%',
+    marginLeft: -75,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    gap: 12,
+  },
+  protractorButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  protractorAngleText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    minWidth: 50,
+    textAlign: 'center',
+  },
+  protractorCloseButton: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+  },
+  protractorZoomButtons: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    gap: 8,
+  },
+  protractorZoomButton: {
+    opacity: 0.8,
+  },
+  protractorResetButton: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  protractorResetText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
 });

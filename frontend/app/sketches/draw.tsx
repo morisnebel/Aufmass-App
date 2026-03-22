@@ -535,10 +535,59 @@ export default function DrawSketchScreen() {
   // Winkelmesser-Tool state
   const [showProtractor, setShowProtractor] = useState(false);
   const [protractorAngle, setProtractorAngle] = useState(0);
-  const [protractorPosition, setProtractorPosition] = useState({ x: 200, y: 300 });
   const [protractorScale, setProtractorScale] = useState(1);
-  const protractorRotation = useRef(new Animated.Value(0)).current;
-  const protractorPan = useRef(new Animated.ValueXY({ x: 200, y: 300 })).current;
+  const [showProtractorAngleInput, setShowProtractorAngleInput] = useState(false);
+  const [protractorAngleInput, setProtractorAngleInput] = useState('0');
+  // Winkelmesser Position mit useState für bessere Web-Kompatibilität
+  const [protractorPosition, setProtractorPosition] = useState({ x: 0, y: 0 });
+  const protractorDragRef = useRef({ 
+    isDragging: false,
+    startX: 0, 
+    startY: 0,
+    initialPosX: 0,
+    initialPosY: 0 
+  });
+  
+  // Handler für Protractor Drag - arbeitet mit Mouse/Touch Events
+  const handleProtractorDragStart = useCallback((e: any) => {
+    const pageX = e.nativeEvent?.pageX || e.pageX || 0;
+    const pageY = e.nativeEvent?.pageY || e.pageY || 0;
+    protractorDragRef.current = {
+      isDragging: true,
+      startX: pageX,
+      startY: pageY,
+      initialPosX: protractorPosition.x,
+      initialPosY: protractorPosition.y,
+    };
+  }, [protractorPosition.x, protractorPosition.y]);
+  
+  const handleProtractorDragMove = useCallback((e: any) => {
+    if (!protractorDragRef.current.isDragging) return;
+    const pageX = e.nativeEvent?.pageX || e.pageX || 0;
+    const pageY = e.nativeEvent?.pageY || e.pageY || 0;
+    const dx = pageX - protractorDragRef.current.startX;
+    const dy = pageY - protractorDragRef.current.startY;
+    setProtractorPosition({
+      x: protractorDragRef.current.initialPosX + dx,
+      y: protractorDragRef.current.initialPosY + dy,
+    });
+  }, []);
+  
+  const handleProtractorDragEnd = useCallback(() => {
+    protractorDragRef.current.isDragging = false;
+  }, []);
+  
+  // PanResponder für native Touch-Geräte
+  const protractorPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: handleProtractorDragStart,
+      onPanResponderMove: handleProtractorDragMove,
+      onPanResponderRelease: handleProtractorDragEnd,
+      onPanResponderTerminate: handleProtractorDragEnd,
+    })
+  );
   
   // Numpad in Modals (für Arrow/Text/Pointer)
   const [showModalNumpad, setShowModalNumpad] = useState(false);
@@ -1343,6 +1392,92 @@ export default function DrawSketchScreen() {
     setHistoryIndex(newHistory.length - 1);
     setElements(newElements);
   };
+
+  // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
+  const addProtractorToSketch = useCallback(() => {
+    // Berechne die Position basierend auf der aktuellen Protractor-Position und dem Canvas-Zentrum
+    const centerX = canvasWidth / 2 + protractorPosition.x;
+    const centerY = canvasHeight / 2 + protractorPosition.y;
+    
+    // Radius für den Winkelbogen auf dem Sketch
+    const arcRadius = 40;
+    const lineLength = 80;
+    
+    // Erstelle den Pfad für den Winkelbogen
+    const endAngle = protractorAngle * Math.PI / 180;
+    const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
+    const sweep = protractorAngle > 0 ? 1 : 0;
+    
+    const arcX1 = centerX + arcRadius;
+    const arcY1 = centerY;
+    const arcX2 = centerX + arcRadius * Math.cos(endAngle);
+    const arcY2 = centerY + arcRadius * Math.sin(endAngle);
+    
+    const arcPath = protractorAngle !== 0 
+      ? `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`
+      : '';
+    
+    // Generiere eindeutige IDs
+    const baseId = Date.now().toString(36);
+    
+    // Erstelle die Elemente für den Winkel
+    const newElements: DrawElement[] = [...elements];
+    
+    // 1. Referenzlinie (horizontal)
+    newElements.push({
+      id: `${baseId}-ref-line`,
+      type: 'line',
+      data: `M ${centerX} ${centerY} L ${centerX + lineLength} ${centerY}`,
+      color: '#2196f3',
+      strokeWidth: 2,
+    });
+    
+    // 2. Winkellinie (gedreht)
+    const endX = centerX + lineLength * Math.cos(endAngle);
+    const endY = centerY + lineLength * Math.sin(endAngle);
+    newElements.push({
+      id: `${baseId}-angle-line`,
+      type: 'line',
+      data: `M ${centerX} ${centerY} L ${endX} ${endY}`,
+      color: '#FF5722',
+      strokeWidth: 2,
+    });
+    
+    // 3. Winkelbogen (wenn Winkel > 0)
+    if (arcPath) {
+      newElements.push({
+        id: `${baseId}-arc`,
+        type: 'path',
+        data: arcPath,
+        color: '#4caf50',
+        strokeWidth: 2,
+      });
+    }
+    
+    // 4. Winkeltext
+    const textX = centerX + (arcRadius + 15) * Math.cos(endAngle / 2);
+    const textY = centerY + (arcRadius + 15) * Math.sin(endAngle / 2);
+    newElements.push({
+      id: `${baseId}-text`,
+      type: 'text',
+      data: `${protractorAngle}°`,
+      color: '#FF5722',
+      strokeWidth: 1,
+      x: textX,
+      y: textY,
+      fontSize: 14,
+      fontWeight: 'bold',
+    });
+    
+    // Füge zum History hinzu
+    addToHistory(newElements);
+    
+    // Schließe das Protractor-Tool
+    setShowProtractor(false);
+    
+    // Zeige Bestätigung
+    showAlert('Winkel hinzugefügt', `${protractorAngle}° wurde zur Skizze hinzugefügt`);
+  }, [elements, protractorAngle, protractorPosition, canvasWidth, canvasHeight]);
 
   const undo = () => {
     if (historyIndex > 0) {
@@ -7060,146 +7195,243 @@ export default function DrawSketchScreen() {
       {/* Winkelmesser Overlay */}
       {showProtractor && (
         <View style={styles.protractorOverlay} pointerEvents="box-none">
+          {/* Verschiebbarer Winkelmesser */}
           <View 
             style={[
-              styles.protractorContainer,
+              styles.protractorDraggable,
               {
                 transform: [
-                  { translateX: protractorPosition.x - 150 },
-                  { translateY: protractorPosition.y - 150 },
-                  { rotate: `${protractorAngle}deg` },
+                  { translateX: protractorPosition.x },
+                  { translateY: protractorPosition.y },
                   { scale: protractorScale },
                 ],
-              },
+                cursor: 'grab',
+              } as any,
             ]}
-            {...PanResponder.create({
-              onStartShouldSetPanResponder: () => true,
-              onMoveShouldSetPanResponder: () => true,
-              onPanResponderMove: (evt, gestureState) => {
-                setProtractorPosition(prev => ({
-                  x: prev.x + gestureState.dx / 10,
-                  y: prev.y + gestureState.dy / 10,
-                }));
-              },
-            }).panHandlers}
+            {...protractorPanResponder.current.panHandlers}
+            // Web-spezifische Events
+            onTouchStart={handleProtractorDragStart}
+            onTouchMove={handleProtractorDragMove}
+            onTouchEnd={handleProtractorDragEnd}
+            // @ts-ignore - Web-only events
+            onMouseDown={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
+            onMouseMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
+            onMouseUp={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
+            onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
-            <Svg width={300} height={300} viewBox="0 0 300 300">
-              {/* Halbtransparenter Hintergrund */}
-              <Circle cx={150} cy={150} r={145} fill="rgba(255, 255, 255, 0.3)" stroke="#FF5722" strokeWidth={2} />
-              
-              {/* Gradmarkierungen */}
-              {Array.from({ length: 36 }, (_, i) => {
-                const angle = i * 10 * (Math.PI / 180);
-                const innerR = i % 9 === 0 ? 110 : 125;
-                const outerR = 140;
-                const x1 = 150 + innerR * Math.cos(angle - Math.PI / 2);
-                const y1 = 150 + innerR * Math.sin(angle - Math.PI / 2);
-                const x2 = 150 + outerR * Math.cos(angle - Math.PI / 2);
-                const y2 = 150 + outerR * Math.sin(angle - Math.PI / 2);
-                return (
-                  <Line 
-                    key={i} 
-                    x1={x1} y1={y1} x2={x2} y2={y2} 
-                    stroke="#333" 
-                    strokeWidth={i % 9 === 0 ? 2 : 1} 
+            <View style={styles.protractorSvgContainer}>
+              <Svg width={300} height={300} viewBox="0 0 300 300">
+                {/* Halbtransparenter Hintergrund */}
+                <Circle cx={150} cy={150} r={145} fill="rgba(255, 255, 255, 0.5)" stroke="#FF5722" strokeWidth={3} />
+                
+                {/* Gradmarkierungen */}
+                {Array.from({ length: 36 }, (_, i) => {
+                  const angle = i * 10 * (Math.PI / 180);
+                  const innerR = i % 9 === 0 ? 100 : 120;
+                  const outerR = 140;
+                  const x1 = 150 + innerR * Math.cos(angle - Math.PI / 2);
+                  const y1 = 150 + innerR * Math.sin(angle - Math.PI / 2);
+                  const x2 = 150 + outerR * Math.cos(angle - Math.PI / 2);
+                  const y2 = 150 + outerR * Math.sin(angle - Math.PI / 2);
+                  return (
+                    <Line 
+                      key={i} 
+                      x1={x1} y1={y1} x2={x2} y2={y2} 
+                      stroke="#333" 
+                      strokeWidth={i % 9 === 0 ? 3 : 1} 
+                    />
+                  );
+                })}
+                
+                {/* Grad-Beschriftungen */}
+                {[0, 90, 180, 270].map((deg) => {
+                  const angle = deg * (Math.PI / 180);
+                  const r = 82;
+                  const x = 150 + r * Math.cos(angle - Math.PI / 2);
+                  const y = 150 + r * Math.sin(angle - Math.PI / 2);
+                  return (
+                    <SvgText 
+                      key={deg} 
+                      x={x} y={y + 5} 
+                      fill="#333" 
+                      fontSize={16} 
+                      fontWeight="bold" 
+                      textAnchor="middle"
+                    >
+                      {deg}°
+                    </SvgText>
+                  );
+                })}
+                
+                {/* Mittelpunkt */}
+                <Circle cx={150} cy={150} r={6} fill="#FF5722" />
+                
+                {/* Referenzlinie (horizontal - blau) */}
+                <Line x1={150} y1={150} x2={290} y2={150} stroke="#2196f3" strokeWidth={3} />
+                
+                {/* Winkellinie (gedreht - orange) */}
+                <Line 
+                  x1={150} 
+                  y1={150} 
+                  x2={150 + 140 * Math.cos(protractorAngle * Math.PI / 180)} 
+                  y2={150 + 140 * Math.sin(protractorAngle * Math.PI / 180)} 
+                  stroke="#FF5722" 
+                  strokeWidth={3} 
+                />
+                
+                {/* Winkelbogen */}
+                {protractorAngle !== 0 && (
+                  <Path 
+                    d={(() => {
+                      const r = 50;
+                      const startAngle = 0;
+                      const endAngle = protractorAngle * Math.PI / 180;
+                      const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
+                      const sweep = protractorAngle > 0 ? 1 : 0;
+                      const x1 = 150 + r;
+                      const y1 = 150;
+                      const x2 = 150 + r * Math.cos(endAngle);
+                      const y2 = 150 + r * Math.sin(endAngle);
+                      return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2} ${y2}`;
+                    })()}
+                    fill="none"
+                    stroke="#4caf50"
+                    strokeWidth={3}
                   />
-                );
-              })}
-              
-              {/* Grad-Beschriftungen */}
-              {[0, 90, 180, 270].map((deg) => {
-                const angle = deg * (Math.PI / 180);
-                const r = 95;
-                const x = 150 + r * Math.cos(angle - Math.PI / 2);
-                const y = 150 + r * Math.sin(angle - Math.PI / 2);
-                return (
-                  <SvgText 
-                    key={deg} 
-                    x={x} y={y + 5} 
-                    fill="#333" 
-                    fontSize={14} 
-                    fontWeight="bold" 
-                    textAnchor="middle"
-                  >
-                    {deg}°
-                  </SvgText>
-                );
-              })}
-              
-              {/* Mittelpunkt */}
-              <Circle cx={150} cy={150} r={5} fill="#FF5722" />
-              
-              {/* Messlinien */}
-              <Line x1={150} y1={150} x2={150} y2={10} stroke="#FF5722" strokeWidth={3} />
-              <Line x1={150} y1={150} x2={290} y2={150} stroke="#2196f3" strokeWidth={3} />
-              
-              {/* Winkelbogen */}
-              <Path 
-                d={`M 150 110 A 40 40 0 0 1 190 150`}
-                fill="none"
-                stroke="#4caf50"
-                strokeWidth={3}
-              />
-              
-              {/* Winkel-Anzeige */}
-              <Rect x={125} y={60} width={50} height={24} fill="#fff" stroke="#333" strokeWidth={1} rx={4} />
-              <SvgText x={150} y={77} fill="#333" fontSize={14} fontWeight="bold" textAnchor="middle">
-                90°
-              </SvgText>
-            </Svg>
-            
-            {/* Drehregler */}
-            <View style={styles.protractorControls}>
+                )}
+                
+                {/* Winkelwert-Anzeige */}
+                <SvgText 
+                  x={150} 
+                  y={150 + 25} 
+                  fill="#FF5722" 
+                  fontSize={22} 
+                  fontWeight="bold" 
+                  textAnchor="middle"
+                >
+                  {protractorAngle}°
+                </SvgText>
+              </Svg>
+            </View>
+          </View>
+          
+          {/* Steuerelemente unten */}
+          <View style={styles.protractorBottomControls}>
+            {/* Winkelsteuerung */}
+            <View style={styles.protractorControlRow}>
               <TouchableOpacity 
-                style={styles.protractorButton}
-                onPress={() => setProtractorAngle(prev => prev - 5)}
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorAngle(prev => prev - 10)}
+              >
+                <Text style={styles.protractorControlBtnText}>-10°</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorAngle(prev => prev - 1)}
+              >
+                <Text style={styles.protractorControlBtnText}>-1°</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.protractorAngleBadge}
+                onPress={() => {
+                  setProtractorAngleInput(protractorAngle.toString());
+                  setShowProtractorAngleInput(true);
+                }}
+              >
+                <Text style={styles.protractorAngleBadgeText}>{protractorAngle}°</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorAngle(prev => prev + 1)}
+              >
+                <Text style={styles.protractorControlBtnText}>+1°</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorAngle(prev => prev + 10)}
+              >
+                <Text style={styles.protractorControlBtnText}>+10°</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Zoom und Reset */}
+            <View style={styles.protractorControlRow}>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorScale(prev => Math.max(0.5, prev - 0.2))}
               >
                 <Ionicons name="remove" size={20} color="#333" />
               </TouchableOpacity>
-              <Text style={styles.protractorAngleText}>{protractorAngle}°</Text>
+              <Text style={styles.protractorZoomLabel}>Zoom: {Math.round(protractorScale * 100)}%</Text>
               <TouchableOpacity 
-                style={styles.protractorButton}
-                onPress={() => setProtractorAngle(prev => prev + 5)}
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.2))}
               >
                 <Ionicons name="add" size={20} color="#333" />
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorResetBtn}
+                onPress={() => {
+                  setProtractorAngle(0);
+                  setProtractorScale(1);
+                  setProtractorPosition({ x: 0, y: 0 });
+                }}
+              >
+                <Text style={styles.protractorResetBtnText}>Reset</Text>
+              </TouchableOpacity>
             </View>
+            
+            {/* Hinzufügen-Button */}
+            <TouchableOpacity 
+              style={styles.protractorAddBtn}
+              onPress={addProtractorToSketch}
+            >
+              <Ionicons name="checkmark-circle" size={24} color="#fff" />
+              <Text style={styles.protractorAddBtnText}>Zur Skizze hinzufügen</Text>
+            </TouchableOpacity>
           </View>
+          
+          {/* Winkel-Eingabe Modal */}
+          {showProtractorAngleInput && (
+            <View style={styles.protractorInputModal}>
+              <Text style={styles.protractorInputLabel}>Winkel eingeben:</Text>
+              <TextInput
+                style={styles.protractorInput}
+                value={protractorAngleInput}
+                onChangeText={setProtractorAngleInput}
+                keyboardType="numeric"
+                autoFocus
+                selectTextOnFocus
+              />
+              <View style={styles.protractorInputButtons}>
+                <TouchableOpacity 
+                  style={styles.protractorInputCancelButton}
+                  onPress={() => setShowProtractorAngleInput(false)}
+                >
+                  <Text style={styles.protractorInputCancelText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.protractorInputOkButton}
+                  onPress={() => {
+                    const angle = parseInt(protractorAngleInput) || 0;
+                    setProtractorAngle(angle % 360);
+                    setShowProtractorAngleInput(false);
+                  }}
+                >
+                  <Text style={styles.protractorInputOkText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
           
           {/* Schließen-Button */}
           <TouchableOpacity 
             style={styles.protractorCloseButton}
             onPress={() => setShowProtractor(false)}
           >
-            <Ionicons name="close-circle" size={36} color="#f44336" />
-          </TouchableOpacity>
-          
-          {/* Zoom-Buttons */}
-          <View style={styles.protractorZoomButtons}>
-            <TouchableOpacity 
-              style={styles.protractorZoomButton}
-              onPress={() => setProtractorScale(prev => Math.max(0.5, prev - 0.1))}
-            >
-              <Ionicons name="remove-circle" size={32} color="#666" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.protractorZoomButton}
-              onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.1))}
-            >
-              <Ionicons name="add-circle" size={32} color="#666" />
-            </TouchableOpacity>
-          </View>
-          
-          {/* Reset-Button */}
-          <TouchableOpacity 
-            style={styles.protractorResetButton}
-            onPress={() => {
-              setProtractorAngle(0);
-              setProtractorScale(1);
-              setProtractorPosition({ x: 200, y: 300 });
-            }}
-          >
-            <Text style={styles.protractorResetText}>Reset</Text>
+            <Ionicons name="close-circle" size={44} color="#f44336" />
           </TouchableOpacity>
         </View>
       )}
@@ -8496,73 +8728,145 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  protractorContainer: {
-    width: 300,
-    height: 300,
+  protractorDraggable: {
+    position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  protractorControls: {
+  protractorSvgContainer: {
+    width: 300,
+    height: 300,
+  },
+  protractorCloseButton: {
     position: 'absolute',
-    bottom: -50,
-    left: '50%',
-    marginLeft: -75,
+    top: 40,
+    right: 20,
+  },
+  protractorBottomControls: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  protractorControlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+    borderRadius: 16,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    gap: 12,
+    paddingHorizontal: 12,
+    gap: 8,
   },
-  protractorButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  protractorControlBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  protractorAngleText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  protractorControlBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
-    minWidth: 50,
-    textAlign: 'center',
   },
-  protractorCloseButton: {
-    position: 'absolute',
-    top: 100,
-    right: 20,
-  },
-  protractorZoomButtons: {
-    position: 'absolute',
-    bottom: 100,
-    right: 20,
-    gap: 8,
-  },
-  protractorZoomButton: {
-    opacity: 0.8,
-  },
-  protractorResetButton: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  protractorAngleBadge: {
+    backgroundColor: '#FF5722',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    minWidth: 80,
+    alignItems: 'center',
   },
-  protractorResetText: {
+  protractorAngleBadgeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  protractorZoomLabel: {
     fontSize: 14,
     color: '#666',
-    fontWeight: '500',
+    marginHorizontal: 8,
+  },
+  protractorResetBtn: {
+    backgroundColor: '#f44336',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginLeft: 8,
+  },
+  protractorResetBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  protractorAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4caf50',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    gap: 8,
+  },
+  protractorAddBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  protractorInputModal: {
+    position: 'absolute',
+    top: '35%',
+    left: 40,
+    right: 40,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  protractorInputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  protractorInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    marginBottom: 16,
+  },
+  protractorInputButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  protractorInputCancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  protractorInputCancelText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  protractorInputOkButton: {
+    backgroundColor: '#4caf50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  protractorInputOkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -16,7 +16,7 @@ import {
   Pressable,
   InteractionManager,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
@@ -741,6 +741,18 @@ export default function NewProjectScreen() {
     }
   };
 
+  // Funktion für den Zurück-Button mit automatischem Speichern
+  const handleBackWithSave = async () => {
+    // Prüfe ob Pflichtfelder ausgefüllt sind
+    if (name.trim() && selectedCustomer) {
+      // Pflichtfelder sind ausgefüllt - speichern und zurück
+      await handleSave();
+    } else {
+      // Pflichtfelder fehlen - einfach zurück gehen
+      router.back();
+    }
+  };
+
   if (loadingCustomers) {
     return (
       <View style={styles.centerContainer}>
@@ -750,10 +762,26 @@ export default function NewProjectScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <>
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={handleBackWithSave}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}
+            >
+              <Ionicons name="chevron-back" size={28} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 17, marginLeft: 4 }}>
+                {name.trim() && selectedCustomer ? 'Speichern' : 'Zurück'}
+              </Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -1447,6 +1475,7 @@ export default function NewProjectScreen() {
         </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
+    </>
   );
 }
 

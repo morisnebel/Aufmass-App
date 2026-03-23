@@ -777,20 +777,16 @@ export default function NewProjectScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={26} color="#fff" />
+              <Ionicons name="chevron-back" size={26} color="#1976d2" />
               <Text style={{ 
-                color: '#fff', 
+                color: '#1976d2', 
                 fontSize: 17, 
-                fontWeight: '500',
-                textShadowColor: 'rgba(0, 0, 0, 0.3)',
-                textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 2,
+                fontWeight: '600',
               }}>
                 {name.trim() && selectedCustomer ? 'Speichern' : 'Zurück'}
               </Text>
             </TouchableOpacity>
           ),
-          headerTintColor: '#fff',
         }}
       />
       <KeyboardAvoidingView

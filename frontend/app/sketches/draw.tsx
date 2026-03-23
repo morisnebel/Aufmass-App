@@ -3273,9 +3273,11 @@ export default function DrawSketchScreen() {
       lastTapRef.current = { time: now, elementId: clickedElement.id };
       
       setSelectedElementId(clickedElement.id);
+      console.log('[DEBUG] Selected element:', clickedElement.type, clickedElement.id);
       
       // Polylines nur über Mittelpunkt oder Eckpunkte verschiebbar, nicht über die Fläche
       if (clickedElement.type !== 'polyline') {
+        console.log('[DEBUG] Setting drag mode to move for:', clickedElement.type);
         setDragMode('move');
         setDragStart({ x: locationX, y: locationY });
         setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));

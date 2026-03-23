@@ -3978,6 +3978,7 @@ export default function DrawSketchScreen() {
                 opacity={0.4}
               />
             )}
+            {isSelected && renderTransformHandles(element)}
           </G>
         );
       
@@ -4003,6 +4004,7 @@ export default function DrawSketchScreen() {
                 strokeDasharray="5,5"
               />
             )}
+            {isSelected && renderTransformHandles(element)}
           </G>
         );
       
@@ -4791,6 +4793,66 @@ export default function DrawSketchScreen() {
           <SvgText x={boxX + boxWidth / 2 - scaledRotateFontSize * 0.4} y={boxY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
+    } else if (element.type === 'polygon' || element.type === 'path') {
+      // Polygon/Path: Extrahiere Punkte und zeige Handles an Eckpunkten und Mittelpunkt
+      const polygonPoints: { x: number; y: number }[] = [];
+      const pathRegex = /([MLQ])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+      let match;
+      while ((match = pathRegex.exec(element.data)) !== null) {
+        polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
+      }
+      
+      if (polygonPoints.length >= 2) {
+        // Berechne Bounding Box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        polygonPoints.forEach(pt => {
+          minX = Math.min(minX, pt.x);
+          minY = Math.min(minY, pt.y);
+          maxX = Math.max(maxX, pt.x);
+          maxY = Math.max(maxY, pt.y);
+        });
+        
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        
+        // Gestrichelte Bounding Box
+        handles.push(
+          <Rect
+            key="polygon-bounds"
+            x={minX - 5}
+            y={minY - 5}
+            width={maxX - minX + 10}
+            height={maxY - minY + 10}
+            fill="none"
+            stroke="#4caf50"
+            strokeWidth={scaledStrokeWidth * 1.5}
+            strokeDasharray={`${4 / Math.max(scale, 0.5)},${4 / Math.max(scale, 0.5)}`}
+          />
+        );
+        
+        // Mittelpunkt-Handle zum Verschieben (größer und auffälliger)
+        handles.push(
+          <G key="center-move">
+            <Circle cx={centerX} cy={centerY} r={scaledHandleRadius * 1.5} fill="#4caf50" stroke="#fff" strokeWidth={scaledStrokeWidth * 2} />
+            <SvgText x={centerX - scaledFontSize * 0.4} y={centerY + scaledFontSize * 0.4} fill="#fff" fontSize={scaledFontSize}>✥</SvgText>
+          </G>
+        );
+        
+        // Eckpunkt-Handles
+        polygonPoints.forEach((pt, idx) => {
+          handles.push(
+            <Circle 
+              key={`corner-${idx}`} 
+              cx={pt.x} 
+              cy={pt.y} 
+              r={scaledHandleRadius} 
+              fill="#2196f3" 
+              stroke="#fff" 
+              strokeWidth={scaledStrokeWidth} 
+            />
+          );
+        });
+      }
     }
     
     return <G>{handles}</G>;

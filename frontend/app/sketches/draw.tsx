@@ -4604,12 +4604,27 @@ export default function DrawSketchScreen() {
                 />
               );
             })}
-            {/* Mittelpunkt zum Verschieben des gesamten Polygons - gut sichtbar */}
+            {/* Mittelpunkt zum Verschieben des gesamten Polygons - größenangepasst */}
             {isSelected && points.length >= 2 && (() => {
               const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
               const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
-              // Gute Größe für Sichtbarkeit und Bedienung
-              const moveHandleSize = Math.max(18, 24 / Math.max(scale, 0.5));
+              
+              // Berechne Bounding Box für größenangepassten Handle
+              let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+              points.forEach((pt: { x: number; y: number }) => {
+                minX = Math.min(minX, pt.x);
+                minY = Math.min(minY, pt.y);
+                maxX = Math.max(maxX, pt.x);
+                maxY = Math.max(maxY, pt.y);
+              });
+              const boxWidth = maxX - minX;
+              const boxHeight = maxY - minY;
+              const polygonSize = Math.min(boxWidth, boxHeight);
+              
+              // Handle-Größe: 15-25% der kleinsten Polygon-Dimension, mit Min/Max Grenzen
+              const baseSize = polygonSize * 0.18;
+              const scaledSize = baseSize / Math.max(scale, 0.5);
+              const moveHandleSize = Math.max(12, Math.min(30, scaledSize)); // Min 12, Max 30
               
               return (
                 <G key="move-handle">
@@ -4620,7 +4635,7 @@ export default function DrawSketchScreen() {
                     r={moveHandleSize} 
                     fill="rgba(255, 152, 0, 0.25)" 
                     stroke="#FF9800" 
-                    strokeWidth={2 / Math.max(scale, 0.5)} 
+                    strokeWidth={Math.max(1, 2 / Math.max(scale, 0.5))} 
                   />
                   {/* Innerer Kreis */}
                   <Circle 
@@ -4629,7 +4644,7 @@ export default function DrawSketchScreen() {
                     r={moveHandleSize * 0.55} 
                     fill="#FF9800" 
                     stroke="#fff" 
-                    strokeWidth={1.5 / Math.max(scale, 0.5)} 
+                    strokeWidth={Math.max(0.8, 1.5 / Math.max(scale, 0.5))} 
                   />
                   {/* Verschiebe-Symbol */}
                   <SvgText 

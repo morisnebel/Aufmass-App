@@ -765,6 +765,10 @@ export default function NewProjectScreen() {
     <>
       <Stack.Screen
         options={{
+          headerStyle: {
+            backgroundColor: '#1976d2',
+          },
+          headerTintColor: '#fff',
           headerLeft: () => (
             <TouchableOpacity
               onPress={handleBackWithSave}
@@ -772,14 +776,13 @@ export default function NewProjectScreen() {
                 flexDirection: 'row', 
                 alignItems: 'center', 
                 paddingVertical: 8, 
-                paddingHorizontal: 0,
-                backgroundColor: 'transparent',
+                paddingLeft: 8,
               }}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={26} color="#1976d2" />
+              <Ionicons name="chevron-back" size={28} color="#fff" />
               <Text style={{ 
-                color: '#1976d2', 
+                color: '#fff', 
                 fontSize: 17, 
                 fontWeight: '600',
               }}>

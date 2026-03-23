@@ -4604,24 +4604,42 @@ export default function DrawSketchScreen() {
                 />
               );
             })}
-            {/* Mittelpunkt zum Verschieben des gesamten Polygons - winzig klein um Linien nicht zu überdecken */}
+            {/* Mittelpunkt zum Verschieben des gesamten Polygons - GROSS und gut sichtbar */}
             {isSelected && points.length >= 2 && (() => {
               const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
               const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
-              // Radius winzig klein gemacht (2 statt 12) damit Linien besser sichtbar sind auf iPhone
-              const scaledMoveRadius = Math.max(2, 2 / Math.max(scale, 0.5));
-              const scaledMoveStroke = Math.max(0.3, 0.5 / Math.max(scale, 0.5));
+              // GROSSER Radius für bessere Sichtbarkeit und Bedienung
+              const moveHandleSize = Math.max(25, 35 / Math.max(scale, 0.5));
               
               return (
                 <G key="move-handle">
+                  {/* Äußerer Ring für bessere Sichtbarkeit */}
                   <Circle 
                     cx={centerX} 
                     cy={centerY} 
-                    r={scaledMoveRadius} 
+                    r={moveHandleSize} 
+                    fill="rgba(255, 152, 0, 0.25)" 
+                    stroke="#FF9800" 
+                    strokeWidth={3 / Math.max(scale, 0.5)} 
+                  />
+                  {/* Innerer Kreis */}
+                  <Circle 
+                    cx={centerX} 
+                    cy={centerY} 
+                    r={moveHandleSize * 0.6} 
                     fill="#FF9800" 
                     stroke="#fff" 
-                    strokeWidth={scaledMoveStroke} 
+                    strokeWidth={2 / Math.max(scale, 0.5)} 
                   />
+                  {/* Verschiebe-Symbol */}
+                  <SvgText 
+                    x={centerX} 
+                    y={centerY + (moveHandleSize * 0.2)} 
+                    fill="#fff" 
+                    fontSize={moveHandleSize * 0.7}
+                    textAnchor="middle"
+                    fontWeight="bold"
+                  >✥</SvgText>
                 </G>
               );
             })()}
@@ -4795,13 +4813,20 @@ export default function DrawSketchScreen() {
           <SvgText x={boxX + boxWidth / 2 - scaledRotateFontSize * 0.4} y={boxY - scaledRotateOffset + scaledRotateFontSize * 0.4} fill="#fff" fontSize={scaledRotateFontSize}>↻</SvgText>
         </G>
       );
-    } else if (element.type === 'polygon' || element.type === 'path') {
-      // Polygon/Path: Extrahiere Punkte und zeige Handles an Eckpunkten und Mittelpunkt
-      const polygonPoints: { x: number; y: number }[] = [];
-      const pathRegex = /([MLQ])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
-      let match;
-      while ((match = pathRegex.exec(element.data)) !== null) {
-        polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
+    } else if (element.type === 'polygon' || element.type === 'path' || element.type === 'polyline') {
+      // Polygon/Path/Polyline: Extrahiere Punkte und zeige Handles an Mittelpunkt
+      let polygonPoints: { x: number; y: number }[] = [];
+      
+      if (element.type === 'polyline' && element.data?.points) {
+        // Polyline hat points Array
+        polygonPoints = element.data.points;
+      } else if (typeof element.data === 'string') {
+        // Polygon/Path haben SVG path string
+        const pathRegex = /([MLQ])\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)/g;
+        let match;
+        while ((match = pathRegex.exec(element.data)) !== null) {
+          polygonPoints.push({ x: parseFloat(match[2]), y: parseFloat(match[3]) });
+        }
       }
       
       if (polygonPoints.length >= 2) {

@@ -234,6 +234,8 @@ export default function ProjectDetailScreen() {
   const [editProjectTypeDate, setEditProjectTypeDate] = useState('');
   const [showProjectTypePicker, setShowProjectTypePicker] = useState(false);
   const [showProjectTypeDatePicker, setShowProjectTypeDatePicker] = useState(false);
+  const [showDirectProjectTypePicker, setShowDirectProjectTypePicker] = useState(false);
+  const [showDirectProjectTypeDatePicker, setShowDirectProjectTypeDatePicker] = useState(false);
   const [projectTypeOptions, setProjectTypeOptions] = useState<string[]>([]);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [lastUsedProjectType, setLastUsedProjectTypeState] = useState<string | null>(null);
@@ -4252,19 +4254,43 @@ export default function ProjectDetailScreen() {
               {/* Projektart Section - GANZ OBEN */}
               <View style={styles.sectionDivider} />
               <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
+              
+              {/* Direkte Auswahl der Projektart */}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Projektart:</Text>
-                <Text style={[styles.infoValue, !project?.project_type && lastUsedProjectType && { color: '#999', fontStyle: 'italic' }]}>
-                  {project?.project_type || lastUsedProjectType || '(nicht gesetzt)'}
-                  {!project?.project_type && lastUsedProjectType && ' (Vorschlag)'}
-                </Text>
+                <TouchableOpacity
+                  style={[styles.projectTypeSelector, { flex: 1 }]}
+                  onPress={() => {
+                    // Zeige Picker Modal für direkte Auswahl
+                    setShowDirectProjectTypePicker(true);
+                  }}
+                >
+                  <Text style={[styles.projectTypeSelectorText, !project?.project_type && { color: '#999' }]}>
+                    {project?.project_type || lastUsedProjectType || 'Auswählen...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#666" />
+                </TouchableOpacity>
               </View>
-              {(project?.project_type_date) && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Datum:</Text>
-                  <Text style={styles.infoValue}>{new Date(project.project_type_date).toLocaleDateString('de-DE')}</Text>
-                </View>
-              )}
+              
+              {/* Datum-Auswahl */}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Datum:</Text>
+                <TouchableOpacity
+                  style={[styles.projectTypeSelector, { flex: 1 }]}
+                  onPress={() => {
+                    setShowDirectProjectTypeDatePicker(true);
+                  }}
+                >
+                  <Text style={[styles.projectTypeSelectorText, !project?.project_type_date && { color: '#999' }]}>
+                    {project?.project_type_date 
+                      ? new Date(project.project_type_date).toLocaleDateString('de-DE')
+                      : 'Datum wählen...'}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Vorschau der Überschrift */}
               {(project?.project_type || lastUsedProjectType) && (
                 <View style={[styles.projectTypePreviewInInfo, !project?.project_type && { borderColor: '#999', borderLeftColor: '#999' }]}>
                   <Ionicons name="ribbon" size={18} color={project?.project_type ? "#1976d2" : "#999"} />
@@ -4272,23 +4298,6 @@ export default function ProjectDetailScreen() {
                     {project?.project_type || lastUsedProjectType}
                     {project?.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
                   </Text>
-                  {!project?.project_type && (
-                    <TouchableOpacity 
-                      style={styles.quickSaveButton}
-                      onPress={async () => {
-                        // Schnell speichern der Projektart
-                        const projectId = Array.isArray(id) ? id[0] : id;
-                        await ProjectService.update(projectId, {
-                          ...project,
-                          project_type: lastUsedProjectType || undefined,
-                        });
-                        await loadProjectData();
-                      }}
-                    >
-                      <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
-                      <Text style={styles.quickSaveButtonText}>Übernehmen</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               )}
               
@@ -6581,6 +6590,134 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
         )}
+
+        {/* DIREKTE Projektart Picker (für Übersicht - speichert sofort) */}
+        {showDirectProjectTypePicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowDirectProjectTypePicker(false)}
+            />
+            <View style={[styles.salutationPickerContent, { maxHeight: 400 }]}>
+              <Text style={styles.salutationModalTitle}>Projektart auswählen</Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {projectTypeOptions.length === 0 ? (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Ionicons name="alert-circle-outline" size={40} color="#999" />
+                    <Text style={{ color: '#666', marginTop: 10, textAlign: 'center' }}>
+                      Keine Projektarten definiert.{'\n'}Bitte in den Einstellungen hinzufügen.
+                    </Text>
+                  </View>
+                ) : (
+                  projectTypeOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={styles.salutationOption}
+                      onPress={async () => {
+                        // Direkt speichern
+                        const projectId = Array.isArray(id) ? id[0] : id;
+                        await ProjectService.update(projectId, {
+                          ...project,
+                          project_type: option,
+                        });
+                        // Speichere als zuletzt verwendete Projektart
+                        await setLastUsedProjectType(option);
+                        setShowDirectProjectTypePicker(false);
+                        await loadProjectData();
+                      }}
+                    >
+                      <Text style={[
+                        styles.salutationOptionText,
+                        project?.project_type === option && styles.salutationOptionSelected
+                      ]}>{option}</Text>
+                      {project?.project_type === option && (
+                        <Ionicons name="checkmark" size={20} color="#1976d2" />
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.salutationOption, { borderTopWidth: 1, borderTopColor: '#e0e0e0' }]}
+                onPress={async () => {
+                  // Projektart löschen
+                  const projectId = Array.isArray(id) ? id[0] : id;
+                  await ProjectService.update(projectId, {
+                    ...project,
+                    project_type: undefined,
+                  });
+                  setShowDirectProjectTypePicker(false);
+                  await loadProjectData();
+                }}
+              >
+                <Text style={[styles.salutationOptionText, { color: '#f44336' }]}>Keine Projektart</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* DIREKTE Datum Picker (für Übersicht - speichert sofort) */}
+        {showDirectProjectTypeDatePicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowDirectProjectTypeDatePicker(false)}
+            />
+            <View style={[styles.salutationPickerContent, { padding: 20 }]}>
+              <Text style={styles.salutationModalTitle}>Datum auswählen</Text>
+              <View style={{ marginTop: 10, alignItems: 'center', backgroundColor: '#fff' }}>
+                <DateTimePicker
+                  value={project?.project_type_date ? new Date(project.project_type_date) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={async (event, selectedDate) => {
+                    if (Platform.OS === 'android') {
+                      setShowDirectProjectTypeDatePicker(false);
+                    }
+                    if (selectedDate) {
+                      // Direkt speichern
+                      const projectId = Array.isArray(id) ? id[0] : id;
+                      await ProjectService.update(projectId, {
+                        ...project,
+                        project_type_date: selectedDate.toISOString(),
+                      });
+                      await loadProjectData();
+                    }
+                  }}
+                  locale="de-DE"
+                  themeVariant="light"
+                  accentColor="#1976d2"
+                  style={{ width: '100%', height: 180, backgroundColor: '#fff' }}
+                />
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 15, width: '100%' }}>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#f44336', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    onPress={async () => {
+                      // Datum löschen
+                      const projectId = Array.isArray(id) ? id[0] : id;
+                      await ProjectService.update(projectId, {
+                        ...project,
+                        project_type_date: undefined,
+                      });
+                      setShowDirectProjectTypeDatePicker(false);
+                      await loadProjectData();
+                    }}
+                  >
+                    <Text style={{ color: '#fff' }}>Löschen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: '#1976d2', padding: 12, borderRadius: 8, alignItems: 'center' }}
+                    onPress={() => setShowDirectProjectTypeDatePicker(false)}
+                  >
+                    <Text style={{ color: '#fff' }}>Fertig</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </Modal>
 
       {/* PDF Preview Modal */}
@@ -6819,6 +6956,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  projectTypeSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  projectTypeSelectorText: {
+    fontSize: 14,
+    color: '#333',
   },
   centerContainer: {
     flex: 1,

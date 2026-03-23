@@ -769,33 +769,51 @@ export default function NewProjectScreen() {
             backgroundColor: '#1976d2',
           },
           headerTintColor: '#fff',
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={handleBackWithSave}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                paddingVertical: 8, 
-                paddingLeft: 8,
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-back" size={28} color="#fff" />
-              <Text style={{ 
-                color: '#fff', 
-                fontSize: 17, 
-                fontWeight: '600',
-              }}>
-                {name.trim() && selectedCustomer ? 'Speichern' : 'Zurück'}
-              </Text>
-            </TouchableOpacity>
-          ),
+          headerBackVisible: false,
+          headerLeft: () => null,
         }}
       />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+      {/* Großer Speichern/Zurück Button oben */}
+      <TouchableOpacity
+        onPress={handleBackWithSave}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: name.trim() && selectedCustomer ? '#4CAF50' : '#1976d2',
+          paddingVertical: 14,
+          paddingHorizontal: 20,
+          marginHorizontal: 16,
+          marginTop: 12,
+          marginBottom: 8,
+          borderRadius: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 4,
+        }}
+        activeOpacity={0.8}
+      >
+        <Ionicons 
+          name={name.trim() && selectedCustomer ? "checkmark-circle" : "arrow-back-circle"} 
+          size={26} 
+          color="#fff" 
+        />
+        <Text style={{ 
+          color: '#fff', 
+          fontSize: 18, 
+          fontWeight: '700',
+          marginLeft: 10,
+        }}>
+          {name.trim() && selectedCustomer ? 'Projekt speichern' : 'Zurück ohne Speichern'}
+        </Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.scrollView}>
         <View style={styles.form}>
           <View style={styles.inputGroup}>

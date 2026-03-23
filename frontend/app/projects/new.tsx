@@ -768,14 +768,29 @@ export default function NewProjectScreen() {
           headerLeft: () => (
             <TouchableOpacity
               onPress={handleBackWithSave}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                paddingVertical: 8, 
+                paddingHorizontal: 0,
+                backgroundColor: 'transparent',
+              }}
+              activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={28} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 17, marginLeft: 4 }}>
+              <Ionicons name="chevron-back" size={26} color="#fff" />
+              <Text style={{ 
+                color: '#fff', 
+                fontSize: 17, 
+                fontWeight: '500',
+                textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 2,
+              }}>
                 {name.trim() && selectedCustomer ? 'Speichern' : 'Zurück'}
               </Text>
             </TouchableOpacity>
           ),
+          headerTintColor: '#fff',
         }}
       />
       <KeyboardAvoidingView

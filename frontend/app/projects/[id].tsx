@@ -236,6 +236,7 @@ export default function ProjectDetailScreen() {
   const [showProjectTypeDatePicker, setShowProjectTypeDatePicker] = useState(false);
   const [showDirectProjectTypePicker, setShowDirectProjectTypePicker] = useState(false);
   const [showDirectProjectTypeDatePicker, setShowDirectProjectTypeDatePicker] = useState(false);
+  const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(null);
   const [projectTypeOptions, setProjectTypeOptions] = useState<string[]>([]);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [lastUsedProjectType, setLastUsedProjectTypeState] = useState<string | null>(null);
@@ -6701,15 +6702,18 @@ export default function ProjectDetailScreen() {
                 onChange={async (event, selectedDate) => {
                   if (Platform.OS === 'android') {
                     setShowDirectProjectTypeDatePicker(false);
+                    if (selectedDate) {
+                      const projectId = Array.isArray(id) ? id[0] : id;
+                      await ProjectService.update(projectId, {
+                        ...project,
+                        project_type_date: selectedDate.toISOString(),
+                      });
+                      await loadProjectData();
+                    }
                   }
-                  if (selectedDate) {
-                    // Direkt speichern
-                    const projectId = Array.isArray(id) ? id[0] : id;
-                    await ProjectService.update(projectId, {
-                      ...project,
-                      project_type_date: selectedDate.toISOString(),
-                    });
-                    await loadProjectData();
+                  // Auf iOS: Nur temporär speichern, "Fertig" Button speichert endgültig
+                  if (selectedDate && Platform.OS === 'ios') {
+                    setTempSelectedDate(selectedDate);
                   }
                 }}
                 locale="de-DE"
@@ -6728,6 +6732,7 @@ export default function ProjectDetailScreen() {
                       project_type_date: undefined,
                     });
                     setShowDirectProjectTypeDatePicker(false);
+                    setTempSelectedDate(null);
                     await loadProjectData();
                   }}
                 >
@@ -6735,7 +6740,18 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: '#1976d2', padding: 12, borderRadius: 8, alignItems: 'center' }}
-                  onPress={() => setShowDirectProjectTypeDatePicker(false)}
+                  onPress={async () => {
+                    // Speichere das aktuell angezeigte Datum
+                    const dateToSave = tempSelectedDate || (project?.project_type_date ? new Date(project.project_type_date) : new Date());
+                    const projectId = Array.isArray(id) ? id[0] : id;
+                    await ProjectService.update(projectId, {
+                      ...project,
+                      project_type_date: dateToSave.toISOString(),
+                    });
+                    setShowDirectProjectTypeDatePicker(false);
+                    setTempSelectedDate(null);
+                    await loadProjectData();
+                  }}
                 >
                   <Text style={{ color: '#fff' }}>Fertig</Text>
                 </TouchableOpacity>

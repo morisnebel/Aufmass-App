@@ -4255,51 +4255,76 @@ export default function ProjectDetailScreen() {
               <View style={styles.sectionDivider} />
               <Text style={styles.subSectionTitle}>Projektart / Überschrift</Text>
               
-              {/* Direkte Auswahl der Projektart */}
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Projektart:</Text>
+              {/* Projektart und Datum nebeneinander - modernes Design */}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                {/* Projektart Auswahl */}
                 <TouchableOpacity
-                  style={[styles.projectTypeSelector, { flex: 1 }]}
-                  onPress={() => {
-                    // Zeige Picker Modal für direkte Auswahl
-                    setShowDirectProjectTypePicker(true);
+                  style={{
+                    flex: 2,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: project?.project_type ? '#e3f2fd' : '#f5f5f5',
+                    borderWidth: 1.5,
+                    borderColor: project?.project_type ? '#1976d2' : '#ddd',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
                   }}
+                  onPress={() => setShowDirectProjectTypePicker(true)}
                 >
-                  <Text style={[styles.projectTypeSelectorText, !project?.project_type && { color: '#999' }]}>
-                    {project?.project_type || lastUsedProjectType || 'Auswählen...'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#666" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Ionicons 
+                      name="ribbon" 
+                      size={20} 
+                      color={project?.project_type ? '#1976d2' : '#999'} 
+                      style={{ marginRight: 10 }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>Projektart</Text>
+                      <Text style={{ 
+                        fontSize: 14, 
+                        fontWeight: '600',
+                        color: project?.project_type ? '#1976d2' : '#999',
+                      }} numberOfLines={1}>
+                        {project?.project_type || 'Auswählen...'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-down" size={18} color={project?.project_type ? '#1976d2' : '#999'} />
+                </TouchableOpacity>
+
+                {/* Datum Auswahl */}
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: project?.project_type_date ? '#e8f5e9' : '#f5f5f5',
+                    borderWidth: 1.5,
+                    borderColor: project?.project_type_date ? '#4caf50' : '#ddd',
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  }}
+                  onPress={() => setShowDirectProjectTypeDatePicker(true)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>Datum</Text>
+                    <Text style={{ 
+                      fontSize: 14, 
+                      fontWeight: '600',
+                      color: project?.project_type_date ? '#4caf50' : '#999',
+                    }}>
+                      {project?.project_type_date 
+                        ? new Date(project.project_type_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                        : '---'}
+                    </Text>
+                  </View>
+                  <Ionicons name="calendar" size={18} color={project?.project_type_date ? '#4caf50' : '#999'} />
                 </TouchableOpacity>
               </View>
-              
-              {/* Datum-Auswahl */}
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Datum:</Text>
-                <TouchableOpacity
-                  style={[styles.projectTypeSelector, { flex: 1 }]}
-                  onPress={() => {
-                    setShowDirectProjectTypeDatePicker(true);
-                  }}
-                >
-                  <Text style={[styles.projectTypeSelectorText, !project?.project_type_date && { color: '#999' }]}>
-                    {project?.project_type_date 
-                      ? new Date(project.project_type_date).toLocaleDateString('de-DE')
-                      : 'Datum wählen...'}
-                  </Text>
-                  <Ionicons name="calendar-outline" size={20} color="#666" />
-                </TouchableOpacity>
-              </View>
-              
-              {/* Vorschau der Überschrift */}
-              {(project?.project_type || lastUsedProjectType) && (
-                <View style={[styles.projectTypePreviewInInfo, !project?.project_type && { borderColor: '#999', borderLeftColor: '#999' }]}>
-                  <Ionicons name="ribbon" size={18} color={project?.project_type ? "#1976d2" : "#999"} />
-                  <Text style={[styles.projectTypePreviewInInfoText, !project?.project_type && { color: '#999' }]}>
-                    {project?.project_type || lastUsedProjectType}
-                    {project?.project_type_date && ` vom ${new Date(project.project_type_date).toLocaleDateString('de-DE')}`}
-                  </Text>
-                </View>
-              )}
               
               {/* Bauherr-Daten */}
               <View style={styles.sectionDivider} />

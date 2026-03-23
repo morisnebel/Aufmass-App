@@ -14,9 +14,10 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
 
 // Anrede-Optionen
@@ -79,6 +80,8 @@ function extractContactData(contact: Contacts.Contact) {
 
 export default function NewCustomerScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const selectMode = params.selectMode === 'true';
   
   // Form state - neue erweiterte Felder
   const [customerNumber, setCustomerNumber] = useState(''); // KD-26001 etc.
@@ -308,7 +311,7 @@ export default function NewCustomerScreen() {
       const fullName = generateFullName(salutation, firstName, lastName);
       const fullAddress = generateFullAddress(street, plz, city);
       
-      await CustomerService.create({
+      const newCustomer = await CustomerService.create({
         salutation: salutation || undefined,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
@@ -323,6 +326,20 @@ export default function NewCustomerScreen() {
         importedContactId: importedContactId || undefined,
         customer_number: finalCustomerNumber,
       });
+      
+      // Hilfsfunktion für Navigation nach Kundenerstellung
+      const handleNavigateBack = async () => {
+        if (selectMode && newCustomer?.id) {
+          // Im selectMode: Speichere die ID und gehe 2x zurück (zur Projekterstellung)
+          await AsyncStorage.setItem('selectedCustomerId', newCustomer.id);
+          router.back(); // Zurück zur Kundenliste
+          setTimeout(() => {
+            router.back(); // Zurück zur Projekterstellung
+          }, 100);
+        } else {
+          router.back();
+        }
+      };
       
       // Handle contact synchronization
       if (saveToContacts && updateExisting && importedContactId) {
@@ -340,11 +357,11 @@ export default function NewCustomerScreen() {
         });
         if (success) {
           Alert.alert('Erfolg', 'Kunde wurde erstellt und iPad-Kontakt wurde aktualisiert', [
-            { text: 'OK', onPress: () => router.back() },
+            { text: 'OK', onPress: handleNavigateBack },
           ]);
         } else {
           Alert.alert('Teilweise erfolgreich', 'Kunde wurde erstellt, aber der iPad-Kontakt konnte nicht aktualisiert werden', [
-            { text: 'OK', onPress: () => router.back() },
+            { text: 'OK', onPress: handleNavigateBack },
           ]);
         }
       } else if (saveToContacts) {
@@ -361,11 +378,11 @@ export default function NewCustomerScreen() {
           city: city || undefined,
         });
         Alert.alert('Erfolg', 'Kunde wurde erstellt und in Kontakten gespeichert', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: handleNavigateBack },
         ]);
       } else {
         Alert.alert('Erfolg', 'Kunde wurde erstellt', [
-          { text: 'OK', onPress: () => router.back() },
+          { text: 'OK', onPress: handleNavigateBack },
         ]);
       }
     } catch (error) {

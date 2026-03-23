@@ -654,7 +654,7 @@ export default function CustomersScreen() {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/customers/new')}
+          onPress={() => router.push(selectMode ? '/customers/new?selectMode=true' : '/customers/new')}
         >
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>

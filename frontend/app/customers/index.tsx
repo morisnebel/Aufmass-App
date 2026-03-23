@@ -630,7 +630,7 @@ export default function CustomersScreen() {
         <TouchableOpacity onPress={() => router.push('/')} style={styles.backButtonMain}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <Text style={styles.mainHeaderTitle}>Kundenliste</Text>
+        <Text style={styles.mainHeaderTitle}>Startseite</Text>
         <View style={{ width: 40 }} />
       </View>
       
@@ -639,7 +639,7 @@ export default function CustomersScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#1976d2" />
           </TouchableOpacity>
-          <Text style={styles.selectModeTitle}>Kunde auswählen</Text>
+          <Text style={styles.selectModeTitle}>Projekteingabe</Text>
         </View>
       )}
       <View style={styles.header}>

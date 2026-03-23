@@ -4816,44 +4816,74 @@ export default function DrawSketchScreen() {
         
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
+        const boxWidth = maxX - minX;
+        const boxHeight = maxY - minY;
         
-        // Gestrichelte Bounding Box
+        // Größerer Padding für bessere Sichtbarkeit
+        const padding = 15 / Math.max(scale, 0.5);
+        
+        // Gestrichelte Bounding Box - dicker und auffälliger
         handles.push(
           <Rect
             key="polygon-bounds"
-            x={minX - 5}
-            y={minY - 5}
-            width={maxX - minX + 10}
-            height={maxY - minY + 10}
-            fill="none"
+            x={minX - padding}
+            y={minY - padding}
+            width={boxWidth + padding * 2}
+            height={boxHeight + padding * 2}
+            fill="rgba(76, 175, 80, 0.1)"
             stroke="#4caf50"
-            strokeWidth={scaledStrokeWidth * 1.5}
-            strokeDasharray={`${4 / Math.max(scale, 0.5)},${4 / Math.max(scale, 0.5)}`}
+            strokeWidth={3 / Math.max(scale, 0.5)}
+            strokeDasharray={`${8 / Math.max(scale, 0.5)},${4 / Math.max(scale, 0.5)}`}
+            rx={8 / Math.max(scale, 0.5)}
           />
         );
         
-        // Mittelpunkt-Handle zum Verschieben (größer und auffälliger)
+        // GROSSER Mittelpunkt-Handle zum Verschieben
+        const moveHandleSize = Math.max(30, 40 / Math.max(scale, 0.5));
         handles.push(
           <G key="center-move">
-            <Circle cx={centerX} cy={centerY} r={scaledHandleRadius * 1.5} fill="#4caf50" stroke="#fff" strokeWidth={scaledStrokeWidth * 2} />
-            <SvgText x={centerX - scaledFontSize * 0.4} y={centerY + scaledFontSize * 0.4} fill="#fff" fontSize={scaledFontSize}>✥</SvgText>
+            {/* Äußerer Ring für bessere Sichtbarkeit */}
+            <Circle 
+              cx={centerX} 
+              cy={centerY} 
+              r={moveHandleSize} 
+              fill="rgba(76, 175, 80, 0.3)" 
+              stroke="#4caf50" 
+              strokeWidth={3 / Math.max(scale, 0.5)} 
+            />
+            {/* Innerer Kreis */}
+            <Circle 
+              cx={centerX} 
+              cy={centerY} 
+              r={moveHandleSize * 0.6} 
+              fill="#4caf50" 
+              stroke="#fff" 
+              strokeWidth={2 / Math.max(scale, 0.5)} 
+            />
+            {/* Verschiebe-Symbol (4 Pfeile) */}
+            <SvgText 
+              x={centerX} 
+              y={centerY + (moveHandleSize * 0.25)} 
+              fill="#fff" 
+              fontSize={moveHandleSize * 0.8}
+              textAnchor="middle"
+              fontWeight="bold"
+            >✥</SvgText>
           </G>
         );
         
-        // Eckpunkt-Handles
-        polygonPoints.forEach((pt, idx) => {
-          handles.push(
-            <Circle 
-              key={`corner-${idx}`} 
-              cx={pt.x} 
-              cy={pt.y} 
-              r={scaledHandleRadius} 
-              fill="#2196f3" 
-              stroke="#fff" 
-              strokeWidth={scaledStrokeWidth} 
-            />
-          );
-        });
+        // Text-Hinweis
+        handles.push(
+          <SvgText
+            key="move-hint"
+            x={centerX}
+            y={minY - padding - 10 / Math.max(scale, 0.5)}
+            fill="#4caf50"
+            fontSize={14 / Math.max(scale, 0.5)}
+            textAnchor="middle"
+            fontWeight="bold"
+          >Zum Verschieben hier ziehen</SvgText>
+        );
       }
     }
     

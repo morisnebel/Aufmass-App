@@ -1164,6 +1164,7 @@ export default function DrawSketchScreen() {
   
   // No longer using background image - images are now elements
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const backgroundImageChangedRef = useRef(false); // Track if bg image changed since load
 
   // Generate unique ID
   const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1273,6 +1274,7 @@ export default function DrawSketchScreen() {
         setHistoryIndex(0);
         setTitle('Neue Skizze');
         setBackgroundImage(null);
+        backgroundImageChangedRef.current = true; // Mark as changed (cleared)
         setTotalLfmBoxPositions({}); // Reset alle Summenbox-Positionen
         setLegendPosition({ x: 0, y: 0 }); // Reset Legend-Position
         legendPan.setValue({ x: 0, y: 0 }); // Reset Pan-Animation
@@ -1715,17 +1717,17 @@ export default function DrawSketchScreen() {
       try {
         setIsSaving(true); // Blockiere weitere Klicks
         setLoading(true);
+        const startTime = Date.now();
         
-        // Create metadata with elements and canvas dimensions for proper scaling
+        // Create metadata WITHOUT backgroundImage (stored separately)
         const metadata = {
           elements,
-          backgroundImage,
           canvasWidth: width,
           canvasHeight: height - 120,
           lineSegmentMeasurements,
-          totalLfmBoxPositions, // Speichere alle Summenbox-Positionen pro Element
-          legendPosition, // Speichere Position der Übersicht-Legend
-          notes, // Speichere die Notizen auch in metadata
+          totalLfmBoxPositions,
+          legendPosition,
+          notes,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
@@ -1743,8 +1745,16 @@ export default function DrawSketchScreen() {
           }
         }
         
+        // Use placeholder for background-image sketches (not the full base64!)
         if (!sketchData && backgroundImage) {
-          sketchData = backgroundImage;
+          const previewSvg = `
+            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="200" height="200" fill="#f0f0f0"/>
+              <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
+              <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
+            </svg>
+          `;
+          sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
         }
         
         if (!sketchData) {
@@ -1768,27 +1778,46 @@ export default function DrawSketchScreen() {
         }
 
         if (sketchId) {
-          // Update existing sketch
-          await SketchService.update(sketchId, {
+          // Update existing sketch - optimized parallel save
+          const saveOps: Promise<any>[] = [];
+          
+          // Save metadata to separate key
+          saveOps.push(AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)));
+          
+          // Only save bg image if changed
+          if (backgroundImageChangedRef.current) {
+            if (backgroundImage) {
+              saveOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+            } else {
+              saveOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+            }
+          }
+          
+          // Update lightweight entry in main array (no metadata!)
+          saveOps.push(SketchService.update(sketchId, {
             project_id: projectId,
             title,
-            notes, // Speichere die Notizen direkt in der Skizze
+            notes,
             sketch_data: sketchData,
-            metadata: JSON.stringify(metadata),
             pdf_size: pdfSize,
-          });
-          console.log('Auto-saved existing sketch');
+          }));
+          
+          await Promise.all(saveOps);
+          backgroundImageChangedRef.current = false;
+          console.log('Auto-saved existing sketch in', Date.now() - startTime, 'ms');
         } else if (title.trim()) {
-          // Create new sketch only if title is provided
+          // Create new sketch
+          const fullMetadata = { ...metadata, backgroundImage };
           await SketchService.create({
             project_id: projectId,
             title,
-            notes, // Speichere die Notizen direkt in der Skizze
+            notes,
             sketch_data: sketchData,
-            metadata: JSON.stringify(metadata),
+            metadata: JSON.stringify(fullMetadata),
             pdf_size: pdfSize,
           });
-          console.log('Auto-saved new sketch');
+          backgroundImageChangedRef.current = false;
+          console.log('Auto-saved new sketch in', Date.now() - startTime, 'ms');
         }
       } catch (error) {
         console.error('Error auto-saving sketch:', error);
@@ -2150,6 +2179,7 @@ export default function DrawSketchScreen() {
       if (!result.canceled && result.assets[0].base64) {
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
         setBackgroundImage(base64Image);
+        backgroundImageChangedRef.current = true;
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -2176,6 +2206,7 @@ export default function DrawSketchScreen() {
       if (!result.canceled && result.assets[0].base64) {
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
         setBackgroundImage(base64Image);
+        backgroundImageChangedRef.current = true;
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -5333,10 +5364,9 @@ export default function DrawSketchScreen() {
       setLoading(true);
       const startTime = Date.now();
       
-      // Create metadata with elements and canvas dimensions for proper scaling
+      // Create metadata WITHOUT backgroundImage (stored separately for performance)
       const metadata = {
         elements,
-        backgroundImage, // Will be stored separately by SketchService
         canvasWidth: width,
         canvasHeight: height - 120, // Subtract header/toolbar height
         lineSegmentMeasurements, // Speichere die Linien-Maße
@@ -5346,7 +5376,7 @@ export default function DrawSketchScreen() {
         labelOffsets, // Speichere Polyline-Label-Positionen
       };
 
-      console.log('Saving sketch with', elements.length, 'elements');
+      console.log('Saving sketch with', elements.length, 'elements, bgChanged:', backgroundImageChangedRef.current);
 
       // Generate preview image
       let sketchData = '';
@@ -5394,35 +5424,59 @@ export default function DrawSketchScreen() {
         sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
       }
 
+      const t1 = Date.now();
+      console.log('Preview generated in', t1 - startTime, 'ms');
+
       if (sketchId) {
-        // Update existing sketch - save heavy data separately for speed
+        // Update existing sketch - save data in parallel for speed
         console.log('Updating sketch ID:', sketchId);
         
-        // Save heavy data (metadata + background) to separate keys in parallel with lightweight update
-        await Promise.all([
-          SketchService.saveSketchData(sketchId, metadata, backgroundImage),
-          SketchService.update(sketchId, {
-            project_id: projectId,
-            title,
-            notes,
-            sketch_data: sketchData,
-            pdf_size: pdfSize,
-          }),
-        ]);
+        // Build save operations
+        const saveOps: Promise<any>[] = [];
+        
+        // Always save metadata (elements, measurements etc.) - this is usually fast
+        const metaStr = JSON.stringify(metadata);
+        saveOps.push(AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr));
+        
+        // Only save background image if it actually changed (skip the expensive write)
+        if (backgroundImageChangedRef.current) {
+          console.log('Background image changed, saving...');
+          if (backgroundImage) {
+            saveOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+          } else {
+            saveOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+          }
+        } else {
+          console.log('Background image unchanged, skipping save');
+        }
+        
+        // Update lightweight sketch entry in main array
+        saveOps.push(SketchService.update(sketchId, {
+          project_id: projectId,
+          title,
+          notes,
+          sketch_data: sketchData,
+          pdf_size: pdfSize,
+        }));
+        
+        await Promise.all(saveOps);
+        backgroundImageChangedRef.current = false; // Reset change flag
         
         console.log('Sketch updated in', Date.now() - startTime, 'ms');
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
       } else {
-        // Create new sketch
+        // Create new sketch - include metadata for SketchService.create to handle
         console.log('Creating new sketch');
+        const fullMetadata = { ...metadata, backgroundImage };
         const newSketch = await SketchService.create({
           project_id: projectId,
           title,
           notes,
           sketch_data: sketchData,
-          metadata: JSON.stringify(metadata),
+          metadata: JSON.stringify(fullMetadata),
           pdf_size: pdfSize,
         });
+        backgroundImageChangedRef.current = false;
         console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert('Erfolg', 'Skizze wurde gespeichert');
       }

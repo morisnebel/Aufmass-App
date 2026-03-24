@@ -21,7 +21,6 @@ import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ResizableNumpad from '../../components/ResizableNumpad';
 // File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
@@ -124,13 +123,6 @@ export default function AnnotatePhotoScreen() {
   const textDragStartRef = useRef({ x: 0, y: 0 });
   const textOriginalPosRef = useRef({ x: 0, y: 0 });
   
-  // Numpad State
-  const [showNumpad, setShowNumpad] = useState(false);
-  const textInputRef = useRef<TextInput>(null);
-  const editTextInputRef = useRef<TextInput>(null);
-  const descriptionInputRef = useRef<TextInput>(null);
-  const activeInputRef = useRef<'text' | 'edit' | 'description' | null>(null);
-  
   // Zoom & Pan
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -140,31 +132,6 @@ export default function AnnotatePhotoScreen() {
   
   // Drawing mode toggle
   const [drawingEnabled, setDrawingEnabled] = useState(false);
-  
-  // Numpad key handler
-  const handlePhotoNumpadPress = (key: string) => {
-    let setter: (val: string) => void;
-    let getter: string;
-    
-    if (activeInputRef.current === 'edit') {
-      setter = setEditTextInput;
-      getter = editTextInput;
-    } else if (activeInputRef.current === 'description') {
-      setter = (val: string) => { setDescription(val); setHasChanges(true); };
-      getter = description;
-    } else {
-      setter = setTextInput;
-      getter = textInput;
-    }
-    
-    if (key === '⌫') {
-      setter(getter.slice(0, -1));
-    } else if (key === 'C') {
-      setter('');
-    } else {
-      setter(getter + key);
-    }
-  };
   
   // Datum/Uhrzeit als Text auf Foto einfügen
   const addDateTimeText = () => {
@@ -1048,44 +1015,26 @@ export default function AnnotatePhotoScreen() {
       <View style={styles.descriptionContainer}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={styles.descriptionLabel}>Beschreibung:</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {/* Datum/Uhrzeit Button */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#e8f5e9',
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 6,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                borderWidth: 1,
-                borderColor: '#4caf50',
-              }}
-              onPress={addDateTimeText}
-            >
-              <Ionicons name="calendar-outline" size={16} color="#388e3c" />
-              <Text style={{ fontSize: 11, color: '#388e3c', fontWeight: '600' }}>Datum</Text>
-            </TouchableOpacity>
-            {/* Numpad Toggle */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: showNumpad && activeInputRef.current === 'description' ? '#1976d2' : '#f0f0f0',
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 6,
-              }}
-              onPress={() => {
-                activeInputRef.current = 'description';
-                setShowNumpad(!(showNumpad && activeInputRef.current === 'description'));
-              }}
-            >
-              <Ionicons name="keypad" size={16} color={showNumpad && activeInputRef.current === 'description' ? '#fff' : '#666'} />
-            </TouchableOpacity>
-          </View>
+          {/* Datum/Uhrzeit Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#e8f5e9',
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              borderWidth: 1,
+              borderColor: '#4caf50',
+            }}
+            onPress={addDateTimeText}
+          >
+            <Ionicons name="calendar-outline" size={16} color="#388e3c" />
+            <Text style={{ fontSize: 12, color: '#388e3c', fontWeight: '600' }}>Datum</Text>
+          </TouchableOpacity>
         </View>
         <TextInput
-          ref={descriptionInputRef}
           style={styles.descriptionInput}
           value={description}
           onChangeText={(text) => { setDescription(text); setHasChanges(true); }}
@@ -1093,16 +1042,6 @@ export default function AnnotatePhotoScreen() {
           placeholderTextColor="#999"
           multiline={false}
           returnKeyType="done"
-          showSoftInputOnFocus={!(showNumpad && activeInputRef.current === 'description')}
-          onFocus={() => { activeInputRef.current = 'description'; }}
-        />
-        {/* Numpad für Beschreibung */}
-        <ResizableNumpad
-          visible={showNumpad && activeInputRef.current === 'description'}
-          onKeyPress={handlePhotoNumpadPress}
-          onClose={() => setShowNumpad(false)}
-          showLetters={true}
-          showUnits={false}
         />
       </View>
 
@@ -1266,32 +1205,14 @@ export default function AnnotatePhotoScreen() {
       <Modal visible={showTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.modalTitle}>Text eingeben</Text>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: showNumpad ? '#1976d2' : '#f0f0f0',
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 6,
-                }}
-                onPress={() => {
-                  activeInputRef.current = 'text';
-                  setShowNumpad(!showNumpad);
-                }}
-              >
-                <Ionicons name="keypad" size={20} color={showNumpad ? '#fff' : '#666'} />
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.modalTitle}>Text eingeben</Text>
             <TextInput
-              ref={textInputRef}
               style={styles.modalInput}
               value={textInput}
               onChangeText={setTextInput}
               placeholder="Text hier eingeben..."
               multiline
               autoFocus
-              showSoftInputOnFocus={!showNumpad}
             />
             
             {/* Font Size Slider */}
@@ -1359,15 +1280,6 @@ export default function AnnotatePhotoScreen() {
               </View>
             </View>
             
-            {/* Numpad for text input */}
-            <ResizableNumpad
-              visible={showNumpad && activeInputRef.current === 'text'}
-              onKeyPress={handlePhotoNumpadPress}
-              onClose={() => setShowNumpad(false)}
-              showLetters={true}
-              showUnits={false}
-            />
-            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -1375,7 +1287,6 @@ export default function AnnotatePhotoScreen() {
                   setShowTextModal(false);
                   setTextInput('');
                   setPendingTextPosition(null);
-                  setShowNumpad(false);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
@@ -1395,32 +1306,14 @@ export default function AnnotatePhotoScreen() {
       <Modal visible={showEditTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.modalTitle}>Text bearbeiten</Text>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: showNumpad && activeInputRef.current === 'edit' ? '#1976d2' : '#f0f0f0',
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 6,
-                }}
-                onPress={() => {
-                  activeInputRef.current = 'edit';
-                  setShowNumpad(!(showNumpad && activeInputRef.current === 'edit'));
-                }}
-              >
-                <Ionicons name="keypad" size={20} color={showNumpad && activeInputRef.current === 'edit' ? '#fff' : '#666'} />
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.modalTitle}>Text bearbeiten</Text>
             <TextInput
-              ref={editTextInputRef}
               style={styles.modalInput}
               value={editTextInput}
               onChangeText={setEditTextInput}
               placeholder="Text hier eingeben..."
               multiline
               autoFocus
-              showSoftInputOnFocus={!(showNumpad && activeInputRef.current === 'edit')}
             />
             
             {/* Font Size Slider */}
@@ -1488,21 +1381,11 @@ export default function AnnotatePhotoScreen() {
               </View>
             </View>
             
-            {/* Numpad for text editing */}
-            <ResizableNumpad
-              visible={showNumpad && activeInputRef.current === 'edit'}
-              onKeyPress={handlePhotoNumpadPress}
-              onClose={() => setShowNumpad(false)}
-              showLetters={true}
-              showUnits={false}
-            />
-            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowEditTextModal(false);
-                  setShowNumpad(false);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>

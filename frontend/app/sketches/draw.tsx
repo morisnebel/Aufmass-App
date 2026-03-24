@@ -6584,7 +6584,10 @@ export default function DrawSketchScreen() {
         <Animated.View 
           style={[
             styles.floatingMeasurePanel,
-            { transform: measurePanelPan.getTranslateTransform() }
+            { 
+              transform: measurePanelPan.getTranslateTransform(),
+              width: numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22),
+            }
           ]}
         >
           {/* Drag Handle */}
@@ -9986,7 +9989,6 @@ const styles = StyleSheet.create({
   floatingMeasurePanel: {
     position: 'absolute',
     top: 60,
-    left: 10,
     right: 10,
     backgroundColor: '#fff',
     borderRadius: 12,

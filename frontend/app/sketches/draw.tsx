@@ -506,6 +506,11 @@ export default function DrawSketchScreen() {
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
   
+  // Maßlinien-Darstellung Einstellungen (global für alle Maßlinien an Polygonen)
+  const [measureLineColor, setMeasureLineColor] = useState('#1976d2');
+  const [measureLineStrokeWidth, setMeasureLineStrokeWidth] = useState(1.2);
+  const [measureLineFontSize, setMeasureLineFontSize] = useState(11);
+  
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
   const isResettingRef = useRef(false);
@@ -4586,8 +4591,8 @@ export default function DrawSketchScreen() {
               // Skalierte Größen basierend auf Zoom-Level
               const baseOffsetMagnitude = 16;
               const baseTickLength = 6;
-              const baseStrokeWidth = 1.2;
-              const baseFontSize = 11;
+              const baseStrokeWidth = measureLineStrokeWidth;
+              const baseFontSize = measureLineFontSize;
               
               const scaledOffsetMagnitude = Math.max(8, baseOffsetMagnitude / Math.max(scale, 0.5));
               const scaledTickLength = Math.max(3, baseTickLength / Math.max(scale, 0.5));
@@ -4613,7 +4618,7 @@ export default function DrawSketchScreen() {
                     y1={p1.y + offsetY}
                     x2={p2.x + offsetX}
                     y2={p2.y + offsetY}
-                    stroke="#1976d2"
+                    stroke={measureLineColor}
                     strokeWidth={scaledStrokeWidth}
                   />
                   {/* End-Strich links */}
@@ -4622,7 +4627,7 @@ export default function DrawSketchScreen() {
                     y1={p1.y + offsetY + Math.cos(angle) * scaledTickLength}
                     x2={p1.x + offsetX + Math.sin(angle) * scaledTickLength}
                     y2={p1.y + offsetY - Math.cos(angle) * scaledTickLength}
-                    stroke="#1976d2"
+                    stroke={measureLineColor}
                     strokeWidth={scaledStrokeWidth}
                   />
                   {/* End-Strich rechts */}
@@ -4631,7 +4636,7 @@ export default function DrawSketchScreen() {
                     y1={p2.y + offsetY + Math.cos(angle) * scaledTickLength}
                     x2={p2.x + offsetX + Math.sin(angle) * scaledTickLength}
                     y2={p2.y + offsetY - Math.cos(angle) * scaledTickLength}
-                    stroke="#1976d2"
+                    stroke={measureLineColor}
                     strokeWidth={scaledStrokeWidth}
                   />
                   {/* Hintergrund für Text - skaliert */}
@@ -4648,7 +4653,7 @@ export default function DrawSketchScreen() {
                   <SvgText
                     x={midX + offsetX}
                     y={midY + offsetY + scaledFontSize * 0.35}
-                    fill="#1976d2"
+                    fill={measureLineColor}
                     fontSize={scaledFontSize}
                     fontWeight="bold"
                     textAnchor="middle"
@@ -4704,7 +4709,7 @@ export default function DrawSketchScreen() {
                       y1={centerY}
                       x2={labelX}
                       y2={labelY}
-                      stroke="#1976d2"
+                      stroke={measureLineColor}
                       strokeWidth={scaledLineStroke}
                       strokeDasharray="3,2"
                       opacity={0.7}
@@ -4715,7 +4720,7 @@ export default function DrawSketchScreen() {
                     cx={labelX}
                     cy={labelY}
                     r={scaledLabelRadius}
-                    fill="#1976d2"
+                    fill={measureLineColor}
                     stroke="#fff"
                     strokeWidth={scaledLabelStroke}
                   />
@@ -5370,13 +5375,13 @@ export default function DrawSketchScreen() {
           const tickLength = 8;
           
           // Dimension line parallel to original line
-          svgElements += `<line x1="${p1.x + offsetX}" y1="${p1.y + offsetY}" x2="${p2.x + offsetX}" y2="${p2.y + offsetY}" stroke="#1976d2" stroke-width="1.5"/>`;
+          svgElements += `<line x1="${p1.x + offsetX}" y1="${p1.y + offsetY}" x2="${p2.x + offsetX}" y2="${p2.y + offsetY}" stroke="${measureLineColor}" stroke-width="${measureLineStrokeWidth * 1.25}"/>`;
           
           // Left end tick
-          svgElements += `<line x1="${p1.x + offsetX - Math.sin(angle) * tickLength}" y1="${p1.y + offsetY + Math.cos(angle) * tickLength}" x2="${p1.x + offsetX + Math.sin(angle) * tickLength}" y2="${p1.y + offsetY - Math.cos(angle) * tickLength}" stroke="#1976d2" stroke-width="1.5"/>`;
+          svgElements += `<line x1="${p1.x + offsetX - Math.sin(angle) * tickLength}" y1="${p1.y + offsetY + Math.cos(angle) * tickLength}" x2="${p1.x + offsetX + Math.sin(angle) * tickLength}" y2="${p1.y + offsetY - Math.cos(angle) * tickLength}" stroke="${measureLineColor}" stroke-width="${measureLineStrokeWidth * 1.25}"/>`;
           
           // Right end tick
-          svgElements += `<line x1="${p2.x + offsetX - Math.sin(angle) * tickLength}" y1="${p2.y + offsetY + Math.cos(angle) * tickLength}" x2="${p2.x + offsetX + Math.sin(angle) * tickLength}" y2="${p2.y + offsetY - Math.cos(angle) * tickLength}" stroke="#1976d2" stroke-width="1.5"/>`;
+          svgElements += `<line x1="${p2.x + offsetX - Math.sin(angle) * tickLength}" y1="${p2.y + offsetY + Math.cos(angle) * tickLength}" x2="${p2.x + offsetX + Math.sin(angle) * tickLength}" y2="${p2.y + offsetY - Math.cos(angle) * tickLength}" stroke="${measureLineColor}" stroke-width="${measureLineStrokeWidth * 1.25}"/>`;
           
           // Background for text
           const textWidth = measurementText.length * 8 + 8;
@@ -5384,7 +5389,7 @@ export default function DrawSketchScreen() {
           svgElements += `<rect x="${midX + offsetX - textWidth/2}" y="${midY + offsetY - 10}" width="${textWidth}" height="${textHeight}" fill="white" rx="2" ry="2"/>`;
           
           // Measurement text
-          svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="#1976d2" font-size="12" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
+          svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="${measureLineColor}" font-size="${measureLineFontSize}" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
         });
         
         // Render label (S1, S2, S3...) at center if this polyline has measurements
@@ -5398,7 +5403,7 @@ export default function DrawSketchScreen() {
           const labelText = `S${labelIndex + 1}`;
           
           // Label circle background
-          svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="#1976d2" stroke="#fff" stroke-width="2"/>`;
+          svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="${measureLineColor}" stroke="#fff" stroke-width="2"/>`;
           // Label text
           svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         }
@@ -5427,7 +5432,7 @@ export default function DrawSketchScreen() {
         const labelText = `S${index + 1}`;
         
         // Label badge - größer
-        svgElements += `<rect x="${svgLegendXPos + 15}" y="${itemY - 16}" width="38" height="24" fill="#1976d2" rx="4" ry="4"/>`;
+        svgElements += `<rect x="${svgLegendXPos + 15}" y="${itemY - 16}" width="38" height="24" fill="${measureLineColor}" rx="4" ry="4"/>`;
         svgElements += `<text x="${svgLegendXPos + 34}" y="${itemY + 2}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         
         // Value text - größere Schrift
@@ -6518,8 +6523,42 @@ export default function DrawSketchScreen() {
       {/* Linien-Maß Eingabe Modal */}
       <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Maß eingeben</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={styles.modalTitle}>Maß eingeben</Text>
+              {/* Maß löschen Button - nur wenn bereits ein Maß vorhanden */}
+              {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#ffebee',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#f44336',
+                  }}
+                  onPress={() => {
+                    removeMeasurementFromSelectedLine();
+                    setShowLineMeasurementNumpad(false);
+                    setLineMeasurementExpression('');
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#f44336" />
+                  <Text style={{ color: '#f44336', fontSize: 12, fontWeight: '600', marginLeft: 4 }}>Maß löschen</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            
+            {/* Vorhandenes Maß anzeigen */}
+            {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
+              <View style={{ backgroundColor: '#e3f2fd', padding: 8, borderRadius: 8, marginBottom: 8 }}>
+                <Text style={{ fontSize: 12, color: '#666' }}>Aktuelles Maß: <Text style={{ fontWeight: '700', color: '#1976d2' }}>{lineSegmentMeasurements[selectedLineSegment.elementId][selectedLineSegment.segmentIndex]}</Text></Text>
+              </View>
+            )}
+            
             <TextInput
               ref={lineMeasurementInputRef}
               style={styles.modalInput}
@@ -6611,12 +6650,114 @@ export default function DrawSketchScreen() {
               })()}
             </View>
             
+            {/* Maßlinien-Darstellung Einstellungen */}
+            <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 }}>Maßlinien-Darstellung</Text>
+              
+              {/* Farbe */}
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Farbe:</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
+                    <TouchableOpacity
+                      key={`ml-${c}`}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: c,
+                        borderWidth: measureLineColor === c ? 3 : 1.5,
+                        borderColor: measureLineColor === c ? '#fff' : '#ddd',
+                        ...(measureLineColor === c ? { 
+                          shadowColor: c, 
+                          shadowOffset: { width: 0, height: 0 }, 
+                          shadowOpacity: 0.6, 
+                          shadowRadius: 4, 
+                          elevation: 3 
+                        } : {}),
+                      }}
+                      onPress={() => setMeasureLineColor(c)}
+                    />
+                  ))}
+                </View>
+              </View>
+              
+              {/* Linienstärke */}
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Linienstärke:</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {[0.8, 1.2, 2, 3, 4].map(w => (
+                    <TouchableOpacity
+                      key={`mlw-${w}`}
+                      style={{
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: measureLineStrokeWidth === w ? measureLineColor : '#f0f0f0',
+                        minWidth: 40,
+                      }}
+                      onPress={() => setMeasureLineStrokeWidth(w)}
+                    >
+                      <View style={{
+                        width: Math.max(w * 3, 4),
+                        height: Math.max(w * 3, 4),
+                        borderRadius: 50,
+                        backgroundColor: measureLineStrokeWidth === w ? '#fff' : '#333',
+                        marginBottom: 2,
+                      }} />
+                      <Text style={{
+                        fontSize: 9,
+                        color: measureLineStrokeWidth === w ? '#fff' : '#666',
+                        fontWeight: '500',
+                      }}>{w}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              {/* Schriftgröße */}
+              <View>
+                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Schriftgröße:</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {[8, 11, 14, 18, 22].map(fs => (
+                    <TouchableOpacity
+                      key={`mlfs-${fs}`}
+                      style={{
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: measureLineFontSize === fs ? measureLineColor : '#f0f0f0',
+                        minWidth: 40,
+                      }}
+                      onPress={() => setMeasureLineFontSize(fs)}
+                    >
+                      <Text style={{
+                        fontSize: Math.min(fs, 16),
+                        color: measureLineFontSize === fs ? '#fff' : '#333',
+                        fontWeight: '700',
+                      }}>A</Text>
+                      <Text style={{
+                        fontSize: 9,
+                        color: measureLineFontSize === fs ? '#fff' : '#666',
+                        fontWeight: '500',
+                      }}>{fs}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowLineMeasurementNumpad(false);
                   setLineMeasurementExpression('');
+                  setSelectedLineSegment(null);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
@@ -6630,6 +6771,7 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 

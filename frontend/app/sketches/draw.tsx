@@ -505,6 +505,7 @@ export default function DrawSketchScreen() {
   const [showLineMeasurementNumpad, setShowLineMeasurementNumpad] = useState(false);
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
+  const [showMeasureStyleSettings, setShowMeasureStyleSettings] = useState(false);
   
   // Maßlinien-Darstellung Einstellungen (PRO ELEMENT - jedes Polygon hat eigene Einstellungen)
   const [measureLineStyles, setMeasureLineStyles] = useState<{ [elementId: string]: { color: string; strokeWidth: number; fontSize: number } }>({});
@@ -6557,22 +6558,33 @@ export default function DrawSketchScreen() {
       {/* Linien-Maß Eingabe Modal */}
       <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={styles.modalTitle}>Maß eingeben</Text>
-              {/* Maß löschen Button - nur wenn bereits ein Maß vorhanden */}
+            {/* Kopfzeile: Titel */}
+            <Text style={[styles.modalTitle, { marginBottom: 6 }]}>Maß eingeben</Text>
+            
+            {/* Eingabe + Löschen-Icon in einer Zeile */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <TextInput
+                ref={lineMeasurementInputRef}
+                style={[styles.modalInput, { flex: 1, marginBottom: 0 }]}
+                value={lineMeasurementExpression}
+                onChangeText={setLineMeasurementExpression}
+                placeholder={
+                  selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex]
+                    ? `Aktuell: ${lineSegmentMeasurements[selectedLineSegment.elementId][selectedLineSegment.segmentIndex]}`
+                    : 'z.B. 2,50 oder 2.50m'
+                }
+                showSoftInputOnFocus={false}
+                caretHidden={false}
+              />
               {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
                 <TouchableOpacity
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#ffebee',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: '#f44336',
+                    width: 44, height: 44,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#ffebee', borderRadius: 8,
+                    borderWidth: 1, borderColor: '#ef9a9a',
                   }}
                   onPress={() => {
                     removeMeasurementFromSelectedLine();
@@ -6580,28 +6592,10 @@ export default function DrawSketchScreen() {
                     setLineMeasurementExpression('');
                   }}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#f44336" />
-                  <Text style={{ color: '#f44336', fontSize: 12, fontWeight: '600', marginLeft: 4 }}>Maß löschen</Text>
+                  <Ionicons name="trash-outline" size={20} color="#f44336" />
                 </TouchableOpacity>
               )}
             </View>
-            
-            {/* Vorhandenes Maß anzeigen */}
-            {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
-              <View style={{ backgroundColor: '#e3f2fd', padding: 8, borderRadius: 8, marginBottom: 8 }}>
-                <Text style={{ fontSize: 12, color: '#666' }}>Aktuelles Maß: <Text style={{ fontWeight: '700', color: '#1976d2' }}>{lineSegmentMeasurements[selectedLineSegment.elementId][selectedLineSegment.segmentIndex]}</Text></Text>
-              </View>
-            )}
-            
-            <TextInput
-              ref={lineMeasurementInputRef}
-              style={styles.modalInput}
-              value={lineMeasurementExpression}
-              onChangeText={setLineMeasurementExpression}
-              placeholder="z.B. 2,50 oder 2.50m"
-              keyboardType="decimal-pad"
-              autoFocus
-            />
             
             {/* Kompaktes Numpad für Maß-Eingabe */}
             <View style={styles.lineMeasureNumpad}>
@@ -6684,9 +6678,21 @@ export default function DrawSketchScreen() {
               })()}
             </View>
             
-            {/* Maßlinien-Darstellung Einstellungen */}
-            <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 }}>Maßlinien-Darstellung</Text>
+            {/* Einklappbare Maßlinien-Darstellung */}
+            <TouchableOpacity 
+              style={{ 
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                marginTop: 8, paddingVertical: 8, paddingHorizontal: 4,
+                borderTopWidth: 1, borderTopColor: '#e0e0e0',
+              }}
+              onPress={() => setShowMeasureStyleSettings(!showMeasureStyleSettings)}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#555' }}>Maßlinien-Darstellung</Text>
+              <Ionicons name={showMeasureStyleSettings ? 'chevron-up' : 'chevron-down'} size={18} color="#888" />
+            </TouchableOpacity>
+            
+            {showMeasureStyleSettings && (
+              <View style={{ paddingBottom: 4 }}>
               
               {/* Farbe */}
               <View style={{ marginBottom: 8 }}>
@@ -6811,8 +6817,9 @@ export default function DrawSketchScreen() {
                 </View>
               </View>
             </View>
+            )}
             
-            <View style={styles.modalButtons}>
+            <View style={[styles.modalButtons, { marginTop: 10 }]}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton, { flex: 1 }]}
                 onPress={() => {

@@ -1453,13 +1453,28 @@ export default function ProjectDetailScreen() {
       if ((photo as any).annotations) {
         try {
           const annotationData = JSON.parse((photo as any).annotations);
+          const canvasWidth = annotationData.canvasWidth || 400;
+          const canvasHeight = annotationData.canvasHeight || 300;
+          let svgContent = '';
+          
+          // Render paths (drawing annotations)
           if (annotationData.paths && annotationData.paths.length > 0) {
-            const canvasWidth = annotationData.canvasWidth || 400;
-            const canvasHeight = annotationData.canvasHeight || 300;
-            const svgPaths = annotationData.paths.map((p: any) => 
+            svgContent += annotationData.paths.map((p: any) => 
               `<path d="${p.path}" stroke="${p.color || '#FF0000'}" stroke-width="${p.strokeWidth || 3}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
             ).join('');
-            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgPaths}</svg>`;
+          }
+          
+          // Render text elements (including date/time stamps)
+          if (annotationData.textElements && annotationData.textElements.length > 0) {
+            svgContent += annotationData.textElements.map((t: any) => {
+              const escapedText = (t.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              const fontFamily = t.fontFamily === 'System' ? 'Arial, sans-serif' : (t.fontFamily || 'Arial, sans-serif');
+              return `<text x="${t.x}" y="${t.y}" font-size="${t.fontSize || 20}" fill="${t.color || '#FFFFFF'}" font-family="${fontFamily}" font-weight="bold" stroke="#000000" stroke-width="0.5" paint-order="stroke">${escapedText}</text>`;
+            }).join('');
+          }
+          
+          if (svgContent) {
+            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgContent}</svg>`;
           }
         } catch (e) {
           console.error('Error parsing photo annotations:', e);

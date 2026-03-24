@@ -150,8 +150,10 @@ export default function AnnotatePhotoScreen() {
     const x = 20;
     const y = 30;
     
+    const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    
     const newTextElement = {
-      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+      id: newId,
       x,
       y,
       text: dateTimeText,
@@ -163,7 +165,12 @@ export default function AnnotatePhotoScreen() {
     setTextElements(prev => [...prev, newTextElement]);
     setHasChanges(true);
     
-    Alert.alert('Datum hinzugefügt', `"${dateTimeText}" wurde als Text auf dem Foto platziert.`);
+    // Automatisch in Text-Modus wechseln und das Datum auswählen
+    setDrawingEnabled(true);
+    setDrawMode('text');
+    setSelectedTextId(newId);
+    
+    Alert.alert('Datum hinzugefügt', 'Das Datum kann jetzt auf dem Bild verschoben werden. Tippen und ziehen Sie den Text.');
   };
   
   // Edit/Select mode
@@ -759,7 +766,7 @@ export default function AnnotatePhotoScreen() {
       // Wenn Annotationen vorhanden sind, Screenshot des Canvas machen
       let fileUri: string;
       
-      if (paths.length > 0 && canvasRef.current) {
+      if ((paths.length > 0 || textElements.length > 0) && canvasRef.current) {
         try {
           fileUri = await captureRef(canvasRef, {
             format: 'png',

@@ -320,6 +320,7 @@ export default function DrawSketchScreen() {
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // Schutz vor Doppelklicks beim Speichern
   
   // Drawing state
   const [currentPath, setCurrentPath] = useState('');
@@ -1673,12 +1674,19 @@ export default function DrawSketchScreen() {
 
   // Handle back button - auto save before navigating back
   const handleBackPress = async () => {
+    // Schutz vor Doppelklicks - wenn bereits gespeichert wird, ignorieren
+    if (isSaving) {
+      console.log('Already saving, ignoring back press');
+      return;
+    }
+    
     // Nur auto-speichern wenn wir die aktuelle Skizze bearbeiten (nicht beim Reset)
     const currentSketchId = lastLoadedSketchId.current;
     
     // Only auto-save if there are elements to save AND we're still on the same sketch
     if (elements.length > 0 && currentSketchId === sketchId) {
       try {
+        setIsSaving(true); // Blockiere weitere Klicks
         setLoading(true);
         
         // Create metadata with elements and canvas dimensions for proper scaling
@@ -1759,6 +1767,7 @@ export default function DrawSketchScreen() {
         console.error('Error auto-saving sketch:', error);
       } finally {
         setLoading(false);
+        setIsSaving(false);
       }
     }
     
@@ -5404,10 +5413,44 @@ export default function DrawSketchScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Speicher-Overlay - blockiert Interaktion während des Speicherns */}
+      {isSaving && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+        }}>
+          <View style={{
+            backgroundColor: '#fff',
+            padding: 30,
+            borderRadius: 16,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+          }}>
+            <ActivityIndicator size="large" color="#1976d2" />
+            <Text style={{ marginTop: 16, fontSize: 18, fontWeight: '600', color: '#333' }}>
+              Skizze wird gespeichert...
+            </Text>
+            <Text style={{ marginTop: 8, fontSize: 14, color: '#666' }}>
+              Bitte warten
+            </Text>
+          </View>
+        </View>
+      )}
+      
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+        <TouchableOpacity onPress={handleBackPress} style={styles.headerButton} disabled={isSaving}>
+          <Ionicons name="arrow-back" size={24} color={isSaving ? "#999" : "#fff"} />
         </TouchableOpacity>
         <TextInput
           style={styles.titleInput}

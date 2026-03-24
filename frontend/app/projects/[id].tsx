@@ -153,6 +153,7 @@ export default function ProjectDetailScreen() {
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
   const [checklistColumns, setChecklistColumns] = useState<number>(2);
   const [loading, setLoading] = useState(true);
+  const hasLoadedOnce = useRef(false); // Track if full load has been done
   
   // Determine initial tab from URL parameter
   const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter') ? tab : 'overview';
@@ -306,9 +307,72 @@ export default function ProjectDetailScreen() {
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadProjectData();
-    }, [id])
+      if (!hasLoadedOnce.current) {
+        // First load: load everything
+        loadProjectData();
+      } else {
+        // Subsequent focus (e.g. returning from sketch editor): only refresh what's needed
+        refreshCurrentTabData();
+      }
+    }, [id, activeTab])
   );
+
+  // Fast refresh: only reload data for the current active tab
+  const refreshCurrentTabData = async () => {
+    try {
+      const projectId = Array.isArray(id) ? id[0] : id;
+      const startTime = Date.now();
+      
+      // Always refresh project info (lightweight)
+      const projectData = await ProjectService.getById(projectId);
+      if (projectData) {
+        setProject(projectData);
+        setRemarks(projectData.remarks || '');
+      }
+      
+      // Only refresh data for the currently active tab
+      switch (activeTab) {
+        case 'sketches':
+          const sketchesData = await SketchService.getByProjectId(projectId);
+          setSketches(sketchesData);
+          break;
+        case 'photos':
+          const photosData = await PhotoService.getByProjectId(projectId);
+          setPhotos(photosData);
+          break;
+        case 'roofs':
+          const roofsData = await RoofService.getByProjectId(projectId);
+          setRoofs(roofsData);
+          break;
+        case 'checklists':
+          const checklistsData = await ChecklistService.getByProjectId(projectId);
+          setChecklists(checklistsData);
+          break;
+        case 'documents':
+          const documentsData = await DocumentService.getByProjectId(projectId);
+          setDocuments(documentsData);
+          break;
+        case 'calculator':
+          const areaCalcsData = await AreaCalculationService.getByProjectId(projectId);
+          setAreaCalculations(areaCalcsData);
+          break;
+        case 'imagemeter':
+          try {
+            const AsyncStorageMod = require('@react-native-async-storage/async-storage').default;
+            const imagemeterData = await AsyncStorageMod.getItem('aufmassprofi_imagemeter_photos');
+            if (imagemeterData) {
+              const allImagemeterPhotos = JSON.parse(imagemeterData);
+              setImagemeterPhotos(allImagemeterPhotos.filter((p: any) => p.projectId === projectId));
+            }
+          } catch (e) { /* ignore */ }
+          break;
+      }
+      
+      console.log('[refreshCurrentTabData] tab:', activeTab, 'in', Date.now() - startTime, 'ms');
+    } catch (error) {
+      console.error('Error refreshing tab data:', error);
+    }
+  };
 
   const loadProjectData = async () => {
     try {
@@ -383,6 +447,7 @@ export default function ProjectDetailScreen() {
       }
       
       console.log('[TIMING] loadProjectData total:', Date.now() - startTime, 'ms');
+      hasLoadedOnce.current = true;
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');

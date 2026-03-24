@@ -872,15 +872,22 @@ export default function DrawSketchScreen() {
     const keyH = Math.round(32 * scale);
     const fontSize = Math.round(14 * scale);
     const gap = Math.round(2 * scale);
+    const containerPadding = Math.round(10 * scale);
+    // Container-Breite skaliert mit: bei S schmaler, bei L breiter
+    const containerMaxWidth = Math.round(320 * scale);
     
-    const keyStyle = [styles.modalNumpadKey, { minWidth: keyMinW, height: keyH }];
-    const keyTextStyle = [styles.modalNumpadKeyText, { fontSize }];
+    const keyStyle = [styles.modalNumpadKey, { minWidth: keyMinW, height: keyH, minHeight: keyH, aspectRatio: undefined }] as any;
+    const keyTextStyle = [{ fontSize, fontWeight: '600' as const, color: '#333' }];
     
     return (
       <Animated.View 
         style={[
           styles.inModalNumpad,
-          { transform: modalNumpadPosition.getTranslateTransform() }
+          { 
+            transform: modalNumpadPosition.getTranslateTransform(),
+            maxWidth: containerMaxWidth,
+            padding: containerPadding,
+          }
         ]}
       >
         {/* Header: Schließen + S/M/L + Verschieben */}
@@ -8885,14 +8892,12 @@ const styles = StyleSheet.create({
   },
   modalNumpadKey: {
     flex: 1,
-    aspectRatio: 1.5,
     backgroundColor: '#f5f5f5',
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    minHeight: 44,
   },
   modalNumpadKeyText: {
     fontSize: 16,
@@ -8970,29 +8975,22 @@ const styles = StyleSheet.create({
   },
   inModalNumpad: {
     position: 'absolute',
-    left: 16,
-    right: 16,
     bottom: 10,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 15,
     zIndex: 9999,
-    maxWidth: 360,
     alignSelf: 'center',
+    left: 0,
+    right: 0,
   },
   numpadCloseBtn: {
-    position: 'absolute',
-    right: 4,
-    top: 4,
     padding: 2,
     zIndex: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
   },
   numpadDragHandle: {
     flexDirection: 'row',

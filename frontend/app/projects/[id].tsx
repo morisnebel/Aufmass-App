@@ -313,14 +313,11 @@ export default function ProjectDetailScreen() {
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
-      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData, settingsData] = await Promise.all([
+      const startTime = Date.now();
+      
+      // PHASE 1: Load critical data first (project info + settings) - show UI fast
+      const [projectData, settingsData] = await Promise.all([
         ProjectService.getById(projectId),
-        RoofService.getByProjectId(projectId),
-        PhotoService.getByProjectId(projectId),
-        SketchService.getByProjectId(projectId),
-        ChecklistService.getByProjectId(projectId),
-        DocumentService.getByProjectId(projectId),
-        AreaCalculationService.getByProjectId(projectId),
         SettingsService.get(),
       ]);
 
@@ -354,12 +351,28 @@ export default function ProjectDetailScreen() {
         }
       }
       
+      // Show UI immediately with project info (stop loading spinner)
+      setLoading(false);
+      console.log('[loadProjectData] Phase 1 (project info) in', Date.now() - startTime, 'ms');
+      
+      // PHASE 2: Load all tab data in parallel (background)
+      const [roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData] = await Promise.all([
+        RoofService.getByProjectId(projectId),
+        PhotoService.getByProjectId(projectId),
+        SketchService.getByProjectId(projectId),
+        ChecklistService.getByProjectId(projectId),
+        DocumentService.getByProjectId(projectId),
+        AreaCalculationService.getByProjectId(projectId),
+      ]);
+      
       setRoofs(roofsData);
       setPhotos(photosData);
       setSketches(sketchesData);
       setChecklists(checklistsData);
       setDocuments(documentsData);
       setAreaCalculations(areaCalcsData);
+      
+      console.log('[loadProjectData] Phase 2 (all data) in', Date.now() - startTime, 'ms');
       
       // Lade ImageMeter-Fotos für dieses Projekt
       try {
@@ -376,10 +389,11 @@ export default function ProjectDetailScreen() {
         console.error('Error loading imagemeter photos:', e);
         setImagemeterPhotos([]);
       }
+      
+      console.log('[loadProjectData] Total in', Date.now() - startTime, 'ms');
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');
-    } finally {
       setLoading(false);
     }
   };

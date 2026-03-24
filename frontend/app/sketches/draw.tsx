@@ -6487,41 +6487,6 @@ export default function DrawSketchScreen() {
         </Animated.View>
       )}
 
-      {/* Maß hinzufügen Button - erscheint wenn ein Liniensegment ausgewählt ist und Numpad NICHT offen */}
-      {selectedLineSegment && drawMode === 'select' && !showLineMeasurementNumpad && (
-        <View style={styles.measurementActionBar}>
-          <View style={styles.measurementActionContent}>
-            <TouchableOpacity 
-              style={styles.measurementActionButton}
-              onPress={() => {
-                setLineMeasurementExpression('');
-                setShowLineMeasurementNumpad(true);
-              }}
-            >
-              <Ionicons name="resize" size={18} color="#fff" />
-              <Text style={styles.measurementActionText}>Maß hinzufügen</Text>
-            </TouchableOpacity>
-            
-            {/* Zeige existierendes Maß wenn vorhanden */}
-            {lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
-              <TouchableOpacity 
-                style={styles.measurementDeleteButton}
-                onPress={removeMeasurementFromSelectedLine}
-              >
-                <Ionicons name="trash-outline" size={16} color="#f44336" />
-              </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity 
-              style={styles.measurementCancelButton}
-              onPress={() => setSelectedLineSegment(null)}
-            >
-              <Ionicons name="close" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
       {/* Legende mit Skizzen-Summen (S1, S2, S3...) - verschiebbar */}
       {getPolylineElementsWithMeasurements().length > 0 && (
         <Animated.View 

@@ -612,6 +612,24 @@ export default function DrawSketchScreen() {
   const [activeNumpadSetter, setActiveNumpadSetter] = useState<React.Dispatch<React.SetStateAction<string>> | null>(null);
   const [activeNumpadRef, setActiveNumpadRef] = useState<React.RefObject<TextInput | null> | null>(null);
   
+  // Numpad Größe (S/M/L) - global gespeichert
+  const [numpadSize, setNumpadSize] = useState<'S' | 'M' | 'L'>('M');
+  const numpadScales = { S: 0.7, M: 1.0, L: 1.3 };
+  
+  // Lade gespeicherte Numpad-Größe beim Start
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_numpad_size').then(saved => {
+      if (saved === 'S' || saved === 'M' || saved === 'L') {
+        setNumpadSize(saved);
+      }
+    });
+  }, []);
+  
+  const changeNumpadSize = (newSize: 'S' | 'M' | 'L') => {
+    setNumpadSize(newSize);
+    AsyncStorage.setItem('aufmassprofi_numpad_size', newSize);
+  };
+  
   // Verschiebbare Numpad-Position (für alle Modals)
   const modalNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const modalNumpadPanResponder = useRef(
@@ -849,6 +867,15 @@ export default function DrawSketchScreen() {
   const renderInModalNumpad = () => {
     if (!showModalNumpad) return null;
     
+    const scale = numpadScales[numpadSize];
+    const keyMinW = Math.round(40 * scale);
+    const keyH = Math.round(32 * scale);
+    const fontSize = Math.round(14 * scale);
+    const gap = Math.round(2 * scale);
+    
+    const keyStyle = [styles.modalNumpadKey, { minWidth: keyMinW, height: keyH }];
+    const keyTextStyle = [styles.modalNumpadKeyText, { fontSize }];
+    
     return (
       <Animated.View 
         style={[
@@ -856,131 +883,134 @@ export default function DrawSketchScreen() {
           { transform: modalNumpadPosition.getTranslateTransform() }
         ]}
       >
-        {/* Schließen-Button außerhalb des Drag-Bereichs */}
-        <TouchableOpacity 
-          style={styles.numpadCloseBtn}
-          onPress={closeModalNumpad}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="close-circle" size={22} color="#999" />
-        </TouchableOpacity>
-        
-        {/* Drag-Handle zum Verschieben */}
-        <View {...modalNumpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
-          <Ionicons name="move" size={14} color="#999" />
-          <Text style={styles.numpadDragText}>Verschieben</Text>
+        {/* Header: Schließen + S/M/L + Verschieben */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <TouchableOpacity 
+            style={styles.numpadCloseBtn}
+            onPress={closeModalNumpad}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close-circle" size={22} color="#999" />
+          </TouchableOpacity>
+          
+          {/* S/M/L Größenwahl */}
+          <View style={{ flexDirection: 'row', gap: 3 }}>
+            {(['S', 'M', 'L'] as const).map(s => (
+              <TouchableOpacity
+                key={s}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  backgroundColor: numpadSize === s ? '#1976d2' : '#e8e8e8',
+                  borderWidth: 1,
+                  borderColor: numpadSize === s ? '#1565c0' : '#ddd',
+                }}
+                onPress={() => changeNumpadSize(s)}
+              >
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: numpadSize === s ? '#fff' : '#666',
+                }}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Drag-Handle */}
+          <View {...modalNumpadPanResponder.panHandlers} style={styles.numpadDragHandle}>
+            <Ionicons name="move" size={14} color="#999" />
+          </View>
         </View>
         
         {modalNumpadMode === 'numbers' ? (
           <>
-            {/* Zahlen-Modus */}
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {['7','8','9','+'].map(k => (
-                <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='+' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k)}>
-                  <Text style={k==='+' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+                <TouchableOpacity key={`num-${k}`} style={[...keyStyle, k==='+' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k)}>
+                  <Text style={k==='+' ? [styles.modalNumpadOpText, { fontSize }] : keyTextStyle}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {['4','5','6','-'].map(k => (
-                <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='-' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k)}>
-                  <Text style={k==='-' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k === '-' ? '−' : k}</Text>
+                <TouchableOpacity key={`num-${k}`} style={[...keyStyle, k==='-' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k)}>
+                  <Text style={k==='-' ? [styles.modalNumpadOpText, { fontSize }] : keyTextStyle}>{k === '-' ? '−' : k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {['1','2','3','×'].map(k => (
-                <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='×' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k === '×' ? '*' : k)}>
-                  <Text style={k==='×' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+                <TouchableOpacity key={`num-${k}`} style={[...keyStyle, k==='×' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k === '×' ? '*' : k)}>
+                  <Text style={k==='×' ? [styles.modalNumpadOpText, { fontSize }] : keyTextStyle}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {[',','0','.','÷'].map(k => (
-                <TouchableOpacity key={`num-${k}`} style={[styles.modalNumpadKey, k==='÷' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k === '÷' ? '/' : k)}>
-                  <Text style={k==='÷' ? styles.modalNumpadOpText : styles.modalNumpadKeyText}>{k}</Text>
+                <TouchableOpacity key={`num-${k}`} style={[...keyStyle, k==='÷' && styles.modalNumpadOp]} onPress={() => handleActiveNumpadPress(k === '÷' ? '/' : k)}>
+                  <Text style={k==='÷' ? [styles.modalNumpadOpText, { fontSize }] : keyTextStyle}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
-              <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadMode]} onPress={() => setModalNumpadMode('letters')}>
-                <Text style={styles.modalNumpadModeText}>ABC</Text>
+            <View style={[styles.modalNumpadRow, { gap }]}>
+              <TouchableOpacity style={[...keyStyle, styles.modalNumpadMode]} onPress={() => setModalNumpadMode('letters')}>
+                <Text style={[styles.modalNumpadModeText, { fontSize: fontSize * 0.85 }]}>ABC</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadClear]} onPress={() => handleActiveNumpadPress('C')}>
-                <Text style={styles.modalNumpadClearText}>C</Text>
+              <TouchableOpacity style={[...keyStyle, styles.modalNumpadClear]} onPress={() => handleActiveNumpadPress('C')}>
+                <Text style={[styles.modalNumpadClearText, { fontSize }]}>C</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(' ')}>
-                <Text style={styles.modalNumpadKeyText}>{"␣"}</Text>
+              <TouchableOpacity style={keyStyle} onPress={() => handleActiveNumpadPress(' ')}>
+                <Text style={keyTextStyle}>{"␣"}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadDel]} onPress={() => handleActiveNumpadPress('⌫')}>
-                <Ionicons name="backspace-outline" size={18} color="#f44336" />
+              <TouchableOpacity style={[...keyStyle, styles.modalNumpadDel]} onPress={() => handleActiveNumpadPress('⌫')}>
+                <Ionicons name="backspace-outline" size={Math.round(18 * scale)} color="#f44336" />
               </TouchableOpacity>
             </View>
           </>
         ) : (
           <>
-            {/* Buchstaben-Modus */}
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {['m','m²','m³','lfm'].map((k, i) => (
-                <TouchableOpacity key={`unit-${i}`} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleActiveNumpadPress(k)}>
-                  <Text style={styles.modalNumpadUnitText}>{k}</Text>
+                <TouchableOpacity key={`unit-${i}`} style={[...keyStyle, styles.modalNumpadUnit]} onPress={() => handleActiveNumpadPress(k)}>
+                  <Text style={[styles.modalNumpadUnitText, { fontSize: fontSize * 0.85 }]}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
+            <View style={[styles.modalNumpadRow, { gap }]}>
               {['Stk','Paar','kg','l'].map((k, i) => (
-                <TouchableOpacity key={`unit2-${i}`} style={[styles.modalNumpadKey, styles.modalNumpadUnit]} onPress={() => handleActiveNumpadPress(k)}>
-                  <Text style={styles.modalNumpadUnitText}>{k}</Text>
+                <TouchableOpacity key={`unit2-${i}`} style={[...keyStyle, styles.modalNumpadUnit]} onPress={() => handleActiveNumpadPress(k)}>
+                  <Text style={[styles.modalNumpadUnitText, { fontSize: fontSize * 0.85 }]}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.modalNumpadRow}>
-              {['a','b','c','d','e','f'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalNumpadRow}>
-              {['g','h','i','j','k','l','m'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalNumpadRow}>
-              {['n','o','p','q','r','s'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalNumpadRow}>
-              {['t','u','v','w','x','y'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalNumpadRow}>
-              {['z','ä','ö','ü','ß','-'].map(k => (
-                <TouchableOpacity key={`let-${k}`} style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k)}>
-                  <Text style={styles.modalNumpadKeyText}>{modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalNumpadRow}>
-              <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadMode]} onPress={() => setModalNumpadMode('numbers')}>
-                <Text style={styles.modalNumpadModeText}>123</Text>
+            {[
+              ['a','b','c','d','e','f'],
+              ['g','h','i','j','k','l','m'],
+              ['n','o','p','q','r','s'],
+              ['t','u','v','w','x','y'],
+              ['z','ä','ö','ü','ß','-'],
+            ].map((row, ri) => (
+              <View key={`row-${ri}`} style={[styles.modalNumpadRow, { gap }]}>
+                {row.map(k => (
+                  <TouchableOpacity key={`let-${k}`} style={keyStyle} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k)}>
+                    <Text style={keyTextStyle}>{modalNumpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+            <View style={[styles.modalNumpadRow, { gap }]}>
+              <TouchableOpacity style={[...keyStyle, styles.modalNumpadMode]} onPress={() => setModalNumpadMode('numbers')}>
+                <Text style={[styles.modalNumpadModeText, { fontSize: fontSize * 0.85 }]}>123</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalNumpadKey, modalNumpadCaps && styles.modalNumpadCapsActive]} onPress={() => setModalNumpadCaps(!modalNumpadCaps)}>
-                <Ionicons name="arrow-up" size={18} color={modalNumpadCaps ? '#fff' : '#666'} />
+              <TouchableOpacity style={[...keyStyle, modalNumpadCaps && styles.modalNumpadCapsActive]} onPress={() => setModalNumpadCaps(!modalNumpadCaps)}>
+                <Ionicons name="arrow-up" size={Math.round(18 * scale)} color={modalNumpadCaps ? '#fff' : '#666'} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalNumpadKey} onPress={() => handleActiveNumpadPress(' ')}>
-                <Text style={styles.modalNumpadKeyText}>{"␣"}</Text>
+              <TouchableOpacity style={keyStyle} onPress={() => handleActiveNumpadPress(' ')}>
+                <Text style={keyTextStyle}>{"␣"}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalNumpadKey, styles.modalNumpadDel]} onPress={() => handleActiveNumpadPress('⌫')}>
-                <Ionicons name="backspace-outline" size={18} color="#f44336" />
+              <TouchableOpacity style={[...keyStyle, styles.modalNumpadDel]} onPress={() => handleActiveNumpadPress('⌫')}>
+                <Ionicons name="backspace-outline" size={Math.round(18 * scale)} color="#f44336" />
               </TouchableOpacity>
             </View>
           </>
@@ -6394,49 +6424,83 @@ export default function DrawSketchScreen() {
             
             {/* Kompaktes Numpad für Maß-Eingabe */}
             <View style={styles.lineMeasureNumpad}>
-              <View style={styles.lineMeasureNumpadRow}>
-                {['7','8','9'].map(k => (
-                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
-                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
+              {/* S/M/L Größenwahl */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 6 }}>
+                {(['S', 'M', 'L'] as const).map(s => (
+                  <TouchableOpacity
+                    key={s}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                      backgroundColor: numpadSize === s ? '#1976d2' : '#e8e8e8',
+                      borderWidth: 1,
+                      borderColor: numpadSize === s ? '#1565c0' : '#ddd',
+                    }}
+                    onPress={() => changeNumpadSize(s)}
+                  >
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: numpadSize === s ? '#fff' : '#666',
+                    }}>{s}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              <View style={styles.lineMeasureNumpadRow}>
-                {['4','5','6'].map(k => (
-                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
-                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.lineMeasureNumpadRow}>
-                {['1','2','3'].map(k => (
-                  <TouchableOpacity key={k} style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(k)}>
-                    <Text style={styles.lineMeasureNumpadKeyText}>{k}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.lineMeasureNumpadRow}>
-                <TouchableOpacity style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress(',')}>
-                  <Text style={styles.lineMeasureNumpadKeyText}>,</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.lineMeasureNumpadKey} onPress={() => handleLineMeasurementNumpadPress('0')}>
-                  <Text style={styles.lineMeasureNumpadKeyText}>0</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadDel]} onPress={() => handleLineMeasurementNumpadPress('⌫')}>
-                  <Ionicons name="backspace-outline" size={20} color="#f44336" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.lineMeasureNumpadRow}>
-                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('m')}>
-                  <Text style={styles.lineMeasureNumpadUnitText}>m</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('cm')}>
-                  <Text style={styles.lineMeasureNumpadUnitText}>cm</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.lineMeasureNumpadKey, styles.lineMeasureNumpadClear]} onPress={() => handleLineMeasurementNumpadPress('C')}>
-                  <Text style={styles.lineMeasureNumpadClearText}>C</Text>
-                </TouchableOpacity>
-              </View>
+              {(() => {
+                const sc = numpadScales[numpadSize];
+                const kH = Math.round(40 * sc);
+                const fS = Math.round(16 * sc);
+                const kStyle = [styles.lineMeasureNumpadKey, { height: kH }] as any;
+                const tStyle = [styles.lineMeasureNumpadKeyText, { fontSize: fS }];
+                return (
+                  <>
+                    <View style={styles.lineMeasureNumpadRow}>
+                      {['7','8','9'].map(k => (
+                        <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                          <Text style={tStyle}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.lineMeasureNumpadRow}>
+                      {['4','5','6'].map(k => (
+                        <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                          <Text style={tStyle}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.lineMeasureNumpadRow}>
+                      {['1','2','3'].map(k => (
+                        <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                          <Text style={tStyle}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.lineMeasureNumpadRow}>
+                      <TouchableOpacity style={kStyle} onPress={() => handleLineMeasurementNumpadPress(',')}>
+                        <Text style={tStyle}>,</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={kStyle} onPress={() => handleLineMeasurementNumpadPress('0')}>
+                        <Text style={tStyle}>0</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadDel]} onPress={() => handleLineMeasurementNumpadPress('⌫')}>
+                        <Ionicons name="backspace-outline" size={Math.round(20 * sc)} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.lineMeasureNumpadRow}>
+                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('m')}>
+                        <Text style={[styles.lineMeasureNumpadUnitText, { fontSize: fS }]}>m</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('cm')}>
+                        <Text style={[styles.lineMeasureNumpadUnitText, { fontSize: fS }]}>cm</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadClear]} onPress={() => handleLineMeasurementNumpadPress('C')}>
+                        <Text style={[styles.lineMeasureNumpadClearText, { fontSize: fS }]}>C</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                );
+              })()}
             </View>
             
             <View style={styles.modalButtons}>
@@ -7438,6 +7502,7 @@ export default function DrawSketchScreen() {
                 multiline
                 autoFocus
                 textAlignVertical="top"
+                showSoftInputOnFocus={!showModalNumpad}
               />
               <TouchableOpacity
                 style={{

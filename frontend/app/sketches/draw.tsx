@@ -614,7 +614,7 @@ export default function DrawSketchScreen() {
   
   // Numpad Größe (S/M/L) - global gespeichert
   const [numpadSize, setNumpadSize] = useState<'S' | 'M' | 'L'>('M');
-  const numpadScales = { S: 0.7, M: 1.0, L: 1.3 };
+  const numpadScales = { S: 0.7, M: 1.0, L: 1.5 };
   
   // Lade gespeicherte Numpad-Größe beim Start
   useEffect(() => {
@@ -986,10 +986,10 @@ export default function DrawSketchScreen() {
             </View>
             {[
               ['a','b','c','d','e','f'],
-              ['g','h','i','j','k','l','m'],
-              ['n','o','p','q','r','s'],
-              ['t','u','v','w','x','y'],
-              ['z','ä','ö','ü','ß','-'],
+              ['g','h','i','j','k','l'],
+              ['m','n','o','p','q','r'],
+              ['s','t','u','v','w','x'],
+              ['y','z','ä','ö','ü','ß'],
             ].map((row, ri) => (
               <View key={`row-${ri}`} style={[styles.modalNumpadRow, { gap }]}>
                 {row.map(k => (
@@ -1005,6 +1005,9 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[...keyStyle, modalNumpadCaps && styles.modalNumpadCapsActive]} onPress={() => setModalNumpadCaps(!modalNumpadCaps)}>
                 <Ionicons name="arrow-up" size={Math.round(18 * scale)} color={modalNumpadCaps ? '#fff' : '#666'} />
+              </TouchableOpacity>
+              <TouchableOpacity style={keyStyle} onPress={() => handleActiveNumpadPress('-')}>
+                <Text style={keyTextStyle}>-</Text>
               </TouchableOpacity>
               <TouchableOpacity style={keyStyle} onPress={() => handleActiveNumpadPress(' ')}>
                 <Text style={keyTextStyle}>{"␣"}</Text>
@@ -3002,6 +3005,7 @@ export default function DrawSketchScreen() {
   const [pendingMemo, setPendingMemo] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [memoText, setMemoText] = useState('');
+  const memoInputRef = useRef<TextInput>(null);
   const [editMemoFontSize, setEditMemoFontSize] = useState(10);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
 
@@ -7155,16 +7159,40 @@ export default function DrawSketchScreen() {
       <Modal visible={showMemoModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
-            <Text style={styles.modalSubtitle}>Text für die Notiz eingeben</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
+                <Text style={styles.modalSubtitle}>Text für die Notiz eingeben</Text>
+              </View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: showModalNumpad ? '#1976d2' : '#f0f0f0',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                }}
+                onPress={() => {
+                  if (showModalNumpad) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setMemoText, memoInputRef);
+                  }
+                }}
+              >
+                <Ionicons name="keypad" size={22} color={showModalNumpad ? '#fff' : '#666'} />
+              </TouchableOpacity>
+            </View>
             <TextInput
+              ref={memoInputRef}
               style={styles.modalInput}
               value={memoText}
               onChangeText={setMemoText}
               placeholder="Notiz eingeben"
               autoFocus
               selectTextOnFocus
+              showSoftInputOnFocus={!showModalNumpad}
             />
+            {renderInModalNumpad()}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -7191,14 +7219,36 @@ export default function DrawSketchScreen() {
       <Modal visible={showEditMemoModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Notiz bearbeiten</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.modalTitle}>Notiz bearbeiten</Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: showModalNumpad ? '#1976d2' : '#f0f0f0',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                }}
+                onPress={() => {
+                  if (showModalNumpad) {
+                    closeModalNumpad();
+                  } else {
+                    openModalNumpad(setMemoText, memoInputRef);
+                  }
+                }}
+              >
+                <Ionicons name="keypad" size={22} color={showModalNumpad ? '#fff' : '#666'} />
+              </TouchableOpacity>
+            </View>
             <TextInput
+              ref={memoInputRef}
               style={styles.modalInput}
               value={memoText}
               onChangeText={setMemoText}
               placeholder="Notiz eingeben"
               multiline
+              showSoftInputOnFocus={!showModalNumpad}
             />
+            {renderInModalNumpad()}
             {/* Font Size Slider */}
             <View style={styles.sliderContainer}>
               <Text style={styles.modalLabel}>Schriftgröße: {editMemoFontSize}px</Text>

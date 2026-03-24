@@ -4962,9 +4962,8 @@ export default function ProjectDetailScreen() {
                 }
               };
 
-              // Try metadata first (more accurate), then fall back to saved preview
-              const metadataSvg = sketch.metadata ? generateSvgFromMetadata(sketch.metadata) : null;
-              const svgXml = metadataSvg || getSvgXml(sketch.sketch_data);
+              // Use saved preview SVG from sketch_data (metadata is stored separately for performance)
+              const svgXml = getSvgXml(sketch.sketch_data);
               const isRegularImage = sketch.sketch_data && !sketch.sketch_data.startsWith('data:image/svg+xml');
 
               return (
@@ -5009,19 +5008,6 @@ export default function ProjectDetailScreen() {
                       </View>
                     )}
                     
-                    {sketch.metadata && (() => {
-                      try {
-                        const metadata = JSON.parse(sketch.metadata);
-                        const elementCount = metadata.elements?.length || 0;
-                        return (
-                          <Text style={styles.sketchInfo}>
-                            {elementCount} Element{elementCount !== 1 ? 'e' : ''}
-                          </Text>
-                        );
-                      } catch (e) {
-                        return null;
-                      }
-                    })()}
                   </TouchableOpacity>
                   
                   {/* Delete Button */}

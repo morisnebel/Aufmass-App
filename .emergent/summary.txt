@@ -1,442 +1,151 @@
 <analysis>**original_problem_statement:**
-The user was initially facing usability issues with polyline selection on their iPhone, which was resolved. Following that fix, the user made two new feature requests:
-1.  Reduce the size of the selection handles (the blue circles) on measurement lines as they appear too large.
-2.  Implement a magnifying glass (Lupe) feature that appears when dragging the endpoints of a measurement line. This is needed because the user's finger obscures the arrowhead, making precise placement difficult.
+The user initiated the session by reporting several Android-specific issues and requesting UI/UX enhancements. A significant portion of the previous session was dedicated to resolving persistent Expo Go connection problems.
+
+The key requests were:
+1.  **Customer Creation Workflow:** Improve the flow when creating a new customer during project creation.
+2.  **Project Header Customization:** Add interactive elements to directly edit the project's header/title for PDF exports.
+3.  **Smart Back Button:** Convert the Back button into a Save button in the New Project screen when the form is valid.
+4.  **Polygon Movement in Sketches:** Make it easier to move polygon/polyline shapes.
+5.  **Sketch Editor Crash:** Fix a native crash () when exiting the sketch editor.
+
+The previous agent addressed these but introduced a new JavaScript error ( not found) while fixing the crash.
+
+In the current session, the agent fixed the  error. The user then reported that loading and saving sketches is very slow (8 seconds to load, 5 to save) and asked for performance improvements. The agent is currently in the middle of refactoring the data storage mechanism for sketches to address this.
 
 **User's preferred language**: German
 
 **what currently exists?**
-The application is an Expo-based sketch editor. The previous agent successfully removed a long-press feature which was no longer required by the user.
+The project is a full-stack Expo mobile application using AsyncStorage for all data storage. The agent has just begun a significant refactoring of the sketch storage logic to improve performance.
 
-Work has begun on the user's new requests within the monolithic  file:
-1.  **Handle Size Reduction:** The  function was modified to scale the handle radius based on the current zoom level ( variable), which should address the size issue.
-2.  **Magnifier Feature:** The initial state variables (, , ) required for the magnifier have been added to the component's state.
+The previous approach stored all sketches, including large base64 background images and complex element data, in a single large JSON array under one AsyncStorage key. The new approach separates this data:
+*   The main  array will only hold lightweight metadata (ID, title, preview SVG).
+*   Detailed sketch elements () will be stored under a separate key: .
+*   The large background image () will also be stored separately: .
+
+The agent has modified  to implement this new logic (including a data migration function) and has updated the  and  functions in  to use these new service methods.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the magnifying glass (Lupe) feature. The agent added the necessary state variables and was about to integrate the core logic into the touch handlers, starting with .
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Manual testing by user. Visual confirmation against the user's request is crucial. A screenshot verification after implementation would be beneficial.
--   **User Testing Done:** N
+- **Last item agent was working:** Optimizing the performance of loading and saving sketches by refactoring how sketch data is stored in AsyncStorage. The agent has implemented the core logic changes in  and  but has not yet verified the full impact or fixed potential regressions in other parts of the app.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** Frontend testing agent to verify performance and check for regressions across the app, especially in the project detail view where sketches are listed.
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending bugs. All current work is on new feature requests.
+- **Issue 1: Performance Optimization for Sketches (P0)**
+    - **Description:** Loading sketches takes ~8 seconds and saving takes ~5 seconds due to storing all sketch data in a single JSON blob.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend
+
+- **Issue 2: Android Zoom in Sketches not working (P2)**
+    - **Description:** The user previously reported that pinch-to-zoom does not work in the sketch editor on Android. This task was deferred.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Frontend
+
+- **Issue 3: Expo Go Connection Instability (P3)**
+    - **Description:** Throughout previous sessions, the user experienced frequent issues connecting to the app via Expo Go. This remains a potential risk.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** NA
 
 **In progress Task List**:
--   **Task 1: Complete Handle Size Reduction & Verification (P1)**
-    -   **Where to resume:** The code to scale the handles in  is in place. However, it has not been verified by the user. This should be tested along with the magnifier feature.
-    -   **What will be achieved with this?** The selection handles will be smaller and more usable, as requested.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on something:** None.
-
--   **Task 2: Complete implementation of the Magnifying Glass (Lupe) feature (P0)**
-    -   **Where to resume:** In . State variables are present. The next steps are:
-        1.  Modify  (and potentially ) to set  to  when a measurement line handle drag begins.
-        2.  In the same handler, update the  to follow the user's finger.
-        3.  Implement the logic to capture the screen content under the finger and update . A library like  might be necessary.
-        4.  Update  to set  to .
-        5.  Add the JSX to render the magnifier view as a floating overlay on the screen.
-    -   **What will be achieved with this?** Solves the user's problem of their finger obscuring the view while precisely positioning measurement line endpoints.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on something:** None.
+- **Task 1: Complete Sketch Performance Optimization (P0)**
+    - **Where to resume:** The agent has modified  and . The immediate next step is to check other files that consume sketch data, particularly , which displays a list of sketches for a project. This file likely needs to be updated to handle the new data structure to avoid breaking the UI. After ensuring all parts of the app are compatible, the performance improvement must be tested and verified.
+    - **What will be achieved with this?** Drastically reduce sketch load/save times from ~8s/5s to an estimated 1-2 seconds, significantly improving user experience.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **Re-implement  and  feature (P2):** This was a previously planned task. After completing the current requests, the agent should ask the user if this is the next priority. This involves adding modes and touch handlers back into .
--   **Future Tasks:**
-    -   **Fix pre-existing TypeScript errors (P3):**  has previously reported errors in , , and .
-    -   **Investigate environment instability (P3):** An  error has occurred in the past. If it reoccurs, investigate logs.
+*   **Upcoming Tasks:**
+    *   **(P0) User Verification:** Once the performance optimization is complete and stable, the user must verify the improved load/save times and confirm no sketch data was lost or corrupted.
+    *   **(P1)** Implement pinch-to-zoom for sketches on Android using  from .
+    *   **(P2)** Implement PDF export functionality for the ImageMeter (Fotomessung) feature.
+*   **Future Tasks:**
+    *   Refactor the monolithic  (9k+ lines) and  (8k+ lines) files into smaller, manageable components.
+    *   Address any pre-existing TypeScript configuration errors.
 
 **Completed work in this session**
--   **Long-Press Feature Removal (DONE):** Successfully removed all code related to the deprecated long-press selection feature from . This included state, timer logic, handler functions, and JSX. The app was verified to be running correctly after the cleanup.
+- **Bug Fix:** Resolved a  in  by adding the missing import from . This fixed the crash that occurred when exiting the sketch editor.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Pre-existing TypeScript errors**
-    -   **Debug checklist:** Run app/calculator/new.tsx(733,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string | null>'.
-  Type 'undefined' is not assignable to type 'SetStateAction<string | null>'.
-app/calculator/new.tsx(1227,60): error TS2345: Argument of type '{ project_id: string; name: string; scale: number; scaleReference: { startPoint: AreaPoint; endPoint: AreaPoint; realLength: number; } | undefined; polygons: AreaPolygon[]; ... 5 more ...; annotations: { ...; } | undefined; }' is not assignable to parameter of type 'Partial<AreaCalculation>'.
-  Types of property 'annotations' are incompatible.
-    Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; } | undefined' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; } | undefined'.
-      Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; }' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; }'.
-        Types of property 'shapes' are incompatible.
-          Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[]'.
-            Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }'.
-              Types of property 'type' are incompatible.
-                Type '"circle" | "arrow" | "line" | "rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
-                  Type '"rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
-app/calculator/new.tsx(1229,45): error TS2345: Argument of type '{ project_id: string; name: string; scale: number; scaleReference: { startPoint: AreaPoint; endPoint: AreaPoint; realLength: number; } | undefined; polygons: AreaPolygon[]; ... 5 more ...; annotations: { ...; } | undefined; }' is not assignable to parameter of type 'Omit<AreaCalculation, "id" | "created_at" | "updated_at">'.
-  Types of property 'annotations' are incompatible.
-    Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; } | undefined' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; } | undefined'.
-      Type '{ shapes: { id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]; texts: { id: string; ... 4 more ...; fontSize: number; }[]; memos: { ...; }[]; }' is not assignable to type '{ shapes?: { id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[] | undefined; texts?: { ...; }[] | undefined; memos?: { ...; }[] | undefined; }'.
-        Types of property 'shapes' are incompatible.
-          Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }[]' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }[]'.
-            Type '{ id: string; type: "circle" | "arrow" | "line" | "rectangle"; startPoint: { x: number; y: number; }; endPoint: { x: number; y: number; }; color: string; strokeWidth: number; }' is not assignable to type '{ id: string; type: "rect" | "circle" | "arrow" | "line"; startPoint: AreaPoint; endPoint: AreaPoint; color: string; strokeWidth: number; }'.
-              Types of property 'type' are incompatible.
-                Type '"circle" | "arrow" | "line" | "rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
-                  Type '"rectangle"' is not assignable to type '"rect" | "circle" | "arrow" | "line"'.
-app/calculator/new.tsx(2074,21): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
-  Type 'null' is not assignable to type 'number'.
-app/calculator/new.tsx(2074,38): error TS18047: 'targetLength' is possibly 'null'.
-app/calculator/new.tsx(2265,25): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
-  Type 'null' is not assignable to type 'number'.
-app/calculator/new.tsx(2265,42): error TS18047: 'targetLength' is possibly 'null'.
-app/calculator/new.tsx(2502,25): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
-  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
-app/calculator/new.tsx(3674,27): error TS2322: Type '(showAlert?: boolean) => Promise<boolean>' is not assignable to type '(event: GestureResponderEvent) => void'.
-  Types of parameters 'showAlert' and 'event' are incompatible.
-    Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
-app/calculator/new.tsx(4628,13): error TS2322: Type 'null' is not assignable to type '{ x: number; y: number; }'.
-app/checklists/templates.tsx(122,46): error TS2345: Argument of type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }[]' is not assignable to parameter of type 'ChecklistTemplate[]'.
-  Type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }' is missing the following properties from type 'ChecklistTemplate': created_at, updated_at
-app/checklists/templates.tsx(140,46): error TS2345: Argument of type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }[]' is not assignable to parameter of type 'ChecklistTemplate[]'.
-  Type '{ order: number; id: string; name: string; items: (string | TemplateItem)[]; }' is missing the following properties from type 'ChecklistTemplate': created_at, updated_at
-app/customers/index.tsx(827,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(837,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(848,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(857,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(866,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(878,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(888,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(899,17): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(911,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(923,21): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(1005,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(1014,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/index.tsx(1025,27): error TS17001: JSX elements cannot have multiple attributes with the same name.
-app/customers/new.tsx(192,9): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'Contact'.
-app/customers/new.tsx(211,41): error TS2345: Argument of type 'Contact' is not assignable to parameter of type '{ id: string; } & Partial<ExistingContact>'.
-  Property 'id' is missing in type 'Contact' but required in type '{ id: string; }'.
-app/index.tsx(448,39): error TS2322: Type '() => void' is not assignable to type '() => Promise<void>'.
-  Type 'void' is not assignable to type 'Promise<void>'.
-app/index.tsx(450,66): error TS2345: Argument of type '{ text: string; onPress: () => Promise<void>; style: string; }[]' is not assignable to parameter of type 'AlertButton[]'.
-  Type '{ text: string; onPress: () => Promise<void>; style: string; }' is not assignable to type 'AlertButton'.
-    Types of property 'style' are incompatible.
-      Type 'string' is not assignable to type '"cancel" | "default" | "destructive" | undefined'.
-app/index.tsx(470,65): error TS2345: Argument of type '{ text: string; onPress: () => void; style: string; }[]' is not assignable to parameter of type 'AlertButton[]'.
-  Type '{ text: string; onPress: () => void; style: string; }' is not assignable to type 'AlertButton'.
-    Types of property 'style' are incompatible.
-      Type 'string' is not assignable to type '"cancel" | "default" | "destructive" | undefined'.
-app/index.tsx(729,40): error TS2345: Argument of type '"/references/"' is not assignable to parameter of type '"/" | RelativePathString | ExternalPathString | `/?${string}` | `/#${string}` | "/_sitemap" | `/_sitemap?${string}` | `/_sitemap#${string}` | "/calculator/edit" | `/calculator/edit?${string}` | ... 83 more ... | { ...; }'.
-app/photos/annotate.tsx(278,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/photos/annotate.tsx(279,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/photos/annotate.tsx(703,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/photos/annotate.tsx(704,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/projects/[id].tsx(327,25): error TS2339: Property 'pdf_checklist_columns' does not exist on type 'Settings'.
-app/projects/[id].tsx(328,42): error TS2339: Property 'pdf_checklist_columns' does not exist on type 'Settings'.
-app/projects/[id].tsx(341,32): error TS2339: Property 'remarks' does not exist on type 'Project'.
-app/projects/[id].tsx(351,16): error TS2345: Argument of type 'Roof[]' is not assignable to parameter of type 'SetStateAction<Roof[]>'.
-  Type 'import("/app/frontend/services/LocalStorage").Roof[]' is not assignable to type 'Roof[]'.
-    Type 'import("/app/frontend/services/LocalStorage").Roof' is not assignable to type 'Roof'.
-      Types of property 'roof_type' are incompatible.
-        Type 'string | undefined' is not assignable to type 'string'.
-          Type 'undefined' is not assignable to type 'string'.
-app/projects/[id].tsx(352,17): error TS2345: Argument of type 'Photo[]' is not assignable to parameter of type 'SetStateAction<Photo[]>'.
-  Type 'import("/app/frontend/services/LocalStorage").Photo[]' is not assignable to type 'Photo[]'.
-    Type 'import("/app/frontend/services/LocalStorage").Photo' is not assignable to type 'Photo'.
-      Types of property 'image_data' are incompatible.
-        Type 'string | undefined' is not assignable to type 'string'.
-          Type 'undefined' is not assignable to type 'string'.
-app/projects/[id].tsx(353,19): error TS2345: Argument of type 'Sketch[]' is not assignable to parameter of type 'SetStateAction<Sketch[]>'.
-  Type 'import("/app/frontend/services/LocalStorage").Sketch[]' is not assignable to type 'Sketch[]'.
-    Type 'import("/app/frontend/services/LocalStorage").Sketch' is not assignable to type 'Sketch'.
-      Types of property 'sketch_data' are incompatible.
-        Type 'string | undefined' is not assignable to type 'string'.
-          Type 'undefined' is not assignable to type 'string'.
-app/projects/[id].tsx(433,32): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
-app/projects/[id].tsx(433,61): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
-app/projects/[id].tsx(436,36): error TS2339: Property 'cacheDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
-app/projects/[id].tsx(437,39): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
-app/projects/[id].tsx(501,36): error TS2339: Property 'EncodingType' does not exist on type 'typeof import("/app/frontend/node_modules/expo-file-system/build/index")'.
-app/projects/[id].tsx(677,11): error TS2353: Object literal may only specify known properties, and 'order' does not exist in type 'Partial<Checklist>'.
-app/projects/[id].tsx(705,72): error TS2339: Property 'salutation' does not exist on type 'Customer'.
-app/projects/[id].tsx(706,71): error TS2339: Property 'firstName' does not exist on type 'Customer'.
-app/projects/[id].tsx(707,69): error TS2339: Property 'lastName' does not exist on type 'Customer'.
-app/projects/[id].tsx(711,64): error TS2339: Property 'street' does not exist on type 'Customer'.
-app/projects/[id].tsx(712,58): error TS2339: Property 'zip' does not exist on type 'Customer'.
-app/projects/[id].tsx(713,60): error TS2339: Property 'city' does not exist on type 'Customer'.
-app/projects/[id].tsx(856,9): error TS2561: Object literal may only specify known properties, but 'bauherr_first_name' does not exist in type 'Partial<Project>'. Did you mean to write 'bauherr_firstName'?
-app/projects/[id].tsx(1150,38): error TS2339: Property 'company_subtitle' does not exist on type 'Settings'.
-app/projects/[id].tsx(1151,36): error TS2339: Property 'street' does not exist on type 'Settings'.
-app/projects/[id].tsx(1152,37): error TS2339: Property 'zip_code' does not exist on type 'Settings'.
-app/projects/[id].tsx(1153,34): error TS2339: Property 'city' does not exist on type 'Settings'.
-app/projects/[id].tsx(1154,35): error TS2339: Property 'phone' does not exist on type 'Settings'.
-app/projects/[id].tsx(1155,35): error TS2339: Property 'email' does not exist on type 'Settings'.
-app/projects/[id].tsx(1156,33): error TS2339: Property 'author_name' does not exist on type 'Settings'.
-app/projects/[id].tsx(1162,30): error TS2339: Property 'logo_data' does not exist on type 'Settings'.
-app/projects/[id].tsx(1789,38): error TS2881: This expression is never nullish.
-app/projects/[id].tsx(1790,38): error TS2881: This expression is never nullish.
-app/projects/[id].tsx(5547,23): error TS2353: Object literal may only specify known properties, and 'remarks' does not exist in type 'Partial<Project>'.
-app/projects/[id].tsx(5592,35): error TS2339: Property 'emptyState' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/[id].tsx(5594,37): error TS2339: Property 'emptyText' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/[id].tsx(5595,37): error TS2339: Property 'emptySubtext' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/[id].tsx(5671,35): error TS2339: Property 'emptyState' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/[id].tsx(5673,37): error TS2339: Property 'emptyText' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/[id].tsx(5674,37): error TS2339: Property 'emptySubtext' does not exist on type '{ container: { flex: number; backgroundColor: string; }; centerContainer: { flex: number; justifyContent: "center"; alignItems: "center"; }; actionBar: { flexDirection: "row"; backgroundColor: string; padding: number; gap: number; borderBottomWidth: number; borderBottomColor: string; }; ... 291 more ...; projectType...'.
-app/projects/new.tsx(717,9): error TS2561: Object literal may only specify known properties, but 'objekt_number' does not exist in type 'Omit<Project, "id" | "created_at" | "updated_at">'. Did you mean to write 'objekt_name'?
-app/projects/new.tsx(1300,53): error TS2339: Property 'id' does not exist on type 'Contact'.
-app/roofs/[id].tsx(79,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
-  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
-app/roofs/new.tsx(414,32): error TS2345: Argument of type '{ project_id: string; roof_type: string; measurements: { gebaeudelaenge: number; gebaeudebreite: number; dachneigung1: number; dachneigung2: number; dachneigung3: number; dachneigung4: number; ... 7 more ...; width: number; }; area: number; notes: string | undefined; }' is not assignable to parameter of type 'Omit<Roof, "id" | "created_at" | "updated_at">'.
-  Property 'name' is missing in type '{ project_id: string; roof_type: string; measurements: { gebaeudelaenge: number; gebaeudebreite: number; dachneigung1: number; dachneigung2: number; dachneigung3: number; dachneigung4: number; ... 7 more ...; width: number; }; area: number; notes: string | undefined; }' but required in type 'Omit<Roof, "id" | "created_at" | "updated_at">'.
-app/settings/index.tsx(605,59): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-app/settings/index.tsx(656,59): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-app/settings/index.tsx(707,59): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
-    Type '{ flex: number; backgroundColor: string; } | { flex: number; justifyContent: "center"; alignItems: "center"; } | { flex: number; } | { padding: number; } | { backgroundColor: string; borderRadius: number; ... 6 more ...; elevation: number; } | ... 113 more ... | { ...; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-      Type '{ color: string; fontWeight: "bold"; fontSize: number; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
-app/settings/index.tsx(1411,3): error TS1117: An object literal cannot have multiple properties with the same name.
-app/settings/index.tsx(1417,3): error TS1117: An object literal cannot have multiple properties with the same name.
-app/sketches/draw.tsx(2962,20): error TS2367: This comparison appears to be unintentional because the types '"polygon"' and '"path"' have no overlap.
-app/sketches/draw.tsx(4092,20): error TS2503: Cannot find namespace 'JSX'.
-app/sketches/draw.tsx(6701,19): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(props: ImageProps): Image', gave the following error.
-    Type '{ source: { uri: string; }; style: { width: number; height: number; }; resizeMode: "contain"; pointerEvents: string; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
-      Property 'pointerEvents' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
-  Overload 2 of 2, '(props: ImageProps, context: any): Image', gave the following error.
-    Type '{ source: { uri: string; }; style: { width: number; height: number; }; resizeMode: "contain"; pointerEvents: string; }' is not assignable to type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
-      Property 'pointerEvents' does not exist on type 'IntrinsicAttributes & IntrinsicClassAttributes<Image> & Readonly<ImageProps>'.
-services/LocalStorage.ts(417,14): error TS2551: Property 'objekt_number' does not exist on type 'Project'. Did you mean 'objekt_name'?
-services/LocalStorage.ts(1058,15): error TS2322: Type '{ pageNumber: number; imageData?: string | undefined; annotations: string; textAnnotations?: TextAnnotation[] | undefined; }' is not assignable to type 'DocumentPage'.
-  Types of property 'imageData' are incompatible.
-    Type 'string | undefined' is not assignable to type 'string'.
-      Type 'undefined' is not assignable to type 'string'. to see errors and fix them in the respective files.
-    -   **Why to solve this issue and what will be achieved with this?** Ensures type safety and prevents potential runtime errors.
-    -   **Should Test frontend/backend/both after fix:** Frontend
-    -   **Is recurring issue?** Y
--   **Issue 2: Environment instability with ngrok**
-    -   **Debug checklist:** If the  error reoccurs, investigate logs. The current workaround is restarting the 
-  Usage: expo [command] [options]
-
-  Options:
-  
-    -V, --version                     output the version number
-    --non-interactive                 Fail, if an interactive prompt would be required to continue.
-    -h, --help                        output usage information
-  
-  Commands:
-
-    init [name]                       Create a new Expo project
-    start [path]                      Start a local dev server for the app
-    start:web [path]                  Start a Webpack dev server for the web app
-    export [path]                     Export the static files of the app for hosting it on a web server
-    install [packages...]             Install a module or other package to a project
-    run:android [path]                Run the Android app binary locally
-    run:ios [path]                    Run the iOS app binary locally
-    send [path]                       Share the project's URL to an email address
-
-    login                             Login to an Expo account
-    logout                            Logout of an Expo account
-    register                          Sign up for a new Expo account
-    whoami                            Return the currently authenticated account
-
-    client:install:ios                Install Expo Go for iOS on the simulator
-    client:install:android            Install Expo Go for Android on a connected device or emulator
-
-    config [path]                     Show the project config
-    doctor [path]                     Diagnose issues with the project
-    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
-
-    customize:web [path]              Eject the default web files for customization
-    prebuild [path]                   Create native iOS and Android project files before building natively.
-                                      Learn more: https://docs.expo.dev/workflow/customizing/
-
-    build:web [path]                  Build the web app for production
-
-    credentials:manager [path]        Superseded by eas credentials in eas-cli
-
-    url [path]                        Log a URL for opening the project in Expo Go
-    url:ipa [path]                    Log the download URL for the standalone iOS binary
-    url:apk [path]                    Log the download URL for the standalone Android binary
-
-    webhooks [path]                   List all webhooks for a project
-    webhooks:add [path]               Add a webhook to a project
-    webhooks:remove [path]            Delete a webhook
-    webhooks:update [path]            Update an existing webhook
-
-    build:ios [path]                  Superseded by eas build in eas-cli
-    build:android [path]              Superseded by eas build in eas-cli
-    build:status [path]               Superseded by eas build:list in eas-cli
-    eject [path]                      Superseded by expo prebuild
-    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
-    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
-    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
-    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
-    publish [path]                    Superseded by eas update in eas-cli
-    publish:set [path]                Superseded by eas update:republish in eas-cli
-    publish:rollback [path]           Superseded by eas update:republish in eas-cli
-    publish:history [path]            Superseded by eas update:list in eas-cli
-    publish:details [path]            Superseded by eas update:view in eas-cli
-    push:android:upload [path]        Superseded by eas credentials in eas-cli
-    push:android:show [path]          Superseded by eas credentials in eas-cli
-    push:android:clear [path]         Superseded by eas credentials in eas-cli
-    upload:android [path]             Superseded by eas submit in eas-cli
-    upload:ios [path]                 Superseded by eas submit in eas-cli
-    client:ios [path]                 Superseded by Expo Dev Clients
-
-[06:49:58]   Run a command with --help for more info 💡
-[06:49:58]     $ expo start --help
-[06:49:58] service.
-    -   **Why to solve this issue and what will be achieved with this?** A stable environment would speed up development.
-    -   **Should Test frontend/backend/both after fix:** N/A (Environment issue)
-    -   **Is recurring issue?** Y
+- This list is covered by the **All Pending/In progress Issue list** and **Upcoming and Future Tasks**.
 
 **Known issue recurrence from previous fork**
--   None.
+-   Expo Go Connection Instability
+-   Android Zoom in Sketches not working
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Frontend:** Expo (React Native), TypeScript.
--   **Drawing:**  for rendering and interaction.
--   **Interaction Logic:** , ,  gesture handlers.
--   **Magnifier/Zoom View:** A new concept being implemented. This will likely require capturing a portion of a view (possibly with ) and displaying it in a floating overlay.
+-   **AsyncStorage Optimization:** Refactoring data storage from a single large JSON blob to multiple smaller, specific key-value pairs (, , ) to improve I/O performance.
+-   **Data Migration:** Implementing logic within the data service () to automatically and transparently convert data from the old format to the new format upon access.
 
 **key DB schema**
--   Not applicable.
+-   N/A (All data is stored in AsyncStorage). The schema is being refactored.
+-   **Old Schema:**
+    -   : 
+-   **New Schema:**
+    -   :  (lightweight list)
+    -   : 
+    -   : 
 
 **changes in tech stack**
--   A new library like  might need to be added to implement the magnifier feature.
+-   None.
 
 **All files of reference**
--   : The only file created or updated in this session. It contains all the logic for the sketch editor.
+*   : Heavily modified to change how sketch data is stored and retrieved. Contains new functions and migration logic.
+*   : The  and  functions were updated to use the new optimized service methods. The  import was also added.
+*   : **CRITICAL FILE TO CHECK.** This file displays sketch lists and previews. It has not been modified yet and is likely broken by the storage changes. It needs to be updated to work with the new data structure.
 
 **Areas that need refactoring**:
--   : This file is now over 7900 lines. It is critically in need of being broken down into smaller components and custom hooks (e.g., for gesture handling, state management, and different tool logics) to improve maintainability.
+*   The performance optimization is an ongoing refactoring task.
+*    (>9k lines) and  (>8k lines) remain critically large and are candidates for being broken down into smaller components.
 
 **key api endpoints**
--   Not applicable.
+-   N/A
 
 **Critical Info for New Agent**
--   **You must communicate in German.**
--   Your immediate priority is to finish the two user requests: smaller selection handles and a magnifier when dragging them.
--   The handle size reduction is likely already coded but needs verification.
--   The magnifier feature is partially started (state variables exist). You need to implement the core logic for capturing the view, updating the position, and rendering the magnifier.
--   **Proposed Plan:**
-    1.  Continue implementing the magnifier (Lupe) in . You may need to research and install a library like  to capture the canvas content.
-    2.  Integrate the magnifier logic into the touch handlers (, ).
-    3.  Add the JSX for the magnifier overlay.
-    4.  Restart the 
-  Usage: expo [command] [options]
-
-  Options:
-  
-    -V, --version                     output the version number
-    --non-interactive                 Fail, if an interactive prompt would be required to continue.
-    -h, --help                        output usage information
-  
-  Commands:
-
-    init [name]                       Create a new Expo project
-    start [path]                      Start a local dev server for the app
-    start:web [path]                  Start a Webpack dev server for the web app
-    export [path]                     Export the static files of the app for hosting it on a web server
-    install [packages...]             Install a module or other package to a project
-    run:android [path]                Run the Android app binary locally
-    run:ios [path]                    Run the iOS app binary locally
-    send [path]                       Share the project's URL to an email address
-
-    login                             Login to an Expo account
-    logout                            Logout of an Expo account
-    register                          Sign up for a new Expo account
-    whoami                            Return the currently authenticated account
-
-    client:install:ios                Install Expo Go for iOS on the simulator
-    client:install:android            Install Expo Go for Android on a connected device or emulator
-
-    config [path]                     Show the project config
-    doctor [path]                     Diagnose issues with the project
-    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
-
-    customize:web [path]              Eject the default web files for customization
-    prebuild [path]                   Create native iOS and Android project files before building natively.
-                                      Learn more: https://docs.expo.dev/workflow/customizing/
-
-    build:web [path]                  Build the web app for production
-
-    credentials:manager [path]        Superseded by eas credentials in eas-cli
-
-    url [path]                        Log a URL for opening the project in Expo Go
-    url:ipa [path]                    Log the download URL for the standalone iOS binary
-    url:apk [path]                    Log the download URL for the standalone Android binary
-
-    webhooks [path]                   List all webhooks for a project
-    webhooks:add [path]               Add a webhook to a project
-    webhooks:remove [path]            Delete a webhook
-    webhooks:update [path]            Update an existing webhook
-
-    build:ios [path]                  Superseded by eas build in eas-cli
-    build:android [path]              Superseded by eas build in eas-cli
-    build:status [path]               Superseded by eas build:list in eas-cli
-    eject [path]                      Superseded by expo prebuild
-    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
-    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
-    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
-    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
-    publish [path]                    Superseded by eas update in eas-cli
-    publish:set [path]                Superseded by eas update:republish in eas-cli
-    publish:rollback [path]           Superseded by eas update:republish in eas-cli
-    publish:history [path]            Superseded by eas update:list in eas-cli
-    publish:details [path]            Superseded by eas update:view in eas-cli
-    push:android:upload [path]        Superseded by eas credentials in eas-cli
-    push:android:show [path]          Superseded by eas credentials in eas-cli
-    push:android:clear [path]         Superseded by eas credentials in eas-cli
-    upload:android [path]             Superseded by eas submit in eas-cli
-    upload:ios [path]                 Superseded by eas submit in eas-cli
-    client:ios [path]                 Superseded by Expo Dev Clients
-
-[06:49:58]   Run a command with --help for more info 💡
-[06:49:58]     $ expo start --help
-[06:49:58] server.
-    5.  Once complete, inform the user that both the handle size reduction and the magnifier are ready for testing. Ask for their feedback.
-    6.  After user confirmation, propose working on the  feature next.
+-   **PRIORITY ONE:** You are in the middle of a major refactor to improve sketch performance. Your immediate task is to identify and fix parts of the app that have broken due to the storage changes. Start by examining  to see how it fetches and displays sketch previews, and adapt it to the new data structure.
+-   **VERIFY REFACTOR:** After ensuring the app is fully functional with the new storage logic, you must test and confirm that the sketch loading and saving times have significantly improved.
+-   **COMMUNICATE IN GERMAN:** The user's preferred language is German. All communication must be in German.
+-   **ANDROID ZOOM:** The issue of pinch-to-zoom not working on Android for sketches is the next high-priority task after the performance optimization is complete and verified by the user.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.   (perfect, the lines work now. can we make the selection fields on the measurement lines smaller, and I have an idea, could you add a kind of magnifying glass to the arrowheads of the measurement line when moving it, because the tip is always covered by my finger). **Status: IN PROGRESS**.
-2.   (it works perfectly now, so we can remove the long press function). **Status: COMPLETED**.
-3.   - **Status: COMPLETED**.
-4.   (good morning the selection of the lines finally works very well...). **Status: COMPLETED**.
-5.   (yes). **Status: COMPLETED**.
+1.  **User:**  (It takes about 8 seconds to load and 5 seconds to save) - **(PENDING - Fix in progress)**
+2.  **User:**  (Is there surely nothing that can be changed about the loading and saving time of sketches?) - **(PENDING - Fix in progress)**
+3.  **User:**  (you have to start EXPO again) - **(COMPLETED)**
+4.  **User:**  (yes) - The user's confirmation to proceed with the  bug fix. - **(COMPLETED)**
 
 **Project Health Check:**
--   **Broken:** The end-to-end  testing flow for creating customers/projects remains broken from a previous session.
--   **Mocked:** None.
+*   **Broken:** The application is in a partially broken state due to the ongoing storage refactor. Views that list or preview sketches (e.g., project details screen) are likely non-functional until they are updated to use the new data-fetching logic.
+*   **Mocked:**
+    *    functionality is mocked (from a previous fork).
 
 **3rd Party Integrations**
--   None observed.
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** The  and  features are still absent due to a user-initiated rollback in a prior session to fix UI bugs.
+-   **Test files created:** []
+-   **Known regressions:** The sketch storage refactoring has likely broken any UI that lists sketches.
 
 **Credentials to test flow:**
--   N/A.
+-   **Pro Version Unlock Code:** 
 
 **What agent forgot to execute**
--   The agent is in the middle of implementing a feature. It correctly identified the next steps but has not yet executed them. The magnifier logic in the touch handlers and the rendering of the magnifier view still need to be implemented.</analysis>
+-   The agent has not yet updated the parts of the application that consume sketch list data (like ) to make them compatible with the new, refactored storage system. This is a critical unaddressed side-effect of the current work.</analysis>

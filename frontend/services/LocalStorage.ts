@@ -587,7 +587,17 @@ export const ProjectService = {
     await setItems(KEYS.PROJECTS, filtered);
     // Also delete related data
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    const sketchesToDelete = sketches.filter(s => s.project_id === id);
     await setItems(KEYS.SKETCHES, sketches.filter(s => s.project_id !== id));
+    // Clean up separate sketch data keys
+    const cleanupOps: Promise<void>[] = [];
+    for (const sketch of sketchesToDelete) {
+      cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${sketch.id}`));
+      cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${sketch.id}`));
+    }
+    if (cleanupOps.length > 0) {
+      await Promise.all(cleanupOps);
+    }
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     await setItems(KEYS.PHOTOS, photos.filter(p => p.project_id !== id));
     const roofs = await getItems<Roof>(KEYS.ROOFS);
@@ -629,33 +639,219 @@ export const SketchService = {
     return sketches.filter(s => s.project_id === projectId);
   },
 
+  // ---- OPTIMIZED: Load heavy sketch data from separate storage keys ----
+  // This avoids parsing all sketches just to load one sketch's elements/background
+  loadSketchData: async (id: string): Promise<{ metadata: any | null; backgroundImage: string | null }> => {
+    try {
+      // Try loading from separate optimized keys first
+      const [metaStr, bgImage] = await Promise.all([
+        AsyncStorage.getItem(`sketch_meta_${id}`),
+        AsyncStorage.getItem(`sketch_bg_${id}`),
+      ]);
+
+      if (metaStr) {
+        // Found in optimized storage
+        const metadata = JSON.parse(metaStr);
+        return { metadata, backgroundImage: bgImage };
+      }
+
+      // Fallback: migrate from old format (metadata embedded in main array)
+      console.log(`[SketchService] Migrating sketch ${id} to optimized storage...`);
+      const sketch = await SketchService.getById(id);
+      if (sketch?.metadata) {
+        const metadata = JSON.parse(sketch.metadata);
+        const bg = metadata.backgroundImage || null;
+
+        // Save to optimized keys (migration)
+        const metaWithoutBg = { ...metadata };
+        delete metaWithoutBg.backgroundImage;
+        await AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
+        if (bg) {
+          await AsyncStorage.setItem(`sketch_bg_${id}`, bg);
+        }
+
+        // Clean heavy data from main array to speed up future loads
+        const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+        const index = sketches.findIndex(s => s.id === id);
+        if (index !== -1) {
+          // Keep only lightweight data + sketch_data (small preview) in the main array
+          delete (sketches[index] as any).metadata;
+          await setItems(KEYS.SKETCHES, sketches);
+        }
+
+        return { metadata: metaWithoutBg, backgroundImage: bg };
+      }
+
+      return { metadata: null, backgroundImage: null };
+    } catch (error) {
+      console.error(`[SketchService] Error loading sketch data for ${id}:`, error);
+      return { metadata: null, backgroundImage: null };
+    }
+  },
+
+  // ---- OPTIMIZED: Save heavy data to separate keys ----
+  saveSketchData: async (id: string, metadata: any, backgroundImage: string | null): Promise<void> => {
+    try {
+      // Save metadata (without background image) to separate key
+      const metaWithoutBg = { ...metadata };
+      delete metaWithoutBg.backgroundImage;
+
+      const saveOps: Promise<void>[] = [
+        AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)),
+      ];
+
+      // Save background image to its own key
+      if (backgroundImage) {
+        saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, backgroundImage));
+      } else {
+        // Remove old background if cleared
+        saveOps.push(AsyncStorage.removeItem(`sketch_bg_${id}`));
+      }
+
+      await Promise.all(saveOps);
+    } catch (error) {
+      console.error(`[SketchService] Error saving sketch data for ${id}:`, error);
+    }
+  },
+
   create: async (data: Omit<Sketch, 'id' | 'created_at' | 'updated_at'>): Promise<Sketch> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
-    const newSketch: Sketch = {
+    const id = generateId();
+
+    // Extract heavy data before storing in main array
+    const heavyMetadata = data.metadata;
+    const lightSketch: Sketch = {
       ...data,
-      id: generateId(),
+      id,
+      metadata: undefined, // Don't store metadata in main array
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    sketches.push(newSketch);
-    await setItems(KEYS.SKETCHES, sketches);
-    return newSketch;
+    sketches.push(lightSketch);
+
+    // Save lightweight array + heavy data in parallel
+    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    if (heavyMetadata) {
+      try {
+        const meta = JSON.parse(heavyMetadata);
+        const bg = meta.backgroundImage || null;
+        const metaWithoutBg = { ...meta };
+        delete metaWithoutBg.backgroundImage;
+        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        if (bg) {
+          saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));
+        }
+      } catch (e) {
+        // If metadata isn't valid JSON, store as-is in separate key
+        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, heavyMetadata));
+      }
+    }
+    await Promise.all(saveOps);
+
+    return { ...lightSketch, metadata: heavyMetadata };
   },
 
   update: async (id: string, data: Partial<Sketch>): Promise<Sketch | null> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const index = sketches.findIndex(s => s.id === id);
     if (index === -1) return null;
-    sketches[index] = { ...sketches[index], ...data, updated_at: new Date().toISOString() };
-    await setItems(KEYS.SKETCHES, sketches);
+
+    // Extract heavy data
+    const heavyMetadata = data.metadata;
+    const lightData = { ...data };
+    delete lightData.metadata; // Don't store metadata in main array
+
+    sketches[index] = { ...sketches[index], ...lightData, updated_at: new Date().toISOString() };
+
+    // Save lightweight array + heavy data in parallel
+    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    if (heavyMetadata) {
+      try {
+        const meta = JSON.parse(heavyMetadata);
+        const bg = meta.backgroundImage || null;
+        const metaWithoutBg = { ...meta };
+        delete metaWithoutBg.backgroundImage;
+        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        if (bg) {
+          saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));
+        } else {
+          saveOps.push(AsyncStorage.removeItem(`sketch_bg_${id}`));
+        }
+      } catch (e) {
+        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, heavyMetadata));
+      }
+    }
+    await Promise.all(saveOps);
+
     return sketches[index];
   },
 
   delete: async (id: string): Promise<boolean> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const filtered = sketches.filter(s => s.id !== id);
-    await setItems(KEYS.SKETCHES, filtered);
+
+    // Delete main array entry + separate heavy data keys in parallel
+    await Promise.all([
+      setItems(KEYS.SKETCHES, filtered),
+      AsyncStorage.removeItem(`sketch_meta_${id}`),
+      AsyncStorage.removeItem(`sketch_bg_${id}`),
+    ]);
     return true;
+  },
+
+  // ---- BATCH MIGRATION: Move all embedded metadata to separate keys ----
+  // This should be called once on app startup to ensure the main sketches array is lightweight.
+  // After migration, loading the sketch list is fast because the heavy data is stored separately.
+  migrateAllSketches: async (): Promise<void> => {
+    const MIGRATION_KEY = 'aufmassprofi_sketch_migration_done';
+    try {
+      // Check if migration already completed
+      const migrationDone = await AsyncStorage.getItem(MIGRATION_KEY);
+      if (migrationDone === 'true') {
+        console.log('[SketchService] Migration already completed, skipping.');
+        return;
+      }
+
+      console.log('[SketchService] Starting batch migration of sketches...');
+      const startTime = Date.now();
+      const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      let migratedCount = 0;
+      let needsSave = false;
+
+      for (const sketch of sketches) {
+        if (sketch.metadata) {
+          try {
+            const meta = JSON.parse(sketch.metadata);
+            const bg = meta.backgroundImage || null;
+            const metaWithoutBg = { ...meta };
+            delete metaWithoutBg.backgroundImage;
+
+            // Save heavy data to separate keys
+            await AsyncStorage.setItem(`sketch_meta_${sketch.id}`, JSON.stringify(metaWithoutBg));
+            if (bg) {
+              await AsyncStorage.setItem(`sketch_bg_${sketch.id}`, bg);
+            }
+
+            // Strip metadata from main array entry
+            delete (sketch as any).metadata;
+            needsSave = true;
+            migratedCount++;
+          } catch (e) {
+            console.error(`[SketchService] Error migrating sketch ${sketch.id}:`, e);
+          }
+        }
+      }
+
+      if (needsSave) {
+        await setItems(KEYS.SKETCHES, sketches);
+      }
+
+      // Mark migration as done
+      await AsyncStorage.setItem(MIGRATION_KEY, 'true');
+      console.log(`[SketchService] Batch migration completed in ${Date.now() - startTime}ms. Migrated ${migratedCount} sketches.`);
+    } catch (error) {
+      console.error('[SketchService] Batch migration error:', error);
+    }
   },
 };
 

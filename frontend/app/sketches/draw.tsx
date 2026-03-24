@@ -1302,11 +1302,15 @@ export default function DrawSketchScreen() {
   const loadSketch = async () => {
     try {
       setLoading(true);
+      const startTime = Date.now();
       console.log('Loading sketch with ID:', sketchId, 'for project:', projectId);
-      const sketches = await SketchService.getByProjectId(projectId);
-      console.log('All sketches:', sketches);
-      const sketch = sketches.find((s: any) => s.id === sketchId);
-      console.log('Found sketch:', sketch);
+      
+      // Load lightweight sketch info + heavy data in parallel for speed
+      const [sketch, heavyData] = await Promise.all([
+        SketchService.getById(sketchId),
+        SketchService.loadSketchData(sketchId),
+      ]);
+      console.log('Sketch loaded in', Date.now() - startTime, 'ms');
       
       if (sketch) {
         setTitle(sketch.title || 'Skizze');
@@ -1321,64 +1325,86 @@ export default function DrawSketchScreen() {
           setPdfSize((sketch as any).pdf_size);
         }
         
-        // Parse saved elements if available
-        if (sketch.metadata) {
+        // Use heavy data from optimized storage
+        const metadata = heavyData.metadata;
+        const bgImage = heavyData.backgroundImage;
+        
+        if (metadata) {
+          console.log('Loaded metadata from optimized storage');
+          if (metadata.elements && Array.isArray(metadata.elements)) {
+            console.log('Setting elements:', metadata.elements.length, 'elements');
+            setElements(metadata.elements);
+            setHistory([metadata.elements]);
+            setHistoryIndex(0);
+          } else {
+            console.log('No elements in metadata');
+          }
+          // Background image from separate storage
+          if (bgImage) {
+            setBackgroundImage(bgImage);
+          }
+          // Lade die Linien-Maße wenn vorhanden, sonst zurücksetzen
+          if (metadata.lineSegmentMeasurements) {
+            setLineSegmentMeasurements(metadata.lineSegmentMeasurements);
+          } else {
+            setLineSegmentMeasurements({});
+          }
+          // Summenbox-Positionen laden wenn vorhanden (pro Element)
+          if (metadata.totalLfmBoxPositions) {
+            setTotalLfmBoxPositions(metadata.totalLfmBoxPositions);
+          } else {
+            setTotalLfmBoxPositions({});
+          }
+          // Legend-Position laden wenn vorhanden
+          if (metadata.legendPosition) {
+            setLegendPosition(metadata.legendPosition);
+            legendPan.setValue(metadata.legendPosition);
+          } else {
+            setLegendPosition({ x: 0, y: 0 });
+            legendPan.setValue({ x: 0, y: 0 });
+          }
+          // Label-Offsets laden wenn vorhanden
+          if (metadata.labelOffsets) {
+            setLabelOffsets(metadata.labelOffsets);
+          } else {
+            setLabelOffsets({});
+          }
+        } else if (sketch.metadata) {
+          // Fallback: metadata still in main array (shouldn't happen after migration)
           try {
-            console.log('Parsing metadata:', sketch.metadata);
-            const metadata = JSON.parse(sketch.metadata);
-            console.log('Parsed metadata:', metadata);
-            if (metadata.elements && Array.isArray(metadata.elements)) {
-              console.log('Setting elements:', metadata.elements.length, 'elements');
-              setElements(metadata.elements);
-              setHistory([metadata.elements]);
+            console.log('Fallback: parsing metadata from main array');
+            const parsedMeta = JSON.parse(sketch.metadata);
+            if (parsedMeta.elements && Array.isArray(parsedMeta.elements)) {
+              setElements(parsedMeta.elements);
+              setHistory([parsedMeta.elements]);
               setHistoryIndex(0);
-            } else {
-              console.log('No elements in metadata');
             }
-            if (metadata.backgroundImage) {
-              setBackgroundImage(metadata.backgroundImage);
+            if (parsedMeta.backgroundImage) {
+              setBackgroundImage(parsedMeta.backgroundImage);
             }
-            // Lade die Linien-Maße wenn vorhanden, sonst zurücksetzen
-            if (metadata.lineSegmentMeasurements) {
-              console.log('Loading lineSegmentMeasurements:', metadata.lineSegmentMeasurements);
-              setLineSegmentMeasurements(metadata.lineSegmentMeasurements);
-            } else {
-              setLineSegmentMeasurements({});
+            if (parsedMeta.lineSegmentMeasurements) {
+              setLineSegmentMeasurements(parsedMeta.lineSegmentMeasurements);
             }
-            // Summenbox-Positionen laden wenn vorhanden (pro Element)
-            if (metadata.totalLfmBoxPositions) {
-              console.log('Loading totalLfmBoxPositions:', metadata.totalLfmBoxPositions);
-              setTotalLfmBoxPositions(metadata.totalLfmBoxPositions);
-            } else {
-              // Keine gespeicherte Positionen - auf Standard zurücksetzen
-              setTotalLfmBoxPositions({});
+            if (parsedMeta.totalLfmBoxPositions) {
+              setTotalLfmBoxPositions(parsedMeta.totalLfmBoxPositions);
             }
-            // Legend-Position laden wenn vorhanden
-            if (metadata.legendPosition) {
-              console.log('Loading legendPosition:', metadata.legendPosition);
-              setLegendPosition(metadata.legendPosition);
-              legendPan.setValue(metadata.legendPosition);
-            } else {
-              // Keine gespeicherte Position - auf Standard zurücksetzen
-              setLegendPosition({ x: 0, y: 0 });
-              legendPan.setValue({ x: 0, y: 0 });
+            if (parsedMeta.legendPosition) {
+              setLegendPosition(parsedMeta.legendPosition);
+              legendPan.setValue(parsedMeta.legendPosition);
             }
-            // Label-Offsets laden wenn vorhanden
-            if (metadata.labelOffsets) {
-              console.log('Loading labelOffsets:', metadata.labelOffsets);
-              setLabelOffsets(metadata.labelOffsets);
-            } else {
-              setLabelOffsets({});
+            if (parsedMeta.labelOffsets) {
+              setLabelOffsets(parsedMeta.labelOffsets);
             }
           } catch (e) {
-            console.error('Error parsing metadata:', e);
+            console.error('Error parsing fallback metadata:', e);
           }
         } else {
-          console.log('No metadata in sketch');
+          console.log('No metadata found for sketch');
         }
       } else {
-        console.log('Sketch not found in response');
+        console.log('Sketch not found');
       }
+      console.log('Total load time:', Date.now() - startTime, 'ms');
     } catch (error) {
       console.error('Error loading sketch:', error);
       showAlert('Fehler', 'Skizze konnte nicht geladen werden');
@@ -5305,11 +5331,12 @@ export default function DrawSketchScreen() {
 
     try {
       setLoading(true);
+      const startTime = Date.now();
       
       // Create metadata with elements and canvas dimensions for proper scaling
       const metadata = {
         elements,
-        backgroundImage,
+        backgroundImage, // Will be stored separately by SketchService
         canvasWidth: width,
         canvasHeight: height - 120, // Subtract header/toolbar height
         lineSegmentMeasurements, // Speichere die Linien-Maße
@@ -5320,19 +5347,14 @@ export default function DrawSketchScreen() {
       };
 
       console.log('Saving sketch with', elements.length, 'elements');
-      console.log('Canvas dimensions:', width, 'x', (height - 120));
-      console.log('Saving legendPosition:', legendPosition);
-      console.log('Metadata:', metadata);
 
       // Generate preview image
       let sketchData = '';
       
       // Priority 1: Generate mini-sketch from elements if we have any
       if (elements.length > 0) {
-        console.log('Generating mini-sketch preview from', elements.length, 'elements...');
         try {
           sketchData = generatePreviewSvg();
-          console.log('Mini-sketch preview generated, length:', sketchData.length);
         } catch (previewError) {
           console.error('Error generating preview:', previewError);
         }
@@ -5340,13 +5362,19 @@ export default function DrawSketchScreen() {
       
       // Priority 2: Use background image if no elements preview available
       if (!sketchData && backgroundImage) {
-        console.log('Using background image as preview');
-        sketchData = backgroundImage;
+        // Use a small placeholder instead of the full background image for preview
+        const previewSvg = `
+          <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="200" fill="#f0f0f0"/>
+            <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
+            <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
+          </svg>
+        `;
+        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
       }
       
       // Priority 3: Fallback colored badge
       if (!sketchData) {
-        console.log('Using fallback badge preview');
         const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
         const colorIndex = elements.length % colors.length;
         const previewColor = colors[colorIndex];
@@ -5367,30 +5395,35 @@ export default function DrawSketchScreen() {
       }
 
       if (sketchId) {
-        // Update existing sketch
+        // Update existing sketch - save heavy data separately for speed
         console.log('Updating sketch ID:', sketchId);
-        await SketchService.update(sketchId, {
-          project_id: projectId,
-          title,
-          notes, // Speichere die Notizen direkt in der Skizze
-          sketch_data: sketchData,
-          metadata: JSON.stringify(metadata),
-          pdf_size: pdfSize,
-        });
-        console.log('Sketch updated');
+        
+        // Save heavy data (metadata + background) to separate keys in parallel with lightweight update
+        await Promise.all([
+          SketchService.saveSketchData(sketchId, metadata, backgroundImage),
+          SketchService.update(sketchId, {
+            project_id: projectId,
+            title,
+            notes,
+            sketch_data: sketchData,
+            pdf_size: pdfSize,
+          }),
+        ]);
+        
+        console.log('Sketch updated in', Date.now() - startTime, 'ms');
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
       } else {
         // Create new sketch
         console.log('Creating new sketch');
-        await SketchService.create({
+        const newSketch = await SketchService.create({
           project_id: projectId,
           title,
-          notes, // Speichere die Notizen direkt in der Skizze
+          notes,
           sketch_data: sketchData,
           metadata: JSON.stringify(metadata),
           pdf_size: pdfSize,
         });
-        console.log('Sketch created');
+        console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert('Erfolg', 'Skizze wurde gespeichert');
       }
 

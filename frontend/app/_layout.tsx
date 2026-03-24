@@ -1,8 +1,10 @@
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, LogBox } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
+import { SketchService } from '../services/LocalStorage';
 
 // Ignore canvas render warnings from pdf.js in WebView
 LogBox.ignoreLogs([
@@ -12,6 +14,12 @@ LogBox.ignoreLogs([
 ]);
 
 export default function RootLayout() {
+  // Run one-time migration of sketch data on app startup
+  useEffect(() => {
+    SketchService.migrateAllSketches().catch(err => 
+      console.error('[App] Sketch migration error:', err)
+    );
+  }, []);
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="auto" />

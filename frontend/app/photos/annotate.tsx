@@ -128,7 +128,8 @@ export default function AnnotatePhotoScreen() {
   const [showNumpad, setShowNumpad] = useState(false);
   const textInputRef = useRef<TextInput>(null);
   const editTextInputRef = useRef<TextInput>(null);
-  const activeInputRef = useRef<'text' | 'edit' | null>(null);
+  const descriptionInputRef = useRef<TextInput>(null);
+  const activeInputRef = useRef<'text' | 'edit' | 'description' | null>(null);
   
   // Zoom & Pan
   const [scale, setScale] = useState(1);
@@ -142,8 +143,19 @@ export default function AnnotatePhotoScreen() {
   
   // Numpad key handler
   const handlePhotoNumpadPress = (key: string) => {
-    const setter = activeInputRef.current === 'edit' ? setEditTextInput : setTextInput;
-    const getter = activeInputRef.current === 'edit' ? editTextInput : textInput;
+    let setter: (val: string) => void;
+    let getter: string;
+    
+    if (activeInputRef.current === 'edit') {
+      setter = setEditTextInput;
+      getter = editTextInput;
+    } else if (activeInputRef.current === 'description') {
+      setter = (val: string) => { setDescription(val); setHasChanges(true); };
+      getter = description;
+    } else {
+      setter = setTextInput;
+      getter = textInput;
+    }
     
     if (key === '⌫') {
       setter(getter.slice(0, -1));
@@ -152,6 +164,35 @@ export default function AnnotatePhotoScreen() {
     } else {
       setter(getter + key);
     }
+  };
+  
+  // Datum/Uhrzeit als Text auf Foto einfügen
+  const addDateTimeText = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('de-DE', { 
+      day: '2-digit', month: '2-digit', year: 'numeric' 
+    });
+    const timeStr = now.toLocaleTimeString('de-DE', { 
+      hour: '2-digit', minute: '2-digit' 
+    });
+    const dateTimeText = `${dateStr} ${timeStr}`;
+    
+    // Position: unten rechts auf dem Canvas
+    const x = canvasDimensions.width > 0 ? canvasDimensions.width - 20 : 300;
+    const y = canvasDimensions.height > 0 ? canvasDimensions.height - 20 : 400;
+    
+    const newTextElement = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+      x,
+      y,
+      text: dateTimeText,
+      fontSize: lastTextFontSize,
+      color: lastTextColor,
+      fontFamily: lastTextFontFamily,
+    };
+    
+    setTextElements(prev => [...prev, newTextElement]);
+    setHasChanges(true);
   };
   
   // Edit/Select mode
@@ -1001,8 +1042,46 @@ export default function AnnotatePhotoScreen() {
 
       {/* Beschreibung Eingabefeld */}
       <View style={styles.descriptionContainer}>
-        <Text style={styles.descriptionLabel}>Beschreibung:</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.descriptionLabel}>Beschreibung:</Text>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {/* Datum/Uhrzeit Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#e8f5e9',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                borderWidth: 1,
+                borderColor: '#4caf50',
+              }}
+              onPress={addDateTimeText}
+            >
+              <Ionicons name="calendar-outline" size={16} color="#388e3c" />
+              <Text style={{ fontSize: 11, color: '#388e3c', fontWeight: '600' }}>Datum</Text>
+            </TouchableOpacity>
+            {/* Numpad Toggle */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: showNumpad && activeInputRef.current === 'description' ? '#1976d2' : '#f0f0f0',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 6,
+              }}
+              onPress={() => {
+                activeInputRef.current = 'description';
+                setShowNumpad(!(showNumpad && activeInputRef.current === 'description'));
+              }}
+            >
+              <Ionicons name="keypad" size={16} color={showNumpad && activeInputRef.current === 'description' ? '#fff' : '#666'} />
+            </TouchableOpacity>
+          </View>
+        </View>
         <TextInput
+          ref={descriptionInputRef}
           style={styles.descriptionInput}
           value={description}
           onChangeText={(text) => { setDescription(text); setHasChanges(true); }}
@@ -1010,6 +1089,16 @@ export default function AnnotatePhotoScreen() {
           placeholderTextColor="#999"
           multiline={false}
           returnKeyType="done"
+          showSoftInputOnFocus={!(showNumpad && activeInputRef.current === 'description')}
+          onFocus={() => { activeInputRef.current = 'description'; }}
+        />
+        {/* Numpad für Beschreibung */}
+        <ResizableNumpad
+          visible={showNumpad && activeInputRef.current === 'description'}
+          onKeyPress={handlePhotoNumpadPress}
+          onClose={() => setShowNumpad(false)}
+          showLetters={true}
+          showUnits={false}
         />
       </View>
 

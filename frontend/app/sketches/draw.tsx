@@ -2828,13 +2828,14 @@ export default function DrawSketchScreen() {
         
         // Automatisch Maß-Eingabe öffnen für das bearbeitete Segment
         const editedPointIdx = editingPolylinePoint;
-        if (selectedElement && selectedElement.type === 'polyline' && selectedElement.data?.points) {
-          const points = selectedElement.data.points;
+        const polyEl = elements.find(el => el.id === selectedElementId);
+        if (polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
+          const points = polyEl.data.points;
           // Das Segment VOR dem Punkt (Punkt i-1 → i) ist das natürlichste
           const segmentIdx = editedPointIdx > 0 ? editedPointIdx - 1 : 0;
           // Nur öffnen wenn das Segment existiert
           if (segmentIdx < points.length - 1) {
-            setSelectedLineSegment({ elementId: selectedElement.id, segmentIndex: segmentIdx });
+            setSelectedLineSegment({ elementId: polyEl.id, segmentIndex: segmentIdx });
             setLineMeasurementExpression('');
             setShowLineMeasurementNumpad(true);
             setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);

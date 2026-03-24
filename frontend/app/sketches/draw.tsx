@@ -1778,33 +1778,34 @@ export default function DrawSketchScreen() {
         }
 
         if (sketchId) {
-          // Update existing sketch - optimized parallel save
-          const saveOps: Promise<any>[] = [];
-          
-          // Save metadata to separate key
-          saveOps.push(AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)));
+          // Update existing sketch - FAST PATH: save critical data first
+          // Save metadata to separate key (critical - contains all drawing elements)
+          const criticalOps: Promise<any>[] = [
+            AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)),
+          ];
           
           // Only save bg image if changed
           if (backgroundImageChangedRef.current) {
             if (backgroundImage) {
-              saveOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+              criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
             } else {
-              saveOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+              criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
             }
           }
           
-          // Update lightweight entry in main array (no metadata!)
-          saveOps.push(SketchService.update(sketchId, {
+          // Wait only for critical data
+          await Promise.all(criticalOps);
+          backgroundImageChangedRef.current = false;
+          console.log('Auto-saved critical data in', Date.now() - startTime, 'ms');
+          
+          // Update main array in background (fire-and-forget for preview/title)
+          SketchService.update(sketchId, {
             project_id: projectId,
             title,
             notes,
             sketch_data: sketchData,
             pdf_size: pdfSize,
-          }));
-          
-          await Promise.all(saveOps);
-          backgroundImageChangedRef.current = false;
-          console.log('Auto-saved existing sketch in', Date.now() - startTime, 'ms');
+          }).catch(err => console.error('Background auto-save update error:', err));
         } else if (title.trim()) {
           // Create new sketch
           const fullMetadata = { ...metadata, backgroundImage };
@@ -5428,41 +5429,48 @@ export default function DrawSketchScreen() {
       console.log('Preview generated in', t1 - startTime, 'ms');
 
       if (sketchId) {
-        // Update existing sketch - save data in parallel for speed
+        // Update existing sketch - FAST PATH: save critical data first, update list later
         console.log('Updating sketch ID:', sketchId);
         
-        // Build save operations
-        const saveOps: Promise<any>[] = [];
-        
-        // Always save metadata (elements, measurements etc.) - this is usually fast
+        // STEP 1: Save metadata (elements etc.) to separate key - this is the critical data
         const metaStr = JSON.stringify(metadata);
-        saveOps.push(AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr));
+        const criticalOps: Promise<any>[] = [
+          AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr),
+        ];
         
-        // Only save background image if it actually changed (skip the expensive write)
+        // Only save background image if it actually changed
         if (backgroundImageChangedRef.current) {
           console.log('Background image changed, saving...');
           if (backgroundImage) {
-            saveOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+            criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
           } else {
-            saveOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+            criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
           }
-        } else {
-          console.log('Background image unchanged, skipping save');
         }
         
-        // Update lightweight sketch entry in main array
-        saveOps.push(SketchService.update(sketchId, {
+        // Wait only for critical data to be saved
+        await Promise.all(criticalOps);
+        backgroundImageChangedRef.current = false;
+        
+        const t2 = Date.now();
+        console.log('Critical data saved in', t2 - startTime, 'ms');
+        
+        // STEP 2: Update lightweight sketch entry in main array (fire-and-forget)
+        // This updates the preview SVG, title, notes for the list view
+        // It runs in the background so the user doesn't have to wait
+        SketchService.update(sketchId, {
           project_id: projectId,
           title,
           notes,
           sketch_data: sketchData,
           pdf_size: pdfSize,
-        }));
+        }).then(() => {
+          console.log('Main array updated in background:', Date.now() - startTime, 'ms');
+        }).catch(err => {
+          console.error('Background update error:', err);
+        });
         
-        await Promise.all(saveOps);
-        backgroundImageChangedRef.current = false; // Reset change flag
-        
-        console.log('Sketch updated in', Date.now() - startTime, 'ms');
+        console.log('Sketch saved in', Date.now() - startTime, 'ms (list update in background)');
         showAlert('Erfolg', 'Skizze wurde aktualisiert');
       } else {
         // Create new sketch - include metadata for SketchService.create to handle

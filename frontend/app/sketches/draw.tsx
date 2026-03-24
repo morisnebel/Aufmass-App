@@ -4542,6 +4542,10 @@ export default function DrawSketchScreen() {
         // Maße für dieses Element
         const elementMeasurements = lineSegmentMeasurements[element.id] || {};
         
+        // Maßlinien-Stil für dieses Element (auf Element-Ebene definiert für Labels UND Maße)
+        const elMeasureStyle = measureLineStyles[element.id] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 };
+        const elColor = elMeasureStyle.color;
+        
         return (
           <G key={element.id}>
             <Path
@@ -4611,12 +4615,10 @@ export default function DrawSketchScreen() {
               const dotProduct = normalX * towardsCenterX + normalY * towardsCenterY;
               
               // Skalierte Größen basierend auf Zoom-Level
-              const elStyle = measureLineStyles[element.id] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 };
               const baseOffsetMagnitude = 16;
               const baseTickLength = 6;
-              const baseStrokeWidth = elStyle.strokeWidth;
-              const baseFontSize = elStyle.fontSize;
-              const elColor = elStyle.color;
+              const baseStrokeWidth = elMeasureStyle.strokeWidth;
+              const baseFontSize = elMeasureStyle.fontSize;
               
               const scaledOffsetMagnitude = Math.max(8, baseOffsetMagnitude / Math.max(scale, 0.5));
               const scaledTickLength = Math.max(3, baseTickLength / Math.max(scale, 0.5));
@@ -4690,6 +4692,9 @@ export default function DrawSketchScreen() {
             
             {/* Label (S1, S2, S3...) im Zentrum des Grundrisses - kleiner und verschiebbar */}
             {(() => {
+              // Maßlinien-Farbe für dieses Element
+              const labelColor = (measureLineStyles[element.id] || { color: '#1976d2' }).color;
+              
               // Berechne Zentrum des Grundrisses
               const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
               const sumY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0);
@@ -4733,7 +4738,7 @@ export default function DrawSketchScreen() {
                       y1={centerY}
                       x2={labelX}
                       y2={labelY}
-                      stroke={elColor}
+                      stroke={labelColor}
                       strokeWidth={scaledLineStroke}
                       strokeDasharray="3,2"
                       opacity={0.7}
@@ -4744,7 +4749,7 @@ export default function DrawSketchScreen() {
                     cx={labelX}
                     cy={labelY}
                     r={scaledLabelRadius}
-                    fill={elColor}
+                    fill={labelColor}
                     stroke="#fff"
                     strokeWidth={scaledLabelStroke}
                   />

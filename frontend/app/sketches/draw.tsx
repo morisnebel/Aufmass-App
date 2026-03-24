@@ -1070,6 +1070,7 @@ export default function DrawSketchScreen() {
   const [showArrowModal, setShowArrowModal] = useState(false);
   const [showPointerModal, setShowPointerModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showElementStyleEditor, setShowElementStyleEditor] = useState(false);
   const [showEditArrowModal, setShowEditArrowModal] = useState(false);
   const [showEditTextModal, setShowEditTextModal] = useState(false);
   const [showEditPointerModal, setShowEditPointerModal] = useState(false);
@@ -1914,6 +1915,33 @@ export default function DrawSketchScreen() {
       setShowDeleteConfirm(false);
     }
   };
+
+  // Farbe des ausgewählten Elements ändern
+  const changeSelectedElementColor = (newColor: string) => {
+    if (!selectedElementId) return;
+    const newElements = elements.map(el => {
+      if (el.id === selectedElementId) {
+        return { ...el, color: newColor };
+      }
+      return el;
+    });
+    addToHistory(newElements);
+  };
+
+  // Linienstärke des ausgewählten Elements ändern
+  const changeSelectedElementStrokeWidth = (newWidth: number) => {
+    if (!selectedElementId) return;
+    const newElements = elements.map(el => {
+      if (el.id === selectedElementId) {
+        return { ...el, strokeWidth: newWidth };
+      }
+      return el;
+    });
+    addToHistory(newElements);
+  };
+
+  // Stil-Editor schließen wenn Element deselektiert wird
+  const selectedElementForStyle = selectedElementId ? elements.find(el => el.id === selectedElementId) : null;
 
   // Move selected element to front (top of the stack)
   const bringToFront = () => {
@@ -3332,12 +3360,16 @@ export default function DrawSketchScreen() {
     // Prüfe ob auf ein Polyline-Segment geklickt wurde (für Maß-Funktion)
     const segmentHit = findPolylineSegmentAtPoint(locationX, locationY);
     if (segmentHit) {
-      // Segment gefunden - nur auswählen für Maß-Eingabe, KEIN Verschieben über Linien
+      // Segment gefunden - Maß-Eingabe DIREKT öffnen (ohne "Maß hinzufügen" Button)
       setSelectedLineSegment({ 
         elementId: segmentHit.element.id, 
         segmentIndex: segmentHit.segmentIndex 
       });
       setSelectedElementId(segmentHit.element.id);
+      // Numpad direkt öffnen
+      setLineMeasurementExpression('');
+      setShowLineMeasurementNumpad(true);
+      setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);
       // KEIN dragMode setzen - Polylinie nur über Mittelpunkt oder Eckpunkte verschiebbar
       return;
     } else {
@@ -5840,6 +5872,26 @@ export default function DrawSketchScreen() {
           <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#f44336' : '#ccc' }]}>Element{'\n'}löschen</Text>
         </View>
 
+        {/* Stil bearbeiten Button */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[
+              styles.toolButtonInner, 
+              !selectedElementId && styles.toolButtonDisabled,
+              showElementStyleEditor && selectedElementId && styles.toolButtonActive,
+            ]}
+            onPress={() => {
+              if (selectedElementId) {
+                setShowElementStyleEditor(!showElementStyleEditor);
+              }
+            }}
+            disabled={!selectedElementId}
+          >
+            <Ionicons name="color-palette" size={18} color={selectedElementId ? (showElementStyleEditor ? '#fff' : '#1976d2') : '#ccc'} />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#1976d2' : '#ccc' }]}>Stil{'\n'}ändern</Text>
+        </View>
+
         <View style={styles.separator} />
 
         {/* 7. Stift */}
@@ -6086,6 +6138,70 @@ export default function DrawSketchScreen() {
               />
             ))}
           </View>
+        </View>
+      )}
+
+      {/* Stil-Editor Panel für ausgewähltes Element */}
+      {showElementStyleEditor && selectedElementForStyle && (
+        <View style={styles.elementStylePanel}>
+          <View style={styles.elementStyleHeader}>
+            <Text style={styles.elementStyleTitle}>Stil bearbeiten</Text>
+            <TouchableOpacity onPress={() => setShowElementStyleEditor(false)}>
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Aktuelle Farbe und Farbauswahl */}
+          {selectedElementForStyle.type !== 'image' && (
+            <View style={styles.elementStyleSection}>
+              <Text style={styles.elementStyleSectionLabel}>Farbe:</Text>
+              <View style={styles.elementStyleColorRow}>
+                {colors.map(color => (
+                  <TouchableOpacity
+                    key={`style-${color}`}
+                    style={[
+                      styles.elementStyleColorOption,
+                      { backgroundColor: color },
+                      selectedElementForStyle.color === color && styles.elementStyleColorSelected,
+                    ]}
+                    onPress={() => changeSelectedElementColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+          
+          {/* Linienstärke - nur für Elemente die strokeWidth haben */}
+          {selectedElementForStyle.type !== 'image' && selectedElementForStyle.type !== 'text' && (
+            <View style={styles.elementStyleSection}>
+              <Text style={styles.elementStyleSectionLabel}>Linienstärke:</Text>
+              <View style={styles.elementStyleStrokeRow}>
+                {[1, 2, 3, 5, 8].map(w => (
+                  <TouchableOpacity
+                    key={`style-sw-${w}`}
+                    style={[
+                      styles.elementStyleStrokeButton,
+                      selectedElementForStyle.strokeWidth === w && styles.elementStyleStrokeButtonActive,
+                    ]}
+                    onPress={() => changeSelectedElementStrokeWidth(w)}
+                  >
+                    <View style={[
+                      styles.elementStyleStrokeDot, 
+                      { 
+                        width: Math.max(w * 2.5, 6), 
+                        height: Math.max(w * 2.5, 6),
+                        backgroundColor: selectedElementForStyle.strokeWidth === w ? '#fff' : '#333',
+                      }
+                    ]} />
+                    <Text style={[
+                      styles.elementStyleStrokeLabel,
+                      selectedElementForStyle.strokeWidth === w && { color: '#fff' }
+                    ]}>{w}px</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -6371,8 +6487,8 @@ export default function DrawSketchScreen() {
         </Animated.View>
       )}
 
-      {/* Maß hinzufügen Button - erscheint wenn ein Liniensegment ausgewählt ist */}
-      {selectedLineSegment && drawMode === 'select' && (
+      {/* Maß hinzufügen Button - erscheint wenn ein Liniensegment ausgewählt ist und Numpad NICHT offen */}
+      {selectedLineSegment && drawMode === 'select' && !showLineMeasurementNumpad && (
         <View style={styles.measurementActionBar}>
           <View style={styles.measurementActionContent}>
             <TouchableOpacity 
@@ -9619,5 +9735,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  // ===== Stil-Editor Panel Styles =====
+  elementStylePanel: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  elementStyleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  elementStyleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#333',
+  },
+  elementStyleSection: {
+    marginBottom: 10,
+  },
+  elementStyleSectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+  },
+  elementStyleColorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  elementStyleColorOption: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  elementStyleColorSelected: {
+    borderColor: '#1976d2',
+    borderWidth: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#1976d2',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {},
+    }),
+  },
+  elementStyleStrokeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  elementStyleStrokeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    minWidth: 44,
+  },
+  elementStyleStrokeButtonActive: {
+    backgroundColor: '#1976d2',
+  },
+  elementStyleStrokeDot: {
+    borderRadius: 50,
+    marginBottom: 2,
+  },
+  elementStyleStrokeLabel: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '500',
   },
 });

@@ -177,22 +177,26 @@ export default function AnnotatePhotoScreen() {
     });
     const dateTimeText = `${dateStr} ${timeStr}`;
     
-    // Position: unten rechts auf dem Canvas
-    const x = canvasDimensions.width > 0 ? canvasDimensions.width - 20 : 300;
-    const y = canvasDimensions.height > 0 ? canvasDimensions.height - 20 : 400;
+    console.log('Adding date/time text:', dateTimeText, 'canvas:', canvasDimensions);
+    
+    // Position: oben links, mit etwas Abstand vom Rand
+    const x = 20;
+    const y = 30;
     
     const newTextElement = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       x,
       y,
       text: dateTimeText,
-      fontSize: lastTextFontSize,
-      color: lastTextColor,
-      fontFamily: lastTextFontFamily,
+      fontSize: lastTextFontSize || 20,
+      color: '#FFFFFF', // Weiß für bessere Sichtbarkeit auf Fotos
+      fontFamily: lastTextFontFamily || 'System',
     };
     
     setTextElements(prev => [...prev, newTextElement]);
     setHasChanges(true);
+    
+    Alert.alert('Datum hinzugefügt', `"${dateTimeText}" wurde als Text auf dem Foto platziert.`);
   };
   
   // Edit/Select mode

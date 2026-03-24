@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Animated,
-  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,10 +40,7 @@ const ResizableNumpad: React.FC<ResizableNumpadProps> = ({
   const [caps, setCaps] = useState(false);
   const [size, setSize] = useState<NumpadSize>('M');
 
-  // Draggable position
-  const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-
-  // Load saved size
+  // Load saved size on mount
   useEffect(() => {
     AsyncStorage.getItem(NUMPAD_SIZE_KEY).then(saved => {
       if (saved && (saved === 'S' || saved === 'M' || saved === 'L')) {
@@ -59,48 +55,32 @@ const ResizableNumpad: React.FC<ResizableNumpadProps> = ({
     AsyncStorage.setItem(NUMPAD_SIZE_KEY, newSize);
   };
 
-  // Cycle through sizes on long press of the drag handle
-  const cycleSize = () => {
-    const idx = SIZE_CYCLE.indexOf(size);
-    const next = SIZE_CYCLE[(idx + 1) % SIZE_CYCLE.length];
-    changeSize(next);
-  };
-
-  // Pan responder for dragging
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dx) > 3 || Math.abs(gs.dy) > 3,
-      onPanResponderGrant: () => {
-        position.extractOffset();
-      },
-      onPanResponderMove: Animated.event(
-        [null, { dx: position.x, dy: position.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
-        position.extractOffset();
-      },
-    })
-  ).current;
-
   if (!visible) return null;
 
   const scale = SIZE_SCALES[size];
-  const baseKeySize = 44;
-  const keySize = baseKeySize * scale;
+  const keySize = 44 * scale;
   const keyHeight = keySize * 0.72;
   const fontSize = Math.round(16 * scale);
   const gap = Math.round(3 * scale);
-  const padding = Math.round(6 * scale);
+  const padding = Math.round(8 * scale);
 
+  // Handle key press with mode switching
   const handleKey = (key: string) => {
+    if (key === '__ABC__') {
+      setMode('letters');
+      return;
+    }
+    if (key === '__123__') {
+      setMode('numbers');
+      return;
+    }
     onKeyPress(key);
   };
 
-  const renderKey = (label: string, value: string, extraStyle?: any, textStyle?: any, widthMul?: number) => (
+  const Key = ({ label, value, style: extraStyle, textStyle, widthMul }: {
+    label: string; value: string; style?: any; textStyle?: any; widthMul?: number;
+  }) => (
     <TouchableOpacity
-      key={label + value}
       style={[styles.key, { minWidth: keySize * (widthMul || 1), height: keyHeight }, extraStyle]}
       onPress={() => handleKey(value)}
       activeOpacity={0.6}
@@ -113,113 +93,10 @@ const ResizableNumpad: React.FC<ResizableNumpadProps> = ({
     </TouchableOpacity>
   );
 
-  const renderNumberKeys = () => (
-    <View style={{ gap }}>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('7', '7')}
-        {renderKey('8', '8')}
-        {renderKey('9', '9')}
-        {renderKey('+', '+', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('4', '4')}
-        {renderKey('5', '5')}
-        {renderKey('6', '6')}
-        {renderKey('−', '-', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('1', '1')}
-        {renderKey('2', '2')}
-        {renderKey('3', '3')}
-        {renderKey('×', '*', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey(',', ',')}
-        {renderKey('0', '0')}
-        {renderKey('.', '.')}
-        {renderKey('÷', '/', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {showLetters && renderKey('ABC', 'ABC', styles.modeKey, styles.modeText)}
-        {renderKey('C', 'C', styles.clearKey, styles.clearText)}
-        {renderKey('␣', ' ')}
-        {renderKey('⌫', '⌫', styles.delKey)}
-      </View>
-    </View>
-  );
-
-  const renderLetterKeys = () => (
-    <View style={{ gap }}>
-      {showUnits && (
-        <>
-          <View style={[styles.row, { gap }]}>
-            {['m', 'm²', 'm³', 'lfm'].map(k => renderKey(k, k, styles.unitKey, styles.unitText))}
-          </View>
-          <View style={[styles.row, { gap }]}>
-            {['Stk', 'Paar', 'kg', 'l'].map(k => renderKey(k, k, styles.unitKey, styles.unitText))}
-          </View>
-        </>
-      )}
-      {[
-        ['a','b','c','d','e','f'],
-        ['g','h','i','j','k','l','m'],
-        ['n','o','p','q','r','s'],
-        ['t','u','v','w','x','y'],
-        ['z','ä','ö','ü','ß','-'],
-      ].map((row, ri) => (
-        <View key={`row-${ri}`} style={[styles.row, { gap }]}>
-          {row.map(k => {
-            const display = caps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k;
-            return renderKey(display, display, undefined, undefined, 0.7);
-          })}
-        </View>
-      ))}
-      <View style={[styles.row, { gap }]}>
-        {renderKey('123', '123', styles.modeKey, styles.modeText)}
-        <TouchableOpacity
-          style={[styles.key, { minWidth: keySize, height: keyHeight }, caps && styles.capsActive]}
-          onPress={() => setCaps(!caps)}
-        >
-          <Ionicons name="arrow-up" size={Math.round(18 * scale)} color={caps ? '#fff' : '#666'} />
-        </TouchableOpacity>
-        {renderKey('␣', ' ')}
-        {renderKey('⌫', '⌫', styles.delKey)}
-      </View>
-    </View>
-  );
-
-  // Intercept special keys
-  const originalOnKeyPress = onKeyPress;
-  const wrappedHandleKey = (key: string) => {
-    if (key === 'ABC') {
-      setMode('letters');
-      return;
-    }
-    if (key === '123') {
-      setMode('numbers');
-      return;
-    }
-    originalOnKeyPress(key);
-  };
-
-  // Override handleKey
-  const handleKeyWrapped = wrappedHandleKey;
-
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        { transform: position.getTranslateTransform(), padding },
-      ]}
-    >
-      {/* Header: drag handle + size buttons + close */}
+    <View style={[styles.container, { padding }]}>
+      {/* Header: size buttons + close */}
       <View style={styles.header}>
-        {/* Drag handle */}
-        <View {...panResponder.panHandlers} style={styles.dragArea}>
-          <View style={styles.dragIndicator} />
-        </View>
-        
-        {/* Size buttons S/M/L */}
         <View style={styles.sizeButtons}>
           {SIZE_CYCLE.map(s => (
             <TouchableOpacity
@@ -233,161 +110,102 @@ const ResizableNumpad: React.FC<ResizableNumpadProps> = ({
         </View>
         
         {onClose && (
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="close-circle" size={22} color="#999" />
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close-circle" size={24} color="#999" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Keys */}
-      {mode === 'numbers' ? (
-        <NumberPad scale={scale} keySize={keySize} keyHeight={keyHeight} fontSize={fontSize} gap={gap}
-          onKeyPress={handleKeyWrapped} showLetters={showLetters} />
-      ) : (
-        <LetterPad scale={scale} keySize={keySize} keyHeight={keyHeight} fontSize={fontSize} gap={gap}
-          onKeyPress={handleKeyWrapped} caps={caps} setCaps={setCaps} showUnits={showUnits} />
-      )}
-    </Animated.View>
-  );
-};
-
-// Extracted key pads as sub-components to avoid re-renders
-const NumberPad = ({ scale, keySize, keyHeight, fontSize, gap, onKeyPress, showLetters }: any) => {
-  const renderKey = (label: string, value: string, extraStyle?: any, textStyle?: any) => (
-    <TouchableOpacity
-      key={label + value}
-      style={[styles.key, { minWidth: keySize, height: keyHeight }, extraStyle]}
-      onPress={() => onKeyPress(value)}
-      activeOpacity={0.6}
-    >
-      {label === '⌫' ? (
-        <Ionicons name="backspace-outline" size={Math.round(18 * scale)} color="#f44336" />
-      ) : (
-        <Text style={[styles.keyText, { fontSize }, textStyle]}>{label}</Text>
-      )}
-    </TouchableOpacity>
-  );
-
-  return (
-    <View style={{ gap }}>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('7', '7')}{renderKey('8', '8')}{renderKey('9', '9')}{renderKey('+', '+', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('4', '4')}{renderKey('5', '5')}{renderKey('6', '6')}{renderKey('−', '-', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey('1', '1')}{renderKey('2', '2')}{renderKey('3', '3')}{renderKey('×', '*', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {renderKey(',', ',')}{renderKey('0', '0')}{renderKey('.', '.')}{renderKey('÷', '/', styles.opKey, styles.opText)}
-      </View>
-      <View style={[styles.row, { gap }]}>
-        {showLetters && renderKey('ABC', 'ABC', styles.modeKey, styles.modeText)}
-        {renderKey('C', 'C', styles.clearKey, styles.clearText)}
-        {renderKey('␣', ' ')}
-        {renderKey('⌫', '⌫', styles.delKey)}
-      </View>
-    </View>
-  );
-};
-
-const LetterPad = ({ scale, keySize, keyHeight, fontSize, gap, onKeyPress, caps, setCaps, showUnits }: any) => {
-  const renderKey = (label: string, value: string, extraStyle?: any, textStyle?: any, wMul?: number) => (
-    <TouchableOpacity
-      key={label + value}
-      style={[styles.key, { minWidth: keySize * (wMul || 1), height: keyHeight }, extraStyle]}
-      onPress={() => onKeyPress(value)}
-      activeOpacity={0.6}
-    >
-      {label === '⌫' ? (
-        <Ionicons name="backspace-outline" size={Math.round(18 * scale)} color="#f44336" />
-      ) : (
-        <Text style={[styles.keyText, { fontSize }, textStyle]}>{label}</Text>
-      )}
-    </TouchableOpacity>
-  );
-
-  return (
-    <View style={{ gap }}>
-      {showUnits && (
-        <>
+      {/* Number pad */}
+      {mode === 'numbers' && (
+        <View style={{ gap }}>
           <View style={[styles.row, { gap }]}>
-            {['m', 'm²', 'm³', 'lfm'].map(k => renderKey(k, k, styles.unitKey, styles.unitText))}
+            <Key label="7" value="7" /><Key label="8" value="8" /><Key label="9" value="9" /><Key label="+" value="+" style={styles.opKey} textStyle={styles.opText} />
           </View>
           <View style={[styles.row, { gap }]}>
-            {['Stk', 'Paar', 'kg', 'l'].map(k => renderKey(k, k, styles.unitKey, styles.unitText))}
+            <Key label="4" value="4" /><Key label="5" value="5" /><Key label="6" value="6" /><Key label="−" value="-" style={styles.opKey} textStyle={styles.opText} />
           </View>
-        </>
-      )}
-      {[
-        ['a','b','c','d','e','f'],
-        ['g','h','i','j','k','l','m'],
-        ['n','o','p','q','r','s'],
-        ['t','u','v','w','x','y'],
-        ['z','ä','ö','ü','ß','-'],
-      ].map((row, ri) => (
-        <View key={`row-${ri}`} style={[styles.row, { gap }]}>
-          {row.map(k => {
-            const display = caps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k;
-            return renderKey(display, display, undefined, undefined, 0.7);
-          })}
+          <View style={[styles.row, { gap }]}>
+            <Key label="1" value="1" /><Key label="2" value="2" /><Key label="3" value="3" /><Key label="×" value="*" style={styles.opKey} textStyle={styles.opText} />
+          </View>
+          <View style={[styles.row, { gap }]}>
+            <Key label="," value="," /><Key label="0" value="0" /><Key label="." value="." /><Key label="÷" value="/" style={styles.opKey} textStyle={styles.opText} />
+          </View>
+          <View style={[styles.row, { gap }]}>
+            {showLetters && <Key label="ABC" value="__ABC__" style={styles.modeKey} textStyle={styles.modeText} />}
+            <Key label="C" value="C" style={styles.clearKey} textStyle={styles.clearText} />
+            <Key label="␣" value=" " />
+            <Key label="⌫" value="⌫" style={styles.delKey} />
+          </View>
         </View>
-      ))}
-      <View style={[styles.row, { gap }]}>
-        {renderKey('123', '123', styles.modeKey, styles.modeText)}
-        <TouchableOpacity
-          style={[styles.key, { minWidth: keySize, height: keyHeight }, caps && styles.capsActive]}
-          onPress={() => setCaps(!caps)}
-        >
-          <Ionicons name="arrow-up" size={Math.round(18 * scale)} color={caps ? '#fff' : '#666'} />
-        </TouchableOpacity>
-        {renderKey('␣', ' ')}
-        {renderKey('⌫', '⌫', styles.delKey)}
-      </View>
+      )}
+
+      {/* Letter pad */}
+      {mode === 'letters' && (
+        <View style={{ gap }}>
+          {showUnits && (
+            <>
+              <View style={[styles.row, { gap }]}>
+                {['m', 'm²', 'm³', 'lfm'].map(k => <Key key={k} label={k} value={k} style={styles.unitKey} textStyle={styles.unitText} />)}
+              </View>
+              <View style={[styles.row, { gap }]}>
+                {['Stk', 'Paar', 'kg', 'l'].map(k => <Key key={k} label={k} value={k} style={styles.unitKey} textStyle={styles.unitText} />)}
+              </View>
+            </>
+          )}
+          {[
+            ['a','b','c','d','e','f'],
+            ['g','h','i','j','k','l','m'],
+            ['n','o','p','q','r','s'],
+            ['t','u','v','w','x','y'],
+            ['z','ä','ö','ü','ß','-'],
+          ].map((row, ri) => (
+            <View key={`r${ri}`} style={[styles.row, { gap }]}>
+              {row.map(k => {
+                const d = caps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k;
+                return <Key key={k} label={d} value={d} widthMul={0.7} />;
+              })}
+            </View>
+          ))}
+          <View style={[styles.row, { gap }]}>
+            <Key label="123" value="__123__" style={styles.modeKey} textStyle={styles.modeText} />
+            <TouchableOpacity
+              style={[styles.key, { minWidth: keySize, height: keyHeight }, caps && styles.capsActive]}
+              onPress={() => setCaps(!caps)}
+            >
+              <Ionicons name="arrow-up" size={Math.round(18 * scale)} color={caps ? '#fff' : '#666'} />
+            </TouchableOpacity>
+            <Key label="␣" value=" " />
+            <Key label="⌫" value="⌫" style={styles.delKey} />
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginTop: 8,
+    backgroundColor: '#f8f8f8',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    borderRadius: 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 4,
-    gap: 10,
-  },
-  dragArea: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  dragIndicator: {
-    width: 36,
-    height: 4,
-    backgroundColor: '#ccc',
-    borderRadius: 2,
+    justifyContent: 'space-between',
+    paddingBottom: 6,
   },
   sizeButtons: {
     flexDirection: 'row',
-    gap: 3,
+    gap: 4,
   },
   sizeBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#e8e8e8',
     borderWidth: 1,
     borderColor: '#ddd',
   },
@@ -396,19 +214,22 @@ const styles = StyleSheet.create({
     borderColor: '#1565c0',
   },
   sizeBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#666',
   },
   sizeBtnTextActive: {
     color: '#fff',
   },
+  closeBtn: {
+    padding: 2,
+  },
   row: {
     flexDirection: 'row',
   },
   key: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
@@ -419,46 +240,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  opKey: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#2196f3',
-  },
-  opText: {
-    fontWeight: '700',
-    color: '#1976d2',
-  },
-  delKey: {
-    backgroundColor: '#ffebee',
-    borderColor: '#f44336',
-  },
-  clearKey: {
-    backgroundColor: '#fff3e0',
-    borderColor: '#ff9800',
-  },
-  clearText: {
-    fontWeight: '700',
-    color: '#f57c00',
-  },
-  modeKey: {
-    backgroundColor: '#e8eaf6',
-    borderColor: '#5c6bc0',
-  },
-  modeText: {
-    fontWeight: '700',
-    color: '#3949ab',
-  },
-  unitKey: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#4caf50',
-  },
-  unitText: {
-    fontWeight: '600',
-    color: '#388e3c',
-  },
-  capsActive: {
-    backgroundColor: '#1976d2',
-    borderColor: '#1565c0',
-  },
+  opKey: { backgroundColor: '#e3f2fd', borderColor: '#2196f3' },
+  opText: { fontWeight: '700', color: '#1976d2' },
+  delKey: { backgroundColor: '#ffebee', borderColor: '#f44336' },
+  clearKey: { backgroundColor: '#fff3e0', borderColor: '#ff9800' },
+  clearText: { fontWeight: '700', color: '#f57c00' },
+  modeKey: { backgroundColor: '#e8eaf6', borderColor: '#5c6bc0' },
+  modeText: { fontWeight: '700', color: '#3949ab' },
+  unitKey: { backgroundColor: '#e8f5e9', borderColor: '#4caf50' },
+  unitText: { fontWeight: '600', color: '#388e3c' },
+  capsActive: { backgroundColor: '#1976d2', borderColor: '#1565c0' },
 });
 
 export default ResizableNumpad;

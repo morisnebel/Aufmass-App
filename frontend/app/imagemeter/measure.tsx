@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line, Circle, G, Text as SvgText, Rect } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ResizableNumpad from '../../components/ResizableNumpad';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -78,8 +79,27 @@ export default function ImageMeterMeasureScreen() {
   const [unitInput, setUnitInput] = useState<'cm' | 'm'>('cm');
   const [labelInput, setLabelInput] = useState('');
   
+  // Numpad state
+  const [showNumpad, setShowNumpad] = useState(false);
+  const [activeImInput, setActiveImInput] = useState<'length' | 'label'>('length');
+  const lengthInputRef = useRef<TextInput>(null);
+  const labelInputRef = useRef<TextInput>(null);  
   // Auto-save state
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Numpad key handler for ImageMeter
+  const handleImNumpadPress = (key: string) => {
+    const setter = activeImInput === 'label' ? setLabelInput : setLengthInput;
+    const getter = activeImInput === 'label' ? labelInput : lengthInput;
+    
+    if (key === '⌫') {
+      setter(getter.slice(0, -1));
+    } else if (key === 'C') {
+      setter('');
+    } else {
+      setter(getter + key);
+    }
+  };
 
   // Load photo data
   useEffect(() => {
@@ -666,9 +686,22 @@ export default function ImageMeterMeasureScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {pendingMeasurement?.type === 'reference' ? 'Referenzmaß eingeben' : 'Maß eingeben'}
-            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.modalTitle}>
+                {pendingMeasurement?.type === 'reference' ? 'Referenzmaß eingeben' : 'Maß eingeben'}
+              </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: showNumpad ? '#1976d2' : '#f0f0f0',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 6,
+                }}
+                onPress={() => setShowNumpad(!showNumpad)}
+              >
+                <Ionicons name="keypad" size={20} color={showNumpad ? '#fff' : '#666'} />
+              </TouchableOpacity>
+            </View>
             
             {pendingMeasurement?.type === 'reference' && (
               <View style={styles.modalInfo}>
@@ -683,12 +716,15 @@ export default function ImageMeterMeasureScreen() {
             <Text style={styles.inputLabel}>Länge</Text>
             <View style={styles.lengthInputRow}>
               <TextInput
-                style={styles.lengthInput}
+                ref={lengthInputRef}
+                style={[styles.lengthInput, activeImInput === 'length' && showNumpad && { borderColor: '#1976d2', borderWidth: 2 }]}
                 value={lengthInput}
                 onChangeText={setLengthInput}
                 placeholder="0"
                 keyboardType="decimal-pad"
                 autoFocus
+                showSoftInputOnFocus={!showNumpad}
+                onFocus={() => setActiveImInput('length')}
               />
               <View style={styles.unitToggle}>
                 <TouchableOpacity
@@ -720,11 +756,23 @@ export default function ImageMeterMeasureScreen() {
             
             <Text style={styles.inputLabel}>Beschriftung (optional)</Text>
             <TextInput
-              style={styles.labelInput}
+              ref={labelInputRef}
+              style={[styles.labelInput, activeImInput === 'label' && showNumpad && { borderColor: '#1976d2', borderWidth: 2 }]}
               value={labelInput}
               onChangeText={setLabelInput}
               placeholder="z.B. Fensterbreite, Türhöhe..."
               placeholderTextColor="#999"
+              showSoftInputOnFocus={!showNumpad}
+              onFocus={() => setActiveImInput('label')}
+            />
+            
+            {/* Numpad */}
+            <ResizableNumpad
+              visible={showNumpad}
+              onKeyPress={handleImNumpadPress}
+              onClose={() => setShowNumpad(false)}
+              showLetters={true}
+              showUnits={true}
             />
             
             <View style={styles.modalButtons}>
@@ -735,6 +783,7 @@ export default function ImageMeterMeasureScreen() {
                   setPendingMeasurement(null);
                   setLengthInput('');
                   setLabelInput('');
+                  setShowNumpad(false);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>

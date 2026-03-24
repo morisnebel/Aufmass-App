@@ -506,6 +506,30 @@ export default function DrawSketchScreen() {
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
   const [showMeasureStyleSettings, setShowMeasureStyleSettings] = useState(false);
+  const [measureKeyboardMode, setMeasureKeyboardMode] = useState<'numbers' | 'letters'>('numbers');
+  
+  // Floating-Panel Position für Maß-Numpad
+  const measurePanelPan = useRef(new Animated.ValueXY({ x: 0, y: 100 })).current;
+  const measurePanelPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        measurePanelPan.setOffset({
+          x: (measurePanelPan.x as any)._value,
+          y: (measurePanelPan.y as any)._value,
+        });
+        measurePanelPan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: measurePanelPan.x, dy: measurePanelPan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        measurePanelPan.flattenOffset();
+      },
+    })
+  ).current;
   
   // Maßlinien-Darstellung Einstellungen (PRO ELEMENT - jedes Polygon hat eigene Einstellungen)
   const [measureLineStyles, setMeasureLineStyles] = useState<{ [elementId: string]: { color: string; strokeWidth: number; fontSize: number } }>({});
@@ -6555,309 +6579,337 @@ export default function DrawSketchScreen() {
         </Animated.View>
       )}
 
-      {/* Linien-Maß Eingabe Modal */}
-      <Modal visible={showLineMeasurementNumpad} transparent animationType="slide">
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
-          <View style={styles.modalContent}>
-            {/* Kopfzeile: Titel */}
-            <Text style={[styles.modalTitle, { marginBottom: 6 }]}>Maß eingeben</Text>
-            
-            {/* Eingabe + Löschen-Icon in einer Zeile */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <TextInput
-                ref={lineMeasurementInputRef}
-                style={[styles.modalInput, { flex: 1, marginBottom: 0 }]}
-                value={lineMeasurementExpression}
-                onChangeText={setLineMeasurementExpression}
-                placeholder={
-                  selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex]
-                    ? `Aktuell: ${lineSegmentMeasurements[selectedLineSegment.elementId][selectedLineSegment.segmentIndex]}`
-                    : 'z.B. 2,50 oder 2.50m'
-                }
-                showSoftInputOnFocus={false}
-                caretHidden={false}
-              />
-              {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
-                <TouchableOpacity
-                  style={{
-                    width: 44, height: 44,
-                    alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: '#ffebee', borderRadius: 8,
-                    borderWidth: 1, borderColor: '#ef9a9a',
-                  }}
-                  onPress={() => {
-                    removeMeasurementFromSelectedLine();
-                    setShowLineMeasurementNumpad(false);
-                    setLineMeasurementExpression('');
-                  }}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#f44336" />
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            {/* Kompaktes Numpad für Maß-Eingabe */}
-            <View style={styles.lineMeasureNumpad}>
-              {/* S/M/L Größenwahl */}
-              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 6 }}>
+      {/* Schwebendes Maß-Eingabe Panel */}
+      {showLineMeasurementNumpad && (
+        <Animated.View 
+          style={[
+            styles.floatingMeasurePanel,
+            { transform: measurePanelPan.getTranslateTransform() }
+          ]}
+        >
+          {/* Drag Handle */}
+          <View {...measurePanelPanResponder.panHandlers} style={styles.floatingMeasureDragBar}>
+            <View style={styles.floatingMeasureDragHandle} />
+            <Text style={styles.floatingMeasureTitle}>Maß eingeben</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setShowLineMeasurementNumpad(false);
+                setLineMeasurementExpression('');
+                setSelectedLineSegment(null);
+              }}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="close" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Eingabe + Löschen */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, marginBottom: 6 }}>
+            <TextInput
+              ref={lineMeasurementInputRef}
+              style={[styles.modalInput, { flex: 1, marginBottom: 0, fontSize: 15, paddingVertical: 8 }]}
+              value={lineMeasurementExpression}
+              onChangeText={setLineMeasurementExpression}
+              placeholder={
+                selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex]
+                  ? `Aktuell: ${lineSegmentMeasurements[selectedLineSegment.elementId][selectedLineSegment.segmentIndex]}`
+                  : 'z.B. 2,50m oder Text'
+              }
+              showSoftInputOnFocus={false}
+              caretHidden={false}
+            />
+            {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
+              <TouchableOpacity
+                style={{
+                  width: 38, height: 38,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: '#ffebee', borderRadius: 8,
+                  borderWidth: 1, borderColor: '#ef9a9a',
+                }}
+                onPress={() => {
+                  removeMeasurementFromSelectedLine();
+                  setShowLineMeasurementNumpad(false);
+                  setLineMeasurementExpression('');
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color="#f44336" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Tastatur-Bereich */}
+          <View style={{ paddingHorizontal: 10 }}>
+            {/* Umschalt-Leiste: S/M/L + Zahlen/ABC */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
                 {(['S', 'M', 'L'] as const).map(s => (
                   <TouchableOpacity
                     key={s}
                     style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 6,
+                      paddingHorizontal: 10, paddingVertical: 3, borderRadius: 5,
                       backgroundColor: numpadSize === s ? '#1976d2' : '#e8e8e8',
-                      borderWidth: 1,
-                      borderColor: numpadSize === s ? '#1565c0' : '#ddd',
                     }}
                     onPress={() => changeNumpadSize(s)}
                   >
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '700',
-                      color: numpadSize === s ? '#fff' : '#666',
-                    }}>{s}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: numpadSize === s ? '#fff' : '#666' }}>{s}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              {(() => {
-                const sc = numpadScales[numpadSize];
-                const kH = Math.round(40 * sc);
-                const fS = Math.round(16 * sc);
-                const kStyle = [styles.lineMeasureNumpadKey, { height: kH }] as any;
-                const tStyle = [styles.lineMeasureNumpadKeyText, { fontSize: fS }];
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 4, borderRadius: 6,
+                  backgroundColor: measureKeyboardMode === 'letters' ? '#1976d2' : '#e8e8e8',
+                  borderWidth: 1, borderColor: measureKeyboardMode === 'letters' ? '#1565c0' : '#ccc',
+                }}
+                onPress={() => setMeasureKeyboardMode(measureKeyboardMode === 'numbers' ? 'letters' : 'numbers')}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: measureKeyboardMode === 'letters' ? '#fff' : '#555' }}>
+                  {measureKeyboardMode === 'numbers' ? 'ABC' : '123'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {(() => {
+              const sc = numpadScales[numpadSize];
+              const kH = Math.round(36 * sc);
+              const fS = Math.round(14 * sc);
+              
+              if (measureKeyboardMode === 'numbers') {
+                const kStyle = [styles.floatingKey, { height: kH }] as any;
+                const tStyle = [styles.floatingKeyText, { fontSize: fS }];
                 return (
                   <>
-                    <View style={styles.lineMeasureNumpadRow}>
+                    <View style={styles.floatingKeyRow}>
                       {['7','8','9'].map(k => (
                         <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
                           <Text style={tStyle}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.lineMeasureNumpadRow}>
+                    <View style={styles.floatingKeyRow}>
                       {['4','5','6'].map(k => (
                         <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
                           <Text style={tStyle}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.lineMeasureNumpadRow}>
+                    <View style={styles.floatingKeyRow}>
                       {['1','2','3'].map(k => (
                         <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
                           <Text style={tStyle}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.lineMeasureNumpadRow}>
-                      <TouchableOpacity style={kStyle} onPress={() => handleLineMeasurementNumpadPress(',')}>
-                        <Text style={tStyle}>,</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={kStyle} onPress={() => handleLineMeasurementNumpadPress('0')}>
-                        <Text style={tStyle}>0</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadDel]} onPress={() => handleLineMeasurementNumpadPress('⌫')}>
-                        <Ionicons name="backspace-outline" size={Math.round(20 * sc)} color="#f44336" />
-                      </TouchableOpacity>
+                    <View style={styles.floatingKeyRow}>
+                      {[',','0','-'].map(k => (
+                        <TouchableOpacity key={k} style={kStyle} onPress={() => handleLineMeasurementNumpadPress(k)}>
+                          <Text style={tStyle}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                    <View style={styles.lineMeasureNumpadRow}>
-                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('m')}>
-                        <Text style={[styles.lineMeasureNumpadUnitText, { fontSize: fS }]}>m</Text>
+                    <View style={styles.floatingKeyRow}>
+                      <TouchableOpacity style={[...kStyle, { backgroundColor: '#e3f2fd' }]} onPress={() => handleLineMeasurementNumpadPress('m')}>
+                        <Text style={[tStyle, { color: '#1976d2', fontWeight: '700' }]}>m</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadUnit]} onPress={() => handleLineMeasurementNumpadPress('cm')}>
-                        <Text style={[styles.lineMeasureNumpadUnitText, { fontSize: fS }]}>cm</Text>
+                      <TouchableOpacity style={[...kStyle, { backgroundColor: '#e3f2fd' }]} onPress={() => handleLineMeasurementNumpadPress('cm')}>
+                        <Text style={[tStyle, { color: '#1976d2', fontWeight: '700' }]}>cm</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[...kStyle, styles.lineMeasureNumpadClear]} onPress={() => handleLineMeasurementNumpadPress('C')}>
-                        <Text style={[styles.lineMeasureNumpadClearText, { fontSize: fS }]}>C</Text>
+                      <TouchableOpacity style={[...kStyle, { backgroundColor: '#ffebee' }]} onPress={() => handleLineMeasurementNumpadPress('\u232b')}>
+                        <Ionicons name="backspace-outline" size={Math.round(18 * sc)} color="#f44336" />
                       </TouchableOpacity>
                     </View>
                   </>
                 );
-              })()}
-            </View>
-            
-            {/* Einklappbare Maßlinien-Darstellung */}
+              } else {
+                const letterRows = [
+                  ['Q','W','E','R','T','Z','U','I','O','P'],
+                  ['A','S','D','F','G','H','J','K','L'],
+                  ['Y','X','C','V','B','N','M'],
+                ];
+                const letterKH = Math.round(34 * sc);
+                const letterFS = Math.round(12 * sc);
+                return (
+                  <>
+                    {letterRows.map((row, ri) => (
+                      <View key={`lr-${ri}`} style={[styles.floatingKeyRow, { gap: 3 }]}>
+                        {row.map(letter => (
+                          <TouchableOpacity 
+                            key={letter} 
+                            style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(28 * sc) }]}
+                            onPress={() => {
+                              setLineMeasurementExpression(prev => prev + letter.toLowerCase());
+                            }}
+                          >
+                            <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>{letter}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ))}
+                    <View style={[styles.floatingKeyRow, { gap: 3 }]}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 1, backgroundColor: '#e3f2fd' }]} onPress={() => setLineMeasurementExpression(prev => prev + ' ')}>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>Leer</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '.')}>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>.</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '/')}>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>/</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '-')}>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>-</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 1, backgroundColor: '#ffebee' }]} onPress={() => handleLineMeasurementNumpadPress('\u232b')}>
+                        <Ionicons name="backspace-outline" size={Math.round(16 * sc)} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                );
+              }
+            })()}
+          </View>
+          
+          {/* Einklappbare Maßlinien-Darstellung */}
+          <View style={{ paddingHorizontal: 10 }}>
             <TouchableOpacity 
               style={{ 
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                marginTop: 8, paddingVertical: 8, paddingHorizontal: 4,
-                borderTopWidth: 1, borderTopColor: '#e0e0e0',
+                paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#e0e0e0', marginTop: 4,
               }}
               onPress={() => setShowMeasureStyleSettings(!showMeasureStyleSettings)}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#555' }}>Maßlinien-Darstellung</Text>
-              <Ionicons name={showMeasureStyleSettings ? 'chevron-up' : 'chevron-down'} size={18} color="#888" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#555' }}>Maßlinien-Darstellung</Text>
+              <Ionicons name={showMeasureStyleSettings ? 'chevron-up' : 'chevron-down'} size={16} color="#888" />
             </TouchableOpacity>
             
             {showMeasureStyleSettings && (
               <View style={{ paddingBottom: 4 }}>
-              
-              {/* Farbe */}
-              <View style={{ marginBottom: 8 }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Farbe:</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
-                    <TouchableOpacity
-                      key={`ml-${c}`}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 14,
-                        backgroundColor: c,
-                        borderWidth: tempMeasureLineColor === c ? 3 : 1.5,
-                        borderColor: tempMeasureLineColor === c ? '#fff' : '#ddd',
-                      }}
-                      onPress={() => {
-                        setTempMeasureLineColor(c);
-                        // Sofort anwenden auf das aktuelle Element
-                        if (selectedLineSegment) {
-                          setMeasureLineStyles(prev => ({
-                            ...prev,
-                            [selectedLineSegment.elementId]: {
-                              ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                              color: c,
-                            }
-                          }));
-                        }
-                      }}
-                    />
-                  ))}
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Farbe:</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+                    {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
+                      <TouchableOpacity
+                        key={`ml-${c}`}
+                        style={{
+                          width: 24, height: 24, borderRadius: 12, backgroundColor: c,
+                          borderWidth: tempMeasureLineColor === c ? 3 : 1.5,
+                          borderColor: tempMeasureLineColor === c ? '#fff' : '#ddd',
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineColor(c);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                color: c,
+                              }
+                            }));
+                          }
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Linienstärke:</Text>
+                  <View style={{ flexDirection: 'row', gap: 5 }}>
+                    {[0.8, 1.2, 2, 3, 4].map(w => (
+                      <TouchableOpacity
+                        key={`mlw-${w}`}
+                        style={{
+                          alignItems: 'center', justifyContent: 'center',
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                          backgroundColor: tempMeasureLineStrokeWidth === w ? tempMeasureLineColor : '#f0f0f0',
+                          minWidth: 36,
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineStrokeWidth(w);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                strokeWidth: w,
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <View style={{
+                          width: Math.max(w * 2.5, 4), height: Math.max(w * 2.5, 4),
+                          borderRadius: 50, backgroundColor: tempMeasureLineStrokeWidth === w ? '#fff' : '#333',
+                        }} />
+                        <Text style={{ fontSize: 8, color: tempMeasureLineStrokeWidth === w ? '#fff' : '#666', fontWeight: '500' }}>{w}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Schriftgröße:</Text>
+                  <View style={{ flexDirection: 'row', gap: 5 }}>
+                    {[8, 11, 14, 18, 22].map(fs => (
+                      <TouchableOpacity
+                        key={`mlfs-${fs}`}
+                        style={{
+                          alignItems: 'center', justifyContent: 'center',
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                          backgroundColor: tempMeasureLineFontSize === fs ? tempMeasureLineColor : '#f0f0f0',
+                          minWidth: 36,
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineFontSize(fs);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                fontSize: fs,
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <Text style={{ fontSize: Math.min(fs, 14), color: tempMeasureLineFontSize === fs ? '#fff' : '#333', fontWeight: '700' }}>A</Text>
+                        <Text style={{ fontSize: 8, color: tempMeasureLineFontSize === fs ? '#fff' : '#666', fontWeight: '500' }}>{fs}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
               </View>
-              
-              {/* Linienstärke */}
-              <View style={{ marginBottom: 8 }}>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Linienstärke:</Text>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {[0.8, 1.2, 2, 3, 4].map(w => (
-                    <TouchableOpacity
-                      key={`mlw-${w}`}
-                      style={{
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tempMeasureLineStrokeWidth === w ? tempMeasureLineColor : '#f0f0f0',
-                        minWidth: 40,
-                      }}
-                      onPress={() => {
-                        setTempMeasureLineStrokeWidth(w);
-                        if (selectedLineSegment) {
-                          setMeasureLineStyles(prev => ({
-                            ...prev,
-                            [selectedLineSegment.elementId]: {
-                              ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                              strokeWidth: w,
-                            }
-                          }));
-                        }
-                      }}
-                    >
-                      <View style={{
-                        width: Math.max(w * 3, 4),
-                        height: Math.max(w * 3, 4),
-                        borderRadius: 50,
-                        backgroundColor: tempMeasureLineStrokeWidth === w ? '#fff' : '#333',
-                        marginBottom: 2,
-                      }} />
-                      <Text style={{
-                        fontSize: 9,
-                        color: tempMeasureLineStrokeWidth === w ? '#fff' : '#666',
-                        fontWeight: '500',
-                      }}>{w}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-              
-              {/* Schriftgröße */}
-              <View>
-                <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Schriftgröße:</Text>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {[8, 11, 14, 18, 22].map(fs => (
-                    <TouchableOpacity
-                      key={`mlfs-${fs}`}
-                      style={{
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tempMeasureLineFontSize === fs ? tempMeasureLineColor : '#f0f0f0',
-                        minWidth: 40,
-                      }}
-                      onPress={() => {
-                        setTempMeasureLineFontSize(fs);
-                        if (selectedLineSegment) {
-                          setMeasureLineStyles(prev => ({
-                            ...prev,
-                            [selectedLineSegment.elementId]: {
-                              ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                              fontSize: fs,
-                            }
-                          }));
-                        }
-                      }}
-                    >
-                      <Text style={{
-                        fontSize: Math.min(fs, 16),
-                        color: tempMeasureLineFontSize === fs ? '#fff' : '#333',
-                        fontWeight: '700',
-                      }}>A</Text>
-                      <Text style={{
-                        fontSize: 9,
-                        color: tempMeasureLineFontSize === fs ? '#fff' : '#666',
-                        fontWeight: '500',
-                      }}>{fs}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
             )}
-            
-            <View style={[styles.modalButtons, { marginTop: 10 }]}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton, { flex: 1 }]}
-                onPress={() => {
+          </View>
+          
+          {/* Buttons */}
+          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 10, paddingBottom: 10, paddingTop: 6 }}>
+            <TouchableOpacity
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: '#f5f5f5', borderWidth: 1, borderColor: '#ddd' }}
+              onPress={() => {
+                setShowLineMeasurementNumpad(false);
+                setLineMeasurementExpression('');
+                setSelectedLineSegment(null);
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1}>Abbrechen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: '#1976d2' }}
+              onPress={() => {
+                if (lineMeasurementExpression.trim()) {
+                  addMeasurementToSelectedLine();
+                } else {
                   setShowLineMeasurementNumpad(false);
                   setLineMeasurementExpression('');
                   setSelectedLineSegment(null);
-                }}
-              >
-                <Text style={[styles.cancelButtonText, { fontSize: 14 }]} numberOfLines={1}>Abbrechen</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  styles.confirmButton, 
-                  { flex: 1 },
-                  !lineMeasurementExpression.trim() && !selectedLineSegment && styles.buttonDisabled,
-                ]}
-                onPress={() => {
-                  if (lineMeasurementExpression.trim()) {
-                    // Maß hinzufügen
-                    addMeasurementToSelectedLine();
-                  } else {
-                    // Nur Stil geändert → Fertig/Schließen
-                    setShowLineMeasurementNumpad(false);
-                    setLineMeasurementExpression('');
-                    setSelectedLineSegment(null);
-                  }
-                }}
-              >
-                <Text style={[styles.confirmButtonText, { fontSize: 14 }]} numberOfLines={1}>
-                  {lineMeasurementExpression.trim() ? 'Hinzufügen' : 'Fertig'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+                }
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }} numberOfLines={1}>
+                {lineMeasurementExpression.trim() ? 'Hinzufügen' : 'Fertig'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+        </Animated.View>
+      )}
 
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">
@@ -9930,6 +9982,75 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   // ===== Stil-Editor Panel Styles =====
+  // ===== Floating Measure Panel =====
+  floatingMeasurePanel: {
+    position: 'absolute',
+    top: 60,
+    left: 10,
+    right: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 },
+      android: { elevation: 10 },
+      default: {},
+    }),
+    zIndex: 999,
+    overflow: 'hidden',
+  },
+  floatingMeasureDragBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  floatingMeasureDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ccc',
+    position: 'absolute',
+    top: 4,
+    alignSelf: 'center',
+  },
+  floatingMeasureTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    flex: 1,
+    textAlign: 'center',
+  },
+  floatingKeyRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  floatingKey: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  floatingKeyText: {
+    fontWeight: '600',
+    color: '#333',
+  },
+  floatingLetterKey: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
   elementStylePanel: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,

@@ -315,11 +315,19 @@ export default function ProjectDetailScreen() {
       const projectId = Array.isArray(id) ? id[0] : id;
       const startTime = Date.now();
       
-      // PHASE 1: Load critical data first (project info + settings) - show UI fast
-      const [projectData, settingsData] = await Promise.all([
-        ProjectService.getById(projectId),
-        SettingsService.get(),
+      // Load all data in parallel
+      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData, settingsData] = await Promise.all([
+        ProjectService.getById(projectId).then(r => { console.log('[TIMING] ProjectService:', Date.now() - startTime, 'ms'); return r; }),
+        RoofService.getByProjectId(projectId).then(r => { console.log('[TIMING] RoofService:', Date.now() - startTime, 'ms'); return r; }),
+        PhotoService.getByProjectId(projectId).then(r => { console.log('[TIMING] PhotoService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
+        SketchService.getByProjectId(projectId).then(r => { console.log('[TIMING] SketchService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
+        ChecklistService.getByProjectId(projectId).then(r => { console.log('[TIMING] ChecklistService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
+        DocumentService.getByProjectId(projectId).then(r => { console.log('[TIMING] DocumentService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
+        AreaCalculationService.getByProjectId(projectId).then(r => { console.log('[TIMING] AreaCalcService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
+        SettingsService.get().then(r => { console.log('[TIMING] SettingsService:', Date.now() - startTime, 'ms'); return r; }),
       ]);
+
+      console.log('[TIMING] All parallel loads done in', Date.now() - startTime, 'ms');
 
       // Lade Projektart-Optionen aus den Einstellungen
       if (settingsData?.project_type_options) {
@@ -351,28 +359,12 @@ export default function ProjectDetailScreen() {
         }
       }
       
-      // Show UI immediately with project info (stop loading spinner)
-      setLoading(false);
-      console.log('[loadProjectData] Phase 1 (project info) in', Date.now() - startTime, 'ms');
-      
-      // PHASE 2: Load all tab data in parallel (background)
-      const [roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData] = await Promise.all([
-        RoofService.getByProjectId(projectId),
-        PhotoService.getByProjectId(projectId),
-        SketchService.getByProjectId(projectId),
-        ChecklistService.getByProjectId(projectId),
-        DocumentService.getByProjectId(projectId),
-        AreaCalculationService.getByProjectId(projectId),
-      ]);
-      
       setRoofs(roofsData);
       setPhotos(photosData);
       setSketches(sketchesData);
       setChecklists(checklistsData);
       setDocuments(documentsData);
       setAreaCalculations(areaCalcsData);
-      
-      console.log('[loadProjectData] Phase 2 (all data) in', Date.now() - startTime, 'ms');
       
       // Lade ImageMeter-Fotos für dieses Projekt
       try {
@@ -390,10 +382,11 @@ export default function ProjectDetailScreen() {
         setImagemeterPhotos([]);
       }
       
-      console.log('[loadProjectData] Total in', Date.now() - startTime, 'ms');
+      console.log('[TIMING] loadProjectData total:', Date.now() - startTime, 'ms');
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');
+    } finally {
       setLoading(false);
     }
   };

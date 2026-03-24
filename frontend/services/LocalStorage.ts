@@ -178,6 +178,92 @@ const getItems = async <T>(key: string): Promise<T[]> => {
   }
 };
 
+// Batch-read multiple keys in ONE native call (much faster than individual reads)
+const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => {
+  try {
+    const startTime = Date.now();
+    const pairs = await AsyncStorage.multiGet(keys);
+    const result = new Map<string, any[]>();
+    for (const [key, value] of pairs) {
+      try {
+        result.set(key, value ? JSON.parse(value) : []);
+      } catch (e) {
+        result.set(key, []);
+      }
+    }
+    console.log('[multiGet] Read', keys.length, 'keys in', Date.now() - startTime, 'ms');
+    return result;
+  } catch (error) {
+    console.error('Error in multiGet:', error);
+    // Fallback to individual reads
+    const result = new Map<string, any[]>();
+    for (const key of keys) {
+      result.set(key, await getItems(key));
+    }
+    return result;
+  }
+};
+
+// Fast project data loader - reads ALL needed data in one native call
+export const loadAllProjectDataFast = async (projectId: string): Promise<{
+  project: any | null;
+  customer: any | null;
+  roofs: any[];
+  photos: any[];
+  sketches: any[];
+  checklists: any[];
+  documents: any[];
+  areaCalculations: any[];
+  settings: any | null;
+  imagemeterPhotos: any[];
+}> => {
+  const startTime = Date.now();
+  
+  // Read ALL keys in ONE native call
+  const allData = await getMultipleItems([
+    KEYS.PROJECTS,
+    KEYS.CUSTOMERS,
+    KEYS.ROOFS,
+    KEYS.PHOTOS,
+    KEYS.SKETCHES,
+    KEYS.CHECKLISTS,
+    KEYS.DOCUMENTS,
+    KEYS.AREA_CALCULATIONS,
+    KEYS.SETTINGS,
+    'aufmassprofi_imagemeter_photos',
+  ]);
+  
+  const t1 = Date.now();
+  
+  // Filter data for this project
+  const projects = allData.get(KEYS.PROJECTS) || [];
+  const project = projects.find((p: any) => p.id === projectId) || null;
+  
+  let customer = null;
+  if (project?.customer_id) {
+    const customers = allData.get(KEYS.CUSTOMERS) || [];
+    customer = customers.find((c: any) => c.id === project.customer_id) || null;
+  }
+  
+  const roofs = (allData.get(KEYS.ROOFS) || []).filter((r: any) => r.project_id === projectId);
+  const photos = (allData.get(KEYS.PHOTOS) || []).filter((p: any) => p.project_id === projectId);
+  const sketches = (allData.get(KEYS.SKETCHES) || []).filter((s: any) => s.project_id === projectId);
+  const checklists = (allData.get(KEYS.CHECKLISTS) || []).filter((c: any) => c.project_id === projectId);
+  const documents = (allData.get(KEYS.DOCUMENTS) || []).filter((d: any) => d.project_id === projectId);
+  const areaCalculations = (allData.get(KEYS.AREA_CALCULATIONS) || []).filter((a: any) => a.project_id === projectId);
+  
+  // Settings is an object, not an array
+  const settingsArr = allData.get(KEYS.SETTINGS);
+  const settings = Array.isArray(settingsArr) && settingsArr.length > 0 ? settingsArr[0] : settingsArr;
+  
+  const allImPhotos = allData.get('aufmassprofi_imagemeter_photos') || [];
+  const imagemeterPhotos = allImPhotos.filter((p: any) => p.projectId === projectId);
+  
+  console.log('[loadAllProjectDataFast] multiGet + filter in', Date.now() - startTime, 'ms');
+  
+  return { project, customer, roofs, photos, sketches, checklists, documents, areaCalculations, settings, imagemeterPhotos };
+};
+
 const setItems = async <T>(key: string, items: T[]): Promise<void> => {
   try {
     await storage.setItem(key, JSON.stringify(items));

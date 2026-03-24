@@ -20,7 +20,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro } from '../../services/FeatureFlags';
@@ -153,7 +153,6 @@ export default function ProjectDetailScreen() {
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
   const [checklistColumns, setChecklistColumns] = useState<number>(2);
   const [loading, setLoading] = useState(true);
-  const hasLoadedOnce = useRef(false); // Track if full load has been done
   
   // Determine initial tab from URL parameter
   const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter') ? tab : 'overview';
@@ -307,100 +306,24 @@ export default function ProjectDetailScreen() {
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (!hasLoadedOnce.current) {
-        // First load: load everything
-        loadProjectData();
-      } else {
-        // Subsequent focus (e.g. returning from sketch editor): only refresh what's needed
-        refreshCurrentTabData();
-      }
-    }, [id, activeTab])
+      loadProjectData();
+    }, [id])
   );
-
-  // Fast refresh: only reload data for the current active tab
-  const refreshCurrentTabData = async () => {
-    try {
-      const projectId = Array.isArray(id) ? id[0] : id;
-      const startTime = Date.now();
-      
-      // Always refresh project info (lightweight)
-      const projectData = await ProjectService.getById(projectId);
-      if (projectData) {
-        setProject(projectData);
-        setRemarks(projectData.remarks || '');
-      }
-      
-      // Only refresh data for the currently active tab
-      switch (activeTab) {
-        case 'sketches':
-          const sketchesData = await SketchService.getByProjectId(projectId);
-          setSketches(sketchesData);
-          break;
-        case 'photos':
-          const photosData = await PhotoService.getByProjectId(projectId);
-          setPhotos(photosData);
-          break;
-        case 'roofs':
-          const roofsData = await RoofService.getByProjectId(projectId);
-          setRoofs(roofsData);
-          break;
-        case 'checklists':
-          const checklistsData = await ChecklistService.getByProjectId(projectId);
-          setChecklists(checklistsData);
-          break;
-        case 'documents':
-          const documentsData = await DocumentService.getByProjectId(projectId);
-          setDocuments(documentsData);
-          break;
-        case 'calculator':
-          const areaCalcsData = await AreaCalculationService.getByProjectId(projectId);
-          setAreaCalculations(areaCalcsData);
-          break;
-        case 'imagemeter':
-          try {
-            const AsyncStorageMod = require('@react-native-async-storage/async-storage').default;
-            const imagemeterData = await AsyncStorageMod.getItem('aufmassprofi_imagemeter_photos');
-            if (imagemeterData) {
-              const allImagemeterPhotos = JSON.parse(imagemeterData);
-              setImagemeterPhotos(allImagemeterPhotos.filter((p: any) => p.projectId === projectId));
-            }
-          } catch (e) { /* ignore */ }
-          break;
-      }
-      
-      console.log('[refreshCurrentTabData] tab:', activeTab, 'in', Date.now() - startTime, 'ms');
-    } catch (error) {
-      console.error('Error refreshing tab data:', error);
-    }
-  };
 
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
       const startTime = Date.now();
       
-      // Load all data in parallel
-      const [projectData, roofsData, photosData, sketchesData, checklistsData, documentsData, areaCalcsData, settingsData] = await Promise.all([
-        ProjectService.getById(projectId).then(r => { console.log('[TIMING] ProjectService:', Date.now() - startTime, 'ms'); return r; }),
-        RoofService.getByProjectId(projectId).then(r => { console.log('[TIMING] RoofService:', Date.now() - startTime, 'ms'); return r; }),
-        PhotoService.getByProjectId(projectId).then(r => { console.log('[TIMING] PhotoService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
-        SketchService.getByProjectId(projectId).then(r => { console.log('[TIMING] SketchService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
-        ChecklistService.getByProjectId(projectId).then(r => { console.log('[TIMING] ChecklistService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
-        DocumentService.getByProjectId(projectId).then(r => { console.log('[TIMING] DocumentService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
-        AreaCalculationService.getByProjectId(projectId).then(r => { console.log('[TIMING] AreaCalcService:', Date.now() - startTime, 'ms, count:', r.length); return r; }),
-        SettingsService.get().then(r => { console.log('[TIMING] SettingsService:', Date.now() - startTime, 'ms'); return r; }),
-      ]);
-
-      console.log('[TIMING] All parallel loads done in', Date.now() - startTime, 'ms');
-
-      // Lade Projektart-Optionen aus den Einstellungen
-      if (settingsData?.project_type_options) {
-        setProjectTypeOptions(settingsData.project_type_options);
-      }
+      // FAST: Read ALL data in ONE native call using multiGet
+      const data = await loadAllProjectDataFast(projectId);
       
-      // Lade Checklisten-Spalten-Einstellung
-      if (settingsData?.pdf_checklist_columns) {
-        setChecklistColumns(settingsData.pdf_checklist_columns);
+      // Load settings
+      if (data.settings?.project_type_options) {
+        setProjectTypeOptions(data.settings.project_type_options);
+      }
+      if (data.settings?.pdf_checklist_columns) {
+        setChecklistColumns(data.settings.pdf_checklist_columns);
       }
 
       // Lade die zuletzt verwendete Projektart
@@ -409,45 +332,26 @@ export default function ProjectDetailScreen() {
         setLastUsedProjectTypeState(lastUsed);
       }
 
-      if (projectData) {
-        console.log('[DEBUG loadProjectData] project_type:', projectData.project_type);
-        console.log('[DEBUG loadProjectData] project_type_date:', projectData.project_type_date);
-        setProject(projectData);
-        setRemarks(projectData.remarks || '');
+      if (data.project) {
+        console.log('[DEBUG loadProjectData] project_type:', data.project.project_type);
+        console.log('[DEBUG loadProjectData] project_type_date:', data.project.project_type_date);
+        setProject(data.project);
+        setRemarks(data.project.remarks || '');
         
-        if (projectData.customer_id) {
-          const customerData = await CustomerService.getById(projectData.customer_id);
-          if (customerData) {
-            setCustomer(customerData);
-          }
+        if (data.customer) {
+          setCustomer(data.customer);
         }
       }
       
-      setRoofs(roofsData);
-      setPhotos(photosData);
-      setSketches(sketchesData);
-      setChecklists(checklistsData);
-      setDocuments(documentsData);
-      setAreaCalculations(areaCalcsData);
-      
-      // Lade ImageMeter-Fotos für dieses Projekt
-      try {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        const imagemeterData = await AsyncStorage.getItem('aufmassprofi_imagemeter_photos');
-        if (imagemeterData) {
-          const allImagemeterPhotos = JSON.parse(imagemeterData);
-          const projectImagemeterPhotos = allImagemeterPhotos.filter((p: any) => p.projectId === projectId);
-          setImagemeterPhotos(projectImagemeterPhotos);
-        } else {
-          setImagemeterPhotos([]);
-        }
-      } catch (e) {
-        console.error('Error loading imagemeter photos:', e);
-        setImagemeterPhotos([]);
-      }
+      setRoofs(data.roofs);
+      setPhotos(data.photos);
+      setSketches(data.sketches);
+      setChecklists(data.checklists);
+      setDocuments(data.documents);
+      setAreaCalculations(data.areaCalculations);
+      setImagemeterPhotos(data.imagemeterPhotos);
       
       console.log('[TIMING] loadProjectData total:', Date.now() - startTime, 'ms');
-      hasLoadedOnce.current = true;
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');

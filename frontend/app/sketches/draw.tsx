@@ -17,6 +17,7 @@ import {
   PanResponder,
   Image as RNImage,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';

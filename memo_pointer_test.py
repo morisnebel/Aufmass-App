@@ -13,7 +13,7 @@ import subprocess
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://imagemeter-build.preview.emergentagent.com/api"
+BACKEND_URL = "https://construction-pro-app.preview.emergentagent.com/api"
 
 class MemoPointerTester:
     def __init__(self):

@@ -608,9 +608,12 @@ export default function DrawSketchScreen() {
     const locationX = e.nativeEvent?.locationX ?? -1;
     const locationY = e.nativeEvent?.locationY ?? -1;
     
-    // SVG-Koordinaten berechnen (viewBox: -50 -50 400 400)
-    const svgX = (locationX / protractorScale) * (400/300) - 50;
-    const svgY = (locationY / protractorScale) * (400/300) - 50;
+    // SVG-Koordinaten berechnen (dynamische viewBox)
+    const vbExtra = Math.max(protractorRefLineExt, protractorAngleLineExt, 0);
+    const vbMin = -50 - vbExtra;
+    const vbSize = 400 + 2 * vbExtra;
+    const svgX = (locationX / protractorScale) * (vbSize/300) + vbMin;
+    const svgY = (locationY / protractorScale) * (vbSize/300) + vbMin;
     
     // Endpunkte der Linien im SVG-Raum (mit Rotation)
     const rotRad = protractorRotation * Math.PI / 180;
@@ -669,7 +672,7 @@ export default function DrawSketchScreen() {
         const newY = origY + totalDy;
         let newAngle = Math.atan2(newY, newX) * 180 / Math.PI;
         if (protractorMirrored) newAngle += 180;
-        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
+        const newLen = Math.min(300, Math.max(30, Math.sqrt(newX * newX + newY * newY)));
         setProtractorRotation(Math.round(newAngle));
         setProtractorRefLineExt(Math.round(newLen - 140));
       } else if (handle === 'angle') {
@@ -690,7 +693,7 @@ export default function DrawSketchScreen() {
         let newRelAngle = protractorMirrored ? -(newAbsAngle - protractorRotation + 180) : newAbsAngle - protractorRotation;
         while (newRelAngle < -180) newRelAngle += 360;
         while (newRelAngle > 360) newRelAngle -= 360;
-        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
+        const newLen = Math.min(300, Math.max(30, Math.sqrt(newX * newX + newY * newY)));
         setProtractorAngle(Math.round(newRelAngle));
         setProtractorAngleLineExt(Math.round(newLen - 140));
       }
@@ -8618,7 +8621,7 @@ export default function DrawSketchScreen() {
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
             <View style={styles.protractorSvgContainer}>
-              <Svg width={300} height={300} viewBox="-50 -50 400 400">
+              <Svg width={300} height={300} viewBox={`${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)}`}>
                 {/* Gesamte Rotation um den Mittelpunkt */}
                 <G transform={`rotate(${protractorRotation}, 150, 150)`}>
                 {/* Halbtransparenter Hintergrund */}

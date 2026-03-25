@@ -919,8 +919,8 @@ export default function DrawSketchScreen() {
         <View {...modalNumpadPanResponder.panHandlers} style={styles.floatingMeasureDragBar}>
           <View style={styles.floatingMeasureDragHandle} />
           <Text style={styles.floatingMeasureTitle}>Tastatur</Text>
-          <TouchableOpacity onPress={closeModalNumpad} style={{ padding: 4 }}>
-            <Ionicons name="close" size={20} color="#666" />
+          <TouchableOpacity onPress={closeModalNumpad} style={{ padding: 8, marginRight: -4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="close-circle" size={26} color="#999" />
           </TouchableOpacity>
         </View>
         
@@ -6064,11 +6064,11 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
             {/* Notizen zur Skizze Button */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, notes.trim() && styles.toolButtonWithBadge]}
+              style={[styles.toolButtonInner, showNotesModal && styles.toolButtonActive, notes.trim() && !showNotesModal && styles.toolButtonWithBadge]}
               onPress={() => setShowNotesModal(true)}
             >
               <View style={styles.notesButtonContainer}>
-                <Ionicons name="document-text-outline" size={18} color={notes.trim() ? '#4caf50' : '#333'} />
+                <Ionicons name="document-text-outline" size={18} color={showNotesModal ? '#fff' : notes.trim() ? '#4caf50' : '#333'} />
                 {notes.trim() && (
                   <View style={styles.notesBadge}>
                     <Ionicons name="checkmark" size={8} color="#fff" />
@@ -6614,9 +6614,10 @@ export default function DrawSketchScreen() {
                 setLineMeasurementExpression('');
                 setSelectedLineSegment(null);
               }}
-              style={{ padding: 4 }}
+              style={{ padding: 8, marginRight: -4 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={20} color="#666" />
+              <Ionicons name="close-circle" size={26} color="#999" />
             </TouchableOpacity>
           </View>
           

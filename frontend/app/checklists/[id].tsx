@@ -1759,119 +1759,129 @@ export default function EditChecklistScreen() {
               </Text>
             )}
 
-            {/* Erweitertes Numpad mit Zahlen/Buchstaben-Umschaltung */}
+            {/* Erweitertes Numpad - gleiches Design wie in Skizzen */}
             {showNumpad && (
-              <View style={styles.numpadCompact}>
+              <View style={{ paddingHorizontal: 8, paddingTop: 4, paddingBottom: 4 }}>
+                {/* Umschalt-Leiste: Zahlen/ABC */}
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 4 }}>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 4, borderRadius: 6,
+                      backgroundColor: numpadMode === 'letters' ? '#1976d2' : '#e8e8e8',
+                      borderWidth: 1, borderColor: numpadMode === 'letters' ? '#1565c0' : '#ccc',
+                    }}
+                    onPress={() => setNumpadMode(numpadMode === 'numbers' ? 'letters' : 'numbers')}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: numpadMode === 'letters' ? '#fff' : '#555' }}>
+                      {numpadMode === 'numbers' ? 'ABC' : '123'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
                 {numpadMode === 'numbers' ? (
                   <>
-                    {/* Zahlen-Modus */}
-                    <View style={styles.numpadRowCompact}>
-                      {['7','8','9','+'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='+' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                          <Text style={k==='+' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['7','8','9'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['4','5','6','-'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='-' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k)}>
-                          <Text style={k==='-' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k === '-' ? '−' : k}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['4','5','6'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['1','2','3','×'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='×' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k === '×' ? '*' : k)}>
-                          <Text style={k==='×' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['1','2','3'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      {[',','0','.','÷'].map(k => (
-                        <TouchableOpacity key={k} style={[styles.numpadKeyCompact, k==='÷' && styles.numpadOpCompact]} onPress={() => handleNumpadPress(k === '÷' ? '/' : k)}>
-                          <Text style={k==='÷' ? styles.numpadOpText : styles.numpadKeyTextCompact}>{k}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {[',','0','-'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadModeCompact]} onPress={() => setNumpadMode('letters')}>
-                        <Text style={styles.numpadModeText}>ABC</Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+                      {['+','×','÷'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k === '×' ? '*' : k === '÷' ? '/' : k)}>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>{k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                      <TouchableOpacity style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('m')}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>m</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadClearCompact]} onPress={() => handleNumpadPress('C')}>
-                        <Text style={styles.numpadClearTextCompact}>C</Text>
+                      <TouchableOpacity style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('cm')}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1976d2' }}>cm</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(' ')}>
-                        <Text style={styles.numpadKeyTextCompact}>␣</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadDelCompact]} onPress={() => handleNumpadPress('⌫')}>
+                      <TouchableOpacity style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffebee', borderRadius: 6, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('⌫')}>
                         <Ionicons name="backspace-outline" size={18} color="#f44336" />
                       </TouchableOpacity>
                     </View>
                   </>
                 ) : (
                   <>
-                    {/* Buchstaben-Modus */}
-                    <View style={styles.numpadRowCompact}>
-                      {['m','m²','m³','lfm'].map((k, i) => (
-                        <TouchableOpacity key={`unit-${i}`} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadUnitText}>{k}</Text>
+                    {/* Einheiten */}
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+                      {['m','m²','m³','lfm'].map(k => (
+                        <TouchableOpacity key={`u-${k}`} style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#1976d2' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['Stk','Paar','kg','l'].map((k, i) => (
-                        <TouchableOpacity key={`unit2-${i}`} style={[styles.numpadKeyCompact, styles.numpadUnitCompact]} onPress={() => handleNumpadPress(k)}>
-                          <Text style={styles.numpadUnitText}>{k}</Text>
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 4 }}>
+                      {['Stk','kg','l','Paar'].map(k => (
+                        <TouchableOpacity key={`u2-${k}`} style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(k)}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#1976d2' }}>{k}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['a','b','c','d','e','f'].map(k => (
-                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
+                    {/* QWERTZ Buchstaben */}
+                    {[
+                      ['Q','W','E','R','T','Z','U','I','O','P'],
+                      ['A','S','D','F','G','H','J','K','L'],
+                      ['Y','X','C','V','B','N','M'],
+                    ].map((row, ri) => (
+                      <View key={`lr-${ri}`} style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                        {row.map(letter => (
+                          <TouchableOpacity key={letter} style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(numpadCaps ? letter : letter.toLowerCase())}>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>{numpadCaps ? letter : letter.toLowerCase()}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ))}
+                    {/* Umlaute + Sonderzeichen */}
+                    <View style={{ flexDirection: 'row', gap: 3, marginBottom: 3 }}>
+                      {['ä','ö','ü','ß'].map(k => (
+                        <TouchableOpacity key={k} style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>{numpadCaps ? k.toUpperCase() : k}</Text>
                         </TouchableOpacity>
                       ))}
-                    </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['g','h','i','j','k','l','m'].map(k => (
-                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['n','o','p','q','r','s'].map(k => (
-                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['t','u','v','w','x','y'].map(k => (
-                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? k.toUpperCase() : k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? k.toUpperCase() : k}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={styles.numpadRowCompact}>
-                      {['z','ä','ö','ü','ß','-'].map(k => (
-                        <TouchableOpacity key={`let-${k}`} style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(numpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k)}>
-                          <Text style={styles.numpadKeyTextCompact}>{numpadCaps ? (k === 'ß' ? 'ẞ' : k.toUpperCase()) : k}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={styles.numpadRowCompact}>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadModeCompact]} onPress={() => setNumpadMode('numbers')}>
-                        <Text style={styles.numpadModeText}>123</Text>
+                      <TouchableOpacity style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: numpadCaps ? '#1976d2' : '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => setNumpadCaps(!numpadCaps)}>
+                        <Ionicons name="arrow-up" size={16} color={numpadCaps ? '#fff' : '#666'} />
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, numpadCaps && styles.numpadCapsActive]} onPress={() => setNumpadCaps(!numpadCaps)}>
-                        <Ionicons name="arrow-up" size={18} color={numpadCaps ? '#fff' : '#666'} />
+                    </View>
+                    {/* Leer + Sonderzeichen + Backspace */}
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      <TouchableOpacity style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(' ')}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1976d2' }}>Leer</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.numpadKeyCompact} onPress={() => handleNumpadPress(' ')}>
-                        <Text style={styles.numpadKeyTextCompact}>{"␣"}</Text>
+                      <TouchableOpacity style={{ flex: 0.5, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('.')}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>.</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.numpadKeyCompact, styles.numpadDelCompact]} onPress={() => handleNumpadPress('⌫')}>
-                        <Ionicons name="backspace-outline" size={18} color="#f44336" />
+                      <TouchableOpacity style={{ flex: 0.5, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('/')}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>/</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffebee', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('⌫')}>
+                        <Ionicons name="backspace-outline" size={16} color="#f44336" />
                       </TouchableOpacity>
                     </View>
                   </>

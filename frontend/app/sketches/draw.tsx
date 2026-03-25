@@ -6942,6 +6942,49 @@ export default function DrawSketchScreen() {
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Winkel anpassen</Text>
             </TouchableOpacity>
           )}
+          {/* "Zu Projektfotos hinzufügen" Button wenn ein Bild-Element ausgewählt ist */}
+          {selectedElementId && (() => {
+            const selEl = elements.find(el => el.id === selectedElementId);
+            if (selEl && selEl.type === 'image' && selEl.data?.uri) {
+              return (
+                <TouchableOpacity 
+                  style={{
+                    backgroundColor: '#1976d2',
+                    borderRadius: 20,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 4,
+                  }}
+                  onPress={async () => {
+                    try {
+                      const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+                      if (!projectId) {
+                        showAlert('Fehler', 'Kein Projekt zugeordnet');
+                        return;
+                      }
+                      await PhotoService.create({
+                        project_id: projectId,
+                        uri: selEl.data.uri,
+                        image_data: selEl.data.uri,
+                        description: `Aus Skizze übernommen`,
+                      });
+                      showAlert('Gespeichert', 'Foto wurde zu den Projektfotos hinzugefügt');
+                    } catch (err) {
+                      console.error('Fehler beim Speichern:', err);
+                      showAlert('Fehler', 'Foto konnte nicht gespeichert werden');
+                    }
+                  }}
+                >
+                  <Ionicons name="images-outline" size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Zu Projektfotos</Text>
+                </TouchableOpacity>
+              );
+            }
+            return null;
+          })()}
           {photoEditMode && (
             <View style={styles.photoEditBadge}>
               <Ionicons name="image-outline" size={14} color="#fff" />

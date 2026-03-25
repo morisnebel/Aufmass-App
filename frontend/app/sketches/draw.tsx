@@ -1818,7 +1818,6 @@ export default function DrawSketchScreen() {
     if (elements.length > 0 && currentSketchId === sketchId) {
       try {
         setIsSaving(true); // Blockiere weitere Klicks
-        setLoading(true);
         const startTime = Date.now();
         
         // Create metadata WITHOUT backgroundImage (stored separately)
@@ -1834,8 +1833,6 @@ export default function DrawSketchScreen() {
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
-        console.log('Saving legendPosition:', legendPosition);
-        console.log('Saving notes:', notes);
 
         // Generate preview image
         let sketchData = '';
@@ -1880,59 +1877,62 @@ export default function DrawSketchScreen() {
           sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
         }
 
-        if (sketchId) {
-          // Update existing sketch - FAST PATH: save critical data first
-          // Save metadata to separate key (critical - contains all drawing elements)
-          const criticalOps: Promise<any>[] = [
-            AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)),
-          ];
-          
-          // Only save bg image if changed
-          if (backgroundImageChangedRef.current) {
-            if (backgroundImage) {
-              criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
-            } else {
-              criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+        // SPEICHERN IM HINTERGRUND - Navigation sofort ausführen
+        const saveInBackground = async () => {
+          try {
+            if (sketchId) {
+              const criticalOps: Promise<any>[] = [
+                AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)),
+              ];
+              
+              if (backgroundImageChangedRef.current) {
+                if (backgroundImage) {
+                  criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+                } else {
+                  criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+                }
+              }
+              
+              await Promise.all(criticalOps);
+              backgroundImageChangedRef.current = false;
+              console.log('Background-saved critical data in', Date.now() - startTime, 'ms');
+              
+              SketchService.update(sketchId, {
+                project_id: projectId,
+                title,
+                notes,
+                sketch_data: sketchData,
+                pdf_size: pdfSize,
+              }).catch(err => console.error('Background save update error:', err));
+            } else if (title.trim()) {
+              const fullMetadata = { ...metadata, backgroundImage };
+              await SketchService.create({
+                project_id: projectId,
+                title,
+                notes,
+                sketch_data: sketchData,
+                metadata: JSON.stringify(fullMetadata),
+                pdf_size: pdfSize,
+              });
+              backgroundImageChangedRef.current = false;
+              console.log('Background-saved new sketch in', Date.now() - startTime, 'ms');
             }
+          } catch (error) {
+            console.error('Error background-saving sketch:', error);
           }
-          
-          // Wait only for critical data
-          await Promise.all(criticalOps);
-          backgroundImageChangedRef.current = false;
-          console.log('Auto-saved critical data in', Date.now() - startTime, 'ms');
-          
-          // Update main array in background (fire-and-forget for preview/title)
-          SketchService.update(sketchId, {
-            project_id: projectId,
-            title,
-            notes,
-            sketch_data: sketchData,
-            pdf_size: pdfSize,
-          }).catch(err => console.error('Background auto-save update error:', err));
-        } else if (title.trim()) {
-          // Create new sketch
-          const fullMetadata = { ...metadata, backgroundImage };
-          await SketchService.create({
-            project_id: projectId,
-            title,
-            notes,
-            sketch_data: sketchData,
-            metadata: JSON.stringify(fullMetadata),
-            pdf_size: pdfSize,
-          });
-          backgroundImageChangedRef.current = false;
-          console.log('Auto-saved new sketch in', Date.now() - startTime, 'ms');
-        }
+        };
+        
+        // Speichern im Hintergrund starten (nicht warten!)
+        saveInBackground();
+        
       } catch (error) {
-        console.error('Error auto-saving sketch:', error);
-      } finally {
-        setLoading(false);
-        setIsSaving(false);
+        console.error('Error preparing sketch save:', error);
       }
     }
     
-    // Navigate back to project details - use router.back() to return to existing page
-    // instead of router.replace() which creates a duplicate in the stack
+    // SOFORT zurück navigieren - Speichern läuft im Hintergrund
+    // Immer router.back() verwenden, um den Navigation-Stack korrekt zu halten
+    // router.replace() würde den Stack zerstören und zu falscher Navigation führen
     router.back();
   };
 

@@ -580,6 +580,7 @@ export default function DrawSketchScreen() {
   
   // Winkelmesser-Tool state - NEU: Bildschirmkoordinaten-basiert
   const [showProtractor, setShowProtractor] = useState(false);
+  const [showProtractorHint, setShowProtractorHint] = useState(false);
   const [showProtractorAngleInput, setShowProtractorAngleInput] = useState(false);
   const [protractorAngleInput, setProtractorAngleInput] = useState('0');
   const [protractorUseComplementary, setProtractorUseComplementary] = useState(false);
@@ -599,6 +600,7 @@ export default function DrawSketchScreen() {
       setProtractorCenter({ x: cx, y: cy });
       setProtractorRefEnd({ x: cx + defaultLen, y: cy });
       setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
+      setShowProtractorHint(true); // Hinweis anzeigen
     }
   }, [showProtractor]);
   
@@ -8878,6 +8880,78 @@ export default function DrawSketchScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          )}
+          
+          {/* Hinweis-Overlay beim Öffnen */}
+          {showProtractorHint && (
+            <TouchableOpacity 
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 100,
+                padding: 24,
+              }}
+              activeOpacity={1}
+              onPress={() => setShowProtractorHint(false)}
+            >
+              <View style={{
+                backgroundColor: '#fff',
+                borderRadius: 16,
+                padding: 24,
+                maxWidth: 360,
+                width: '90%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+              }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 16, textAlign: 'center' }}>
+                  Winkelmesser
+                </Text>
+                
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF5722', marginRight: 10 }} />
+                    <Text style={{ fontSize: 14, color: '#555', flex: 1 }}>
+                      Mittelpunkt auf die Ecke ziehen
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#2196f3', marginRight: 10 }} />
+                    <Text style={{ fontSize: 14, color: '#555', flex: 1 }}>
+                      Referenzlinie auf die erste Kante ziehen
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF5722', marginRight: 10, borderWidth: 2, borderColor: '#fff' }} />
+                    <Text style={{ fontSize: 14, color: '#555', flex: 1 }}>
+                      Winkellinie auf die zweite Kante ziehen
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={{ backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center' }}>
+                    Tipp: Für genaue Ergebnisse das Foto möglichst frontal zur Oberfläche aufnehmen
+                  </Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={{
+                    backgroundColor: '#FF5722',
+                    borderRadius: 25,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setShowProtractorHint(false)}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Verstanden</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           )}
           
           {/* Schließen-Button */}

@@ -310,18 +310,16 @@ export default function ProjectDetailScreen() {
   const [isTabLoading, setIsTabLoading] = useState(false);
   const prevTabRef = useRef(activeTab);
 
-  // Beim Tab-Wechsel: kurz Ladeanzeige zeigen, dann Inhalte rendern
-  useEffect(() => {
-    if (prevTabRef.current !== activeTab) {
-      prevTabRef.current = activeTab;
-      // Nur für Tabs mit schweren Vorschauen (Skizzen, Fotos) Ladeanzeige zeigen
-      if (activeTab === 'sketches' || activeTab === 'photos') {
-        setIsTabLoading(true);
-        const timer = setTimeout(() => {
-          setIsTabLoading(false);
-        }, 100); // Kurze Verzögerung, damit UI-Thread den Spinner zeigen kann
-        return () => clearTimeout(timer);
-      }
+  // Tab-Wechsel mit sofortiger Ladeanzeige für schwere Tabs
+  const handleTabChange = useCallback((newTab: typeof activeTab) => {
+    if (newTab === activeTab) return;
+    if (newTab === 'sketches' || newTab === 'photos') {
+      setIsTabLoading(true);
+      setActiveTab(newTab);
+      // Kurze Verzögerung, damit der Spinner erst angezeigt wird, bevor die schweren SVGs rendern
+      setTimeout(() => setIsTabLoading(false), 150);
+    } else {
+      setActiveTab(newTab);
     }
   }, [activeTab]);
 
@@ -331,7 +329,7 @@ export default function ProjectDetailScreen() {
         title: tabTitles[activeTab] || 'Projektdetails',
         headerLeft: () => (
           <TouchableOpacity 
-            onPress={() => setActiveTab('overview')} 
+            onPress={() => handleTabChange('overview')} 
             style={{ 
               flexDirection: 'row', 
               alignItems: 'center', 
@@ -341,8 +339,8 @@ export default function ProjectDetailScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '500' }}>Projektdetails</Text>
+            <Ionicons name="chevron-back" size={28} color="#000" />
+            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });
@@ -4076,7 +4074,7 @@ export default function ProjectDetailScreen() {
           {/* 1. Info - Blau */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'overview' && styles.tabPillActive]}
-            onPress={() => setActiveTab('overview')}
+            onPress={() => handleTabChange('overview')}
           >
             <Ionicons 
               name={activeTab === 'overview' ? "information-circle" : "information-circle-outline"}
@@ -4091,7 +4089,7 @@ export default function ProjectDetailScreen() {
           {/* 2. Foto - Grün */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'photos' && styles.tabPillActive]}
-            onPress={() => setActiveTab('photos')}
+            onPress={() => handleTabChange('photos')}
           >
             <Ionicons 
               name={activeTab === 'photos' ? "camera" : "camera-outline"}
@@ -4113,7 +4111,7 @@ export default function ProjectDetailScreen() {
           {/* 3. Skizze - Lila */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'sketches' && styles.tabPillActive]}
-            onPress={() => setActiveTab('sketches')}
+            onPress={() => handleTabChange('sketches')}
           >
             <Ionicons 
               name={activeTab === 'sketches' ? "brush" : "brush-outline"}
@@ -4135,7 +4133,7 @@ export default function ProjectDetailScreen() {
           {/* 3.5 Fotomessung - Grün/Teal */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'imagemeter' && styles.tabPillActive]}
-            onPress={() => setActiveTab('imagemeter')}
+            onPress={() => handleTabChange('imagemeter')}
           >
             <Ionicons 
               name={activeTab === 'imagemeter' ? "analytics" : "analytics-outline"}
@@ -4158,7 +4156,7 @@ export default function ProjectDetailScreen() {
           {Features.showFlaechenTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'calculator' && styles.tabPillActive]}
-            onPress={() => setActiveTab('calculator')}
+            onPress={() => handleTabChange('calculator')}
           >
             <Ionicons 
               name={activeTab === 'calculator' ? "grid" : "grid-outline"}
@@ -4182,7 +4180,7 @@ export default function ProjectDetailScreen() {
           {Features.showDachTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'roofs' && styles.tabPillActive]}
-            onPress={() => setActiveTab('roofs')}
+            onPress={() => handleTabChange('roofs')}
           >
             <Ionicons 
               name={activeTab === 'roofs' ? "home" : "home-outline"}
@@ -4205,7 +4203,7 @@ export default function ProjectDetailScreen() {
           {/* 6. Liste - Türkis */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'checklists' && styles.tabPillActive]}
-            onPress={() => setActiveTab('checklists')}
+            onPress={() => handleTabChange('checklists')}
           >
             <Ionicons 
               name={activeTab === 'checklists' ? "checkbox" : "checkbox-outline"}
@@ -4227,7 +4225,7 @@ export default function ProjectDetailScreen() {
           {/* 7. Notiz - Pink */}
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'remarks' && styles.tabPillActive]}
-            onPress={() => setActiveTab('remarks')}
+            onPress={() => handleTabChange('remarks')}
           >
             <Ionicons 
               name={activeTab === 'remarks' ? "document-text" : "document-text-outline"}
@@ -4243,7 +4241,7 @@ export default function ProjectDetailScreen() {
           {Features.showDokuTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'documents' && styles.tabPillActive]}
-            onPress={() => setActiveTab('documents')}
+            onPress={() => handleTabChange('documents')}
           >
             <Ionicons 
               name={activeTab === 'documents' ? "folder" : "folder-outline"}

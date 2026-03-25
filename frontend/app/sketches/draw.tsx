@@ -4374,31 +4374,10 @@ export default function DrawSketchScreen() {
   const checkTransformHandles = (element: DrawElement, x: number, y: number): { type: 'rotate' | 'resize' | 'angle-rotate' | 'angle-adjust', handle: string } | null => {
     const handleRadius = 15;
     
-    // Prüfe zuerst, ob das Element zu einer Winkelgruppe gehört
+    // Winkelgruppen: Keine Endpunkt-Griffe - nur als Ganzes verschieben
+    // Bearbeitung über "Winkel anpassen" Button
     if (isAngleGroupElement(element.id)) {
-      const baseId = getAngleGroupBaseId(element.id);
-      const geo = getAngleGroupGeometry(baseId);
-      if (geo) {
-        // Endpunkt der Referenzlinie (blau) - zum Drehen
-        const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
-        const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
-        const distRef = Math.sqrt(Math.pow(x - refEndX, 2) + Math.pow(y - refEndY, 2));
-        console.log(`[ANGLE-HANDLE-CHECK] distRef=${distRef.toFixed(1)}, threshold=${handleRadius * 2.5}`);
-        if (distRef < handleRadius * 2.5) {
-          console.log('[ANGLE-HANDLE-CHECK] HIT: angle-rotate (ref-end)');
-          return { type: 'angle-rotate', handle: 'ref-end' };
-        }
-        
-        // Endpunkt der Winkellinie (rot) - zum Winkel anpassen
-        const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
-        const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
-        const distAngle = Math.sqrt(Math.pow(x - angleEndX, 2) + Math.pow(y - angleEndY, 2));
-        console.log(`[ANGLE-HANDLE-CHECK] distAngle=${distAngle.toFixed(1)}, threshold=${handleRadius * 2.5}`);
-        if (distAngle < handleRadius * 2.5) {
-          console.log('[ANGLE-HANDLE-CHECK] HIT: angle-adjust (angle-end)');
-          return { type: 'angle-adjust', handle: 'angle-end' };
-        }
-      }
+      return null; // Kein spezieller Handle, Standard-Verschiebung wird verwendet
     }
     
     if (element.type === 'rect') {
@@ -5234,71 +5213,35 @@ export default function DrawSketchScreen() {
     const scaledRotateFontSize = Math.max(6, baseRotateFontSize / Math.max(scale, 0.5));
     const scaledRotateOffset = Math.max(15, 30 / Math.max(scale, 0.5));
     
-    // Winkelgruppen-Handles (Drehen + Verlängern)
+    // Winkelgruppen: Nur einfache Auswahl-Markierung (verschieben als Ganzes)
     if (isAngleGroupElement(element.id)) {
       const baseId = getAngleGroupBaseId(element.id);
       const geo = baseId ? getAngleGroupGeometry(baseId) : null;
-      console.log('[ANGLE-HANDLES] element:', element.id, 'baseId:', baseId, 'geo:', geo ? 'found' : 'NULL');
-      
-      if (!geo && baseId) {
-        // Debug: warum wurde geo nicht gefunden?
-        const refLineEl = elements.find(el => el.id === `${baseId}-ref-line`);
-        const angleLineEl = elements.find(el => el.id === `${baseId}-angle-line`);
-        console.log('[ANGLE-HANDLES] refLine found:', !!refLineEl, 'angleLine found:', !!angleLineEl);
-        console.log('[ANGLE-HANDLES] All element IDs:', elements.map(el => el.id).join(', '));
-      }
       
       if (geo) {
         const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
         const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
         const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
         const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
-        // Große, gut sichtbare Handles
-        const handleSize = Math.max(12, 18 / Math.max(scale, 0.5));
         const strokeW = Math.max(2, 3 / Math.max(scale, 0.5));
-        const centerSize = Math.max(6, 10 / Math.max(scale, 0.5));
+        const centerSize = Math.max(8, 12 / Math.max(scale, 0.5));
         
-        // Auswahl-Markierung: Mittelpunkt hervorheben
-        handles.push(
-          <Circle key="angle-center" cx={geo.cx} cy={geo.cy} r={centerSize} fill="rgba(255,255,255,0.8)" stroke="#333" strokeWidth={strokeW} />
-        );
-        
-        // Gestrichelte Linien zu den Endpunkten (Auswahl-Feedback)
+        // Auswahl-Rahmen: Gestrichelte Linien
         handles.push(
           <Line key="angle-ref-dash" x1={geo.cx} y1={geo.cy} x2={refEndX} y2={refEndY} 
-            stroke="rgba(33,150,243,0.4)" strokeWidth={strokeW * 3} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
+            stroke="rgba(33,150,243,0.5)" strokeWidth={strokeW * 2} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
         );
         handles.push(
           <Line key="angle-adj-dash" x1={geo.cx} y1={geo.cy} x2={angleEndX} y2={angleEndY} 
-            stroke="rgba(244,67,54,0.4)" strokeWidth={strokeW * 3} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
+            stroke="rgba(244,67,54,0.5)" strokeWidth={strokeW * 2} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
         );
         
-        // Blauer Griff am Ende der Referenzlinie (zum Drehen) - GROSS
+        // Verschiebe-Griff am Mittelpunkt
         handles.push(
-          <G key="angle-rotate-handle">
-            <Circle cx={refEndX} cy={refEndY} r={handleSize} fill="#2196f3" stroke="#fff" strokeWidth={strokeW} />
-            <SvgText x={refEndX} y={refEndY + handleSize * 0.35} fill="#fff" fontSize={handleSize * 0.8} textAnchor="middle" fontWeight="bold">↻</SvgText>
+          <G key="angle-center">
+            <Circle cx={geo.cx} cy={geo.cy} r={centerSize} fill="rgba(255,255,255,0.9)" stroke="#FF5722" strokeWidth={strokeW} />
+            <SvgText x={geo.cx} y={geo.cy + centerSize * 0.35} fill="#FF5722" fontSize={centerSize * 0.8} textAnchor="middle" fontWeight="bold">✥</SvgText>
           </G>
-        );
-        
-        // Roter Griff am Ende der Winkellinie (zum Winkel anpassen) - GROSS
-        handles.push(
-          <G key="angle-adjust-handle">
-            <Circle cx={angleEndX} cy={angleEndY} r={handleSize} fill="#f44336" stroke="#fff" strokeWidth={strokeW} />
-            <SvgText x={angleEndX} y={angleEndY + handleSize * 0.35} fill="#fff" fontSize={handleSize * 0.8} textAnchor="middle" fontWeight="bold">↻</SvgText>
-          </G>
-        );
-      } else if (element.type === 'line') {
-        // FALLBACK: Zeige einfache Griffpunkte an den Linienenden
-        console.log('[ANGLE-HANDLES] Using FALLBACK handles for line element');
-        const { x1, y1, x2, y2 } = element.data;
-        const handleSize = Math.max(12, 18 / Math.max(scale, 0.5));
-        const strokeW = Math.max(2, 3 / Math.max(scale, 0.5));
-        handles.push(
-          <Circle key="fallback-start" cx={x1} cy={y1} r={handleSize} fill="#ff9800" stroke="#fff" strokeWidth={strokeW} />
-        );
-        handles.push(
-          <Circle key="fallback-end" cx={x2} cy={y2} r={handleSize} fill="#ff9800" stroke="#fff" strokeWidth={strokeW} />
         );
       }
       return <G>{handles}</G>;

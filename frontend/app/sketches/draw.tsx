@@ -5130,6 +5130,16 @@ export default function DrawSketchScreen() {
     if (isAngleGroupElement(element.id)) {
       const baseId = getAngleGroupBaseId(element.id);
       const geo = baseId ? getAngleGroupGeometry(baseId) : null;
+      console.log('[ANGLE-HANDLES] element:', element.id, 'baseId:', baseId, 'geo:', geo ? 'found' : 'NULL');
+      
+      if (!geo && baseId) {
+        // Debug: warum wurde geo nicht gefunden?
+        const refLineEl = elements.find(el => el.id === `${baseId}-ref-line`);
+        const angleLineEl = elements.find(el => el.id === `${baseId}-angle-line`);
+        console.log('[ANGLE-HANDLES] refLine found:', !!refLineEl, 'angleLine found:', !!angleLineEl);
+        console.log('[ANGLE-HANDLES] All element IDs:', elements.map(el => el.id).join(', '));
+      }
+      
       if (geo) {
         const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
         const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
@@ -5169,6 +5179,18 @@ export default function DrawSketchScreen() {
             <Circle cx={angleEndX} cy={angleEndY} r={handleSize} fill="#f44336" stroke="#fff" strokeWidth={strokeW} />
             <SvgText x={angleEndX} y={angleEndY + handleSize * 0.35} fill="#fff" fontSize={handleSize * 0.8} textAnchor="middle" fontWeight="bold">↻</SvgText>
           </G>
+        );
+      } else if (element.type === 'line') {
+        // FALLBACK: Zeige einfache Griffpunkte an den Linienenden
+        console.log('[ANGLE-HANDLES] Using FALLBACK handles for line element');
+        const { x1, y1, x2, y2 } = element.data;
+        const handleSize = Math.max(12, 18 / Math.max(scale, 0.5));
+        const strokeW = Math.max(2, 3 / Math.max(scale, 0.5));
+        handles.push(
+          <Circle key="fallback-start" cx={x1} cy={y1} r={handleSize} fill="#ff9800" stroke="#fff" strokeWidth={strokeW} />
+        );
+        handles.push(
+          <Circle key="fallback-end" cx={x2} cy={y2} r={handleSize} fill="#ff9800" stroke="#fff" strokeWidth={strokeW} />
         );
       }
       return <G>{handles}</G>;

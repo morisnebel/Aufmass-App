@@ -1931,12 +1931,9 @@ export default function DrawSketchScreen() {
       }
     }
     
-    // Navigate back to project details with sketches tab
-    if (projectId) {
-      router.replace(`/projects/${projectId}?tab=sketches`);
-    } else {
-      router.replace('/');
-    }
+    // Navigate back to project details - use router.back() to return to existing page
+    // instead of router.replace() which creates a duplicate in the stack
+    router.back();
   };
 
   // Delete selected element (or entire angle group if part of one)

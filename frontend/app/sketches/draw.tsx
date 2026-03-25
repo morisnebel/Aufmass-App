@@ -685,9 +685,11 @@ export default function DrawSketchScreen() {
       dragHandle = 'body'; // Mittelpunkt = ganzer Körper bewegen
     }
     
-    // Lupe für Endpunkt-Drag aktivieren
-    if (dragHandle === 'ref' || dragHandle === 'angle') {
-      const targetPt = dragHandle === 'ref' ? protractorRefEnd : protractorAngleEnd;
+    // Lupe für Drag aktivieren (auch am Mittelpunkt!)
+    if (dragHandle === 'ref' || dragHandle === 'angle' || dragHandle === 'body') {
+      const targetPt = dragHandle === 'ref' ? protractorRefEnd 
+        : dragHandle === 'angle' ? protractorAngleEnd 
+        : protractorCenter;
       // Lupe mit Canvas-relativen Koordinaten
       if (canvasLayout) {
         setMagnifierTargetPosition({ x: targetPt.x - canvasLayout.x, y: targetPt.y - canvasLayout.y });
@@ -735,10 +737,11 @@ export default function DrawSketchScreen() {
     
     if (handle === 'body') {
       // Alles verschieben
-      setProtractorCenter({ 
+      const newCenter = { 
         x: protractorDragRef.current.initialCenter.x + dx,
         y: protractorDragRef.current.initialCenter.y + dy,
-      });
+      };
+      setProtractorCenter(newCenter);
       setProtractorRefEnd({
         x: protractorDragRef.current.initialRefEnd.x + dx,
         y: protractorDragRef.current.initialRefEnd.y + dy,
@@ -747,6 +750,11 @@ export default function DrawSketchScreen() {
         x: protractorDragRef.current.initialAngleEnd.x + dx,
         y: protractorDragRef.current.initialAngleEnd.y + dy,
       });
+      // Lupe am Mittelpunkt aktualisieren
+      if (canvasLayout) {
+        setMagnifierTargetPosition({ x: newCenter.x - canvasLayout.x, y: newCenter.y - canvasLayout.y });
+        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+      }
     } else if (handle === 'ref') {
       const newPos = {
         x: protractorDragRef.current.initialRefEnd.x + dx,
@@ -774,11 +782,10 @@ export default function DrawSketchScreen() {
   
   // Drag End
   const handleProtractorDragEnd = useCallback(() => {
-    if (protractorDragRef.current.dragHandle !== 'body') {
-      setShowMagnifier(false);
-      setMagnifierPosition(null);
-      setMagnifierSnapshot(null); // Snapshot freigeben
-    }
+    // Lupe bei allen Drag-Typen ausblenden
+    setShowMagnifier(false);
+    setMagnifierPosition(null);
+    setMagnifierSnapshot(null);
     protractorDragRef.current.isDragging = false;
     protractorDragRef.current.dragHandle = 'body';
   }, []);

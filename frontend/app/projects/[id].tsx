@@ -4130,7 +4130,8 @@ export default function ProjectDetailScreen() {
             )}
           </TouchableOpacity>
           
-          {/* 3.5 Fotomessung - Grün/Teal */}
+          {/* 3.5 Fotomessung - Grün/Teal - nur in Pro */}
+          {Features.showMessungTab && (
           <TouchableOpacity
             style={[styles.tabPill, activeTab === 'imagemeter' && styles.tabPillActive]}
             onPress={() => handleTabChange('imagemeter')}
@@ -4151,6 +4152,7 @@ export default function ProjectDetailScreen() {
               </View>
             )}
           </TouchableOpacity>
+          )}
           
           {/* 4. Flächen - Orange - nur in Pro */}
           {Features.showFlaechenTab && (

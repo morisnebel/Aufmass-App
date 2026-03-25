@@ -411,7 +411,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.company_name}
                 onChangeText={(text) => setSettings({ ...settings, company_name: text })}
-                placeholder="z.B. Nebel-Bedachung"
+                placeholder="z.B. Aufmassprofi"
               />
             </View>
 

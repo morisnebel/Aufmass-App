@@ -62,6 +62,7 @@ export const getFeatures = () => ({
   showFlaechenTab: _isPro,
   showDachTab: _isPro,
   showDokuTab: _isPro,
+  showMessungTab: _isPro,
   
   // Checklisten
   maxChecklistItems: _isPro ? 999 : 5,
@@ -91,6 +92,7 @@ export const Features = {
   showFlaechenTab: false,
   showDachTab: false,
   showDokuTab: false,
+  showMessungTab: false,
   
   // Checklisten
   maxChecklistItems: 5,

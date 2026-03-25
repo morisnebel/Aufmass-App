@@ -3621,21 +3621,33 @@ export default function DrawSketchScreen() {
       
       // Polylines nur über Mittelpunkt oder Eckpunkte verschiebbar, nicht über die Fläche
       if (clickedElement.type !== 'polyline') {
-        console.log('[DEBUG] Setting drag mode to move for:', clickedElement.type);
-        setDragMode('move');
-        setDragStart({ x: locationX, y: locationY });
-        setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
-        
         // WINKEL-GRUPPEN-LOGIK: Prüfe ob das Element Teil einer Winkel-Gruppe ist
         const baseId = getAngleGroupBaseId(clickedElement.id);
         if (baseId) {
-          // Es ist ein Winkel-Element - speichere alle Gruppenelemente
-          const groupIds = getAngleGroupElementIds(baseId);
-          const groupElements = elements.filter(el => groupIds.includes(el.id));
-          setOriginalGroupElements(groupElements.map(el => JSON.parse(JSON.stringify(el))));
-          setMovingGroupBaseId(baseId);
+          console.log('[DEBUG] Angle group element tapped:', clickedElement.id, 'baseId:', baseId);
+          // Winkelgruppe: NICHT sofort den Verschiebungsmodus starten
+          // Stattdessen nur auswählen, damit die Griff-Punkte sichtbar werden
+          // Der Benutzer kann dann entweder einen Griff ziehen oder das Element verschieben
+          // Verschiebung wird erst beim NÄCHSTEN Drag gestartet
+          if (selectedElementId === clickedElement.id) {
+            // Element war schon ausgewählt → Verschiebung starten
+            console.log('[DEBUG] Angle group: starting move (already selected)');
+            setDragMode('move');
+            setDragStart({ x: locationX, y: locationY });
+            setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+            const groupIds = getAngleGroupElementIds(baseId);
+            const groupElements = elements.filter(el => groupIds.includes(el.id));
+            setOriginalGroupElements(groupElements.map(el => JSON.parse(JSON.stringify(el))));
+            setMovingGroupBaseId(baseId);
+          }
+          // Erstes Tap → nur auswählen (Handles werden sichtbar)
         } else {
-          // Kein Winkel-Element - Gruppen-State zurücksetzen
+          // Kein Winkel-Element → normales Verschieben
+          console.log('[DEBUG] Setting drag mode to move for:', clickedElement.type);
+          setDragMode('move');
+          setDragStart({ x: locationX, y: locationY });
+          setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+          // Gruppen-State zurücksetzen
           setOriginalGroupElements([]);
           setMovingGroupBaseId(null);
         }
@@ -5109,7 +5121,9 @@ export default function DrawSketchScreen() {
     // Winkelgruppen-Handles (Drehen + Verlängern)
     if (isAngleGroupElement(element.id)) {
       const baseId = getAngleGroupBaseId(element.id);
-      const geo = getAngleGroupGeometry(baseId);
+      console.log('=== ANGLE GROUP HANDLES ===', element.id, 'baseId:', baseId);
+      const geo = baseId ? getAngleGroupGeometry(baseId) : null;
+      console.log('=== ANGLE GEO ===', geo);
       if (geo) {
         const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
         const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);

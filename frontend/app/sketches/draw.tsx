@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -578,144 +578,187 @@ export default function DrawSketchScreen() {
   const measurementInputRef = useRef<TextInput>(null);
   const availableUnits = ['m', 'm²', 'm³', 'lfm', 'Stück', 'Paar', 'kg', 'l'];
   
-  // Winkelmesser-Tool state
+  // Winkelmesser-Tool state - NEU: Bildschirmkoordinaten-basiert
   const [showProtractor, setShowProtractor] = useState(false);
-  const [protractorAngle, setProtractorAngle] = useState(0);
-  const [protractorScale, setProtractorScale] = useState(1);
   const [showProtractorAngleInput, setShowProtractorAngleInput] = useState(false);
   const [protractorAngleInput, setProtractorAngleInput] = useState('0');
-  const [protractorUseComplementary, setProtractorUseComplementary] = useState(false); // Komplementärwinkel (180° - angle)
-  const [protractorMirrored, setProtractorMirrored] = useState(false); // Horizontal spiegeln
-  const [protractorDrawSize, setProtractorDrawSize] = useState(60); // Größe des gezeichneten Winkels (30-100)
-  const [protractorRotation, setProtractorRotation] = useState(0); // Basis-Rotation des gesamten Winkelmessers (in Grad)
-  const [protractorRefLineExt, setProtractorRefLineExt] = useState(0); // Verlängerung der Referenzlinie über Kreis hinaus
-  const [protractorAngleLineExt, setProtractorAngleLineExt] = useState(0); // Verlängerung der Winkellinie über Kreis hinaus
-  // Winkelmesser Position mit useState für bessere Web-Kompatibilität
-  const [protractorPosition, setProtractorPosition] = useState({ x: 0, y: 0 });
+  const [protractorUseComplementary, setProtractorUseComplementary] = useState(false);
+  const [protractorDrawSize, setProtractorDrawSize] = useState(60);
+  
+  // Bildschirmkoordinaten der drei Punkte
+  const [protractorCenter, setProtractorCenter] = useState({ x: 0, y: 0 });
+  const [protractorRefEnd, setProtractorRefEnd] = useState({ x: 0, y: 0 });
+  const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
+  
+  // Initialisierung wenn Winkelmesser geöffnet wird
+  useEffect(() => {
+    if (showProtractor) {
+      const cx = screenWidth / 2;
+      const cy = Math.max(200, canvasHeight / 2 + 60); // unterhalb der Toolbar
+      const defaultLen = Math.min(screenWidth * 0.3, 150);
+      setProtractorCenter({ x: cx, y: cy });
+      setProtractorRefEnd({ x: cx + defaultLen, y: cy });
+      setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
+    }
+  }, [showProtractor]);
+  
+  // Berechneter Winkel aus den Positionen
+  const protractorAngle = useMemo(() => {
+    const dx1 = protractorRefEnd.x - protractorCenter.x;
+    const dy1 = protractorRefEnd.y - protractorCenter.y;
+    const dx2 = protractorAngleEnd.x - protractorCenter.x;
+    const dy2 = protractorAngleEnd.y - protractorCenter.y;
+    if (Math.sqrt(dx1*dx1+dy1*dy1) < 1 || Math.sqrt(dx2*dx2+dy2*dy2) < 1) return 0;
+    const a1 = Math.atan2(dy1, dx1);
+    const a2 = Math.atan2(dy2, dx2);
+    let deg = Math.round((a2 - a1) * 180 / Math.PI);
+    while (deg < -180) deg += 360;
+    while (deg > 180) deg -= 360;
+    return deg;
+  }, [protractorCenter, protractorRefEnd, protractorAngleEnd]);
+  
+  // Berechnete Rotation (Richtung der Referenzlinie)
+  const protractorRotation = useMemo(() => {
+    return Math.round(Math.atan2(
+      protractorRefEnd.y - protractorCenter.y,
+      protractorRefEnd.x - protractorCenter.x
+    ) * 180 / Math.PI);
+  }, [protractorCenter, protractorRefEnd]);
+  
+  // Hilfsfunktion: Winkel um Delta ändern
+  const adjustProtractorAngle = useCallback((deltaDeg: number) => {
+    const dx = protractorAngleEnd.x - protractorCenter.x;
+    const dy = protractorAngleEnd.y - protractorCenter.y;
+    const currentAngle = Math.atan2(dy, dx);
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const newAngle = currentAngle + deltaDeg * Math.PI / 180;
+    setProtractorAngleEnd({
+      x: protractorCenter.x + len * Math.cos(newAngle),
+      y: protractorCenter.y + len * Math.sin(newAngle),
+    });
+  }, [protractorAngleEnd, protractorCenter]);
+  
+  // Hilfsfunktion: Winkel auf bestimmten Wert setzen
+  const setProtractorAngleTo = useCallback((deg: number) => {
+    const refDx = protractorRefEnd.x - protractorCenter.x;
+    const refDy = protractorRefEnd.y - protractorCenter.y;
+    const refAngle = Math.atan2(refDy, refDx);
+    const dx = protractorAngleEnd.x - protractorCenter.x;
+    const dy = protractorAngleEnd.y - protractorCenter.y;
+    const len = Math.max(50, Math.sqrt(dx * dx + dy * dy));
+    const newAngle = refAngle + deg * Math.PI / 180;
+    setProtractorAngleEnd({
+      x: protractorCenter.x + len * Math.cos(newAngle),
+      y: protractorCenter.y + len * Math.sin(newAngle),
+    });
+  }, [protractorRefEnd, protractorAngleEnd, protractorCenter]);
+  
+  // Protractor Drag Ref
   const protractorDragRef = useRef({ 
     isDragging: false,
-    startX: 0, 
-    startY: 0,
-    initialPosX: 0,
-    initialPosY: 0,
+    startX: 0, startY: 0,
     dragHandle: 'body' as 'body' | 'ref' | 'angle',
+    initialCenter: { x: 0, y: 0 },
+    initialRefEnd: { x: 0, y: 0 },
+    initialAngleEnd: { x: 0, y: 0 },
   });
   
-  // Handler für Protractor Drag - arbeitet mit Mouse/Touch Events
+  // Drag Start - welcher Griff wurde angefasst?
   const handleProtractorDragStart = useCallback((e: any) => {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
-    const locationX = e.nativeEvent?.locationX ?? -1;
-    const locationY = e.nativeEvent?.locationY ?? -1;
     
-    // SVG-Koordinaten berechnen (dynamische viewBox)
-    const vbExtra = Math.max(protractorRefLineExt, protractorAngleLineExt, 0);
-    const vbMin = -50 - vbExtra;
-    const vbSize = 400 + 2 * vbExtra;
-    const svgX = (locationX / protractorScale) * (vbSize/300) + vbMin;
-    const svgY = (locationY / protractorScale) * (vbSize/300) + vbMin;
+    // Abstand zu jedem Handle berechnen
+    const distRef = Math.sqrt(Math.pow(pageX - protractorRefEnd.x, 2) + Math.pow(pageY - protractorRefEnd.y, 2));
+    const distAngle = Math.sqrt(Math.pow(pageX - protractorAngleEnd.x, 2) + Math.pow(pageY - protractorAngleEnd.y, 2));
+    const distCenter = Math.sqrt(Math.pow(pageX - protractorCenter.x, 2) + Math.pow(pageY - protractorCenter.y, 2));
     
-    // Endpunkte der Linien im SVG-Raum (mit Rotation)
-    const rotRad = protractorRotation * Math.PI / 180;
-    const refLen = 140 + protractorRefLineExt;
-    const angleRad = protractorAngle * Math.PI / 180;
-    const angleLen = 140 + protractorAngleLineExt;
-    
-    const refEndX = protractorMirrored ? 150 - refLen * Math.cos(rotRad) : 150 + refLen * Math.cos(rotRad);
-    const refEndY = protractorMirrored ? 150 - refLen * Math.sin(rotRad) : 150 + refLen * Math.sin(rotRad);
-    
-    const aEndX = protractorMirrored
-      ? 150 - angleLen * Math.cos(angleRad - rotRad)
-      : 150 + angleLen * Math.cos(angleRad + rotRad);
-    const aEndY = protractorMirrored
-      ? 150 + angleLen * Math.sin(-(angleRad - rotRad))
-      : 150 + angleLen * Math.sin(angleRad + rotRad);
-    
-    const distRef = Math.sqrt(Math.pow(svgX - refEndX, 2) + Math.pow(svgY - refEndY, 2));
-    const distAngle = Math.sqrt(Math.pow(svgX - aEndX, 2) + Math.pow(svgY - aEndY, 2));
-    
+    const handleRadius = 50; // Touch-Zielgröße
     let dragHandle: 'body' | 'ref' | 'angle' = 'body';
-    if (distRef < 50 && distRef < distAngle) dragHandle = 'ref';
-    else if (distAngle < 50) dragHandle = 'angle';
     
-    // Lupe aktivieren wenn ein Handle gezogen wird
-    if (dragHandle !== 'body') {
+    // Endpunkte haben Priorität
+    if (distRef < handleRadius && distRef <= distAngle) {
+      dragHandle = 'ref';
+    } else if (distAngle < handleRadius) {
+      dragHandle = 'angle';
+    } else if (distCenter < handleRadius * 1.5) {
+      dragHandle = 'body'; // Mittelpunkt = ganzer Körper bewegen
+    }
+    
+    // Lupe für Endpunkt-Drag aktivieren
+    if (dragHandle === 'ref' || dragHandle === 'angle') {
+      const targetPt = dragHandle === 'ref' ? protractorRefEnd : protractorAngleEnd;
+      // Lupe mit Canvas-relativen Koordinaten
+      if (canvasLayout) {
+        setMagnifierTargetPosition({ x: targetPt.x - canvasLayout.x, y: targetPt.y - canvasLayout.y });
+        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+      }
       setShowMagnifier(true);
-      setMagnifierPosition({ x: locationX, y: locationY });
-      setMagnifierTargetPosition({ x: locationX, y: locationY });
     }
     
     protractorDragRef.current = {
-      isDragging: true, startX: pageX, startY: pageY,
-      initialPosX: protractorPosition.x, initialPosY: protractorPosition.y,
+      isDragging: true,
+      startX: pageX, startY: pageY,
       dragHandle,
+      initialCenter: { ...protractorCenter },
+      initialRefEnd: { ...protractorRefEnd },
+      initialAngleEnd: { ...protractorAngleEnd },
     };
-  }, [protractorPosition.x, protractorPosition.y, protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale]);
+  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasLayout]);
   
+  // Drag Move - Position direkt aktualisieren
   const handleProtractorDragMove = useCallback((e: any) => {
     if (!protractorDragRef.current.isDragging) return;
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     const handle = protractorDragRef.current.dragHandle;
     
+    // Endpunkte: reduzierte Empfindlichkeit für Präzision
+    const sensitivity = handle === 'body' ? 1.0 : 0.5;
+    const dx = (pageX - protractorDragRef.current.startX) * sensitivity;
+    const dy = (pageY - protractorDragRef.current.startY) * sensitivity;
+    
     if (handle === 'body') {
-      const dx = pageX - protractorDragRef.current.startX;
-      const dy = pageY - protractorDragRef.current.startY;
-      setProtractorPosition({
-        x: protractorDragRef.current.initialPosX + dx,
-        y: protractorDragRef.current.initialPosY + dy,
+      // Alles verschieben
+      setProtractorCenter({ 
+        x: protractorDragRef.current.initialCenter.x + dx,
+        y: protractorDragRef.current.initialCenter.y + dy,
       });
-    } else {
-      // Verschiebung in SVG-Einheiten (mit reduzierter Empfindlichkeit für Präzision)
-      const dragSensitivity = 0.5; // 0.5 = halbe Geschwindigkeit, mehr Präzision
-      const totalDx = (pageX - protractorDragRef.current.startX) / protractorScale * dragSensitivity;
-      const totalDy = (pageY - protractorDragRef.current.startY) / protractorScale * dragSensitivity;
-      
-      // Lupe-Position aktualisieren
-      if (showMagnifier) {
-        setMagnifierPosition({ x: pageX, y: pageY - 80 });
-        setMagnifierTargetPosition({ x: pageX, y: pageY });
+      setProtractorRefEnd({
+        x: protractorDragRef.current.initialRefEnd.x + dx,
+        y: protractorDragRef.current.initialRefEnd.y + dy,
+      });
+      setProtractorAngleEnd({
+        x: protractorDragRef.current.initialAngleEnd.x + dx,
+        y: protractorDragRef.current.initialAngleEnd.y + dy,
+      });
+    } else if (handle === 'ref') {
+      const newPos = {
+        x: protractorDragRef.current.initialRefEnd.x + dx,
+        y: protractorDragRef.current.initialRefEnd.y + dy,
+      };
+      setProtractorRefEnd(newPos);
+      // Lupe aktualisieren
+      if (canvasLayout) {
+        setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
+        setMagnifierPosition({ x: pageX, y: pageY - 100 });
       }
-      
-      if (handle === 'ref') {
-        const rotRad = protractorRotation * Math.PI / 180;
-        const refLen = 140 + protractorRefLineExt;
-        const origX = protractorMirrored ? -refLen * Math.cos(rotRad) : refLen * Math.cos(rotRad);
-        const origY = protractorMirrored ? -refLen * Math.sin(rotRad) : refLen * Math.sin(rotRad);
-        const newX = origX + totalDx;
-        const newY = origY + totalDy;
-        let newAngle = Math.atan2(newY, newX) * 180 / Math.PI;
-        if (protractorMirrored) newAngle += 180;
-        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
-        setProtractorRotation(Math.round(newAngle));
-        setProtractorRefLineExt(Math.round(newLen - 140));
-      } else if (handle === 'angle') {
-        const rotRad = protractorRotation * Math.PI / 180;
-        const angleRad = protractorAngle * Math.PI / 180;
-        const angleLen = 140 + protractorAngleLineExt;
-        let origX: number, origY: number;
-        if (protractorMirrored) {
-          origX = -angleLen * Math.cos(angleRad - rotRad);
-          origY = angleLen * Math.sin(-(angleRad - rotRad));
-        } else {
-          origX = angleLen * Math.cos(angleRad + rotRad);
-          origY = angleLen * Math.sin(angleRad + rotRad);
-        }
-        const newX = origX + totalDx;
-        const newY = origY + totalDy;
-        const newAbsAngle = Math.atan2(newY, newX) * 180 / Math.PI;
-        let newRelAngle = protractorMirrored ? -(newAbsAngle - protractorRotation + 180) : newAbsAngle - protractorRotation;
-        while (newRelAngle < -180) newRelAngle += 360;
-        while (newRelAngle > 360) newRelAngle -= 360;
-        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
-        setProtractorAngle(Math.round(newRelAngle));
-        setProtractorAngleLineExt(Math.round(newLen - 140));
+    } else if (handle === 'angle') {
+      const newPos = {
+        x: protractorDragRef.current.initialAngleEnd.x + dx,
+        y: protractorDragRef.current.initialAngleEnd.y + dy,
+      };
+      setProtractorAngleEnd(newPos);
+      // Lupe aktualisieren
+      if (canvasLayout) {
+        setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
+        setMagnifierPosition({ x: pageX, y: pageY - 100 });
       }
     }
-  }, [protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale, showMagnifier]);
+  }, [canvasLayout]);
   
+  // Drag End
   const handleProtractorDragEnd = useCallback(() => {
-    // Lupe ausblenden wenn Handle losgelassen wird
     if (protractorDragRef.current.dragHandle !== 'body') {
       setShowMagnifier(false);
       setMagnifierPosition(null);
@@ -724,19 +767,17 @@ export default function DrawSketchScreen() {
     protractorDragRef.current.dragHandle = 'body';
   }, []);
   
-  // Refs für die neuesten Callbacks (verhindert stale closures im PanResponder)
+  // Refs für PanResponder (verhindert stale closures)
   const dragStartRef = useRef(handleProtractorDragStart);
   const dragMoveRef = useRef(handleProtractorDragMove);
   const dragEndRef = useRef(handleProtractorDragEnd);
-  
-  // Immer die neuesten Callbacks in den Refs halten
   useEffect(() => {
     dragStartRef.current = handleProtractorDragStart;
     dragMoveRef.current = handleProtractorDragMove;
     dragEndRef.current = handleProtractorDragEnd;
   }, [handleProtractorDragStart, handleProtractorDragMove, handleProtractorDragEnd]);
   
-  // PanResponder für native Touch-Geräte (verwendet Refs für aktuelle Callbacks)
+  // PanResponder für native Touch
   const protractorPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -1652,192 +1693,105 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // KOORDINATEN-BERECHNUNG:
-    // Das protractorOverlay liegt über dem gesamten Container.
-    // Der Protractor (300x300) ist zentriert, sein Mittelpunkt liegt in der Mitte des Bildschirms.
-    // protractorPosition ist die Verschiebung relativ zu dieser Mitte.
-    //
-    // Verwende canvasLayout für präzise Berechnung:
-    // canvasLayout.y ist die Y-Position des Canvas auf dem Bildschirm
-    
-    // Screen-Mitte (wo der Protractor zentriert ist)
-    const screenCenterX = screenWidth / 2;
-    const screenCenterY = screenHeight / 2;
-    
-    // Position des Protractor-Mittelpunkts auf dem Bildschirm
-    const protractorScreenX = screenCenterX + protractorPosition.x;
-    const protractorScreenY = screenCenterY + protractorPosition.y;
-    
-    // Umrechnung auf Canvas-Koordinaten:
-    // Falls canvasLayout verfügbar, verwende präzise Werte
-    // Ansonsten Fallback auf geschätzte Werte
+    // Umrechnung auf Canvas-Koordinaten
     let centerX: number;
     let centerY: number;
     
     if (canvasLayout) {
-      // Präzise Berechnung mit gemessenen Werten
-      centerX = protractorScreenX - canvasLayout.x;
-      centerY = protractorScreenY - canvasLayout.y;
+      centerX = protractorCenter.x - canvasLayout.x;
+      centerY = protractorCenter.y - canvasLayout.y;
     } else {
-      // Fallback: Geschätzte Werte (weniger präzise)
       const headerHeight = Platform.OS === 'ios' ? 62 : 24;
       const toolbarHeight = 70;
       const topOffset = headerHeight + toolbarHeight;
-      centerX = protractorScreenX;
-      centerY = protractorScreenY - topOffset;
+      centerX = protractorCenter.x;
+      centerY = protractorCenter.y - topOffset;
     }
     
-    // Verwendbare Größe (vom Benutzer einstellbar)
-    const arcRadius = protractorDrawSize * 0.6;  // Bogenradius
-    const refLineLen = protractorDrawSize + (protractorRefLineExt * protractorDrawSize / 140);  // Referenzlinienlänge (skaliert)
-    const angleLineLen = protractorDrawSize + (protractorAngleLineExt * protractorDrawSize / 140); // Winkellinienlänge (skaliert)
-    const lineLength = protractorDrawSize;  // Standard-Linienlänge für Bogen-Berechnung
-    
-    // Basis-Rotation in Radians
-    const rotRad = protractorRotation * Math.PI / 180;
-    
-    // Berechne den anzuzeigenden Winkel
-    // Immer positive Werte verwenden
+    // Winkel-Anzeige (immer positiv)
     let displayAngle = Math.abs(protractorAngle);
-    
-    // Komplementärwinkel berechnen wenn gewünscht (für Innen/Außenwinkel)
     if (protractorUseComplementary && displayAngle !== 0 && displayAngle !== 180) {
       displayAngle = 180 - displayAngle;
     }
     
-    // Berechne ob gespiegelt oder nicht
-    const mirrorFactor = protractorMirrored ? -1 : 1;
+    // Berechne Referenzlinien-Richtung und Winkellinie aus den Endpunkten
+    const refDx = protractorRefEnd.x - protractorCenter.x;
+    const refDy = protractorRefEnd.y - protractorCenter.y;
+    const refAngle = Math.atan2(refDy, refDx);
     
-    // Erstelle den Pfad für den Winkelbogen
-    // Der tatsächliche Zeichenwinkel berücksichtigt die Spiegelung
-    const drawAngle = protractorAngle;
-    const endAngle = drawAngle * Math.PI / 180;
-    const largeArc = Math.abs(drawAngle) > 180 ? 1 : 0;
-    const sweep = (drawAngle > 0 ? 1 : 0) === (protractorMirrored ? 0 : 1) ? 1 : 0;
+    const angleDx = protractorAngleEnd.x - protractorCenter.x;
+    const angleDy = protractorAngleEnd.y - protractorCenter.y;
+    const angleEndAngle = Math.atan2(angleDy, angleDx);
+    
+    // Zeichengröße (vom Benutzer einstellbar)
+    const lineLength = protractorDrawSize;
+    const arcRadius = protractorDrawSize * 0.6;
     
     // Generiere eindeutige IDs
     const baseId = Date.now().toString(36);
-    
-    // Erstelle die Elemente für den Winkel
     const newElements: DrawElement[] = [...elements];
     
-    if (protractorMirrored) {
-      // Gespiegelter Winkel - Referenzlinie nach links
-      // 1. Referenzlinie (horizontal nach links)
+    // 1. Referenzlinie
+    const refEndX = centerX + lineLength * Math.cos(refAngle);
+    const refEndY = centerY + lineLength * Math.sin(refAngle);
+    newElements.push({
+      id: `${baseId}-ref-line`,
+      type: 'line',
+      data: { x1: centerX, y1: centerY, x2: refEndX, y2: refEndY },
+      color: '#2196f3',
+      strokeWidth: 3,
+    });
+    
+    // 2. Winkellinie
+    const angleEndX = centerX + lineLength * Math.cos(angleEndAngle);
+    const angleEndY = centerY + lineLength * Math.sin(angleEndAngle);
+    newElements.push({
+      id: `${baseId}-angle-line`,
+      type: 'line',
+      data: { x1: centerX, y1: centerY, x2: angleEndX, y2: angleEndY },
+      color: '#FF5722',
+      strokeWidth: 3,
+    });
+    
+    // 3. Winkelbogen
+    const drawAngle = protractorAngle;
+    if (drawAngle !== 0) {
+      const arcX1 = centerX + arcRadius * Math.cos(refAngle);
+      const arcY1 = centerY + arcRadius * Math.sin(refAngle);
+      const arcX2 = centerX + arcRadius * Math.cos(angleEndAngle);
+      const arcY2 = centerY + arcRadius * Math.sin(angleEndAngle);
+      const largeArc = Math.abs(drawAngle) > 180 ? 1 : 0;
+      const sweep = drawAngle > 0 ? 1 : 0;
+      const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`;
       newElements.push({
-        id: `${baseId}-ref-line`,
-        type: 'line',
-        data: { x1: centerX, y1: centerY, x2: centerX - lineLength, y2: centerY },
-        color: '#2196f3',
+        id: `${baseId}-arc`,
+        type: 'path',
+        data: arcPath,
+        color: '#4caf50',
         strokeWidth: 3,
-      });
-      
-      // 2. Winkellinie (gedreht, gespiegelt)
-      const endX = centerX - lineLength * Math.cos(endAngle);
-      const endY = centerY + lineLength * Math.sin(endAngle);
-      newElements.push({
-        id: `${baseId}-angle-line`,
-        type: 'line',
-        data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
-        color: '#FF5722',
-        strokeWidth: 3,
-      });
-      
-      // 3. Winkelbogen (gespiegelt)
-      if (drawAngle !== 0) {
-        const arcX1 = centerX - arcRadius;
-        const arcY1 = centerY;
-        const arcX2 = centerX - arcRadius * Math.cos(endAngle);
-        const arcY2 = centerY + arcRadius * Math.sin(endAngle);
-        const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`;
-        newElements.push({
-          id: `${baseId}-arc`,
-          type: 'path',
-          data: arcPath,
-          color: '#4caf50',
-          strokeWidth: 3,
-        });
-      }
-      
-      // 4. Winkeltext
-      const textAngle = endAngle / 2;
-      const textX = centerX - (arcRadius + 15) * Math.cos(textAngle);
-      const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
-      newElements.push({
-        id: `${baseId}-text`,
-        type: 'text',
-        data: { text: `${displayAngle}°` },
-        color: '#FF5722',
-        strokeWidth: 1,
-        x: textX,
-        y: textY,
-        fontSize: Math.max(14, protractorDrawSize * 0.25),
-        fontWeight: 'bold',
-      });
-    } else {
-      // Normaler Winkel - Referenzlinie nach rechts
-      // 1. Referenzlinie (horizontal)
-      newElements.push({
-        id: `${baseId}-ref-line`,
-        type: 'line',
-        data: { x1: centerX, y1: centerY, x2: centerX + lineLength, y2: centerY },
-        color: '#2196f3',
-        strokeWidth: 3,
-      });
-      
-      // 2. Winkellinie (gedreht)
-      const endX = centerX + lineLength * Math.cos(endAngle);
-      const endY = centerY + lineLength * Math.sin(endAngle);
-      newElements.push({
-        id: `${baseId}-angle-line`,
-        type: 'line',
-        data: { x1: centerX, y1: centerY, x2: endX, y2: endY },
-        color: '#FF5722',
-        strokeWidth: 3,
-      });
-      
-      // 3. Winkelbogen (wenn Winkel != 0)
-      if (drawAngle !== 0) {
-        const arcX1 = centerX + arcRadius;
-        const arcY1 = centerY;
-        const arcX2 = centerX + arcRadius * Math.cos(endAngle);
-        const arcY2 = centerY + arcRadius * Math.sin(endAngle);
-        const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${drawAngle > 0 ? 1 : 0} ${arcX2} ${arcY2}`;
-        newElements.push({
-          id: `${baseId}-arc`,
-          type: 'path',
-          data: arcPath,
-          color: '#4caf50',
-          strokeWidth: 3,
-        });
-      }
-      
-      // 4. Winkeltext
-      const textAngle = endAngle / 2;
-      const textX = centerX + (arcRadius + 15) * Math.cos(textAngle);
-      const textY = centerY + (arcRadius + 15) * Math.sin(textAngle);
-      newElements.push({
-        id: `${baseId}-text`,
-        type: 'text',
-        data: { text: `${displayAngle}°` },
-        color: '#FF5722',
-        strokeWidth: 1,
-        x: textX,
-        y: textY,
-        fontSize: Math.max(14, protractorDrawSize * 0.25),
-        fontWeight: 'bold',
       });
     }
     
-    // Füge zum History hinzu
+    // 4. Winkeltext
+    const midAngle = (refAngle + angleEndAngle) / 2;
+    const textX = centerX + (arcRadius + 15) * Math.cos(midAngle);
+    const textY = centerY + (arcRadius + 15) * Math.sin(midAngle);
+    newElements.push({
+      id: `${baseId}-text`,
+      type: 'text',
+      data: { text: `${displayAngle}°` },
+      color: '#FF5722',
+      strokeWidth: 1,
+      x: textX,
+      y: textY,
+      fontSize: Math.max(14, protractorDrawSize * 0.25),
+      fontWeight: 'bold',
+    });
+    
     addToHistory(newElements);
-    
-    // Schließe das Protractor-Tool
     setShowProtractor(false);
-    
-    // Zeige Bestätigung
     showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
-  }, [elements, protractorAngle, protractorPosition, screenWidth, screenHeight, isPhone, protractorUseComplementary, protractorDrawSize, protractorMirrored, canvasLayout]);
+  }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout]);
 
   // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
   // Winkel-Elemente haben IDs im Format: {baseId}-ref-line, {baseId}-angle-line, {baseId}-arc, {baseId}-text
@@ -8631,185 +8585,123 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Overlay */}
+      {/* Winkelmesser Overlay - NEU: Bildschirmkoordinaten-basiert */}
       {showProtractor && (
         <View style={styles.protractorOverlay} pointerEvents="box-none">
-          {/* Verschiebbarer Winkelmesser */}
+          {/* Vollbild-Drag-Bereich */}
           <View 
-            style={[
-              styles.protractorDraggable,
-              {
-                transform: [
-                  { translateX: protractorPosition.x },
-                  { translateY: protractorPosition.y },
-                  { scale: protractorScale },
-                ],
-                cursor: 'grab',
-              } as any,
-            ]}
+            style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
             {...(Platform.OS !== 'web' ? protractorPanResponder.current.panHandlers : {})}
-            // @ts-ignore - Web-only events (PanResponder funktioniert nicht gut auf Web)
+            // @ts-ignore - Web-only events
             onMouseDown={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
             onMouseMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onMouseUp={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
-            // Web: onTouch-Events als Fallback für Touch-Screens im Browser
             onTouchStart={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
             onTouchMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
-            <View style={styles.protractorSvgContainer}>
-              <Svg width={300} height={300} viewBox={`${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)}`}>
-                {/* Gesamte Rotation um den Mittelpunkt */}
-                <G transform={`rotate(${protractorRotation}, 150, 150)`}>
-                {/* Halbtransparenter Hintergrund */}
-                <Circle cx={150} cy={150} r={145} fill="rgba(255, 255, 255, 0.5)" stroke="#FF5722" strokeWidth={3} />
-                
-                {/* Gradmarkierungen */}
-                {Array.from({ length: 36 }, (_, i) => {
-                  const angle = i * 10 * (Math.PI / 180);
-                  const innerR = i % 9 === 0 ? 100 : 120;
-                  const outerR = 140;
-                  const x1 = 150 + innerR * Math.cos(angle - Math.PI / 2);
-                  const y1 = 150 + innerR * Math.sin(angle - Math.PI / 2);
-                  const x2 = 150 + outerR * Math.cos(angle - Math.PI / 2);
-                  const y2 = 150 + outerR * Math.sin(angle - Math.PI / 2);
-                  return (
-                    <Line 
-                      key={i} 
-                      x1={x1} y1={y1} x2={x2} y2={y2} 
-                      stroke="#333" 
-                      strokeWidth={i % 9 === 0 ? 3 : 1} 
-                    />
-                  );
-                })}
-                
-                {/* Grad-Beschriftungen */}
-                {[0, 90, 180, 270].map((deg) => {
-                  const angle = deg * (Math.PI / 180);
-                  const r = 82;
-                  const x = 150 + r * Math.cos(angle - Math.PI / 2);
-                  const y = 150 + r * Math.sin(angle - Math.PI / 2);
-                  return (
-                    <SvgText 
-                      key={deg} 
-                      x={x} y={y + 5} 
-                      fill="#333" 
-                      fontSize={16} 
-                      fontWeight="bold" 
-                      textAnchor="middle"
-                    >
-                      {deg}°
-                    </SvgText>
-                  );
-                })}
-                
-                {/* Mittelpunkt */}
-                <Circle cx={150} cy={150} r={6} fill="#FF5722" />
-                
-                {/* Referenzlinie (blau) - mit Verlängerung */}
-                <Line 
-                  x1={150} 
-                  y1={150} 
-                  x2={protractorMirrored ? 150 - (140 + protractorRefLineExt) : 150 + (140 + protractorRefLineExt)} 
-                  y2={150} 
-                  stroke="#2196f3" 
-                  strokeWidth={3} 
-                />
-                
-                {/* Griffpunkt am Ende der Referenzlinie (blau) */}
-                <Circle 
-                  cx={protractorMirrored ? 150 - (140 + protractorRefLineExt) : 150 + (140 + protractorRefLineExt)} 
-                  cy={150} 
-                  r={10} 
-                  fill="#2196f3" 
-                  stroke="#fff" 
-                  strokeWidth={2} 
-                />
-                
-                {/* Winkellinie (orange) - mit Verlängerung */}
-                <Line 
-                  x1={150} 
-                  y1={150} 
-                  x2={protractorMirrored 
-                    ? 150 - (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)
-                    : 150 + (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)} 
-                  y2={150 + (140 + protractorAngleLineExt) * Math.sin(protractorAngle * Math.PI / 180)} 
-                  stroke="#FF5722" 
-                  strokeWidth={3} 
-                />
-                
-                {/* Griffpunkt am Ende der Winkellinie (orange/rot) */}
-                <Circle 
-                  cx={protractorMirrored 
-                    ? 150 - (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)
-                    : 150 + (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)} 
-                  cy={150 + (140 + protractorAngleLineExt) * Math.sin(protractorAngle * Math.PI / 180)} 
-                  r={10} 
-                  fill="#FF5722" 
-                  stroke="#fff" 
-                  strokeWidth={2} 
-                />
-                
-                {/* Winkelbogen */}
-                {protractorAngle !== 0 && (
+            {/* Vollbild-SVG für Linien und Griffe */}
+            <Svg 
+              width={screenWidth} 
+              height={screenHeight} 
+              viewBox={`0 0 ${screenWidth} ${screenHeight}`}
+              style={{ position: 'absolute', top: 0, left: 0 }}
+              pointerEvents="none"
+            >
+              {/* Referenzlinie (blau) */}
+              <Line 
+                x1={protractorCenter.x} y1={protractorCenter.y}
+                x2={protractorRefEnd.x} y2={protractorRefEnd.y}
+                stroke="#2196f3" strokeWidth={3}
+              />
+              
+              {/* Winkellinie (orange) */}
+              <Line 
+                x1={protractorCenter.x} y1={protractorCenter.y}
+                x2={protractorAngleEnd.x} y2={protractorAngleEnd.y}
+                stroke="#FF5722" strokeWidth={3}
+              />
+              
+              {/* Winkelbogen */}
+              {protractorAngle !== 0 && (() => {
+                const refAng = Math.atan2(protractorRefEnd.y - protractorCenter.y, protractorRefEnd.x - protractorCenter.x);
+                const angAng = Math.atan2(protractorAngleEnd.y - protractorCenter.y, protractorAngleEnd.x - protractorCenter.x);
+                const arcR = 40;
+                const arcX1 = protractorCenter.x + arcR * Math.cos(refAng);
+                const arcY1 = protractorCenter.y + arcR * Math.sin(refAng);
+                const arcX2 = protractorCenter.x + arcR * Math.cos(angAng);
+                const arcY2 = protractorCenter.y + arcR * Math.sin(angAng);
+                const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
+                const sweep = protractorAngle > 0 ? 1 : 0;
+                return (
                   <Path 
-                    d={(() => {
-                      const r = 50;
-                      const endAngle = protractorAngle * Math.PI / 180;
-                      const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
-                      const sweep = protractorAngle > 0 ? 1 : 0;
-                      if (protractorMirrored) {
-                        const x1 = 150 - r;
-                        const y1 = 150;
-                        const x2 = 150 - r * Math.cos(endAngle);
-                        const y2 = 150 + r * Math.sin(endAngle);
-                        return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep === 1 ? 0 : 1} ${x2} ${y2}`;
-                      } else {
-                        const x1 = 150 + r;
-                        const y1 = 150;
-                        const x2 = 150 + r * Math.cos(endAngle);
-                        const y2 = 150 + r * Math.sin(endAngle);
-                        return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2} ${y2}`;
-                      }
-                    })()}
-                    fill="none"
-                    stroke="#4caf50"
-                    strokeWidth={3}
+                    d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
+                    fill="none" stroke="#4caf50" strokeWidth={3}
                   />
-                )}
-                
-                {/* Winkelwert-Anzeige */}
-                <SvgText 
-                  x={150} 
-                  y={150 + 25} 
-                  fill="#FF5722" 
-                  fontSize={22} 
-                  fontWeight="bold" 
-                  textAnchor="middle"
-                >
-                  {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
-                    ? `${180 - Math.abs(protractorAngle)}°`
-                    : `${Math.abs(protractorAngle)}°`}
-                </SvgText>
-                </G>
-              </Svg>
-            </View>
+                );
+              })()}
+              
+              {/* Winkelwert am Mittelpunkt */}
+              <SvgText
+                x={protractorCenter.x}
+                y={protractorCenter.y - 20}
+                fill="#FF5722"
+                fontSize={20}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
+                  ? `${180 - Math.abs(protractorAngle)}°`
+                  : `${Math.abs(protractorAngle)}°`}
+              </SvgText>
+              
+              {/* Mittelpunkt (kleiner Kreis) */}
+              <Circle cx={protractorCenter.x} cy={protractorCenter.y} r={8} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+              
+              {/* Griffpunkt Referenzlinie (blau, größer) */}
+              <Circle cx={protractorRefEnd.x} cy={protractorRefEnd.y} r={14} fill="#2196f3" stroke="#fff" strokeWidth={3} />
+              
+              {/* Griffpunkt Winkellinie (orange, größer) */}
+              <Circle cx={protractorAngleEnd.x} cy={protractorAngleEnd.y} r={14} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+              
+              {/* Labels an den Griffpunkten */}
+              <SvgText
+                x={protractorRefEnd.x}
+                y={protractorRefEnd.y - 20}
+                fill="#2196f3"
+                fontSize={12}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                Ref
+              </SvgText>
+              <SvgText
+                x={protractorAngleEnd.x}
+                y={protractorAngleEnd.y - 20}
+                fill="#FF5722"
+                fontSize={12}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                Winkel
+              </SvgText>
+            </Svg>
           </View>
           
           {/* Steuerelemente unten */}
-          <View style={styles.protractorBottomControls}>
+          <View style={[styles.protractorBottomControls, { zIndex: 10 }]}>
             {/* Winkelsteuerung */}
             <View style={styles.protractorControlRow}>
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorAngle(prev => prev - 10)}
+                onPress={() => adjustProtractorAngle(-10)}
               >
                 <Text style={styles.protractorControlBtnText}>-10°</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorAngle(prev => prev - 1)}
+                onPress={() => adjustProtractorAngle(-1)}
               >
                 <Text style={styles.protractorControlBtnText}>-1°</Text>
               </TouchableOpacity>
@@ -8830,19 +8722,19 @@ export default function DrawSketchScreen() {
               
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorAngle(prev => prev + 1)}
+                onPress={() => adjustProtractorAngle(1)}
               >
                 <Text style={styles.protractorControlBtnText}>+1°</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.protractorControlBtn}
-                onPress={() => setProtractorAngle(prev => prev + 10)}
+                onPress={() => adjustProtractorAngle(10)}
               >
                 <Text style={styles.protractorControlBtnText}>+10°</Text>
               </TouchableOpacity>
             </View>
             
-            {/* Komplementärwinkel-Umschalter, Spiegeln und Größe */}
+            {/* Innen/Außen + Größe + Reset */}
             <View style={styles.protractorControlRow}>
               <TouchableOpacity 
                 style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive]}
@@ -8851,16 +8743,6 @@ export default function DrawSketchScreen() {
                 <Ionicons name="swap-horizontal" size={16} color={protractorUseComplementary ? '#fff' : '#333'} />
                 <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive]}>
                   {protractorUseComplementary ? 'Außen' : 'Innen'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.protractorToggleBtn, protractorMirrored && styles.protractorToggleBtnActive]}
-                onPress={() => setProtractorMirrored(prev => !prev)}
-              >
-                <Ionicons name="swap-vertical" size={16} color={protractorMirrored ? '#fff' : '#333'} />
-                <Text style={[styles.protractorToggleBtnText, protractorMirrored && styles.protractorToggleBtnTextActive]}>
-                  Spiegeln
                 </Text>
               </TouchableOpacity>
               
@@ -8879,58 +8761,40 @@ export default function DrawSketchScreen() {
                   <Ionicons name="add" size={16} color="#333" />
                 </TouchableOpacity>
               </View>
-            </View>
-            
-            {/* Rotation-Anzeige */}
-            <View style={styles.protractorControlRow}>
-              <View style={[styles.protractorAngleBadge, { backgroundColor: '#2196f3' }]}>
-                <Text style={styles.protractorAngleBadgeText}>
-                  ↻ {protractorRotation}°
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#2196f3', marginRight: 3 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>{140 + protractorRefLineExt}px</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF5722', marginRight: 3 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>{140 + protractorAngleLineExt}px</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Zoom und Reset */}
-            <View style={styles.protractorControlRow}>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorScale(prev => Math.max(0.3, prev - 0.1))}
-              >
-                <Ionicons name="remove" size={20} color="#333" />
-              </TouchableOpacity>
-              <Text style={styles.protractorZoomLabel}>Zoom: {Math.round(protractorScale * 100)}%</Text>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorScale(prev => Math.min(2, prev + 0.1))}
-              >
-                <Ionicons name="add" size={20} color="#333" />
-              </TouchableOpacity>
+              
               <TouchableOpacity 
                 style={styles.protractorResetBtn}
                 onPress={() => {
-                  setProtractorAngle(0);
-                  setProtractorScale(1);
-                  setProtractorPosition({ x: 0, y: 0 });
+                  const cx = screenWidth / 2;
+                  const cy = Math.max(200, canvasHeight / 2 + 60);
+                  const defaultLen = Math.min(screenWidth * 0.3, 150);
+                  setProtractorCenter({ x: cx, y: cy });
+                  setProtractorRefEnd({ x: cx + defaultLen, y: cy });
+                  setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) });
                   setProtractorUseComplementary(false);
-                  setProtractorMirrored(false);
                   setProtractorDrawSize(60);
-                  setProtractorRotation(0);
-                  setProtractorRefLineExt(0);
-                  setProtractorAngleLineExt(0);
                 }}
               >
                 <Text style={styles.protractorResetBtnText}>Reset</Text>
               </TouchableOpacity>
+            </View>
+            
+            {/* Info-Zeile: Rotation + Linienlängen */}
+            <View style={styles.protractorControlRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#2196f3', marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>
+                    {Math.round(Math.sqrt(Math.pow(protractorRefEnd.x - protractorCenter.x, 2) + Math.pow(protractorRefEnd.y - protractorCenter.y, 2)))}px
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF5722', marginRight: 4 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>
+                    {Math.round(Math.sqrt(Math.pow(protractorAngleEnd.x - protractorCenter.x, 2) + Math.pow(protractorAngleEnd.y - protractorCenter.y, 2)))}px
+                  </Text>
+                </View>
+              </View>
             </View>
             
             {/* Hinzufügen-Button */}
@@ -8966,7 +8830,7 @@ export default function DrawSketchScreen() {
                   style={styles.protractorInputOkButton}
                   onPress={() => {
                     const angle = parseInt(protractorAngleInput) || 0;
-                    setProtractorAngle(angle % 360);
+                    setProtractorAngleTo(angle % 360);
                     setShowProtractorAngleInput(false);
                   }}
                 >
@@ -8978,7 +8842,7 @@ export default function DrawSketchScreen() {
           
           {/* Schließen-Button */}
           <TouchableOpacity 
-            style={styles.protractorCloseButton}
+            style={[styles.protractorCloseButton, { zIndex: 20 }]}
             onPress={() => setShowProtractor(false)}
           >
             <Ionicons name="close-circle" size={44} color="#f44336" />

@@ -597,33 +597,105 @@ export default function DrawSketchScreen() {
     startX: 0, 
     startY: 0,
     initialPosX: 0,
-    initialPosY: 0 
+    initialPosY: 0,
+    dragHandle: 'body' as 'body' | 'ref' | 'angle',
   });
   
   // Handler für Protractor Drag - arbeitet mit Mouse/Touch Events
   const handleProtractorDragStart = useCallback((e: any) => {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
+    const locationX = e.nativeEvent?.locationX ?? -1;
+    const locationY = e.nativeEvent?.locationY ?? -1;
+    
+    // SVG-Koordinaten berechnen (viewBox: -50 -50 400 400)
+    const svgX = (locationX / protractorScale) * (400/300) - 50;
+    const svgY = (locationY / protractorScale) * (400/300) - 50;
+    
+    // Endpunkte der Linien im SVG-Raum (mit Rotation)
+    const rotRad = protractorRotation * Math.PI / 180;
+    const refLen = 140 + protractorRefLineExt;
+    const angleRad = protractorAngle * Math.PI / 180;
+    const angleLen = 140 + protractorAngleLineExt;
+    
+    const refEndX = protractorMirrored ? 150 - refLen * Math.cos(rotRad) : 150 + refLen * Math.cos(rotRad);
+    const refEndY = protractorMirrored ? 150 - refLen * Math.sin(rotRad) : 150 + refLen * Math.sin(rotRad);
+    
+    const aEndX = protractorMirrored
+      ? 150 - angleLen * Math.cos(angleRad - rotRad)
+      : 150 + angleLen * Math.cos(angleRad + rotRad);
+    const aEndY = protractorMirrored
+      ? 150 + angleLen * Math.sin(-(angleRad - rotRad))
+      : 150 + angleLen * Math.sin(angleRad + rotRad);
+    
+    const distRef = Math.sqrt(Math.pow(svgX - refEndX, 2) + Math.pow(svgY - refEndY, 2));
+    const distAngle = Math.sqrt(Math.pow(svgX - aEndX, 2) + Math.pow(svgY - aEndY, 2));
+    
+    let dragHandle: 'body' | 'ref' | 'angle' = 'body';
+    if (distRef < 50 && distRef < distAngle) dragHandle = 'ref';
+    else if (distAngle < 50) dragHandle = 'angle';
+    
     protractorDragRef.current = {
-      isDragging: true,
-      startX: pageX,
-      startY: pageY,
-      initialPosX: protractorPosition.x,
-      initialPosY: protractorPosition.y,
+      isDragging: true, startX: pageX, startY: pageY,
+      initialPosX: protractorPosition.x, initialPosY: protractorPosition.y,
+      dragHandle,
     };
-  }, [protractorPosition.x, protractorPosition.y]);
+  }, [protractorPosition.x, protractorPosition.y, protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale]);
   
   const handleProtractorDragMove = useCallback((e: any) => {
     if (!protractorDragRef.current.isDragging) return;
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
-    const dx = pageX - protractorDragRef.current.startX;
-    const dy = pageY - protractorDragRef.current.startY;
-    setProtractorPosition({
-      x: protractorDragRef.current.initialPosX + dx,
-      y: protractorDragRef.current.initialPosY + dy,
-    });
-  }, []);
+    const handle = protractorDragRef.current.dragHandle;
+    
+    if (handle === 'body') {
+      const dx = pageX - protractorDragRef.current.startX;
+      const dy = pageY - protractorDragRef.current.startY;
+      setProtractorPosition({
+        x: protractorDragRef.current.initialPosX + dx,
+        y: protractorDragRef.current.initialPosY + dy,
+      });
+    } else {
+      // Verschiebung in SVG-Einheiten
+      const totalDx = (pageX - protractorDragRef.current.startX) / protractorScale;
+      const totalDy = (pageY - protractorDragRef.current.startY) / protractorScale;
+      
+      if (handle === 'ref') {
+        const rotRad = protractorRotation * Math.PI / 180;
+        const refLen = 140 + protractorRefLineExt;
+        const origX = protractorMirrored ? -refLen * Math.cos(rotRad) : refLen * Math.cos(rotRad);
+        const origY = protractorMirrored ? -refLen * Math.sin(rotRad) : refLen * Math.sin(rotRad);
+        const newX = origX + totalDx;
+        const newY = origY + totalDy;
+        let newAngle = Math.atan2(newY, newX) * 180 / Math.PI;
+        if (protractorMirrored) newAngle += 180;
+        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
+        setProtractorRotation(Math.round(newAngle));
+        setProtractorRefLineExt(Math.round(newLen - 140));
+      } else if (handle === 'angle') {
+        const rotRad = protractorRotation * Math.PI / 180;
+        const angleRad = protractorAngle * Math.PI / 180;
+        const angleLen = 140 + protractorAngleLineExt;
+        let origX: number, origY: number;
+        if (protractorMirrored) {
+          origX = -angleLen * Math.cos(angleRad - rotRad);
+          origY = angleLen * Math.sin(-(angleRad - rotRad));
+        } else {
+          origX = angleLen * Math.cos(angleRad + rotRad);
+          origY = angleLen * Math.sin(angleRad + rotRad);
+        }
+        const newX = origX + totalDx;
+        const newY = origY + totalDy;
+        const newAbsAngle = Math.atan2(newY, newX) * 180 / Math.PI;
+        let newRelAngle = protractorMirrored ? -(newAbsAngle - protractorRotation + 180) : newAbsAngle - protractorRotation;
+        while (newRelAngle < -180) newRelAngle += 360;
+        while (newRelAngle > 360) newRelAngle -= 360;
+        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
+        setProtractorAngle(Math.round(newRelAngle));
+        setProtractorAngleLineExt(Math.round(newLen - 140));
+      }
+    }
+  }, [protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale]);
   
   const handleProtractorDragEnd = useCallback(() => {
     protractorDragRef.current.isDragging = false;
@@ -8768,72 +8840,22 @@ export default function DrawSketchScreen() {
               </View>
             </View>
             
-            {/* Rotation-Steuerung */}
+            {/* Rotation-Anzeige */}
             <View style={styles.protractorControlRow}>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorRotation(prev => prev - 10)}
-              >
-                <Text style={styles.protractorControlBtnText}>-10°</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorRotation(prev => prev - 1)}
-              >
-                <Text style={styles.protractorControlBtnText}>-1°</Text>
-              </TouchableOpacity>
               <View style={[styles.protractorAngleBadge, { backgroundColor: '#2196f3' }]}>
                 <Text style={styles.protractorAngleBadgeText}>
                   ↻ {protractorRotation}°
                 </Text>
               </View>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorRotation(prev => prev + 1)}
-              >
-                <Text style={styles.protractorControlBtnText}>+1°</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.protractorControlBtn}
-                onPress={() => setProtractorRotation(prev => prev + 10)}
-              >
-                <Text style={styles.protractorControlBtnText}>+10°</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Linienverlängerung */}
-            <View style={styles.protractorControlRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#2196f3', marginRight: 4 }} />
-                <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
-                  onPress={() => setProtractorRefLineExt(prev => Math.max(-100, prev - 20))}
-                >
-                  <Ionicons name="remove" size={16} color="#333" />
-                </TouchableOpacity>
-                <Text style={{ fontSize: 12, marginHorizontal: 4 }}>{140 + protractorRefLineExt}px</Text>
-                <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
-                  onPress={() => setProtractorRefLineExt(prev => Math.min(200, prev + 20))}
-                >
-                  <Ionicons name="add" size={16} color="#333" />
-                </TouchableOpacity>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FF5722', marginRight: 4 }} />
-                <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
-                  onPress={() => setProtractorAngleLineExt(prev => Math.max(-100, prev - 20))}
-                >
-                  <Ionicons name="remove" size={16} color="#333" />
-                </TouchableOpacity>
-                <Text style={{ fontSize: 12, marginHorizontal: 4 }}>{140 + protractorAngleLineExt}px</Text>
-                <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
-                  onPress={() => setProtractorAngleLineExt(prev => Math.min(200, prev + 20))}
-                >
-                  <Ionicons name="add" size={16} color="#333" />
-                </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#2196f3', marginRight: 3 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>{140 + protractorRefLineExt}px</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF5722', marginRight: 3 }} />
+                  <Text style={{ fontSize: 11, color: '#666' }}>{140 + protractorAngleLineExt}px</Text>
+                </View>
               </View>
             </View>
             

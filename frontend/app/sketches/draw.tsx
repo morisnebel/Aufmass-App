@@ -6837,8 +6837,13 @@ export default function DrawSketchScreen() {
           )}
         </Svg>
 
-        {/* Info overlay */}
-        <View style={styles.infoOverlay}>
+        {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
+        <View 
+          style={styles.infoOverlay}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderTerminationRequest={() => false}
+        >
           <Text style={styles.infoText}>Elemente: {elements.length}</Text>
           {selectedElementId && <Text style={styles.infoText}>Ausgewählt</Text>}
           {/* "Winkel anpassen" Button wenn ein Winkel-Element ausgewählt ist */}

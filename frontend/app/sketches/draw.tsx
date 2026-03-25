@@ -1433,6 +1433,7 @@ export default function DrawSketchScreen() {
           console.log('Loaded metadata from optimized storage');
           if (metadata.elements && Array.isArray(metadata.elements)) {
             console.log('Setting elements:', metadata.elements.length, 'elements');
+            console.log('Element IDs:', metadata.elements.map((e: any) => e.id + ' (' + e.type + ')').join(', '));
             setElements(metadata.elements);
             setHistory([metadata.elements]);
             setHistoryIndex(0);

@@ -919,8 +919,8 @@ export default function DrawSketchScreen() {
         <View {...modalNumpadPanResponder.panHandlers} style={styles.floatingMeasureDragBar}>
           <View style={styles.floatingMeasureDragHandle} />
           <Text style={styles.floatingMeasureTitle}>Tastatur</Text>
-          <TouchableOpacity onPress={closeModalNumpad} style={{ padding: 8, marginRight: -4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="close-circle" size={26} color="#999" />
+          <TouchableOpacity onPress={closeModalNumpad} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 22 }}>
+            <Ionicons name="close" size={22} color="#666" />
           </TouchableOpacity>
         </View>
         
@@ -6614,10 +6614,13 @@ export default function DrawSketchScreen() {
                 setLineMeasurementExpression('');
                 setSelectedLineSegment(null);
               }}
-              style={{ padding: 8, marginRight: -4 }}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{ 
+                width: 44, height: 44, 
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: '#f0f0f0', borderRadius: 22,
+              }}
             >
-              <Ionicons name="close-circle" size={26} color="#999" />
+              <Ionicons name="close" size={22} color="#666" />
             </TouchableOpacity>
           </View>
           

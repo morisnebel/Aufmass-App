@@ -6886,48 +6886,53 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           )}
           {/* "Zu Projektfotos hinzufügen" Button wenn ein Bild-Element ausgewählt ist */}
-          {selectedElementId && (() => {
-            const selEl = elements.find(el => el.id === selectedElementId);
-            if (selEl && selEl.type === 'image' && selEl.data?.uri) {
-              return (
-                <TouchableOpacity 
-                  style={{
-                    backgroundColor: '#1976d2',
-                    borderRadius: 20,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginTop: 4,
-                  }}
-                  onPress={async () => {
-                    try {
-                      const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-                      if (!projectId) {
-                        showAlert('Fehler', 'Kein Projekt zugeordnet');
-                        return;
-                      }
-                      await PhotoService.create({
-                        project_id: projectId,
-                        uri: selEl.data.uri,
-                        image_data: selEl.data.uri,
-                        description: `Aus Skizze übernommen`,
-                      });
-                      showAlert('Gespeichert', 'Foto wurde zu den Projektfotos hinzugefügt');
-                    } catch (err) {
-                      console.error('Fehler beim Speichern:', err);
-                      showAlert('Fehler', 'Foto konnte nicht gespeichert werden');
-                    }
-                  }}
-                >
-                  <Ionicons name="images-outline" size={16} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Zu Projektfotos</Text>
-                </TouchableOpacity>
-              );
-            }
-            return null;
-          })()}
+          {selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'image' && elements.find(el => el.id === selectedElementId)?.data?.uri && (
+            <TouchableOpacity 
+              style={{
+                backgroundColor: '#1976d2',
+                borderRadius: 20,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 4,
+              }}
+              onPress={async () => {
+                try {
+                  const selEl = elements.find(el => el.id === selectedElementId);
+                  console.log('[FOTO-KOPIE] Start - projectId:', projectId, 'selectedId:', selectedElementId, 'type:', selEl?.type);
+                  
+                  if (!projectId) {
+                    Alert.alert('Fehler', 'Kein Projekt zugeordnet');
+                    return;
+                  }
+                  if (!selEl?.data?.uri) {
+                    Alert.alert('Fehler', 'Kein Bild vorhanden');
+                    return;
+                  }
+                  
+                  const imageUri = selEl.data.uri;
+                  console.log('[FOTO-KOPIE] URI Länge:', imageUri.length, 'Prefix:', imageUri.substring(0, 30));
+                  
+                  const newPhoto = await PhotoService.create({
+                    project_id: projectId,
+                    uri: imageUri,
+                    image_data: imageUri,
+                    description: `Aus Skizze übernommen (${new Date().toLocaleDateString('de-DE')})`,
+                  });
+                  console.log('[FOTO-KOPIE] Erfolgreich! Photo-ID:', newPhoto.id);
+                  Alert.alert('Gespeichert ✓', 'Das Foto wurde zu den Projektfotos hinzugefügt.');
+                } catch (err: any) {
+                  console.error('[FOTO-KOPIE] Fehler:', err?.message || err);
+                  Alert.alert('Fehler', `Foto konnte nicht gespeichert werden: ${err?.message || 'Unbekannter Fehler'}`);
+                }
+              }}
+            >
+              <Ionicons name="images-outline" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Zu Projektfotos</Text>
+            </TouchableOpacity>
+          )}
           {photoEditMode && (
             <View style={styles.photoEditBadge}>
               <Ionicons name="image-outline" size={14} color="#fff" />

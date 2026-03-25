@@ -18,6 +18,7 @@ import {
   Image as RNImage,
   useWindowDimensions,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
@@ -915,13 +916,18 @@ export default function DrawSketchScreen() {
           }
         ]}
       >
-        {/* Drag Handle */}
-        <View {...modalNumpadPanResponder.panHandlers} style={styles.floatingMeasureDragBar}>
-          <View style={styles.floatingMeasureDragHandle} />
-          <Text style={styles.floatingMeasureTitle}>Tastatur</Text>
-          <TouchableOpacity onPress={closeModalNumpad} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 22 }}>
+        {/* Header: Drag-Handle + Close-Button getrennt für Apple Pencil Kompatibilität */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+          <View {...modalNumpadPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
+            <View style={styles.floatingMeasureDragHandle} />
+            <Text style={styles.floatingMeasureTitle}>Tastatur</Text>
+          </View>
+          <Pressable
+            onPress={closeModalNumpad}
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 22, marginRight: 6 }}
+          >
             <Ionicons name="close" size={22} color="#666" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
         
         {/* Tastatur-Bereich */}
@@ -6604,11 +6610,13 @@ export default function DrawSketchScreen() {
             }
           ]}
         >
-          {/* Drag Handle */}
-          <View {...measurePanelPanResponder.panHandlers} style={styles.floatingMeasureDragBar}>
-            <View style={styles.floatingMeasureDragHandle} />
-            <Text style={styles.floatingMeasureTitle}>Maß eingeben</Text>
-            <TouchableOpacity 
+          {/* Header: Drag-Handle + Close-Button getrennt für Apple Pencil Kompatibilität */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+            <View {...measurePanelPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
+              <View style={styles.floatingMeasureDragHandle} />
+              <Text style={styles.floatingMeasureTitle}>Maß eingeben</Text>
+            </View>
+            <Pressable
               onPress={() => {
                 setShowLineMeasurementNumpad(false);
                 setLineMeasurementExpression('');
@@ -6618,10 +6626,11 @@ export default function DrawSketchScreen() {
                 width: 44, height: 44, 
                 alignItems: 'center', justifyContent: 'center',
                 backgroundColor: '#f0f0f0', borderRadius: 22,
+                marginRight: 6,
               }}
             >
               <Ionicons name="close" size={22} color="#666" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           
           {/* Eingabe + Löschen */}

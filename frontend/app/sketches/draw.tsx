@@ -1931,8 +1931,7 @@ export default function DrawSketchScreen() {
     }
     
     // SOFORT zurück navigieren - Speichern läuft im Hintergrund
-    // Immer router.back() verwenden, um den Navigation-Stack korrekt zu halten
-    // router.replace() würde den Stack zerstören und zu falscher Navigation führen
+    console.log('=== NAVIGATION DEBUG v2 === handleBackPress calling router.back(), projectId:', projectId, 'sketchId:', sketchId);
     router.back();
   };
 

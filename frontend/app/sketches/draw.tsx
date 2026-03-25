@@ -693,7 +693,22 @@ export default function DrawSketchScreen() {
         setMagnifierTargetPosition({ x: targetPt.x - canvasLayout.x, y: targetPt.y - canvasLayout.y });
         setMagnifierPosition({ x: pageX, y: pageY - 100 });
       }
-      setShowMagnifier(true);
+      // Canvas-Snapshot für präzise Lupe erstellen
+      if (canvasRef.current) {
+        captureRef(canvasRef.current, {
+          format: 'png',
+          quality: 0.8,
+          result: 'data-uri',
+        }).then((uri: string) => {
+          setMagnifierSnapshot(uri);
+          setShowMagnifier(true);
+        }).catch((err: Error) => {
+          console.log('Protractor magnifier snapshot error:', err);
+          setShowMagnifier(true); // Fallback ohne Snapshot
+        });
+      } else {
+        setShowMagnifier(true);
+      }
     }
     
     protractorDragRef.current = {
@@ -762,6 +777,7 @@ export default function DrawSketchScreen() {
     if (protractorDragRef.current.dragHandle !== 'body') {
       setShowMagnifier(false);
       setMagnifierPosition(null);
+      setMagnifierSnapshot(null); // Snapshot freigeben
     }
     protractorDragRef.current.isDragging = false;
     protractorDragRef.current.dragHandle = 'body';
@@ -8525,8 +8541,8 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
-                      width: width * 2, // 2x vergrößert
-                      height: (height - 120) * 2,
+                      width: (canvasLayout?.width || width) * 2, // 2x vergrößert (Canvas-Breite)
+                      height: (canvasLayout?.height || (height - 120)) * 2,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
                       left: -magnifierTargetPosition.x * 2 + 55,
@@ -8540,8 +8556,8 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: backgroundImage }}
                     style={{
-                      width: width * 2, // 2x vergrößert
-                      height: (height - 120) * 2,
+                      width: (canvasLayout?.width || width) * 2, // 2x vergrößert
+                      height: (canvasLayout?.height || (height - 120)) * 2,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
                       left: -magnifierTargetPosition.x * 2 + 55,
@@ -8797,14 +8813,31 @@ export default function DrawSketchScreen() {
               </View>
             </View>
             
-            {/* Hinzufügen-Button */}
-            <TouchableOpacity 
-              style={styles.protractorAddBtn}
-              onPress={addProtractorToSketch}
-            >
-              <Ionicons name="checkmark-circle" size={24} color="#fff" />
-              <Text style={styles.protractorAddBtnText}>Zur Skizze hinzufügen</Text>
-            </TouchableOpacity>
+            {/* Hinzufügen- und Abbrechen-Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+              <TouchableOpacity 
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#f44336',
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  borderRadius: 25,
+                  gap: 8,
+                }}
+                onPress={() => setShowProtractor(false)}
+              >
+                <Ionicons name="close-circle" size={22} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorAddBtn}
+                onPress={addProtractorToSketch}
+              >
+                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Text style={styles.protractorAddBtnText}>Hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           
           {/* Winkel-Eingabe Modal */}

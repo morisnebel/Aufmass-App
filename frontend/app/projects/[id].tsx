@@ -17,7 +17,7 @@ import {
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast } from '../../services/LocalStorage';
@@ -137,6 +137,7 @@ interface Checklist {
 
 export default function ProjectDetailScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id, tab } = useLocalSearchParams();
   
   // iPhone vs iPad Erkennung - für unterschiedliches Layout
@@ -291,6 +292,41 @@ export default function ProjectDetailScreen() {
       setActiveTab(tab);
     }
   }, [tab]);
+
+  // Dynamischer Header: Wenn ein Tab aktiv ist, zeige Tab-Name und "← Projektdetails" als Zurück-Button
+  const tabTitles: Record<string, string> = {
+    overview: 'Projektdetails',
+    sketches: 'Skizzen',
+    roofs: 'Dach',
+    photos: 'Fotos',
+    checklists: 'Checklisten',
+    remarks: 'Bemerkungen',
+    documents: 'Dokumente',
+    calculator: 'Flächenberechnung',
+    imagemeter: 'Fotomessung',
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'overview') {
+      navigation.setOptions({
+        title: tabTitles[activeTab] || 'Projektdetails',
+        headerLeft: () => (
+          <TouchableOpacity 
+            onPress={() => setActiveTab('overview')} 
+            style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}
+          >
+            <Ionicons name="chevron-back" size={28} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 17 }}>Projektdetails</Text>
+          </TouchableOpacity>
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        title: 'Projektdetails',
+        headerLeft: undefined,
+      });
+    }
+  }, [activeTab, navigation]);
 
   // Auto-regenerate PDF when toggle changes while modal is open
   useEffect(() => {

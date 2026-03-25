@@ -2023,8 +2023,15 @@ export default function DrawSketchScreen() {
           }
         };
         
-        // Speichern im Hintergrund starten (nicht warten!)
-        saveInBackground();
+        // SPEICHERN: Für neue Skizzen warten wir auf das Speichern, damit die Vorschau sofort angezeigt wird
+        // Für bestehende Skizzen speichern wir im Hintergrund
+        if (sketchId) {
+          // Bestehende Skizze: Im Hintergrund speichern (nicht warten!)
+          saveInBackground();
+        } else {
+          // NEUE Skizze: Warten bis gespeichert, damit sie in der Vorschau erscheint
+          await saveInBackground();
+        }
         
       } catch (error) {
         console.error('Error preparing sketch save:', error);
@@ -5122,30 +5129,45 @@ export default function DrawSketchScreen() {
     // Winkelgruppen-Handles (Drehen + Verlängern)
     if (isAngleGroupElement(element.id)) {
       const baseId = getAngleGroupBaseId(element.id);
-      console.log('=== ANGLE GROUP HANDLES ===', element.id, 'baseId:', baseId);
       const geo = baseId ? getAngleGroupGeometry(baseId) : null;
-      console.log('=== ANGLE GEO ===', geo);
       if (geo) {
         const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
         const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
         const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
         const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
-        const handleSize = Math.max(6, 10 / Math.max(scale, 0.5));
-        const strokeW = Math.max(1, 2 / Math.max(scale, 0.5));
+        // Große, gut sichtbare Handles
+        const handleSize = Math.max(12, 18 / Math.max(scale, 0.5));
+        const strokeW = Math.max(2, 3 / Math.max(scale, 0.5));
+        const centerSize = Math.max(6, 10 / Math.max(scale, 0.5));
         
-        // Blauer Griff am Ende der Referenzlinie (zum Drehen)
+        // Auswahl-Markierung: Mittelpunkt hervorheben
+        handles.push(
+          <Circle key="angle-center" cx={geo.cx} cy={geo.cy} r={centerSize} fill="rgba(255,255,255,0.8)" stroke="#333" strokeWidth={strokeW} />
+        );
+        
+        // Gestrichelte Linien zu den Endpunkten (Auswahl-Feedback)
+        handles.push(
+          <Line key="angle-ref-dash" x1={geo.cx} y1={geo.cy} x2={refEndX} y2={refEndY} 
+            stroke="rgba(33,150,243,0.4)" strokeWidth={strokeW * 3} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
+        );
+        handles.push(
+          <Line key="angle-adj-dash" x1={geo.cx} y1={geo.cy} x2={angleEndX} y2={angleEndY} 
+            stroke="rgba(244,67,54,0.4)" strokeWidth={strokeW * 3} strokeDasharray={`${8/Math.max(scale,0.5)},${4/Math.max(scale,0.5)}`} />
+        );
+        
+        // Blauer Griff am Ende der Referenzlinie (zum Drehen) - GROSS
         handles.push(
           <G key="angle-rotate-handle">
             <Circle cx={refEndX} cy={refEndY} r={handleSize} fill="#2196f3" stroke="#fff" strokeWidth={strokeW} />
-            <SvgText x={refEndX - handleSize * 0.45} y={refEndY + handleSize * 0.45} fill="#fff" fontSize={handleSize * 0.9}>↻</SvgText>
+            <SvgText x={refEndX} y={refEndY + handleSize * 0.35} fill="#fff" fontSize={handleSize * 0.8} textAnchor="middle" fontWeight="bold">↻</SvgText>
           </G>
         );
         
-        // Roter Griff am Ende der Winkellinie (zum Winkel anpassen)
+        // Roter Griff am Ende der Winkellinie (zum Winkel anpassen) - GROSS
         handles.push(
           <G key="angle-adjust-handle">
             <Circle cx={angleEndX} cy={angleEndY} r={handleSize} fill="#f44336" stroke="#fff" strokeWidth={strokeW} />
-            <SvgText x={angleEndX - handleSize * 0.45} y={angleEndY + handleSize * 0.45} fill="#fff" fontSize={handleSize * 0.9}>↻</SvgText>
+            <SvgText x={angleEndX} y={angleEndY + handleSize * 0.35} fill="#fff" fontSize={handleSize * 0.8} textAnchor="middle" fontWeight="bold">↻</SvgText>
           </G>
         );
       }

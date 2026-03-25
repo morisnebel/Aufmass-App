@@ -591,16 +591,24 @@ export default function DrawSketchScreen() {
   const [protractorRefEnd, setProtractorRefEnd] = useState({ x: 0, y: 0 });
   const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
   
-  // Initialisierung wenn Winkelmesser geöffnet wird
+  // Initialisierung wenn Winkelmesser neu geöffnet wird (nicht beim Bearbeiten)
+  const protractorInitializedRef = useRef(false);
   useEffect(() => {
-    if (showProtractor) {
+    if (showProtractor && !protractorInitializedRef.current) {
       const cx = screenWidth / 2;
       const cy = Math.max(200, canvasHeight / 2 + 60); // unterhalb der Toolbar
       const defaultLen = Math.min(screenWidth * 0.3, 150);
-      setProtractorCenter({ x: cx, y: cy });
-      setProtractorRefEnd({ x: cx + defaultLen, y: cy });
-      setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
-      setShowProtractorHint(true); // Hinweis anzeigen
+      // Nur initialisieren wenn Center bei (0,0) ist (= komplett neuer Winkelmesser)
+      if (protractorCenter.x === 0 && protractorCenter.y === 0) {
+        setProtractorCenter({ x: cx, y: cy });
+        setProtractorRefEnd({ x: cx + defaultLen, y: cy });
+        setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
+        setShowProtractorHint(true); // Hinweis nur bei neuem Winkelmesser
+      }
+      protractorInitializedRef.current = true;
+    }
+    if (!showProtractor) {
+      protractorInitializedRef.current = false;
     }
   }, [showProtractor]);
   
@@ -4374,14 +4382,20 @@ export default function DrawSketchScreen() {
         // Endpunkt der Referenzlinie (blau) - zum Drehen
         const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
         const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
-        if (Math.sqrt(Math.pow(x - refEndX, 2) + Math.pow(y - refEndY, 2)) < handleRadius * 1.5) {
+        const distRef = Math.sqrt(Math.pow(x - refEndX, 2) + Math.pow(y - refEndY, 2));
+        console.log(`[ANGLE-HANDLE-CHECK] distRef=${distRef.toFixed(1)}, threshold=${handleRadius * 2.5}`);
+        if (distRef < handleRadius * 2.5) {
+          console.log('[ANGLE-HANDLE-CHECK] HIT: angle-rotate (ref-end)');
           return { type: 'angle-rotate', handle: 'ref-end' };
         }
         
         // Endpunkt der Winkellinie (rot) - zum Winkel anpassen
         const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
         const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
-        if (Math.sqrt(Math.pow(x - angleEndX, 2) + Math.pow(y - angleEndY, 2)) < handleRadius * 1.5) {
+        const distAngle = Math.sqrt(Math.pow(x - angleEndX, 2) + Math.pow(y - angleEndY, 2));
+        console.log(`[ANGLE-HANDLE-CHECK] distAngle=${distAngle.toFixed(1)}, threshold=${handleRadius * 2.5}`);
+        if (distAngle < handleRadius * 2.5) {
+          console.log('[ANGLE-HANDLE-CHECK] HIT: angle-adjust (angle-end)');
           return { type: 'angle-adjust', handle: 'angle-end' };
         }
       }
@@ -6390,7 +6404,15 @@ export default function DrawSketchScreen() {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
-            onPress={() => setShowProtractor(!showProtractor)}
+            onPress={() => {
+              if (!showProtractor) {
+                // Neuen Winkelmesser öffnen → Position zurücksetzen
+                setProtractorCenter({ x: 0, y: 0 });
+                setProtractorRefEnd({ x: 0, y: 0 });
+                setProtractorAngleEnd({ x: 0, y: 0 });
+              }
+              setShowProtractor(!showProtractor);
+            }}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24">
               <Path 
@@ -6876,6 +6898,50 @@ export default function DrawSketchScreen() {
         <View style={styles.infoOverlay}>
           <Text style={styles.infoText}>Elemente: {elements.length}</Text>
           {selectedElementId && <Text style={styles.infoText}>Ausgewählt</Text>}
+          {/* "Winkel anpassen" Button wenn ein Winkel-Element ausgewählt ist */}
+          {selectedElementId && isAngleGroupElement(selectedElementId) && (
+            <TouchableOpacity 
+              style={{
+                backgroundColor: '#FF5722',
+                borderRadius: 20,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 4,
+              }}
+              onPress={() => {
+                const baseId = getAngleGroupBaseId(selectedElementId);
+                const geo = getAngleGroupGeometry(baseId);
+                if (geo && canvasLayout) {
+                  // Positionen aus den platzierten Elementen berechnen
+                  const cx = geo.cx + canvasLayout.x;
+                  const cy = geo.cy + canvasLayout.y;
+                  const refEndX = cx + geo.refLength * Math.cos(geo.refAngleRad);
+                  const refEndY = cy + geo.refLength * Math.sin(geo.refAngleRad);
+                  const angleEndX = cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
+                  const angleEndY = cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
+                  
+                  // Alte Elemente entfernen
+                  const groupIds = getAngleGroupElementIds(baseId);
+                  const newElements = elements.filter(el => !groupIds.includes(el.id));
+                  addToHistory(newElements);
+                  setSelectedElementId(null);
+                  
+                  // Winkelmesser mit den Positionen öffnen
+                  setProtractorCenter({ x: cx, y: cy });
+                  setProtractorRefEnd({ x: refEndX, y: refEndY });
+                  setProtractorAngleEnd({ x: angleEndX, y: angleEndY });
+                  setShowProtractorHint(false); // Kein Hinweis beim Bearbeiten
+                  setShowProtractor(true);
+                }
+              }}
+            >
+              <Ionicons name="pencil" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Winkel anpassen</Text>
+            </TouchableOpacity>
+          )}
           {photoEditMode && (
             <View style={styles.photoEditBadge}>
               <Ionicons name="image-outline" size={14} color="#fff" />

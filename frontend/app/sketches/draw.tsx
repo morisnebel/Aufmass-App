@@ -345,6 +345,11 @@ export default function DrawSketchScreen() {
   const [originalGroupElements, setOriginalGroupElements] = useState<DrawElement[]>([]);
   const [movingGroupBaseId, setMovingGroupBaseId] = useState<string | null>(null);
   
+  // Für Winkel-Gruppen-Bearbeitung: Drehen & Verlängern
+  const [angleEditMode, setAngleEditMode] = useState<'rotate' | 'adjust' | null>(null);
+  const [angleEditBaseId, setAngleEditBaseId] = useState<string | null>(null);
+  const [angleEditOriginals, setAngleEditOriginals] = useState<DrawElement[]>([]);
+  
   // Zoom & Pan - use dynamic dimensions
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -1784,6 +1789,101 @@ export default function DrawSketchScreen() {
     });
   }, [elements, getAngleGroupElementIds]);
 
+  // Berechnet eine Winkelgruppe basierend auf neuen Parametern (Drehen & Verlängern)
+  const recalculateAngleGroup = useCallback((
+    baseId: string,
+    centerX: number, centerY: number,
+    refAngleRad: number,  // Winkel der Referenzlinie (blau) in Radians
+    refLength: number,    // Länge der Referenzlinie
+    angleOffsetRad: number, // Winkelversatz (Winkel zwischen den Linien) in Radians
+    anglLineLength: number, // Länge der Winkellinie (rot)
+    isMirrored: boolean,  // Ob gespiegelt
+  ): DrawElement[] => {
+    const groupIds = getAngleGroupElementIds(baseId);
+    
+    // Berechne Endpunkte
+    const refEndX = centerX + refLength * Math.cos(refAngleRad);
+    const refEndY = centerY + refLength * Math.sin(refAngleRad);
+    
+    const angleLineRad = refAngleRad + angleOffsetRad;
+    const angleEndX = centerX + anglLineLength * Math.cos(angleLineRad);
+    const angleEndY = centerY + anglLineLength * Math.sin(angleLineRad);
+    
+    // Bogenradius = kleinere der beiden Linienlängen * 0.4
+    const arcRadius = Math.min(refLength, anglLineLength) * 0.4;
+    
+    // Bogenpunkte
+    const arcStartX = centerX + arcRadius * Math.cos(refAngleRad);
+    const arcStartY = centerY + arcRadius * Math.sin(refAngleRad);
+    const arcEndX = centerX + arcRadius * Math.cos(angleLineRad);
+    const arcEndY = centerY + arcRadius * Math.sin(angleLineRad);
+    
+    // Arc sweep Berechnung
+    const absAngle = Math.abs(angleOffsetRad * 180 / Math.PI);
+    const largeArc = absAngle > 180 ? 1 : 0;
+    const sweep = angleOffsetRad > 0 ? 1 : 0;
+    
+    const arcPath = `M ${arcStartX} ${arcStartY} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcEndX} ${arcEndY}`;
+    
+    // Textposition (Mitte des Bogens)
+    const textAngleRad = refAngleRad + angleOffsetRad / 2;
+    const textDist = arcRadius + 15;
+    const textX = centerX + textDist * Math.cos(textAngleRad);
+    const textY = centerY + textDist * Math.sin(textAngleRad);
+    
+    // Winkeltext
+    const displayAngle = Math.round(Math.abs(angleOffsetRad * 180 / Math.PI));
+    
+    return elements.map(el => {
+      if (!groupIds.includes(el.id)) return el;
+      
+      if (el.id === `${baseId}-ref-line`) {
+        return { ...el, data: { x1: centerX, y1: centerY, x2: refEndX, y2: refEndY } };
+      } else if (el.id === `${baseId}-angle-line`) {
+        return { ...el, data: { x1: centerX, y1: centerY, x2: angleEndX, y2: angleEndY } };
+      } else if (el.id === `${baseId}-arc`) {
+        return { ...el, data: arcPath };
+      } else if (el.id === `${baseId}-text`) {
+        return { ...el, x: textX, y: textY, data: { text: `${displayAngle}°` } };
+      }
+      return el;
+    });
+  }, [elements, getAngleGroupElementIds]);
+
+  // Extrahiert die geometrischen Parameter einer Winkelgruppe aus den Elementen
+  const getAngleGroupGeometry = useCallback((baseId: string, els?: DrawElement[]) => {
+    const sourceElements = els || elements;
+    const refLine = sourceElements.find(el => el.id === `${baseId}-ref-line`);
+    const angleLine = sourceElements.find(el => el.id === `${baseId}-angle-line`);
+    
+    if (!refLine || !angleLine) return null;
+    
+    const cx = refLine.data.x1;
+    const cy = refLine.data.y1;
+    
+    // Referenzlinie Winkel und Länge
+    const refDx = refLine.data.x2 - cx;
+    const refDy = refLine.data.y2 - cy;
+    const refAngleRad = Math.atan2(refDy, refDx);
+    const refLength = Math.sqrt(refDx * refDx + refDy * refDy);
+    
+    // Winkellinie Winkel und Länge
+    const anglDx = angleLine.data.x2 - cx;
+    const anglDy = angleLine.data.y2 - cy;
+    const angleLineRad = Math.atan2(anglDy, anglDx);
+    const anglLineLength = Math.sqrt(anglDx * anglDx + anglDy * anglDy);
+    
+    // Winkelversatz (Differenz zwischen den beiden Linien)
+    let angleOffsetRad = angleLineRad - refAngleRad;
+    
+    return {
+      cx, cy,
+      refAngleRad, refLength,
+      angleLineRad, anglLineLength,
+      angleOffsetRad,
+    };
+  }, [elements]);
+
   const undo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
@@ -2906,6 +3006,13 @@ export default function DrawSketchScreen() {
       };
       addToHistory([...elements, newElement]);
       setCurrentPath('');
+    } else if (drawMode === 'select' && angleEditMode) {
+      // Winkelgruppen-Bearbeitung (Drehen/Verlängern) abgeschlossen
+      addToHistory(elements);
+      setAngleEditMode(null);
+      setAngleEditBaseId(null);
+      setAngleEditOriginals([]);
+      setDragStart(null);
     } else if (drawMode === 'select' && dragMode) {
       // Finish transform - add to history if elements changed
       if (editingPolylinePoint !== null) {
@@ -3379,6 +3486,18 @@ export default function DrawSketchScreen() {
         
         const handle = checkTransformHandles(selectedEl, locationX, locationY);
         if (handle) {
+          // Winkelgruppen-Bearbeitungsmodus (Drehen/Verlängern)
+          if (handle.type === 'angle-rotate' || handle.type === 'angle-adjust') {
+            const baseId = getAngleGroupBaseId(selectedEl.id);
+            const groupIds = getAngleGroupElementIds(baseId);
+            const originals = elements.filter(el => groupIds.includes(el.id)).map(el => JSON.parse(JSON.stringify(el)));
+            setAngleEditMode(handle.type === 'angle-rotate' ? 'rotate' : 'adjust');
+            setAngleEditBaseId(baseId);
+            setAngleEditOriginals(originals);
+            setDragStart({ x: locationX, y: locationY });
+            return;
+          }
+          
           setDragMode(handle.type === 'rotate' ? 'rotate' : 'resize');
           setResizeHandle(handle.handle);
           setDragStart({ x: locationX, y: locationY });
@@ -3544,7 +3663,55 @@ export default function DrawSketchScreen() {
       return;
     }
     
-    if (!originalElement || !dragStart) return;
+    if (!originalElement || !dragStart) {
+      // Winkelgruppen-Bearbeitung (Drehen/Verlängern) - braucht kein originalElement
+      if (angleEditMode && angleEditBaseId && dragStart) {
+        const geo = getAngleGroupGeometry(angleEditBaseId, angleEditOriginals);
+        if (!geo) return;
+        
+        if (angleEditMode === 'rotate') {
+          // Blauen Linie-Endpunkt ziehen → Gesamte Rotation + Länge
+          const newAngleRad = Math.atan2(locationY - geo.cy, locationX - geo.cx);
+          const newLength = Math.max(30, Math.sqrt(
+            Math.pow(locationX - geo.cx, 2) + Math.pow(locationY - geo.cy, 2)
+          ));
+          
+          // Winkelversatz bleibt gleich (Winkel zwischen den Linien ändert sich nicht)
+          const updatedElements = recalculateAngleGroup(
+            angleEditBaseId,
+            geo.cx, geo.cy,
+            newAngleRad,
+            newLength,
+            geo.angleOffsetRad,
+            geo.anglLineLength,
+            false,
+          );
+          setElements(updatedElements);
+        } else if (angleEditMode === 'adjust') {
+          // Rote Linie-Endpunkt ziehen → Winkel anpassen + Länge
+          const newAngleLineRad = Math.atan2(locationY - geo.cy, locationX - geo.cx);
+          const newLength = Math.max(30, Math.sqrt(
+            Math.pow(locationX - geo.cx, 2) + Math.pow(locationY - geo.cy, 2)
+          ));
+          
+          // Neuer Winkelversatz = neue Richtung - Referenzlinie Richtung
+          const newAngleOffset = newAngleLineRad - geo.refAngleRad;
+          
+          const updatedElements = recalculateAngleGroup(
+            angleEditBaseId,
+            geo.cx, geo.cy,
+            geo.refAngleRad,
+            geo.refLength,
+            newAngleOffset,
+            newLength,
+            false,
+          );
+          setElements(updatedElements);
+        }
+        return;
+      }
+      return;
+    }
 
     const dx = locationX - dragStart.x;
     const dy = locationY - dragStart.y;
@@ -4082,8 +4249,29 @@ export default function DrawSketchScreen() {
   };
 
   // Check transform handles
-  const checkTransformHandles = (element: DrawElement, x: number, y: number): { type: 'rotate' | 'resize', handle: string } | null => {
+  const checkTransformHandles = (element: DrawElement, x: number, y: number): { type: 'rotate' | 'resize' | 'angle-rotate' | 'angle-adjust', handle: string } | null => {
     const handleRadius = 15;
+    
+    // Prüfe zuerst, ob das Element zu einer Winkelgruppe gehört
+    if (isAngleGroupElement(element.id)) {
+      const baseId = getAngleGroupBaseId(element.id);
+      const geo = getAngleGroupGeometry(baseId);
+      if (geo) {
+        // Endpunkt der Referenzlinie (blau) - zum Drehen
+        const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
+        const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
+        if (Math.sqrt(Math.pow(x - refEndX, 2) + Math.pow(y - refEndY, 2)) < handleRadius * 1.5) {
+          return { type: 'angle-rotate', handle: 'ref-end' };
+        }
+        
+        // Endpunkt der Winkellinie (rot) - zum Winkel anpassen
+        const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
+        const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
+        if (Math.sqrt(Math.pow(x - angleEndX, 2) + Math.pow(y - angleEndY, 2)) < handleRadius * 1.5) {
+          return { type: 'angle-adjust', handle: 'angle-end' };
+        }
+      }
+    }
     
     if (element.type === 'rect') {
       const { x: rx, y: ry, width: w, height: h } = element.data;
@@ -4917,6 +5105,37 @@ export default function DrawSketchScreen() {
     const scaledFontSize = Math.max(5, baseFontSize / Math.max(scale, 0.5));
     const scaledRotateFontSize = Math.max(6, baseRotateFontSize / Math.max(scale, 0.5));
     const scaledRotateOffset = Math.max(15, 30 / Math.max(scale, 0.5));
+    
+    // Winkelgruppen-Handles (Drehen + Verlängern)
+    if (isAngleGroupElement(element.id)) {
+      const baseId = getAngleGroupBaseId(element.id);
+      const geo = getAngleGroupGeometry(baseId);
+      if (geo) {
+        const refEndX = geo.cx + geo.refLength * Math.cos(geo.refAngleRad);
+        const refEndY = geo.cy + geo.refLength * Math.sin(geo.refAngleRad);
+        const angleEndX = geo.cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
+        const angleEndY = geo.cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
+        const handleSize = Math.max(6, 10 / Math.max(scale, 0.5));
+        const strokeW = Math.max(1, 2 / Math.max(scale, 0.5));
+        
+        // Blauer Griff am Ende der Referenzlinie (zum Drehen)
+        handles.push(
+          <G key="angle-rotate-handle">
+            <Circle cx={refEndX} cy={refEndY} r={handleSize} fill="#2196f3" stroke="#fff" strokeWidth={strokeW} />
+            <SvgText x={refEndX - handleSize * 0.45} y={refEndY + handleSize * 0.45} fill="#fff" fontSize={handleSize * 0.9}>↻</SvgText>
+          </G>
+        );
+        
+        // Roter Griff am Ende der Winkellinie (zum Winkel anpassen)
+        handles.push(
+          <G key="angle-adjust-handle">
+            <Circle cx={angleEndX} cy={angleEndY} r={handleSize} fill="#f44336" stroke="#fff" strokeWidth={strokeW} />
+            <SvgText x={angleEndX - handleSize * 0.45} y={angleEndY + handleSize * 0.45} fill="#fff" fontSize={handleSize * 0.9}>↻</SvgText>
+          </G>
+        );
+      }
+      return <G>{handles}</G>;
+    }
     
     if (element.type === 'rect') {
       const { x, y, width: w, height: h } = element.data;

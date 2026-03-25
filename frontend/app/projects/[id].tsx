@@ -306,6 +306,25 @@ export default function ProjectDetailScreen() {
     imagemeter: 'Fotomessung',
   };
 
+  // Ladezustand für Tab-Wechsel (damit SVG-Vorschauen nicht den UI-Thread blockieren)
+  const [isTabLoading, setIsTabLoading] = useState(false);
+  const prevTabRef = useRef(activeTab);
+
+  // Beim Tab-Wechsel: kurz Ladeanzeige zeigen, dann Inhalte rendern
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      // Nur für Tabs mit schweren Vorschauen (Skizzen, Fotos) Ladeanzeige zeigen
+      if (activeTab === 'sketches' || activeTab === 'photos') {
+        setIsTabLoading(true);
+        const timer = setTimeout(() => {
+          setIsTabLoading(false);
+        }, 100); // Kurze Verzögerung, damit UI-Thread den Spinner zeigen kann
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     if (activeTab !== 'overview') {
       navigation.setOptions({
@@ -313,10 +332,17 @@ export default function ProjectDetailScreen() {
         headerLeft: () => (
           <TouchableOpacity 
             onPress={() => setActiveTab('overview')} 
-            style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}
+            style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              paddingRight: 8,
+              paddingVertical: 8,
+              minHeight: 44,
+            }}
+            activeOpacity={0.7}
           >
             <Ionicons name="chevron-back" size={28} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 17 }}>Projektdetails</Text>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '500' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });
@@ -4657,7 +4683,12 @@ export default function ProjectDetailScreen() {
               <Text style={styles.addButtonText}>Neue Skizze</Text>
             </TouchableOpacity>
 
-            {sketches.map((sketch) => {
+            {isTabLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#1976d2" />
+                <Text style={{ marginTop: 12, fontSize: 15, color: '#666' }}>Skizzen werden geladen...</Text>
+              </View>
+            ) : sketches.map((sketch) => {
               // Extract SVG XML from base64 data URI if it's an SVG
               const getSvgXml = (dataUri: string): string | null => {
                 if (!dataUri) return null;
@@ -5049,7 +5080,8 @@ export default function ProjectDetailScreen() {
                   </TouchableOpacity>
                 </View>
               );
-            })}
+            })
+            }
           </View>
         )}
 

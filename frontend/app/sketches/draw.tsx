@@ -361,7 +361,7 @@ export default function DrawSketchScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
   const canvasWidth = screenWidth;
-  const canvasHeight = screenHeight - (isPhone ? 100 : 120);
+  const canvasHeight = Math.max(100, screenHeight - (isPhone ? 100 : 120));
   
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
   const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -638,6 +638,13 @@ export default function DrawSketchScreen() {
     if (distRef < 50 && distRef < distAngle) dragHandle = 'ref';
     else if (distAngle < 50) dragHandle = 'angle';
     
+    // Lupe aktivieren wenn ein Handle gezogen wird
+    if (dragHandle !== 'body') {
+      setShowMagnifier(true);
+      setMagnifierPosition({ x: locationX, y: locationY });
+      setMagnifierTargetPosition({ x: locationX, y: locationY });
+    }
+    
     protractorDragRef.current = {
       isDragging: true, startX: pageX, startY: pageY,
       initialPosX: protractorPosition.x, initialPosY: protractorPosition.y,
@@ -659,9 +666,16 @@ export default function DrawSketchScreen() {
         y: protractorDragRef.current.initialPosY + dy,
       });
     } else {
-      // Verschiebung in SVG-Einheiten
-      const totalDx = (pageX - protractorDragRef.current.startX) / protractorScale;
-      const totalDy = (pageY - protractorDragRef.current.startY) / protractorScale;
+      // Verschiebung in SVG-Einheiten (mit reduzierter Empfindlichkeit für Präzision)
+      const dragSensitivity = 0.5; // 0.5 = halbe Geschwindigkeit, mehr Präzision
+      const totalDx = (pageX - protractorDragRef.current.startX) / protractorScale * dragSensitivity;
+      const totalDy = (pageY - protractorDragRef.current.startY) / protractorScale * dragSensitivity;
+      
+      // Lupe-Position aktualisieren
+      if (showMagnifier) {
+        setMagnifierPosition({ x: pageX, y: pageY - 80 });
+        setMagnifierTargetPosition({ x: pageX, y: pageY });
+      }
       
       if (handle === 'ref') {
         const rotRad = protractorRotation * Math.PI / 180;
@@ -672,7 +686,7 @@ export default function DrawSketchScreen() {
         const newY = origY + totalDy;
         let newAngle = Math.atan2(newY, newX) * 180 / Math.PI;
         if (protractorMirrored) newAngle += 180;
-        const newLen = Math.min(300, Math.max(30, Math.sqrt(newX * newX + newY * newY)));
+        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
         setProtractorRotation(Math.round(newAngle));
         setProtractorRefLineExt(Math.round(newLen - 140));
       } else if (handle === 'angle') {
@@ -693,26 +707,44 @@ export default function DrawSketchScreen() {
         let newRelAngle = protractorMirrored ? -(newAbsAngle - protractorRotation + 180) : newAbsAngle - protractorRotation;
         while (newRelAngle < -180) newRelAngle += 360;
         while (newRelAngle > 360) newRelAngle -= 360;
-        const newLen = Math.min(300, Math.max(30, Math.sqrt(newX * newX + newY * newY)));
+        const newLen = Math.max(30, Math.sqrt(newX * newX + newY * newY));
         setProtractorAngle(Math.round(newRelAngle));
         setProtractorAngleLineExt(Math.round(newLen - 140));
       }
     }
-  }, [protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale]);
+  }, [protractorRotation, protractorRefLineExt, protractorAngleLineExt, protractorAngle, protractorMirrored, protractorScale, showMagnifier]);
   
   const handleProtractorDragEnd = useCallback(() => {
+    // Lupe ausblenden wenn Handle losgelassen wird
+    if (protractorDragRef.current.dragHandle !== 'body') {
+      setShowMagnifier(false);
+      setMagnifierPosition(null);
+    }
     protractorDragRef.current.isDragging = false;
+    protractorDragRef.current.dragHandle = 'body';
   }, []);
   
-  // PanResponder für native Touch-Geräte
+  // Refs für die neuesten Callbacks (verhindert stale closures im PanResponder)
+  const dragStartRef = useRef(handleProtractorDragStart);
+  const dragMoveRef = useRef(handleProtractorDragMove);
+  const dragEndRef = useRef(handleProtractorDragEnd);
+  
+  // Immer die neuesten Callbacks in den Refs halten
+  useEffect(() => {
+    dragStartRef.current = handleProtractorDragStart;
+    dragMoveRef.current = handleProtractorDragMove;
+    dragEndRef.current = handleProtractorDragEnd;
+  }, [handleProtractorDragStart, handleProtractorDragMove, handleProtractorDragEnd]);
+  
+  // PanResponder für native Touch-Geräte (verwendet Refs für aktuelle Callbacks)
   const protractorPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: handleProtractorDragStart,
-      onPanResponderMove: handleProtractorDragMove,
-      onPanResponderRelease: handleProtractorDragEnd,
-      onPanResponderTerminate: handleProtractorDragEnd,
+      onPanResponderGrant: (e: any) => dragStartRef.current(e),
+      onPanResponderMove: (e: any) => dragMoveRef.current(e),
+      onPanResponderRelease: () => dragEndRef.current(),
+      onPanResponderTerminate: () => dragEndRef.current(),
     })
   );
   
@@ -6733,9 +6765,15 @@ export default function DrawSketchScreen() {
           onResponderRelease={onTouchEnd}
           onLayout={(event) => {
             // Speichere die Canvas-Position auf dem Bildschirm für präzise Koordinaten-Berechnung
-            event.target.measureInWindow((x, y, width, height) => {
+            if (Platform.OS === 'web') {
+              // Web: Verwende layout-Daten aus dem Event
+              const { x, y, width, height } = event.nativeEvent.layout;
               setCanvasLayout({ x, y, width, height });
-            });
+            } else if (event.target && typeof event.target.measureInWindow === 'function') {
+              event.target.measureInWindow((x: number, y: number, width: number, height: number) => {
+                setCanvasLayout({ x, y, width, height });
+              });
+            }
           }}
         >
         <Svg
@@ -8609,16 +8647,16 @@ export default function DrawSketchScreen() {
                 cursor: 'grab',
               } as any,
             ]}
-            {...protractorPanResponder.current.panHandlers}
-            // Web-spezifische Events
-            onTouchStart={handleProtractorDragStart}
-            onTouchMove={handleProtractorDragMove}
-            onTouchEnd={handleProtractorDragEnd}
-            // @ts-ignore - Web-only events
+            {...(Platform.OS !== 'web' ? protractorPanResponder.current.panHandlers : {})}
+            // @ts-ignore - Web-only events (PanResponder funktioniert nicht gut auf Web)
             onMouseDown={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
             onMouseMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onMouseUp={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
+            // Web: onTouch-Events als Fallback für Touch-Screens im Browser
+            onTouchStart={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
+            onTouchMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
+            onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
             <View style={styles.protractorSvgContainer}>
               <Svg width={300} height={300} viewBox={`${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${-50 - Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)} ${400 + 2*Math.max(protractorRefLineExt, protractorAngleLineExt, 0)}`}>
@@ -8886,6 +8924,9 @@ export default function DrawSketchScreen() {
                   setProtractorUseComplementary(false);
                   setProtractorMirrored(false);
                   setProtractorDrawSize(60);
+                  setProtractorRotation(0);
+                  setProtractorRefLineExt(0);
+                  setProtractorAngleLineExt(0);
                 }}
               >
                 <Text style={styles.protractorResetBtnText}>Reset</Text>

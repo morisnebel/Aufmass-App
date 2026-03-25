@@ -587,6 +587,9 @@ export default function DrawSketchScreen() {
   const [protractorUseComplementary, setProtractorUseComplementary] = useState(false); // Komplementärwinkel (180° - angle)
   const [protractorMirrored, setProtractorMirrored] = useState(false); // Horizontal spiegeln
   const [protractorDrawSize, setProtractorDrawSize] = useState(60); // Größe des gezeichneten Winkels (30-100)
+  const [protractorRotation, setProtractorRotation] = useState(0); // Basis-Rotation des gesamten Winkelmessers (in Grad)
+  const [protractorRefLineExt, setProtractorRefLineExt] = useState(0); // Verlängerung der Referenzlinie über Kreis hinaus
+  const [protractorAngleLineExt, setProtractorAngleLineExt] = useState(0); // Verlängerung der Winkellinie über Kreis hinaus
   // Winkelmesser Position mit useState für bessere Web-Kompatibilität
   const [protractorPosition, setProtractorPosition] = useState({ x: 0, y: 0 });
   const protractorDragRef = useRef({ 
@@ -1579,7 +1582,12 @@ export default function DrawSketchScreen() {
     
     // Verwendbare Größe (vom Benutzer einstellbar)
     const arcRadius = protractorDrawSize * 0.6;  // Bogenradius
-    const lineLength = protractorDrawSize;  // Linienlänge
+    const refLineLen = protractorDrawSize + (protractorRefLineExt * protractorDrawSize / 140);  // Referenzlinienlänge (skaliert)
+    const angleLineLen = protractorDrawSize + (protractorAngleLineExt * protractorDrawSize / 140); // Winkellinienlänge (skaliert)
+    const lineLength = protractorDrawSize;  // Standard-Linienlänge für Bogen-Berechnung
+    
+    // Basis-Rotation in Radians
+    const rotRad = protractorRotation * Math.PI / 180;
     
     // Berechne den anzuzeigenden Winkel
     // Immer positive Werte verwenden
@@ -8538,7 +8546,9 @@ export default function DrawSketchScreen() {
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
             <View style={styles.protractorSvgContainer}>
-              <Svg width={300} height={300} viewBox="0 0 300 300">
+              <Svg width={300} height={300} viewBox="-50 -50 400 400">
+                {/* Gesamte Rotation um den Mittelpunkt */}
+                <G transform={`rotate(${protractorRotation}, 150, 150)`}>
                 {/* Halbtransparenter Hintergrund */}
                 <Circle cx={150} cy={150} r={145} fill="rgba(255, 255, 255, 0.5)" stroke="#FF5722" strokeWidth={3} />
                 
@@ -8584,29 +8594,51 @@ export default function DrawSketchScreen() {
                 {/* Mittelpunkt */}
                 <Circle cx={150} cy={150} r={6} fill="#FF5722" />
                 
-                {/* Referenzlinie (horizontal - blau) - gespiegelt wenn protractorMirrored */}
+                {/* Referenzlinie (blau) - mit Verlängerung */}
                 <Line 
                   x1={150} 
                   y1={150} 
-                  x2={protractorMirrored ? 10 : 290} 
+                  x2={protractorMirrored ? 150 - (140 + protractorRefLineExt) : 150 + (140 + protractorRefLineExt)} 
                   y2={150} 
                   stroke="#2196f3" 
                   strokeWidth={3} 
                 />
                 
-                {/* Winkellinie (gedreht - orange) - gespiegelt wenn protractorMirrored */}
+                {/* Griffpunkt am Ende der Referenzlinie (blau) */}
+                <Circle 
+                  cx={protractorMirrored ? 150 - (140 + protractorRefLineExt) : 150 + (140 + protractorRefLineExt)} 
+                  cy={150} 
+                  r={10} 
+                  fill="#2196f3" 
+                  stroke="#fff" 
+                  strokeWidth={2} 
+                />
+                
+                {/* Winkellinie (orange) - mit Verlängerung */}
                 <Line 
                   x1={150} 
                   y1={150} 
                   x2={protractorMirrored 
-                    ? 150 - 140 * Math.cos(protractorAngle * Math.PI / 180)
-                    : 150 + 140 * Math.cos(protractorAngle * Math.PI / 180)} 
-                  y2={150 + 140 * Math.sin(protractorAngle * Math.PI / 180)} 
+                    ? 150 - (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)
+                    : 150 + (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)} 
+                  y2={150 + (140 + protractorAngleLineExt) * Math.sin(protractorAngle * Math.PI / 180)} 
                   stroke="#FF5722" 
                   strokeWidth={3} 
                 />
                 
-                {/* Winkelbogen - gespiegelt wenn protractorMirrored */}
+                {/* Griffpunkt am Ende der Winkellinie (orange/rot) */}
+                <Circle 
+                  cx={protractorMirrored 
+                    ? 150 - (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)
+                    : 150 + (140 + protractorAngleLineExt) * Math.cos(protractorAngle * Math.PI / 180)} 
+                  cy={150 + (140 + protractorAngleLineExt) * Math.sin(protractorAngle * Math.PI / 180)} 
+                  r={10} 
+                  fill="#FF5722" 
+                  stroke="#fff" 
+                  strokeWidth={2} 
+                />
+                
+                {/* Winkelbogen */}
                 {protractorAngle !== 0 && (
                   <Path 
                     d={(() => {
@@ -8615,14 +8647,12 @@ export default function DrawSketchScreen() {
                       const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
                       const sweep = protractorAngle > 0 ? 1 : 0;
                       if (protractorMirrored) {
-                        // Gespiegelt: Bogen nach links
                         const x1 = 150 - r;
                         const y1 = 150;
                         const x2 = 150 - r * Math.cos(endAngle);
                         const y2 = 150 + r * Math.sin(endAngle);
                         return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} ${sweep === 1 ? 0 : 1} ${x2} ${y2}`;
                       } else {
-                        // Normal: Bogen nach rechts
                         const x1 = 150 + r;
                         const y1 = 150;
                         const x2 = 150 + r * Math.cos(endAngle);
@@ -8649,6 +8679,7 @@ export default function DrawSketchScreen() {
                     ? `${180 - Math.abs(protractorAngle)}°`
                     : `${Math.abs(protractorAngle)}°`}
                 </SvgText>
+                </G>
               </Svg>
             </View>
           </View>
@@ -8731,6 +8762,75 @@ export default function DrawSketchScreen() {
                 <TouchableOpacity 
                   style={styles.protractorControlBtnSmall}
                   onPress={() => setProtractorDrawSize(prev => Math.min(120, prev + 10))}
+                >
+                  <Ionicons name="add" size={16} color="#333" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Rotation-Steuerung */}
+            <View style={styles.protractorControlRow}>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorRotation(prev => prev - 10)}
+              >
+                <Text style={styles.protractorControlBtnText}>-10°</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorRotation(prev => prev - 1)}
+              >
+                <Text style={styles.protractorControlBtnText}>-1°</Text>
+              </TouchableOpacity>
+              <View style={[styles.protractorAngleBadge, { backgroundColor: '#2196f3' }]}>
+                <Text style={styles.protractorAngleBadgeText}>
+                  ↻ {protractorRotation}°
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorRotation(prev => prev + 1)}
+              >
+                <Text style={styles.protractorControlBtnText}>+1°</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.protractorControlBtn}
+                onPress={() => setProtractorRotation(prev => prev + 10)}
+              >
+                <Text style={styles.protractorControlBtnText}>+10°</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Linienverlängerung */}
+            <View style={styles.protractorControlRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#2196f3', marginRight: 4 }} />
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorRefLineExt(prev => Math.max(-100, prev - 20))}
+                >
+                  <Ionicons name="remove" size={16} color="#333" />
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, marginHorizontal: 4 }}>{140 + protractorRefLineExt}px</Text>
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorRefLineExt(prev => Math.min(200, prev + 20))}
+                >
+                  <Ionicons name="add" size={16} color="#333" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FF5722', marginRight: 4 }} />
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorAngleLineExt(prev => Math.max(-100, prev - 20))}
+                >
+                  <Ionicons name="remove" size={16} color="#333" />
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, marginHorizontal: 4 }}>{140 + protractorAngleLineExt}px</Text>
+                <TouchableOpacity 
+                  style={styles.protractorControlBtnSmall}
+                  onPress={() => setProtractorAngleLineExt(prev => Math.min(200, prev + 20))}
                 >
                   <Ionicons name="add" size={16} color="#333" />
                 </TouchableOpacity>

@@ -2580,12 +2580,12 @@ export default function ProjectDetailScreen() {
           .header {
             background: ${headerBgColor};
             color: ${headerTextColor};
-            padding: ${headerSize.padding}px ${headerSize.padding + 4}px;
-            margin: 0 0 10px 0;
+            padding: ${Math.max(headerSize.padding - 2, 2)}px ${headerSize.padding + 2}px;
+            margin: 0 0 4px 0;
             border-radius: 0;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 3px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             ${headerBorderStyle}
@@ -2626,9 +2626,9 @@ export default function ProjectDetailScreen() {
           h2 {
             color: ${toolsAccentColor};
             border-bottom: 1px solid ${toolsAccentColor};
-            padding-bottom: 3px;
-            margin-top: 12px;
-            margin-bottom: 8px;
+            padding-bottom: 2px;
+            margin-top: 8px;
+            margin-bottom: 4px;
             font-size: ${toolsSize.h2Size}px;
             page-break-after: avoid;
             page-break-inside: avoid;
@@ -2725,37 +2725,39 @@ export default function ProjectDetailScreen() {
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 5px;
+            margin-bottom: 6px;
           }
           .info-box {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
-            padding: 6px 8px;
+            padding: 4px 6px;
           }
           .info-box h3 {
             margin-top: 0;
             color: #1976d2;
-            font-size: 9px;
+            font-size: 8px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 3px;
-            margin-bottom: 4px;
+            padding-bottom: 2px;
+            margin-bottom: 3px;
           }
           .info-row {
             display: flex;
-            margin-bottom: 2px;
-            font-size: 8px;
+            margin-bottom: 1px;
+            font-size: 7px;
+            line-height: 1.3;
           }
           .info-label {
             font-weight: 800;
-            min-width: 110px;
+            min-width: 80px;
             flex-shrink: 0;
             color: #000;
-            font-size: 9px;
+            font-size: 7.5px;
           }
           .info-value {
             flex: 1;
+            font-size: 7.5px;
           }
           .stats-grid {
             display: grid;
@@ -2785,8 +2787,8 @@ export default function ProjectDetailScreen() {
             background: ${projectTypeBgColor};
             ${projectTypeBorderStyle}
             border-radius: 4px;
-            padding: ${projectTypeSize.padding}px ${projectTypeSize.padding + 4}px;
-            margin-bottom: 12px;
+            padding: ${Math.max(projectTypeSize.padding - 2, 2)}px ${projectTypeSize.padding + 2}px;
+            margin-bottom: 6px;
             text-align: center;
             display: flex;
             align-items: center;
@@ -3512,8 +3514,8 @@ export default function ProjectDetailScreen() {
               <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
-              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <h4 style="color: #1976d2; margin: 0 0 8px 0; font-size: 9px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px;">
+              <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #e0e0e0;">
+                <h4 style="color: #1976d2; margin: 0 0 3px 0; font-size: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 2px;">
                   Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}
                 </h4>
                 ${objektNumber ? `

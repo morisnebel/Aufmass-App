@@ -6562,17 +6562,17 @@ export default function DrawSketchScreen() {
       {showElementStyleEditor && selectedElementForStyle && (
         <View style={styles.elementStylePanel}>
           <View style={styles.elementStyleHeader}>
-            <Text style={styles.elementStyleTitle}>Stil bearbeiten</Text>
-            <TouchableOpacity onPress={() => setShowElementStyleEditor(false)}>
-              <Ionicons name="close" size={20} color="#666" />
+            <Text style={styles.elementStyleTitle}>Stil</Text>
+            <TouchableOpacity onPress={() => setShowElementStyleEditor(false)} style={{ padding: 4 }}>
+              <Ionicons name="close-circle" size={22} color="#999" />
             </TouchableOpacity>
           </View>
           
-          {/* Aktuelle Farbe und Farbauswahl */}
-          {selectedElementForStyle.type !== 'image' && (
-            <View style={styles.elementStyleSection}>
-              <Text style={styles.elementStyleSectionLabel}>Farbe:</Text>
-              <View style={styles.elementStyleColorRow}>
+          {/* Farbe + Linienstärke in einer kompakten Zeile */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {/* Farbauswahl */}
+            {selectedElementForStyle.type !== 'image' && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', flex: 1 }}>
                 {colors.map(color => (
                   <TouchableOpacity
                     key={`style-${color}`}
@@ -6585,14 +6585,11 @@ export default function DrawSketchScreen() {
                   />
                 ))}
               </View>
-            </View>
-          )}
-          
-          {/* Linienstärke - nur für Elemente die strokeWidth haben */}
-          {selectedElementForStyle.type !== 'image' && selectedElementForStyle.type !== 'text' && (
-            <View style={styles.elementStyleSection}>
-              <Text style={styles.elementStyleSectionLabel}>Linienstärke:</Text>
-              <View style={styles.elementStyleStrokeRow}>
+            )}
+            
+            {/* Linienstärke - kompakt */}
+            {selectedElementForStyle.type !== 'image' && selectedElementForStyle.type !== 'text' && (
+              <View style={{ flexDirection: 'row', gap: 4 }}>
                 {[1, 2, 3, 5, 8].map(w => (
                   <TouchableOpacity
                     key={`style-sw-${w}`}
@@ -6605,20 +6602,20 @@ export default function DrawSketchScreen() {
                     <View style={[
                       styles.elementStyleStrokeDot, 
                       { 
-                        width: Math.max(w * 2.5, 6), 
-                        height: Math.max(w * 2.5, 6),
+                        width: Math.max(w * 2, 5), 
+                        height: Math.max(w * 2, 5),
                         backgroundColor: selectedElementForStyle.strokeWidth === w ? '#fff' : '#333',
                       }
                     ]} />
                     <Text style={[
                       styles.elementStyleStrokeLabel,
                       selectedElementForStyle.strokeWidth === w && { color: '#fff' }
-                    ]}>{w}px</Text>
+                    ]}>{w}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-          )}
+            )}
+          </View>
         </View>
       )}
 
@@ -10562,8 +10559,8 @@ const styles = StyleSheet.create({
   },
   elementStylePanel: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     borderTopWidth: 1,
@@ -10573,31 +10570,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   elementStyleTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#333',
   },
   elementStyleSection: {
-    marginBottom: 10,
+    marginBottom: 4,
   },
   elementStyleSectionLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#666',
-    marginBottom: 6,
+    marginBottom: 3,
   },
   elementStyleColorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 5,
   },
   elementStyleColorOption: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#ddd',
   },
@@ -10619,16 +10616,16 @@ const styles = StyleSheet.create({
   },
   elementStyleStrokeRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
   },
   elementStyleStrokeButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
     backgroundColor: '#f0f0f0',
-    minWidth: 44,
+    minWidth: 32,
   },
   elementStyleStrokeButtonActive: {
     backgroundColor: '#1976d2',

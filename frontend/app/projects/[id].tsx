@@ -23,7 +23,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
-import { isPro } from '../../services/FeatureFlags';
+import { isPro, getProStatus } from '../../services/FeatureFlags';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -1215,7 +1215,8 @@ export default function ProjectDetailScreen() {
     
     // Logo: In Basic Version das Aufmassprofi-Logo verwenden
     let companyLogo = '';
-    if (isPro) {
+    const isProActive = getProStatus();
+    if (isProActive) {
       // Pro Version: Benutzer-Logo aus Einstellungen
       companyLogo = settings.logo_data || '';
     } else {

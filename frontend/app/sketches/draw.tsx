@@ -513,6 +513,7 @@ export default function DrawSketchScreen() {
   const lineMeasurementInputRef = useRef<TextInput>(null);
   const [showMeasureStyleSettings, setShowMeasureStyleSettings] = useState(false);
   const [measureKeyboardMode, setMeasureKeyboardMode] = useState<'numbers' | 'letters'>('numbers');
+  const [measureKeyboardCaps, setMeasureKeyboardCaps] = useState(false);
   
   // Floating-Panel Position für Maß-Numpad
   const measurePanelPan = useRef(new Animated.ValueXY({ x: 0, y: 100 })).current;
@@ -1228,7 +1229,10 @@ export default function DrawSketchScreen() {
                     <TouchableOpacity 
                       key={letter}
                       style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(26 * scale) }]}
-                      onPress={() => handleActiveNumpadPress(modalNumpadCaps ? letter : letter.toLowerCase())}
+                      onPress={() => {
+                        handleActiveNumpadPress(modalNumpadCaps ? letter : letter.toLowerCase());
+                        if (modalNumpadCaps) setModalNumpadCaps(false);
+                      }}
                     >
                       <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>
                         {modalNumpadCaps ? letter : letter.toLowerCase()}
@@ -1240,7 +1244,10 @@ export default function DrawSketchScreen() {
               {/* Umlaute + Sonderzeichen */}
               <View style={[styles.floatingKeyRow, { gap: 3 }]}>
                 {['ä','ö','ü','ß'].map(k => (
-                  <TouchableOpacity key={k} style={[styles.floatingLetterKey, { height: Math.round(34 * scale) }]} onPress={() => handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k)}>
+                  <TouchableOpacity key={k} style={[styles.floatingLetterKey, { height: Math.round(34 * scale) }]} onPress={() => {
+                    handleActiveNumpadPress(modalNumpadCaps ? k.toUpperCase() : k);
+                    if (modalNumpadCaps) setModalNumpadCaps(false);
+                  }}>
                     <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>{modalNumpadCaps ? k.toUpperCase() : k}</Text>
                   </TouchableOpacity>
                 ))}
@@ -1250,13 +1257,13 @@ export default function DrawSketchScreen() {
               </View>
               {/* Leer + Sonderzeichen + Backspace */}
               <View style={[styles.floatingKeyRow, { gap: 3 }]}>
-                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), flex: 1, backgroundColor: '#e3f2fd' }]} onPress={() => handleActiveNumpadPress(' ')}>
-                  <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale), color: '#1976d2' }]}>Leer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(32 * scale) }]} onPress={() => handleActiveNumpadPress('.')}>
+                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(24 * scale) }]} onPress={() => handleActiveNumpadPress('.')}>
                   <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>.</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(32 * scale) }]} onPress={() => handleActiveNumpadPress('/')}>
+                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => handleActiveNumpadPress(' ')}>
+                  <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale), color: '#1976d2' }]}>Leer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(24 * scale) }]} onPress={() => handleActiveNumpadPress('/')}>
                   <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>/</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), flex: 1, backgroundColor: '#ffebee' }]} onPress={() => handleActiveNumpadPress('⌫')}>
@@ -7200,25 +7207,41 @@ export default function DrawSketchScreen() {
                             key={letter} 
                             style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(28 * sc) }]}
                             onPress={() => {
-                              setLineMeasurementExpression(prev => prev + letter.toLowerCase());
+                              setLineMeasurementExpression(prev => prev + (measureKeyboardCaps ? letter : letter.toLowerCase()));
+                              if (measureKeyboardCaps) setMeasureKeyboardCaps(false);
                             }}
                           >
-                            <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>{letter}</Text>
+                            <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>{measureKeyboardCaps ? letter : letter.toLowerCase()}</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
                     ))}
+                    {/* Umlaute + Shift */}
                     <View style={[styles.floatingKeyRow, { gap: 3 }]}>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 1, backgroundColor: '#e3f2fd' }]} onPress={() => setLineMeasurementExpression(prev => prev + ' ')}>
-                        <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>Leer</Text>
+                      {['ä','ö','ü','ß'].map(k => (
+                        <TouchableOpacity key={k} style={[styles.floatingLetterKey, { height: letterKH }]} onPress={() => {
+                          setLineMeasurementExpression(prev => prev + (measureKeyboardCaps ? k.toUpperCase() : k));
+                          if (measureKeyboardCaps) setMeasureKeyboardCaps(false);
+                        }}>
+                          <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>{measureKeyboardCaps ? k.toUpperCase() : k}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, backgroundColor: measureKeyboardCaps ? '#1976d2' : '#f0f0f0' }]} onPress={() => setMeasureKeyboardCaps(!measureKeyboardCaps)}>
+                        <Ionicons name="arrow-up" size={Math.round(16 * sc)} color={measureKeyboardCaps ? '#fff' : '#666'} />
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '.')}>
+                    </View>
+                    {/* . + Leer (breit) + / + - + Backspace */}
+                    <View style={[styles.floatingKeyRow, { gap: 3 }]}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '.')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>.</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '/')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => setLineMeasurementExpression(prev => prev + ' ')}>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>Leer</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '/')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>/</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(36 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '-')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '-')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>-</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 1, backgroundColor: '#ffebee' }]} onPress={() => handleLineMeasurementNumpadPress('\u232b')}>

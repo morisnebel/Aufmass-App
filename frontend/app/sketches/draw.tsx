@@ -2115,12 +2115,31 @@ export default function DrawSketchScreen() {
         const saveBgChanged = backgroundImageChangedRef.current;
         const saveBgImage = backgroundImage;
 
+        // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
+        const extractedImageOps: Promise<any>[] = [];
+        const lightElements = metadata.elements.map((el: any) => {
+          if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
+            // Speichere das Bild separat
+            const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
+            extractedImageOps.push(
+              AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
+                console.error('Error saving image element:', err)
+              )
+            );
+            // Ersetze die URI durch einen Verweis auf den Speicherkey
+            return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+          }
+          return el;
+        });
+        const lightMetadata = { ...metadata, elements: lightElements };
+
         // SPEICHERN IM HINTERGRUND - Navigation sofort ausführen
         const saveInBackground = async () => {
           try {
             if (saveSketchId) {
               const criticalOps: Promise<any>[] = [
-                AsyncStorage.setItem(`sketch_meta_${saveSketchId}`, JSON.stringify(metadata)),
+                AsyncStorage.setItem(`sketch_meta_${saveSketchId}`, JSON.stringify(lightMetadata)),
+                ...extractedImageOps,
               ];
               
               if (saveBgChanged) {
@@ -6003,14 +6022,31 @@ export default function DrawSketchScreen() {
       const t1 = Date.now();
       console.log('Preview generated in', t1 - startTime, 'ms');
 
+      // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
+      const imageOps: Promise<any>[] = [];
+      const lightElementsForSave = metadata.elements.map((el: any) => {
+        if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
+          const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
+          imageOps.push(
+            AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
+              console.error('Error saving image element:', err)
+            )
+          );
+          return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+        }
+        return el;
+      });
+      const lightMetadataForSave = { ...metadata, elements: lightElementsForSave };
+
       if (sketchId) {
         // Update existing sketch - FAST PATH: save critical data first, update list later
         console.log('Updating sketch ID:', sketchId);
         
         // STEP 1: Save metadata (elements etc.) to separate key - this is the critical data
-        const metaStr = JSON.stringify(metadata);
+        const metaStr = JSON.stringify(lightMetadataForSave);
         const criticalOps: Promise<any>[] = [
           AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr),
+          ...imageOps,
         ];
         
         // Only save background image if it actually changed
@@ -6050,7 +6086,8 @@ export default function DrawSketchScreen() {
       } else {
         // Create new sketch - include metadata for SketchService.create to handle
         console.log('Creating new sketch');
-        const fullMetadata = { ...metadata, backgroundImage };
+        const fullMetadata = { ...lightMetadataForSave, backgroundImage };
+        await Promise.all(imageOps);
         const newSketch = await SketchService.create({
           project_id: projectId,
           title,

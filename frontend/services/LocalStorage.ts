@@ -680,6 +680,22 @@ export const ProjectService = {
     for (const sketch of sketchesToDelete) {
       cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${sketch.id}`));
       cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${sketch.id}`));
+      // Clean up separately stored image elements
+      try {
+        const metaStr = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
+        if (metaStr) {
+          const meta = JSON.parse(metaStr);
+          if (meta?.elements) {
+            for (const el of meta.elements) {
+              if (el.data?.imageStorageKey) {
+                cleanupOps.push(AsyncStorage.removeItem(el.data.imageStorageKey));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors during cleanup
+      }
     }
     if (cleanupOps.length > 0) {
       await Promise.all(cleanupOps);
@@ -736,8 +752,35 @@ export const SketchService = {
       ]);
 
       if (metaStr) {
-        // Found in optimized storage
-        const metadata = JSON.parse(metaStr);
+        // Found in optimized storage - parse with error handling
+        let metadata: any;
+        try {
+          metadata = JSON.parse(metaStr);
+        } catch (parseErr) {
+          console.error(`[SketchService] Failed to parse metadata for sketch ${id}:`, parseErr);
+          return { metadata: null, backgroundImage: bgImage };
+        }
+        
+        // Restore image URIs from separate storage if they were extracted
+        if (metadata.elements && Array.isArray(metadata.elements)) {
+          const imageElements = metadata.elements.filter((el: any) => el.type === 'image' && el.data?.imageStorageKey);
+          if (imageElements.length > 0) {
+            const imageKeys = imageElements.map((el: any) => el.data.imageStorageKey);
+            const imagePromises = imageKeys.map((key: string) => AsyncStorage.getItem(key).catch(() => null));
+            const imageData = await Promise.all(imagePromises);
+            
+            metadata.elements = metadata.elements.map((el: any) => {
+              if (el.type === 'image' && el.data?.imageStorageKey) {
+                const idx = imageKeys.indexOf(el.data.imageStorageKey);
+                if (idx !== -1 && imageData[idx]) {
+                  return { ...el, data: { ...el.data, uri: imageData[idx] } };
+                }
+              }
+              return el;
+            });
+          }
+        }
+        
         return { metadata, backgroundImage: bgImage };
       }
 
@@ -745,7 +788,13 @@ export const SketchService = {
       console.log(`[SketchService] Migrating sketch ${id} to optimized storage...`);
       const sketch = await SketchService.getById(id);
       if (sketch?.metadata) {
-        const metadata = JSON.parse(sketch.metadata);
+        let metadata: any;
+        try {
+          metadata = JSON.parse(sketch.metadata);
+        } catch (parseErr) {
+          console.error(`[SketchService] Failed to parse legacy metadata for sketch ${id}:`, parseErr);
+          return { metadata: null, backgroundImage: null };
+        }
         const bg = metadata.backgroundImage || null;
 
         // Save to optimized keys (migration)

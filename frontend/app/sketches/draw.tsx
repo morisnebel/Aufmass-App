@@ -7163,8 +7163,8 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
             
             {angleSnapEnabled && (
-              <View style={{ flexDirection: 'row', gap: 2 }}>
-                {[45, 90, 120].map(angle => (
+              <View style={{ flexDirection: 'row', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                {[30, 45, 60, 90, 120].map(angle => (
                   <TouchableOpacity
                     key={`snap-${angle}`}
                     style={{
@@ -7181,6 +7181,31 @@ export default function DrawSketchScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
+                {/* Benutzerdefinierter Winkel - + / - Buttons */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#f0f0f0',
+                    borderRadius: 4,
+                    paddingHorizontal: 5,
+                    paddingVertical: 3,
+                  }}
+                  onPress={() => setAngleSnapValue(Math.max(5, angleSnapValue - 5))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#666' }}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#f0f0f0',
+                    borderRadius: 4,
+                    paddingHorizontal: 5,
+                    paddingVertical: 3,
+                  }}
+                  onPress={() => setAngleSnapValue(Math.min(180, angleSnapValue + 5))}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#666' }}>+</Text>
+                </TouchableOpacity>
               </View>
             )}
             

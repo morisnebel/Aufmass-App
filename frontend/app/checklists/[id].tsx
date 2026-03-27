@@ -21,6 +21,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistService, ProjectService, ChecklistTemplateService } from '../../services/LocalStorage';
 import { getFeatures } from '../../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {
@@ -53,6 +54,7 @@ interface Checklist {
 }
 
 export default function EditChecklistScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   
@@ -250,11 +252,11 @@ export default function EditChecklistScreen() {
           items: convertedItems,
         });
       } else {
-        Alert.alert('Fehler', 'Checkliste wurde nicht gefunden');
+        Alert.alert(t('common.error'), 'Checkliste wurde nicht gefunden');
       }
     } catch (error) {
       console.error('Error loading checklist:', error);
-      Alert.alert('Fehler', 'Checkliste konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Checkliste konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -493,7 +495,7 @@ export default function EditChecklistScreen() {
     
     const result = calculateExpression(measurementExpression);
     if (result === null) {
-      Alert.alert('Fehler', 'Ungültiger Rechenausdruck. Erlaubt: Zahlen und +, -, *, /\n\nBeispiele:\n• 5,00+6,00+9,20\n• 5,00*6,00\n• (3+4)*2');
+      Alert.alert(t('common.error'), 'Ungültiger Rechenausdruck. Erlaubt: Zahlen und +, -, *, /\n\nBeispiele:\n• 5,00+6,00+9,20\n• 5,00*6,00\n• (3+4)*2');
       return;
     }
     
@@ -866,7 +868,7 @@ export default function EditChecklistScreen() {
   // Item einfügen (nach einer Position)
   const pasteItemAfter = (path: number[]) => {
     if (!checklist || !copiedItem) {
-      Alert.alert('Hinweis', 'Kein Element in der Zwischenablage');
+      Alert.alert(t('common.note'), 'Kein Element in der Zwischenablage');
       return;
     }
     
@@ -971,11 +973,11 @@ export default function EditChecklistScreen() {
     setSaving(false);
     
     if (success) {
-      Alert.alert('Erfolg', 'Checkliste wurde gespeichert', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), 'Checkliste wurde gespeichert', [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } else {
-      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden. Bitte prüfe deine Internetverbindung.');
+      Alert.alert(t('common.error'), 'Checkliste konnte nicht gespeichert werden. Bitte prüfe deine Internetverbindung.');
     }
   };
 
@@ -1157,8 +1159,8 @@ export default function EditChecklistScreen() {
                       'Löschen',
                       `"${item.text}" wirklich löschen?`,
                       [
-                        { text: 'Abbrechen', style: 'cancel' },
-                        { text: 'Löschen', style: 'destructive', onPress: () => deleteItem(path) }
+                        { text: t('common.cancel'), style: 'cancel' },
+                        { text: t('common.delete'), style: 'destructive', onPress: () => deleteItem(path) }
                       ]
                     );
                   }}
@@ -1336,8 +1338,8 @@ export default function EditChecklistScreen() {
                     'Löschen',
                     `"${item.text}" wirklich löschen?`,
                     [
-                      { text: 'Abbrechen', style: 'cancel' },
-                      { text: 'Löschen', style: 'destructive', onPress: () => deleteItem(path) }
+                      { text: t('common.cancel'), style: 'cancel' },
+                      { text: t('common.delete'), style: 'destructive', onPress: () => deleteItem(path) }
                     ]
                   );
                 }}

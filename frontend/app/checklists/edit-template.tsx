@@ -21,6 +21,7 @@ import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 import * as ImagePicker from 'expo-image-picker';
 import { Features } from '../../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {
@@ -41,6 +42,7 @@ interface ChecklistTemplate {
 }
 
 export default function EditTemplateScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const { templateId } = useLocalSearchParams();
@@ -157,7 +159,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error loading template:', error);
-      Alert.alert('Fehler', 'Vorlage konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Vorlage konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -197,7 +199,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fehler', 'Bild konnte nicht ausgewählt werden');
+      Alert.alert(t('common.error'), 'Bild konnte nicht ausgewählt werden');
     }
   };
 
@@ -226,7 +228,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error picking template logo:', error);
-      Alert.alert('Fehler', 'Logo konnte nicht ausgewählt werden');
+      Alert.alert(t('common.error'), 'Logo konnte nicht ausgewählt werden');
     }
   };
 
@@ -263,7 +265,7 @@ export default function EditTemplateScreen() {
       setReferenceFolders(folders);
     } catch (error) {
       console.error('Error loading reference folders:', error);
-      Alert.alert('Fehler', 'Referenz-Ordner konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Referenz-Ordner konnten nicht geladen werden');
     } finally {
       setLoadingReferences(false);
     }
@@ -334,7 +336,7 @@ export default function EditTemplateScreen() {
       Alert.alert('Verknüpft', `Ordner "${folder.name}" wurde verknüpft und gespeichert.`);
     } catch (error) {
       console.error('Error linking folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht verknüpft werden');
+      Alert.alert(t('common.error'), 'Ordner konnte nicht verknüpft werden');
     }
   };
 
@@ -447,7 +449,7 @@ export default function EditTemplateScreen() {
   // Item einfügen (nach einer Position)
   const pasteItemAfter = (path: number[]) => {
     if (!copiedItem) {
-      Alert.alert('Hinweis', 'Kein Element in der Zwischenablage');
+      Alert.alert(t('common.note'), 'Kein Element in der Zwischenablage');
       return;
     }
     
@@ -512,7 +514,7 @@ export default function EditTemplateScreen() {
         Alert.alert(
           'Basic Version', 
           'In der Basic Version können maximal 5 Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.',
-          [{ text: 'OK' }]
+          [{ text: t('common.ok') }]
         );
         return;
       }
@@ -541,13 +543,13 @@ export default function EditTemplateScreen() {
 
   const saveTemplate = async () => {
     if (!templateName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie einen Namen ein');
       return;
     }
 
     const validItems = items.filter(item => item.text.trim());
     if (validItems.length === 0) {
-      Alert.alert('Fehler', 'Bitte fügen Sie mindestens einen Punkt hinzu');
+      Alert.alert(t('common.error'), 'Bitte fügen Sie mindestens einen Punkt hinzu');
       return;
     }
 
@@ -562,18 +564,18 @@ export default function EditTemplateScreen() {
       if (templateId) {
         const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
         await ChecklistTemplateService.update(tplId || '', payload);
-        Alert.alert('Erfolg', 'Vorlage wurde aktualisiert', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common.success'), 'Vorlage wurde aktualisiert', [
+          { text: t('common.ok'), onPress: () => router.back() },
         ]);
       } else {
         await ChecklistTemplateService.create(payload);
-        Alert.alert('Erfolg', 'Vorlage wurde erstellt', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common.success'), 'Vorlage wurde erstellt', [
+          { text: t('common.ok'), onPress: () => router.back() },
         ]);
       }
     } catch (error) {
       console.error('Error saving template:', error);
-      Alert.alert('Fehler', 'Vorlage konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Vorlage konnte nicht gespeichert werden');
     } finally {
       setSaving(false);
     }

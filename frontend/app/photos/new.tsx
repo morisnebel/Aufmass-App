@@ -19,6 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import PdfThumbnail from '../../utils/PdfThumbnailShim';
 import { PhotoService } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 interface SelectedPhoto {
   uri: string;
@@ -26,6 +27,7 @@ interface SelectedPhoto {
 }
 
 export default function NewPhotoScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
@@ -96,7 +98,7 @@ export default function NewPhotoScreen() {
       }
     } catch (error) {
       console.error('Error picking images:', error);
-      Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Bilder konnten nicht geladen werden');
     }
   };
 
@@ -141,7 +143,7 @@ export default function NewPhotoScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht aufgenommen werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht aufgenommen werden');
     }
   };
 
@@ -191,7 +193,7 @@ export default function NewPhotoScreen() {
           Alert.alert(
             'PDF Import',
             'Das PDF konnte nicht automatisch konvertiert werden. Dies funktioniert nur in der TestFlight/App Store Version, nicht in Expo Go.\n\nAlternativ: Machen Sie einen Screenshot des PDFs.',
-            [{ text: 'OK', style: 'default' }]
+            [{ text: t('common.ok'), style: 'default' }]
           );
           return;
         }
@@ -210,11 +212,11 @@ export default function NewPhotoScreen() {
           setSelectedPhotos(prev => [...prev, { uri: base64Image, description: '' }]);
         }
       } else {
-        Alert.alert('Fehler', 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.) oder PDF.');
+        Alert.alert(t('common.error'), 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.) oder PDF.');
       }
     } catch (error) {
       console.error('Error importing from files:', error);
-      Alert.alert('Fehler', 'Datei konnte nicht importiert werden');
+      Alert.alert(t('common.error'), 'Datei konnte nicht importiert werden');
     }
   };
 
@@ -226,7 +228,7 @@ export default function NewPhotoScreen() {
 
   const handleSave = async () => {
     if (selectedPhotos.length === 0) {
-      Alert.alert('Fehler', 'Bitte wählen Sie mindestens ein Foto aus');
+      Alert.alert(t('common.error'), 'Bitte wählen Sie mindestens ein Foto aus');
       return;
     }
 
@@ -256,7 +258,7 @@ export default function NewPhotoScreen() {
         if (Platform.OS === 'web') {
           alert(message);
         } else {
-          Alert.alert('Erfolg', message);
+          Alert.alert(t('common.success'), message);
         }
       }, 300);
     } catch (error) {
@@ -264,7 +266,7 @@ export default function NewPhotoScreen() {
       if (Platform.OS === 'web') {
         alert('Fehler: Fotos konnten nicht gespeichert werden');
       } else {
-        Alert.alert('Fehler', 'Fotos konnten nicht gespeichert werden');
+        Alert.alert(t('common.error'), 'Fotos konnten nicht gespeichert werden');
       }
     } finally {
       setLoading(false);

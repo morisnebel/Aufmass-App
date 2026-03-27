@@ -24,6 +24,7 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { Share } from 'react-native';
 import { Features } from '../../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
 
 interface SubItem {
   text: string;
@@ -80,6 +81,7 @@ const DEFAULT_TEMPLATES = [
 ];
 
 export default function ChecklistTemplatesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -189,7 +191,7 @@ export default function ChecklistTemplatesScreen() {
           title: `${template.name}.checklistvorlage`,
         });
       } catch (shareError) {
-        Alert.alert('Fehler', 'Vorlage konnte nicht exportiert werden');
+        Alert.alert(t('common.error'), 'Vorlage konnte nicht exportiert werden');
       }
     } finally {
       setIsExporting(false);
@@ -214,7 +216,7 @@ export default function ChecklistTemplatesScreen() {
       
       // Check file extension
       if (!file.name.endsWith('.checklistvorlage')) {
-        Alert.alert('Fehler', 'Bitte wählen Sie eine .checklistvorlage Datei aus');
+        Alert.alert(t('common.error'), 'Bitte wählen Sie eine .checklistvorlage Datei aus');
         setIsImporting(false);
         return;
       }
@@ -237,7 +239,7 @@ export default function ChecklistTemplatesScreen() {
 
       // Validate import data
       if (importData.type !== 'aufmass_checklist_template' || !importData.template) {
-        Alert.alert('Fehler', 'Ungültiges Dateiformat');
+        Alert.alert(t('common.error'), 'Ungültiges Dateiformat');
         setIsImporting(false);
         return;
       }
@@ -261,10 +263,10 @@ export default function ChecklistTemplatesScreen() {
       });
 
       await loadTemplates();
-      Alert.alert('Erfolg', `Vorlage "${finalName}" wurde importiert`);
+      Alert.alert(t('common.success'), `Vorlage "${finalName}" wurde importiert`);
     } catch (error) {
       console.error('Error importing template:', error);
-      Alert.alert('Fehler', 'Vorlage konnte nicht importiert werden');
+      Alert.alert(t('common.error'), 'Vorlage konnte nicht importiert werden');
     } finally {
       setIsImporting(false);
     }
@@ -272,7 +274,7 @@ export default function ChecklistTemplatesScreen() {
 
   const createTemplate = async () => {
     if (!newTemplateName.trim() || !newTemplateItems.trim()) {
-      Alert.alert('Fehler', 'Bitte füllen Sie alle Felder aus');
+      Alert.alert(t('common.error'), 'Bitte füllen Sie alle Felder aus');
       return;
     }
 
@@ -281,7 +283,7 @@ export default function ChecklistTemplatesScreen() {
       Alert.alert(
         'Basic Version',
         `In der Basic Version können maximal ${Features.maxTemplates} Vorlagen erstellt werden. Upgrade auf Pro für unbegrenzte Vorlagen.`,
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
       return;
     }
@@ -301,10 +303,10 @@ export default function ChecklistTemplatesScreen() {
       setNewTemplateName('');
       setNewTemplateItems('');
       loadTemplates();
-      Alert.alert('Erfolg', 'Vorlage wurde erstellt');
+      Alert.alert(t('common.success'), 'Vorlage wurde erstellt');
     } catch (error) {
       console.error('Error creating template:', error);
-      Alert.alert('Fehler', 'Vorlage konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), 'Vorlage konnte nicht erstellt werden');
     }
   };
 
@@ -313,7 +315,7 @@ export default function ChecklistTemplatesScreen() {
       'Vorlage löschen',
       'Möchten Sie diese Vorlage wirklich löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Löschen',
           style: 'destructive',
@@ -323,7 +325,7 @@ export default function ChecklistTemplatesScreen() {
               loadTemplates();
             } catch (error) {
               console.error('Error deleting template:', error);
-              Alert.alert('Fehler', 'Vorlage konnte nicht gelöscht werden');
+              Alert.alert(t('common.error'), 'Vorlage konnte nicht gelöscht werden');
             }
           },
         },

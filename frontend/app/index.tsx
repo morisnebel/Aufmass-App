@@ -748,7 +748,7 @@ export default function HomeScreen() {
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>
               <Ionicons name="settings-outline" size={isPhone ? 18 : 20} color="#546e7a" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Setup' : t('home.settings')}</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.settings')}</Text>
           </TouchableOpacity>
         </View>
 

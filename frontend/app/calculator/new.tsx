@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
 import Svg, { 
   Path, 
   Circle, 
@@ -111,6 +112,7 @@ import {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function AreaCalculatorEditor() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const calculationId = params.id as string | undefined;
@@ -1161,7 +1163,7 @@ export default function AreaCalculatorEditor() {
   const saveCalculation = async (showAlert: boolean = true) => {
     if (!projectId) {
       if (showAlert) {
-        Alert.alert('Fehler', 'Kein Projekt zugeordnet');
+        Alert.alert(t('common.error'), 'Kein Projekt zugeordnet');
       }
       return false;
     }
@@ -1233,7 +1235,7 @@ export default function AreaCalculatorEditor() {
         if (Platform.OS === 'web') {
           alert('Berechnung gespeichert');
         } else {
-          Alert.alert('Erfolg', 'Berechnung wurde gespeichert');
+          Alert.alert(t('common.success'), 'Berechnung wurde gespeichert');
         }
       }
       
@@ -1244,7 +1246,7 @@ export default function AreaCalculatorEditor() {
         if (Platform.OS === 'web') {
           alert('Fehler beim Speichern');
         } else {
-          Alert.alert('Fehler', 'Berechnung konnte nicht gespeichert werden');
+          Alert.alert(t('common.error'), 'Berechnung konnte nicht gespeichert werden');
         }
       }
       return false;
@@ -2592,7 +2594,7 @@ export default function AreaCalculatorEditor() {
     
     const realLength = parseFloat(scaleInputValue.replace(',', '.'));
     if (isNaN(realLength) || realLength <= 0) {
-      Alert.alert('Fehler', 'Bitte geben Sie eine gültige Länge ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie eine gültige Länge ein');
       return;
     }
     
@@ -2676,7 +2678,7 @@ export default function AreaCalculatorEditor() {
     
     // Can't delete if polygon would have less than 3 points
     if (polygon.points.length <= 3) {
-      Alert.alert('Hinweis', 'Ein Polygon muss mindestens 3 Punkte haben. Löschen Sie stattdessen das ganze Polygon.');
+      Alert.alert(t('common.note'), 'Ein Polygon muss mindestens 3 Punkte haben. Löschen Sie stattdessen das ganze Polygon.');
       return;
     }
     
@@ -3170,7 +3172,7 @@ export default function AreaCalculatorEditor() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fehler', 'Bild konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Bild konnte nicht geladen werden');
     }
   };
 
@@ -3179,7 +3181,7 @@ export default function AreaCalculatorEditor() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Kamera-Zugriff wird benötigt');
+        Alert.alert(t('customers.permissionRequired'), 'Kamera-Zugriff wird benötigt');
         return;
       }
 
@@ -3220,7 +3222,7 @@ export default function AreaCalculatorEditor() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht aufgenommen werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht aufgenommen werden');
     }
   };
 
@@ -3573,12 +3575,12 @@ export default function AreaCalculatorEditor() {
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('Fehler', 'Teilen nicht verfügbar');
+        Alert.alert(t('common.error'), 'Teilen nicht verfügbar');
       }
       
     } catch (error) {
       console.error('PDF Export error:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), 'PDF konnte nicht erstellt werden');
     } finally {
       setIsExportingPdf(false);
     }
@@ -4212,7 +4214,7 @@ export default function AreaCalculatorEditor() {
                   });
                   
                   if (mainPolygons.length === 0) {
-                    Alert.alert('Hinweis', 'Die Abzugsfläche schneidet keine Hauptfläche.');
+                    Alert.alert(t('common.note'), 'Die Abzugsfläche schneidet keine Hauptfläche.');
                     return;
                   }
                   
@@ -4349,7 +4351,7 @@ export default function AreaCalculatorEditor() {
           // "Punkt auf Linie" mode - only on selected polygon
           if (addPointMode && mode === 'select') {
             if (!selectedPolygonId) {
-              Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Polygon aus.');
+              Alert.alert(t('common.note'), 'Bitte wählen Sie zuerst ein Polygon aus.');
               return;
             }
             const linePoint = findClosestPointOnPolygonLine(x, y);
@@ -4362,7 +4364,7 @@ export default function AreaCalculatorEditor() {
           // "Punkt löschen" mode - only on selected polygon
           if (deletePointMode && mode === 'select') {
             if (!selectedPolygonId) {
-              Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Polygon aus.');
+              Alert.alert(t('common.note'), 'Bitte wählen Sie zuerst ein Polygon aus.');
               return;
             }
             const polygonPoint = findPolygonPointAtPosition(x, y, true);
@@ -6993,7 +6995,7 @@ export default function AreaCalculatorEditor() {
                           if (photo.uri) {
                             useProjectPhotoAsBackground(photo.uri);
                           } else {
-                            Alert.alert('Fehler', 'Dieses Foto hat keine gültige URI');
+                            Alert.alert(t('common.error'), 'Dieses Foto hat keine gültige URI');
                           }
                         }}
                       >

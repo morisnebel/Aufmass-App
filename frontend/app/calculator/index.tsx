@@ -13,8 +13,10 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 export default function CalculatorListScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [calculations, setCalculations] = useState<AreaCalculation[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
@@ -64,14 +66,14 @@ export default function CalculatorListScreen() {
       if (Platform.OS === 'web') {
         alert('Berechnung wurde gelöscht');
       } else {
-        Alert.alert('Erfolg', 'Berechnung wurde gelöscht');
+        Alert.alert(t('common.success'), 'Berechnung wurde gelöscht');
       }
     } catch (error) {
       console.error('Error deleting calculation:', error);
       if (Platform.OS === 'web') {
         alert('Fehler beim Löschen');
       } else {
-        Alert.alert('Fehler', 'Berechnung konnte nicht gelöscht werden');
+        Alert.alert(t('common.error'), 'Berechnung konnte nicht gelöscht werden');
       }
     }
   };

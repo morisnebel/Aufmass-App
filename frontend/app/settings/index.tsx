@@ -184,7 +184,7 @@ export default function SettingsScreen() {
         Alert.alert(
           '🎉 Expertenmodus aktiviert!',
           'Alle Pro-Features sind jetzt freigeschaltet. Bitte starten Sie die App neu, um alle Änderungen zu sehen.',
-          [{ text: 'OK' }]
+          [{ text: t('common.ok') }]
         );
       } else {
         Alert.alert('Falscher Code', 'Der eingegebene Code ist nicht korrekt.');
@@ -200,7 +200,7 @@ export default function SettingsScreen() {
       'Expertenmodus deaktivieren?',
       'Möchten Sie wirklich zur Basic Version zurückkehren?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Deaktivieren',
           style: 'destructive',
@@ -211,7 +211,7 @@ export default function SettingsScreen() {
             Alert.alert(
               'Basic Version aktiviert',
               'Die App wurde auf Basic Version zurückgesetzt. Bitte starten Sie die App neu.',
-              [{ text: 'OK' }]
+              [{ text: t('common.ok') }]
             );
           }
         }
@@ -288,7 +288,7 @@ export default function SettingsScreen() {
   const pickLogo = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
       return;
     }
 
@@ -317,14 +317,14 @@ export default function SettingsScreen() {
       if (Platform.OS === 'web') {
         alert('Einstellungen wurden gespeichert');
       } else {
-        Alert.alert('Erfolg', 'Einstellungen wurden gespeichert');
+        Alert.alert(t('common.success'), 'Einstellungen wurden gespeichert');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
       if (Platform.OS === 'web') {
         alert('Fehler beim Speichern');
       } else {
-        Alert.alert('Fehler', 'Einstellungen konnten nicht gespeichert werden');
+        Alert.alert(t('common.error'), 'Einstellungen konnten nicht gespeichert werden');
       }
     } finally {
       setSaving(false);
@@ -881,7 +881,7 @@ export default function SettingsScreen() {
                   'Einstellungen zurücksetzen',
                   'Möchten Sie wirklich alle Einstellungen leeren?',
                   [
-                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
                       text: t('common.reset'),
                       style: 'destructive',
@@ -917,7 +917,7 @@ export default function SettingsScreen() {
                           pdf_tools_color: 'blue',
                           pdf_tools_style: 'filled',
                         });
-                        Alert.alert('Erfolg', 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
+                        Alert.alert(t('common.success'), 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
                       },
                     },
                   ]

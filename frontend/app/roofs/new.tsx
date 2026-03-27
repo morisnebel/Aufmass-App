@@ -15,6 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoofService } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 const ROOF_TYPES = [
   { id: 'Flachdach', name: 'Flachdach', description: 'Ebene Dachfläche ohne Neigung' },
@@ -27,6 +28,7 @@ const ROOF_TYPES = [
 ];
 
 export default function NewRoofScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [roofType, setRoofType] = useState('Satteldach');
@@ -402,7 +404,7 @@ export default function NewRoofScreen() {
 
   const handleSave = async () => {
     if (!gebaeudelaenge || !gebaeudebreite) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens Gebäudelänge und Gebäudebreite ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie mindestens Gebäudelänge und Gebäudebreite ein');
       return;
     }
 
@@ -435,12 +437,12 @@ export default function NewRoofScreen() {
         area,
         notes: notes || undefined,
       });
-      Alert.alert('Erfolg', 'Dachmessung wurde gespeichert', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), 'Dachmessung wurde gespeichert', [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error('Error creating roof:', error);
-      Alert.alert('Fehler', 'Dachmessung konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Dachmessung konnte nicht gespeichert werden');
     } finally {
       setLoading(false);
     }

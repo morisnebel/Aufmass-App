@@ -23,6 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { ReferenceService, ReferenceFolder, ReferencePhoto, ExternalFolder } from '../../services/ReferenceService';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 const FOLDER_COLUMNS = screenWidth > 600 ? 5 : 4; // 5 columns on iPad, 4 on iPhone
@@ -33,6 +34,7 @@ const FOLDER_SIZE = Math.min(CALCULATED_FOLDER_SIZE, MAX_FOLDER_SIZE);
 const PHOTO_SIZE = (screenWidth - 32 - (PHOTO_COLUMNS - 1) * 8) / PHOTO_COLUMNS;
 
 export default function ReferencesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   
   // Navigation state
@@ -94,7 +96,7 @@ export default function ReferencesScreen() {
       setAllFoldersForMove(allFolders);
     } catch (error) {
       console.error('Error loading reference data:', error);
-      Alert.alert('Fehler', 'Daten konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Daten konnten nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -146,7 +148,7 @@ export default function ReferencesScreen() {
   // Create/Edit folder
   const saveFolder = async () => {
     if (!newFolderName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Ordnernamen ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie einen Ordnernamen ein');
       return;
     }
 
@@ -162,7 +164,7 @@ export default function ReferencesScreen() {
       loadData();
     } catch (error) {
       console.error('Error saving folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Ordner konnte nicht gespeichert werden');
     }
   };
 
@@ -172,7 +174,7 @@ export default function ReferencesScreen() {
       'Ordner löschen',
       `Möchten Sie "${folder.name}" und alle Inhalte wirklich löschen?`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Löschen',
           style: 'destructive',
@@ -181,7 +183,7 @@ export default function ReferencesScreen() {
               await ReferenceService.deleteFolder(folder.id);
               loadData();
             } catch (error) {
-              Alert.alert('Fehler', 'Ordner konnte nicht gelöscht werden');
+              Alert.alert(t('common.error'), 'Ordner konnte nicht gelöscht werden');
             }
           },
         },
@@ -228,13 +230,13 @@ export default function ReferencesScreen() {
           mimeType: 'application/json',
           dialogTitle: `Ordner "${folder.name}" exportieren`,
         });
-        Alert.alert('Hinweis', `Die Fotos befinden sich unter:\n${exportDir}\n\nÖffnen Sie die Dateien-App und kopieren Sie den Ordner auf Ihren USB-Stick.`);
+        Alert.alert(t('common.note'), `Die Fotos befinden sich unter:\n${exportDir}\n\nÖffnen Sie die Dateien-App und kopieren Sie den Ordner auf Ihren USB-Stick.`);
       } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
+        Alert.alert(t('common.error'), 'Teilen ist auf diesem Gerät nicht verfügbar');
       }
     } catch (error) {
       console.error('Error exporting folder:', error);
-      Alert.alert('Fehler', 'Ordner konnte nicht exportiert werden');
+      Alert.alert(t('common.error'), 'Ordner konnte nicht exportiert werden');
     }
   };
 
@@ -250,7 +252,7 @@ export default function ReferencesScreen() {
   
   const saveLinkFolder = async () => {
     if (!linkFolderName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen für die Verknüpfung ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie einen Namen für die Verknüpfung ein');
       return;
     }
     
@@ -266,7 +268,7 @@ export default function ReferencesScreen() {
       );
     } catch (error) {
       console.error('Error saving link:', error);
-      Alert.alert('Fehler', 'Verknüpfung konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Verknüpfung konnte nicht gespeichert werden');
     }
   };
 
@@ -276,7 +278,7 @@ export default function ReferencesScreen() {
       'Verknüpfung entfernen',
       `Möchten Sie die Verknüpfung zu "${folder.name}" entfernen?`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Entfernen',
           style: 'destructive',
@@ -305,7 +307,7 @@ export default function ReferencesScreen() {
       }
     } catch (error) {
       console.error('Error selecting images:', error);
-      Alert.alert('Fehler', 'Bilder konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Bilder konnten nicht geladen werden');
     }
   };
 
@@ -323,7 +325,7 @@ export default function ReferencesScreen() {
         const metadata = JSON.parse(metadataContent);
         
         if (!metadata.folder || !metadata.photos) {
-          Alert.alert('Fehler', 'Ungültiges Export-Format');
+          Alert.alert(t('common.error'), 'Ungültiges Export-Format');
           return;
         }
         
@@ -352,7 +354,7 @@ export default function ReferencesScreen() {
                   for (const asset of photosResult.assets) {
                     await ReferenceService.addPhoto(newFolder.id, asset.uri, 'files');
                   }
-                  Alert.alert('Erfolg', `${photosResult.assets.length} Fotos importiert`);
+                  Alert.alert(t('common.success'), `${photosResult.assets.length} Fotos importiert`);
                 }
                 loadData();
               },
@@ -362,7 +364,7 @@ export default function ReferencesScreen() {
       }
     } catch (error) {
       console.error('Error importing folder:', error);
-      Alert.alert('Fehler', 'Import fehlgeschlagen');
+      Alert.alert(t('common.error'), 'Import fehlgeschlagen');
     }
   };
 
@@ -371,7 +373,7 @@ export default function ReferencesScreen() {
     if (!currentFolder) return;
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Kamerazugriff');
+      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Kamerazugriff');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
@@ -385,7 +387,7 @@ export default function ReferencesScreen() {
     if (!currentFolder) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
+      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -416,14 +418,14 @@ export default function ReferencesScreen() {
         loadData();
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Fotos konnten nicht hinzugefügt werden');
+      Alert.alert(t('common.error'), 'Fotos konnten nicht hinzugefügt werden');
     }
   };
 
   const deletePhoto = () => {
     if (!selectedPhoto) return;
     Alert.alert('Foto löschen', 'Möchten Sie dieses Foto wirklich löschen?', [
-      { text: 'Abbrechen', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
         text: 'Löschen',
         style: 'destructive',
@@ -441,7 +443,7 @@ export default function ReferencesScreen() {
   const setFolderThumbnailFromGallery = async (folder: ReferenceFolder) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
+      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -454,9 +456,9 @@ export default function ReferencesScreen() {
         // Set thumbnail URI directly without adding as photo
         await ReferenceService.setFolderThumbnailUri(folder.id, result.assets[0].uri);
         loadData();
-        Alert.alert('Erfolg', 'Vorschaubild wurde gesetzt');
+        Alert.alert(t('common.success'), 'Vorschaubild wurde gesetzt');
       } catch (error) {
-        Alert.alert('Fehler', 'Vorschaubild konnte nicht gesetzt werden');
+        Alert.alert(t('common.error'), 'Vorschaubild konnte nicht gesetzt werden');
       }
     }
   };
@@ -470,11 +472,11 @@ export default function ReferencesScreen() {
 
   const movePhotoToFolder = async (targetFolderId: string) => {
     if (!photoToMove) {
-      Alert.alert('Fehler', 'Kein Foto ausgewählt');
+      Alert.alert(t('common.error'), 'Kein Foto ausgewählt');
       return;
     }
     if (!targetFolderId) {
-      Alert.alert('Fehler', 'Kein Zielordner ausgewählt');
+      Alert.alert(t('common.error'), 'Kein Zielordner ausgewählt');
       return;
     }
     try {
@@ -486,10 +488,10 @@ export default function ReferencesScreen() {
       setShowPhotoModal(false);
       setSelectedPhoto(null);
       loadData();
-      Alert.alert('Erfolg', 'Foto wurde verschoben');
+      Alert.alert(t('common.success'), 'Foto wurde verschoben');
     } catch (error) {
       console.error('Error moving photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht verschoben werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht verschoben werden');
     }
   };
 
@@ -501,7 +503,7 @@ export default function ReferencesScreen() {
       onPress={() => navigateToFolder(item)}
       onLongPress={() => {
         Alert.alert(item.name, 'Was möchten Sie tun?', [
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: 'Vorschaubild',
             onPress: () => setFolderThumbnailFromGallery(item),
@@ -518,7 +520,7 @@ export default function ReferencesScreen() {
               setShowNewFolderModal(true);
             },
           },
-          { text: 'Löschen', style: 'destructive', onPress: () => deleteFolder(item) },
+          { text: t('common.delete'), style: 'destructive', onPress: () => deleteFolder(item) },
         ]);
       }}
     >
@@ -549,7 +551,7 @@ export default function ReferencesScreen() {
       onPress={() => openExternalFolder(item)}
       onLongPress={() => {
         Alert.alert(item.name, 'Was möchten Sie tun?', [
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           { text: 'Verknüpfung entfernen', style: 'destructive', onPress: () => unlinkExternalFolder(item) },
         ]);
       }}

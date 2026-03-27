@@ -30,6 +30,7 @@ import PdfThumbnail from '../../utils/PdfThumbnailShim';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
+import { useTranslation } from 'react-i18next';
 
 // Key für Tool-Größen-Einstellungen
 const TOOL_SIZES_KEY = 'aufmassprofi_tool_sizes';
@@ -292,6 +293,7 @@ const DraggableTotalBox: React.FC<DraggableTotalBoxProps> = ({
 };
 
 export default function DrawSketchScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
@@ -418,7 +420,7 @@ export default function DrawSketchScreen() {
       setProjectPhotos(photos);
       setShowProjectPhotosModal(true);
     } else {
-      Alert.alert('Hinweis', 'Kein Projekt ausgewählt. Bitte öffnen Sie die Skizze aus einem Projekt.');
+      Alert.alert(t('common.note'), t('sketches.noProjectSelected'));
     }
   };
 
@@ -426,7 +428,7 @@ export default function DrawSketchScreen() {
   const insertProjectPhoto = (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
     if (!imageUri) {
-      Alert.alert('Fehler', 'Dieses Foto hat keine gültige Bilddaten');
+      Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
     }
     
@@ -1123,7 +1125,7 @@ export default function DrawSketchScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
           <View {...modalNumpadPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
             <View style={styles.floatingMeasureDragHandle} />
-            <Text style={styles.floatingMeasureTitle}>Tastatur</Text>
+            <Text style={styles.floatingMeasureTitle}>{t('sketches.keyboard')}</Text>
           </View>
           <Pressable
             onPress={closeModalNumpad}
@@ -1274,7 +1276,7 @@ export default function DrawSketchScreen() {
                   <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>.</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => handleActiveNumpadPress(' ')}>
-                  <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale), color: '#1976d2' }]}>Leer</Text>
+                  <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale), color: '#1976d2' }]}>{t('sketches.space')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.floatingLetterKey, { height: Math.round(34 * scale), minWidth: Math.round(24 * scale) }]} onPress={() => handleActiveNumpadPress('/')}>
                   <Text style={[styles.floatingKeyText, { fontSize: Math.round(12 * scale) }]}>/</Text>
@@ -1293,7 +1295,7 @@ export default function DrawSketchScreen() {
   const insertMeasurementAsText = () => {
     const result = calculateMeasurementExpression(measurementExpression);
     if (result === null) {
-      Alert.alert('Fehler', 'Ungültiger Rechenausdruck');
+      Alert.alert(t('common.error'), t('sketches.invalidExpression'));
       return;
     }
     // Formatiere den Text
@@ -1721,7 +1723,7 @@ export default function DrawSketchScreen() {
       console.log('Total load time:', Date.now() - startTime, 'ms');
     } catch (error) {
       console.error('Error loading sketch:', error);
-      showAlert('Fehler', 'Skizze konnte nicht geladen werden');
+      showAlert(t('common.error'), t('sketches.sketchLoadError'));
     } finally {
       setLoading(false);
     }
@@ -1843,7 +1845,7 @@ export default function DrawSketchScreen() {
     
     addToHistory(newElements);
     setShowProtractor(false);
-    showAlert('Winkel hinzugefügt', `${displayAngle}° wurde zur Skizze hinzugefügt`);
+    showAlert(t('sketches.angleSnap'), t('sketches.angleAdded', { angle: displayAngle }));
   }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout]);
 
   // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
@@ -2324,7 +2326,7 @@ export default function DrawSketchScreen() {
         }
       );
     } else {
-      Alert.alert('Hinweis', 'Bitte wählen Sie zuerst ein Bild aus.');
+      Alert.alert(t('common.note'), t('sketches.selectImageFirst'));
     }
   };
 
@@ -2364,7 +2366,7 @@ export default function DrawSketchScreen() {
       );
     } else {
       // Kein Bild an dieser Position - Hinweis zeigen
-      Alert.alert('Hinweis', 'Tippen Sie auf ein Foto, um es zuzuschneiden.');
+      Alert.alert(t('common.note'), t('sketches.tapPhotoToCrop'));
     }
   };
 
@@ -2449,7 +2451,7 @@ export default function DrawSketchScreen() {
       setDrawMode('select');
     } catch (error) {
       console.error('Error cropping image:', error);
-      Alert.alert('Fehler', 'Bild konnte nicht zugeschnitten werden');
+      Alert.alert(t('common.error'), t('sketches.cropError'));
     }
   };
 
@@ -2578,7 +2580,7 @@ export default function DrawSketchScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      showAlert('Fehler', 'Bild konnte nicht ausgewählt werden');
+      showAlert(t('common.error'), t('sketches.imageSelectError'));
     }
   };
 
@@ -2587,7 +2589,7 @@ export default function DrawSketchScreen() {
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          showAlert('Berechtigung erforderlich', 'Kamera-Zugriff wird benötigt');
+          showAlert(t('sketches.cameraPermission'), t('sketches.cameraPermissionMessage'));
           return;
         }
       }
@@ -2605,7 +2607,7 @@ export default function DrawSketchScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      showAlert('Fehler', 'Foto konnte nicht aufgenommen werden');
+      showAlert(t('common.error'), t('sketches.photoTakeError'));
     }
   };
 
@@ -2662,7 +2664,7 @@ export default function DrawSketchScreen() {
       }
     } catch (error) {
       console.error('Error inserting image:', error);
-      showAlert('Fehler', 'Bild konnte nicht eingefügt werden');
+      showAlert(t('common.error'), t('sketches.imageInsertError'));
     }
   };
 
@@ -2699,8 +2701,8 @@ export default function DrawSketchScreen() {
           // Fallback: Zeige Info-Meldung wenn Konvertierung fehlschlägt
           Alert.alert(
             'PDF Import',
-            'Das PDF konnte nicht automatisch konvertiert werden. Dies funktioniert nur in der TestFlight/App Store Version, nicht in Expo Go.\n\nAlternativ: Machen Sie einen Screenshot des PDFs.',
-            [{ text: 'OK', style: 'default' }]
+            t('sketches.pdfImportPages', { count: '' }) + '\n' + t('sketches.selectPdfPage'),
+            [{ text: t('common.ok'), style: 'default' }]
           );
           return;
         }
@@ -2710,11 +2712,11 @@ export default function DrawSketchScreen() {
       if (mimeType.startsWith('image/')) {
         await insertImageFromUri(fileUri);
       } else {
-        showAlert('Fehler', 'Dieser Dateityp wird nicht unterstützt. Bitte wählen Sie ein Bild (JPG, PNG, etc.) oder PDF.');
+        showAlert(t('common.error'), t('sketches.fileTypeNotSupported'));
       }
     } catch (error) {
       console.error('Error importing from files:', error);
-      showAlert('Fehler', 'Datei konnte nicht importiert werden');
+      showAlert(t('common.error'), t('sketches.fileImportError'));
     }
   };
 
@@ -2734,7 +2736,7 @@ export default function DrawSketchScreen() {
       await insertImageFromUri(file.uri);
     } catch (error) {
       console.error('Error importing image from files:', error);
-      showAlert('Fehler', 'Bild konnte nicht importiert werden');
+      showAlert(t('common.error'), t('sketches.imageImportError'));
     }
   };
 
@@ -2788,10 +2790,10 @@ export default function DrawSketchScreen() {
       setPhotoEditMode(true);
       selectDrawMode('select');
       
-      showAlert('Erfolg', 'Bild wurde eingefügt');
+      showAlert(t('common.success'), t('sketches.imageInserted'));
     } catch (error) {
       console.error('Error inserting image from URI:', error);
-      showAlert('Fehler', 'Bild konnte nicht eingefügt werden');
+      showAlert(t('common.error'), t('sketches.imageInsertError'));
     }
   };
 
@@ -2801,7 +2803,7 @@ export default function DrawSketchScreen() {
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          showAlert('Berechtigung erforderlich', 'Kamera-Zugriff wird benötigt');
+          showAlert(t('sketches.cameraPermission'), t('sketches.cameraPermissionMessage'));
           return;
         }
       }
@@ -2855,7 +2857,7 @@ export default function DrawSketchScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      showAlert('Fehler', 'Foto konnte nicht aufgenommen werden');
+      showAlert(t('common.error'), t('sketches.photoTakeError'));
     }
   };
 
@@ -2931,19 +2933,19 @@ export default function DrawSketchScreen() {
   const handleAddPointTouch = (x: number, y: number) => {
     // Zuerst: Prüfe ob eine Polyline ausgewählt ist
     if (!selectedElementId) {
-      showAlert('Hinweis', 'Bitte wähle zuerst eine Polyline aus');
+      showAlert(t('common.note'), t('sketches.selectPolylineFirst'));
       return;
     }
     
     const selectedEl = elements.find(el => el.id === selectedElementId);
     if (!selectedEl || selectedEl.type !== 'polyline') {
-      showAlert('Hinweis', 'Bitte wähle eine Polyline aus');
+      showAlert(t('common.note'), t('sketches.selectPolyline'));
       return;
     }
     
     const points = selectedEl.data?.points;
     if (!points || points.length < 2) {
-      showAlert('Hinweis', 'Ungültige Polyline');
+      showAlert(t('common.note'), t('sketches.invalidPolyline'));
       return;
     }
     
@@ -3059,19 +3061,19 @@ export default function DrawSketchScreen() {
   const handleRemovePointTouch = (x: number, y: number) => {
     // Zuerst: Prüfe ob eine Polyline ausgewählt ist
     if (!selectedElementId) {
-      showAlert('Hinweis', 'Bitte wähle zuerst eine Polyline aus');
+      showAlert(t('common.note'), t('sketches.selectPolylineFirst'));
       return;
     }
     
     const selectedEl = elements.find(el => el.id === selectedElementId);
     if (!selectedEl || selectedEl.type !== 'polyline') {
-      showAlert('Hinweis', 'Bitte wähle eine Polyline aus');
+      showAlert(t('common.note'), t('sketches.selectPolyline'));
       return;
     }
     
     const points = selectedEl.data?.points;
     if (!points || points.length < 3) {
-      showAlert('Hinweis', 'Polyline muss mindestens 3 Punkte haben');
+      showAlert(t('common.note'), t('sketches.polylineMinPoints'));
       return;
     }
     
@@ -5970,7 +5972,7 @@ export default function DrawSketchScreen() {
 
   const saveSketch = async () => {
     if (!title.trim()) {
-      showAlert('Fehler', 'Bitte geben Sie einen Titel ein');
+      showAlert(t('common.error'), t('sketches.enterTitle'));
       return;
     }
 
@@ -6102,7 +6104,7 @@ export default function DrawSketchScreen() {
         });
         
         console.log('Sketch saved in', Date.now() - startTime, 'ms (list update in background)');
-        showAlert('Erfolg', 'Skizze wurde aktualisiert');
+        showAlert(t('common.success'), t('sketches.sketchUpdated'));
       } else {
         // Create new sketch - include metadata for SketchService.create to handle
         console.log('Creating new sketch');
@@ -6118,14 +6120,14 @@ export default function DrawSketchScreen() {
         });
         backgroundImageChangedRef.current = false;
         console.log('Sketch created in', Date.now() - startTime, 'ms');
-        showAlert('Erfolg', 'Skizze wurde gespeichert');
+        showAlert(t('common.success'), t('sketches.sketchSaved'));
       }
 
       router.back();
     } catch (error) {
       console.error('Error saving sketch:', error);
       if (isMountedRef.current) {
-        showAlert('Fehler', 'Skizze konnte nicht gespeichert werden');
+        showAlert(t('common.error'), t('sketches.sketchSaveError'));
       }
     } finally {
       if (isMountedRef.current) {
@@ -6188,7 +6190,7 @@ export default function DrawSketchScreen() {
           style={styles.titleInput}
           value={title}
           onChangeText={setTitle}
-          placeholder="Skizzen-Titel"
+          placeholder={t('sketches.sketchTitle')}
           placeholderTextColor="#ccc"
         />
         {/* PDF-Größe Button mit Label */}
@@ -6199,7 +6201,7 @@ export default function DrawSketchScreen() {
             const currentIndex = sizes.indexOf(pdfSize);
             const nextIndex = (currentIndex + 1) % sizes.length;
             setPdfSize(sizes[nextIndex]);
-            showAlert('PDF-Größe', labels[nextIndex]);
+            showAlert('PDF', labels[nextIndex]);
           }} 
           style={styles.pdfSizeHeaderButton}
         >
@@ -6230,7 +6232,7 @@ export default function DrawSketchScreen() {
           <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhone && styles.toolButtonPhotoWidePhone]} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
             <Ionicons name="camera" size={isPhone ? 18 : 20} color="#4caf50" />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabelWide, isPhone && styles.toolButtonLabelWidePhone]}>Foto</Text>
+          <Text style={[styles.toolButtonLabelWide, isPhone && styles.toolButtonLabelWidePhone]}>{t('sketches.photo')}</Text>
         </View>
 
         {/* 2. Projektfotos */}
@@ -6241,7 +6243,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="images" size={20} color="#1976d2" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Projekt</Text>
+          <Text style={styles.toolButtonLabelWide}>{t('sketches.photoFromProject')}</Text>
         </View>
 
         {/* 3. Galeriefotos */}
@@ -6249,7 +6251,7 @@ export default function DrawSketchScreen() {
           <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); insertImage(); }}>
             <Ionicons name="image" size={20} color="#9C27B0" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabelWide}>Foto aus{'\n'}Galerie</Text>
+          <Text style={styles.toolButtonLabelWide}>{t('sketches.photoFromGallery')}</Text>
         </View>
 
         {/* 3.5 Bild aus Dateien */}
@@ -6257,7 +6259,7 @@ export default function DrawSketchScreen() {
           <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); importFromFiles(); }}>
             <Ionicons name="document" size={20} color="#FF5722" />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabelWide}>Aus{'\n'}Dateien</Text>
+          <Text style={styles.toolButtonLabelWide}>{t('sketches.fromFiles')}</Text>
         </View>
 
         {/* 4. Foto Position */}
@@ -6277,7 +6279,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="move" size={18} color={photoEditMode ? '#fff' : '#FF9800'} />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Position</Text>
+          <Text style={styles.toolButtonLabel}>{t('sketches.position')}</Text>
         </View>
 
         {/* 5. Foto zuschneiden */}
@@ -6288,7 +6290,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="crop-outline" size={18} color={drawMode === 'crop' ? '#fff' : '#9C27B0'} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: drawMode === 'crop' ? '#9C27B0' : '#333' }]}>Zuschneiden</Text>
+          <Text style={[styles.toolButtonLabel, { color: drawMode === 'crop' ? '#9C27B0' : '#333' }]}>{t('sketches.crop')}</Text>
         </View>
 
         <View style={styles.separator} />
@@ -6327,7 +6329,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="hand-left" size={18} color={drawMode === 'select' ? '#fff' : '#333'} />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Bearbeiten</Text>
+          <Text style={styles.toolButtonLabel}>{t('common.edit')}</Text>
         </View>
 
         {/* ========== MAßLINIEN (nach Zoom & Bearbeiten) ========== */}
@@ -6431,10 +6433,10 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Maßlinie</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Polygon</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>+Pkt</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>-Pkt</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.measurementLine')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.polygon')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.addPoint')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.removePoint')}</Text>
           </View>
         </View>
 
@@ -6451,7 +6453,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="trash" size={18} color={selectedElementId ? '#f44336' : '#ccc'} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#f44336' : '#ccc' }]}>Element{'\n'}löschen</Text>
+          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#f44336' : '#ccc' }]}>{t('sketches.deleteElement')}</Text>
         </View>
 
         {/* Stil bearbeiten Button */}
@@ -6471,7 +6473,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="color-palette" size={18} color={selectedElementId ? (showElementStyleEditor ? '#fff' : '#1976d2') : '#ccc'} />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#1976d2' : '#ccc' }]}>Stil{'\n'}ändern</Text>
+          <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#1976d2' : '#ccc' }]}>{t('sketches.editStyle')}</Text>
         </View>
 
         <View style={styles.separator} />
@@ -6484,7 +6486,7 @@ export default function DrawSketchScreen() {
           >
             <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
           </TouchableOpacity>
-          <Text style={styles.toolButtonLabel}>Stift</Text>
+          <Text style={styles.toolButtonLabel}>{t('sketches.pen')}</Text>
         </View>
 
         {/* 8. Formen (Linie, Kreis, Rechteck) */}
@@ -6510,9 +6512,9 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Linie</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Kreis</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Rechteck</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.line')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.circle')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.rect')}</Text>
           </View>
         </View>
 
@@ -6547,7 +6549,7 @@ export default function DrawSketchScreen() {
               />
             </Svg>
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>Winkel</Text>
+          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
         </View>
 
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}
@@ -6590,10 +6592,10 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Memo</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Text</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notiz</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>Notizen</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.memo')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.text')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.note')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.notes')}</Text>
           </View>
         </View>
 
@@ -6618,7 +6620,7 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.toolButtonLabel}>Zeichenleiste</Text>
+          <Text style={styles.toolButtonLabel}>{t('sketches.drawBar')}</Text>
         </View>
 
         <View style={styles.separator} />
@@ -6655,7 +6657,7 @@ export default function DrawSketchScreen() {
                 color: backgroundImage ? '#ccc' : (showGrid ? '#fff' : '#333'),
                 marginTop: 1,
               }}>
-                Raster
+                {t('sketches.grid')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -6682,7 +6684,7 @@ export default function DrawSketchScreen() {
               <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.toolButtonLabel}>Vor-Zurück</Text>
+          <Text style={styles.toolButtonLabel}>{t('sketches.undoRedo')}</Text>
         </View>
 
         <View style={styles.separator} />
@@ -6695,15 +6697,15 @@ export default function DrawSketchScreen() {
                 clearAll();
               }
             } else {
-              Alert.alert('Alles löschen', 'Möchten Sie alle Elemente löschen?', [
-                { text: 'Abbrechen', style: 'cancel' },
-                { text: 'Löschen', style: 'destructive', onPress: clearAll },
+              Alert.alert(t('sketches.clear'), t('sketches.clearConfirm'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.delete'), style: 'destructive', onPress: clearAll },
               ]);
             }
           }}>
             <Ionicons name="trash-bin" size={18} color="#f44336" />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: '#f44336' }]}>Seite{'\n'}löschen</Text>
+          <Text style={[styles.toolButtonLabel, { color: '#f44336' }]}>{t('sketches.deletePage')}</Text>
         </View>
       </ScrollView>
       </View>
@@ -6711,7 +6713,7 @@ export default function DrawSketchScreen() {
       {/* Color picker expandable */}
       {showColorPicker && (
         <View style={styles.colorPickerPanel}>
-          <Text style={styles.colorPickerTitle}>Farbe wählen:</Text>
+          <Text style={styles.colorPickerTitle}>{t('sketches.chooseColor')}</Text>
           <View style={styles.colorGrid}>
             {colors.map(color => (
               <TouchableOpacity
@@ -6735,7 +6737,7 @@ export default function DrawSketchScreen() {
       {showElementStyleEditor && selectedElementForStyle && (
         <View style={styles.elementStylePanel}>
           <View style={styles.elementStyleHeader}>
-            <Text style={styles.elementStyleTitle}>Stil</Text>
+            <Text style={styles.elementStyleTitle}>{t('sketches.style')}</Text>
             <TouchableOpacity onPress={() => setShowElementStyleEditor(false)} style={{ padding: 4 }}>
               <Ionicons name="close-circle" size={22} color="#999" />
             </TouchableOpacity>
@@ -6796,7 +6798,7 @@ export default function DrawSketchScreen() {
       {showGridSettings && !backgroundImage && (
         <View style={styles.gridSettingsPanel}>
           <View style={styles.gridSettingsHeader}>
-            <Text style={styles.gridSettingsTitle}>Raster-Einstellungen</Text>
+            <Text style={styles.gridSettingsTitle}>{t('sketches.gridSettings')}</Text>
             <TouchableOpacity onPress={() => setShowGridSettings(false)}>
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
@@ -6804,9 +6806,9 @@ export default function DrawSketchScreen() {
           
           {/* Größen-Slider */}
           <View style={styles.gridSliderSection}>
-            <Text style={styles.gridSliderSectionLabel}>Kästchengröße: {gridSize}px</Text>
+            <Text style={styles.gridSliderSectionLabel}>{t('sketches.gridSize')}: {gridSize}px</Text>
             <View style={styles.gridSliderRow}>
-              <Text style={styles.gridSliderLabel}>Klein</Text>
+              <Text style={styles.gridSliderLabel}>{t('sketches.gridSmall')}</Text>
               <Slider
                 style={styles.gridSlider}
                 minimumValue={10}
@@ -6818,15 +6820,15 @@ export default function DrawSketchScreen() {
                 maximumTrackTintColor="#ddd"
                 thumbTintColor="#1976d2"
               />
-              <Text style={styles.gridSliderLabel}>Groß</Text>
+              <Text style={styles.gridSliderLabel}>{t('sketches.gridLarge')}</Text>
             </View>
           </View>
           
           {/* Transparenz-Slider */}
           <View style={styles.gridSliderSection}>
-            <Text style={styles.gridSliderSectionLabel}>Sichtbarkeit: {Math.round(gridOpacity * 100)}%</Text>
+            <Text style={styles.gridSliderSectionLabel}>{t('sketches.gridVisibility')}: {Math.round(gridOpacity * 100)}%</Text>
             <View style={styles.gridSliderRow}>
-              <Text style={styles.gridSliderLabel}>Schwach</Text>
+              <Text style={styles.gridSliderLabel}>{t('sketches.gridWeak')}</Text>
               <Slider
                 style={styles.gridSlider}
                 minimumValue={0.1}
@@ -6838,7 +6840,7 @@ export default function DrawSketchScreen() {
                 maximumTrackTintColor="#ddd"
                 thumbTintColor="#1976d2"
               />
-              <Text style={styles.gridSliderLabel}>Stark</Text>
+              <Text style={styles.gridSliderLabel}>{t('sketches.gridStrong')}</Text>
             </View>
           </View>
         </View>
@@ -7057,7 +7059,7 @@ export default function DrawSketchScreen() {
               }}
             >
               <Ionicons name="pencil" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Winkel anpassen</Text>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('sketches.adjustAngle')}</Text>
             </TouchableOpacity>
           )}
           {/* "Zu Projektfotos hinzufügen" Button wenn ein Bild-Element ausgewählt ist */}
@@ -7079,11 +7081,11 @@ export default function DrawSketchScreen() {
                   console.log('[FOTO-KOPIE] Start - projectId:', projectId, 'selectedId:', selectedElementId, 'type:', selEl?.type);
                   
                   if (!projectId) {
-                    Alert.alert('Fehler', 'Kein Projekt zugeordnet');
+                    Alert.alert(t('common.error'), t('sketches.noProjectAssigned'));
                     return;
                   }
                   if (!selEl?.data?.uri) {
-                    Alert.alert('Fehler', 'Kein Bild vorhanden');
+                    Alert.alert(t('common.error'), t('sketches.noImageAvailable'));
                     return;
                   }
                   
@@ -7097,21 +7099,21 @@ export default function DrawSketchScreen() {
                     description: `Aus Skizze übernommen (${new Date().toLocaleDateString('de-DE')})`,
                   });
                   console.log('[FOTO-KOPIE] Erfolgreich! Photo-ID:', newPhoto.id);
-                  Alert.alert('Gespeichert ✓', 'Das Foto wurde zu den Projektfotos hinzugefügt.');
+                  Alert.alert(t('common.saved'), t('sketches.photoSaved'));
                 } catch (err: any) {
                   console.error('[FOTO-KOPIE] Fehler:', err?.message || err);
-                  Alert.alert('Fehler', `Foto konnte nicht gespeichert werden: ${err?.message || 'Unbekannter Fehler'}`);
+                  Alert.alert(t('common.error'), `${t('sketches.photoSaveError')}: ${err?.message || t('sketches.unknownError')}`);
                 }
               }}
             >
               <Ionicons name="images-outline" size={16} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Zu Projektfotos</Text>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('sketches.toProjectPhotos')}</Text>
             </TouchableOpacity>
           )}
           {photoEditMode && (
             <View style={styles.photoEditBadge}>
               <Ionicons name="image-outline" size={14} color="#fff" />
-              <Text style={styles.photoEditBadgeText}>Foto-Modus</Text>
+              <Text style={styles.photoEditBadgeText}>{t('sketches.photoMode')}</Text>
             </View>
           )}
           {zoomMode && (
@@ -7137,7 +7139,7 @@ export default function DrawSketchScreen() {
           <View {...polylineControlPanResponder.panHandlers} style={styles.polylineDragHandle}>
             <View style={styles.polylineDragIndicator} />
             <Text style={styles.polylineInfoCompact}>
-              Grundriss: {polylinePoints.length}
+              {t('sketches.groundPlan')}: {polylinePoints.length}
             </Text>
           </View>
           
@@ -7281,7 +7283,7 @@ export default function DrawSketchScreen() {
           <View style={styles.sketchLegendDragHandle}>
             <Ionicons name="move" size={12} color="#999" />
           </View>
-          <Text style={styles.sketchLegendTitle}>Übersicht</Text>
+          <Text style={styles.sketchLegendTitle}>{t('sketches.overview')}</Text>
           {getPolylineElementsWithMeasurements().map((element, index) => {
             const totalForElement = calculateTotalLfmForElement(element.id);
             if (totalForElement <= 0) return null;
@@ -7312,7 +7314,7 @@ export default function DrawSketchScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
             <View {...measurePanelPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
               <View style={styles.floatingMeasureDragHandle} />
-              <Text style={styles.floatingMeasureTitle}>Maß eingeben</Text>
+              <Text style={styles.floatingMeasureTitle}>{t('sketches.enterMeasurement')}</Text>
             </View>
             <Pressable
               onPress={() => {
@@ -7494,7 +7496,7 @@ export default function DrawSketchScreen() {
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>.</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => setLineMeasurementExpression(prev => prev + ' ')}>
-                        <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>Leer</Text>
+                        <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>{t('sketches.space')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '/')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>/</Text>
@@ -7528,7 +7530,7 @@ export default function DrawSketchScreen() {
             {showMeasureStyleSettings && (
               <View style={{ paddingBottom: 4 }}>
                 <View style={{ marginBottom: 6 }}>
-                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Farbe:</Text>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.colorLabel')}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
                     {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
                       <TouchableOpacity
@@ -7589,7 +7591,7 @@ export default function DrawSketchScreen() {
                   </View>
                 </View>
                 <View>
-                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Schriftgröße:</Text>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.fontSize')}:</Text>
                   <View style={{ flexDirection: 'row', gap: 5 }}>
                     {[8, 11, 14, 18, 22].map(fs => (
                       <TouchableOpacity
@@ -7633,7 +7635,7 @@ export default function DrawSketchScreen() {
                 setSelectedLineSegment(null);
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1}>Abbrechen</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: '#1976d2' }}
@@ -7648,7 +7650,7 @@ export default function DrawSketchScreen() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }} numberOfLines={1}>
-                {lineMeasurementExpression.trim() ? 'Hinzufügen' : 'Fertig'}
+                {lineMeasurementExpression.trim() ? t('common.add') : t('common.done')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -7694,7 +7696,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Schriftgröße: {lastTextFontSize}px</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {lastTextFontSize}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -7716,7 +7718,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Family Selection */}
               <View style={styles.fontFamilyContainer}>
-                <Text style={styles.modalLabel}>Schriftart:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontFamily')}</Text>
                 <View style={styles.fontFamilyButtons}>
                   {FONT_FAMILIES.map(font => (
                     <TouchableOpacity
@@ -7741,7 +7743,7 @@ export default function DrawSketchScreen() {
               
               {/* Color Picker */}
               <View style={styles.colorPickerContainer}>
-                <Text style={styles.modalLabel}>Farbe:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
                 <View style={styles.colorGrid}>
                   {colors.map(color => (
                     <TouchableOpacity
@@ -7767,7 +7769,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -7776,7 +7778,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+                  <Text style={styles.confirmButtonText}>{t('common.add')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -7864,7 +7866,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Schriftgröße: {editArrowFontSize}px</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {editArrowFontSize}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -7894,7 +7896,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -7903,7 +7905,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+                  <Text style={styles.confirmButtonText}>{t('common.add')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -7924,13 +7926,13 @@ export default function DrawSketchScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowDeleteConfirm(false)}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.deleteButton]}
                 onPress={deleteSelectedElement}
               >
-                <Text style={styles.deleteButtonText}>Löschen</Text>
+                <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8014,7 +8016,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Schriftgröße: {editArrowFontSize}px</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {editArrowFontSize}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -8035,7 +8037,7 @@ export default function DrawSketchScreen() {
               </View>
               
               <View style={styles.colorPickerContainer}>
-                <Text style={styles.modalLabel}>Farbe:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
                 <View style={styles.colorGrid}>
                   {colors.map(color => (
                     <TouchableOpacity
@@ -8058,7 +8060,7 @@ export default function DrawSketchScreen() {
                     setArrowText('');
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -8086,7 +8088,7 @@ export default function DrawSketchScreen() {
                     }
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                  <Text style={styles.confirmButtonText}>{t('sketches.update')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -8143,7 +8145,7 @@ export default function DrawSketchScreen() {
                   closeModalNumpad();
                 }}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
@@ -8152,7 +8154,7 @@ export default function DrawSketchScreen() {
                   closeModalNumpad();
                 }}
               >
-                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+                <Text style={styles.confirmButtonText}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8221,7 +8223,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Schriftgröße: {editPointerFontSize}px</Text>
+              <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {editPointerFontSize}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -8242,7 +8244,7 @@ export default function DrawSketchScreen() {
               </View>
               
               <View style={styles.colorPickerContainer}>
-                <Text style={styles.modalLabel}>Farbe:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
                 <View style={styles.colorGrid}>
                   {colors.map(color => (
                     <TouchableOpacity
@@ -8265,13 +8267,13 @@ export default function DrawSketchScreen() {
                     setPointerText('');
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
                   onPress={updatePointerElement}
                 >
-                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                  <Text style={styles.confirmButtonText}>{t('sketches.update')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -8328,13 +8330,13 @@ export default function DrawSketchScreen() {
                   setPendingMemo(null);
                 }}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={addMemoElement}
               >
-                <Text style={styles.confirmButtonText}>Hinzufügen</Text>
+                <Text style={styles.confirmButtonText}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8377,7 +8379,7 @@ export default function DrawSketchScreen() {
             {renderInModalNumpad()}
             {/* Font Size Slider */}
             <View style={styles.sliderContainer}>
-              <Text style={styles.modalLabel}>Schriftgröße: {editMemoFontSize}px</Text>
+              <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {editMemoFontSize}px</Text>
               <View style={styles.sliderRow}>
                 <TouchableOpacity 
                   style={styles.sliderButton} 
@@ -8398,7 +8400,7 @@ export default function DrawSketchScreen() {
             </View>
             {/* Color Selection */}
             <View style={styles.colorSelectionContainer}>
-              <Text style={styles.modalLabel}>Farbe:</Text>
+              <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
               <View style={styles.colorOptions}>
                 {['#E74C3C', '#333333', '#2196f3', '#4caf50', '#FF9800', '#9C27B0'].map((color) => (
                   <TouchableOpacity
@@ -8421,13 +8423,13 @@ export default function DrawSketchScreen() {
                   setMemoText('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={updateMemoElement}
               >
-                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                <Text style={styles.confirmButtonText}>{t('sketches.update')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8438,11 +8440,11 @@ export default function DrawSketchScreen() {
       <Modal visible={showEditPolygonModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Form bearbeiten</Text>
+            <Text style={styles.modalTitle}>{t('sketches.editShape')}</Text>
             
             {/* Stroke Width Slider */}
             <View style={styles.sliderContainer}>
-              <Text style={styles.modalLabel}>Strichstärke: {editPolygonStrokeWidth}px</Text>
+              <Text style={styles.modalLabel}>{t('sketches.strokeWidthLabel')}: {editPolygonStrokeWidth}px</Text>
               <View style={styles.sliderRow}>
                 <TouchableOpacity 
                   style={styles.sliderButton} 
@@ -8464,7 +8466,7 @@ export default function DrawSketchScreen() {
             
             {/* Color Selection */}
             <View style={styles.colorSelectionContainer}>
-              <Text style={styles.modalLabel}>Farbe:</Text>
+              <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
               <View style={styles.colorOptions}>
                 {['#E74C3C', '#333333', '#2196f3', '#4caf50', '#FF9800', '#9C27B0', '#795548', '#607D8B'].map((color) => (
                   <TouchableOpacity
@@ -8485,13 +8487,13 @@ export default function DrawSketchScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowEditPolygonModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
                 onPress={updatePolygonElement}
               >
-                <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                <Text style={styles.confirmButtonText}>{t('sketches.update')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8503,7 +8505,7 @@ export default function DrawSketchScreen() {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Text bearbeiten</Text>
+              <Text style={styles.modalTitle}>{t('sketches.editText')}</Text>
               <TextInput
                 ref={textInputRef}
                 style={styles.modalInput}
@@ -8536,7 +8538,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Size Slider */}
               <View style={styles.sliderContainer}>
-                <Text style={styles.modalLabel}>Schriftgröße: {editFontSize}px</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontSize')}: {editFontSize}px</Text>
                 <View style={styles.sliderRow}>
                   <TouchableOpacity 
                     style={styles.sliderButton} 
@@ -8558,7 +8560,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Style Buttons */}
               <View style={styles.fontStyleContainer}>
-                <Text style={styles.modalLabel}>Stil:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontStyle')}</Text>
                 <View style={styles.fontStyleButtons}>
                   <TouchableOpacity
                     style={[styles.fontStyleButton, editFontWeight === 'bold' && styles.fontStyleButtonActive]}
@@ -8577,7 +8579,7 @@ export default function DrawSketchScreen() {
               
               {/* Font Family Selection */}
               <View style={styles.fontFamilyContainer}>
-                <Text style={styles.modalLabel}>Schriftart:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.fontFamily')}</Text>
                 <View style={styles.fontFamilyButtons}>
                   {FONT_FAMILIES.map(font => (
                     <TouchableOpacity
@@ -8601,7 +8603,7 @@ export default function DrawSketchScreen() {
               </View>
               
               <View style={styles.colorPickerContainer}>
-                <Text style={styles.modalLabel}>Farbe:</Text>
+                <Text style={styles.modalLabel}>{t('sketches.colorLabel')}</Text>
                 <View style={styles.colorGrid}>
                   {colors.map(color => (
                     <TouchableOpacity
@@ -8625,7 +8627,7 @@ export default function DrawSketchScreen() {
                     setTextInput('');
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -8651,7 +8653,7 @@ export default function DrawSketchScreen() {
                     }
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>Aktualisieren</Text>
+                  <Text style={styles.confirmButtonText}>{t('sketches.update')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -8665,15 +8667,15 @@ export default function DrawSketchScreen() {
       <Modal visible={showNotesModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Notizen zur Skizze</Text>
-            <Text style={styles.modalSubtitle}>Diese Notizen werden im PDF unter der Skizze angezeigt</Text>
+            <Text style={styles.modalTitle}>{t('sketches.sketchNotes')}</Text>
+            <Text style={styles.modalSubtitle}>{t('sketches.sketchNotesSubtitle')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <TextInput
                 ref={notesInputRef}
                 style={[styles.modalInput, styles.notesInput, { flex: 1 }]}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Notizen hier eingeben..."
+                placeholder={t('sketches.notes')}
                 placeholderTextColor="#999"
                 multiline
                 autoFocus
@@ -8710,7 +8712,7 @@ export default function DrawSketchScreen() {
                   setShowNotesModal(false);
                 }}
               >
-                <Text style={styles.notesModalButtonText}>Schließen</Text>
+                <Text style={styles.notesModalButtonText}>{t('common.close')}</Text>
               </TouchableOpacity>
               {notes.trim() && (
                 <TouchableOpacity
@@ -8721,7 +8723,7 @@ export default function DrawSketchScreen() {
                     setShowNotesModal(false);
                   }}
                 >
-                  <Text style={styles.notesModalButtonTextWhite}>Löschen</Text>
+                  <Text style={styles.notesModalButtonTextWhite}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -8731,7 +8733,7 @@ export default function DrawSketchScreen() {
                   setShowNotesModal(false);
                 }}
               >
-                <Text style={styles.notesModalButtonTextWhite}>Speichern</Text>
+                <Text style={styles.notesModalButtonTextWhite}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
             {/* In-Modal Numpad für Notizen */}
@@ -8745,7 +8747,7 @@ export default function DrawSketchScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '80%', width: '95%' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={styles.modalTitle}>Projektfotos auswählen</Text>
+              <Text style={styles.modalTitle}>{t('sketches.selectProjectPhotos')}</Text>
               <TouchableOpacity onPress={() => setShowProjectPhotosModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -8755,10 +8757,10 @@ export default function DrawSketchScreen() {
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <Ionicons name="images-outline" size={48} color="#ccc" />
                 <Text style={{ marginTop: 16, color: '#666', textAlign: 'center' }}>
-                  Keine Fotos in diesem Projekt vorhanden.
+                  {t('sketches.noProjectPhotos')}
                 </Text>
                 <Text style={{ marginTop: 8, color: '#999', fontSize: 12, textAlign: 'center' }}>
-                  Fügen Sie Fotos über die Projekt-Detailseite hinzu.
+                  {t('sketches.addPhotosHint')}
                 </Text>
               </View>
             ) : (
@@ -8800,7 +8802,7 @@ export default function DrawSketchScreen() {
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowProjectPhotosModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Abbrechen</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -8811,8 +8813,8 @@ export default function DrawSketchScreen() {
       <Modal visible={showCropModal} transparent animationType="fade">
         <View style={styles.cropModalOverlay}>
           <View style={styles.cropModalContent}>
-            <Text style={styles.cropModalTitle}>Foto zuschneiden</Text>
-            <Text style={styles.cropModalSubtitle}>Ziehen Sie die Ecken um den Bereich anzupassen</Text>
+            <Text style={styles.cropModalTitle}>{t('sketches.cropPhoto')}</Text>
+            <Text style={styles.cropModalSubtitle}>{t('sketches.cropSubtitle')}</Text>
             
             <View 
               ref={cropContainerRef}
@@ -8858,11 +8860,11 @@ export default function DrawSketchScreen() {
             <View style={styles.cropButtonRow}>
               <TouchableOpacity style={styles.cropCancelButton} onPress={cancelCrop}>
                 <Ionicons name="close" size={20} color="#fff" />
-                <Text style={styles.cropButtonText}>Abbrechen</Text>
+                <Text style={styles.cropButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cropApplyButton} onPress={applyCrop}>
                 <Ionicons name="checkmark" size={20} color="#fff" />
-                <Text style={styles.cropButtonText}>Anwenden</Text>
+                <Text style={styles.cropButtonText}>{t('sketches.applyBtn')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -9177,14 +9179,14 @@ export default function DrawSketchScreen() {
                 onPress={() => setShowProtractor(false)}
               >
                 <Ionicons name="close-circle" size={22} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Abbrechen</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.protractorAddBtn}
                 onPress={addProtractorToSketch}
               >
                 <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                <Text style={styles.protractorAddBtnText}>Hinzufügen</Text>
+                <Text style={styles.protractorAddBtnText}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -9192,7 +9194,7 @@ export default function DrawSketchScreen() {
           {/* Winkel-Eingabe Modal */}
           {showProtractorAngleInput && (
             <View style={styles.protractorInputModal}>
-              <Text style={styles.protractorInputLabel}>Winkel eingeben:</Text>
+              <Text style={styles.protractorInputLabel}>{t('sketches.enterAngle')}</Text>
               <TextInput
                 style={styles.protractorInput}
                 value={protractorAngleInput}
@@ -9206,7 +9208,7 @@ export default function DrawSketchScreen() {
                   style={styles.protractorInputCancelButton}
                   onPress={() => setShowProtractorAngleInput(false)}
                 >
-                  <Text style={styles.protractorInputCancelText}>Abbrechen</Text>
+                  <Text style={styles.protractorInputCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.protractorInputOkButton}
@@ -9288,7 +9290,7 @@ export default function DrawSketchScreen() {
                   }}
                   onPress={() => setShowProtractorHint(false)}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Verstanden</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{t('sketches.understood')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>

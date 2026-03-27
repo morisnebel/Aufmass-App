@@ -16,6 +16,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoofService, ProjectService } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 const ROOF_TYPES = [
   { id: 'Flachdach', name: 'Flachdach', description: 'Ebene Dachfläche ohne Neigung' },
@@ -28,6 +29,7 @@ const ROOF_TYPES = [
 ];
 
 export default function EditRoofScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [roofType, setRoofType] = useState('Satteldach');
@@ -94,7 +96,7 @@ export default function EditRoofScreen() {
         }
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Dachmessung konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Dachmessung konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -225,7 +227,7 @@ export default function EditRoofScreen() {
   };
 
   const handleSave = async () => {
-    if (!gebaeudelaenge || !gebaeudebreite) { Alert.alert('Fehler', 'Bitte Länge und Breite eingeben'); return; }
+    if (!gebaeudelaenge || !gebaeudebreite) { Alert.alert(t('common.error'), 'Bitte Länge und Breite eingeben'); return; }
     setSaving(true);
     try {
       const roofId = Array.isArray(id) ? id[0] : id;
@@ -242,8 +244,8 @@ export default function EditRoofScreen() {
         },
         area: calculateArea(), notes: notes || undefined,
       });
-      Alert.alert('Erfolg', 'Gespeichert', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (error) { Alert.alert('Fehler', 'Speichern fehlgeschlagen'); }
+      Alert.alert(t('common.success'), 'Gespeichert', [{ text: t('common.ok'), onPress: () => router.back() }]);
+    } catch (error) { Alert.alert(t('common.error'), 'Speichern fehlgeschlagen'); }
     finally { setSaving(false); }
   };
 

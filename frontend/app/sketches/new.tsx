@@ -2,8 +2,10 @@ import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export default function NewSketchScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
 

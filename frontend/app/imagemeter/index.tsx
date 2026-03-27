@@ -14,6 +14,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 
@@ -29,6 +30,7 @@ interface ImageMeterPhoto {
 }
 
 export default function ImageMeterIndexScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [photos, setPhotos] = useState<ImageMeterPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function ImageMeterIndexScreen() {
       'Foto löschen',
       'Möchten Sie dieses Foto mit allen Messungen löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Löschen',
           style: 'destructive',
@@ -80,7 +82,7 @@ export default function ImageMeterIndexScreen() {
               setPhotos(newPhotos);
             } catch (error) {
               console.error('Error deleting photo:', error);
-              Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+              Alert.alert(t('common.error'), 'Foto konnte nicht gelöscht werden');
             }
           },
         },

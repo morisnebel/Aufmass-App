@@ -17,10 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 
 export default function ImageMeterNewScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const projectId = params.projectId as string | undefined;
@@ -61,7 +63,7 @@ export default function ImageMeterNewScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht aufgenommen werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht aufgenommen werden');
     }
   };
 
@@ -83,13 +85,13 @@ export default function ImageMeterNewScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Fehler', 'Bild konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Bild konnte nicht geladen werden');
     }
   };
 
   const saveAndContinue = async () => {
     if (!imageUri) {
-      Alert.alert('Hinweis', 'Bitte nehmen Sie zuerst ein Foto auf oder wählen Sie ein Bild aus.');
+      Alert.alert(t('common.note'), 'Bitte nehmen Sie zuerst ein Foto auf oder wählen Sie ein Bild aus.');
       return;
     }
 
@@ -119,7 +121,7 @@ export default function ImageMeterNewScreen() {
       router.replace(`/imagemeter/measure?id=${newPhoto.id}`);
     } catch (error) {
       console.error('Error saving photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht gespeichert werden');
     } finally {
       setLoading(false);
     }

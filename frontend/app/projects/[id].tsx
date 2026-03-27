@@ -2352,7 +2352,7 @@ export default function ProjectDetailScreen() {
             
             <!-- Footer - kompakt -->
             <div style="text-align: center; font-size: 8px; color: #1976d2; font-weight: 600; margin-top: 12px; padding-top: 6px; border-top: 1px solid #1976d2;">
-              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
+              ${t('pdf.createdWith')} - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         `;
@@ -3487,22 +3487,22 @@ export default function ProjectDetailScreen() {
                 ${companySubtitle ? `<br/><em>${companySubtitle}</em>` : ''}
                 ${companyStreet ? `<br/>${companyStreet}` : ''}
                 ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
-                ${companyPhone ? `<br/>Tel: ${companyPhone}` : ''}
-                ${companyMobilePhone ? `<br/>Mobil: ${companyMobilePhone}` : ''}
-                ${companyFax ? `<br/>Fax: ${companyFax}` : ''}
+                ${companyPhone ? `<br/>${t('pdf.phone')}: ${companyPhone}` : ''}
+                ${companyMobilePhone ? `<br/>${t('pdf.mobile')}: ${companyMobilePhone}` : ''}
+                ${companyFax ? `<br/>${t('pdf.fax')}: ${companyFax}` : ''}
                 ${companyEmail ? `<br/>${companyEmail}` : ''}
               </div>
             ` : ''}
           </div>
         </div>
         
-        <h2>Projektübersicht</h2>
+        <h2>${t('pdf.projectOverview')}</h2>
         <div class="info-grid">
           <div class="info-box">
-            <h3>Projekt</h3>
+            <h3>${t('pdf.project')}</h3>
             ${project?.project_number ? `
               <div class="info-row">
-                <span class="info-label">Projekt Nr.:</span>
+                <span class="info-label">${t('projects.projectNumber')}:</span>
                 <span class="info-value" style="color: #4caf50; font-weight: 600;">${project.project_number}</span>
               </div>
             ` : ''}
@@ -3512,22 +3512,22 @@ export default function ProjectDetailScreen() {
             </div>
             ${project?.description ? `
               <div class="info-row">
-                <span class="info-label">Beschreibung:</span>
+                <span class="info-label">${t('projects.description')}:</span>
                 <span class="info-value">${project.description}</span>
               </div>
             ` : ''}
             <div class="info-row">
-              <span class="info-label">Status:</span>
-              <span class="info-value">${project?.status === 'aktiv' ? 'Aktiv' : project?.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}</span>
+              <span class="info-label">${t('projects.status')}:</span>
+              <span class="info-value">${project?.status === 'aktiv' ? t('projects.statusActive') : project?.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}</span>
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
               <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #e0e0e0;">
                 <h4 style="color: #1976d2; margin: 0 0 3px 0; font-size: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 2px;">
-                  Objektadresse${objektAddressName ? ` (${objektAddressName})` : ''}
+                  ${t('projects.objectAddress')}${objektAddressName ? ` (${objektAddressName})` : ''}
                 </h4>
                 ${objektNumber ? `
                   <div class="info-row">
-                    <span class="info-label">Objekt Nr.:</span>
+                    <span class="info-label">${t('projects.objectNumber')}:</span>
                     <span class="info-value" style="color: #ff9800; font-weight: 600;">${objektNumber}</span>
                   </div>
                 ` : ''}
@@ -3539,13 +3539,13 @@ export default function ProjectDetailScreen() {
                 ` : ''}
                 ${objektStreet ? `
                   <div class="info-row">
-                    <span class="info-label">Straße:</span>
+                    <span class="info-label">${t('common.street')}:</span>
                     <span class="info-value">${objektStreet}</span>
                   </div>
                 ` : ''}
                 ${(objektPlz || objektCity) ? `
                   <div class="info-row">
-                    <span class="info-label">PLZ/Ort:</span>
+                    <span class="info-label">${t('common.zip')}/${t('common.city')}:</span>
                     <span class="info-value">${objektPlz || ''} ${objektCity || ''}</span>
                   </div>
                 ` : ''}
@@ -3572,10 +3572,10 @@ export default function ProjectDetailScreen() {
           </div>
           
           <div class="info-box">
-            <h3>Bauherr</h3>
+            <h3>${t('projects.bauherr')}</h3>
             ${customer?.customer_number ? `
               <div class="info-row">
-                <span class="info-label">Kunden Nr.:</span>
+                <span class="info-label">${t('customers.customerNumber')}:</span>
                 <span class="info-value" style="color: #1976d2; font-weight: 600;">${customer.customer_number}</span>
               </div>
             ` : ''}
@@ -3587,31 +3587,31 @@ export default function ProjectDetailScreen() {
             ` : ''}
             ${bauherrStreet ? `
               <div class="info-row">
-                <span class="info-label">Straße:</span>
+                <span class="info-label">${t('common.street')}:</span>
                 <span class="info-value">${bauherrStreet}</span>
               </div>
             ` : ''}
             ${(bauherrPlz || bauherrCity) ? `
               <div class="info-row">
-                <span class="info-label">PLZ/Ort:</span>
+                <span class="info-label">${t('common.zip')}/${t('common.city')}:</span>
                 <span class="info-value">${bauherrPlz || ''} ${bauherrCity || ''}</span>
               </div>
             ` : ''}
             ${bauherrPhone ? `
               <div class="info-row">
-                <span class="info-label">Telefon:</span>
+                <span class="info-label">${t('common.phone')}:</span>
                 <span class="info-value">${bauherrPhone}</span>
               </div>
             ` : ''}
             ${bauherrMobile ? `
               <div class="info-row">
-                <span class="info-label">Mobil:</span>
+                <span class="info-label">${t('pdf.mobile')}:</span>
                 <span class="info-value">${bauherrMobile}</span>
               </div>
             ` : ''}
             ${bauherrEmail ? `
               <div class="info-row">
-                <span class="info-label">E-Mail:</span>
+                <span class="info-label">${t('common.email')}:</span>
                 <span class="info-value">${bauherrEmail}</span>
               </div>
             ` : ''}
@@ -3626,28 +3626,28 @@ export default function ProjectDetailScreen() {
         
         ${roofs.length > 0 ? `
         <div class="roofs-section">
-          <h2>Dachflächen</h2>
+          <h2>${t('projects.roofMeasurement')}</h2>
           ${roofsHtml}
         </div>
         ` : ''}
         
         ${checklists.length > 0 ? `
         <div class="checklists-section checklists-page-break">
-          <h2>Checklisten</h2>
+          <h2>${t('checklists.title')}</h2>
           ${checklistsHtml}
         </div>
         ` : ''}
         
         ${photos.length > 0 ? `
           <div class="photos-section">
-            <h2>Fotos</h2>
+            <h2>${t('photos.title')}</h2>
             ${photosHtml}
           </div>
         ` : ''}
         
         ${sketches.length > 0 ? `
           <div class="sketches-section">
-            <h2>Skizzen</h2>
+            <h2>${t('sketches.title')}</h2>
             ${sketchesHtml}
           </div>
         ` : ''}
@@ -3663,7 +3663,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             <div class="footer">
-              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
+              ${t('pdf.createdWith')} - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         ` : ''}
@@ -3685,7 +3685,7 @@ export default function ProjectDetailScreen() {
                 </div>
               ` : ''}
               <div class="footer">
-                Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
+                ${t('pdf.createdWith')} - Aufmassprofi - • ${formatDate(new Date().toISOString())}
               </div>
             </div>
           </div>
@@ -3702,7 +3702,7 @@ export default function ProjectDetailScreen() {
               </div>
             ` : ''}
             <div class="footer">
-              Erstellt mit - Aufmassprofi - • ${formatDate(new Date().toISOString())}
+              ${t('pdf.createdWith')} - Aufmassprofi - • ${formatDate(new Date().toISOString())}
             </div>
           </div>
         ` : ''}

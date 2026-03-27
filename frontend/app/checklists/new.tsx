@@ -11,6 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService, ChecklistService } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateItem {
   text: string;
@@ -54,6 +55,7 @@ interface ChecklistItem {
 }
 
 export default function NewChecklistScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { projectId } = useLocalSearchParams();
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
@@ -71,7 +73,7 @@ export default function NewChecklistScreen() {
       setTemplates(data);
     } catch (error) {
       console.error('Error loading templates:', error);
-      Alert.alert('Fehler', 'Vorlagen konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Vorlagen konnten nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -172,7 +174,7 @@ export default function NewChecklistScreen() {
 
   const saveChecklist = async () => {
     if (!selectedTemplate) {
-      Alert.alert('Fehler', 'Bitte wählen Sie eine Vorlage aus');
+      Alert.alert(t('common.error'), 'Bitte wählen Sie eine Vorlage aus');
       return;
     }
 
@@ -190,7 +192,7 @@ export default function NewChecklistScreen() {
       
       if (!projId) {
         console.error('ERROR: No project ID provided!');
-        Alert.alert('Fehler', 'Keine Projekt-ID vorhanden');
+        Alert.alert(t('common.error'), 'Keine Projekt-ID vorhanden');
         return;
       }
       
@@ -204,12 +206,12 @@ export default function NewChecklistScreen() {
       
       console.log('Checklist created successfully:', result);
 
-      Alert.alert('Erfolg', 'Checkliste wurde erstellt', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), 'Checkliste wurde erstellt', [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error('Error saving checklist:', error);
-      Alert.alert('Fehler', 'Checkliste konnte nicht gespeichert werden: ' + (error as Error).message);
+      Alert.alert(t('common.error'), 'Checkliste konnte nicht gespeichert werden: ' + (error as Error).message);
     }
   };
 

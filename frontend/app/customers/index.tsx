@@ -77,7 +77,7 @@ export default function CustomersScreen() {
       setProjects(projectData);
     } catch (error) {
       console.error('Error loading customers:', error);
-      Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');
+      Alert.alert(t('common.error'), 'Kunden konnten nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ export default function CustomersScreen() {
       loadCustomers();
     } catch (error) {
       console.error('Error deleting customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht gelöscht werden');
+      Alert.alert(t('common.error'), 'Kunde konnte nicht gelöscht werden');
     } finally {
       setIsDeleting(false);
     }
@@ -149,7 +149,7 @@ export default function CustomersScreen() {
 
   const saveAddress = async () => {
     if (!selectedCustomer || !addressName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Namen ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie mindestens einen Namen ein');
       return;
     }
 
@@ -169,7 +169,7 @@ export default function CustomersScreen() {
           'Objektnummer bereits vergeben',
           `Die Objektnummer "${objectNumToCheck}" existiert bereits. Was möchten Sie tun?`,
           [
-            { text: 'Abbrechen', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
               text: 'Trotzdem behalten', 
               onPress: () => saveAddressWithNumber(objectNumToCheck)
@@ -249,7 +249,7 @@ export default function CustomersScreen() {
             'Projekte synchronisieren?',
             `${matchingProjects.length} Projekt(e) verwenden diese Adresse. Sollen die Objektadressen in diesen Projekten auch aktualisiert werden?`,
             [
-              { text: 'Nein', style: 'cancel' },
+              { text: t('common.no'), style: 'cancel' },
               { 
                 text: 'Ja, synchronisieren', 
                 onPress: async () => {
@@ -268,7 +268,7 @@ export default function CustomersScreen() {
                       objekt_email: addressEmail || undefined,
                     });
                   }
-                  Alert.alert('Erfolg', `${matchingProjects.length} Projekt(e) wurden aktualisiert`);
+                  Alert.alert(t('common.success'), `${matchingProjects.length} Projekt(e) wurden aktualisiert`);
                 }
               },
             ]
@@ -287,7 +287,7 @@ export default function CustomersScreen() {
       'Adresse löschen',
       'Möchten Sie diese Adresse wirklich löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
           text: 'Löschen', 
           style: 'destructive',
@@ -328,7 +328,7 @@ export default function CustomersScreen() {
         'Kein Projekt gefunden',
         `Für "${address.name}" existiert noch kein Projekt. Möchten Sie ein neues Projekt erstellen?`,
         [
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: 'Projekt erstellen',
             onPress: async () => {
@@ -350,7 +350,7 @@ export default function CustomersScreen() {
                 router.push(`/projects/${newProject.id}`);
               } catch (error) {
                 console.error('Error creating project:', error);
-                Alert.alert('Fehler', 'Projekt konnte nicht erstellt werden');
+                Alert.alert(t('common.error'), 'Projekt konnte nicht erstellt werden');
               }
             }
           }
@@ -397,7 +397,7 @@ export default function CustomersScreen() {
     if (!editingProject) return;
     
     if (!editProjectName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie einen Projektnamen ein');
       return;
     }
     
@@ -409,7 +409,7 @@ export default function CustomersScreen() {
           'Projektnummer bereits vergeben',
           `Die Projektnummer "${editProjectNumber}" existiert bereits. Was möchten Sie tun?`,
           [
-            { text: 'Abbrechen', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
               text: 'Trotzdem behalten', 
               onPress: () => doSaveProjectChanges(editProjectNumber)
@@ -447,10 +447,10 @@ export default function CustomersScreen() {
       setProjects(projectData);
       
       cancelEditProject();
-      Alert.alert('Erfolg', 'Projekt wurde aktualisiert');
+      Alert.alert(t('common.success'), 'Projekt wurde aktualisiert');
     } catch (error) {
       console.error('Error saving project:', error);
-      Alert.alert('Fehler', 'Projekt konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Projekt konnte nicht gespeichert werden');
     } finally {
       setSavingProject(false);
     }

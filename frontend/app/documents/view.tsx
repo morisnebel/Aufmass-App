@@ -27,6 +27,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import { captureRef } from 'react-native-view-shot';
+import { useTranslation } from 'react-i18next';
 
 // Annotation types for saving
 interface SavedAnnotations {
@@ -66,6 +67,7 @@ interface DrawPath {
 }
 
 export default function DocumentViewScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const documentId = params.documentId as string;
@@ -167,11 +169,11 @@ export default function DocumentViewScreen() {
       if (doc) {
         setDocument(doc);
       } else {
-        Alert.alert('Fehler', 'Dokument nicht gefunden');
+        Alert.alert(t('common.error'), 'Dokument nicht gefunden');
         router.back();
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Dokument konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Dokument konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -400,9 +402,9 @@ export default function DocumentViewScreen() {
           annotations: JSON.stringify(annotationData),
         });
       }
-      Alert.alert('Gespeichert', 'Alle Anmerkungen wurden gespeichert');
+      Alert.alert(t('common.saved'), 'Alle Anmerkungen wurden gespeichert');
     } catch (error) {
-      Alert.alert('Fehler', 'Konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Konnte nicht gespeichert werden');
     }
   };
 
@@ -414,7 +416,7 @@ export default function DocumentViewScreen() {
         await Sharing.shareAsync(uri, { mimeType: 'image/png' });
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Konnte nicht geteilt werden');
+      Alert.alert(t('common.error'), 'Konnte nicht geteilt werden');
     }
   };
 
@@ -680,7 +682,7 @@ export default function DocumentViewScreen() {
             });
             console.log('Share dialog closed');
           } else {
-            Alert.alert('Fehler', 'Teilen nicht verfügbar');
+            Alert.alert(t('common.error'), 'Teilen nicht verfügbar');
           }
         } catch (shareError) {
           console.log('Share error:', shareError);
@@ -690,7 +692,7 @@ export default function DocumentViewScreen() {
       
     } catch (e) {
       console.log('PDF export error:', e);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), 'PDF konnte nicht erstellt werden');
       isPrintingRef.current = false;
     }
   };
@@ -797,7 +799,7 @@ export default function DocumentViewScreen() {
         handleExportPageRendered(data.pageNum, data.imageData);
       } else if (data.type === 'exportError') {
         console.log('Export error:', data.error);
-        Alert.alert('Fehler', 'Seite konnte nicht gerendert werden');
+        Alert.alert(t('common.error'), 'Seite konnte nicht gerendert werden');
         setIsExporting(false);
         setRenderAllPagesMode(false);
       }
@@ -1541,7 +1543,7 @@ export default function DocumentViewScreen() {
       'Alles löschen?',
       'Möchten Sie wirklich alle Anmerkungen löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
           text: 'Löschen', 
           style: 'destructive',
@@ -1587,7 +1589,7 @@ export default function DocumentViewScreen() {
       }
     } catch (error) {
       console.log('Share original error:', error);
-      Alert.alert('Fehler', 'Konnte nicht geteilt werden');
+      Alert.alert(t('common.error'), 'Konnte nicht geteilt werden');
     }
   };
 
@@ -1595,7 +1597,7 @@ export default function DocumentViewScreen() {
     // Load all annotations and create PDF with them
     const freshDoc = await DocumentService.getById(documentId || '');
     if (!freshDoc) {
-      Alert.alert('Fehler', 'Dokument nicht gefunden');
+      Alert.alert(t('common.error'), 'Dokument nicht gefunden');
       return;
     }
 
@@ -1620,7 +1622,7 @@ export default function DocumentViewScreen() {
       Alert.alert(
         'Keine Annotationen',
         'Es wurden keine Annotationen gefunden. Das Original-PDF wird geteilt.',
-        [{ text: 'OK', onPress: shareOriginalPdf }]
+        [{ text: t('common.ok'), onPress: shareOriginalPdf }]
       );
       return;
     }

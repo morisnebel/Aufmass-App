@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line, Circle, G, Text as SvgText, Rect } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -52,6 +53,7 @@ interface ImageMeterPhoto {
 }
 
 export default function ImageMeterMeasureScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const photoId = params.id as string;
@@ -117,7 +119,7 @@ export default function ImageMeterMeasureScreen() {
       }
     } catch (error) {
       console.error('Error loading photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -161,12 +163,12 @@ export default function ImageMeterMeasureScreen() {
           };
           await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(photos));
           setHasChanges(false);
-          Alert.alert('Erfolg', 'Messungen wurden gespeichert');
+          Alert.alert(t('common.success'), 'Messungen wurden gespeichert');
         }
       }
     } catch (error) {
       console.error('Error saving:', error);
-      Alert.alert('Fehler', 'Speichern fehlgeschlagen');
+      Alert.alert(t('common.error'), 'Speichern fehlgeschlagen');
     }
   };
 
@@ -279,7 +281,7 @@ export default function ImageMeterMeasureScreen() {
     
     const length = parseFloat(lengthInput.replace(',', '.'));
     if (isNaN(length) || length <= 0) {
-      Alert.alert('Fehler', 'Bitte geben Sie eine gültige Länge ein');
+      Alert.alert(t('common.error'), 'Bitte geben Sie eine gültige Länge ein');
       return;
     }
     
@@ -331,7 +333,7 @@ export default function ImageMeterMeasureScreen() {
         ? 'Das Referenzmaß wird gelöscht. Automatische Berechnungen sind dann nicht mehr möglich.'
         : 'Möchten Sie diese Messung löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: 'Löschen',
           style: 'destructive',

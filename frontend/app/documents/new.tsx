@@ -13,8 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system/next';
 import { DocumentService } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 export default function NewDocumentScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
@@ -34,7 +36,7 @@ export default function NewDocumentScreen() {
 
       const file = result.assets[0];
       if (!file) {
-        Alert.alert('Fehler', 'Keine Datei ausgewählt');
+        Alert.alert(t('common.error'), 'Keine Datei ausgewählt');
         return;
       }
 
@@ -57,7 +59,7 @@ export default function NewDocumentScreen() {
         pages: [], // Pages will be rendered in the viewer
       });
 
-      Alert.alert('Erfolg', 'Dokument wurde hinzugefügt', [
+      Alert.alert(t('common.success'), 'Dokument wurde hinzugefügt', [
         {
           text: 'OK',
           onPress: () => router.replace({
@@ -68,7 +70,7 @@ export default function NewDocumentScreen() {
       ]);
     } catch (error) {
       console.error('Error picking document:', error);
-      Alert.alert('Fehler', 'Dokument konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Dokument konnte nicht geladen werden');
     } finally {
       setLoading(false);
       setLoadingText('');

@@ -21,6 +21,7 @@ import { PhotoService } from '../../services/LocalStorage';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 // File system import removed - using simpler export method
 
 // API_URL removed - using local storage now
@@ -85,6 +86,7 @@ const PDF_SIZES = [
 ];
 
 export default function AnnotatePhotoScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
@@ -339,7 +341,7 @@ export default function AnnotatePhotoScreen() {
           setImageUri(imageSource);
         } else {
           console.error('No image data found for photo:', photoId);
-          Alert.alert('Fehler', 'Keine Bilddaten gefunden');
+          Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
         }
         setPdfSize(photo.pdf_size || 'medium');
         setDescription(photo.description || '');
@@ -365,11 +367,11 @@ export default function AnnotatePhotoScreen() {
         }
       } else {
         console.error('Photo not found:', photoId);
-        Alert.alert('Fehler', 'Foto nicht gefunden');
+        Alert.alert(t('common.error'), 'Foto nicht gefunden');
       }
     } catch (error) {
       console.error('Error loading photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht geladen werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht geladen werden');
     } finally {
       setLoading(false);
     }
@@ -568,8 +570,8 @@ export default function AnnotatePhotoScreen() {
       'Alle löschen',
       'Möchten Sie alle Zeichnungen und Texte löschen?',
       [
-        { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Löschen', onPress: () => {
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), onPress: () => {
           setPaths([]);
           setTextElements([]);
         }},
@@ -747,12 +749,12 @@ export default function AnnotatePhotoScreen() {
         pdf_size: pdfSize,
       });
 
-      Alert.alert('Erfolg', 'Foto wurde gespeichert', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), 'Foto wurde gespeichert', [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error('Error saving annotated photo:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), 'Foto konnte nicht gespeichert werden');
     } finally {
       setLoading(false);
     }
@@ -791,11 +793,11 @@ export default function AnnotatePhotoScreen() {
           UTI: 'public.jpeg',
         });
       } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar');
+        Alert.alert(t('common.error'), 'Teilen ist auf diesem Gerät nicht verfügbar');
       }
     } catch (error) {
       console.error('Error saving to gallery:', error);
-      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden: ' + (error as Error).message);
+      Alert.alert(t('common.error'), 'Foto konnte nicht gespeichert werden: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -987,19 +989,19 @@ export default function AnnotatePhotoScreen() {
                   'Foto löschen',
                   'Möchten Sie dieses Foto komplett löschen?',
                   [
-                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
                       text: 'Löschen',
                       style: 'destructive',
                       onPress: async () => {
                         try {
                           await PhotoService.delete(photoId || '');
-                          Alert.alert('Erfolg', 'Foto wurde gelöscht', [
-                            { text: 'OK', onPress: () => router.back() },
+                          Alert.alert(t('common.success'), 'Foto wurde gelöscht', [
+                            { text: t('common.ok'), onPress: () => router.back() },
                           ]);
                         } catch (error) {
                           console.error('Error deleting photo:', error);
-                          Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+                          Alert.alert(t('common.error'), 'Foto konnte nicht gelöscht werden');
                         }
                       },
                     },

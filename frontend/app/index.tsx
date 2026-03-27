@@ -459,11 +459,11 @@ export default function HomeScreen() {
   // Sortierung ändern
   const changeSortOrder = () => {
     const sortOptions = [
-      { key: 'date_desc', label: 'Neueste zuerst' },
-      { key: 'date_asc', label: 'Älteste zuerst' },
-      { key: 'name_asc', label: 'Name A-Z' },
-      { key: 'name_desc', label: 'Name Z-A' },
-      { key: 'status', label: 'Nach Status' },
+      { key: 'date_desc', labelKey: 'home.sortNewest' },
+      { key: 'date_asc', labelKey: 'home.sortOldest' },
+      { key: 'name_asc', labelKey: 'home.sortNameAZ' },
+      { key: 'name_desc', labelKey: 'home.sortNameZA' },
+      { key: 'status', labelKey: 'home.sortByStatus' },
     ];
     
     const buttons = sortOptions.map(option => ({
@@ -471,20 +471,20 @@ export default function HomeScreen() {
       onPress: () => setSortBy(option.key as typeof sortBy),
       style: sortBy === option.key ? 'cancel' : 'default' as const,
     }));
-    buttons.push({ text: 'Abbrechen', onPress: () => {}, style: 'cancel' as const });
+    buttons.push({ text: t('common.cancel'), onPress: () => {}, style: 'cancel' as const });
     
-    Alert.alert('Sortieren nach', 'Wählen Sie die Sortierung:', buttons);
+    Alert.alert(t('common.sortBy'), t('common.selectSort'), buttons);
   };
 
   // Sortier-Label
   const getSortLabel = () => {
     switch (sortBy) {
-      case 'date_desc': return 'Neueste';
-      case 'date_asc': return 'Älteste';
+      case 'date_desc': return t('home.newestLabel');
+      case 'date_asc': return t('home.oldestLabel');
       case 'name_asc': return 'A-Z';
       case 'name_desc': return 'Z-A';
       case 'status': return 'Status';
-      default: return 'Sortieren';
+      default: return t('home.sortLabel');
     }
   };
 
@@ -620,7 +620,7 @@ export default function HomeScreen() {
             onPress={() => !selectionMode && changeProjectStatus(item.id, item.status)}
             disabled={selectionMode}
           >
-            <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+            <Text style={[styles.statusText, { color: statusColor }]}>{item.status === 'aktiv' ? t('projects.statusActive') : item.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}</Text>
             {!selectionMode && <Ionicons name="chevron-down" size={14} color={statusColor} />}
           </TouchableOpacity>
           <Text style={styles.projectDate}>
@@ -785,7 +785,7 @@ export default function HomeScreen() {
               color={selectionMode ? "#fff" : "#9c27b0"} 
             />
             <Text style={[styles.utilityButtonText, { color: selectionMode ? '#fff' : '#9c27b0' }]}>
-              {selectionMode ? 'Abbrechen' : 'Verschieben'}
+              {selectionMode ? t('common.cancel') : t('home.select')}
             </Text>
           </TouchableOpacity>
           )}
@@ -804,7 +804,7 @@ export default function HomeScreen() {
               color="#1976d2" 
             />
             <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>
-              {selectedProjects.size > 0 ? `(${selectedProjects.size})` : 'Alle'}
+              {selectedProjects.size > 0 ? `(${selectedProjects.size})` : t('home.selectAll')}
             </Text>
           </TouchableOpacity>
           
@@ -814,7 +814,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="share-outline" size={16} color="#2e7d32" />
-            <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>Export</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#2e7d32' }]}>{t('common.export')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -823,7 +823,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="play-circle-outline" size={16} color="#4caf50" />
-            <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Aktiv</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>{t('home.active')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -841,7 +841,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="close-circle-outline" size={16} color="#f57c00" />
-            <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>Abgebr.</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>{t('home.cancelled')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -850,7 +850,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="trash-outline" size={16} color="#f44336" />
-            <Text style={[styles.multiSelectButtonText, { color: '#f44336' }]}>Löschen</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#f44336' }]}>{t('common.delete')}</Text>
           </TouchableOpacity>
         </View>
         )}
@@ -860,7 +860,7 @@ export default function HomeScreen() {
       {isProcessing && (
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.processingText}>Verarbeite...</Text>
+          <Text style={styles.processingText}>{t('common.loading')}</Text>
         </View>
       )}
 

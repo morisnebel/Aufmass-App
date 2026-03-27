@@ -263,7 +263,7 @@ export default function ReferencesScreen() {
       setLinkFolderName('');
       loadData();
       Alert.alert(
-        'Erfolg', 
+        t('common.success'), 
         `Verknüpfung "${linkFolderName.trim()}" wurde erstellt.\n\nTippen Sie darauf, um Bilder aus der Dateien-App auszuwählen.`
       );
     } catch (error) {

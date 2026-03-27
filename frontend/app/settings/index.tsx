@@ -187,7 +187,7 @@ export default function SettingsScreen() {
           [{ text: t('common.ok') }]
         );
       } else {
-        Alert.alert('Falscher Code', 'Der eingegebene Code ist nicht korrekt.');
+        Alert.alert(t('settings.wrongCode'), t('settings.wrongCodeMessage'));
       }
     } catch (e) {
       console.error('Error checking expert code:', e);
@@ -222,17 +222,17 @@ export default function SettingsScreen() {
   // Master-Reset: Neuen Expert-Code setzen
   const handleResetCode = async () => {
     if (masterCode !== MASTER_RESET_CODE) {
-      Alert.alert('Falscher Master-Code', 'Der Master-Code ist nicht korrekt.');
+      Alert.alert(t('settings.wrongMasterCode'), t('settings.wrongMasterCodeMessage'));
       return;
     }
     
     if (newExpertCode.length < 4) {
-      Alert.alert('Code zu kurz', 'Der neue Code muss mindestens 4 Zeichen haben.');
+      Alert.alert(t('settings.codeTooShort'), t('settings.codeTooShortMessage'));
       return;
     }
     
     if (newExpertCode !== confirmNewCode) {
-      Alert.alert('Codes stimmen nicht überein', 'Bitte geben Sie den neuen Code zweimal identisch ein.');
+      Alert.alert(t('settings.codesNoMatch'), t('settings.codesNoMatchMessage'));
       return;
     }
     
@@ -288,7 +288,7 @@ export default function SettingsScreen() {
   const pickLogo = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+      Alert.alert(t('customers.permissionRequired'), t('settings.photoPermission'));
       return;
     }
 
@@ -315,16 +315,16 @@ export default function SettingsScreen() {
     try {
       await SettingsService.update(settings);
       if (Platform.OS === 'web') {
-        alert('Einstellungen wurden gespeichert');
+        alert(t('settings.settingsSaved'));
       } else {
-        Alert.alert(t('common.success'), 'Einstellungen wurden gespeichert');
+        Alert.alert(t('common.success'), t('settings.settingsSaved'));
       }
     } catch (error) {
       console.error('Error saving settings:', error);
       if (Platform.OS === 'web') {
         alert('Fehler beim Speichern');
       } else {
-        Alert.alert(t('common.error'), 'Einstellungen konnten nicht gespeichert werden');
+        Alert.alert(t('common.error'), t('settings.settingsSaveError'));
       }
     } finally {
       setSaving(false);
@@ -878,8 +878,8 @@ export default function SettingsScreen() {
               style={styles.resetButton}
               onPress={() => {
                 Alert.alert(
-                  'Einstellungen zurücksetzen',
-                  'Möchten Sie wirklich alle Einstellungen leeren?',
+                  t('settings.resetSettings'),
+                  t('settings.resetConfirm'),
                   [
                     { text: t('common.cancel'), style: 'cancel' },
                     {
@@ -917,7 +917,7 @@ export default function SettingsScreen() {
                           pdf_tools_color: 'blue',
                           pdf_tools_style: 'filled',
                         });
-                        Alert.alert(t('common.success'), 'Einstellungen wurden zurückgesetzt. Vergessen Sie nicht zu speichern!');
+                        Alert.alert(t('common.success'), t('settings.resetDone'));
                       },
                     },
                   ]
@@ -1055,7 +1055,7 @@ export default function SettingsScreen() {
         >
           <Ionicons name="save-outline" size={24} color="#fff" />
           <Text style={styles.saveButtonText}>
-            {saving ? 'Wird gespeichert...' : 'Einstellungen speichern'}
+            {saving ? t('common.isSaving') : t('common.save')}
           </Text>
         </TouchableOpacity>
       </View>

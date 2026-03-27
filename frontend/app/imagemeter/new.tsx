@@ -37,7 +37,7 @@ export default function ImageMeterNewScreen() {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Berechtigung erforderlich',
+          t('customers.permissionRequired'),
           'Bitte erlauben Sie den Zugriff auf die Kamera, um Fotos aufzunehmen.'
         );
       }

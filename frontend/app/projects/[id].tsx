@@ -604,7 +604,7 @@ export default function ProjectDetailScreen() {
       }
     } catch (error: any) {
       console.error('Error saving photos to gallery:', error?.message || error);
-      Alert.alert('Fehler', 'Fotos konnten nicht gespeichert werden: ' + (error?.message || 'Unbekannter Fehler'));
+      Alert.alert(t('common.error'), t('photos.saveError'));
     } finally {
       setIsSavingToGallery(false);
     }
@@ -3906,11 +3906,11 @@ export default function ProjectDetailScreen() {
           Alert.alert(t('common.error'), t('pdf.shareNotAvailable'));
         }
       } else {
-        Alert.alert('Fehler', 'Screenshot konnte nicht erstellt werden.');
+        Alert.alert(t('common.error'), t('pdf.screenshotError'));
       }
     } catch (error) {
       console.error('Error sharing image:', error);
-      Alert.alert('Fehler', 'Bild konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('pdf.imageCreateError'));
     } finally {
       setIsSharingImage(false);
     }
@@ -3935,7 +3935,7 @@ export default function ProjectDetailScreen() {
       );
     } catch (error) {
       console.error('Error in sendEmail:', error);
-      Alert.alert('Fehler', 'Ein unerwarteter Fehler ist aufgetreten');
+      Alert.alert(t('common.error'), t('pdf.unexpectedError'));
     }
   };
 

@@ -68,12 +68,12 @@ export default function ImageMeterIndexScreen() {
 
   const deletePhoto = async (id: string) => {
     Alert.alert(
-      'Foto löschen',
-      'Möchten Sie dieses Foto mit allen Messungen löschen?',
+      t('imagemeter.deletePhoto'),
+      t('imagemeter.deletePhotoConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {

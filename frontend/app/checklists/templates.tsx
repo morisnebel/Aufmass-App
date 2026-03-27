@@ -191,7 +191,7 @@ export default function ChecklistTemplatesScreen() {
           title: `${template.name}.checklistvorlage`,
         });
       } catch (shareError) {
-        Alert.alert(t('common.error'), 'Vorlage konnte nicht exportiert werden');
+        Alert.alert(t('common.error'), t('checklists.templateExportError'));
       }
     } finally {
       setIsExporting(false);
@@ -216,7 +216,7 @@ export default function ChecklistTemplatesScreen() {
       
       // Check file extension
       if (!file.name.endsWith('.checklistvorlage')) {
-        Alert.alert(t('common.error'), 'Bitte wählen Sie eine .checklistvorlage Datei aus');
+        Alert.alert(t('common.error'), t('checklists.selectTemplateFile'));
         setIsImporting(false);
         return;
       }
@@ -233,13 +233,13 @@ export default function ChecklistTemplatesScreen() {
         if (jsonMatch) {
           importData = JSON.parse(jsonMatch[0]);
         } else {
-          throw new Error('Keine gültigen Daten gefunden');
+          throw new Error(t('checklists.noValidData'));
         }
       }
 
       // Validate import data
       if (importData.type !== 'aufmass_checklist_template' || !importData.template) {
-        Alert.alert(t('common.error'), 'Ungültiges Dateiformat');
+        Alert.alert(t('common.error'), t('checklists.invalidFileFormat'));
         setIsImporting(false);
         return;
       }
@@ -263,10 +263,10 @@ export default function ChecklistTemplatesScreen() {
       });
 
       await loadTemplates();
-      Alert.alert(t('common.success'), `Vorlage "${finalName}" wurde importiert`);
+      Alert.alert(t('common.success'), t('checklists.templateCreated'));
     } catch (error) {
       console.error('Error importing template:', error);
-      Alert.alert(t('common.error'), 'Vorlage konnte nicht importiert werden');
+      Alert.alert(t('common.error'), t('checklists.templateSaveError'));
     } finally {
       setIsImporting(false);
     }
@@ -274,15 +274,15 @@ export default function ChecklistTemplatesScreen() {
 
   const createTemplate = async () => {
     if (!newTemplateName.trim() || !newTemplateItems.trim()) {
-      Alert.alert(t('common.error'), 'Bitte füllen Sie alle Felder aus');
+      Alert.alert(t('common.error'), t('checklists.fillAllFields'));
       return;
     }
 
     // Basis-Version: Max 3 Vorlagen
     if (Features.maxTemplates < 100 && templates.length >= Features.maxTemplates) {
       Alert.alert(
-        'Basic Version',
-        `In der Basic Version können maximal ${Features.maxTemplates} Vorlagen erstellt werden. Upgrade auf Pro für unbegrenzte Vorlagen.`,
+        t('checklists.basicVersionTitle'),
+        t('checklists.basicVersionLimit', { max: Features.maxTemplates }),
         [{ text: t('common.ok') }]
       );
       return;
@@ -303,21 +303,21 @@ export default function ChecklistTemplatesScreen() {
       setNewTemplateName('');
       setNewTemplateItems('');
       loadTemplates();
-      Alert.alert(t('common.success'), 'Vorlage wurde erstellt');
+      Alert.alert(t('common.success'), t('checklists.templateCreated'));
     } catch (error) {
       console.error('Error creating template:', error);
-      Alert.alert(t('common.error'), 'Vorlage konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), t('checklists.templateCreateError'));
     }
   };
 
   const deleteTemplate = async (templateId: string) => {
     Alert.alert(
-      'Vorlage löschen',
-      'Möchten Sie diese Vorlage wirklich löschen?',
+      t('checklists.deleteTemplate'),
+      t('checklists.deleteTemplateConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -325,7 +325,7 @@ export default function ChecklistTemplatesScreen() {
               loadTemplates();
             } catch (error) {
               console.error('Error deleting template:', error);
-              Alert.alert(t('common.error'), 'Vorlage konnte nicht gelöscht werden');
+              Alert.alert(t('common.error'), t('checklists.templateDeleteError'));
             }
           },
         },
@@ -409,7 +409,7 @@ export default function ChecklistTemplatesScreen() {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#1976d2" />
             <Text style={styles.loadingText}>
-              {isExporting ? 'Exportiere...' : 'Importiere...'}
+              {isExporting ? t('checklists.exporting') : t('checklists.importing')}
             </Text>
           </View>
         </View>
@@ -417,7 +417,7 @@ export default function ChecklistTemplatesScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerText}>
-          Wählen Sie eine Vorlage für Ihr Projekt aus
+          {t('checklists.selectTemplateTitle')}
         </Text>
         
         {/* Button Row */}
@@ -429,7 +429,7 @@ export default function ChecklistTemplatesScreen() {
             onPress={() => setShowModal(true)}
           >
             <Ionicons name="add-circle" size={24} color="#1976d2" />
-            <Text style={styles.addButtonText}>Neue Vorlage</Text>
+            <Text style={styles.addButtonText}>{t('checklists.newChecklist')}</Text>
           </TouchableOpacity>
           )}
           
@@ -441,7 +441,7 @@ export default function ChecklistTemplatesScreen() {
             disabled={isImporting}
           >
             <Ionicons name="download-outline" size={24} color="#4caf50" />
-            <Text style={styles.importButtonText}>Importieren</Text>
+            <Text style={styles.importButtonText}>{t('common.import')}</Text>
           </TouchableOpacity>
           )}
         </View>
@@ -449,7 +449,7 @@ export default function ChecklistTemplatesScreen() {
         {/* Limit-Hinweis für Basis */}
         {Features.maxTemplates < 100 && (
           <Text style={styles.limitHint}>
-            {templates.length}/{Features.maxTemplates} Vorlagen (Basic Version)
+            {t('checklists.templatesCount', { count: templates.length, max: Features.maxTemplates })}
           </Text>
         )}
       </View>
@@ -474,7 +474,7 @@ export default function ChecklistTemplatesScreen() {
           >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Neue Checklisten-Vorlage</Text>
+                <Text style={styles.modalTitle}>{t('checklists.newTemplate')}</Text>
                 <TouchableOpacity onPress={() => setShowModal(false)}>
                   <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
@@ -486,7 +486,7 @@ export default function ChecklistTemplatesScreen() {
                 showsVerticalScrollIndicator={true}
               >
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Vorlagen-Name</Text>
+                  <Text style={styles.label}>{t('checklists.templateName')}</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="z.B. Dachsanierung"
@@ -496,10 +496,10 @@ export default function ChecklistTemplatesScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Punkte (ein Punkt pro Zeile)</Text>
+                  <Text style={styles.label}>{t('checklists.itemsPerLine')}</Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
-                    placeholder="Punkt 1\nPunkt 2\nPunkt 3"
+                    placeholder={t('checklists.itemsPlaceholder')}
                     value={newTemplateItems}
                     onChangeText={setNewTemplateItems}
                     multiline
@@ -508,7 +508,7 @@ export default function ChecklistTemplatesScreen() {
                 </View>
 
                 <TouchableOpacity style={styles.createButton} onPress={createTemplate}>
-                  <Text style={styles.createButtonText}>Vorlage erstellen</Text>
+                  <Text style={styles.createButtonText}>{t('checklists.createTemplate')}</Text>
                 </TouchableOpacity>
                 
                 <View style={styles.keyboardSpacer} />

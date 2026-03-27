@@ -252,11 +252,11 @@ export default function EditChecklistScreen() {
           items: convertedItems,
         });
       } else {
-        Alert.alert(t('common.error'), 'Checkliste wurde nicht gefunden');
+        Alert.alert(t('common.error'), t('checklists.checklistNotFound'));
       }
     } catch (error) {
       console.error('Error loading checklist:', error);
-      Alert.alert(t('common.error'), 'Checkliste konnte nicht geladen werden');
+      Alert.alert(t('common.error'), t('checklists.checklistLoadError'));
     } finally {
       setLoading(false);
     }
@@ -495,7 +495,7 @@ export default function EditChecklistScreen() {
     
     const result = calculateExpression(measurementExpression);
     if (result === null) {
-      Alert.alert(t('common.error'), 'Ungültiger Rechenausdruck. Erlaubt: Zahlen und +, -, *, /\n\nBeispiele:\n• 5,00+6,00+9,20\n• 5,00*6,00\n• (3+4)*2');
+      Alert.alert(t('common.error'), t('checklists.invalidExpression'));
       return;
     }
     
@@ -862,13 +862,13 @@ export default function EditChecklistScreen() {
     });
     
     setCopiedItem(deepCopy(item));
-    Alert.alert('Kopiert', `"${item.text}" wurde kopiert`);
+    Alert.alert(t('checklists.copied'), t('checklists.copiedMessage', { text: item.text }));
   };
 
   // Item einfügen (nach einer Position)
   const pasteItemAfter = (path: number[]) => {
     if (!checklist || !copiedItem) {
-      Alert.alert(t('common.note'), 'Kein Element in der Zwischenablage');
+      Alert.alert(t('common.note'), t('checklists.clipboardEmpty'));
       return;
     }
     
@@ -924,7 +924,7 @@ export default function EditChecklistScreen() {
     }
     
     setHasChanges(true);
-    Alert.alert('Eingefügt', `"${copiedItem.text}" wurde eingefügt`);
+    Alert.alert(t('checklists.pastedTitle'), t('checklists.pastedMessage', { text: copiedItem.text }));
   };
 
   // Stilles Speichern (ohne Alert) mit Retry
@@ -973,11 +973,11 @@ export default function EditChecklistScreen() {
     setSaving(false);
     
     if (success) {
-      Alert.alert(t('common.success'), 'Checkliste wurde gespeichert', [
+      Alert.alert(t('common.success'), t('checklists.checklistSaved'), [
         { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } else {
-      Alert.alert(t('common.error'), 'Checkliste konnte nicht gespeichert werden. Bitte prüfe deine Internetverbindung.');
+      Alert.alert(t('common.error'), t('checklists.checklistSaveError'));
     }
   };
 
@@ -1123,7 +1123,7 @@ export default function EditChecklistScreen() {
                       isNoteOpen(path) && styles.labeledActionTextActive,
                       item.note && item.note.trim() && styles.labeledActionTextHasContent
                     ]}>
-                      Notiz
+                      {t('checklists.note')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -1148,7 +1148,7 @@ export default function EditChecklistScreen() {
                       isMeasurementOpen(path) && styles.labeledActionTextActive,
                       item.measurements && item.measurements.length > 0 && styles.labeledActionTextHasContent
                     ]}>
-                      Messung
+                      {t('checklists.measurement')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -1156,8 +1156,8 @@ export default function EditChecklistScreen() {
                 <TouchableOpacity 
                   onPress={() => {
                     Alert.alert(
-                      'Löschen',
-                      `"${item.text}" wirklich löschen?`,
+                      t('common.delete'),
+                      t('checklists.deleteConfirmItem', { text: item.text }),
                       [
                         { text: t('common.cancel'), style: 'cancel' },
                         { text: t('common.delete'), style: 'destructive', onPress: () => deleteItem(path) }
@@ -1173,7 +1173,7 @@ export default function EditChecklistScreen() {
               {/* Hinweis auf Unterpunkte wenn eingeklappt */}
               {hasSubItems && isCollapsed(path) && (
                 <Text style={styles.subItemsHintPhone}>
-                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''}
+                  {t('checklists.subItemCount', { count: item.subItems!.length })}
                 </Text>
               )}
             </View>
@@ -1225,7 +1225,7 @@ export default function EditChecklistScreen() {
               {/* Hinweis auf Unterpunkte wenn eingeklappt */}
               {hasSubItems && isCollapsed(path) && (
                 <Text style={styles.subItemsHint}>
-                  {item.subItems!.length} Unterpunkt{item.subItems!.length !== 1 ? 'e' : ''} ausgeblendet
+                  {t('checklists.subItemsHidden', { count: item.subItems!.length })}
                 </Text>
               )}
             </TouchableOpacity>
@@ -1299,7 +1299,7 @@ export default function EditChecklistScreen() {
                     isNoteOpen(path) && styles.labeledActionTextActive,
                     item.note && item.note.trim() && styles.labeledActionTextHasContent
                   ]}>
-                    Notiz
+                    {t('checklists.note')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1326,7 +1326,7 @@ export default function EditChecklistScreen() {
                     isMeasurementOpen(path) && styles.labeledActionTextActive,
                     item.measurements && item.measurements.length > 0 && styles.labeledActionTextHasContent
                   ]}>
-                    Messung
+                    {t('checklists.measurement')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1335,8 +1335,8 @@ export default function EditChecklistScreen() {
               <TouchableOpacity 
                 onPress={() => {
                   Alert.alert(
-                    'Löschen',
-                    `"${item.text}" wirklich löschen?`,
+                    t('common.delete'),
+                    t('checklists.deleteConfirmItem', { text: item.text }),
                     [
                       { text: t('common.cancel'), style: 'cancel' },
                       { text: t('common.delete'), style: 'destructive', onPress: () => deleteItem(path) }
@@ -1370,7 +1370,7 @@ export default function EditChecklistScreen() {
               <View style={styles.noteContainer}>
                 <View style={styles.noteHeader}>
                   <Ionicons name="document-text-outline" size={18} color="#9c27b0" />
-                  <Text style={styles.noteLabel}>Notiz</Text>
+                  <Text style={styles.noteLabel}>{t('checklists.note')}</Text>
                   <TouchableOpacity
                     style={styles.closeSectionButton}
                     onPress={() => toggleNoteField(path)}
@@ -1380,7 +1380,7 @@ export default function EditChecklistScreen() {
                 </View>
                 <TextInput
                   style={styles.noteInput}
-                  placeholder="Notiz hinzufügen..."
+                  placeholder={t('checklists.addNotePlaceholder')}
                   value={item.note || ''}
                   onChangeText={(text) => updateNote(path, text)}
                   multiline
@@ -1396,7 +1396,7 @@ export default function EditChecklistScreen() {
               <View style={styles.measurementSection}>
                 <View style={styles.measurementHeader}>
                   <Ionicons name="calculator-outline" size={18} color="#2196f3" />
-                  <Text style={styles.measurementLabel}>Messungen</Text>
+                  <Text style={styles.measurementLabel}>{t('checklists.measurements')}</Text>
                   <TouchableOpacity
                     style={styles.addMeasurementButton}
                     onPress={() => openMeasurementModal(path)}
@@ -1449,7 +1449,7 @@ export default function EditChecklistScreen() {
                       if (units.length > 0) {
                         return (
                           <View style={styles.measurementSumContainer}>
-                            <Text style={styles.measurementSumLabel}>Summen:</Text>
+                            <Text style={styles.measurementSumLabel}>{t('checklists.sums')}</Text>
                             {units.map(unit => (
                               <Text key={unit} style={styles.measurementSumText}>
                                 {sumsByUnit[unit].toFixed(2).replace('.', ',')} {unit}
@@ -1481,7 +1481,7 @@ export default function EditChecklistScreen() {
               <View style={styles.newSubItemRow}>
                 <TextInput
                   style={styles.newSubItemInput}
-                  placeholder="Neuen Unterpunkt eingeben..."
+                  placeholder={t('checklists.newSubItemPlaceholder')}
                   placeholderTextColor="#999"
                   value={newSubItemTexts[path.join('-')] || ''}
                   onChangeText={(text) => setNewSubItemTexts(prev => ({ ...prev, [path.join('-')]: text }))}
@@ -1513,7 +1513,7 @@ export default function EditChecklistScreen() {
                 onPress={() => addSubItem(path)}
               >
                 <Ionicons name="add" size={18} color="#1976d2" />
-                <Text style={styles.addSubItemText}>Unterpunkt hinzufügen</Text>
+                <Text style={styles.addSubItemText}>{t('checklists.addSubItem')}</Text>
               </TouchableOpacity>
             )}
             
@@ -1523,8 +1523,8 @@ export default function EditChecklistScreen() {
                 <Ionicons name="lock-closed" size={14} color="#999" />
                 <Text style={styles.limitReachedText}>
                   {path.length > 1 && !getFeatures().allowNestedSubItems 
-                    ? 'Verschachtelte Unterpunkte nur in Pro' 
-                    : `Max. ${getFeatures().maxChecklistItems} Unterpunkte (Basic)`}
+                    ? t('checklists.nestedSubItemsProOnly') 
+                    : t('checklists.maxSubItemsBasic', { max: getFeatures().maxChecklistItems })}
                 </Text>
               </View>
             )}
@@ -1639,7 +1639,7 @@ export default function EditChecklistScreen() {
   if (!checklist) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Checkliste nicht gefunden</Text>
+        <Text style={styles.emptyText}>{t('checklists.checklistNotFound')}</Text>
       </View>
     );
   }
@@ -1655,13 +1655,13 @@ export default function EditChecklistScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{checklist.template_name}</Text>
         {hasChanges && (
-          <Text style={styles.unsavedHint}>Nicht gespeicherte Änderungen</Text>
+          <Text style={styles.unsavedHint}>{t('checklists.unsavedChanges')}</Text>
         )}
         {/* Zwischenablage-Anzeige */}
         {copiedItem && (
           <View style={styles.clipboardInfo}>
             <Ionicons name="clipboard" size={14} color="#ff9800" />
-            <Text style={styles.clipboardText}>Kopiert: "{copiedItem.text.substring(0, 25)}{copiedItem.text.length > 25 ? '...' : ''}"</Text>
+            <Text style={styles.clipboardText}>{t('checklists.copiedLabel')} "{copiedItem.text.substring(0, 25)}{copiedItem.text.length > 25 ? '...' : ''}"</Text>
             <TouchableOpacity onPress={() => setCopiedItem(null)}>
               <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
@@ -1676,7 +1676,7 @@ export default function EditChecklistScreen() {
           />
         </View>
         <Text style={styles.progressText}>
-          {completedCount} von {totalCount} erledigt ({Math.round(progress)}%)
+          {t('checklists.progressTextPercent', { done: completedCount, total: totalCount, percent: Math.round(progress) })}
         </Text>
       </View>
 
@@ -1694,7 +1694,7 @@ export default function EditChecklistScreen() {
         >
           <Ionicons name="checkmark-circle" size={24} color="#fff" />
           <Text style={styles.saveButtonText}>
-            {saving ? 'Wird gespeichert...' : 'Speichern & Zurück'}
+            {saving ? t('common.isSaving') : t('checklists.saveAndBack')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1732,7 +1732,7 @@ export default function EditChecklistScreen() {
             <View {...numpadPanResponder.panHandlers} style={styles.dragHandle}>
               <View style={styles.dragIndicator} />
               <Text style={styles.modalTitleCompact}>
-                {editingMeasurementIndex !== null ? 'Bearbeiten' : 'Aufmaß'}
+                {editingMeasurementIndex !== null ? t('common.edit') : t('checklists.measurementTitle')}
               </Text>
               <View style={styles.bluetoothBadge}>
                 <Ionicons name="bluetooth" size={14} color="#4caf50" />
@@ -1745,7 +1745,7 @@ export default function EditChecklistScreen() {
               style={styles.expressionInputCompact}
               value={measurementExpression}
               onChangeText={setMeasurementExpression}
-              placeholder="Wert eingeben..."
+              placeholder={t('checklists.enterValue')}
               autoFocus={true}
               autoCorrect={false}
               spellCheck={false}
@@ -1757,7 +1757,7 @@ export default function EditChecklistScreen() {
               <Text style={calculateExpression(measurementExpression) !== null ? styles.resultCompact : styles.resultErrorCompact}>
                 {calculateExpression(measurementExpression) !== null 
                   ? `= ${calculateExpression(measurementExpression)?.toString().replace('.', ',')} ${measurementUnit}`
-                  : 'Ungültig'}
+                  : t('checklists.invalid')}
               </Text>
             )}
 
@@ -1874,7 +1874,7 @@ export default function EditChecklistScreen() {
                     {/* Leer + Sonderzeichen + Backspace */}
                     <View style={{ flexDirection: 'row', gap: 3 }}>
                       <TouchableOpacity style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress(' ')}>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1976d2' }}>Leer</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1976d2' }}>{t('checklists.space')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={{ flex: 0.5, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 5, borderWidth: 1, borderColor: '#ddd' }} onPress={() => handleNumpadPress('.')}>
                         <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>.</Text>
@@ -1916,7 +1916,7 @@ export default function EditChecklistScreen() {
                   numpadPosition.setOffset({ x: 0, y: 0 });
                 }}
               >
-                <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmBtnCompact, calculateExpression(measurementExpression) === null && styles.btnDisabled]}

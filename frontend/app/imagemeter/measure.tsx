@@ -328,14 +328,14 @@ export default function ImageMeterMeasureScreen() {
     if (!measurement) return;
     
     Alert.alert(
-      'Messung löschen',
+      t('imagemeter.deleteMeasurement'),
       measurement.type === 'reference' 
-        ? 'Das Referenzmaß wird gelöscht. Automatische Berechnungen sind dann nicht mehr möglich.'
-        : 'Möchten Sie diese Messung löschen?',
+        ? t('imagemeter.deleteReferenceWarning')
+        : t('imagemeter.deleteMeasurementConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             setMeasurements(prev => prev.filter(m => m.id !== id));
@@ -547,8 +547,8 @@ export default function ImageMeterMeasureScreen() {
             { color: drawMode === 'reference' ? '#4CAF50' : '#1976d2' },
           ]}>
             {drawMode === 'reference' 
-              ? 'Ziehen Sie eine Linie über eine bekannte Länge'
-              : 'Ziehen Sie eine Linie zum Messen'
+              ? t('imagemeter.dragLineReference')
+              : t('imagemeter.dragLineMeasure')
             }
           </Text>
         </View>

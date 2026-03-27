@@ -703,7 +703,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/projects/new')}
         >
           <Ionicons name="add-circle" size={22} color="#fff" />
-          <Text style={styles.primaryButtonText}>Neues Projekt</Text>
+          <Text style={styles.primaryButtonText}>{t('home.newProject')}</Text>
         </TouchableOpacity>
 
         {/* Quick action grid */}

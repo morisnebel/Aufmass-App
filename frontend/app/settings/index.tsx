@@ -56,15 +56,15 @@ interface CompanySettings {
 
 // Größen-Optionen für PDF-Layout
 const PDF_SIZE_OPTIONS = [
-  { id: 'small', label: 'Klein' },
-  { id: 'medium', label: 'Mittel' },
-  { id: 'large', label: 'Groß' },
+  { id: 'small', labelKey: 'settings.sizeSmall' },
+  { id: 'medium', labelKey: 'settings.sizeMedium' },
+  { id: 'large', labelKey: 'settings.sizeLarge' },
 ];
 
 // Style-Optionen für PDF-Layout
 const PDF_STYLE_OPTIONS = [
-  { id: 'filled', label: 'Volle Farbe' },
-  { id: 'outline', label: 'Nur Rahmen' },
+  { id: 'filled', labelKey: 'settings.fullColor' },
+  { id: 'outline', labelKey: 'settings.outlineOnly' },
 ];
 
 // Verfügbare Farboptionen für PDF-Header
@@ -183,7 +183,7 @@ export default function SettingsScreen() {
         
         Alert.alert(
           '🎉 Expertenmodus aktiviert!',
-          'Alle Pro-Features sind jetzt freigeschaltet. Bitte starten Sie die App neu, um alle Änderungen zu sehen.',
+          t('settings.proFeaturesUnlocked'),
           [{ text: t('common.ok') }]
         );
       } else {
@@ -197,20 +197,20 @@ export default function SettingsScreen() {
   // Pro deaktivieren (zurück zu Basic)
   const handleDeactivatePro = async () => {
     Alert.alert(
-      'Expertenmodus deaktivieren?',
-      'Möchten Sie wirklich zur Basic Version zurückkehren?',
+      t('settings.deactivateExpertMode'),
+      t('settings.deactivateExpertConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Deaktivieren',
+          text: t('settings.deactivate'),
           style: 'destructive',
           onPress: async () => {
             await setProStatus(false);
             setIsProUnlocked(false);
             updateFeatures();
             Alert.alert(
-              'Basic Version aktiviert',
-              'Die App wurde auf Basic Version zurückgesetzt. Bitte starten Sie die App neu.',
+              t('settings.basicVersionActivated'),
+              t('settings.basicVersionResetMessage'),
               [{ text: t('common.ok') }]
             );
           }
@@ -377,7 +377,7 @@ export default function SettingsScreen() {
                   />
                   <View style={styles.basicLogoOverlay}>
                     <Text style={styles.basicLogoText}>{getAppName()}</Text>
-                    <Text style={styles.basicLogoHint}>Eigenes Logo in Pro Version</Text>
+                    <Text style={styles.basicLogoHint}>{t('settings.customLogoProHint')}</Text>
                   </View>
                 </View>
               ) : (
@@ -476,7 +476,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.company_subtitle}
                 onChangeText={(text) => setSettings({ ...settings, company_subtitle: text })}
-                placeholder="z.B. Dachdeckermeister"
+                placeholder={t('settings.subtitlePlaceholder')}
               />
             </View>
 
@@ -486,7 +486,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.owner_name}
                 onChangeText={(text) => setSettings({ ...settings, owner_name: text })}
-                placeholder="z.B. Max Mustermann"
+                placeholder={t('settings.ownerPlaceholder')}
               />
             </View>
 
@@ -496,7 +496,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.street}
                 onChangeText={(text) => setSettings({ ...settings, street: text })}
-                placeholder="z.B. Musterstraße 1"
+                placeholder={t('settings.streetPlaceholder')}
               />
             </View>
 
@@ -507,7 +507,7 @@ export default function SettingsScreen() {
                   style={styles.input}
                   value={settings.zip_code}
                   onChangeText={(text) => setSettings({ ...settings, zip_code: text })}
-                  placeholder="12345"
+                  placeholder={t('settings.zipPlaceholder')}
                   keyboardType="number-pad"
                 />
               </View>
@@ -517,7 +517,7 @@ export default function SettingsScreen() {
                   style={styles.input}
                   value={settings.city}
                   onChangeText={(text) => setSettings({ ...settings, city: text })}
-                  placeholder="Musterstadt"
+                  placeholder={t('settings.cityPlaceholder')}
                 />
               </View>
             </View>
@@ -528,7 +528,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.phone}
                 onChangeText={(text) => setSettings({ ...settings, phone: text })}
-                placeholder="0123 456789"
+                placeholder={t('settings.phonePlaceholder')}
                 keyboardType="phone-pad"
               />
             </View>
@@ -539,7 +539,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.mobile_phone}
                 onChangeText={(text) => setSettings({ ...settings, mobile_phone: text })}
-                placeholder="0170 1234567"
+                placeholder={t('settings.mobilePlaceholder')}
                 keyboardType="phone-pad"
               />
             </View>
@@ -550,7 +550,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.fax}
                 onChangeText={(text) => setSettings({ ...settings, fax: text })}
-                placeholder="0123 456780"
+                placeholder={t('settings.faxPlaceholder')}
                 keyboardType="phone-pad"
               />
             </View>
@@ -561,7 +561,7 @@ export default function SettingsScreen() {
                 style={styles.input}
                 value={settings.email}
                 onChangeText={(text) => setSettings({ ...settings, email: text })}
-                placeholder="info@firma.de"
+                placeholder={t('settings.emailPlaceholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -582,10 +582,10 @@ export default function SettingsScreen() {
 
           {/* Verfasser Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Verfasser (für PDF)</Text>
+            <Text style={styles.sectionTitle}>{t('settings.authorLabel')}</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name des Verfassers</Text>
+              <Text style={styles.label}>{t('settings.authorName')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.author_name}
@@ -597,11 +597,11 @@ export default function SettingsScreen() {
 
           {/* PDF Einstellungen Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PDF-Layout</Text>
+            <Text style={styles.sectionTitle}>{t('settings.pdfLayout')}</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Checklisten-Spalten im PDF</Text>
-              <Text style={styles.sublabel}>Wie viele Spalten sollen für Checklisten-Kategorien verwendet werden?</Text>
+              <Text style={styles.label}>{t('settings.checklistColumns')}</Text>
+              <Text style={styles.sublabel}>{t('settings.checklistColumnsHint')}</Text>
               <View style={styles.columnSelector}>
                 {[1, 2, 3].map((num) => (
                   <TouchableOpacity
@@ -622,7 +622,7 @@ export default function SettingsScreen() {
                       styles.columnOptionLabel,
                       settings.pdf_checklist_columns === num && styles.columnOptionLabelActive
                     ]}>
-                      {num === 1 ? 'Spalte' : 'Spalten'}
+                      {num === 1 ? t('settings.column') : t('settings.columns')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -632,9 +632,9 @@ export default function SettingsScreen() {
 
           {/* PDF Layout Größen Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PDF Layout-Größen</Text>
+            <Text style={styles.sectionTitle}>{t('settings.pdfLayoutSizes')}</Text>
             <Text style={styles.sublabel}>
-              Passen Sie die Größe der verschiedenen Bereiche im PDF an (klein, mittel, groß).
+              {t('settings.pdfLayoutSizesHint')}
             </Text>
             
             {/* Bereichsauswahl-Tabs */}
@@ -651,14 +651,14 @@ export default function SettingsScreen() {
                 onPress={() => setSelectedLayoutSection('project_type')}
               >
                 <Ionicons name="ribbon" size={18} color={selectedLayoutSection === 'project_type' ? '#fff' : '#666'} />
-                <Text style={[styles.layoutTabText, selectedLayoutSection === 'project_type' && styles.layoutTabTextActive]}>Überschrift</Text>
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'project_type' && styles.layoutTabTextActive]}>{t('settings.headerStyleLabel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.layoutTab, selectedLayoutSection === 'tools' && styles.layoutTabActive]}
                 onPress={() => setSelectedLayoutSection('tools')}
               >
                 <Ionicons name="construct" size={18} color={selectedLayoutSection === 'tools' ? '#fff' : '#666'} />
-                <Text style={[styles.layoutTabText, selectedLayoutSection === 'tools' && styles.layoutTabTextActive]}>Tools</Text>
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'tools' && styles.layoutTabTextActive]}>{t('settings.toolsLabel')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -667,11 +667,11 @@ export default function SettingsScreen() {
               {selectedLayoutSection === 'header' && (
                 <>
                   <Text style={styles.layoutSectionInfo}>
-                    <Ionicons name="information-circle" size={14} color="#666" /> Firmendaten und Logo im PDF-Kopf
+                    <Ionicons name="information-circle" size={14} color="#666" /> {t('settings.companyDataInHeader')}
                   </Text>
                   
                   {/* Größe */}
-                  <Text style={styles.layoutSubLabel}>Größe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.sizeLabel')}</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
@@ -680,13 +680,13 @@ export default function SettingsScreen() {
                         onPress={() => setSettings({ ...settings, pdf_header_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_header_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_header_size === size.id && styles.sizeButtonTextActive]}>{t(size.labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                   
                   {/* Farbe */}
-                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.headerColor')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
                     {PDF_COLOR_OPTIONS.map((color) => (
                       <TouchableOpacity
@@ -700,7 +700,7 @@ export default function SettingsScreen() {
                   </ScrollView>
                   
                   {/* Stil */}
-                  <Text style={styles.layoutSubLabel}>Stil:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('sketches.fontStyle')}</Text>
                   <View style={styles.styleButtonsRow}>
                     {PDF_STYLE_OPTIONS.map((style) => (
                       <TouchableOpacity
@@ -708,7 +708,7 @@ export default function SettingsScreen() {
                         style={[styles.styleButtonSmall, settings.pdf_header_section_style === style.id && styles.styleButtonSmallActive]}
                         onPress={() => setSettings({ ...settings, pdf_header_section_style: style.id as 'filled' | 'outline' })}
                       >
-                        <Text style={[styles.styleButtonSmallText, settings.pdf_header_section_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
+                        <Text style={[styles.styleButtonSmallText, settings.pdf_header_section_style === style.id && styles.styleButtonSmallTextActive]}>{t(style.labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -722,7 +722,7 @@ export default function SettingsScreen() {
                   </Text>
                   
                   {/* Größe */}
-                  <Text style={styles.layoutSubLabel}>Größe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.sizeLabel')}</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
@@ -731,13 +731,13 @@ export default function SettingsScreen() {
                         onPress={() => setSettings({ ...settings, pdf_project_type_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_project_type_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_project_type_size === size.id && styles.sizeButtonTextActive]}>{t(size.labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                   
                   {/* Farbe */}
-                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.headerColor')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
                     {PDF_COLOR_OPTIONS.map((color) => (
                       <TouchableOpacity
@@ -751,7 +751,7 @@ export default function SettingsScreen() {
                   </ScrollView>
                   
                   {/* Stil */}
-                  <Text style={styles.layoutSubLabel}>Stil:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('sketches.fontStyle')}</Text>
                   <View style={styles.styleButtonsRow}>
                     {PDF_STYLE_OPTIONS.map((style) => (
                       <TouchableOpacity
@@ -759,7 +759,7 @@ export default function SettingsScreen() {
                         style={[styles.styleButtonSmall, settings.pdf_project_type_style === style.id && styles.styleButtonSmallActive]}
                         onPress={() => setSettings({ ...settings, pdf_project_type_style: style.id as 'filled' | 'outline' })}
                       >
-                        <Text style={[styles.styleButtonSmallText, settings.pdf_project_type_style === style.id && styles.styleButtonSmallTextActive]}>{style.label}</Text>
+                        <Text style={[styles.styleButtonSmallText, settings.pdf_project_type_style === style.id && styles.styleButtonSmallTextActive]}>{t(style.labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -773,7 +773,7 @@ export default function SettingsScreen() {
                   </Text>
                   
                   {/* Größe */}
-                  <Text style={styles.layoutSubLabel}>Größe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.sizeLabel')}</Text>
                   <View style={styles.sizeButtonsRow}>
                     {PDF_SIZE_OPTIONS.map((size) => (
                       <TouchableOpacity
@@ -782,13 +782,13 @@ export default function SettingsScreen() {
                         onPress={() => setSettings({ ...settings, pdf_tools_size: size.id as 'small' | 'medium' | 'large' })}
                       >
                         <View style={[styles.sizePreview, styles[`sizePreview${size.id.charAt(0).toUpperCase() + size.id.slice(1)}` as keyof typeof styles]]} />
-                        <Text style={[styles.sizeButtonText, settings.pdf_tools_size === size.id && styles.sizeButtonTextActive]}>{size.label}</Text>
+                        <Text style={[styles.sizeButtonText, settings.pdf_tools_size === size.id && styles.sizeButtonTextActive]}>{t(size.labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                   
                   {/* Farbe */}
-                  <Text style={styles.layoutSubLabel}>Farbe:</Text>
+                  <Text style={styles.layoutSubLabel}>{t('settings.headerColor')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollRow}>
                     {PDF_COLOR_OPTIONS.map((color) => (
                       <TouchableOpacity
@@ -846,7 +846,7 @@ export default function SettingsScreen() {
                 style={styles.addProjectTypeInput}
                 value={newProjectType}
                 onChangeText={setNewProjectType}
-                placeholder="Neue Überschrift eingeben..."
+                placeholder={t('settings.addProjectType')}
                 placeholderTextColor="#999"
               />
               <TouchableOpacity

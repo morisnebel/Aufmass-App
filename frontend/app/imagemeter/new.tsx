@@ -38,7 +38,7 @@ export default function ImageMeterNewScreen() {
       if (status !== 'granted') {
         Alert.alert(
           t('customers.permissionRequired'),
-          'Bitte erlauben Sie den Zugriff auf die Kamera, um Fotos aufzunehmen.'
+          t('imagemeter.cameraPermission')
         );
       }
     })();

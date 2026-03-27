@@ -5,6 +5,7 @@ import { View, LogBox } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService } from '../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 import '../i18n'; // i18n initialisieren
 
 // Ignore canvas render warnings from pdf.js in WebView
@@ -15,6 +16,7 @@ LogBox.ignoreLogs([
 ]);
 
 export default function RootLayout() {
+  const { t } = useTranslation();
   // Run one-time migration of sketch data on app startup
   useEffect(() => {
     SketchService.migrateAllSketches().catch(err => 
@@ -44,83 +46,83 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="customers" 
-          options={{ title: 'Kunden', headerShown: false }} 
+          options={{ title: t('screenTitles.customers'), headerShown: false }} 
         />
         <Stack.Screen 
           name="projects/new" 
-          options={{ title: 'Neues Projekt' }} 
+          options={{ title: t('screenTitles.newProject') }} 
         />
         <Stack.Screen 
           name="projects/[id]" 
-          options={{ title: 'Projektdetails' }} 
+          options={{ title: t('screenTitles.projectDetails') }} 
         />
         <Stack.Screen 
           name="roofs/new" 
-          options={{ title: 'Neue Dachmessung' }} 
+          options={{ title: t('screenTitles.newRoof') }} 
         />
         <Stack.Screen 
           name="photos/new" 
-          options={{ title: 'Foto hinzufügen' }} 
+          options={{ title: t('screenTitles.addPhoto') }} 
         />
         <Stack.Screen 
           name="photos/annotate" 
-          options={{ title: 'Foto bearbeiten' }} 
+          options={{ title: t('screenTitles.editPhoto') }} 
         />
         <Stack.Screen 
           name="sketches/draw" 
-          options={{ title: 'Skizze zeichnen', headerShown: false }} 
+          options={{ title: t('screenTitles.drawSketch'), headerShown: false }} 
         />
         <Stack.Screen 
           name="sketches/new" 
-          options={{ title: 'Neue Skizze', headerShown: false }} 
+          options={{ title: t('screenTitles.newSketch'), headerShown: false }} 
         />
         <Stack.Screen 
           name="checklists/templates" 
-          options={{ title: 'Checklisten-Vorlagen' }} 
+          options={{ title: t('screenTitles.checklistTemplates') }} 
         />
         <Stack.Screen 
           name="checklists/edit-template" 
-          options={{ title: 'Checkliste erstellen' }} 
+          options={{ title: t('screenTitles.createChecklist') }} 
         />
         <Stack.Screen 
           name="checklists/new" 
-          options={{ title: 'Neue Checkliste' }} 
+          options={{ title: t('screenTitles.newChecklist') }} 
         />
         <Stack.Screen 
           name="checklists/[id]" 
-          options={{ title: 'Checkliste bearbeiten' }} 
+          options={{ title: t('screenTitles.editChecklist') }} 
         />
         <Stack.Screen 
           name="roofs/[id]" 
-          options={{ title: 'Dachmessung bearbeiten' }} 
+          options={{ title: t('screenTitles.editRoof') }} 
         />
         <Stack.Screen 
           name="documents/new" 
-          options={{ title: 'Dokument hinzufügen' }} 
+          options={{ title: t('screenTitles.addDocument') }} 
         />
         <Stack.Screen 
           name="documents/view" 
-          options={{ title: 'Dokument', headerShown: false }} 
+          options={{ title: t('screenTitles.document'), headerShown: false }} 
         />
         <Stack.Screen 
           name="calculator/index" 
-          options={{ title: 'Flächenberechnungen' }} 
+          options={{ title: t('screenTitles.areaCalculations') }} 
         />
         <Stack.Screen 
           name="calculator/new" 
-          options={{ title: 'Flächenkalkulator', headerShown: false }} 
+          options={{ title: t('screenTitles.areaCalculator'), headerShown: false }} 
         />
         <Stack.Screen 
           name="calculator/edit" 
-          options={{ title: 'Flächenkalkulator', headerShown: false }} 
+          options={{ title: t('screenTitles.areaCalculator'), headerShown: false }} 
         />
         <Stack.Screen 
           name="references/index" 
-          options={{ title: 'Referenz Fotos', headerShown: false }} 
+          options={{ title: t('screenTitles.referencePhotos'), headerShown: false }} 
         />
         <Stack.Screen 
           name="settings" 
-          options={{ title: 'Einstellungen', headerShown: false }} 
+          options={{ title: t('screenTitles.settings'), headerShown: false }} 
         />
       </Stack>
       <KeyboardDismissButton />

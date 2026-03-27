@@ -438,7 +438,7 @@ export default function ProjectDetailScreen() {
       await loadProjectData();
       
       if (Platform.OS === 'web') {
-        alert('Foto wurde gelöscht');
+        alert(t('projects.photoDeleted'));
       } else {
         Alert.alert(t('common.success'), t('photos.photoDeleted'));
       }
@@ -448,7 +448,7 @@ export default function ProjectDetailScreen() {
       // Only show error if it's not a 404 (photo already deleted)
       if (error?.response?.status !== 404) {
         if (Platform.OS === 'web') {
-          alert('Fehler: Foto konnte nicht gelöscht werden');
+          alert(t('projects.photoDeleteError'));
         } else {
           Alert.alert(t('common.error'), t('photos.photoDeleteError'));
         }
@@ -501,12 +501,12 @@ export default function ProjectDetailScreen() {
         // For Expo Go, we might need to use a different approach
         // Try using Sharing instead
         Alert.alert(
-          'Alternative Methode',
-          'Das direkte Speichern ist in Expo Go eingeschränkt. Möchten Sie die Fotos stattdessen teilen?',
+          t('projects.alternativeMethod'),
+          t('projects.alternativeMethodMessage'),
           [
             { text: t('common.cancel'), style: 'cancel', onPress: () => setIsSavingToGallery(false) },
             { 
-              text: 'Teilen', 
+              text: t('common.share'), 
               onPress: async () => {
                 try {
                   for (const photoId of selectedPhotos) {
@@ -626,7 +626,7 @@ export default function ProjectDetailScreen() {
       await loadProjectData();
       
       if (Platform.OS === 'web') {
-        alert('Skizze wurde gelöscht');
+        alert(t('projects.sketchDeleted'));
       } else {
         Alert.alert(t('common.success'), t('sketches.title'));
       }
@@ -634,7 +634,7 @@ export default function ProjectDetailScreen() {
       console.error('Error deleting sketch:', error);
       
       if (Platform.OS === 'web') {
-        alert('Fehler: Skizze konnte nicht gelöscht werden');
+        alert(t('projects.sketchDeleteError'));
       } else {
         Alert.alert(t('common.error'), t('sketches.title'));
       }
@@ -659,7 +659,7 @@ export default function ProjectDetailScreen() {
       await loadProjectData();
       
       if (Platform.OS === 'web') {
-        alert('Checkliste wurde gelöscht');
+        alert(t('projects.checklistDeleted'));
       } else {
         Alert.alert(t('common.success'), t('checklists.checklistDeleted'));
       }
@@ -667,7 +667,7 @@ export default function ProjectDetailScreen() {
       console.error('Error deleting checklist:', error);
       
       if (Platform.OS === 'web') {
-        alert('Fehler: Checkliste konnte nicht gelöscht werden');
+        alert(t('projects.checklistDeleteError'));
       } else {
         Alert.alert(t('common.error'), t('checklists.checklistDeleteError'));
       }
@@ -709,7 +709,7 @@ export default function ProjectDetailScreen() {
     } catch (error) {
       console.error('Error saving checklist as template:', error);
       if (Platform.OS === 'web') {
-        alert('Fehler beim Speichern der Vorlage');
+        alert(t('projects.templateSaveError'));
       } else {
         Alert.alert(t('common.error'), t('checklists.templateSaveError'));
       }
@@ -802,7 +802,7 @@ export default function ProjectDetailScreen() {
   const handleSaveProject = async () => {
     if (!editProjectName.trim()) {
       if (Platform.OS === 'web') {
-        alert('Bitte geben Sie einen Projektnamen ein');
+        alert(t('projects.enterProjectName'));
       } else {
         Alert.alert(t('common.error'), t('projects.enterProjectNameError'));
       }
@@ -864,16 +864,16 @@ export default function ProjectDetailScreen() {
     if (duplicateChecks.length > 0) {
       const dupeList = duplicateChecks.map(d => `${d.field}: "${d.number}"`).join('\n');
       Alert.alert(
-        'Nummern bereits vergeben',
+        t('projects.numbersAlreadyTaken'),
         `Folgende Nummern existieren bereits:\n${dupeList}\n\nWas möchten Sie tun?`,
         [
           { text: t('common.cancel'), style: 'cancel' },
           { 
-            text: 'Trotzdem behalten', 
+            text: t('projects.keepNumbers'), 
             onPress: () => doSaveProject(editProjectNumber, editCustomerNumber, editObjektNumber)
           },
           {
-            text: 'Neue Nummern vergeben',
+            text: t('projects.assignNewNumbers'),
             onPress: async () => {
               let newProjectNum = editProjectNumber;
               let newCustomerNum = editCustomerNumber;
@@ -1018,12 +1018,12 @@ export default function ProjectDetailScreen() {
               console.log('No match found, showing selection dialog');
               // Zeige Dialog mit allen Adressen
               Alert.alert(
-                'Adresse beim Kunden aktualisieren?',
-                'Welche Projektadresse soll aktualisiert werden?',
+                t('projects.updateAddressAtCustomer'),
+                t('projects.whichAddressToUpdate'),
                 [
                   { text: 'Keine', style: 'cancel' },
                   ...existingCustomer.projectAddresses.map(addr => ({
-                    text: addr.name || 'Unbenannt',
+                    text: addr.name || t('projects.unnamed'),
                     onPress: async () => {
                       const updatedAddresses = existingCustomer.projectAddresses!.map(a => 
                         a.id === addr.id
@@ -1077,12 +1077,12 @@ export default function ProjectDetailScreen() {
               
               if (hasChanges) {
                 Alert.alert(
-                  'Adresse synchronisieren?',
+                  t('projects.syncAddress'),
                   `Die Objektadresse wurde geändert. Soll die Projektadresse "${matchingAddress.name}" beim Kunden auch aktualisiert werden?`,
                   [
                     { text: 'Nein', style: 'cancel' },
                     { 
-                      text: 'Ja, synchronisieren', 
+                      text: t('projects.yesSync'), 
                       onPress: async () => {
                         // Aktualisiere beim Kunden: Bezeichnung bleibt gleich, aber Objektname und andere Daten werden aktualisiert
                         const updatedAddresses = existingCustomer.projectAddresses!.map(addr => 
@@ -1132,14 +1132,14 @@ export default function ProjectDetailScreen() {
       }
 
       if (Platform.OS === 'web') {
-        alert('Projekt wurde aktualisiert');
+        alert(t('projects.projectUpdatedMsg'));
       } else {
         Alert.alert(t('common.success'), t('projects.projectUpdated'));
       }
     } catch (error) {
       console.error('Error updating project:', error);
       if (Platform.OS === 'web') {
-        alert('Fehler: Projekt konnte nicht aktualisiert werden');
+        alert(t('projects.projectUpdateErrorMsg'));
       } else {
         Alert.alert(t('common.error'), t('projects.projectUpdateError'));
       }
@@ -3717,10 +3717,10 @@ export default function ProjectDetailScreen() {
   const exportToPDF = async () => {
     Alert.alert(
       'PDF Export',
-      'Was möchten Sie tun?',
+      t('projects.whatToDo'),
       [
         {
-          text: 'Vorschau anzeigen',
+          text: t('projects.showPreview'),
           onPress: async () => {
             try {
               setIsGeneratingPdf(true);
@@ -3740,7 +3740,7 @@ export default function ProjectDetailScreen() {
           onPress: () => generateAndSharePdf(),
         },
         {
-          text: 'In Dateien speichern',
+          text: t('projects.saveToFiles'),
           onPress: () => generateAndSavePdf(),
         },
         { text: t('common.cancel'), style: 'cancel' },
@@ -3900,7 +3900,7 @@ export default function ProjectDetailScreen() {
         if (canShare) {
           await Sharing.shareAsync(uri, {
             mimeType: 'image/jpeg',
-            dialogTitle: 'Aufmaß-Vorschau teilen',
+            dialogTitle: t('projects.sharePreview'),
           });
         } else {
           Alert.alert(t('common.error'), t('pdf.shareNotAvailable'));
@@ -3943,11 +3943,11 @@ export default function ProjectDetailScreen() {
     // Share project with PDF or text
     try {
       Alert.alert(
-        'Projekt teilen',
-        'Wie möchten Sie das Projekt teilen?',
+        t('projects.shareProject'),
+        t('projects.howToShare'),
         [
           { 
-            text: 'Nur Text', 
+            text: t('projects.textOnly'), 
             onPress: async () => {
               try {
                 const message = `Projekt: ${project?.name}\nKunde: ${customer?.name || project?.bauherr_name || '-'}\nDachflächen: ${roofs.length}\nGesamtfläche: ${totalArea.toFixed(2)} m²`;
@@ -4009,7 +4009,7 @@ export default function ProjectDetailScreen() {
       // Share the file
       await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
-        dialogTitle: 'Projekt speichern',
+        dialogTitle: t('projects.saveProject2'),
       });
       
     } catch (error: any) {
@@ -4033,7 +4033,7 @@ export default function ProjectDetailScreen() {
           title: `${project?.name || 'Projekt'}.aufmass`,
         });
       } catch (shareError) {
-        Alert.alert('Export Fehler', 'Export nicht möglich');
+        Alert.alert(t('projects.exportError2'), t('projects.exportNotPossible'));
       }
     }
   };
@@ -4062,13 +4062,13 @@ export default function ProjectDetailScreen() {
       <View style={styles.actionBar}>
         <TouchableOpacity style={styles.actionButton} onPress={exportToPDF}>
           <Ionicons name="document-text" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>Projekt-PDF</Text>
+          <Text style={styles.actionButtonText}>{t('projects.projectPdf')}</Text>
         </TouchableOpacity>
         {/* Projekt exportieren - nur in Pro Version */}
         {Features.showProjektExport && (
         <TouchableOpacity style={styles.actionButton} onPress={exportProjectFile}>
           <Ionicons name="cloud-upload" size={20} color="#1976d2" />
-          <Text style={styles.actionButtonText}>Projekt exportieren</Text>
+          <Text style={styles.actionButtonText}>{t('projects.exportProject')}</Text>
         </TouchableOpacity>
         )}
       </View>
@@ -4309,7 +4309,7 @@ export default function ProjectDetailScreen() {
                 <Text style={styles.infoLabel}>Status:</Text>
                 <View style={[styles.statusBadge, { backgroundColor: project.status === 'aktiv' ? '#4caf50' : project.status === 'abgeschlossen' ? '#2196f3' : '#ff9800' }]}>
                   <Text style={styles.statusBadgeText}>
-                    {project.status === 'aktiv' ? 'Aktiv' : project.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgebrochen'}
+                    {project.status === 'aktiv' ? t('projects.statusActive') : project.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}
                   </Text>
                 </View>
               </View>
@@ -4528,12 +4528,12 @@ export default function ProjectDetailScreen() {
                   style={styles.roofDeleteButton}
                   onPress={() => {
                     Alert.alert(
-                      'Dachfläche löschen',
-                      `Möchten Sie "${roof.roof_type}" wirklich löschen?`,
+                      t('roof.deleteConfirm'),
+                      t('checklists.deleteConfirmItem', { text: roof.roof_type }),
                       [
                         { text: t('common.cancel'), style: 'cancel' },
                         {
-                          text: 'Löschen',
+                          text: t('common.delete'),
                           style: 'destructive',
                           onPress: async () => {
                             try {
@@ -4598,7 +4598,7 @@ export default function ProjectDetailScreen() {
                   >
                     <Ionicons name="cloud-upload-outline" size={22} color="#43a047" />
                     <View style={styles.photoActionButtonTextContainer}>
-                      <Text style={[styles.photoActionButtonText, { color: '#43a047' }]}>In Galerie</Text>
+                      <Text style={[styles.photoActionButtonText, { color: '#43a047' }]}>{t('photos.fromGallery')}</Text>
                       <Text style={[styles.photoActionButtonSubtext, { color: '#43a047' }]}>(Exportieren)</Text>
                     </View>
                   </TouchableOpacity>
@@ -4610,7 +4610,7 @@ export default function ProjectDetailScreen() {
                   >
                     <Ionicons name="camera-outline" size={22} color="#1976d2" />
                     <View style={styles.photoActionButtonTextContainer}>
-                      <Text style={[styles.photoActionButtonText, { color: '#1976d2' }]}>Foto hinzufügen</Text>
+                      <Text style={[styles.photoActionButtonText, { color: '#1976d2' }]}>{t('sketches.addPhoto')}</Text>
                       <Text style={[styles.photoActionButtonSubtext, { color: '#1976d2' }]}>(Importieren)</Text>
                     </View>
                   </TouchableOpacity>
@@ -4689,7 +4689,7 @@ export default function ProjectDetailScreen() {
               onPress={() => router.push(`/sketches/draw?projectId=${id}`)}
             >
               <Ionicons name="add-circle" size={24} color="#1976d2" />
-              <Text style={styles.addButtonText}>Neue Skizze</Text>
+              <Text style={styles.addButtonText}>{t('sketches.newSketch')}</Text>
             </TouchableOpacity>
 
             {isTabLoading ? (
@@ -5101,7 +5101,7 @@ export default function ProjectDetailScreen() {
               onPress={() => router.push(`/checklists/new?projectId=${id}`)}
             >
               <Ionicons name="add-circle" size={24} color="#1976d2" />
-              <Text style={styles.addButtonText}>Neue Checkliste</Text>
+              <Text style={styles.addButtonText}>{t('checklists.newChecklist')}</Text>
             </TouchableOpacity>
 
             {checklists.map((checklist, checklistIndex) => {
@@ -5504,16 +5504,16 @@ export default function ProjectDetailScreen() {
             <View style={styles.remarksCard}>
               <View style={styles.remarksHeader}>
                 <Ionicons name="document-text-outline" size={24} color="#1976d2" />
-                <Text style={styles.remarksTitle}>Zusätzliche Bemerkungen</Text>
+                <Text style={styles.remarksTitle}>{t('projects.remarks')}</Text>
               </View>
               <Text style={styles.remarksSubtitle}>
-                Hier können Sie allgemeine Notizen und Bemerkungen zum Projekt erfassen.
+                {t('projects.remarksSubtitle')}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                 <TextInput
                   ref={remarksInputRef}
                   style={[styles.remarksInput, { flex: 1 }]}
-                  placeholderTextColor="#999" placeholder="Bemerkungen eingeben..."
+                  placeholderTextColor="#999" placeholder={t('projects.remarksPlaceholder')}
                   value={remarks}
                   onChangeText={setRemarks}
                   multiline
@@ -5750,14 +5750,14 @@ export default function ProjectDetailScreen() {
                     // Update local project state with new remarks
                     setProject({ ...project, remarks: remarks });
                     if (Platform.OS === 'web') {
-                      alert('Bemerkungen wurden gespeichert');
+                      alert(t('projects.remarksSaved'));
                     } else {
                       Alert.alert(t('common.success'), t('roof.notesSaved'));
                     }
                   } catch (error) {
                     console.error('Error saving remarks:', error);
                     if (Platform.OS === 'web') {
-                      alert('Fehler beim Speichern');
+                      alert(t('projects.remarksSaveError'));
                     } else {
                       Alert.alert(t('common.error'), t('roof.notesSaveError'));
                     }
@@ -5769,7 +5769,7 @@ export default function ProjectDetailScreen() {
               >
                 <Ionicons name="save-outline" size={20} color="#fff" />
                 <Text style={styles.saveRemarksButtonText}>
-                  {isSavingRemarks ? 'Wird gespeichert...' : 'Bemerkungen speichern'}
+                  {isSavingRemarks ? t('common.isSaving') : t('projects.saveRemarks')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -5824,12 +5824,12 @@ export default function ProjectDetailScreen() {
                       style={styles.deleteDocButton}
                       onPress={() => {
                         Alert.alert(
-                          'Dokument löschen',
-                          `Möchten Sie "${doc.name}" wirklich löschen?`,
+                          t('documents.deleteDocument'),
+                          t('checklists.deleteConfirmItem', { text: doc.name }),
                           [
                             { text: t('common.cancel'), style: 'cancel' },
                             {
-                              text: 'Löschen',
+                              text: t('common.delete'),
                               style: 'destructive',
                               onPress: async () => {
                                 try {
@@ -5865,13 +5865,13 @@ export default function ProjectDetailScreen() {
               })}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />
-              <Text style={styles.addButtonText}>Neue Fotomessung</Text>
+              <Text style={styles.addButtonText}>{t('photos.newPhoto')}</Text>
             </TouchableOpacity>
 
             {imagemeterPhotos.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="camera-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>Keine Fotomessungen</Text>
+                <Text style={styles.emptyText}>{t('photos.noPhotos')}</Text>
                 <Text style={styles.emptySubtext}>
                   Messen Sie direkt auf Fotos. Setzen Sie ein Referenzmaß für automatische Berechnungen.
                 </Text>
@@ -5909,12 +5909,12 @@ export default function ProjectDetailScreen() {
                       style={styles.deleteDocButton}
                       onPress={() => {
                         Alert.alert(
-                          'Fotomessung löschen',
-                          `Möchten Sie "${photo.name || 'Unbenannt'}" wirklich löschen?`,
+                          t('roof.photoMeasurementDeleted'),
+                          t('checklists.deleteConfirmItem', { text: photo.name || t('projects.unnamed') }),
                           [
                             { text: t('common.cancel'), style: 'cancel' },
                             {
-                              text: 'Löschen',
+                              text: t('common.delete'),
                               style: 'destructive',
                               onPress: async () => {
                                 try {
@@ -5994,12 +5994,12 @@ export default function ProjectDetailScreen() {
                       style={styles.deleteDocButton}
                       onPress={() => {
                         Alert.alert(
-                          'Berechnung löschen',
-                          `Möchten Sie "${calc.name}" wirklich löschen?`,
+                          t('calculator.calculationDeleted'),
+                          t('checklists.deleteConfirmItem', { text: calc.name }),
                           [
                             { text: t('common.cancel'), style: 'cancel' },
                             {
-                              text: 'Löschen',
+                              text: t('common.delete'),
                               style: 'destructive',
                               onPress: async () => {
                                 try {
@@ -6037,7 +6037,7 @@ export default function ProjectDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Foto löschen</Text>
             <Text style={styles.modalMessage}>
-              Möchten Sie dieses Foto wirklich löschen?
+              {t('photos.deleteConfirm')}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -6055,7 +6055,7 @@ export default function ProjectDetailScreen() {
                 disabled={isDeleting}
               >
                 <Text style={styles.deleteButtonText}>
-                  {isDeleting ? 'Wird gelöscht...' : 'Löschen'}
+                  {isDeleting ? t('projects.deleting2') : t('projects.deleteItem')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -6074,7 +6074,7 @@ export default function ProjectDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Skizze löschen</Text>
             <Text style={styles.modalMessage}>
-              Möchten Sie diese Skizze wirklich löschen?
+              {t('common.delete')}?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -6092,7 +6092,7 @@ export default function ProjectDetailScreen() {
                 disabled={isDeletingSketch}
               >
                 <Text style={styles.deleteButtonText}>
-                  {isDeletingSketch ? 'Wird gelöscht...' : 'Löschen'}
+                  {isDeletingSketch ? t('projects.deleting2') : t('projects.deleteItem')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -6111,7 +6111,7 @@ export default function ProjectDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Checkliste löschen</Text>
             <Text style={styles.modalMessage}>
-              Möchten Sie diese Checkliste wirklich löschen?
+              {t('checklists.deleteChecklist')}?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -6129,7 +6129,7 @@ export default function ProjectDetailScreen() {
                 disabled={isDeletingChecklist}
               >
                 <Text style={styles.deleteButtonText}>
-                  {isDeletingChecklist ? 'Wird gelöscht...' : 'Löschen'}
+                  {isDeletingChecklist ? t('projects.deleting2') : t('projects.deleteItem')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -6215,7 +6215,7 @@ export default function ProjectDetailScreen() {
                             styles.statusButtonTextCompact,
                             editProjectStatus === status && styles.statusButtonTextActiveCompact,
                           ]}>
-                            {status === 'aktiv' ? 'Aktiv' : status === 'abgeschlossen' ? 'Fertig' : 'Abgebr.'}
+                            {status === 'aktiv' ? t('projects.statusActive') : status === 'abgeschlossen' ? t('home.completed') : t('home.cancelled')}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -6234,7 +6234,7 @@ export default function ProjectDetailScreen() {
                           onPress={() => setShowProjectTypePicker(true)}
                         >
                           <Text style={editProjectType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
-                            {editProjectType || 'Projektart auswählen...'}
+                            {editProjectType || t('projects.selectProjectType')}
                           </Text>
                           <Ionicons name="chevron-down" size={16} color="#666" />
                         </TouchableOpacity>
@@ -6247,17 +6247,17 @@ export default function ProjectDetailScreen() {
                           onPress={() => {
                             if (editProjectTypeDate) {
                               Alert.alert(
-                                'Datum',
-                                'Was möchten Sie tun?',
+                                t('projects.dateLabel'),
+                                t('projects.whatToDo'),
                                 [
                                   { text: t('common.cancel'), style: 'cancel' },
                                   { 
-                                    text: 'Datum löschen', 
+                                    text: t('projects.deleteDate'), 
                                     style: 'destructive',
                                     onPress: () => setEditProjectTypeDate('')
                                   },
                                   {
-                                    text: 'Ändern',
+                                    text: t('projects.changeDate'),
                                     onPress: () => setShowProjectTypeDatePicker(true)
                                   }
                                 ]

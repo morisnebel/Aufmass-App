@@ -76,9 +76,9 @@ export default function EditTemplateScreen() {
   // Header-Titel setzen
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: templateId ? 'Checkliste bearbeiten' : 'Checkliste erstellen',
+      title: templateId ? t('checklists.editTemplate') : t('checklists.createTemplate'),
     });
-  }, [navigation, templateId]);
+  }, [navigation, templateId, t]);
 
   useEffect(() => {
     if (templateId) {
@@ -159,7 +159,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error loading template:', error);
-      Alert.alert(t('common.error'), 'Vorlage konnte nicht geladen werden');
+      Alert.alert(t('common.error'), t('checklists.templateLoadError'));
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert(t('common.error'), 'Bild konnte nicht ausgewählt werden');
+      Alert.alert(t('common.error'), t('checklists.imageSelectError'));
     }
   };
 
@@ -228,7 +228,7 @@ export default function EditTemplateScreen() {
       }
     } catch (error) {
       console.error('Error picking template logo:', error);
-      Alert.alert(t('common.error'), 'Logo konnte nicht ausgewählt werden');
+      Alert.alert(t('common.error'), t('checklists.logoSelectError'));
     }
   };
 
@@ -265,7 +265,7 @@ export default function EditTemplateScreen() {
       setReferenceFolders(folders);
     } catch (error) {
       console.error('Error loading reference folders:', error);
-      Alert.alert(t('common.error'), 'Referenz-Ordner konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('checklists.referenceFolderLoadError'));
     } finally {
       setLoadingReferences(false);
     }
@@ -333,10 +333,10 @@ export default function EditTemplateScreen() {
         });
       }
       
-      Alert.alert('Verknüpft', `Ordner "${folder.name}" wurde verknüpft und gespeichert.`);
+      Alert.alert(t('checklists.linked'), t('checklists.folderLinkedMessage', { name: folder.name }));
     } catch (error) {
       console.error('Error linking folder:', error);
-      Alert.alert(t('common.error'), 'Ordner konnte nicht verknüpft werden');
+      Alert.alert(t('common.error'), t('checklists.folderLinkError'));
     }
   };
 
@@ -443,13 +443,13 @@ export default function EditTemplateScreen() {
     });
     
     setCopiedItem(deepCopy(item));
-    Alert.alert('Kopiert', `"${item.text}" wurde kopiert`);
+    Alert.alert(t('checklists.copied'), t('checklists.copiedMessage', { text: item.text }));
   };
 
   // Item einfügen (nach einer Position)
   const pasteItemAfter = (path: number[]) => {
     if (!copiedItem) {
-      Alert.alert(t('common.note'), 'Kein Element in der Zwischenablage');
+      Alert.alert(t('common.note'), t('checklists.clipboardEmpty'));
       return;
     }
     
@@ -493,7 +493,7 @@ export default function EditTemplateScreen() {
       setItems(updateItemAtPath(items, parentPath, { subItems: newSubItems }));
     }
     
-    Alert.alert('Eingefügt', `"${copiedItem.text}" wurde eingefügt`);
+    Alert.alert(t('checklists.pastedTitle'), t('checklists.pastedMessage', { text: copiedItem.text }));
   };
 
   // Unterpunkt hinzufügen
@@ -512,8 +512,8 @@ export default function EditTemplateScreen() {
     if (!Features.maxChecklistItems || item.subItems.length >= Features.maxChecklistItems) {
       if (item.subItems.length >= 5) {
         Alert.alert(
-          'Basic Version', 
-          'In der Basic Version können maximal 5 Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.',
+          t('checklists.basicVersionTitle'), 
+          t('checklists.basicSubItemLimit', { max: 5 }),
           [{ text: t('common.ok') }]
         );
         return;
@@ -543,13 +543,13 @@ export default function EditTemplateScreen() {
 
   const saveTemplate = async () => {
     if (!templateName.trim()) {
-      Alert.alert(t('common.error'), 'Bitte geben Sie einen Namen ein');
+      Alert.alert(t('common.error'), t('checklists.enterName'));
       return;
     }
 
     const validItems = items.filter(item => item.text.trim());
     if (validItems.length === 0) {
-      Alert.alert(t('common.error'), 'Bitte fügen Sie mindestens einen Punkt hinzu');
+      Alert.alert(t('common.error'), t('checklists.addAtLeastOneItem'));
       return;
     }
 
@@ -564,18 +564,18 @@ export default function EditTemplateScreen() {
       if (templateId) {
         const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
         await ChecklistTemplateService.update(tplId || '', payload);
-        Alert.alert(t('common.success'), 'Vorlage wurde aktualisiert', [
+        Alert.alert(t('common.success'), t('checklists.templateUpdated'), [
           { text: t('common.ok'), onPress: () => router.back() },
         ]);
       } else {
         await ChecklistTemplateService.create(payload);
-        Alert.alert(t('common.success'), 'Vorlage wurde erstellt', [
+        Alert.alert(t('common.success'), t('checklists.templateCreated'), [
           { text: t('common.ok'), onPress: () => router.back() },
         ]);
       }
     } catch (error) {
       console.error('Error saving template:', error);
-      Alert.alert(t('common.error'), 'Vorlage konnte nicht gespeichert werden');
+      Alert.alert(t('common.error'), t('checklists.templateSaveError'));
     } finally {
       setSaving(false);
     }
@@ -804,7 +804,7 @@ export default function EditTemplateScreen() {
           >
             <Ionicons name="add" size={16} color="#1976d2" />
             <Text style={styles.addSubItemText}>
-              {depth === 0 ? 'Unterpunkt hinzufügen' : 'Weiteren Unterpunkt'}
+              {depth === 0 ? t('checklists.addSubItem') : t('checklists.addAnotherSubItem')}
             </Text>
           </TouchableOpacity>
         )}
@@ -831,7 +831,7 @@ export default function EditTemplateScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: templateId ? 'Checkliste bearbeiten' : 'Checkliste erstellen' 
+          title: templateId ? t('checklists.editTemplate') : t('checklists.createTemplate') 
         }} 
       />
       <KeyboardAvoidingView 
@@ -854,7 +854,7 @@ export default function EditTemplateScreen() {
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Vorlagen-Name</Text>
+            <Text style={styles.label}>{t('checklists.templateName')}</Text>
             <View style={styles.templateNameRow}>
               <TextInput
                 style={[styles.input, styles.templateNameInput]}
@@ -891,7 +891,7 @@ export default function EditTemplateScreen() {
             <Text style={styles.sectionHint}>
               {Features.maxMainItems < 100 
                 ? `Erstellen Sie bis zu ${Features.maxMainItems} Hauptpunkte mit je ${Features.maxChecklistItems} Unterpunkten`
-                : 'Erstellen Sie Hauptpunkte und fügen Sie beliebig viele Unterpunkte hinzu'
+                : t('checklists.editTemplateHint')
               }
             </Text>
             
@@ -901,7 +901,7 @@ export default function EditTemplateScreen() {
             {(Features.maxMainItems >= 100 || items.length < Features.maxMainItems) && (
             <TouchableOpacity style={styles.addItemButton} onPress={addItem}>
               <Ionicons name="add-circle" size={24} color="#1976d2" />
-              <Text style={styles.addItemText}>Neuen Hauptpunkt hinzufügen</Text>
+              <Text style={styles.addItemText}>{t('checklists.addMainItem')}</Text>
             </TouchableOpacity>
             )}
             {Features.maxMainItems < 100 && items.length >= Features.maxMainItems && (
@@ -924,7 +924,7 @@ export default function EditTemplateScreen() {
         >
           <Ionicons name="checkmark-circle" size={24} color="#fff" />
           <Text style={styles.saveButtonText}>
-            {saving ? 'Wird gespeichert...' : 'Vorlage speichern'}
+            {saving ? t('common.isSaving') : t('checklists.saveTemplate')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1000,7 +1000,7 @@ export default function EditTemplateScreen() {
                 <View style={styles.backBtn} />
               )}
               <Text style={styles.referenceFolderTitle}>
-                {currentReferenceFolder?.name || 'Referenz-Ordner'}
+                {currentReferenceFolder?.name || t('checklists.referenceFolder')}
               </Text>
               <TouchableOpacity onPress={() => setShowReferenceFolderModal(false)}>
                 <Ionicons name="close" size={28} color="#333" />

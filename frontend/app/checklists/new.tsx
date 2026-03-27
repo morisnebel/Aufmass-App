@@ -73,7 +73,7 @@ export default function NewChecklistScreen() {
       setTemplates(data);
     } catch (error) {
       console.error('Error loading templates:', error);
-      Alert.alert(t('common.error'), 'Vorlagen konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('checklists.templatesLoadError'));
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ export default function NewChecklistScreen() {
 
   const saveChecklist = async () => {
     if (!selectedTemplate) {
-      Alert.alert(t('common.error'), 'Bitte wählen Sie eine Vorlage aus');
+      Alert.alert(t('common.error'), t('checklists.selectTemplate'));
       return;
     }
 
@@ -206,12 +206,12 @@ export default function NewChecklistScreen() {
       
       console.log('Checklist created successfully:', result);
 
-      Alert.alert(t('common.success'), 'Checkliste wurde erstellt', [
+      Alert.alert(t('common.success'), t('checklists.checklistCreated'), [
         { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error('Error saving checklist:', error);
-      Alert.alert(t('common.error'), 'Checkliste konnte nicht gespeichert werden: ' + (error as Error).message);
+      Alert.alert(t('common.error'), t('checklists.checklistSaveError'));
     }
   };
 
@@ -226,12 +226,12 @@ export default function NewChecklistScreen() {
   if (templates.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Keine Vorlagen vorhanden</Text>
+        <Text style={styles.emptyText}>{t('checklists.noTemplates')}</Text>
         <TouchableOpacity
           style={styles.button}
           onPress={() => router.push('/checklists/templates')}
         >
-          <Text style={styles.buttonText}>Vorlagen erstellen</Text>
+          <Text style={styles.buttonText}>{t('checklists.createTemplates')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -241,7 +241,7 @@ export default function NewChecklistScreen() {
     return (
       <ScrollView style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.title}>Wählen Sie eine Vorlage</Text>
+          <Text style={styles.title}>{t('checklists.selectTemplateTitle')}</Text>
           {templates.map((template) => (
             <TouchableOpacity
               key={template.id}
@@ -253,7 +253,7 @@ export default function NewChecklistScreen() {
                 <Text style={styles.templateName}>{template.name}</Text>
                 <Ionicons name="chevron-forward" size={24} color="#666" />
               </View>
-              <Text style={styles.itemCount}>{template.items.length} Punkte</Text>
+              <Text style={styles.itemCount}>{t('checklists.itemCount', { count: template.items.length })}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -269,7 +269,7 @@ export default function NewChecklistScreen() {
           onPress={() => setSelectedTemplate(null)}
         >
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
-          <Text style={styles.backText}>Andere Vorlage</Text>
+          <Text style={styles.backText}>{t('checklists.otherTemplate')}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{selectedTemplate.name}</Text>
       </View>
@@ -363,11 +363,10 @@ export default function NewChecklistScreen() {
           />
         </View>
         <Text style={styles.progressText}>
-          {checklistItems.filter((i) => i.checked).length} von{' '}
-          {checklistItems.length} erledigt
+          {t('checklists.progressText', { done: checklistItems.filter((i) => i.checked).length, total: checklistItems.length })}
         </Text>
         <TouchableOpacity style={styles.saveButton} onPress={saveChecklist}>
-          <Text style={styles.saveButtonText}>Checkliste speichern</Text>
+          <Text style={styles.saveButtonText}>{t('checklists.saveChecklist')}</Text>
         </TouchableOpacity>
       </View>
     </View>

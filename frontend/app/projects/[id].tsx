@@ -1609,14 +1609,12 @@ export default function ProjectDetailScreen() {
         console.log('Error parsing sketch metadata:', e);
       }
       
-      // iPhone: Alle Skizzen werden als Grid-Items behandelt (immer 2 pro Zeile)
-      // iPad: Normale Größenlogik
-      let sizeClass = isIpad ? 'sketch-large' : 'sketch-iphone';
-      if (isIpad) {
-        if (size === 'small') sizeClass = 'sketch-small';
-        if (size === 'medium') sizeClass = 'sketch-medium';
-        if (size === 'full') sizeClass = 'sketch-full';
-      }
+      // Größenklasse basierend auf pdf_size - für alle Geräte gleich
+      let sizeClass = 'sketch-large'; // Default
+      if (size === 'small') sizeClass = 'sketch-small';
+      else if (size === 'medium') sizeClass = 'sketch-medium';
+      else if (size === 'full') sizeClass = 'sketch-full';
+      else sizeClass = 'sketch-large';
       
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
@@ -1637,8 +1635,8 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // iPhone: Grid-Container mit 2 Spalten, iPad: normaler Container
-    const sketchesContainerClass = isIpad ? 'sketches-container' : 'sketches-container-iphone';
+    // Sketches-Container: Immer Flexbox für korrekte Größendarstellung
+    const sketchesContainerClass = 'sketches-container';
     
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">
@@ -2532,13 +2530,31 @@ export default function ProjectDetailScreen() {
               height: auto !important;
             }
             .sketches-container, .photos-container {
-              display: block !important;
+              display: flex !important;
+              flex-wrap: wrap !important;
+              gap: 10px !important;
             }
             .sketch-item, .photo-item {
-              max-width: 100% !important;
               box-sizing: border-box !important;
               max-height: none !important;
               overflow: visible !important;
+            }
+            /* Sketch-Größen beim Drucken beibehalten */
+            .sketch-small {
+              flex: 0 0 calc(33.33% - 10px) !important;
+              max-width: calc(33.33% - 10px) !important;
+            }
+            .sketch-medium {
+              flex: 0 0 calc(50% - 10px) !important;
+              max-width: calc(50% - 10px) !important;
+            }
+            .sketch-large {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+            }
+            .sketch-full {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
             }
             /* iPhone Sketch Container - keine Höhenbeschränkung beim Drucken */
             .sketch-iphone, .photo-iphone {
@@ -3306,7 +3322,6 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             display: block;
-            width: 100%;
             max-height: 350px;
           }
           /* Photo/Sketch im Grid nicht umbrechen */

@@ -25,6 +25,7 @@ import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file
 import * as Sharing from 'expo-sharing';
 import { Features, AppName } from '../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Status-Optionen
 const STATUS_OPTIONS = [
@@ -50,6 +51,20 @@ export default function HomeScreen() {
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
+  // Letzten Filter aus AsyncStorage laden
+  useEffect(() => {
+    AsyncStorage.getItem('lastActiveFilter').then(saved => {
+      if (saved && ['all', 'aktiv', 'abgeschlossen', 'abgebrochen'].includes(saved)) {
+        setActiveFilter(saved);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Filter-Änderung speichern
+  const handleFilterChange = useCallback((key: string) => {
+    setActiveFilter(key);
+    AsyncStorage.setItem('lastActiveFilter', key).catch(() => {});
+  }, []);
   // Multi-Select Mode
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
@@ -678,7 +693,7 @@ export default function HomeScreen() {
               activeFilter === option.key && styles.filterTabActive,
               activeFilter === option.key && option.color && { borderColor: option.color }
             ]}
-            onPress={() => setActiveFilter(option.key)}
+            onPress={() => handleFilterChange(option.key)}
           >
             <Ionicons 
               name={option.icon as any} 

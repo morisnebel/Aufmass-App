@@ -29,7 +29,7 @@ import { Features, AppName } from '../services/FeatureFlags';
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Alle', icon: 'folder-outline' },
   { key: 'aktiv', label: 'Aktiv', icon: 'play-circle-outline', color: '#4caf50' },
-  { key: 'abgeschlossen', label: 'Fertig', icon: 'checkmark-circle-outline', color: '#2196f3' },
+  { key: 'abgeschlossen', label: 'Abgeschl.', icon: 'checkmark-circle-outline', color: '#2196f3' },
   { key: 'abgebrochen', label: 'Abgebr.', icon: 'close-circle-outline', color: '#f44336' },
 ];
 
@@ -236,7 +236,7 @@ export default function HomeScreen() {
       return;
     }
     
-    const statusLabel = newStatus === 'abgeschlossen' ? 'Fertig' : (newStatus === 'aktiv' ? 'Aktiv' : 'Abgebrochen');
+    const statusLabel = newStatus === 'abgeschlossen' ? 'Abgeschlossen' : (newStatus === 'aktiv' ? 'Aktiv' : 'Abgebrochen');
     
     Alert.alert(
       `Nach "${statusLabel}" verschieben`,
@@ -826,7 +826,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
-            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Fertig</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Abgeschl.</Text>
           </TouchableOpacity>
           
           <TouchableOpacity

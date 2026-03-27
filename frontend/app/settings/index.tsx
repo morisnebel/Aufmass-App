@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SettingsService } from '../../services/LocalStorage';
 import * as ImagePicker from 'expo-image-picker';
 import { isPro, getAppName, getProStatus, setProStatus, loadProStatus, updateFeatures } from '../../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
+import { saveLanguage, getCurrentLanguage } from '../../i18n';
 
 interface CompanySettings {
   company_name: string;
@@ -80,8 +82,10 @@ const PDF_COLOR_OPTIONS = [
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   const isPhone = screenWidth < 500;
+  const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -346,7 +350,7 @@ export default function SettingsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
-          <Text style={styles.headerTitle}>{isProUnlocked ? 'AUFMASSPROFI Pro' : 'AUFMASSPROFI Basic'}</Text>
+          <Text style={styles.headerTitle}>{isProUnlocked ? t('settings.titlePro') : t('settings.titleBasic')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
           {saving ? (
@@ -407,20 +411,67 @@ export default function SettingsScreen() {
 
           {/* Briefkopf Section */}
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  backgroundColor: currentLang === 'de' ? '#1976d2' : '#f0f0f0',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: currentLang === 'de' ? '#1565c0' : '#ddd',
+                }}
+                onPress={() => {
+                  setCurrentLang('de');
+                  saveLanguage('de');
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: currentLang === 'de' ? '#fff' : '#333' }}>
+                  🇩🇪  {t('settings.german')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  backgroundColor: currentLang === 'en' ? '#1976d2' : '#f0f0f0',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: currentLang === 'en' ? '#1565c0' : '#ddd',
+                }}
+                onPress={() => {
+                  setCurrentLang('en');
+                  saveLanguage('en');
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: currentLang === 'en' ? '#fff' : '#333' }}>
+                  🇬🇧  {t('settings.english')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Briefkopf Section */}
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Briefkopf / Firmendaten</Text>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Firmenname</Text>
+              <Text style={styles.label}>{t('settings.companyName')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.company_name}
                 onChangeText={(text) => setSettings({ ...settings, company_name: text })}
-                placeholder="z.B. Aufmassprofi"
+                placeholder={t('settings.companyNamePlaceholder')}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Untertitel</Text>
+              <Text style={styles.label}>{t('settings.subtitle')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.company_subtitle}
@@ -430,7 +481,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Inhaber / Name</Text>
+              <Text style={styles.label}>{t('settings.ownerName')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.owner_name}
@@ -440,7 +491,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Straße</Text>
+              <Text style={styles.label}>{t('settings.street')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.street}
@@ -472,7 +523,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Telefon</Text>
+              <Text style={styles.label}>{t('settings.phone')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.phone}
@@ -483,7 +534,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Handynummer</Text>
+              <Text style={styles.label}>{t('settings.mobilePhone')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.mobile_phone}
@@ -494,7 +545,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fax</Text>
+              <Text style={styles.label}>{t('settings.fax')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.fax}
@@ -505,7 +556,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-Mail</Text>
+              <Text style={styles.label}>{t('settings.email')}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.email}

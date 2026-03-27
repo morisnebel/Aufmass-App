@@ -24,17 +24,19 @@ import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Features, AppName } from '../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
 
 // Status-Optionen
 const STATUS_OPTIONS = [
-  { key: 'all', label: 'Alle', icon: 'folder-outline' },
-  { key: 'aktiv', label: 'Aktiv', icon: 'play-circle-outline', color: '#4caf50' },
-  { key: 'abgeschlossen', label: 'Abgeschl.', icon: 'checkmark-circle-outline', color: '#2196f3' },
-  { key: 'abgebrochen', label: 'Abgebr.', icon: 'close-circle-outline', color: '#f44336' },
+  { key: 'all', labelKey: 'home.allProjects', icon: 'folder-outline' },
+  { key: 'aktiv', labelKey: 'home.active', icon: 'play-circle-outline', color: '#4caf50' },
+  { key: 'abgeschlossen', labelKey: 'home.completed', icon: 'checkmark-circle-outline', color: '#2196f3' },
+  { key: 'abgebrochen', labelKey: 'home.cancelled', icon: 'close-circle-outline', color: '#f44336' },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   // iPhone hat typisch < 500px Breite, iPad >= 768px
   const isPhone = screenWidth < 500;
@@ -236,7 +238,7 @@ export default function HomeScreen() {
       return;
     }
     
-    const statusLabel = newStatus === 'abgeschlossen' ? 'Abgeschlossen' : (newStatus === 'aktiv' ? 'Aktiv' : 'Abgebrochen');
+    const statusLabel = newStatus === 'abgeschlossen' ? t('home.markAsCompleted') : (newStatus === 'aktiv' ? t('home.markAsActive') : t('home.markAsCancelled'));
     
     Alert.alert(
       `Nach "${statusLabel}" verschieben`,
@@ -461,7 +463,7 @@ export default function HomeScreen() {
     ];
     
     const buttons = sortOptions.map(option => ({
-      text: option.label + (sortBy === option.key ? ' ✓' : ''),
+      text: t(option.labelKey) + (sortBy === option.key ? ' ✓' : ''),
       onPress: () => setSortBy(option.key as typeof sortBy),
       style: sortBy === option.key ? 'cancel' : 'default' as const,
     }));
@@ -650,7 +652,7 @@ export default function HomeScreen() {
         <Ionicons name="search" size={20} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Projekt oder Kunde suchen..."
+          placeholder={t('home.searchPlaceholder')}
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -684,7 +686,7 @@ export default function HomeScreen() {
               activeFilter === option.key && styles.filterTabTextActive,
               activeFilter === option.key && option.color && { color: option.color }
             ]}>
-              {option.label}
+              {t(option.labelKey)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -709,7 +711,7 @@ export default function HomeScreen() {
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#e3f2fd' }]}>
               <Ionicons name="people" size={isPhone ? 18 : 20} color="#1976d2" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>Kunden</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.customers')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -719,7 +721,7 @@ export default function HomeScreen() {
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#f3e5f5' }]}>
               <Ionicons name="checkbox-outline" size={isPhone ? 18 : 20} color="#7b1fa2" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Listen' : 'Checklisten'}</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.checklists')}</Text>
           </TouchableOpacity>
 
           {/* Referenzen - nur in Pro Version */}
@@ -731,7 +733,7 @@ export default function HomeScreen() {
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#fff3e0' }]}>
               <Ionicons name="images" size={isPhone ? 18 : 20} color="#f57c00" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Referenz' : 'Referenzen'}</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.references')}</Text>
           </TouchableOpacity>
           )}
 
@@ -742,7 +744,7 @@ export default function HomeScreen() {
             <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>
               <Ionicons name="settings-outline" size={isPhone ? 18 : 20} color="#546e7a" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Setup' : 'Einstellungen'}</Text>
+            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{isPhone ? 'Setup' : t('home.settings')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -826,7 +828,7 @@ export default function HomeScreen() {
             disabled={selectedProjects.size === 0}
           >
             <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
-            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>Abgeschl.</Text>
+            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>{t('home.completed')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity

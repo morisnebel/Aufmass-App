@@ -5,6 +5,7 @@ import { View, LogBox } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService } from '../services/LocalStorage';
+import '../i18n'; // i18n initialisieren
 
 // Ignore canvas render warnings from pdf.js in WebView
 LogBox.ignoreLogs([

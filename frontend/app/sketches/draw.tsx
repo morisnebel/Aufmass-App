@@ -337,6 +337,7 @@ export default function DrawSketchScreen() {
   const [polylinePoints, setPolylinePoints] = useState<{ x: number; y: number }[]>([]);
   const [angleSnapEnabled, setAngleSnapEnabled] = useState(false);
   const [angleSnapValue, setAngleSnapValue] = useState(90); // Standard: 90°
+  const [gridSnapEnabled, setGridSnapEnabled] = useState(false); // Raster-Einrastung
   
   // Transform state
   const [dragMode, setDragMode] = useState<'move' | 'resize' | 'rotate' | null>(null);
@@ -3389,16 +3390,25 @@ export default function DrawSketchScreen() {
 
   // Winkeleinrastung: Punkt auf den nächsten Vielfachen des Snap-Winkels einrasten
   const snapPointToAngle = (newX: number, newY: number): { x: number; y: number } => {
+    // Erst Raster-Einrastung anwenden
+    let snappedX = newX;
+    let snappedY = newY;
+    
+    if (gridSnapEnabled && showGrid && gridSize > 0) {
+      snappedX = Math.round(newX / gridSize) * gridSize;
+      snappedY = Math.round(newY / gridSize) * gridSize;
+    }
+    
     if (!angleSnapEnabled || polylinePoints.length === 0) {
-      return { x: newX, y: newY };
+      return { x: snappedX, y: snappedY };
     }
     
     const lastPoint = polylinePoints[polylinePoints.length - 1];
-    const dx = newX - lastPoint.x;
-    const dy = newY - lastPoint.y;
+    const dx = snappedX - lastPoint.x;
+    const dy = snappedY - lastPoint.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance < 5) return { x: newX, y: newY }; // Zu kurz, kein Snap
+    if (distance < 5) return { x: snappedX, y: snappedY }; // Zu kurz, kein Snap
     
     // Aktuellen Winkel berechnen (in Grad, 0° = rechts, gegen Uhrzeigersinn)
     let currentAngle = Math.atan2(-dy, dx) * (180 / Math.PI); // -dy weil Y nach unten zeigt
@@ -3420,10 +3430,19 @@ export default function DrawSketchScreen() {
     const snappedAbsolute = (baseAngle + snappedRelative) * (Math.PI / 180);
     
     // Neuen Punkt berechnen
-    return {
-      x: lastPoint.x + distance * Math.cos(snappedAbsolute),
-      y: lastPoint.y - distance * Math.sin(snappedAbsolute), // -sin weil Y nach unten
-    };
+    let resultX = lastPoint.x + distance * Math.cos(snappedAbsolute);
+    let resultY = lastPoint.y - distance * Math.sin(snappedAbsolute); // -sin weil Y nach unten
+    
+    // Bei Raster+Winkel: Entfernung auf nächstes Raster-Vielfaches in der Winkelrichtung einrasten
+    if (gridSnapEnabled && showGrid && gridSize > 0) {
+      const gridDistance = Math.round(distance / gridSize) * gridSize;
+      if (gridDistance > 0) {
+        resultX = lastPoint.x + gridDistance * Math.cos(snappedAbsolute);
+        resultY = lastPoint.y - gridDistance * Math.sin(snappedAbsolute);
+      }
+    }
+    
+    return { x: resultX, y: resultY };
   };
 
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
@@ -6362,21 +6381,38 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
             {/* Winkel-Snap Toggle - sichtbar wenn Polyline aktiv */}
             {drawMode === 'polyline' && polylinePoints.length === 0 && (
-              <TouchableOpacity
-                style={[
-                  styles.toolButtonInner, 
-                  { 
-                    backgroundColor: angleSnapEnabled ? '#1976d2' : '#f5f5f5',
-                    borderWidth: 1,
-                    borderColor: angleSnapEnabled ? '#1565c0' : '#ddd',
-                  }
-                ]}
-                onPress={() => setAngleSnapEnabled(!angleSnapEnabled)}
-              >
-                <Text style={{ fontSize: 10, fontWeight: '700', color: angleSnapEnabled ? '#fff' : '#666' }}>
-                  {angleSnapEnabled ? `${angleSnapValue}°` : '∠'}
-                </Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.toolButtonInner, 
+                    { 
+                      backgroundColor: angleSnapEnabled ? '#1976d2' : '#f5f5f5',
+                      borderWidth: 1,
+                      borderColor: angleSnapEnabled ? '#1565c0' : '#ddd',
+                    }
+                  ]}
+                  onPress={() => setAngleSnapEnabled(!angleSnapEnabled)}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: angleSnapEnabled ? '#fff' : '#666' }}>
+                    {angleSnapEnabled ? `${angleSnapValue}°` : '∠'}
+                  </Text>
+                </TouchableOpacity>
+                {showGrid && !backgroundImage && (
+                  <TouchableOpacity
+                    style={[
+                      styles.toolButtonInner, 
+                      { 
+                        backgroundColor: gridSnapEnabled ? '#4caf50' : '#f5f5f5',
+                        borderWidth: 1,
+                        borderColor: gridSnapEnabled ? '#388e3c' : '#ddd',
+                      }
+                    ]}
+                    onPress={() => setGridSnapEnabled(!gridSnapEnabled)}
+                  >
+                    <Ionicons name="grid-outline" size={16} color={gridSnapEnabled ? '#fff' : '#666'} />
+                  </TouchableOpacity>
+                )}
+              </>
             )}
             {/* Punkt hinzufügen Button */}
             <TouchableOpacity
@@ -7104,8 +7140,9 @@ export default function DrawSketchScreen() {
             </Text>
           </View>
           
-          {/* Winkel-Snap Toggle */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingBottom: 4 }}>
+          {/* Winkel-Snap + Raster-Snap Toggles */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingBottom: 4, flexWrap: 'wrap' }}>
+            {/* Winkel-Snap Toggle */}
             <TouchableOpacity 
               style={{
                 flexDirection: 'row',
@@ -7145,6 +7182,28 @@ export default function DrawSketchScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+            )}
+            
+            {/* Raster-Snap Toggle */}
+            {showGrid && !backgroundImage && (
+              <TouchableOpacity 
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: gridSnapEnabled ? '#4caf50' : '#e0e0e0',
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  gap: 4,
+                }}
+                onPress={() => setGridSnapEnabled(!gridSnapEnabled)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="grid-outline" size={14} color={gridSnapEnabled ? '#fff' : '#666'} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: gridSnapEnabled ? '#fff' : '#666' }}>
+                  Raster
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
           

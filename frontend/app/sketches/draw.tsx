@@ -947,20 +947,28 @@ export default function DrawSketchScreen() {
     } catch { return null; }
   };
   
+  // Hilfsfunktion: Extrahiert den numerischen Wert aus einem Maß-String und konvertiert alles auf Meter
+  const parseMeasurementToMeters = (measurement: string): number => {
+    // Extrahiere Zahl und Einheit aus dem Maß-String (z.B. "2,50m" -> 2.50m, "25cm" -> 0.25m, "1500mm" -> 1.5m)
+    const match = measurement.match(/^([\d.,]+)\s*(cm|mm|m)?/i);
+    if (match) {
+      const value = parseFloat(match[1].replace(',', '.'));
+      if (isNaN(value)) return 0;
+      const unit = (match[2] || 'm').toLowerCase();
+      if (unit === 'cm') return value / 100;
+      if (unit === 'mm') return value / 1000;
+      return value; // Default: Meter
+    }
+    return 0;
+  };
+
   // Berechne Gesamtlänge für ein einzelnes Element (Grundriss)
   const calculateTotalLfmForElement = (elementId: string): number => {
     let total = 0;
     const segmentMeasures = lineSegmentMeasurements[elementId];
     if (segmentMeasures) {
       Object.values(segmentMeasures).forEach(measurement => {
-        // Extrahiere Zahl aus dem Maß-String (z.B. "2,50m" -> 2.50)
-        const match = measurement.match(/^([\d.,]+)/);
-        if (match) {
-          const value = parseFloat(match[1].replace(',', '.'));
-          if (!isNaN(value)) {
-            total += value;
-          }
-        }
+        total += parseMeasurementToMeters(measurement);
       });
     }
     return Math.round(total * 100) / 100;
@@ -971,14 +979,7 @@ export default function DrawSketchScreen() {
     let total = 0;
     Object.values(lineSegmentMeasurements).forEach(segmentMeasures => {
       Object.values(segmentMeasures).forEach(measurement => {
-        // Extrahiere Zahl aus dem Maß-String (z.B. "2,50m" -> 2.50)
-        const match = measurement.match(/^([\d.,]+)/);
-        if (match) {
-          const value = parseFloat(match[1].replace(',', '.'));
-          if (!isNaN(value)) {
-            total += value;
-          }
-        }
+        total += parseMeasurementToMeters(measurement);
       });
     });
     return Math.round(total * 100) / 100;

@@ -24,6 +24,7 @@ import { ProjectService, CustomerService, RoofService, PhotoService, SketchServi
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
+import { useTranslation } from 'react-i18next';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -136,6 +137,7 @@ interface Checklist {
 }
 
 export default function ProjectDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const { id, tab } = useLocalSearchParams();
@@ -295,15 +297,15 @@ export default function ProjectDetailScreen() {
 
   // Dynamischer Header: Wenn ein Tab aktiv ist, zeige Tab-Name und "← Projektdetails" als Zurück-Button
   const tabTitles: Record<string, string> = {
-    overview: 'Projektdetails',
-    sketches: 'Skizzen',
-    roofs: 'Dach',
-    photos: 'Fotos',
-    checklists: 'Checklisten',
-    remarks: 'Bemerkungen',
-    documents: 'Dokumente',
-    calculator: 'Flächenberechnung',
-    imagemeter: 'Fotomessung',
+    overview: t('projects.title'),
+    sketches: t('projects.sketches'),
+    roofs: t('projects.roofMeasurement'),
+    photos: t('projects.photos'),
+    checklists: t('projects.checklists'),
+    remarks: t('projects.notes'),
+    documents: t('projects.documents'),
+    calculator: t('calculator.title'),
+    imagemeter: t('projects.measurement'),
   };
 
   // Ladezustand für Tab-Wechsel (damit SVG-Vorschauen nicht den UI-Thread blockieren)
@@ -4089,7 +4091,7 @@ export default function ProjectDetailScreen() {
               color="#3b82f6"
             />
             <Text style={[styles.tabPillText, activeTab === 'overview' && styles.tabPillTextActive]}>
-              Info
+              {t('common.info', 'Info')}
             </Text>
           </TouchableOpacity>
           
@@ -4104,7 +4106,7 @@ export default function ProjectDetailScreen() {
               color="#10b981"
             />
             <Text style={[styles.tabPillText, activeTab === 'photos' && styles.tabPillTextActive]}>
-              Foto
+              {t('projects.photos')}
             </Text>
             {photos.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#d1fae5' }]}>
@@ -4126,7 +4128,7 @@ export default function ProjectDetailScreen() {
               color="#8b5cf6"
             />
             <Text style={[styles.tabPillText, activeTab === 'sketches' && styles.tabPillTextActive]}>
-              Skizze
+              {t('projects.sketches')}
             </Text>
             {sketches.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#ede9fe' }]}>
@@ -4149,7 +4151,7 @@ export default function ProjectDetailScreen() {
               color="#14b8a6"
             />
             <Text style={[styles.tabPillText, activeTab === 'imagemeter' && styles.tabPillTextActive]}>
-              Messung
+              {t('projects.measurement')}
             </Text>
             {imagemeterPhotos.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#ccfbf1' }]}>
@@ -4173,7 +4175,7 @@ export default function ProjectDetailScreen() {
               color="#f59e0b"
             />
             <Text style={[styles.tabPillText, activeTab === 'calculator' && styles.tabPillTextActive]}>
-              Flächen
+              {t('calculator.area', 'Flächen')}
             </Text>
             {areaCalculations.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#fef3c7' }]}>
@@ -4197,7 +4199,7 @@ export default function ProjectDetailScreen() {
               color="#ef4444"
             />
             <Text style={[styles.tabPillText, activeTab === 'roofs' && styles.tabPillTextActive]}>
-              Dach
+              {t('projects.roofMeasurement', 'Dach')}
             </Text>
             {roofs.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#fee2e2' }]}>
@@ -4220,7 +4222,7 @@ export default function ProjectDetailScreen() {
               color="#06b6d4"
             />
             <Text style={[styles.tabPillText, activeTab === 'checklists' && styles.tabPillTextActive]}>
-              Liste
+              {t('projects.checklists')}
             </Text>
             {checklists.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#cffafe' }]}>
@@ -4242,7 +4244,7 @@ export default function ProjectDetailScreen() {
               color="#ec4899"
             />
             <Text style={[styles.tabPillText, activeTab === 'remarks' && styles.tabPillTextActive]}>
-              Notiz
+              {t('projects.notes')}
             </Text>
           </TouchableOpacity>
           
@@ -4258,7 +4260,7 @@ export default function ProjectDetailScreen() {
               color="#6366f1"
             />
             <Text style={[styles.tabPillText, activeTab === 'documents' && styles.tabPillTextActive]}>
-              Doku
+              {t('projects.documents')}
             </Text>
             {documents.length > 0 && (
               <View style={[styles.tabBadge, { backgroundColor: '#e0e7ff' }]}>
@@ -4403,13 +4405,13 @@ export default function ProjectDetailScreen() {
               </View>
               {(project?.bauherr_phone || customer?.phone) && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Telefon:</Text>
+                  <Text style={styles.infoLabel}>{t('settings.phone')}:</Text>
                   <Text style={styles.infoValue}>{project?.bauherr_phone || customer?.phone}</Text>
                 </View>
               )}
               {(project?.bauherr_email || customer?.email) && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>E-Mail:</Text>
+                  <Text style={styles.infoLabel}>{t('settings.email')}:</Text>
                   <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
                 </View>
               )}
@@ -4461,19 +4463,19 @@ export default function ProjectDetailScreen() {
                   </View>
                   {project?.objekt_contact_person && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Ansprechpartner:</Text>
+                      <Text style={styles.infoLabel}>{t('projects.contactPerson')}:</Text>
                       <Text style={styles.infoValue}>{project.objekt_contact_person}</Text>
                     </View>
                   )}
                   {project?.objekt_phone && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Telefon:</Text>
+                      <Text style={styles.infoLabel}>{t('settings.phone')}:</Text>
                       <Text style={styles.infoValue}>{project.objekt_phone}</Text>
                     </View>
                   )}
                   {project?.objekt_email && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>E-Mail:</Text>
+                      <Text style={styles.infoLabel}>{t('settings.email')}:</Text>
                       <Text style={styles.infoValue}>{project.objekt_email}</Text>
                     </View>
                   )}
@@ -6149,7 +6151,7 @@ export default function ProjectDetailScreen() {
         >
           <View style={styles.editModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Projekt bearbeiten</Text>
+              <Text style={styles.modalTitle}>{t('projects.editProject')}</Text>
               <TouchableOpacity onPress={() => setShowEditProjectModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -6181,17 +6183,17 @@ export default function ProjectDetailScreen() {
                       style={styles.compactInput}
                       value={editProjectName}
                       onChangeText={setEditProjectName}
-                      placeholderTextColor="#999" placeholder="Projektname"
+                      placeholderTextColor="#999" placeholder={t('projects.projectName')}
                     />
                   </View>
 
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Beschreibung</Text>
+                    <Text style={styles.compactLabel}>{t('projects.description')}</Text>
                     <TextInput
                       style={[styles.compactInput, styles.compactTextArea]}
                       value={editProjectDescription}
                       onChangeText={setEditProjectDescription}
-                      placeholderTextColor="#999" placeholder="Beschreibung"
+                      placeholderTextColor="#999" placeholder={t('projects.description')}
                       multiline
                       numberOfLines={2}
                     />
@@ -6519,7 +6521,7 @@ export default function ProjectDetailScreen() {
                 disabled={isSavingProject}
               >
                 <Text style={styles.saveButtonText}>
-                  {isSavingProject ? 'Speichern...' : 'Speichern'}
+                  {isSavingProject ? t('common.saving') : t('common.save')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -6827,7 +6829,7 @@ export default function ProjectDetailScreen() {
             >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
-            <Text style={styles.pdfPreviewTitle}>PDF Vorschau</Text>
+            <Text style={styles.pdfPreviewTitle}>{t('projects.pdfPreview')}</Text>
             <TouchableOpacity 
               style={{
                 backgroundColor: '#1976d2',
@@ -6847,7 +6849,7 @@ export default function ProjectDetailScreen() {
               }}
             >
               <Ionicons name="print" size={18} color="#fff" />
-              <Text style={{ color: '#fff', marginLeft: 6, fontWeight: '600', fontSize: 13 }}>Drucken</Text>
+              <Text style={{ color: '#fff', marginLeft: 6, fontWeight: '600', fontSize: 13 }}>{t('projects.print')}</Text>
             </TouchableOpacity>
           </View>
           
@@ -6914,7 +6916,7 @@ export default function ProjectDetailScreen() {
               ) : (
                 <>
                   <Ionicons name="image-outline" size={22} color="#fff" />
-                  <Text style={styles.pdfPreviewActionText}>Als Bild teilen</Text>
+                  <Text style={styles.pdfPreviewActionText}>{t('projects.shareAsImage')}</Text>
                 </>
               )}
             </TouchableOpacity>

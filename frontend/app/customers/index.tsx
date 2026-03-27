@@ -18,9 +18,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber, isCustomerNumberDuplicate, isObjectNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const selectMode = params.selectMode === 'true';
   
@@ -647,7 +649,7 @@ export default function CustomersScreen() {
           <Ionicons name="search" size={20} color="#666" />
           <TextInput
             style={styles.searchInput}
-            placeholderTextColor="#999" placeholder="Kunden suchen..."
+            placeholderTextColor="#999" placeholder={t('customers.searchPlaceholder')}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -987,7 +989,7 @@ export default function CustomersScreen() {
                     }}
                   >
                     <Ionicons name="add-circle" size={20} color="#fff" />
-                    <Text style={styles.createProjectButtonText}>Neues Projekt erstellen</Text>
+                    <Text style={styles.createProjectButtonText}>{t('projects.newProject')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (

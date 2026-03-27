@@ -356,7 +356,7 @@ export default function SettingsScreen() {
           {saving ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.saveButtonText}>Speichern</Text>
+            <Text style={styles.saveButtonText}>{t('common.save')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -401,7 +401,7 @@ export default function SettingsScreen() {
                   )}
                   {settings.logo_data && (
                     <TouchableOpacity style={styles.changeLogoButton} onPress={pickLogo}>
-                      <Text style={styles.changeLogoText}>Logo ändern</Text>
+                      <Text style={styles.changeLogoText}>{t('settings.changeLogo')}</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -458,7 +458,7 @@ export default function SettingsScreen() {
 
           {/* Briefkopf Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Briefkopf / Firmendaten</Text>
+            <Text style={styles.sectionTitle}>{t('settings.pdfSettings')}</Text>
             
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t('settings.companyName')}</Text>
@@ -502,7 +502,7 @@ export default function SettingsScreen() {
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>PLZ</Text>
+                <Text style={styles.label}>{t('settings.zipCode')}</Text>
                 <TextInput
                   style={styles.input}
                   value={settings.zip_code}
@@ -512,7 +512,7 @@ export default function SettingsScreen() {
                 />
               </View>
               <View style={[styles.inputGroup, { flex: 2 }]}>
-                <Text style={styles.label}>Ort</Text>
+                <Text style={styles.label}>{t('settings.city')}</Text>
                 <TextInput
                   style={styles.input}
                   value={settings.city}
@@ -568,7 +568,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Leistungen (eine pro Zeile)</Text>
+              <Text style={styles.label}>{t('settings.services')}</Text>
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 value={settings.services}
@@ -644,7 +644,7 @@ export default function SettingsScreen() {
                 onPress={() => setSelectedLayoutSection('header')}
               >
                 <Ionicons name="document-text" size={18} color={selectedLayoutSection === 'header' ? '#fff' : '#666'} />
-                <Text style={[styles.layoutTabText, selectedLayoutSection === 'header' && styles.layoutTabTextActive]}>Kopfzeile</Text>
+                <Text style={[styles.layoutTabText, selectedLayoutSection === 'header' && styles.layoutTabTextActive]}>{t('settings.headerStyle')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.layoutTab, selectedLayoutSection === 'project_type' && styles.layoutTabActive]}
@@ -812,7 +812,7 @@ export default function SettingsScreen() {
 
           {/* Projektart-Überschriften Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Projektart-Überschriften</Text>
+            <Text style={styles.sectionTitle}>{t('settings.projectTypes')}</Text>
             <Text style={styles.sublabel}>
               Definieren Sie hier die Überschriften, die bei Projekten ausgewählt werden können (z.B. "Sturmschaden", "Wartung", "Neueindeckung").
             </Text>
@@ -872,7 +872,7 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Daten zurücksetzen</Text>
             <Text style={styles.resetInfo}>
-              Alle Einstellungen leeren und auf Standardwerte zurücksetzen.
+              {t('settings.resetInfo')}
             </Text>
             <TouchableOpacity
               style={styles.resetButton}
@@ -883,7 +883,7 @@ export default function SettingsScreen() {
                   [
                     { text: 'Abbrechen', style: 'cancel' },
                     {
-                      text: 'Zurücksetzen',
+                      text: t('common.reset'),
                       style: 'destructive',
                       onPress: () => {
                         setSettings({

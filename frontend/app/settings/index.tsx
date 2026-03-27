@@ -28,6 +28,8 @@ interface CompanySettings {
   zip_code: string;
   city: string;
   phone: string;
+  mobile_phone: string;
+  fax: string;
   email: string;
   services: string;
   author_name: string;
@@ -91,6 +93,8 @@ export default function SettingsScreen() {
     zip_code: '',
     city: '',
     phone: '',
+    mobile_phone: '',
+    fax: '',
     email: '',
     services: '',
     author_name: '',
@@ -342,7 +346,7 @@ export default function SettingsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
-          <Text style={styles.headerTitle}>Einstellungen</Text>
+          <Text style={styles.headerTitle}>{isProUnlocked ? 'AUFMASSPROFI Pro' : 'AUFMASSPROFI Basic'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
           {saving ? (
@@ -474,6 +478,28 @@ export default function SettingsScreen() {
                 value={settings.phone}
                 onChangeText={(text) => setSettings({ ...settings, phone: text })}
                 placeholder="0123 456789"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Handynummer</Text>
+              <TextInput
+                style={styles.input}
+                value={settings.mobile_phone}
+                onChangeText={(text) => setSettings({ ...settings, mobile_phone: text })}
+                placeholder="0170 1234567"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Fax</Text>
+              <TextInput
+                style={styles.input}
+                value={settings.fax}
+                onChangeText={(text) => setSettings({ ...settings, fax: text })}
+                placeholder="0123 456780"
                 keyboardType="phone-pad"
               />
             </View>
@@ -817,6 +843,8 @@ export default function SettingsScreen() {
                           zip_code: '',
                           city: '',
                           phone: '',
+                          mobile_phone: '',
+                          fax: '',
                           email: '',
                           services: '',
                           author_name: '',

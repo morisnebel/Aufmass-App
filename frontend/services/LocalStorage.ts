@@ -1273,6 +1273,8 @@ export interface Settings {
   company_name?: string;
   company_address?: string;
   company_phone?: string;
+  company_mobile_phone?: string;
+  company_fax?: string;
   company_email?: string;
   company_logo?: string;
   tax_rate?: number;

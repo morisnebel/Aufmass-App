@@ -1210,6 +1210,8 @@ export default function ProjectDetailScreen() {
     const companyZipCode = settings.zip_code || '';
     const companyCity = settings.city || '';
     const companyPhone = settings.phone || '';
+    const companyMobilePhone = settings.mobile_phone || '';
+    const companyFax = settings.fax || '';
     const companyEmail = settings.email || '';
     const authorName = settings.author_name || '';
     
@@ -3484,6 +3486,8 @@ export default function ProjectDetailScreen() {
                 ${companyStreet ? `<br/>${companyStreet}` : ''}
                 ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
                 ${companyPhone ? `<br/>Tel: ${companyPhone}` : ''}
+                ${companyMobilePhone ? `<br/>Mobil: ${companyMobilePhone}` : ''}
+                ${companyFax ? `<br/>Fax: ${companyFax}` : ''}
                 ${companyEmail ? `<br/>${companyEmail}` : ''}
               </div>
             ` : ''}

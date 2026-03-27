@@ -335,6 +335,8 @@ export default function DrawSketchScreen() {
   
   // Polyline state - für zusammenhängende Linien (Grundrisse)
   const [polylinePoints, setPolylinePoints] = useState<{ x: number; y: number }[]>([]);
+  const [angleSnapEnabled, setAngleSnapEnabled] = useState(false);
+  const [angleSnapValue, setAngleSnapValue] = useState(90); // Standard: 90°
   
   // Transform state
   const [dragMode, setDragMode] = useState<'move' | 'resize' | 'rotate' | null>(null);
@@ -2845,14 +2847,15 @@ export default function DrawSketchScreen() {
       setCurrentPath(`M ${locationX} ${locationY}`);
     } else if (drawMode === 'polyline') {
       // Polyline: Füge Punkt hinzu
-      const newPoint = { x: locationX, y: locationY };
+      const snappedPoint = snapPointToAngle(locationX, locationY);
+      const newPoint = { x: snappedPoint.x, y: snappedPoint.y };
       
       // Prüfe ob wir nahe am ersten Punkt sind (schließen)
       if (polylinePoints.length >= 3) {
         const firstPoint = polylinePoints[0];
         const distance = Math.sqrt(
-          Math.pow(locationX - firstPoint.x, 2) + 
-          Math.pow(locationY - firstPoint.y, 2)
+          Math.pow(snappedPoint.x - firstPoint.x, 2) + 
+          Math.pow(snappedPoint.y - firstPoint.y, 2)
         );
         
         if (distance < 30) {
@@ -3335,6 +3338,45 @@ export default function DrawSketchScreen() {
     if (polylinePoints.length > 0) {
       setPolylinePoints(polylinePoints.slice(0, -1));
     }
+  };
+
+  // Winkeleinrastung: Punkt auf den nächsten Vielfachen des Snap-Winkels einrasten
+  const snapPointToAngle = (newX: number, newY: number): { x: number; y: number } => {
+    if (!angleSnapEnabled || polylinePoints.length === 0) {
+      return { x: newX, y: newY };
+    }
+    
+    const lastPoint = polylinePoints[polylinePoints.length - 1];
+    const dx = newX - lastPoint.x;
+    const dy = newY - lastPoint.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance < 5) return { x: newX, y: newY }; // Zu kurz, kein Snap
+    
+    // Aktuellen Winkel berechnen (in Grad, 0° = rechts, gegen Uhrzeigersinn)
+    let currentAngle = Math.atan2(-dy, dx) * (180 / Math.PI); // -dy weil Y nach unten zeigt
+    
+    // Basiswinkel bestimmen
+    let baseAngle = 0;
+    if (polylinePoints.length >= 2) {
+      // Winkel des vorherigen Segments als Basis
+      const prevPoint = polylinePoints[polylinePoints.length - 2];
+      const prevDx = lastPoint.x - prevPoint.x;
+      const prevDy = lastPoint.y - prevPoint.y;
+      baseAngle = Math.atan2(-prevDy, prevDx) * (180 / Math.PI);
+    }
+    
+    // Relativen Winkel berechnen und auf Snap-Wert runden
+    const relativeAngle = currentAngle - baseAngle;
+    const snapAngleRad = angleSnapValue;
+    const snappedRelative = Math.round(relativeAngle / snapAngleRad) * snapAngleRad;
+    const snappedAbsolute = (baseAngle + snappedRelative) * (Math.PI / 180);
+    
+    // Neuen Punkt berechnen
+    return {
+      x: lastPoint.x + distance * Math.cos(snappedAbsolute),
+      y: lastPoint.y - distance * Math.sin(snappedAbsolute), // -sin weil Y nach unten
+    };
   };
 
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
@@ -6249,6 +6291,24 @@ export default function DrawSketchScreen() {
             >
               <Ionicons name="git-network-outline" size={22} color={drawMode === 'polyline' ? '#fff' : '#333'} />
             </TouchableOpacity>
+            {/* Winkel-Snap Toggle - sichtbar wenn Polyline aktiv */}
+            {drawMode === 'polyline' && polylinePoints.length === 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.toolButtonInner, 
+                  { 
+                    backgroundColor: angleSnapEnabled ? '#1976d2' : '#f5f5f5',
+                    borderWidth: 1,
+                    borderColor: angleSnapEnabled ? '#1565c0' : '#ddd',
+                  }
+                ]}
+                onPress={() => setAngleSnapEnabled(!angleSnapEnabled)}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: angleSnapEnabled ? '#fff' : '#666' }}>
+                  {angleSnapEnabled ? `${angleSnapValue}°` : '∠'}
+                </Text>
+              </TouchableOpacity>
+            )}
             {/* Punkt hinzufügen Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'addPoint' && styles.toolButtonActive]}
@@ -6973,6 +7033,50 @@ export default function DrawSketchScreen() {
             <Text style={styles.polylineInfoCompact}>
               Grundriss: {polylinePoints.length}
             </Text>
+          </View>
+          
+          {/* Winkel-Snap Toggle */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingBottom: 4 }}>
+            <TouchableOpacity 
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: angleSnapEnabled ? '#1976d2' : '#e0e0e0',
+                borderRadius: 6,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                gap: 4,
+              }}
+              onPress={() => setAngleSnapEnabled(!angleSnapEnabled)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="git-branch-outline" size={14} color={angleSnapEnabled ? '#fff' : '#666'} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: angleSnapEnabled ? '#fff' : '#666' }}>
+                {angleSnapEnabled ? `${angleSnapValue}°` : 'Winkel'}
+              </Text>
+            </TouchableOpacity>
+            
+            {angleSnapEnabled && (
+              <View style={{ flexDirection: 'row', gap: 2 }}>
+                {[45, 90, 120].map(angle => (
+                  <TouchableOpacity
+                    key={`snap-${angle}`}
+                    style={{
+                      backgroundColor: angleSnapValue === angle ? '#1565c0' : '#f0f0f0',
+                      borderRadius: 4,
+                      paddingHorizontal: 6,
+                      paddingVertical: 3,
+                    }}
+                    onPress={() => setAngleSnapValue(angle)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: angleSnapValue === angle ? '#fff' : '#666' }}>
+                      {angle}°
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
           
           {/* Buttons */}

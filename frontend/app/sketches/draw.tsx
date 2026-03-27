@@ -549,6 +549,15 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
+  const isMountedRef = useRef(true);
+  
+  // Cleanup beim Unmount - verhindert Crashes durch State-Updates nach Navigation
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const isResettingRef = useRef(false);
   const currentSketchIdRef = useRef<string | undefined>(sketchId);
   
@@ -2046,7 +2055,7 @@ export default function DrawSketchScreen() {
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
 
-        // Generate preview image
+        // Generate preview image - wrapped in try/catch
         let sketchData = '';
         
         if (elements.length > 0) {
@@ -2059,49 +2068,66 @@ export default function DrawSketchScreen() {
         
         // Use placeholder for background-image sketches (not the full base64!)
         if (!sketchData && backgroundImage) {
-          const previewSvg = `
-            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="200" height="200" fill="#f0f0f0"/>
-              <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
-              <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
-            </svg>
-          `;
-          sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+          try {
+            const previewSvg = `
+              <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="#f0f0f0"/>
+                <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
+                <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${(title || 'Skizze').replace(/[<>&"']/g, '')}</text>
+              </svg>
+            `;
+            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+          } catch (e) {
+            console.error('Error creating placeholder preview:', e);
+          }
         }
         
         if (!sketchData) {
-          const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
-          const colorIndex = elements.length % colors.length;
-          const previewColor = colors[colorIndex];
-          
-          const previewSvg = `
-            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="200" height="200" fill="${previewColor}" opacity="0.3"/>
-              <text x="100" y="100" text-anchor="middle" font-size="24" fill="#333">
-                ${elements.length} Element${elements.length !== 1 ? 'e' : ''}
-              </text>
-              <text x="100" y="130" text-anchor="middle" font-size="14" fill="#666">
-                ${title || 'Skizze'}
-              </text>
-            </svg>
-          `;
-          
-          sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+          try {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
+            const colorIndex = elements.length % colors.length;
+            const previewColor = colors[colorIndex];
+            
+            const previewSvg = `
+              <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="${previewColor}" opacity="0.3"/>
+                <text x="100" y="100" text-anchor="middle" font-size="24" fill="#333">
+                  ${elements.length} Element${elements.length !== 1 ? 'e' : ''}
+                </text>
+                <text x="100" y="130" text-anchor="middle" font-size="14" fill="#666">
+                  ${(title || 'Skizze').replace(/[<>&"']/g, '')}
+                </text>
+              </svg>
+            `;
+            
+            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+          } catch (e) {
+            console.error('Error creating fallback preview:', e);
+          }
         }
+
+        // Lokale Kopien für den Hintergrund-Speichervorgang erstellen
+        const saveSketchId = sketchId;
+        const saveProjectId = projectId;
+        const saveTitle = title;
+        const saveNotes = notes;
+        const savePdfSize = pdfSize;
+        const saveBgChanged = backgroundImageChangedRef.current;
+        const saveBgImage = backgroundImage;
 
         // SPEICHERN IM HINTERGRUND - Navigation sofort ausführen
         const saveInBackground = async () => {
           try {
-            if (sketchId) {
+            if (saveSketchId) {
               const criticalOps: Promise<any>[] = [
-                AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(metadata)),
+                AsyncStorage.setItem(`sketch_meta_${saveSketchId}`, JSON.stringify(metadata)),
               ];
               
-              if (backgroundImageChangedRef.current) {
-                if (backgroundImage) {
-                  criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+              if (saveBgChanged) {
+                if (saveBgImage) {
+                  criticalOps.push(AsyncStorage.setItem(`sketch_bg_${saveSketchId}`, saveBgImage));
                 } else {
-                  criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+                  criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${saveSketchId}`));
                 }
               }
               
@@ -2109,22 +2135,22 @@ export default function DrawSketchScreen() {
               backgroundImageChangedRef.current = false;
               console.log('Background-saved critical data in', Date.now() - startTime, 'ms');
               
-              SketchService.update(sketchId, {
-                project_id: projectId,
-                title,
-                notes,
+              SketchService.update(saveSketchId, {
+                project_id: saveProjectId,
+                title: saveTitle,
+                notes: saveNotes,
                 sketch_data: sketchData,
-                pdf_size: pdfSize,
+                pdf_size: savePdfSize,
               }).catch(err => console.error('Background save update error:', err));
-            } else if (title.trim()) {
-              const fullMetadata = { ...metadata, backgroundImage };
+            } else if (saveTitle.trim()) {
+              const fullMetadata = { ...metadata, backgroundImage: saveBgImage };
               await SketchService.create({
-                project_id: projectId,
-                title,
-                notes,
+                project_id: saveProjectId,
+                title: saveTitle,
+                notes: saveNotes,
                 sketch_data: sketchData,
                 metadata: JSON.stringify(fullMetadata),
-                pdf_size: pdfSize,
+                pdf_size: savePdfSize,
               });
               backgroundImageChangedRef.current = false;
               console.log('Background-saved new sketch in', Date.now() - startTime, 'ms');
@@ -2151,7 +2177,9 @@ export default function DrawSketchScreen() {
     
     // SOFORT zurück navigieren - Speichern läuft im Hintergrund
     console.log('=== NAVIGATION DEBUG v2 === handleBackPress calling router.back(), projectId:', projectId, 'sketchId:', sketchId);
-    router.back();
+    if (isMountedRef.current) {
+      router.back();
+    }
   };
 
   // Delete selected element (or entire angle group if part of one)
@@ -6039,9 +6067,13 @@ export default function DrawSketchScreen() {
       router.back();
     } catch (error) {
       console.error('Error saving sketch:', error);
-      showAlert('Fehler', 'Skizze konnte nicht gespeichert werden');
+      if (isMountedRef.current) {
+        showAlert('Fehler', 'Skizze konnte nicht gespeichert werden');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

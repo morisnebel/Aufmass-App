@@ -117,6 +117,10 @@ export default function RootLayout() {
           name="references/index" 
           options={{ title: 'Referenz Fotos', headerShown: false }} 
         />
+        <Stack.Screen 
+          name="settings" 
+          options={{ title: 'Einstellungen', headerShown: false }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

@@ -17,7 +17,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerService, ProjectService, generateFullName, generateFullAddress } from '../../services/LocalStorage';
+import { CustomerService, ProjectService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -87,6 +87,7 @@ export default function EditCustomerScreen() {
   
   // Form state - neue erweiterte Felder
   const [customerNumber, setCustomerNumber] = useState('');
+  const [originalCustomerNumber, setOriginalCustomerNumber] = useState('');
   const [salutation, setSalutation] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -151,6 +152,7 @@ export default function EditCustomerScreen() {
       
       if (customer && !isImportingRef.current) {
         setCustomerNumber(customer.customer_number || '');
+        setOriginalCustomerNumber(customer.customer_number || '');
         setSalutation(customer.salutation || '');
         setFirstName(customer.firstName || '');
         setLastName(customer.lastName || '');
@@ -346,6 +348,37 @@ export default function EditCustomerScreen() {
   };
 
   const saveCustomer = async (syncToContacts: boolean = false) => {
+    // Duplikat-Prüfung für Kundennummer (nur wenn geändert)
+    if (customerNumber && customerNumber !== originalCustomerNumber) {
+      const isDuplicate = await isCustomerNumberDuplicate(customerNumber, customerId);
+      if (isDuplicate) {
+        Alert.alert(
+          'Kundennummer bereits vergeben',
+          `Die Kundennummer "${customerNumber}" existiert bereits. Was möchten Sie tun?`,
+          [
+            { text: 'Abbrechen', style: 'cancel' },
+            { 
+              text: 'Trotzdem verwenden', 
+              onPress: () => doSaveCustomer(syncToContacts, customerNumber)
+            },
+            {
+              text: 'Nächste freie Nummer',
+              onPress: async () => {
+                const newNumber = await getNextAvailableCustomerNumber();
+                setCustomerNumber(newNumber);
+                doSaveCustomer(syncToContacts, newNumber);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+    
+    await doSaveCustomer(syncToContacts, customerNumber);
+  };
+
+  const doSaveCustomer = async (syncToContacts: boolean, finalCustomerNumber: string) => {
     setSaving(true);
     try {
       // Generiere den vollständigen Namen und die kombinierte Adresse
@@ -358,7 +391,7 @@ export default function EditCustomerScreen() {
       }
       
       await CustomerService.update(customerId, {
-        customer_number: customerNumber,
+        customer_number: finalCustomerNumber,
         salutation: salutation,
         firstName: firstName,
         lastName: lastName,

@@ -71,7 +71,7 @@ export default function HomeScreen() {
       setCustomers(customerMap);
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Fehler', 'Daten konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('home.dataLoadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,7 +130,7 @@ export default function HomeScreen() {
   // Export selected projects
   const exportSelectedProjects = async () => {
     if (selectedProjects.size === 0) {
-      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      Alert.alert(t('common.note'), t('home.selectAtLeastOne'));
       return;
     }
     
@@ -190,24 +190,24 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Export error:', error);
       setIsProcessing(false);
-      Alert.alert('Fehler', 'Export fehlgeschlagen');
+      Alert.alert(t('common.error'), t('home.exportFailed'));
     }
   };
   
   // Delete selected projects
   const deleteSelectedProjects = async () => {
     if (selectedProjects.size === 0) {
-      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      Alert.alert(t('common.note'), t('home.selectAtLeastOne'));
       return;
     }
     
     Alert.alert(
-      'Projekte löschen',
-      `Möchten Sie wirklich ${selectedProjects.size} Projekt(e) löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      t('home.deleteMultiple', { count: selectedProjects.size }),
+      t('home.deleteMultipleConfirm', { count: selectedProjects.size }),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setIsProcessing(true);
@@ -218,10 +218,10 @@ export default function HomeScreen() {
               await loadData();
               setSelectionMode(false);
               setSelectedProjects(new Set());
-              Alert.alert('Erfolg', `${selectedProjects.size} Projekt(e) gelöscht`);
+              Alert.alert(t('common.success'), t('home.deletedCount', { count: selectedProjects.size }));
             } catch (error) {
               console.error('Delete error:', error);
-              Alert.alert('Fehler', 'Löschen fehlgeschlagen');
+              Alert.alert(t('common.error'), t('home.deleteFailed'));
             } finally {
               setIsProcessing(false);
             }
@@ -234,19 +234,19 @@ export default function HomeScreen() {
   // Move selected projects to status
   const moveSelectedToStatus = async (newStatus: string) => {
     if (selectedProjects.size === 0) {
-      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Projekt aus');
+      Alert.alert(t('common.note'), t('home.selectAtLeastOne'));
       return;
     }
     
     const statusLabel = newStatus === 'abgeschlossen' ? t('home.markAsCompleted') : (newStatus === 'aktiv' ? t('home.markAsActive') : t('home.markAsCancelled'));
     
     Alert.alert(
-      `Nach "${statusLabel}" verschieben`,
-      `Möchten Sie ${selectedProjects.size} Projekt(e) nach "${statusLabel}" verschieben?`,
+      t('home.statusChanged'),
+      t('home.statusChangedMessage', { count: selectedProjects.size, status: statusLabel }),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Verschieben',
+          text: t('common.ok'),
           onPress: async () => {
             setIsProcessing(true);
             try {
@@ -259,10 +259,10 @@ export default function HomeScreen() {
               await loadData();
               setSelectionMode(false);
               setSelectedProjects(new Set());
-              Alert.alert('Erfolg', `${selectedProjects.size} Projekt(e) verschoben`);
+              Alert.alert(t('common.success'), t('home.movedCount', { count: selectedProjects.size }));
             } catch (error) {
               console.error('Status change error:', error);
-              Alert.alert('Fehler', 'Verschieben fehlgeschlagen');
+              Alert.alert(t('common.error'), t('home.moveFailed'));
             } finally {
               setIsProcessing(false);
             }
@@ -289,7 +289,7 @@ export default function HomeScreen() {
       // Accept .aufmass, .json and .txt files
       const fileName = file.name?.toLowerCase() || '';
       if (!fileName.endsWith('.aufmass') && !fileName.endsWith('.json') && !fileName.endsWith('.txt')) {
-        Alert.alert('Fehler', 'Bitte wählen Sie eine .aufmass, .json oder .txt Datei aus');
+        Alert.alert(t('common.error'), t('home.importFileError'));
         return;
       }
       
@@ -301,7 +301,7 @@ export default function HomeScreen() {
       // Clean up content - remove truncation markers if present
       let cleanContent = content;
       if (content.includes('... (gekürzt)')) {
-        Alert.alert('Fehler', 'Die Datei ist unvollständig. Bitte exportieren Sie das Projekt erneut.');
+        Alert.alert(t('common.error'), t('home.importIncomplete'));
         setLoading(false);
         return;
       }
@@ -310,7 +310,7 @@ export default function HomeScreen() {
       
       // Validate import data
       if (!importData.project || !importData.version) {
-        Alert.alert('Fehler', 'Ungültige Projektdatei');
+        Alert.alert(t('common.error'), t('home.importInvalid'));
         setLoading(false);
         return;
       }
@@ -392,14 +392,14 @@ export default function HomeScreen() {
       }
       
       await loadData();
-      Alert.alert('Erfolg', `Projekt "${importData.project.name}" wurde importiert`);
+      Alert.alert(t('common.success'), t('home.importSuccess', { name: importData.project.name }));
       
       // Navigate to the imported project
       router.push(`/projects/${newProject.id}`);
       
     } catch (error) {
       console.error('Error importing project:', error);
-      Alert.alert('Fehler', 'Projekt konnte nicht importiert werden');
+      Alert.alert(t('common.error'), t('home.importFailed'));
     } finally {
       setLoading(false);
     }
@@ -407,12 +407,12 @@ export default function HomeScreen() {
 
   const deleteProject = async (projectId: string) => {
     Alert.alert(
-      'Projekt löschen',
-      'Möchten Sie dieses Projekt wirklich löschen?',
+      t('home.deleteProject'),
+      t('home.deleteProjectConfirm', { name: '' }),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -420,7 +420,7 @@ export default function HomeScreen() {
               loadData();
             } catch (error) {
               console.error('Error deleting project:', error);
-              Alert.alert('Fehler', 'Projekt konnte nicht gelöscht werden');
+              Alert.alert(t('common.error'), t('home.deleteError'));
             }
           },
         },
@@ -442,14 +442,18 @@ export default function HomeScreen() {
           }
         } catch (error) {
           console.error('Error updating status:', error);
-          Alert.alert('Fehler', 'Status konnte nicht geändert werden');
+          Alert.alert(t('common.error'), t('home.statusChangeError'));
         }
       },
       style: status === currentStatus ? 'cancel' : 'default' as const,
     }));
-    buttons.push({ text: 'Abbrechen', onPress: () => {}, style: 'cancel' as const });
+    buttons.push({ text: t('common.cancel'), onPress: () => {}, style: 'cancel' as const });
     
-    Alert.alert('Status ändern', 'Wählen Sie den neuen Status:', buttons);
+    Alert.alert(
+      t('home.statusChanged', 'Status ändern'), 
+      t('home.statusChangedMessage', { count: selectedProjects.length, status: '' }) || 'Wählen Sie den neuen Status:', 
+      buttons
+    );
   };
 
   // Sortierung ändern
@@ -864,14 +868,14 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="folder-open-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>
-            {projects.length === 0 ? 'Keine Projekte vorhanden' : 'Keine Projekte gefunden'}
+            {projects.length === 0 ? t('home.noProjects') : t('home.noProjects')}
           </Text>
           <Text style={styles.emptySubtext}>
             {projects.length === 0 
-              ? 'Erstellen Sie Ihr erstes Projekt' 
+              ? t('home.createFirst') 
               : searchQuery 
-                ? 'Versuchen Sie einen anderen Suchbegriff'
-                : 'Keine Projekte mit diesem Status'}
+                ? t('home.searchPlaceholder')
+                : t('home.noProjects')}
           </Text>
         </View>
       ) : (

@@ -271,7 +271,7 @@ export default function ProjectDetailScreen() {
       setReferencePhotosModal({ visible: true, photos, title: folderName, folderId });
     } catch (error) {
       console.error('Error loading reference photos:', error);
-      Alert.alert('Fehler', 'Referenz-Fotos konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('roof.referenceLoadError'));
     } finally {
       setLoadingReferencePhotos(false);
     }
@@ -416,7 +416,7 @@ export default function ProjectDetailScreen() {
       console.log('[TIMING] loadProjectData total:', Date.now() - startTime, 'ms');
     } catch (error) {
       console.error('Error loading project:', error);
-      Alert.alert('Fehler', 'Projekt konnte nicht geladen werden');
+      Alert.alert(t('common.error'), t('projects.projectLoadError'));
     } finally {
       setLoading(false);
     }
@@ -440,7 +440,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Foto wurde gelöscht');
       } else {
-        Alert.alert('Erfolg', 'Foto wurde gelöscht');
+        Alert.alert(t('common.success'), t('photos.photoDeleted'));
       }
     } catch (error: any) {
       console.error('Error deleting photo:', error);
@@ -450,7 +450,7 @@ export default function ProjectDetailScreen() {
         if (Platform.OS === 'web') {
           alert('Fehler: Foto konnte nicht gelöscht werden');
         } else {
-          Alert.alert('Fehler', 'Foto konnte nicht gelöscht werden');
+          Alert.alert(t('common.error'), t('photos.photoDeleteError'));
         }
       } else {
         // Photo was already deleted, just close modal and reload
@@ -474,7 +474,7 @@ export default function ProjectDetailScreen() {
 
   const saveSelectedPhotosToGallery = async () => {
     if (selectedPhotos.length === 0) {
-      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Foto aus.');
+      Alert.alert(t('common.note'), t('photos.selectAtLeastOne'));
       return;
     }
 
@@ -484,7 +484,7 @@ export default function ProjectDetailScreen() {
       // Request permission
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Berechtigung benötigt', 'Bitte erlauben Sie den Zugriff auf Ihre Fotos.');
+        Alert.alert(t('photos.permissionNeeded'), t('photos.photoPermission'));
         setIsSavingToGallery(false);
         return;
       }
@@ -504,7 +504,7 @@ export default function ProjectDetailScreen() {
           'Alternative Methode',
           'Das direkte Speichern ist in Expo Go eingeschränkt. Möchten Sie die Fotos stattdessen teilen?',
           [
-            { text: 'Abbrechen', style: 'cancel', onPress: () => setIsSavingToGallery(false) },
+            { text: t('common.cancel'), style: 'cancel', onPress: () => setIsSavingToGallery(false) },
             { 
               text: 'Teilen', 
               onPress: async () => {
@@ -597,10 +597,10 @@ export default function ProjectDetailScreen() {
       setSelectedPhotos([]);
 
       if (savedCount > 0) {
-        Alert.alert('Erfolg', `${savedCount} Foto(s) wurden in der Galerie gespeichert.`);
+        Alert.alert(t('common.success'), t('photos.savedToGallery', { count: savedCount }));
       } else {
         const errorDetail = errors.length > 0 ? `\n\nDetails: ${errors[0]}` : '';
-        Alert.alert('Fehler', `Keine Fotos konnten gespeichert werden.${errorDetail}`);
+        Alert.alert(t('common.error'), t('photos.saveToGalleryError'));
       }
     } catch (error: any) {
       console.error('Error saving photos to gallery:', error?.message || error);
@@ -628,7 +628,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Skizze wurde gelöscht');
       } else {
-        Alert.alert('Erfolg', 'Skizze wurde gelöscht');
+        Alert.alert(t('common.success'), t('sketches.title'));
       }
     } catch (error: any) {
       console.error('Error deleting sketch:', error);
@@ -636,7 +636,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Fehler: Skizze konnte nicht gelöscht werden');
       } else {
-        Alert.alert('Fehler', 'Skizze konnte nicht gelöscht werden');
+        Alert.alert(t('common.error'), t('sketches.title'));
       }
     } finally {
       setIsDeletingSketch(false);
@@ -661,7 +661,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Checkliste wurde gelöscht');
       } else {
-        Alert.alert('Erfolg', 'Checkliste wurde gelöscht');
+        Alert.alert(t('common.success'), t('checklists.checklistDeleted'));
       }
     } catch (error: any) {
       console.error('Error deleting checklist:', error);
@@ -669,7 +669,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Fehler: Checkliste konnte nicht gelöscht werden');
       } else {
-        Alert.alert('Fehler', 'Checkliste konnte nicht gelöscht werden');
+        Alert.alert(t('common.error'), t('checklists.checklistDeleteError'));
       }
     } finally {
       setIsDeletingChecklist(false);
@@ -704,14 +704,14 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert(`"${templateName}" wurde als Vorlage gespeichert`);
       } else {
-        Alert.alert('Erfolg', `"${templateName}" wurde als Vorlage gespeichert.\n\nSie finden die Vorlage unter "Neue Checkliste" → "Aus Vorlage".`);
+        Alert.alert(t('common.success'), t('checklists.templateSaved', { name: templateName }));
       }
     } catch (error) {
       console.error('Error saving checklist as template:', error);
       if (Platform.OS === 'web') {
         alert('Fehler beim Speichern der Vorlage');
       } else {
-        Alert.alert('Fehler', 'Vorlage konnte nicht gespeichert werden');
+        Alert.alert(t('common.error'), t('checklists.templateSaveError'));
       }
     }
   };
@@ -744,7 +744,7 @@ export default function ProjectDetailScreen() {
       setChecklists(updated);
     } catch (error) {
       console.error('Error moving checklist:', error);
-      Alert.alert('Fehler', 'Checkliste konnte nicht verschoben werden');
+      Alert.alert(t('common.error'), t('checklists.moveError'));
     }
   };
 
@@ -804,7 +804,7 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Bitte geben Sie einen Projektnamen ein');
       } else {
-        Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');
+        Alert.alert(t('common.error'), t('projects.enterProjectNameError'));
       }
       return;
     }
@@ -867,7 +867,7 @@ export default function ProjectDetailScreen() {
         'Nummern bereits vergeben',
         `Folgende Nummern existieren bereits:\n${dupeList}\n\nWas möchten Sie tun?`,
         [
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           { 
             text: 'Trotzdem behalten', 
             onPress: () => doSaveProject(editProjectNumber, editCustomerNumber, editObjektNumber)
@@ -1054,7 +1054,7 @@ export default function ProjectDetailScreen() {
                         });
                       }
                       await loadProjectData(); // Daten neu laden
-                      Alert.alert('Erfolg', `Projektadresse "${addr.name}" wurde aktualisiert`);
+                      Alert.alert(t('common.success'), t('projects.addressUpdated', { name: addr.name }));
                     }
                   }))
                 ]
@@ -1117,7 +1117,7 @@ export default function ProjectDetailScreen() {
                             });
                           }
                         }
-                        Alert.alert('Erfolg', 'Projektadresse beim Kunden wurde aktualisiert');
+                        Alert.alert(t('common.success'), t('projects.addressUpdatedAtCustomer'));
                         await loadProjectData(); // Daten neu laden nach Sync
                       }
                     },
@@ -1134,14 +1134,14 @@ export default function ProjectDetailScreen() {
       if (Platform.OS === 'web') {
         alert('Projekt wurde aktualisiert');
       } else {
-        Alert.alert('Erfolg', 'Projekt wurde aktualisiert');
+        Alert.alert(t('common.success'), t('projects.projectUpdated'));
       }
     } catch (error) {
       console.error('Error updating project:', error);
       if (Platform.OS === 'web') {
         alert('Fehler: Projekt konnte nicht aktualisiert werden');
       } else {
-        Alert.alert('Fehler', 'Projekt konnte nicht aktualisiert werden');
+        Alert.alert(t('common.error'), t('projects.projectUpdateError'));
       }
     } finally {
       setIsSavingProject(false);
@@ -3729,7 +3729,7 @@ export default function ProjectDetailScreen() {
               setShowPdfPreviewModal(true);
             } catch (error) {
               console.error('Error generating preview:', error);
-              Alert.alert('Fehler', 'Vorschau konnte nicht erstellt werden.');
+              Alert.alert(t('common.error'), t('pdf.previewError'));
             } finally {
               setIsGeneratingPdf(false);
             }
@@ -3743,7 +3743,7 @@ export default function ProjectDetailScreen() {
           text: 'In Dateien speichern',
           onPress: () => generateAndSavePdf(),
         },
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   };
@@ -3771,11 +3771,11 @@ export default function ProjectDetailScreen() {
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+        Alert.alert(t('common.error'), t('pdf.shareNotAvailable'));
       }
     } catch (error) {
       console.error('Error sharing PDF:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('pdf.pdfCreateError'));
       setIsGeneratingPdf(false);
     }
   };
@@ -3804,11 +3804,11 @@ export default function ProjectDetailScreen() {
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+        Alert.alert(t('common.error'), t('pdf.shareNotAvailable'));
       }
     } catch (error) {
       console.error('Error saving PDF:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('pdf.pdfSaveError'));
       setIsGeneratingPdf(false);
     }
   };
@@ -3845,7 +3845,7 @@ export default function ProjectDetailScreen() {
       }
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht erstellt werden.');
+      Alert.alert(t('common.error'), t('pdf.pdfCreateError'));
     }
   };
 
@@ -3881,7 +3881,7 @@ export default function ProjectDetailScreen() {
       }
     } catch (error) {
       console.error('Error saving PDF from preview:', error);
-      Alert.alert('Fehler', 'PDF konnte nicht gespeichert werden.');
+      Alert.alert(t('common.error'), t('pdf.pdfSaveError'));
     }
   };
 
@@ -3903,7 +3903,7 @@ export default function ProjectDetailScreen() {
             dialogTitle: 'Aufmaß-Vorschau teilen',
           });
         } else {
-          Alert.alert('Fehler', 'Teilen ist auf diesem Gerät nicht verfügbar.');
+          Alert.alert(t('common.error'), t('pdf.shareNotAvailable'));
         }
       } else {
         Alert.alert('Fehler', 'Screenshot konnte nicht erstellt werden.');
@@ -3923,7 +3923,7 @@ export default function ProjectDetailScreen() {
         'PDF erstellen und teilen',
         'Möchten Sie das Aufmaß-PDF erstellen und per E-Mail teilen?',
         [
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: 'PDF erstellen',
             onPress: async () => {
@@ -3967,7 +3967,7 @@ export default function ProjectDetailScreen() {
               await exportToPDF();
             },
           },
-          { text: 'Abbrechen', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     } catch (error) {
@@ -4531,7 +4531,7 @@ export default function ProjectDetailScreen() {
                       'Dachfläche löschen',
                       `Möchten Sie "${roof.roof_type}" wirklich löschen?`,
                       [
-                        { text: 'Abbrechen', style: 'cancel' },
+                        { text: t('common.cancel'), style: 'cancel' },
                         {
                           text: 'Löschen',
                           style: 'destructive',
@@ -4541,7 +4541,7 @@ export default function ProjectDetailScreen() {
                               setRoofs(roofs.filter(r => r.id !== roof.id));
                             } catch (error) {
                               console.error('Error deleting roof:', error);
-                              Alert.alert('Fehler', 'Dachfläche konnte nicht gelöscht werden');
+                              Alert.alert(t('common.error'), t('roof.deleteError'));
                             }
                           }
                         }
@@ -5752,14 +5752,14 @@ export default function ProjectDetailScreen() {
                     if (Platform.OS === 'web') {
                       alert('Bemerkungen wurden gespeichert');
                     } else {
-                      Alert.alert('Erfolg', 'Bemerkungen wurden gespeichert');
+                      Alert.alert(t('common.success'), t('roof.notesSaved'));
                     }
                   } catch (error) {
                     console.error('Error saving remarks:', error);
                     if (Platform.OS === 'web') {
                       alert('Fehler beim Speichern');
                     } else {
-                      Alert.alert('Fehler', 'Bemerkungen konnten nicht gespeichert werden');
+                      Alert.alert(t('common.error'), t('roof.notesSaveError'));
                     }
                   } finally {
                     setIsSavingRemarks(false);
@@ -5827,7 +5827,7 @@ export default function ProjectDetailScreen() {
                           'Dokument löschen',
                           `Möchten Sie "${doc.name}" wirklich löschen?`,
                           [
-                            { text: 'Abbrechen', style: 'cancel' },
+                            { text: t('common.cancel'), style: 'cancel' },
                             {
                               text: 'Löschen',
                               style: 'destructive',
@@ -5835,10 +5835,10 @@ export default function ProjectDetailScreen() {
                                 try {
                                   await DocumentService.delete(doc.id);
                                   await loadProjectData();
-                                  Alert.alert('Erfolg', 'Dokument wurde gelöscht');
+                                  Alert.alert(t('common.success'), t('documents.documentDeleted'));
                                 } catch (error) {
                                   console.error('Error deleting document:', error);
-                                  Alert.alert('Fehler', 'Dokument konnte nicht gelöscht werden');
+                                  Alert.alert(t('common.error'), t('documents.documentDeleteError'));
                                 }
                               },
                             },
@@ -5912,7 +5912,7 @@ export default function ProjectDetailScreen() {
                           'Fotomessung löschen',
                           `Möchten Sie "${photo.name || 'Unbenannt'}" wirklich löschen?`,
                           [
-                            { text: 'Abbrechen', style: 'cancel' },
+                            { text: t('common.cancel'), style: 'cancel' },
                             {
                               text: 'Löschen',
                               style: 'destructive',
@@ -5925,11 +5925,11 @@ export default function ProjectDetailScreen() {
                                     const filtered = allPhotos.filter((p: any) => p.id !== photo.id);
                                     await AsyncStorage.setItem('aufmassprofi_imagemeter_photos', JSON.stringify(filtered));
                                     await loadProjectData();
-                                    Alert.alert('Erfolg', 'Fotomessung wurde gelöscht');
+                                    Alert.alert(t('common.success'), t('roof.photoMeasurementDeleted'));
                                   }
                                 } catch (error) {
                                   console.error('Error deleting imagemeter photo:', error);
-                                  Alert.alert('Fehler', 'Löschen fehlgeschlagen');
+                                  Alert.alert(t('common.error'), t('roof.deleteFailed'));
                                 }
                               },
                             },
@@ -5997,7 +5997,7 @@ export default function ProjectDetailScreen() {
                           'Berechnung löschen',
                           `Möchten Sie "${calc.name}" wirklich löschen?`,
                           [
-                            { text: 'Abbrechen', style: 'cancel' },
+                            { text: t('common.cancel'), style: 'cancel' },
                             {
                               text: 'Löschen',
                               style: 'destructive',
@@ -6005,10 +6005,10 @@ export default function ProjectDetailScreen() {
                                 try {
                                   await AreaCalculationService.delete(calc.id);
                                   await loadProjectData();
-                                  Alert.alert('Erfolg', 'Berechnung wurde gelöscht');
+                                  Alert.alert(t('common.success'), t('calculator.calculationDeleted'));
                                 } catch (error) {
                                   console.error('Error deleting calculation:', error);
-                                  Alert.alert('Fehler', 'Berechnung konnte nicht gelöscht werden');
+                                  Alert.alert(t('common.error'), t('calculator.calculationDeleteError'));
                                 }
                               },
                             },
@@ -6250,7 +6250,7 @@ export default function ProjectDetailScreen() {
                                 'Datum',
                                 'Was möchten Sie tun?',
                                 [
-                                  { text: 'Abbrechen', style: 'cancel' },
+                                  { text: t('common.cancel'), style: 'cancel' },
                                   { 
                                     text: 'Datum löschen', 
                                     style: 'destructive',

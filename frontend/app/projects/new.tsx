@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 // Customer type is imported from LocalStorage service
 
@@ -82,6 +83,7 @@ function extractContactData(contact: Contacts.Contact) {
 }
 
 export default function NewProjectScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ customer_id?: string }>();
   const [projectNumber, setProjectNumber] = useState(''); // PR-26001 etc.
@@ -191,7 +193,7 @@ export default function NewProjectScreen() {
       }
     } catch (error) {
       console.error('Error loading customers:', error);
-      Alert.alert('Fehler', 'Kunden konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('customers.customersLoadError'));
     } finally {
       setLoadingCustomers(false);
     }
@@ -252,14 +254,14 @@ export default function NewProjectScreen() {
   // Open contact picker from device
   const openContactPicker = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar.');
+      Alert.alert(t('common.note'), t('customers.contactImportWebOnly'));
       return;
     }
 
     try {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        Alert.alert(t('customers.permissionRequired'), t('customers.contactsPermission'));
         return;
       }
 
@@ -297,7 +299,7 @@ export default function NewProjectScreen() {
           setDeviceContacts(sortedContacts);
         } catch (error) {
           console.error('Error loading contacts:', error);
-          Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+          Alert.alert(t('common.error'), t('customers.contactsLoadError'));
           setShowContactPicker(false);
         } finally {
           setLoadingContacts(false);
@@ -305,7 +307,7 @@ export default function NewProjectScreen() {
       });
     } catch (error) {
       console.error('Error requesting contacts permission:', error);
-      Alert.alert('Fehler', 'Kontakt-Berechtigung konnte nicht angefordert werden');
+      Alert.alert(t('common.error'), t('customers.contactsLoadError'));
     }
   };
 
@@ -344,15 +346,15 @@ export default function NewProjectScreen() {
   // Create new customer - mit Bestätigungsdialog
   const handleCreateCustomer = async () => {
     if (!newCustomerFirstName.trim() && !newCustomerLastName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
+      Alert.alert(t('common.error'), t('customers.enterNameError'));
       return;
     }
 
     // Wenn aus Kontakten importiert wurde, frage nach Aktualisierung
     if (Platform.OS !== 'web' && importedContactId) {
       Alert.alert(
-        'Kontakt aktualisieren?',
-        'Möchten Sie die Änderungen auch in Ihren iPad-Kontakten aktualisieren?',
+        t('customers.updateContactQuestion'),
+        t('customers.updateContactMessage'),
         [
           {
             text: 'Nein',
@@ -368,8 +370,8 @@ export default function NewProjectScreen() {
     } else if (Platform.OS !== 'web') {
       // Neuer Kunde - frage ob in Kontakte speichern
       Alert.alert(
-        'In Kontakte speichern?',
-        'Soll dieser Kunde auch in Ihren iPad-Kontakten gespeichert werden?',
+        t('customers.saveToContactsQuestion'),
+        t('customers.saveToContactsMessage'),
         [
           {
             text: 'Nein',
@@ -513,15 +515,15 @@ export default function NewProjectScreen() {
       // Alert mit requestAnimationFrame verzögern um UI-Thread nicht zu blockieren
       requestAnimationFrame(() => {
         const message = saveOrUpdateContact 
-          ? (wasImportedContact ? 'Kunde erstellt und Kontakt aktualisiert' : 'Kunde erstellt und in Kontakten gespeichert')
-          : 'Kunde wurde erstellt';
-        Alert.alert('Erfolg', message, [{ text: 'OK' }]);
+          ? (wasImportedContact ? t('customers.createdAndContactUpdatedShort') : t('customers.createdAndContactSavedShort'))
+          : t('customers.createdShort');
+        Alert.alert(t('common.success'), message, [{ text: t('common.ok') }]);
       });
       
     } catch (error) {
       console.error('Error creating customer:', error);
       setCreatingCustomer(false);
-      Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), t('customers.customerCreateError'));
     }
   };
 
@@ -541,12 +543,12 @@ export default function NewProjectScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Projektnamen ein');
+      Alert.alert(t('common.error'), t('projects.enterProjectNameError'));
       return;
     }
 
     if (!customerId) {
-      Alert.alert('Fehler', 'Bitte wählen Sie einen Kunden aus');
+      Alert.alert(t('common.error'), t('projects.selectCustomerError'));
       return;
     }
 
@@ -574,8 +576,8 @@ export default function NewProjectScreen() {
       } else {
         // Frage ob die Adresse beim Kunden gespeichert werden soll
         Alert.alert(
-          'Adresse speichern?',
-          'Möchten Sie diese Objektadresse auch beim Kunden für zukünftige Projekte speichern?',
+          t('projects.saveAddressQuestion'),
+          t('projects.saveAddressMessage'),
           [
             {
               text: 'Nein',
@@ -613,10 +615,10 @@ export default function NewProjectScreen() {
       if (isDuplicate) {
         setLoading(false);
         Alert.alert(
-          'Projektnummer bereits vergeben',
-          `Die Projektnummer "${projectNumber}" existiert bereits. Was möchten Sie tun?`,
+          t('projects.duplicateNumber'),
+          t('projects.duplicateNumberMessage', { number: projectNumber }),
           [
-            { text: 'Abbrechen', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
               text: 'Trotzdem verwenden', 
               onPress: () => doSaveProject(saveAddressWithName, projectNumber)
@@ -728,16 +730,16 @@ export default function NewProjectScreen() {
       setLoading(false);
       
       const successMessage = saveAddressWithName 
-        ? 'Projekt wurde erstellt und Adresse beim Kunden gespeichert'
-        : 'Projekt wurde erstellt';
+        ? t('projects.projectCreatedAndAddressSaved')
+        : t('projects.projectCreated');
         
-      Alert.alert('Erfolg', successMessage, [
-        { text: 'OK', onPress: () => router.replace(`/projects/${newProject.id}`) },
+      Alert.alert(t('common.success'), successMessage, [
+        { text: t('common.ok'), onPress: () => router.replace(`/projects/${newProject.id}`) },
       ]);
     } catch (error) {
       console.error('Error creating project:', error);
       setLoading(false);
-      Alert.alert('Fehler', 'Projekt konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      Alert.alert(t('common.error'), t('projects.projectCreateError'));
     }
   };
 
@@ -810,7 +812,7 @@ export default function NewProjectScreen() {
           fontWeight: '700',
           marginLeft: 10,
         }}>
-          {name.trim() && selectedCustomer ? 'Projekt speichern' : 'Zurück ohne Speichern'}
+          {name.trim() && selectedCustomer ? t('projects.saveProject') : t('projects.backWithoutSaving')}
         </Text>
       </TouchableOpacity>
 
@@ -820,7 +822,7 @@ export default function NewProjectScreen() {
             <Text style={styles.label}>Projektnummer (optional)</Text>
             <TextInput
               style={styles.input}
-              placeholderTextColor="#999" placeholder="Wird automatisch vergeben (z.B. PR-26001)"
+              placeholderTextColor="#999" placeholder={t('projects.autoAssignPlaceholder')}
               value={projectNumber}
               onChangeText={setProjectNumber}
             />
@@ -828,7 +830,7 @@ export default function NewProjectScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Projektname *</Text>
+            <Text style={styles.label}>{t('projects.projectName')} *</Text>
             <TextInput
               style={styles.input}
               placeholderTextColor="#999" placeholder="z.B. Dachsanierung Hauptstraße"
@@ -882,7 +884,7 @@ export default function NewProjectScreen() {
                       </>
                     ) : (
                       <Text style={styles.addressPlaceholder}>
-                        Gespeicherte Adresse auswählen...
+                        {t('projects.selectSavedAddress')}
                       </Text>
                     )}
                   </View>
@@ -909,7 +911,7 @@ export default function NewProjectScreen() {
             </Text>
             <TextInput
               style={styles.input}
-              placeholderTextColor="#999" placeholder="Bezeichnung (z.B. Haupthaus, Garage)"
+              placeholderTextColor="#999" placeholder={t('projects.designationPlaceholder')}
               value={objektAddressName}
               onChangeText={(text) => {
                 setObjektAddressName(text);
@@ -918,7 +920,7 @@ export default function NewProjectScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholderTextColor="#999" placeholder="Objektname (optional)"
+              placeholderTextColor="#999" placeholder={t('projects.objectNamePlaceholder')}
               value={objektName}
               onChangeText={(text) => {
                 setObjektName(text);
@@ -927,7 +929,7 @@ export default function NewProjectScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholderTextColor="#999" placeholder="Straße und Hausnummer"
+              placeholderTextColor="#999" placeholder={t('common.streetAndNumber')}
               value={objektStreet}
               onChangeText={(text) => {
                 setObjektStreet(text);
@@ -937,7 +939,7 @@ export default function NewProjectScreen() {
             <View style={styles.addressRow}>
               <TextInput
                 style={[styles.input, styles.plzInput]}
-                placeholderTextColor="#999" placeholder="PLZ"
+                placeholderTextColor="#999" placeholder={t('common.zip')}
                 value={objektPlz}
                 onChangeText={(text) => {
                   setObjektPlz(text);
@@ -947,7 +949,7 @@ export default function NewProjectScreen() {
               />
               <TextInput
                 style={[styles.input, styles.cityInput]}
-                placeholderTextColor="#999" placeholder="Ort"
+                placeholderTextColor="#999" placeholder={t('common.city')}
                 value={objektCity}
                 onChangeText={(text) => {
                   setObjektCity(text);
@@ -971,7 +973,7 @@ export default function NewProjectScreen() {
             <View style={styles.addressRow}>
               <TextInput
                 style={[styles.input, { flex: 1, marginRight: 8 }]}
-                placeholderTextColor="#999" placeholder="Telefon"
+                placeholderTextColor="#999" placeholder={t('common.phone')}
                 value={objektPhone}
                 onChangeText={(text) => {
                   setObjektPhone(text);
@@ -981,7 +983,7 @@ export default function NewProjectScreen() {
               />
               <TextInput
                 style={[styles.input, { flex: 1.5 }]}
-                placeholderTextColor="#999" placeholder="E-Mail"
+                placeholderTextColor="#999" placeholder={t('common.email')}
                 value={objektEmail}
                 onChangeText={(text) => {
                   setObjektEmail(text);
@@ -994,10 +996,10 @@ export default function NewProjectScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Beschreibung</Text>
+            <Text style={styles.label}>{t('projects.description')}</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholderTextColor="#999" placeholder="Projektbeschreibung..."
+              placeholderTextColor="#999" placeholder={t('projects.descriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -1011,7 +1013,7 @@ export default function NewProjectScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Wird gespeichert...' : 'Projekt erstellen'}
+              {loading ? t('common.saving') : t('projects.newProject', 'Projekt erstellen')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1049,14 +1051,14 @@ export default function NewProjectScreen() {
               }}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />
-              <Text style={styles.newCustomerTopButtonText}>Neuen Kunden anlegen</Text>
+              <Text style={styles.newCustomerTopButtonText}>{t('projects.createNewCustomer')}</Text>
             </TouchableOpacity>
 
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholderTextColor="#999" placeholder="Kunde suchen..."
+                placeholderTextColor="#999" placeholder={t('projects.searchCustomer')}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -1110,8 +1112,8 @@ export default function NewProjectScreen() {
               )}
               ListEmptyComponent={
                 <View style={styles.emptyListContainer}>
-                  <Text style={styles.emptyListText}>Keine Kunden gefunden</Text>
-                  <Text style={styles.emptyListSubtext}>Erstellen Sie einen neuen Kunden</Text>
+                  <Text style={styles.emptyListText}>{t('projects.noCustomersFound')}</Text>
+                  <Text style={styles.emptyListSubtext}>{t('projects.createNewCustomerHint')}</Text>
                 </View>
               }
               style={styles.customerList}
@@ -1199,7 +1201,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Vorname *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#999" placeholder="Vorname"
+                  placeholderTextColor="#999" placeholder={t('common.firstName')}
                   value={newCustomerFirstName}
                   onChangeText={setNewCustomerFirstName}
                 />
@@ -1209,7 +1211,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Nachname *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#999" placeholder="Nachname"
+                  placeholderTextColor="#999" placeholder={t('common.lastName')}
                   value={newCustomerLastName}
                   onChangeText={setNewCustomerLastName}
                 />
@@ -1219,7 +1221,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>E-Mail</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#999" placeholder="E-Mail-Adresse"
+                  placeholderTextColor="#999" placeholder={t('customers.emailPlaceholder')}
                   value={newCustomerEmail}
                   onChangeText={setNewCustomerEmail}
                   keyboardType="email-address"
@@ -1231,7 +1233,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Telefon</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#999" placeholder="Telefonnummer"
+                  placeholderTextColor="#999" placeholder={t('customers.phonePlaceholder')}
                   value={newCustomerPhone}
                   onChangeText={setNewCustomerPhone}
                   keyboardType="default"
@@ -1255,7 +1257,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.formLabel}>Straße</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholderTextColor="#999" placeholder="Straße und Hausnummer"
+                  placeholderTextColor="#999" placeholder={t('common.streetAndNumber')}
                   value={newCustomerStreet}
                   onChangeText={setNewCustomerStreet}
                 />
@@ -1266,7 +1268,7 @@ export default function NewProjectScreen() {
                   <Text style={styles.formLabel}>PLZ</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholderTextColor="#999" placeholder="PLZ"
+                    placeholderTextColor="#999" placeholder={t('common.zip')}
                     value={newCustomerPlz}
                     onChangeText={setNewCustomerPlz}
                     keyboardType="number-pad"
@@ -1276,7 +1278,7 @@ export default function NewProjectScreen() {
                   <Text style={styles.formLabel}>Ort</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholderTextColor="#999" placeholder="Ort"
+                    placeholderTextColor="#999" placeholder={t('common.city')}
                     value={newCustomerCity}
                     onChangeText={setNewCustomerCity}
                   />
@@ -1337,7 +1339,7 @@ export default function NewProjectScreen() {
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholderTextColor="#999" placeholder="Kontakt suchen..."
+                placeholderTextColor="#999" placeholder={t('customers.searchContact')}
                 value={contactSearchQuery}
                 onChangeText={setContactSearchQuery}
                 autoFocus
@@ -1352,7 +1354,7 @@ export default function NewProjectScreen() {
             {loadingContacts ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1976d2" />
-                <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
+                <Text style={styles.loadingText}>{t('customers.loadingContacts')}</Text>
               </View>
             ) : (
               <FlatList
@@ -1382,7 +1384,7 @@ export default function NewProjectScreen() {
                 }}
                 ListEmptyComponent={
                   <View style={styles.emptyListContainer}>
-                    <Text style={styles.emptyListText}>Keine Kontakte gefunden</Text>
+                    <Text style={styles.emptyListText}>{t('customers.noContactsFound')}</Text>
                   </View>
                 }
                 style={styles.contactList}
@@ -1470,16 +1472,16 @@ export default function NewProjectScreen() {
           <View style={styles.saveAddressModalContent}>
             <View style={styles.saveAddressModalHeader}>
               <Ionicons name="home" size={32} color="#ff9800" />
-              <Text style={styles.saveAddressModalTitle}>Adresse benennen</Text>
+              <Text style={styles.saveAddressModalTitle}>{t('projects.nameAddress')}</Text>
             </View>
             
             <Text style={styles.saveAddressModalText}>
-              Geben Sie eine Bezeichnung für die Adresse ein (z.B. "Haupthaus", "Garage"):
+              {t('projects.nameAddressText')}
             </Text>
             
             <TextInput
               style={styles.saveAddressModalInput}
-              placeholderTextColor="#999" placeholder="z.B. Haupthaus"
+              placeholderTextColor="#999" placeholder={t('projects.nameAddressPlaceholder')}
               value={newAddressName}
               onChangeText={setNewAddressName}
               autoFocus
@@ -1493,14 +1495,14 @@ export default function NewProjectScreen() {
                   saveProject(null);
                 }}
               >
-                <Text style={styles.saveAddressModalCancelText}>Überspringen</Text>
+                <Text style={styles.saveAddressModalCancelText}>{t('common.skip')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveAddressModalButton, styles.saveAddressModalSaveButton]}
                 onPress={handleSaveAddressAndProject}
               >
                 <Ionicons name="checkmark" size={20} color="#fff" />
-                <Text style={styles.saveAddressModalSaveText}>Speichern</Text>
+                <Text style={styles.saveAddressModalSaveText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

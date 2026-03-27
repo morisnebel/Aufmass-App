@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -79,6 +80,7 @@ function extractContactData(contact: Contacts.Contact) {
 }
 
 export default function NewCustomerScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const selectMode = params.selectMode === 'true';
@@ -222,7 +224,7 @@ export default function NewCustomerScreen() {
 
   const handleSave = async () => {
     if (!firstName.trim() && !lastName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
+      Alert.alert(t('common.error'), t('customers.enterNameError'));
       return;
     }
 
@@ -230,16 +232,16 @@ export default function NewCustomerScreen() {
     if (Platform.OS !== 'web' && importedContactId) {
       // Kontakt wurde importiert - biete Option zum Aktualisieren an
       Alert.alert(
-        'Kontakt synchronisieren?',
-        'Dieser Kunde wurde aus Ihren iPad-Kontakten importiert. Möchten Sie die Änderungen auch dort aktualisieren?',
+        t('customers.syncContactQuestion'),
+        t('customers.syncContactImportedMessage'),
         [
           {
-            text: 'Nur hier speichern',
+            text: t('customers.saveOnlyHere'),
             style: 'cancel',
             onPress: () => saveCustomer(false),
           },
           {
-            text: 'Kontakt aktualisieren',
+            text: t('customers.updateContact'),
             onPress: () => saveCustomer(true, true), // updateExisting = true
           },
         ]
@@ -247,16 +249,16 @@ export default function NewCustomerScreen() {
     } else if (Platform.OS !== 'web') {
       // Neuer Kontakt - frage ob in Kontakten speichern
       Alert.alert(
-        'In Kontakte speichern?',
-        'Soll dieser Kunde auch in Ihren iPad-Kontakten gespeichert werden?',
+        t('customers.saveToContactsQuestion'),
+        t('customers.saveToContactsMessage'),
         [
           {
-            text: 'Nein',
+            text: t('common.no'),
             style: 'cancel',
             onPress: () => saveCustomer(false),
           },
           {
-            text: 'Ja',
+            text: t('common.yes'),
             onPress: () => saveCustomer(true),
           },
         ]
@@ -278,16 +280,16 @@ export default function NewCustomerScreen() {
       if (isDuplicate) {
         console.log('[DEBUG] Duplikat gefunden! Zeige Dialog...');
         Alert.alert(
-          'Kundennummer bereits vergeben',
-          `Die Kundennummer "${customerNumber}" existiert bereits. Was möchten Sie tun?`,
+          t('customers.duplicateNumber'),
+          t('customers.duplicateNumberMessage', { number: customerNumber }),
           [
-            { text: 'Abbrechen', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
-              text: 'Trotzdem verwenden', 
+              text: t('common.useAnyway'), 
               onPress: () => doSaveCustomer(saveToContacts, updateExisting, customerNumber)
             },
             {
-              text: 'Automatisch vergeben',
+              text: t('common.autoAssign'),
               onPress: async () => {
                 const newNumber = await getNextAvailableCustomerNumber();
                 doSaveCustomer(saveToContacts, updateExisting, newNumber);
@@ -356,12 +358,12 @@ export default function NewCustomerScreen() {
           city: city || undefined,
         });
         if (success) {
-          Alert.alert('Erfolg', 'Kunde wurde erstellt und iPad-Kontakt wurde aktualisiert', [
-            { text: 'OK', onPress: handleNavigateBack },
+          Alert.alert(t('common.success'), t('customers.createdAndContactUpdated'), [
+            { text: t('common.ok'), onPress: handleNavigateBack },
           ]);
         } else {
-          Alert.alert('Teilweise erfolgreich', 'Kunde wurde erstellt, aber der iPad-Kontakt konnte nicht aktualisiert werden', [
-            { text: 'OK', onPress: handleNavigateBack },
+          Alert.alert(t('common.partialSuccess'), t('customers.createdContactNotUpdated'), [
+            { text: t('common.ok'), onPress: handleNavigateBack },
           ]);
         }
       } else if (saveToContacts) {
@@ -377,17 +379,17 @@ export default function NewCustomerScreen() {
           plz: plz || undefined,
           city: city || undefined,
         });
-        Alert.alert('Erfolg', 'Kunde wurde erstellt und in Kontakten gespeichert', [
-          { text: 'OK', onPress: handleNavigateBack },
+        Alert.alert(t('common.success'), t('customers.createdAndContactSaved'), [
+          { text: t('common.ok'), onPress: handleNavigateBack },
         ]);
       } else {
-        Alert.alert('Erfolg', 'Kunde wurde erstellt', [
-          { text: 'OK', onPress: handleNavigateBack },
+        Alert.alert(t('common.success'), t('customers.customerCreated'), [
+          { text: t('common.ok'), onPress: handleNavigateBack },
         ]);
       }
     } catch (error) {
       console.error('Error creating customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht erstellt werden');
+      Alert.alert(t('common.error'), t('customers.customerCreateError'));
     } finally {
       setLoading(false);
     }
@@ -396,14 +398,14 @@ export default function NewCustomerScreen() {
   // Open contact picker
   const openContactPicker = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Import ist nur in der mobilen App verfügbar.');
+      Alert.alert(t('common.note'), t('customers.contactImportWebOnly'));
       return;
     }
 
     try {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        Alert.alert(t('customers.permissionRequired'), t('customers.contactsPermission'));
         return;
       }
 
@@ -436,7 +438,7 @@ export default function NewCustomerScreen() {
       setContacts(sortedContacts);
     } catch (error) {
       console.error('Error loading contacts:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('customers.contactsLoadError'));
     } finally {
       setLoadingContacts(false);
     }
@@ -483,7 +485,7 @@ export default function NewCustomerScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Neuer Kunde</Text>
+        <Text style={styles.headerTitle}>{t('customers.newCustomer')}</Text>
         <View style={styles.headerSpacer} />
       </View>
       
@@ -498,30 +500,30 @@ export default function NewCustomerScreen() {
             onPress={openContactPicker}
           >
             <Ionicons name="people" size={20} color="#1976d2" />
-            <Text style={styles.importButtonText}>Aus Kontakten importieren</Text>
+            <Text style={styles.importButtonText}>{t('customers.importFromContacts')}</Text>
           </Pressable>
 
           {/* Kundennummer */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Kundennummer (optional)</Text>
+            <Text style={styles.label}>{t('customers.customerNumber')} ({t('projects.autoAssignHint').toLowerCase()})</Text>
             <TextInput
               style={styles.input}
-              placeholder="Wird automatisch vergeben (z.B. KD-26001)"
+              placeholder={t('customers.customerNumberAutoHint')}
               value={customerNumber}
               onChangeText={setCustomerNumber}
             />
-            <Text style={styles.fieldHint}>Leer lassen für automatische Vergabe</Text>
+            <Text style={styles.fieldHint}>{t('customers.autoAssignHint')}</Text>
           </View>
 
           {/* Anrede */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Anrede</Text>
+            <Text style={styles.label}>{t('projects.salutation')}</Text>
             <TouchableOpacity 
               style={styles.pickerButton}
               onPress={() => setShowSalutationPicker(true)}
             >
               <Text style={salutation ? styles.pickerText : styles.pickerPlaceholder}>
-                {salutation || 'Anrede auswählen'}
+                {salutation || t('projects.salutation')}
               </Text>
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
@@ -530,20 +532,20 @@ export default function NewCustomerScreen() {
           {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Vorname *</Text>
+              <Text style={styles.label}>{t('common.firstName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Vorname"
+                placeholder={t('common.firstName')}
                 value={firstName}
                 onChangeText={setFirstName}
                 autoComplete="given-name"
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Nachname *</Text>
+              <Text style={styles.label}>{t('common.lastName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Nachname"
+                placeholder={t('common.lastName')}
                 value={lastName}
                 onChangeText={setLastName}
                 autoComplete="family-name"
@@ -552,10 +554,10 @@ export default function NewCustomerScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Straße</Text>
+            <Text style={styles.label}>{t('settings.street')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Straße und Hausnummer"
+              placeholder={t('common.streetAndNumber')}
               value={street}
               onChangeText={setStreet}
               autoComplete="street-address"
@@ -564,7 +566,7 @@ export default function NewCustomerScreen() {
 
           <View style={styles.row}>
             <View style={styles.plzInput}>
-              <Text style={styles.label}>PLZ</Text>
+              <Text style={styles.label}>{t('settings.zipCode')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="PLZ"
@@ -575,7 +577,7 @@ export default function NewCustomerScreen() {
               />
             </View>
             <View style={styles.cityInput}>
-              <Text style={styles.label}>Ort</Text>
+              <Text style={styles.label}>{t('settings.city')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Ort"
@@ -587,20 +589,20 @@ export default function NewCustomerScreen() {
 
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Mobiltelefon</Text>
+              <Text style={styles.label}>{t('common.mobilePhone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Handynummer"
+                placeholder={t('customers.mobilePlaceholder')}
                 value={mobile}
                 onChangeText={setMobile}
                 keyboardType="phone-pad"
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Telefon</Text>
+              <Text style={styles.label}>{t('settings.phone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Festnetz"
+                placeholder={t('customers.phonePlaceholder')}
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
@@ -610,10 +612,10 @@ export default function NewCustomerScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-Mail</Text>
+            <Text style={styles.label}>{t('settings.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="E-Mail-Adresse"
+              placeholder={t('customers.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -628,7 +630,7 @@ export default function NewCustomerScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Wird gespeichert...' : 'Kunde erstellen'}
+              {loading ? t('common.isSaving') : t('customers.createCustomerBtn')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -646,7 +648,7 @@ export default function NewCustomerScreen() {
           onPress={() => setShowSalutationPicker(false)}
         >
           <View style={styles.salutationModalContent}>
-            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            <Text style={styles.salutationModalTitle}>{t('common.selectSalutation')}</Text>
             {SALUTATION_OPTIONS.map((option) => (
               <TouchableOpacity
                 key={option}
@@ -672,7 +674,7 @@ export default function NewCustomerScreen() {
                 setShowSalutationPicker(false);
               }}
             >
-              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+              <Text style={styles.salutationOptionText}>{t('common.noSalutation')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -691,7 +693,7 @@ export default function NewCustomerScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kontakt auswählen</Text>
+              <Text style={styles.modalTitle}>{t('customers.selectContact')}</Text>
               <TouchableOpacity
                 onPress={() => {
                   setShowContactPicker(false);
@@ -706,7 +708,7 @@ export default function NewCustomerScreen() {
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Kontakt suchen..."
+                placeholder={t('customers.searchContact')}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoFocus
@@ -721,7 +723,7 @@ export default function NewCustomerScreen() {
             {loadingContacts ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1976d2" />
-                <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
+                <Text style={styles.loadingText}>{t('customers.loadingContacts')}</Text>
               </View>
             ) : (
               <FlatList
@@ -729,7 +731,7 @@ export default function NewCustomerScreen() {
                 keyExtractor={(item, index) => (item as any).id || index.toString()}
                 renderItem={({ item }) => {
                   const { extractedFirstName, extractedLastName, extractedPhone, extractedMobile, extractedStreet, extractedCity } = extractContactData(item);
-                  const displayName = `${extractedFirstName} ${extractedLastName}`.trim() || item.name || 'Unbekannt';
+                  const displayName = `${extractedFirstName} ${extractedLastName}`.trim() || item.name || t('common.unknown');
                   return (
                     <TouchableOpacity
                       style={styles.contactItem}
@@ -754,7 +756,7 @@ export default function NewCustomerScreen() {
                 }}
                 ListEmptyComponent={
                   <View style={styles.emptyListContainer}>
-                    <Text style={styles.emptyListText}>Keine Kontakte gefunden</Text>
+                    <Text style={styles.emptyListText}>{t('customers.noContactsFound')}</Text>
                   </View>
                 }
                 style={styles.contactList}

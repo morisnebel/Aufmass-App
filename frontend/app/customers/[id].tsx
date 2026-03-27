@@ -18,6 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerService, ProjectService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
+import { useTranslation } from 'react-i18next';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -78,6 +79,7 @@ function extractContactData(contact: Contacts.Contact) {
 }
 
 export default function EditCustomerScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const customerId = Array.isArray(id) ? id[0] : id;
@@ -208,7 +210,7 @@ export default function EditCustomerScreen() {
       }
     } catch (error) {
       console.error('Error loading customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht geladen werden');
+      Alert.alert(t('common.error'), t('customers.customerLoadError'));
     } finally {
       setLoading(false);
     }
@@ -246,7 +248,7 @@ export default function EditCustomerScreen() {
     setShowImportOptions(false);
     
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Import aus dem Adressbuch ist nur in der mobilen App verfügbar.');
+      Alert.alert(t('common.note'), t('customers.contactImportWebOnly'));
       return;
     }
 
@@ -254,7 +256,7 @@ export default function EditCustomerScreen() {
       const { status } = await Contacts.requestPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        Alert.alert(t('customers.permissionRequired'), t('customers.contactsPermission'));
         return;
       }
 
@@ -283,7 +285,7 @@ export default function EditCustomerScreen() {
       setContacts(sortedContacts);
     } catch (error) {
       console.error('Error in openContactPicker:', error);
-      Alert.alert('Fehler', 'Kontakte konnten nicht geladen werden');
+      Alert.alert(t('common.error'), t('customers.contactsLoadError'));
       setShowContactPicker(false);
     } finally {
       setLoadingContacts(false);
@@ -321,23 +323,23 @@ export default function EditCustomerScreen() {
 
   const handleSave = async () => {
     if (!firstName.trim() && !lastName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie mindestens einen Vor- oder Nachnamen ein');
+      Alert.alert(t('common.error'), t('customers.enterNameError'));
       return;
     }
 
     // Prüfe ob der Kontakt aus iPad-Kontakten importiert wurde
     if (Platform.OS !== 'web' && importedContactId) {
       Alert.alert(
-        'Kontakt synchronisieren?',
-        'Möchten Sie die Änderungen auch in Ihren iPad-Kontakten aktualisieren?',
+        t('customers.syncContactQuestion'),
+        t('customers.syncContactEditMessage'),
         [
           {
-            text: 'Nur hier speichern',
+            text: t('customers.saveOnlyHere'),
             style: 'cancel',
             onPress: () => saveCustomer(false),
           },
           {
-            text: 'Kontakt aktualisieren',
+            text: t('customers.updateContact'),
             onPress: () => saveCustomer(true),
           },
         ]
@@ -353,16 +355,16 @@ export default function EditCustomerScreen() {
       const isDuplicate = await isCustomerNumberDuplicate(customerNumber, customerId);
       if (isDuplicate) {
         Alert.alert(
-          'Kundennummer bereits vergeben',
-          `Die Kundennummer "${customerNumber}" existiert bereits. Was möchten Sie tun?`,
+          t('customers.duplicateNumber'),
+          t('customers.duplicateNumberMessage', { number: customerNumber }),
           [
-            { text: 'Abbrechen', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             { 
-              text: 'Trotzdem verwenden', 
+              text: t('common.useAnyway'), 
               onPress: () => doSaveCustomer(syncToContacts, customerNumber)
             },
             {
-              text: 'Nächste freie Nummer',
+              text: t('customers.nextFreeNumber'),
               onPress: async () => {
                 const newNumber = await getNextAvailableCustomerNumber();
                 setCustomerNumber(newNumber);
@@ -411,26 +413,26 @@ export default function EditCustomerScreen() {
       const customerProjects = allProjects.filter(p => p.customer_id === customerId);
       
       const successMessage = syncToContacts 
-        ? 'Kunde wurde aktualisiert und iPad-Kontakt synchronisiert'
-        : 'Kunde wurde aktualisiert';
+        ? t('customers.customerUpdatedAndSynced')
+        : t('customers.customerUpdated');
       
       if (customerProjects.length > 0) {
         // Frage, ob die Projekte auch aktualisiert werden sollen
         Alert.alert(
-          'Projekte aktualisieren?',
-          `Dieser Kunde hat ${customerProjects.length} Projekt(e). Sollen die Bauherr-Daten in allen zugehörigen Projekten auch aktualisiert werden?`,
+          t('customers.updateProjectsQuestion'),
+          t('customers.updateProjectsMessage', { count: customerProjects.length }),
           [
             {
-              text: 'Nein',
+              text: t('common.no'),
               style: 'cancel',
               onPress: () => {
-                Alert.alert('Erfolg', successMessage, [
-                  { text: 'OK', onPress: () => router.back() },
+                Alert.alert(t('common.success'), successMessage, [
+                  { text: t('common.ok'), onPress: () => router.back() },
                 ]);
               },
             },
             {
-              text: 'Ja, aktualisieren',
+              text: t('customers.yesUpdate'),
               onPress: async () => {
                 try {
                   // Aktualisiere alle Projekte mit den neuen Kundendaten
@@ -449,13 +451,13 @@ export default function EditCustomerScreen() {
                       bauherr_city: city || undefined,
                     });
                   }
-                  Alert.alert('Erfolg', `${successMessage} und ${customerProjects.length} Projekt(e) wurden aktualisiert`, [
-                    { text: 'OK', onPress: () => router.back() },
+                  Alert.alert(t('common.success'), `${successMessage} ${t('customers.projectsUpdatedMessage', { count: customerProjects.length })}`, [
+                    { text: t('common.ok'), onPress: () => router.back() },
                   ]);
                 } catch (syncError) {
                   console.error('Error syncing projects:', syncError);
-                  Alert.alert('Teilweise erfolgreich', 'Kunde wurde aktualisiert, aber einige Projekte konnten nicht synchronisiert werden', [
-                    { text: 'OK', onPress: () => router.back() },
+                  Alert.alert(t('common.partialSuccess'), t('customers.projectsSyncError'), [
+                    { text: t('common.ok'), onPress: () => router.back() },
                   ]);
                 }
               },
@@ -463,13 +465,13 @@ export default function EditCustomerScreen() {
           ]
         );
       } else {
-        Alert.alert('Erfolg', successMessage, [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common.success'), successMessage, [
+          { text: t('common.ok'), onPress: () => router.back() },
         ]);
       }
     } catch (error) {
       console.error('Error updating customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht aktualisiert werden');
+      Alert.alert(t('common.error'), t('customers.customerUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -484,12 +486,12 @@ export default function EditCustomerScreen() {
     try {
       await CustomerService.delete(customerId);
       setShowDeleteModal(false);
-      Alert.alert('Erfolg', 'Kunde wurde gelöscht', [
+      Alert.alert(t('common.success'), t('customers.customerDeleted'), [
         { text: 'OK', onPress: () => router.replace('/customers/') },
       ]);
     } catch (error) {
       console.error('Error deleting customer:', error);
-      Alert.alert('Fehler', 'Kunde konnte nicht gelöscht werden');
+      Alert.alert(t('common.error'), t('customers.customerDeleteError'));
     } finally {
       setIsDeleting(false);
     }
@@ -498,7 +500,7 @@ export default function EditCustomerScreen() {
   // Sync mit Gerätekontakten
   const syncWithDeviceContacts = async () => {
     if (Platform.OS === 'web') {
-      Alert.alert('Hinweis', 'Kontakt-Synchronisation ist nur in der mobilen App verfügbar.');
+      Alert.alert(t('common.note'), t('customers.contactSyncWebOnly'));
       return;
     }
 
@@ -508,7 +510,7 @@ export default function EditCustomerScreen() {
     try {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Berechtigung erforderlich', 'Bitte erlauben Sie den Zugriff auf Ihre Kontakte.');
+        Alert.alert(t('customers.permissionRequired'), t('customers.contactsPermission'));
         return;
       }
 
@@ -560,7 +562,7 @@ export default function EditCustomerScreen() {
               console.log('Neue ID gespeichert');
             }
             
-            Alert.alert('Erfolg', `"${fullName}" wurde in Ihren Kontakten aktualisiert.`);
+            Alert.alert(t('common.success'), t('customers.contactUpdatedInDevice', { name: fullName }));
             return;
           }
         } catch (updateError) {
@@ -580,10 +582,10 @@ export default function EditCustomerScreen() {
         console.log('ID beim Kunden gespeichert');
       }
       
-      Alert.alert('Erfolg', `"${fullName}" wurde zu Ihren Kontakten hinzugefügt.`);
+      Alert.alert(t('common.success'), t('customers.contactAddedToDevice', { name: fullName }));
     } catch (error) {
       console.error('Error syncing contact:', error);
-      Alert.alert('Fehler', 'Kontakt konnte nicht synchronisiert werden.');
+      Alert.alert(t('common.error'), t('customers.contactSyncError'));
     }
   };
 
@@ -608,7 +610,7 @@ export default function EditCustomerScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kunde bearbeiten</Text>
+        <Text style={styles.headerTitle}>{t('customers.editCustomer')}</Text>
         <View style={styles.headerSpacer} />
       </View>
       
@@ -623,12 +625,12 @@ export default function EditCustomerScreen() {
             onPress={handleImportPress}
           >
             <Ionicons name="person-add" size={20} color="#1976d2" />
-            <Text style={styles.importButtonText}>Daten importieren / Schnelleingabe</Text>
+            <Text style={styles.importButtonText}>{t('customers.importData')}</Text>
           </Pressable>
 
           {/* Kundennummer */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Kundennummer</Text>
+            <Text style={styles.label}>{t('customers.customerNumberLabel')}</Text>
             <View style={styles.customerNumberContainer}>
               {customerNumber ? (
                 <View style={styles.customerNumberBadge}>
@@ -637,7 +639,7 @@ export default function EditCustomerScreen() {
               ) : null}
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="z.B. KD-26001"
+                placeholder={t('customers.customerNumberPlaceholder')}
                 value={customerNumber}
                 onChangeText={setCustomerNumber}
               />
@@ -646,13 +648,13 @@ export default function EditCustomerScreen() {
 
           {/* Anrede */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Anrede</Text>
+            <Text style={styles.label}>{t('common.salutation')}</Text>
             <TouchableOpacity 
               style={styles.pickerButton}
               onPress={() => setShowSalutationPicker(true)}
             >
               <Text style={salutation ? styles.pickerText : styles.pickerPlaceholder}>
-                {salutation || 'Anrede auswählen'}
+                {salutation || t('common.selectSalutation')}
               </Text>
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
@@ -661,19 +663,19 @@ export default function EditCustomerScreen() {
           {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Vorname *</Text>
+              <Text style={styles.label}>{t('common.firstName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Vorname"
+                placeholder={t('common.firstName')}
                 value={firstName}
                 onChangeText={setFirstName}
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Nachname *</Text>
+              <Text style={styles.label}>{t('common.lastName')} *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Nachname"
+                placeholder={t('common.lastName')}
                 value={lastName}
                 onChangeText={setLastName}
               />
@@ -681,10 +683,10 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Straße</Text>
+            <Text style={styles.label}>{t('common.street')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Straße und Hausnummer"
+              placeholder={t('common.streetAndNumber')}
               value={street}
               onChangeText={setStreet}
             />
@@ -692,20 +694,20 @@ export default function EditCustomerScreen() {
 
           <View style={styles.row}>
             <View style={styles.plzInput}>
-              <Text style={styles.label}>PLZ</Text>
+              <Text style={styles.label}>{t('common.zip')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="PLZ"
+                placeholder={t('common.zip')}
                 value={zip}
                 onChangeText={setZip}
                 keyboardType="number-pad"
               />
             </View>
             <View style={styles.cityInput}>
-              <Text style={styles.label}>Ort</Text>
+              <Text style={styles.label}>{t('common.city')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ort"
+                placeholder={t('common.city')}
                 value={city}
                 onChangeText={setCity}
               />
@@ -714,20 +716,20 @@ export default function EditCustomerScreen() {
 
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Mobiltelefon</Text>
+              <Text style={styles.label}>{t('common.mobilePhone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Handynummer"
+                placeholder={t('customers.mobilePlaceholder')}
                 value={mobile}
                 onChangeText={setMobile}
                 keyboardType="phone-pad"
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>Telefon</Text>
+              <Text style={styles.label}>{t('common.phone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Festnetz"
+                placeholder={t('customers.phonePlaceholder')}
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
@@ -736,10 +738,10 @@ export default function EditCustomerScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-Mail</Text>
+            <Text style={styles.label}>{t('common.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="kunde@beispiel.de"
+              placeholder={t('customers.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -753,7 +755,7 @@ export default function EditCustomerScreen() {
             disabled={saving}
           >
             <Text style={styles.buttonText}>
-              {saving ? 'Wird gespeichert...' : 'Änderungen speichern'}
+              {saving ? t('common.isSaving') : t('customers.saveChanges')}
             </Text>
           </TouchableOpacity>
 
@@ -762,7 +764,7 @@ export default function EditCustomerScreen() {
             onPress={syncWithDeviceContacts}
           >
             <Ionicons name="sync" size={20} color="#4caf50" />
-            <Text style={styles.syncContactButtonText}>Mit Kontakten synchronisieren</Text>
+            <Text style={styles.syncContactButtonText}>{t('customers.syncWithContacts')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -770,7 +772,7 @@ export default function EditCustomerScreen() {
             onPress={handleDeleteCustomer}
           >
             <Ionicons name="trash-outline" size={20} color="#f44336" />
-            <Text style={styles.deleteCustomerButtonText}>Kunde löschen</Text>
+            <Text style={styles.deleteCustomerButtonText}>{t('customers.deleteCustomer')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -787,7 +789,7 @@ export default function EditCustomerScreen() {
           onPress={() => setShowImportOptions(false)}
         >
           <View style={styles.optionsModalContent}>
-            <Text style={styles.optionsTitle}>Daten importieren</Text>
+            <Text style={styles.optionsTitle}>{t('customers.importDataTitle')}</Text>
             
             <TouchableOpacity
               style={styles.optionButton}
@@ -795,8 +797,8 @@ export default function EditCustomerScreen() {
             >
               <Ionicons name="create-outline" size={24} color="#1976d2" />
               <View style={styles.optionTextContainer}>
-                <Text style={styles.optionTitle}>Schnelleingabe</Text>
-                <Text style={styles.optionSubtitle}>Daten manuell bearbeiten</Text>
+                <Text style={styles.optionTitle}>{t('customers.quickEntry')}</Text>
+                <Text style={styles.optionSubtitle}>{t('customers.editManually')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -808,8 +810,8 @@ export default function EditCustomerScreen() {
               >
                 <Ionicons name="people-outline" size={24} color="#1976d2" />
                 <View style={styles.optionTextContainer}>
-                  <Text style={styles.optionTitle}>Aus Kontakten</Text>
-                  <Text style={styles.optionSubtitle}>Vom Adressbuch importieren</Text>
+                  <Text style={styles.optionTitle}>{t('customers.fromContacts')}</Text>
+                  <Text style={styles.optionSubtitle}>{t('customers.fromAddressBook')}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#ccc" />
               </TouchableOpacity>
@@ -819,7 +821,7 @@ export default function EditCustomerScreen() {
               style={styles.cancelButton}
               onPress={() => setShowImportOptions(false)}
             >
-              <Text style={styles.cancelButtonText}>Abbrechen</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -837,7 +839,7 @@ export default function EditCustomerScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.quickEntryHeader}>
-            <Text style={styles.quickEntryTitle}>Schnelleingabe</Text>
+            <Text style={styles.quickEntryTitle}>{t('customers.quickEntry')}</Text>
             <TouchableOpacity
               onPress={() => setShowQuickEntry(false)}
               style={styles.closeButton}
@@ -849,20 +851,20 @@ export default function EditCustomerScreen() {
           <ScrollView style={styles.quickEntryForm}>
             <View style={styles.row}>
               <View style={styles.halfInput}>
-                <Text style={styles.label}>Vorname</Text>
+                <Text style={styles.label}>{t('common.firstName')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Vorname"
+                  placeholder={t('common.firstName')}
                   value={quickFirstName}
                   onChangeText={setQuickFirstName}
                   autoFocus
                 />
               </View>
               <View style={styles.halfInput}>
-                <Text style={styles.label}>Nachname</Text>
+                <Text style={styles.label}>{t('common.lastName')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Nachname"
+                  placeholder={t('common.lastName')}
                   value={quickLastName}
                   onChangeText={setQuickLastName}
                 />
@@ -870,10 +872,10 @@ export default function EditCustomerScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Straße</Text>
+              <Text style={styles.label}>{t('common.street')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Straße und Hausnummer"
+                placeholder={t('common.streetAndNumber')}
                 value={quickStreet}
                 onChangeText={setQuickStreet}
               />
@@ -881,20 +883,20 @@ export default function EditCustomerScreen() {
 
             <View style={styles.row}>
               <View style={styles.plzInput}>
-                <Text style={styles.label}>PLZ</Text>
+                <Text style={styles.label}>{t('common.zip')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="PLZ"
+                  placeholder={t('common.zip')}
                   value={quickZip}
                   onChangeText={setQuickZip}
                   keyboardType="number-pad"
                 />
               </View>
               <View style={styles.cityInput}>
-                <Text style={styles.label}>Ort</Text>
+                <Text style={styles.label}>{t('common.city')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Ort"
+                  placeholder={t('common.city')}
                   value={quickCity}
                   onChangeText={setQuickCity}
                 />
@@ -902,7 +904,7 @@ export default function EditCustomerScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Telefon</Text>
+              <Text style={styles.label}>{t('common.phone')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="+49 123 456789"
@@ -913,10 +915,10 @@ export default function EditCustomerScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>E-Mail</Text>
+              <Text style={styles.label}>{t('common.email')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="kunde@beispiel.de"
+                placeholder={t('customers.emailPlaceholder')}
                 value={quickEmail}
                 onChangeText={setQuickEmail}
                 keyboardType="email-address"
@@ -929,7 +931,7 @@ export default function EditCustomerScreen() {
               onPress={applyQuickEntry}
             >
               <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.applyButtonText}>Übernehmen</Text>
+              <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -944,7 +946,7 @@ export default function EditCustomerScreen() {
       >
         <View style={styles.contactModalContainer}>
           <View style={styles.contactModalHeader}>
-            <Text style={styles.contactModalTitle}>Kontakt auswählen</Text>
+            <Text style={styles.contactModalTitle}>{t('customers.selectContact')}</Text>
             <TouchableOpacity
               onPress={() => {
                 setSearchQuery('');
@@ -958,7 +960,7 @@ export default function EditCustomerScreen() {
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Kontakt suchen..."
+            placeholder={t('customers.searchContact')}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -966,13 +968,13 @@ export default function EditCustomerScreen() {
           {loadingContacts ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#1976d2" />
-              <Text style={styles.loadingText}>Kontakte werden geladen...</Text>
+              <Text style={styles.loadingText}>{t('customers.loadingContacts')}</Text>
             </View>
           ) : filteredContacts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={48} color="#ccc" />
               <Text style={styles.emptyText}>
-                {searchQuery ? 'Keine Kontakte gefunden' : 'Keine Kontakte verfügbar'}
+                {searchQuery ? t('customers.noContactsFound') : t('customers.noContactsAvailable')}
               </Text>
             </View>
           ) : (
@@ -990,7 +992,7 @@ export default function EditCustomerScreen() {
                       <Ionicons name="person" size={24} color="#fff" />
                     </View>
                     <View style={styles.contactInfo}>
-                      <Text style={styles.contactName}>{item.name || 'Unbekannt'}</Text>
+                      <Text style={styles.contactName}>{item.name || t('common.unknown')}</Text>
                       {extractedPhone ? (
                         <Text style={styles.contactDetail}>{extractedPhone}</Text>
                       ) : null}
@@ -1018,9 +1020,9 @@ export default function EditCustomerScreen() {
         <View style={styles.deleteModalOverlay}>
           <View style={styles.deleteModalContent}>
             <Ionicons name="warning" size={48} color="#f44336" style={{ marginBottom: 16 }} />
-            <Text style={styles.deleteModalTitle}>Kunde löschen?</Text>
+            <Text style={styles.deleteModalTitle}>{t('customers.deleteCustomerQuestion')}</Text>
             <Text style={styles.deleteModalText}>
-              Möchten Sie diesen Kunden wirklich löschen?
+              {t('customers.deleteCustomerConfirmText')}
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -1028,7 +1030,7 @@ export default function EditCustomerScreen() {
                 onPress={() => setShowDeleteModal(false)}
                 disabled={isDeleting}
               >
-                <Text style={styles.deleteModalCancelText}>Abbrechen</Text>
+                <Text style={styles.deleteModalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.deleteModalButton, styles.deleteModalConfirmButton]}
@@ -1036,7 +1038,7 @@ export default function EditCustomerScreen() {
                 disabled={isDeleting}
               >
                 <Text style={styles.deleteModalConfirmText}>
-                  {isDeleting ? 'Wird gelöscht...' : 'Löschen'}
+                  {isDeleting ? t('common.deleting') : t('common.delete')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1056,7 +1058,7 @@ export default function EditCustomerScreen() {
           onPress={() => setShowSalutationPicker(false)}
         >
           <View style={styles.salutationModalContent}>
-            <Text style={styles.salutationModalTitle}>Anrede auswählen</Text>
+            <Text style={styles.salutationModalTitle}>{t('common.selectSalutation')}</Text>
             {SALUTATION_OPTIONS.map((option) => (
               <TouchableOpacity
                 key={option}
@@ -1082,7 +1084,7 @@ export default function EditCustomerScreen() {
                 setShowSalutationPicker(false);
               }}
             >
-              <Text style={styles.salutationOptionText}>Keine Anrede</Text>
+              <Text style={styles.salutationOptionText}>{t('common.noSalutation')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

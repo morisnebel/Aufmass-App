@@ -1131,9 +1131,13 @@ export default function DrawSketchScreen() {
     const kH = Math.round(36 * scale);
     const fS = Math.round(14 * scale);
     // iPhone: größere Panels damit Tasten tippbar sind und der Titel passt
-    const panelWidth = isPhoneDevice 
+    // Im Buchstaben-Modus auf iPhone: fast volle Breite damit alle QWERTZ-Tasten passen (10 pro Reihe)
+    const numericPanelWidth = isPhoneDevice 
       ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
       : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22));
+    const panelWidth = (isPhoneDevice && modalNumpadMode === 'letters') 
+      ? Math.round(screenWidth * 0.92)
+      : numericPanelWidth;
     
     return (
       <Animated.View 
@@ -7343,15 +7347,21 @@ export default function DrawSketchScreen() {
       )}
 
       {/* Schwebendes Maß-Eingabe Panel */}
-      {showLineMeasurementNumpad && (
+      {showLineMeasurementNumpad && (() => {
+        // Dynamische Breite: Im Buchstaben-Modus auf iPhone breiter für QWERTZ-Layout
+        const measureNumericWidth = isPhoneDevice
+          ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
+          : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22));
+        const measurePanelWidth = (isPhoneDevice && measureKeyboardMode === 'letters')
+          ? Math.round(screenWidth * 0.92)
+          : measureNumericWidth;
+        return (
         <Animated.View 
           style={[
             styles.floatingMeasurePanel,
             { 
               transform: measurePanelPan.getTranslateTransform(),
-              width: isPhoneDevice
-                ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
-                : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22)),
+              width: measurePanelWidth,
             }
           ]}
         >
@@ -7700,7 +7710,8 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
         </Animated.View>
-      )}
+        );
+      })()}
 
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">

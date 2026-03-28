@@ -373,9 +373,13 @@ export default function DrawSketchScreen() {
 
   // === Android Pinch-to-Zoom ===
   // iOS nutzt native ScrollView-Zoom. Android braucht eigene Gesten-Logik.
+  // Hybrid-Ansatz: Animated.View für flüssige Animation WÄHREND der Geste,
+  // SVG viewBox für präzise Darstellung und korrekte Koordinaten NACH der Geste.
   const androidZoomScale = useRef(new Animated.Value(1)).current;
   const androidTranslateX = useRef(new Animated.Value(0)).current;
   const androidTranslateY = useRef(new Animated.Value(0)).current;
+  // viewBox-Zustand: Definiert den sichtbaren Bereich des SVG-Canvas
+  const [androidViewBox, setAndroidViewBox] = useState({ x: 0, y: 0, w: 0, h: 0 });
   const androidPinchRef = useRef({
     initialDistance: 0,
     initialScale: 1,
@@ -388,6 +392,19 @@ export default function DrawSketchScreen() {
     currentTranslateY: 0,
   });
 
+  // Initialisiere viewBox wenn Bildschirm-Dimensionen sich ändern
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      setAndroidViewBox(prev => {
+        // Nur initialisieren wenn noch nicht gesetzt (w === 0) oder bei erstem Render
+        if (prev.w === 0) {
+          return { x: 0, y: 0, w: screenWidth, h: canvasHeight };
+        }
+        return prev;
+      });
+    }
+  }, [screenWidth, canvasHeight]);
+
   // Android Zoom zurücksetzen
   const resetAndroidZoom = useCallback(() => {
     androidPinchRef.current.currentScale = 1;
@@ -398,8 +415,9 @@ export default function DrawSketchScreen() {
     androidZoomScale.setValue(1);
     androidTranslateX.setValue(0);
     androidTranslateY.setValue(0);
+    setAndroidViewBox({ x: 0, y: 0, w: screenWidth, h: canvasHeight });
     setScale(1);
-  }, [androidZoomScale, androidTranslateX, androidTranslateY]);
+  }, [androidZoomScale, androidTranslateX, androidTranslateY, screenWidth, canvasHeight]);
 
   // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
   const canvasWidth = screenWidth;
@@ -2969,11 +2987,16 @@ export default function DrawSketchScreen() {
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     // Die locationX/Y sind relativ zum inneren View (Canvas-Container)
-    // Bei gezoomter ScrollView: Der innere View wird NICHT skaliert, nur die ScrollView zoomt
-    // Das bedeutet: locationX ist bereits in Canvas-Koordinaten!
-    // Wir müssen nur den scrollOffset berücksichtigen (in Content/Canvas-Koordinaten)
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
+    // Bei gezoomter ScrollView (iOS): locationX ist bereits in Canvas-Koordinaten!
+    // Bei Android viewBox-Zoom: locationX ist in Screen-Koordinaten und muss konvertiert werden
+    let locationX = touch.locationX || touch.pageX;
+    let locationY = touch.locationY || touch.pageY;
+
+    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten via viewBox
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
+      locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+    }
 
     if (drawMode === 'select') {
       handleSelectTouchStart(locationX, locationY);
@@ -3238,8 +3261,14 @@ export default function DrawSketchScreen() {
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     // Gleiche Formel wie onTouchStart - locationX/Y sind bereits Canvas-Koordinaten
-    const locationX = touch.locationX || touch.pageX;
-    const locationY = touch.locationY || touch.pageY;
+    let locationX = touch.locationX || touch.pageX;
+    let locationY = touch.locationY || touch.pageY;
+
+    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten via viewBox
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
+      locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+    }
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
@@ -3275,9 +3304,35 @@ export default function DrawSketchScreen() {
   const onTouchEnd = (event: any) => {
     // === Android Zoom-Modus ===
     if (Platform.OS === 'android' && zoomMode) {
-      // Wenn Pinch endet, Skala synchronisieren
-      if (androidPinchRef.current.isPinching) {
-        setScale(androidPinchRef.current.currentScale);
+      // Wenn Pinch endet: Animated.View-Zoom in SVG viewBox überführen
+      if (androidPinchRef.current.isPinching || androidPinchRef.current.currentScale !== 1 || androidPinchRef.current.currentTranslateX !== 0 || androidPinchRef.current.currentTranslateY !== 0) {
+        const gestureScale = androidPinchRef.current.currentScale;
+        const gestureTx = androidPinchRef.current.currentTranslateX;
+        const gestureTy = androidPinchRef.current.currentTranslateY;
+        
+        // Berechne neue viewBox basierend auf aktueller viewBox + Geste
+        const prevVB = androidViewBox.w > 0 ? androidViewBox : { x: 0, y: 0, w: screenWidth, h: canvasHeight };
+        const newW = prevVB.w / gestureScale;
+        const newH = prevVB.h / gestureScale;
+        // Pan-Offset in viewBox-Koordinaten umrechnen
+        const panInVBX = (gestureTx / screenWidth) * prevVB.w;
+        const panInVBY = (gestureTy / canvasHeight) * prevVB.h;
+        const newX = prevVB.x - panInVBX / gestureScale + (prevVB.w - newW) / 2;
+        const newY = prevVB.y - panInVBY / gestureScale + (prevVB.h - newH) / 2;
+        
+        setAndroidViewBox({ x: newX, y: newY, w: newW, h: newH });
+        
+        // Gesamtzoom berechnen (Verhältnis original zu aktuellem viewBox)
+        const totalScale = screenWidth / newW;
+        setScale(totalScale);
+        
+        // Animated.View zurücksetzen (die Zoom-Info ist jetzt im viewBox)
+        androidZoomScale.setValue(1);
+        androidTranslateX.setValue(0);
+        androidTranslateY.setValue(0);
+        androidPinchRef.current.currentScale = 1;
+        androidPinchRef.current.currentTranslateX = 0;
+        androidPinchRef.current.currentTranslateY = 0;
       }
       androidPinchRef.current.isPinching = false;
       androidPinchRef.current.initialDistance = 0;
@@ -3370,9 +3425,13 @@ export default function DrawSketchScreen() {
       setDraggingLabelId(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // locationX/Y sind bereits Canvas-Koordinaten
-      const locationX = touch.locationX || touch.pageX;
-      const locationY = touch.locationY || touch.pageY;
+      let locationX = touch.locationX || touch.pageX;
+      let locationY = touch.locationY || touch.pageY;
+      // Android: Konvertiere via viewBox
+      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
+        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+      }
       
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3382,9 +3441,13 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // locationX/Y sind bereits Canvas-Koordinaten
-      const locationX = touch.locationX || touch.pageX;
-      const locationY = touch.locationY || touch.pageY;
+      let locationX = touch.locationX || touch.pageX;
+      let locationY = touch.locationY || touch.pageY;
+      // Android: Konvertiere via viewBox
+      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
+        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+      }
       
       // Speichere die Pointer-Koordinaten und öffne Modal
       setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3395,9 +3458,13 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'memo') {
       // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // locationX/Y sind bereits Canvas-Koordinaten
-      const locationX = touch.locationX || touch.pageX;
-      const locationY = touch.locationY || touch.pageY;
+      let locationX = touch.locationX || touch.pageX;
+      let locationY = touch.locationY || touch.pageY;
+      // Android: Konvertiere via viewBox
+      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
+        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+      }
       
       // Speichere die Memo-Koordinaten und öffne Modal
       setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -7068,6 +7135,10 @@ export default function DrawSketchScreen() {
           width={screenWidth}
           height={canvasHeight}
           style={styles.svg}
+          viewBox={Platform.OS === 'android' && androidViewBox.w > 0
+            ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
+            : `0 0 ${screenWidth} ${canvasHeight}`
+          }
         >
           {/* Kästchenpapier Gitter - nur wenn kein Hintergrundbild und Gitter aktiviert */}
           {showGrid && !backgroundImage && (

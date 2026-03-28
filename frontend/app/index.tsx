@@ -38,9 +38,10 @@ const STATUS_OPTIONS = [
 export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   // iPhone hat typisch < 500px Breite, iPad >= 768px
   const isPhone = screenWidth < 500;
+  const isLandscape = screenWidth > screenHeight;
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<{ [key: string]: Customer }>({});
@@ -656,11 +657,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Company Logo */}
-      <View style={styles.logoContainer}>
+      {/* Company Logo - kompakt im Landscape */}
+      <View style={[styles.logoContainer, isLandscape && isPhone && styles.logoContainerLandscape]}>
         <Image
           source={require('../assets/images/icon.png')}
-          style={styles.logo}
+          style={[styles.logo, isLandscape && isPhone && styles.logoLandscape]}
           resizeMode="contain"
         />
         <Text style={styles.versionCode}>{AppName}</Text>
@@ -925,10 +926,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  logoContainerLandscape: {
+    flexDirection: 'row',
+    padding: 8,
+    paddingHorizontal: 16,
+    gap: 10,
+    justifyContent: 'center',
+  },
   logo: {
     width: 120,
     height: 120,
     borderRadius: 20,
+  },
+  logoLandscape: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
   },
   versionCode: {
     color: '#ffffff',

@@ -2463,6 +2463,33 @@ export default function ProjectDetailScreen() {
             .checklists-page-break {
               /* page-break-before removed for compact layout */
             }
+            /* Section-Headers nicht am Seitenende allein lassen */
+            h2, h3 {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              orphans: 3;
+              widows: 3;
+            }
+            /* Checklist-Items nicht umbrechen */
+            .checklist-item {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Roof-Sections nicht umbrechen */
+            .roof-detail {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Calculator-Sections nicht umbrechen */
+            .calc-detail {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Neue Seite für große Abschnitte */
+            .section-page-break {
+              page-break-before: always !important;
+              break-before: always !important;
+            }
             /* Foto-Layouts für Druck */
             .photos-section {
               margin-bottom: 15px !important;
@@ -2515,8 +2542,20 @@ export default function ProjectDetailScreen() {
             img {
               max-width: 100% !important;
               height: auto !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
+            /* Seitenumbrüche für Abschnitte */
+            .sketches-section, .photos-section, .checklists-section, .roof-section, .calculator-section {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Wenn Abschnitte zu groß sind, erlaube Umbruch aber nicht mitten im Item */
+            .sketches-section { page-break-inside: auto !important; }
+            .photos-section { page-break-inside: auto !important; }
             .sketch-item {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
               max-height: none !important;
               overflow: visible !important;
             }

@@ -32,6 +32,7 @@ import { SketchService, PhotoService } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Key für Tool-Größen-Einstellungen
 const TOOL_SIZES_KEY = 'aufmassprofi_tool_sizes';
@@ -308,7 +309,11 @@ export default function DrawSketchScreen() {
   
   // iPhone-Erkennung für responsive Layout
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const isPhone = screenWidth < 500;
+  const insets = useSafeAreaInsets();
+  // Geräte-Erkennung: Nutze die kürzere Seite damit isPhone auch im Querformat korrekt ist
+  const isPhoneDevice = Math.min(screenWidth, screenHeight) < 500;
+  const isLandscape = screenWidth > screenHeight;
+  const isPhoneLandscape = isPhoneDevice && isLandscape;
   
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
@@ -367,7 +372,9 @@ export default function DrawSketchScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
   const canvasWidth = screenWidth;
-  const canvasHeight = Math.max(100, screenHeight - (isPhone ? 100 : 120));
+  // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
+  const canvasOverhead = isPhoneLandscape ? 80 : (isPhoneDevice ? 100 : 120);
+  const canvasHeight = Math.max(100, screenHeight - canvasOverhead);
   
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
   const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -6201,13 +6208,18 @@ export default function DrawSketchScreen() {
         </View>
       )}
       
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header - dynamisches Padding via SafeArea, kompakt im Querformat */}
+      <View style={[styles.header, { 
+        paddingTop: isPhoneLandscape ? Math.max(insets.top, 4) : (Platform.OS === 'ios' ? Math.max(insets.top, 20) : 12),
+        paddingVertical: isPhoneLandscape ? 4 : 12,
+        paddingLeft: isPhoneLandscape ? Math.max(insets.left, 8) : 16,
+        paddingRight: isPhoneLandscape ? Math.max(insets.right, 8) : 16,
+      }]}>
         <TouchableOpacity onPress={handleBackPress} style={styles.headerButton} disabled={isSaving}>
-          <Ionicons name="arrow-back" size={24} color={isSaving ? "#999" : "#fff"} />
+          <Ionicons name="arrow-back" size={isPhoneLandscape ? 20 : 24} color={isSaving ? "#999" : "#fff"} />
         </TouchableOpacity>
         <TextInput
-          style={styles.titleInput}
+          style={[styles.titleInput, isPhoneLandscape && { paddingVertical: 4, fontSize: 14 }]}
           value={title}
           onChangeText={setTitle}
           placeholder={t('sketches.sketchTitle')}
@@ -6243,22 +6255,22 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Toolbar mit Labels - scrollbar für iPhone */}
-      <View style={styles.toolbarContainer}>
+      {/* Toolbar mit Labels - scrollbar für iPhone und im Querformat */}
+      <View style={[styles.toolbarContainer, isPhoneLandscape && { borderBottomWidth: 0.5 }]}>
         <ScrollView 
-          horizontal={isPhone} 
-          showsHorizontalScrollIndicator={isPhone}
-          style={[styles.toolbar, isPhone && styles.toolbarPhone]}
-          contentContainerStyle={isPhone ? styles.toolbarContentPhone : styles.toolbarContent}
+          horizontal={isPhoneDevice || isPhoneLandscape} 
+          showsHorizontalScrollIndicator={isPhoneDevice}
+          style={[styles.toolbar, (isPhoneDevice || isPhoneLandscape) && styles.toolbarPhone, isPhoneLandscape && { maxHeight: 50, paddingVertical: 2 }]}
+          contentContainerStyle={(isPhoneDevice || isPhoneLandscape) ? styles.toolbarContentPhone : styles.toolbarContent}
         >
         {/* ========== FOTO-TOOLS (VORNE) ========== */}
         
         {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhone && styles.toolButtonPhotoWidePhone]} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
-            <Ionicons name="camera" size={isPhone ? 18 : 20} color="#4caf50" />
+          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhoneDevice && styles.toolButtonPhotoWidePhone]} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
+            <Ionicons name="camera" size={isPhoneDevice ? 18 : 20} color="#4caf50" />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabelWide, isPhone && styles.toolButtonLabelWidePhone]}>{t('sketches.photo')}</Text>
+          <Text style={[styles.toolButtonLabelWide, isPhoneDevice && styles.toolButtonLabelWidePhone]}>{t('sketches.photo')}</Text>
         </View>
 
         {/* 2. Projektfotos */}
@@ -6875,13 +6887,15 @@ export default function DrawSketchScreen() {
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
         ref={scrollViewRef}
-        style={styles.canvasScrollView}
+        style={[styles.canvasScrollView, isPhoneLandscape && { paddingLeft: insets.left, paddingRight: insets.right }]}
         contentContainerStyle={{ flexGrow: 1 }}
         minimumZoomScale={zoomMode ? 0.5 : scale}
         maximumZoomScale={zoomMode ? 4 : scale}
         bouncesZoom={zoomMode}
         scrollEnabled={zoomMode}
         pinchGestureEnabled={zoomMode}
+        directionalLockEnabled={false}
+        centerContent={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onScroll={(event) => {
@@ -6900,8 +6914,8 @@ export default function DrawSketchScreen() {
         <View
           ref={canvasRef}
           style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
+          onStartShouldSetResponder={() => !zoomMode}
+          onMoveShouldSetResponder={() => !zoomMode}
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}
@@ -8903,9 +8917,9 @@ export default function DrawSketchScreen() {
         const magnifierSize = 110;
         const coordsHeight = 25;
         const totalHeight = magnifierSize + coordsHeight;
-        const offsetAbove = isPhone ? 30 : 40; // Abstand über dem Punkt
-        const offsetBelow = isPhone ? 30 : 40; // Abstand unter dem Punkt
-        const minTop = isPhone ? 10 : 10; // Minimum-Abstand zum oberen Rand
+        const offsetAbove = isPhoneDevice ? 30 : 40; // Abstand über dem Punkt
+        const offsetBelow = isPhoneDevice ? 30 : 40; // Abstand unter dem Punkt
+        const minTop = isPhoneDevice ? 10 : 10; // Minimum-Abstand zum oberen Rand
         
         // Berechne ideale Position über dem Punkt
         let magTop = magnifierPosition.y - totalHeight - offsetAbove;
@@ -9370,7 +9384,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976d2',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    // paddingTop wird dynamisch über inline-style gesetzt (SafeArea + Landscape)
   },
   headerButton: {
     padding: 8,

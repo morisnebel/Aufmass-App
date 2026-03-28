@@ -2152,10 +2152,27 @@ export default function DrawSketchScreen() {
         });
         const lightMetadata = { ...metadata, elements: lightElements };
 
-        // SPEICHERN IM HINTERGRUND - Navigation sofort ausführen
-        const saveInBackground = async () => {
+        // SPEICHERN: Leichtgewichtige Daten (Sketch-Liste inkl. pdf_size) SOFORT speichern
+        // Schwere Daten (Metadata, Bilder, Background) im Hintergrund
+        if (saveSketchId) {
+          // SOFORT: Sketch-Listeneintrag aktualisieren (pdf_size, title, notes)
+          // Das stellt sicher, dass die Projektdetails die neuesten Daten haben
           try {
-            if (saveSketchId) {
+            await SketchService.update(saveSketchId, {
+              project_id: saveProjectId,
+              title: saveTitle,
+              notes: saveNotes,
+              sketch_data: sketchData,
+              pdf_size: savePdfSize,
+            });
+            console.log('Sketch list entry updated (sync) in', Date.now() - startTime, 'ms');
+          } catch (err) {
+            console.error('Error saving sketch list entry:', err);
+          }
+          
+          // IM HINTERGRUND: Schwere Metadata und Bilder speichern
+          const saveHeavyDataInBackground = async () => {
+            try {
               const criticalOps: Promise<any>[] = [
                 AsyncStorage.setItem(`sketch_meta_${saveSketchId}`, JSON.stringify(lightMetadata)),
                 ...extractedImageOps,
@@ -2171,41 +2188,29 @@ export default function DrawSketchScreen() {
               
               await Promise.all(criticalOps);
               backgroundImageChangedRef.current = false;
-              console.log('Background-saved critical data in', Date.now() - startTime, 'ms');
-              
-              SketchService.update(saveSketchId, {
-                project_id: saveProjectId,
-                title: saveTitle,
-                notes: saveNotes,
-                sketch_data: sketchData,
-                pdf_size: savePdfSize,
-              }).catch(err => console.error('Background save update error:', err));
-            } else if (saveTitle.trim()) {
-              const fullMetadata = { ...metadata, backgroundImage: saveBgImage };
-              await SketchService.create({
-                project_id: saveProjectId,
-                title: saveTitle,
-                notes: saveNotes,
-                sketch_data: sketchData,
-                metadata: JSON.stringify(fullMetadata),
-                pdf_size: savePdfSize,
-              });
-              backgroundImageChangedRef.current = false;
-              console.log('Background-saved new sketch in', Date.now() - startTime, 'ms');
+              console.log('Background-saved heavy data in', Date.now() - startTime, 'ms');
+            } catch (error) {
+              console.error('Error background-saving heavy data:', error);
             }
+          };
+          saveHeavyDataInBackground();
+        } else if (saveTitle.trim()) {
+          // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
+          try {
+            const fullMetadata = { ...metadata, backgroundImage: saveBgImage };
+            await SketchService.create({
+              project_id: saveProjectId,
+              title: saveTitle,
+              notes: saveNotes,
+              sketch_data: sketchData,
+              metadata: JSON.stringify(fullMetadata),
+              pdf_size: savePdfSize,
+            });
+            backgroundImageChangedRef.current = false;
+            console.log('Saved new sketch in', Date.now() - startTime, 'ms');
           } catch (error) {
-            console.error('Error background-saving sketch:', error);
+            console.error('Error saving new sketch:', error);
           }
-        };
-        
-        // SPEICHERN: Für neue Skizzen warten wir auf das Speichern, damit die Vorschau sofort angezeigt wird
-        // Für bestehende Skizzen speichern wir im Hintergrund
-        if (sketchId) {
-          // Bestehende Skizze: Im Hintergrund speichern (nicht warten!)
-          saveInBackground();
-        } else {
-          // NEUE Skizze: Warten bis gespeichert, damit sie in der Vorschau erscheint
-          await saveInBackground();
         }
         
       } catch (error) {

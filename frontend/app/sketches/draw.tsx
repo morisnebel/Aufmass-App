@@ -370,6 +370,37 @@ export default function DrawSketchScreen() {
   const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // === Android Pinch-to-Zoom ===
+  // iOS nutzt native ScrollView-Zoom. Android braucht eigene Gesten-Logik.
+  const androidZoomScale = useRef(new Animated.Value(1)).current;
+  const androidTranslateX = useRef(new Animated.Value(0)).current;
+  const androidTranslateY = useRef(new Animated.Value(0)).current;
+  const androidPinchRef = useRef({
+    initialDistance: 0,
+    initialScale: 1,
+    lastPanX: 0,
+    lastPanY: 0,
+    isPinching: false,
+    numTouches: 0,
+    currentScale: 1,
+    currentTranslateX: 0,
+    currentTranslateY: 0,
+  });
+
+  // Android Zoom zurücksetzen
+  const resetAndroidZoom = useCallback(() => {
+    androidPinchRef.current.currentScale = 1;
+    androidPinchRef.current.currentTranslateX = 0;
+    androidPinchRef.current.currentTranslateY = 0;
+    androidPinchRef.current.initialDistance = 0;
+    androidPinchRef.current.isPinching = false;
+    androidZoomScale.setValue(1);
+    androidTranslateX.setValue(0);
+    androidTranslateY.setValue(0);
+    setScale(1);
+  }, [androidZoomScale, androidTranslateX, androidTranslateY]);
+
   // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
   const canvasWidth = screenWidth;
   // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
@@ -2901,7 +2932,28 @@ export default function DrawSketchScreen() {
   // Bei einem gezoomten ScrollView sind diese Koordinaten bereits in Canvas-Koordinaten!
   // Der scrollOffset wird benötigt, um die Position des sichtbaren Ausschnitts zu berücksichtigen
   const onTouchStart = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
+    // === Android Zoom-Modus ===
+    if (Platform.OS === 'android' && zoomMode) {
+      const touches = event.nativeEvent.touches;
+      if (!touches) return;
+      if (touches.length >= 2) {
+        // Pinch-Start: Abstand zwischen zwei Fingern berechnen
+        const dx = touches[0].pageX - touches[1].pageX;
+        const dy = touches[0].pageY - touches[1].pageY;
+        androidPinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
+        androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
+        androidPinchRef.current.isPinching = true;
+        androidPinchRef.current.numTouches = touches.length;
+      } else if (touches.length === 1) {
+        // Pan-Start: Startpunkt merken
+        androidPinchRef.current.lastPanX = touches[0].pageX;
+        androidPinchRef.current.lastPanY = touches[0].pageY;
+        androidPinchRef.current.isPinching = false;
+        androidPinchRef.current.numTouches = 1;
+      }
+      return;
+    }
+    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
@@ -3140,7 +3192,37 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
+    // === Android Zoom-Modus ===
+    if (Platform.OS === 'android' && zoomMode) {
+      const touches = event.nativeEvent.touches;
+      if (!touches) return;
+      if (touches.length >= 2) {
+        // Pinch-Zoom: Neuen Abstand berechnen und Skala anpassen
+        const dx = touches[0].pageX - touches[1].pageX;
+        const dy = touches[0].pageY - touches[1].pageY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (androidPinchRef.current.initialDistance > 0) {
+          const ratio = distance / androidPinchRef.current.initialDistance;
+          const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
+          androidPinchRef.current.currentScale = newScale;
+          androidZoomScale.setValue(newScale);
+        }
+        androidPinchRef.current.isPinching = true;
+        androidPinchRef.current.numTouches = touches.length;
+      } else if (touches.length === 1 && !androidPinchRef.current.isPinching && androidPinchRef.current.currentScale > 1.05) {
+        // Pan: Nur bei gezoomtem Canvas und einem Finger (nicht direkt nach Pinch)
+        const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
+        const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
+        androidPinchRef.current.currentTranslateX += panDx;
+        androidPinchRef.current.currentTranslateY += panDy;
+        androidTranslateX.setValue(androidPinchRef.current.currentTranslateX);
+        androidTranslateY.setValue(androidPinchRef.current.currentTranslateY);
+        androidPinchRef.current.lastPanX = touches[0].pageX;
+        androidPinchRef.current.lastPanY = touches[0].pageY;
+      }
+      return;
+    }
+    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
     if (zoomMode) return;
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
@@ -3180,7 +3262,18 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
-    // Im Zoom-Modus keine Zeichnung
+    // === Android Zoom-Modus ===
+    if (Platform.OS === 'android' && zoomMode) {
+      // Wenn Pinch endet, Skala synchronisieren
+      if (androidPinchRef.current.isPinching) {
+        setScale(androidPinchRef.current.currentScale);
+      }
+      androidPinchRef.current.isPinching = false;
+      androidPinchRef.current.initialDistance = 0;
+      androidPinchRef.current.numTouches = 0;
+      return;
+    }
+    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
     if (zoomMode) return;
     
     if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
@@ -6353,7 +6446,19 @@ export default function DrawSketchScreen() {
                 borderColor: zoomMode ? '#4caf50' : '#f44336',
               }
             ]}
-            onPress={() => setZoomMode(!zoomMode)}
+            onPress={() => {
+              const newZoomMode = !zoomMode;
+              setZoomMode(newZoomMode);
+              // Bei Zoom aus → Android-Zoom beibehalten aber Pan zurücksetzen
+              // Bei Zoom an → nichts weiter nötig
+              if (!newZoomMode && Platform.OS === 'android') {
+                // Pan zurücksetzen, Skala beibehalten
+                androidPinchRef.current.currentTranslateX = 0;
+                androidPinchRef.current.currentTranslateY = 0;
+                androidTranslateX.setValue(0);
+                androidTranslateY.setValue(0);
+              }
+            }}
           >
             <Ionicons 
               name="search" 
@@ -6896,16 +7001,16 @@ export default function DrawSketchScreen() {
         ref={scrollViewRef}
         style={[styles.canvasScrollView, isPhoneLandscape && { paddingLeft: insets.left, paddingRight: insets.right }]}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={zoomMode ? 0.5 : scale}
-        maximumZoomScale={zoomMode ? 4 : scale}
-        bouncesZoom={zoomMode}
-        scrollEnabled={zoomMode}
-        pinchGestureEnabled={zoomMode}
+        minimumZoomScale={Platform.OS === 'ios' ? (zoomMode ? 0.5 : scale) : 1}
+        maximumZoomScale={Platform.OS === 'ios' ? (zoomMode ? 4 : scale) : 1}
+        bouncesZoom={Platform.OS === 'ios' && zoomMode}
+        scrollEnabled={Platform.OS === 'ios' ? zoomMode : false}
+        pinchGestureEnabled={Platform.OS === 'ios' && zoomMode}
         directionalLockEnabled={false}
-        centerContent={true}
+        centerContent={Platform.OS === 'ios'}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        onScroll={(event) => {
+        onScroll={Platform.OS === 'ios' ? (event) => {
           const currentScale = event.nativeEvent.zoomScale || 1;
           if (currentScale !== scale) {
             setScale(currentScale);
@@ -6915,14 +7020,22 @@ export default function DrawSketchScreen() {
           if (contentOffset) {
             setScrollOffset({ x: contentOffset.x, y: contentOffset.y });
           }
-        }}
+        } : undefined}
         scrollEventThrottle={16}
       >
+        {/* Android: Animated.View Wrapper für Pinch-to-Zoom Transforms */}
+        <Animated.View style={Platform.OS === 'android' ? {
+          transform: [
+            { translateX: androidTranslateX },
+            { translateY: androidTranslateY },
+            { scale: androidZoomScale },
+          ],
+        } : undefined}>
         <View
           ref={canvasRef}
           style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
-          onStartShouldSetResponder={() => !zoomMode}
-          onMoveShouldSetResponder={() => !zoomMode}
+          onStartShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}
+          onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}
@@ -7164,14 +7277,20 @@ export default function DrawSketchScreen() {
             </View>
           )}
           {zoomMode && (
-            <View style={[styles.photoEditBadge, { backgroundColor: '#FF9800' }]}>
+            <View style={[styles.photoEditBadge, { backgroundColor: '#FF9800', flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
               <Ionicons name="search-outline" size={14} color="#fff" />
-              <Text style={styles.photoEditBadgeText}>Zoom-Modus {Math.round(scale * 100)}%</Text>
+              <Text style={styles.photoEditBadgeText}>Zoom {Math.round(scale * 100)}%</Text>
+              {Platform.OS === 'android' && scale > 1.05 && (
+                <TouchableOpacity onPress={resetAndroidZoom} style={{ marginLeft: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>Reset</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
 
       </View>
+      </Animated.View>
       </ScrollView>
 
       {/* Polyline Steuerung - kompakt und verschiebbar */}

@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Modal,
+  Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -131,6 +132,21 @@ export default function AnnotatePhotoScreen() {
   const [lastScale, setLastScale] = useState(1);
   const [lastPanOffset, setLastPanOffset] = useState({ x: 0, y: 0 });
   const [isZooming, setIsZooming] = useState(false);
+  
+  // === Android Pinch-to-Zoom ===
+  const androidZoomScale = useRef(new Animated.Value(1)).current;
+  const androidTranslateX = useRef(new Animated.Value(0)).current;
+  const androidTranslateY = useRef(new Animated.Value(0)).current;
+  const androidPinchRef = useRef({
+    initialDistance: 0,
+    initialScale: 1,
+    lastPanX: 0,
+    lastPanY: 0,
+    isPinching: false,
+    currentScale: 1,
+    currentTranslateX: 0,
+    currentTranslateY: 0,
+  });
   
   // Drawing mode toggle
   const [drawingEnabled, setDrawingEnabled] = useState(false);
@@ -1064,11 +1080,11 @@ export default function AnnotatePhotoScreen() {
         style={styles.canvasContainer}
         contentContainerStyle={{ flexGrow: 1 }}
         ref={canvasRef as any}
-        minimumZoomScale={0.5}
-        maximumZoomScale={4}
-        bouncesZoom={!drawingEnabled}
-        scrollEnabled={!drawingEnabled}
-        pinchGestureEnabled={!drawingEnabled}
+        minimumZoomScale={Platform.OS === 'ios' ? 0.5 : 1}
+        maximumZoomScale={Platform.OS === 'ios' ? 4 : 1}
+        bouncesZoom={Platform.OS === 'ios' && !drawingEnabled}
+        scrollEnabled={Platform.OS === 'ios' ? !drawingEnabled : false}
+        pinchGestureEnabled={Platform.OS === 'ios' && !drawingEnabled}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         onLayout={(event) => {
@@ -1076,13 +1092,37 @@ export default function AnnotatePhotoScreen() {
           setCanvasDimensions({ width, height });
         }}
       >
+        {/* Android: Animated.View Wrapper für Pinch-to-Zoom */}
+        <Animated.View style={Platform.OS === 'android' ? {
+          transform: [
+            { translateX: androidTranslateX },
+            { translateY: androidTranslateY },
+            { scale: androidZoomScale },
+          ],
+        } : undefined}>
         <View style={{ flex: 1 }}>
           <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
           <View
             style={styles.svgContainer}
-            onStartShouldSetResponder={() => drawingEnabled}
-            onMoveShouldSetResponder={() => drawingEnabled && (drawMode === 'draw' || isDraggingText)}
+            onStartShouldSetResponder={() => Platform.OS === 'android' ? true : drawingEnabled}
+            onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : (drawingEnabled && (drawMode === 'draw' || isDraggingText))}
             onResponderGrant={(event) => {
+              // Android Zoom: Multi-Touch abfangen wenn Zeichnen deaktiviert
+              if (Platform.OS === 'android' && !drawingEnabled) {
+                const touches = event.nativeEvent.touches;
+                if (touches && touches.length >= 2) {
+                  const dx = touches[0].pageX - touches[1].pageX;
+                  const dy = touches[0].pageY - touches[1].pageY;
+                  androidPinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
+                  androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
+                  androidPinchRef.current.isPinching = true;
+                } else if (touches && touches.length === 1) {
+                  androidPinchRef.current.lastPanX = touches[0].pageX;
+                  androidPinchRef.current.lastPanY = touches[0].pageY;
+                  androidPinchRef.current.isPinching = false;
+                }
+                return;
+              }
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
@@ -1114,6 +1154,33 @@ export default function AnnotatePhotoScreen() {
               }
             }}
             onResponderMove={(event) => {
+              // Android Zoom: Multi-Touch abfangen wenn Zeichnen deaktiviert
+              if (Platform.OS === 'android' && !drawingEnabled) {
+                const touches = event.nativeEvent.touches;
+                if (touches && touches.length >= 2) {
+                  const dx = touches[0].pageX - touches[1].pageX;
+                  const dy = touches[0].pageY - touches[1].pageY;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+                  if (androidPinchRef.current.initialDistance > 0) {
+                    const ratio = distance / androidPinchRef.current.initialDistance;
+                    const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
+                    androidPinchRef.current.currentScale = newScale;
+                    androidZoomScale.setValue(newScale);
+                  }
+                  androidPinchRef.current.isPinching = true;
+                } else if (touches && touches.length === 1 && !androidPinchRef.current.isPinching && androidPinchRef.current.currentScale > 1.05) {
+                  const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
+                  const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
+                  androidPinchRef.current.currentTranslateX += panDx;
+                  androidPinchRef.current.currentTranslateY += panDy;
+                  androidTranslateX.setValue(androidPinchRef.current.currentTranslateX);
+                  androidTranslateY.setValue(androidPinchRef.current.currentTranslateY);
+                  androidPinchRef.current.lastPanX = touches[0].pageX;
+                  androidPinchRef.current.lastPanY = touches[0].pageY;
+                }
+                return;
+              }
+
               const touch = event.nativeEvent;
               const locationX = touch.locationX;
               const locationY = touch.locationY;
@@ -1139,6 +1206,12 @@ export default function AnnotatePhotoScreen() {
               }
             }}
             onResponderRelease={() => {
+              // Android Zoom Ende
+              if (Platform.OS === 'android' && !drawingEnabled) {
+                androidPinchRef.current.isPinching = false;
+                androidPinchRef.current.initialDistance = 0;
+                return;
+              }
               // Text-Verschiebung beenden
               if (isDraggingText) {
                 stopDraggingText();
@@ -1214,6 +1287,7 @@ export default function AnnotatePhotoScreen() {
             </Svg>
           </View>
         </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Text Input Modal */}

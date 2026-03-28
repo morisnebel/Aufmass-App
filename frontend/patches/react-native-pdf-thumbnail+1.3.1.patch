@@ -1,0 +1,47 @@
+diff --git a/node_modules/react-native-pdf-thumbnail/android/build.gradle b/node_modules/react-native-pdf-thumbnail/android/build.gradle
+index 37d07c9..4c2f6fc 100644
+--- a/node_modules/react-native-pdf-thumbnail/android/build.gradle
++++ b/node_modules/react-native-pdf-thumbnail/android/build.gradle
+@@ -8,7 +8,7 @@ buildscript {
+   }
+ 
+   dependencies {
+-    classpath "com.android.tools.build:gradle:7.2.1"
++    // classpath "com.android.tools.build:gradle:7.2.1" // Removed - use root project AGP
+     // noinspection DifferentKotlinGradleVersion
+     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+   }
+@@ -72,8 +72,8 @@ android {
+   }
+ 
+   compileOptions {
+-    sourceCompatibility JavaVersion.VERSION_1_8
+-    targetCompatibility JavaVersion.VERSION_1_8
++    sourceCompatibility JavaVersion.VERSION_11
++    targetCompatibility JavaVersion.VERSION_11
+   }
+ }
+ 
+diff --git a/node_modules/react-native-pdf-thumbnail/android/gradle.properties b/node_modules/react-native-pdf-thumbnail/android/gradle.properties
+index 622628f..d28896b 100644
+--- a/node_modules/react-native-pdf-thumbnail/android/gradle.properties
++++ b/node_modules/react-native-pdf-thumbnail/android/gradle.properties
+@@ -1,4 +1,4 @@
+-PdfThumbnail_kotlinVersion=1.7.0
++PdfThumbnail_kotlinVersion=2.1.20
+ PdfThumbnail_minSdkVersion=21
+ PdfThumbnail_targetSdkVersion=31
+ PdfThumbnail_compileSdkVersion=31
+diff --git a/node_modules/react-native-pdf-thumbnail/android/src/main/java/org/songsterq/pdfthumbnail/PdfThumbnailModule.kt b/node_modules/react-native-pdf-thumbnail/android/src/main/java/org/songsterq/pdfthumbnail/PdfThumbnailModule.kt
+index 921b578..3e4aa6b 100644
+--- a/node_modules/react-native-pdf-thumbnail/android/src/main/java/org/songsterq/pdfthumbnail/PdfThumbnailModule.kt
++++ b/node_modules/react-native-pdf-thumbnail/android/src/main/java/org/songsterq/pdfthumbnail/PdfThumbnailModule.kt
+@@ -98,7 +98,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
+     currentPage.close()
+ 
+     // Some bitmaps have transparent background which results in a black thumbnail. Add a white background.
+-    val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
++    val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+     val canvas = Canvas(bitmapWhiteBG)
+     canvas.drawBitmap(bitmap, 0f, 0f, null)
+     bitmap.recycle()

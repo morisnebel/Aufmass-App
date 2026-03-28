@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { isPro, getAppName, getProStatus, setProStatus, loadProStatus, updateFeatures } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 import { saveLanguage, getCurrentLanguage } from '../../i18n';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CompanySettings {
   company_name: string;
@@ -84,6 +85,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isPhone = screenWidth < 500;
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
   
@@ -344,21 +346,24 @@ export default function SettingsScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#1976d2" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
-          <Text style={styles.headerTitle}>{isProUnlocked ? t('settings.titlePro') : t('settings.titleBasic')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>{t('common.save')}</Text>
-          )}
-        </TouchableOpacity>
+      {/* Custom Header mit SafeArea */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <Text style={styles.headerScreenTitle}>{t('screenTitles.settings')}</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1976d2" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
+            <Text style={styles.headerTitle}>{isProUnlocked ? t('settings.titlePro') : t('settings.titleBasic')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>{t('common.save')}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       
       <ScrollView style={styles.scrollView}>
@@ -1470,14 +1475,23 @@ const styles = StyleSheet.create({
   },
   // Header Styles
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  headerScreenTitle: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backButton: {
     padding: 8,

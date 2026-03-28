@@ -39,9 +39,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  // iPhone hat typisch < 500px Breite, iPad >= 768px
-  const isPhone = screenWidth < 500;
+  // iPhone hat typisch < 500px Breite (kürzere Seite), iPad >= 768px
+  const isPhoneDevice = Math.min(screenWidth, screenHeight) < 500;
   const isLandscape = screenWidth > screenHeight;
+  const isPhoneLandscape = isPhoneDevice && isLandscape;
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<{ [key: string]: Customer }>({});
@@ -655,13 +656,14 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <View style={styles.container}>
+  // Header-Inhalte als ListHeaderComponent für scrollbare Gesamtseite
+  const renderListHeader = () => (
+    <>
       {/* Company Logo - kompakt im Landscape */}
-      <View style={[styles.logoContainer, isLandscape && isPhone && styles.logoContainerLandscape]}>
+      <View style={[styles.logoContainer, isLandscape && isPhoneDevice && styles.logoContainerLandscape]}>
         <Image
           source={require('../assets/images/icon.png')}
-          style={[styles.logo, isLandscape && isPhone && styles.logoLandscape]}
+          style={[styles.logo, isLandscape && isPhoneDevice && styles.logoLandscape]}
           resizeMode="contain"
         />
         <Text style={styles.versionCode}>{AppName}</Text>
@@ -701,11 +703,14 @@ export default function HomeScreen() {
               size={16} 
               color={activeFilter === option.key ? (option.color || '#1976d2') : '#666'} 
             />
-            <Text style={[
-              styles.filterTabText,
-              activeFilter === option.key && styles.filterTabTextActive,
-              activeFilter === option.key && option.color && { color: option.color }
-            ]}>
+            <Text 
+              style={[
+                styles.filterTabText,
+                activeFilter === option.key && styles.filterTabTextActive,
+                activeFilter === option.key && option.color && { color: option.color }
+              ]}
+              numberOfLines={1}
+            >
               {t(option.labelKey)}
             </Text>
           </TouchableOpacity>
@@ -723,48 +728,48 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Quick action grid */}
-        <View style={[styles.quickGrid, isPhone && styles.quickGridPhone]}>
+        <View style={[styles.quickGrid, isPhoneDevice && styles.quickGridPhone]}>
           <TouchableOpacity
-            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
             onPress={() => router.push('/customers/')}
           >
-            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#e3f2fd' }]}>
-              <Ionicons name="people" size={isPhone ? 18 : 20} color="#1976d2" />
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#e3f2fd' }]}>
+              <Ionicons name="people" size={isPhoneDevice ? 18 : 20} color="#1976d2" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.customers')}</Text>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>{t('home.customers')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
             onPress={() => router.push('/checklists/templates')}
           >
-            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#f3e5f5' }]}>
-              <Ionicons name="checkbox-outline" size={isPhone ? 18 : 20} color="#7b1fa2" />
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#f3e5f5' }]}>
+              <Ionicons name="checkbox-outline" size={isPhoneDevice ? 18 : 20} color="#7b1fa2" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.checklists')}</Text>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>{t('home.checklists')}</Text>
           </TouchableOpacity>
 
           {/* Referenzen - nur in Pro Version */}
           {Features.showReferenzButton && (
           <TouchableOpacity
-            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
             onPress={() => router.push('/references/')}
           >
-            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#fff3e0' }]}>
-              <Ionicons name="images" size={isPhone ? 18 : 20} color="#f57c00" />
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#fff3e0' }]}>
+              <Ionicons name="images" size={isPhoneDevice ? 18 : 20} color="#f57c00" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.references')}</Text>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>{t('home.references')}</Text>
           </TouchableOpacity>
           )}
 
           <TouchableOpacity
-            style={[styles.quickButton, isPhone && styles.quickButtonPhone]}
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
             onPress={() => router.push('/settings')}
           >
-            <View style={[styles.quickIconContainer, isPhone && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>
-              <Ionicons name="settings-outline" size={isPhone ? 18 : 20} color="#546e7a" />
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#eceff1' }]}>
+              <Ionicons name="settings-outline" size={isPhoneDevice ? 18 : 20} color="#546e7a" />
             </View>
-            <Text style={[styles.quickButtonText, isPhone && styles.quickButtonTextPhone]}>{t('home.settings')}</Text>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>{t('home.settings')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -871,7 +876,11 @@ export default function HomeScreen() {
         </View>
         )}
       </View>
-      
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
       {/* Processing Overlay */}
       {isProcessing && (
         <View style={styles.processingOverlay}>
@@ -880,31 +889,32 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {filteredProjects.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="folder-open-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>
-            {projects.length === 0 ? t('home.noProjects') : t('home.noProjects')}
-          </Text>
-          <Text style={styles.emptySubtext}>
-            {projects.length === 0 
-              ? t('home.createFirst') 
-              : searchQuery 
-                ? t('home.searchPlaceholder')
-                : t('home.noProjects')}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredProjects}
-          renderItem={renderProject}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.projectList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
-      )}
+      {/* Gesamte Seite als eine scrollbare FlatList - Header scrollt mit */}
+      <FlatList
+        data={filteredProjects}
+        renderItem={renderProject}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.projectList}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="folder-open-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>
+              {projects.length === 0 ? t('home.noProjects') : t('home.noProjects')}
+            </Text>
+            <Text style={styles.emptySubtext}>
+              {projects.length === 0 
+                ? t('home.createFirst') 
+                : searchQuery 
+                  ? t('home.searchPlaceholder')
+                  : t('home.noProjects')}
+            </Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      />
     </View>
   );
 }

@@ -677,7 +677,12 @@
     "editTemplateHint": "Create main items and add as many sub-items as you like",
     "referenceFolder": "Reference Folder",
     "basicSubItemLimit": "In the Basic version, a maximum of {{max}} sub-items per category can be added. Upgrade to Pro for unlimited sub-items.",
-    "space": "Space"
+    "space": "Space",
+    "copyFromTemplate": "Copy from other template",
+    "noOtherTemplates": "No other templates available",
+    "selectAll": "Select all",
+    "copySelectedItems": "Copy {{count}} items",
+    "itemsCopiedFromTemplate": "{{count}} items copied from \"{{name}}\""
   },
   "calculator": {
     "title": "Area Calculations",

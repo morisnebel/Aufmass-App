@@ -677,7 +677,12 @@
     "editTemplateHint": "Erstellen Sie Hauptpunkte und fügen Sie beliebig viele Unterpunkte hinzu",
     "referenceFolder": "Referenz-Ordner",
     "basicSubItemLimit": "In der Basic Version können maximal {{max}} Unterpunkte pro Kategorie hinzugefügt werden. Upgrade auf Pro für unbegrenzte Unterpunkte.",
-    "space": "Leer"
+    "space": "Leer",
+    "copyFromTemplate": "Punkte aus anderer Vorlage",
+    "noOtherTemplates": "Keine anderen Vorlagen vorhanden",
+    "selectAll": "Alle auswählen",
+    "copySelectedItems": "{{count}} Punkte kopieren",
+    "itemsCopiedFromTemplate": "{{count}} Punkte aus \"{{name}}\" kopiert"
   },
   "calculator": {
     "title": "Flächenberechnungen",

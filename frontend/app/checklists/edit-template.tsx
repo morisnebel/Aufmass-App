@@ -73,6 +73,12 @@ export default function EditTemplateScreen() {
   const [referenceTargetPath, setReferenceTargetPath] = useState<number[]>([]);
   const [loadingReferences, setLoadingReferences] = useState(false);
 
+  // State für "Punkte aus anderer Vorlage kopieren"
+  const [showCopyFromModal, setShowCopyFromModal] = useState(false);
+  const [otherTemplates, setOtherTemplates] = useState<ChecklistTemplate[]>([]);
+  const [selectedCopyTemplate, setSelectedCopyTemplate] = useState<ChecklistTemplate | null>(null);
+  const [selectedCopyItems, setSelectedCopyItems] = useState<Set<string>>(new Set());
+
   // Header-Titel setzen
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -524,6 +530,81 @@ export default function EditTemplateScreen() {
     setItems(updateItemAtPath(items, path, { subItems: newSubItems }));
   };
 
+  // ====== Punkte aus anderer Vorlage kopieren ======
+  const openCopyFromModal = async () => {
+    try {
+      const templates = await ChecklistTemplateService.getAll();
+      const currentId = Array.isArray(templateId) ? templateId[0] : templateId;
+      // Aktuelle Vorlage aus der Liste ausschließen
+      const others = templates.filter((tpl: any) => tpl.id !== currentId);
+      setOtherTemplates(others);
+      setSelectedCopyTemplate(null);
+      setSelectedCopyItems(new Set());
+      setShowCopyFromModal(true);
+    } catch (err) {
+      console.error('Error loading templates for copy:', err);
+    }
+  };
+
+  const toggleCopyItemSelection = (itemKey: string) => {
+    setSelectedCopyItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemKey)) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllCopyItems = (template: ChecklistTemplate) => {
+    const allKeys = new Set<string>();
+    const addKeys = (templateItems: any[], prefix: string) => {
+      templateItems.forEach((item: any, idx: number) => {
+        allKeys.add(`${prefix}-${idx}`);
+      });
+    };
+    addKeys(template.items, 'item');
+    if (selectedCopyItems.size === allKeys.size) {
+      setSelectedCopyItems(new Set());
+    } else {
+      setSelectedCopyItems(allKeys);
+    }
+  };
+
+  const convertApiItemToRecursive = (apiItem: any): RecursiveTemplateItem => {
+    return {
+      text: apiItem.text || '',
+      subItems: (apiItem.subItems || []).map((sub: any) => convertApiItemToRecursive(sub)),
+      printImage: apiItem.printImage,
+      previewImages: apiItem.previewImages,
+      categoryLogo: apiItem.categoryLogo,
+      referenceFolderId: apiItem.referenceFolderId,
+      referenceFolderName: apiItem.referenceFolderName,
+    };
+  };
+
+  const applyCopyFromTemplate = () => {
+    if (!selectedCopyTemplate || selectedCopyItems.size === 0) return;
+    
+    const newItems: RecursiveTemplateItem[] = [];
+    selectedCopyTemplate.items.forEach((item: any, idx: number) => {
+      if (selectedCopyItems.has(`item-${idx}`)) {
+        newItems.push(convertApiItemToRecursive(item));
+      }
+    });
+    
+    if (newItems.length > 0) {
+      setItems(prev => [...prev, ...newItems]);
+      Alert.alert(
+        t('checklists.copied'),
+        t('checklists.itemsCopiedFromTemplate', { count: newItems.length, name: selectedCopyTemplate.name })
+      );
+    }
+    setShowCopyFromModal(false);
+  };
+
   // Rekursive Konvertierung für API
   const convertToApiFormat = (items: RecursiveTemplateItem[]): any[] => {
     return items
@@ -904,6 +985,12 @@ export default function EditTemplateScreen() {
               <Text style={styles.addItemText}>{t('checklists.addMainItem')}</Text>
             </TouchableOpacity>
             )}
+            
+            {/* Punkte aus anderer Vorlage kopieren Button */}
+            <TouchableOpacity style={styles.copyFromButton} onPress={openCopyFromModal}>
+              <Ionicons name="copy-outline" size={22} color="#7b1fa2" />
+              <Text style={styles.copyFromButtonText}>{t('checklists.copyFromTemplate')}</Text>
+            </TouchableOpacity>
             {Features.maxMainItems < 100 && items.length >= Features.maxMainItems && (
             <View style={styles.limitReachedBox}>
               <Ionicons name="information-circle" size={20} color="#f57c00" />
@@ -1080,6 +1167,124 @@ export default function EditTemplateScreen() {
                   </View>
                 )}
               </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Punkte aus anderer Vorlage kopieren Modal */}
+      <Modal
+        visible={showCopyFromModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCopyFromModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.copyFromModalContent}>
+            <View style={styles.copyFromHeader}>
+              {selectedCopyTemplate ? (
+                <TouchableOpacity onPress={() => { setSelectedCopyTemplate(null); setSelectedCopyItems(new Set()); }} style={styles.backBtn}>
+                  <Ionicons name="arrow-back" size={24} color="#1976d2" />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.backBtn} />
+              )}
+              <Text style={styles.copyFromTitle}>
+                {selectedCopyTemplate 
+                  ? selectedCopyTemplate.name 
+                  : t('checklists.copyFromTemplate')}
+              </Text>
+              <TouchableOpacity onPress={() => setShowCopyFromModal(false)}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.copyFromList}>
+              {!selectedCopyTemplate ? (
+                // Vorlagen-Auswahl
+                <>
+                  {otherTemplates.length === 0 ? (
+                    <View style={styles.emptyReferenceState}>
+                      <Ionicons name="documents-outline" size={48} color="#ccc" />
+                      <Text style={styles.emptyReferenceText}>
+                        {t('checklists.noOtherTemplates')}
+                      </Text>
+                    </View>
+                  ) : (
+                    otherTemplates.map((tpl) => (
+                      <TouchableOpacity 
+                        key={tpl.id} 
+                        style={styles.copyFromTemplateItem}
+                        onPress={() => setSelectedCopyTemplate(tpl)}
+                      >
+                        <View style={styles.copyFromTemplateInfo}>
+                          <Text style={styles.copyFromTemplateName}>{tpl.name}</Text>
+                          <Text style={styles.copyFromTemplateCount}>
+                            {t('checklists.itemCount', { count: tpl.items.length })}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={22} color="#999" />
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </>
+              ) : (
+                // Punkte-Auswahl aus der gewählten Vorlage
+                <>
+                  <TouchableOpacity 
+                    style={styles.selectAllButton}
+                    onPress={() => selectAllCopyItems(selectedCopyTemplate)}
+                  >
+                    <Ionicons 
+                      name={selectedCopyItems.size === selectedCopyTemplate.items.length ? "checkbox" : "square-outline"} 
+                      size={22} color="#1976d2" 
+                    />
+                    <Text style={styles.selectAllText}>{t('checklists.selectAll')}</Text>
+                  </TouchableOpacity>
+                  
+                  {selectedCopyTemplate.items.map((item: any, idx: number) => {
+                    const key = `item-${idx}`;
+                    const isSelected = selectedCopyItems.has(key);
+                    return (
+                      <TouchableOpacity 
+                        key={key} 
+                        style={[styles.copyFromItem, isSelected && styles.copyFromItemSelected]}
+                        onPress={() => toggleCopyItemSelection(key)}
+                      >
+                        <Ionicons 
+                          name={isSelected ? "checkbox" : "square-outline"} 
+                          size={22} 
+                          color={isSelected ? "#1976d2" : "#999"} 
+                        />
+                        <View style={styles.copyFromItemContent}>
+                          <Text style={[styles.copyFromItemText, isSelected && styles.copyFromItemTextSelected]}>
+                            {item.text}
+                          </Text>
+                          {item.subItems && item.subItems.length > 0 && (
+                            <Text style={styles.copyFromSubCount}>
+                              {t('checklists.subItemCount', { count: item.subItems.length })}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
+            </ScrollView>
+
+            {selectedCopyTemplate && selectedCopyItems.size > 0 && (
+              <View style={styles.copyFromFooter}>
+                <TouchableOpacity 
+                  style={styles.copyFromApplyButton}
+                  onPress={applyCopyFromTemplate}
+                >
+                  <Ionicons name="copy" size={20} color="#fff" />
+                  <Text style={styles.copyFromApplyText}>
+                    {t('checklists.copySelectedItems', { count: selectedCopyItems.size })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -1660,5 +1865,143 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Copy From Template Styles
+  copyFromButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#7b1fa2',
+    borderStyle: 'dashed',
+    backgroundColor: '#f3e5f5',
+  },
+  copyFromButtonText: {
+    color: '#7b1fa2',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  copyFromModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '80%',
+    width: '100%',
+    position: 'absolute' as const,
+    bottom: 0,
+  },
+  copyFromHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  copyFromTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: '#333',
+    flex: 1,
+    textAlign: 'center' as const,
+  },
+  copyFromList: {
+    maxHeight: 400,
+    paddingHorizontal: 16,
+  },
+  copyFromTemplateItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  copyFromTemplateInfo: {
+    flex: 1,
+  },
+  copyFromTemplateName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#333',
+  },
+  copyFromTemplateCount: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  selectAllButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: '#1976d2',
+    marginBottom: 4,
+  },
+  selectAllText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#1976d2',
+  },
+  copyFromItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    borderRadius: 8,
+    marginVertical: 1,
+  },
+  copyFromItemSelected: {
+    backgroundColor: '#e3f2fd',
+  },
+  copyFromItemContent: {
+    flex: 1,
+  },
+  copyFromItemText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  copyFromItemTextSelected: {
+    fontWeight: '600' as const,
+    color: '#1976d2',
+  },
+  copyFromSubCount: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  copyFromFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  copyFromApplyButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: '#7b1fa2',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  copyFromApplyText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700' as const,
   },
 });

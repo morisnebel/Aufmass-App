@@ -13,6 +13,7 @@ import {
   FlatList,
   ActivityIndicator,
   Pressable,
+  StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -780,7 +781,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    paddingTop: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },

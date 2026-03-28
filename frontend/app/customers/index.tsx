@@ -12,6 +12,7 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1105,7 +1106,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    paddingTop: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },

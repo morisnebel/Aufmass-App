@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1066,7 +1067,7 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a1628', paddingTop: 50, paddingBottom: 12, paddingHorizontal: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a1628', paddingTop: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 8, paddingBottom: 12, paddingHorizontal: 12 },
   backButton: { padding: 6 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginHorizontal: 8 },
   headerRight: { width: 36 },

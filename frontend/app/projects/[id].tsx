@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Dimensions,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8471,7 +8472,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',

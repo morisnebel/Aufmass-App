@@ -600,6 +600,17 @@ export default function DrawSketchScreen() {
       isMountedRef.current = false;
     };
   }, []);
+
+  // Android Hardware-Zurück-Button: Speichern vor dem Verlassen
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleBackPress();
+      return true; // Event konsumieren, nicht default Back-Navigation
+    });
+    return () => backHandler.remove();
+  }, []);
+
   const isResettingRef = useRef(false);
   const currentSketchIdRef = useRef<string | undefined>(sketchId);
   

@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  StatusBar,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976d2',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+    paddingTop: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 8,
   },
   backButton: {
     padding: 8,

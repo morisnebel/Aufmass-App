@@ -1130,7 +1130,10 @@ export default function DrawSketchScreen() {
     const scale = numpadScales[numpadSize];
     const kH = Math.round(36 * scale);
     const fS = Math.round(14 * scale);
-    const panelWidth = numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22);
+    // iPhone: größere Panels damit Tasten tippbar sind und der Titel passt
+    const panelWidth = isPhoneDevice 
+      ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
+      : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22));
     
     return (
       <Animated.View 
@@ -1145,15 +1148,15 @@ export default function DrawSketchScreen() {
       >
         {/* Header: Drag-Handle + Close-Button getrennt für Apple Pencil Kompatibilität */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
-          <View {...modalNumpadPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
+          <View {...modalNumpadPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: isPhoneDevice ? 6 : 12, paddingVertical: isPhoneDevice ? 4 : 8 }}>
             <View style={styles.floatingMeasureDragHandle} />
-            <Text style={styles.floatingMeasureTitle}>{t('sketches.keyboard')}</Text>
+            <Text style={[styles.floatingMeasureTitle, isPhoneDevice && { fontSize: 11 }]} numberOfLines={1}>{t('sketches.keyboard')}</Text>
           </View>
           <Pressable
             onPress={closeModalNumpad}
-            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: 22, marginRight: 6 }}
+            style={{ width: isPhoneDevice ? 32 : 44, height: isPhoneDevice ? 32 : 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0', borderRadius: isPhoneDevice ? 16 : 22, marginRight: isPhoneDevice ? 4 : 6 }}
           >
-            <Ionicons name="close" size={22} color="#666" />
+            <Ionicons name="close" size={isPhoneDevice ? 18 : 22} color="#666" />
           </Pressable>
         </View>
         
@@ -7346,15 +7349,17 @@ export default function DrawSketchScreen() {
             styles.floatingMeasurePanel,
             { 
               transform: measurePanelPan.getTranslateTransform(),
-              width: numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22),
+              width: isPhoneDevice
+                ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
+                : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22)),
             }
           ]}
         >
           {/* Header: Drag-Handle + Close-Button getrennt für Apple Pencil Kompatibilität */}
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
-            <View {...measurePanelPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 }}>
+            <View {...measurePanelPanResponder.panHandlers} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: isPhoneDevice ? 6 : 12, paddingVertical: isPhoneDevice ? 4 : 8 }}>
               <View style={styles.floatingMeasureDragHandle} />
-              <Text style={styles.floatingMeasureTitle}>{t('sketches.enterMeasurement')}</Text>
+              <Text style={[styles.floatingMeasureTitle, isPhoneDevice && { fontSize: 11 }]} numberOfLines={1}>{t('sketches.enterMeasurement')}</Text>
             </View>
             <Pressable
               onPress={() => {
@@ -7363,13 +7368,13 @@ export default function DrawSketchScreen() {
                 setSelectedLineSegment(null);
               }}
               style={{ 
-                width: 44, height: 44, 
+                width: isPhoneDevice ? 32 : 44, height: isPhoneDevice ? 32 : 44, 
                 alignItems: 'center', justifyContent: 'center',
-                backgroundColor: '#f0f0f0', borderRadius: 22,
-                marginRight: 6,
+                backgroundColor: '#f0f0f0', borderRadius: isPhoneDevice ? 16 : 22,
+                marginRight: isPhoneDevice ? 4 : 6,
               }}
             >
-              <Ionicons name="close" size={22} color="#666" />
+              <Ionicons name="close" size={isPhoneDevice ? 18 : 22} color="#666" />
             </Pressable>
           </View>
           

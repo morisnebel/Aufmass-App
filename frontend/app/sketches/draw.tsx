@@ -720,7 +720,8 @@ export default function DrawSketchScreen() {
       // Canvas-Layout frisch messen für präzise Koordinaten
       const measureAndActivate = (layout: { x: number; y: number; width: number; height: number }) => {
         setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
-        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+        // Magnifier-Position = tatsächliche Position des Endpunkts auf dem Bildschirm
+        setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
         
         // Canvas-Snapshot für präzise Lupe erstellen
         if (canvasRef.current) {
@@ -792,7 +793,7 @@ export default function DrawSketchScreen() {
       // Lupe am Mittelpunkt aktualisieren
       if (canvasLayout) {
         setMagnifierTargetPosition({ x: newCenter.x - canvasLayout.x, y: newCenter.y - canvasLayout.y });
-        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+        setMagnifierPosition({ x: newCenter.x, y: newCenter.y });
       }
     } else if (handle === 'ref') {
       const newPos = {
@@ -803,7 +804,7 @@ export default function DrawSketchScreen() {
       // Lupe aktualisieren
       if (canvasLayout) {
         setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
-        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+        setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     } else if (handle === 'angle') {
       const newPos = {
@@ -814,7 +815,7 @@ export default function DrawSketchScreen() {
       // Lupe aktualisieren
       if (canvasLayout) {
         setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
-        setMagnifierPosition({ x: pageX, y: pageY - 100 });
+        setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     }
   }, [canvasLayout]);
@@ -3701,13 +3702,13 @@ export default function DrawSketchScreen() {
               
               // Lupe aktivieren für Polygon-Eckpunkte
               setMagnifierTargetPosition({ x: pt.x, y: pt.y });
-              setMagnifierPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
               
               // Canvas-Snapshot für Lupe erstellen
               if (canvasRef.current) {
                 captureRef(canvasRef.current, {
                   format: 'png',
-                  quality: 0.8,
+                  quality: 1.0,
                   result: 'data-uri',
                 }).then((uri: string) => {
                   setMagnifierSnapshot(uri);
@@ -3752,13 +3753,13 @@ export default function DrawSketchScreen() {
             const targetX = handle.handle === 'start' ? selectedEl.data.x1 : selectedEl.data.x2;
             const targetY = handle.handle === 'start' ? selectedEl.data.y1 : selectedEl.data.y2;
             setMagnifierTargetPosition({ x: targetX, y: targetY });
-            setMagnifierPosition({ x: locationX, y: locationY });
+            setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
             
             // Canvas-Snapshot für Lupe erstellen
             if (canvasRef.current) {
               captureRef(canvasRef.current, {
                 format: 'png',
-                quality: 0.8,
+                quality: 1.0,
                 result: 'data-uri',
               }).then((uri: string) => {
                 setMagnifierSnapshot(uri);
@@ -4038,7 +4039,7 @@ export default function DrawSketchScreen() {
             const newX = currentPoint.x + dx;
             const newY = currentPoint.y + dy;
             setMagnifierTargetPosition({ x: newX, y: newY });
-            setMagnifierPosition({ x: locationX, y: locationY });
+            setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
           }
         } else if (el.type === 'path') {
           // Move path by shifting all coordinates
@@ -4133,14 +4134,14 @@ export default function DrawSketchScreen() {
             // Lupe-Position aktualisieren
             if (showMagnifier) {
               setMagnifierTargetPosition({ x: locationX, y: locationY });
-              setMagnifierPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
             }
           } else if (resizeHandle === 'end') {
             newEl.data = { ...el.data, x2: locationX, y2: locationY };
             // Lupe-Position aktualisieren
             if (showMagnifier) {
               setMagnifierTargetPosition({ x: locationX, y: locationY });
-              setMagnifierPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
             }
           }
         } else if (el.type === 'rect') {
@@ -8886,13 +8887,36 @@ export default function DrawSketchScreen() {
       </Modal>
 
       {/* Lupe (Magnifier) Overlay für präzises Positionieren von Maßlinien-Endpunkten */}
-      {showMagnifier && magnifierPosition && magnifierTargetPosition && (
+      {showMagnifier && magnifierPosition && magnifierTargetPosition && (() => {
+        // Intelligente Positionierung: Nah am Punkt, aber ohne ihn zu verdecken
+        const magnifierSize = 110;
+        const coordsHeight = 25;
+        const totalHeight = magnifierSize + coordsHeight;
+        const offsetAbove = isPhone ? 30 : 40; // Abstand über dem Punkt
+        const offsetBelow = isPhone ? 30 : 40; // Abstand unter dem Punkt
+        const minTop = isPhone ? 10 : 10; // Minimum-Abstand zum oberen Rand
+        
+        // Berechne ideale Position über dem Punkt
+        let magTop = magnifierPosition.y - totalHeight - offsetAbove;
+        let showBelow = false;
+        
+        // Wenn die Lupe oben aus dem Bildschirm ragt → nach unten verschieben
+        if (magTop < minTop) {
+          magTop = magnifierPosition.y + offsetBelow;
+          showBelow = true;
+        }
+        
+        // Horizontal: zentriert über dem Punkt, aber im Bildschirm halten
+        let magLeft = magnifierPosition.x - magnifierSize / 2;
+        magLeft = Math.max(5, Math.min(magLeft, screenWidth - magnifierSize - 5));
+        
+        return (
         <View
           style={[
             styles.magnifierOverlay,
             {
-              left: magnifierPosition.x - 60,
-              top: magnifierPosition.y - 160, // Über dem Finger positionieren
+              left: magLeft,
+              top: magTop,
             },
           ]}
           pointerEvents="none"
@@ -8964,7 +8988,8 @@ export default function DrawSketchScreen() {
           {/* Verbindungslinie zum Zielpunkt */}
           <View style={styles.magnifierLine} />
         </View>
-      )}
+        );
+      })()}
 
       {/* Winkelmesser Overlay - NEU: Bildschirmkoordinaten-basiert */}
       {showProtractor && (

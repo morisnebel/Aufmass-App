@@ -845,7 +845,13 @@ export default function AnnotatePhotoScreen() {
               onPress={() => { 
                 try {
                   setPdfSize(size.value); 
-                  setHasChanges(true); 
+                  setHasChanges(true);
+                  // pdf_size sofort speichern, damit die Änderung beim Zurückkehren verfügbar ist
+                  if (photoId) {
+                    PhotoService.update(photoId, { pdf_size: size.value }).catch(err => 
+                      console.error('Error saving pdf_size:', err)
+                    );
+                  }
                 } catch (e) {
                   console.error('Error setting PDF size:', e);
                 }

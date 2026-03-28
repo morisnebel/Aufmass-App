@@ -6222,6 +6222,12 @@ export default function DrawSketchScreen() {
             const nextIndex = (currentIndex + 1) % sizes.length;
             setPdfSize(sizes[nextIndex]);
             showAlert('PDF', labels[nextIndex]);
+            // pdf_size sofort speichern, damit die Änderung beim Zurückkehren verfügbar ist
+            if (sketchId) {
+              SketchService.update(sketchId, { pdf_size: sizes[nextIndex] }).catch(err => 
+                console.error('Error saving pdf_size:', err)
+              );
+            }
           }} 
           style={styles.pdfSizeHeaderButton}
         >

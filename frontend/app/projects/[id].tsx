@@ -372,6 +372,21 @@ export default function ProjectDetailScreen() {
     }, [id])
   );
 
+  // PDF automatisch neu generieren wenn sich Sketch/Photo-Daten ändern
+  useEffect(() => {
+    if (sketches.length > 0 || photos.length > 0) {
+      const regenerate = async () => {
+        try {
+          const html = await generatePdfHtml();
+          setPdfHtmlContent(html);
+        } catch (e) {
+          console.error('Error auto-regenerating PDF:', e);
+        }
+      };
+      regenerate();
+    }
+  }, [sketches, photos, checklists, roofs, areaCalculations, imagemeterPhotos, remarks]);
+
   const loadProjectData = async () => {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;

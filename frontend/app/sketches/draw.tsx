@@ -19,6 +19,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Pressable,
+  PixelRatio,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
@@ -715,26 +716,39 @@ export default function DrawSketchScreen() {
       const targetPt = dragHandle === 'ref' ? protractorRefEnd 
         : dragHandle === 'angle' ? protractorAngleEnd 
         : protractorCenter;
-      // Lupe mit Canvas-relativen Koordinaten
-      if (canvasLayout) {
-        setMagnifierTargetPosition({ x: targetPt.x - canvasLayout.x, y: targetPt.y - canvasLayout.y });
+      
+      // Canvas-Layout frisch messen für präzise Koordinaten
+      const measureAndActivate = (layout: { x: number; y: number; width: number; height: number }) => {
+        setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
         setMagnifierPosition({ x: pageX, y: pageY - 100 });
-      }
-      // Canvas-Snapshot für präzise Lupe erstellen
-      if (canvasRef.current) {
-        captureRef(canvasRef.current, {
-          format: 'png',
-          quality: 0.8,
-          result: 'data-uri',
-        }).then((uri: string) => {
-          setMagnifierSnapshot(uri);
+        
+        // Canvas-Snapshot für präzise Lupe erstellen
+        if (canvasRef.current) {
+          captureRef(canvasRef.current, {
+            format: 'png',
+            quality: 1.0,
+            result: 'data-uri',
+          }).then((uri: string) => {
+            setMagnifierSnapshot(uri);
+            setShowMagnifier(true);
+          }).catch((err: Error) => {
+            console.log('Protractor magnifier snapshot error:', err);
+            setShowMagnifier(true);
+          });
+        } else {
           setShowMagnifier(true);
-        }).catch((err: Error) => {
-          console.log('Protractor magnifier snapshot error:', err);
-          setShowMagnifier(true); // Fallback ohne Snapshot
+        }
+      };
+      
+      // Frisch messen für aktuelle Position
+      if (canvasRef.current && Platform.OS !== 'web' && typeof (canvasRef.current as any).measureInWindow === 'function') {
+        (canvasRef.current as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+          const freshLayout = { x, y, width: w, height: h };
+          setCanvasLayout(freshLayout);
+          measureAndActivate(freshLayout);
         });
-      } else {
-        setShowMagnifier(true);
+      } else if (canvasLayout) {
+        measureAndActivate(canvasLayout);
       }
     }
     
@@ -8784,7 +8798,7 @@ export default function DrawSketchScreen() {
                         <RNImage
                           source={{ uri: photo.image_data || photo.uri }}
                           style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
+                          resizeMode="stretch"
                         />
                       ) : (
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -8892,14 +8906,14 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
-                      width: (canvasLayout?.width || width) * 2, // 2x vergrößert (Canvas-Breite)
-                      height: (canvasLayout?.height || (height - 120)) * 2,
+                      width: (canvasLayout?.width || width) * 3, // 3x vergrößert für bessere Präzision
+                      height: (canvasLayout?.height || (height - 120)) * 3,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
-                      left: -magnifierTargetPosition.x * 2 + 55,
-                      top: -magnifierTargetPosition.y * 2 + 55,
+                      left: -magnifierTargetPosition.x * 3 + 55,
+                      top: -magnifierTargetPosition.y * 3 + 55,
                     }}
-                    resizeMode="cover"
+                    resizeMode="stretch"
                   />
                 </View>
               ) : backgroundImage ? (
@@ -8907,14 +8921,14 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: backgroundImage }}
                     style={{
-                      width: (canvasLayout?.width || width) * 2, // 2x vergrößert
-                      height: (canvasLayout?.height || (height - 120)) * 2,
+                      width: (canvasLayout?.width || width) * 3, // 3x vergrößert
+                      height: (canvasLayout?.height || (height - 120)) * 3,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
-                      left: -magnifierTargetPosition.x * 2 + 55,
-                      top: -magnifierTargetPosition.y * 2 + 55,
+                      left: -magnifierTargetPosition.x * 3 + 55,
+                      top: -magnifierTargetPosition.y * 3 + 55,
                     }}
-                    resizeMode="cover"
+                    resizeMode="stretch"
                   />
                 </View>
               ) : (

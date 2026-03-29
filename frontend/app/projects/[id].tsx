@@ -21,7 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
@@ -392,6 +392,9 @@ export default function ProjectDetailScreen() {
     try {
       const projectId = Array.isArray(id) ? id[0] : id;
       const startTime = Date.now();
+      
+      // Migration: Foto-Bilddaten in separate Schlüssel verschieben (einmalig)
+      await migratePhotoStorage();
       
       // FAST: Read ALL data in ONE native call using multiGet
       const data = await loadAllProjectDataFast(projectId);

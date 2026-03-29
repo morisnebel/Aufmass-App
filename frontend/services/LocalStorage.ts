@@ -247,6 +247,25 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
   
   const roofs = (allData.get(KEYS.ROOFS) || []).filter((r: any) => r.project_id === projectId);
   const photos = (allData.get(KEYS.PHOTOS) || []).filter((p: any) => p.project_id === projectId);
+  
+  // Bilddaten separat laden (neue Speicherstruktur: photo_img_${id})
+  if (photos.length > 0) {
+    const photoImageKeys = photos.map((p: any) => `photo_img_${p.id}`);
+    try {
+      const photoImages = await AsyncStorage.multiGet(photoImageKeys);
+      for (let i = 0; i < photos.length; i++) {
+        const [, value] = photoImages[i];
+        if (value) {
+          photos[i].image_data = value;
+          photos[i].uri = value;
+        }
+        // Fallback: Wenn kein separates Bild, aber Inline-Daten vorhanden → OK (alte Fotos)
+      }
+    } catch (e) {
+      console.error('[loadAllProjectDataFast] Error loading photo images:', e);
+    }
+  }
+  
   const sketches = (allData.get(KEYS.SKETCHES) || []).filter((s: any) => s.project_id === projectId);
   const checklists = (allData.get(KEYS.CHECKLISTS) || []).filter((c: any) => c.project_id === projectId);
   const documents = (allData.get(KEYS.DOCUMENTS) || []).filter((d: any) => d.project_id === projectId);
@@ -1004,6 +1023,45 @@ export interface Photo {
   updated_at: string;
 }
 
+// Migration: Foto-Bilddaten aus dem Array in separate Schlüssel verschieben
+// Verhindert Hermes OOM bei JSON.stringify des gesamten Foto-Arrays
+export const migratePhotoStorage = async (): Promise<void> => {
+  try {
+    const migrationKey = 'aufmassprofi_photo_migration_done';
+    const done = await AsyncStorage.getItem(migrationKey);
+    if (done === 'true') return; // Bereits migriert
+    
+    const photos = await getItems<Photo>(KEYS.PHOTOS);
+    let migrated = 0;
+    let needsSave = false;
+    
+    for (const photo of photos) {
+      const inlineData = photo.image_data || photo.uri || '';
+      if (inlineData.length > 200) {
+        // Bilddaten separat speichern
+        try {
+          await AsyncStorage.setItem(`photo_img_${photo.id}`, inlineData);
+          photo.image_data = '';
+          photo.uri = '';
+          migrated++;
+          needsSave = true;
+        } catch (e) {
+          console.error(`Migration error for photo ${photo.id}:`, e);
+        }
+      }
+    }
+    
+    if (needsSave) {
+      await setItems(KEYS.PHOTOS, photos);
+      console.log(`[migratePhotoStorage] ${migrated} photos migrated to separate storage`);
+    }
+    
+    await AsyncStorage.setItem(migrationKey, 'true');
+  } catch (e) {
+    console.error('[migratePhotoStorage] Error:', e);
+  }
+};
+
 export const PhotoService = {
   getAll: async (): Promise<Photo[]> => {
     return getItems<Photo>(KEYS.PHOTOS);
@@ -1065,6 +1123,26 @@ export const PhotoService = {
     const imageData = data.image_data || data.uri || '';
     if (imageData) {
       await storage.setItem(`photo_img_${newId}`, imageData);
+    }
+    
+    // MIGRATION: Alte Fotos mit Inline-Bilddaten ebenfalls migrieren
+    // Damit das Array klein bleibt und JSON.stringify nicht crasht
+    for (const existingPhoto of photos) {
+      const inlineData = existingPhoto.image_data || existingPhoto.uri || '';
+      if (inlineData.length > 200) {
+        // Bilddaten separat speichern (falls noch nicht geschehen)
+        try {
+          const alreadyMigrated = await storage.getItem(`photo_img_${existingPhoto.id}`);
+          if (!alreadyMigrated) {
+            await storage.setItem(`photo_img_${existingPhoto.id}`, inlineData);
+          }
+        } catch (e) {
+          console.error(`Migration error for photo ${existingPhoto.id}:`, e);
+        }
+        // Inline-Daten entfernen
+        existingPhoto.image_data = '';
+        existingPhoto.uri = '';
+      }
     }
     
     // Nur Metadaten im Array speichern (OHNE base64-Bilddaten!)

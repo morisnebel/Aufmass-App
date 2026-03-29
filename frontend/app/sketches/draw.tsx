@@ -733,9 +733,29 @@ export default function DrawSketchScreen() {
       protractorInitializedRef.current = true;
       // Panel-Position zurücksetzen
       protractorPanelPan.setValue({ x: 0, y: 0 });
+      
+      // Sicherheits-Snapshot: Falls der Button-Handler den Snapshot nicht erfasst hat,
+      // nochmals versuchen (mit kleiner Verzögerung damit Render abgeschlossen ist)
+      if (!protractorCanvasSnapshot.current && canvasRef.current) {
+        setTimeout(() => {
+          if (canvasRef.current && !protractorCanvasSnapshot.current) {
+            captureRef(canvasRef.current, {
+              format: 'png',
+              quality: 0.8,
+              result: 'data-uri',
+            }).then((uri: string) => {
+              protractorCanvasSnapshot.current = uri;
+              console.log('Protractor canvas snapshot captured (delayed)');
+            }).catch((err: Error) => {
+              console.log('Delayed canvas snapshot error:', err);
+            });
+          }
+        }, 300);
+      }
     }
     if (!showProtractor) {
       protractorInitializedRef.current = false;
+      protractorCanvasSnapshot.current = null; // Snapshot freigeben
     }
   }, [showProtractor]);
   
@@ -834,7 +854,19 @@ export default function DrawSketchScreen() {
         setCanvasLayout(layout);
         setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
         setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
-        setMagnifierSnapshot(protractorCanvasSnapshot.current);
+        // Canvas-Snapshot verwenden (vor Protractor-Overlay aufgenommen)
+        // Fallback-Kette: protractorCanvasSnapshot → backgroundImage → Bild-Element → Grid
+        const snapshot = protractorCanvasSnapshot.current;
+        console.log('Magnifier activation - snapshot:', !!snapshot, 'bgImage:', !!backgroundImage, 'elements with images:', elements.filter(el => el.type === 'image').length);
+        if (snapshot) {
+          setMagnifierSnapshot(snapshot);
+        } else if (backgroundImage) {
+          setMagnifierSnapshot(backgroundImage);
+        } else {
+          // Letzter Fallback: Bild aus Elementen suchen
+          const imgEl = elements.find(el => el.type === 'image' && el.data?.uri);
+          setMagnifierSnapshot(imgEl?.data?.uri || null);
+        }
         setShowMagnifier(true);
       };
       
@@ -1878,14 +1910,21 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // History management (Undo/Redo)
-  const addToHistory = (newElements: DrawElement[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
+  // History management (Undo/Redo) - ref-basiert um stale closures zu vermeiden
+  const historyRef = useRef(history);
+  const historyIndexRef = useRef(historyIndex);
+  useEffect(() => { historyRef.current = history; }, [history]);
+  useEffect(() => { historyIndexRef.current = historyIndex; }, [historyIndex]);
+  
+  const addToHistory = useCallback((newElements: DrawElement[]) => {
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    const newHistory = currentHistory.slice(0, currentIndex + 1);
     newHistory.push(newElements);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setElements(newElements);
-  };
+  }, []);
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
@@ -1993,7 +2032,7 @@ export default function DrawSketchScreen() {
     protractorInitializedRef.current = false;
     
     showAlert(t('sketches.angleSnap'), t('sketches.angleAdded', { angle: displayAngle }));
-  }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout]);
+  }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout, addToHistory]);
 
   // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
   // Winkel-Elemente haben IDs im Format: {baseId}-ref-line, {baseId}-angle-line, {baseId}-arc, {baseId}-text

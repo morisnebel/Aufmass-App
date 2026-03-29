@@ -348,17 +348,22 @@ export default function AnnotatePhotoScreen() {
 
   const loadPhoto = async () => {
     try {
+      console.log('[annotate] Loading photo with id:', photoId);
       // Direkt das einzelne Foto laden (statt alle Projekt-Fotos)
       const photo = await PhotoService.getById(photoId || '');
+      console.log('[annotate] Photo found:', !!photo, 'image_data length:', photo?.image_data?.length || 0, 'uri length:', photo?.uri?.length || 0);
       if (photo) {
         // Prüfe ob image_data oder uri vorhanden ist
         const imageSource = photo.image_data || photo.uri;
+        console.log('[annotate] imageSource length:', imageSource?.length || 0, 'starts with:', imageSource?.substring(0, 30));
         if (imageSource) {
           setImageUri(imageSource);
         } else {
           // Fallback: Versuche Bilddaten direkt aus AsyncStorage zu laden
           try {
+            console.log('[annotate] Trying direct AsyncStorage for photo_img_' + photoId);
             const directImage = await AsyncStorage.getItem(`photo_img_${photoId}`);
+            console.log('[annotate] Direct image found:', !!directImage, 'length:', directImage?.length || 0);
             if (directImage) {
               setImageUri(directImage);
             } else {

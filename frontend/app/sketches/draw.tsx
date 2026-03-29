@@ -687,6 +687,29 @@ export default function DrawSketchScreen() {
   const [protractorRefEnd, setProtractorRefEnd] = useState({ x: 0, y: 0 });
   const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
   
+  // Verschiebbare Position des Protractor-Panels
+  const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const protractorPanelPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        protractorPanelPan.setOffset({
+          x: (protractorPanelPan.x as any)._value,
+          y: (protractorPanelPan.y as any)._value,
+        });
+        protractorPanelPan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: protractorPanelPan.x, dy: protractorPanelPan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        protractorPanelPan.flattenOffset();
+      },
+    })
+  ).current;
+  
   // Initialisierung wenn Winkelmesser neu geöffnet wird (nicht beim Bearbeiten)
   const protractorInitializedRef = useRef(false);
   useEffect(() => {
@@ -702,6 +725,8 @@ export default function DrawSketchScreen() {
         setShowProtractorHint(true); // Hinweis nur bei neuem Winkelmesser
       }
       protractorInitializedRef.current = true;
+      // Panel-Position zurücksetzen
+      protractorPanelPan.setValue({ x: 0, y: 0 });
     }
     if (!showProtractor) {
       protractorInitializedRef.current = false;
@@ -9323,11 +9348,11 @@ export default function DrawSketchScreen() {
       {/* Lupe (Magnifier) Overlay für präzises Positionieren von Maßlinien-Endpunkten */}
       {showMagnifier && magnifierPosition && magnifierTargetPosition && (() => {
         // Intelligente Positionierung: Nah am Punkt, aber ohne ihn zu verdecken
-        const magnifierSize = 110;
-        const coordsHeight = 25;
+        const magnifierSize = isPhoneDevice ? 90 : 110;
+        const coordsHeight = isPhoneDevice ? 20 : 25;
         const totalHeight = magnifierSize + coordsHeight;
-        const offsetAbove = isPhoneDevice ? 30 : 40; // Abstand über dem Punkt
-        const offsetBelow = isPhoneDevice ? 30 : 40; // Abstand unter dem Punkt
+        const offsetAbove = isPhoneDevice ? 25 : 40; // Abstand über dem Punkt
+        const offsetBelow = isPhoneDevice ? 25 : 40; // Abstand unter dem Punkt
         const minTop = isPhoneDevice ? 10 : 10; // Minimum-Abstand zum oberen Rand
         
         // Berechne ideale Position über dem Punkt
@@ -9340,9 +9365,18 @@ export default function DrawSketchScreen() {
           showBelow = true;
         }
         
+        // Auf iPhone: Prüfen ob die Lupe hinter dem Protractor-Panel verschwindet
+        // Panel ist ca. 200px hoch, ab bottom: 20 → oberkante bei screenHeight - 220
+        if (isPhoneDevice && showProtractor && magTop + totalHeight > screenHeight - 220) {
+          // Über dem Punkt platzieren, notfalls ganz oben
+          magTop = Math.max(minTop, magnifierPosition.y - totalHeight - offsetAbove);
+        }
+        
         // Horizontal: zentriert über dem Punkt, aber im Bildschirm halten
         let magLeft = magnifierPosition.x - magnifierSize / 2;
         magLeft = Math.max(5, Math.min(magLeft, screenWidth - magnifierSize - 5));
+        
+        const halfSize = magnifierSize / 2;
         
         return (
         <View
@@ -9351,16 +9385,18 @@ export default function DrawSketchScreen() {
             {
               left: magLeft,
               top: magTop,
+              width: magnifierSize + 10,
+              zIndex: 10001, // Über dem Protractor-Panel
             },
           ]}
           pointerEvents="none"
         >
           <View style={styles.magnifierContent}>
             {/* Runder Lupen-Container mit Bild */}
-            <View style={styles.magnifierCircle}>
+            <View style={[styles.magnifierCircle, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
               {/* Canvas-Snapshot vergrößert - zeigt Bild + SVG-Zeichnungen */}
               {magnifierSnapshot ? (
-                <View style={styles.magnifierImageContainer}>
+                <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
@@ -9368,14 +9404,14 @@ export default function DrawSketchScreen() {
                       height: (canvasLayout?.height || (height - 120)) * 3,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
-                      left: -magnifierTargetPosition.x * 3 + 55,
-                      top: -magnifierTargetPosition.y * 3 + 55,
+                      left: -magnifierTargetPosition.x * 3 + halfSize,
+                      top: -magnifierTargetPosition.y * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
                 </View>
               ) : backgroundImage ? (
-                <View style={styles.magnifierImageContainer}>
+                <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
                   <RNImage
                     source={{ uri: backgroundImage }}
                     style={{
@@ -9383,8 +9419,8 @@ export default function DrawSketchScreen() {
                       height: (canvasLayout?.height || (height - 120)) * 3,
                       position: 'absolute',
                       // Position so berechnen, dass der Zielpunkt zentriert ist
-                      left: -magnifierTargetPosition.x * 3 + 55,
-                      top: -magnifierTargetPosition.y * 3 + 55,
+                      left: -magnifierTargetPosition.x * 3 + halfSize,
+                      top: -magnifierTargetPosition.y * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
@@ -9397,23 +9433,23 @@ export default function DrawSketchScreen() {
               )}
               
               {/* Fadenkreuz-Overlay */}
-              <Svg width={110} height={110} style={styles.magnifierCrosshair}>
+              <Svg width={magnifierSize} height={magnifierSize} style={styles.magnifierCrosshair}>
                 {/* Fadenkreuz */}
-                <Line x1={55} y1={10} x2={55} y2={100} stroke="#f44336" strokeWidth={1.5} />
-                <Line x1={10} y1={55} x2={100} y2={55} stroke="#f44336" strokeWidth={1.5} />
+                <Line x1={halfSize} y1={10} x2={halfSize} y2={magnifierSize - 10} stroke="#f44336" strokeWidth={1.5} />
+                <Line x1={10} y1={halfSize} x2={magnifierSize - 10} y2={halfSize} stroke="#f44336" strokeWidth={1.5} />
                 {/* Zentraler Kreis */}
-                <Circle cx={55} cy={55} r={5} fill="none" stroke="#f44336" strokeWidth={1.5} />
+                <Circle cx={halfSize} cy={halfSize} r={4} fill="none" stroke="#f44336" strokeWidth={1.5} />
                 {/* Rahmen */}
-                <Circle cx={55} cy={55} r={52} fill="none" stroke="#1976d2" strokeWidth={3} />
+                <Circle cx={halfSize} cy={halfSize} r={halfSize - 3} fill="none" stroke="#1976d2" strokeWidth={3} />
               </Svg>
             </View>
             
             {/* Koordinaten-Anzeige */}
             <View style={styles.magnifierCoords}>
-              <Text style={styles.magnifierCoordsText}>
+              <Text style={[styles.magnifierCoordsText, isPhoneDevice && { fontSize: 9 }]}>
                 X: {Math.round(magnifierTargetPosition.x)}
               </Text>
-              <Text style={styles.magnifierCoordsText}>
+              <Text style={[styles.magnifierCoordsText, isPhoneDevice && { fontSize: 9 }]}>
                 Y: {Math.round(magnifierTargetPosition.y)}
               </Text>
             </View>
@@ -9529,31 +9565,53 @@ export default function DrawSketchScreen() {
             </Svg>
           </View>
           
-          {/* Steuerelemente unten */}
-          <View style={[styles.protractorBottomControls, { zIndex: 10 }]}>
-            {/* Winkelsteuerung */}
-            <View style={styles.protractorControlRow}>
+          {/* Kompakte Steuerelemente - verschiebbar */}
+          <Animated.View 
+            style={[
+              styles.protractorBottomControls, 
+              { 
+                zIndex: 10,
+                transform: protractorPanelPan.getTranslateTransform(),
+              },
+              isPhoneDevice && {
+                bottom: 20,
+                left: 10,
+                right: 10,
+                gap: 6,
+              },
+            ]}
+          >
+            {/* Drag-Handle */}
+            <View {...protractorPanelPanResponder.panHandlers}>
+              <View style={{
+                width: 40, height: 5, borderRadius: 3,
+                backgroundColor: '#ccc', alignSelf: 'center', marginBottom: isPhoneDevice ? 2 : 6,
+              }} />
+            </View>
+            
+            {/* Winkelsteuerung - kompakt auf iPhone */}
+            <View style={[styles.protractorControlRow, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8, gap: 4 }]}>
               <TouchableOpacity 
-                style={styles.protractorControlBtn}
+                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
                 onPress={() => adjustProtractorAngle(-10)}
               >
-                <Text style={styles.protractorControlBtnText}>-10°</Text>
+                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>-10°</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.protractorControlBtn}
+                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
                 onPress={() => adjustProtractorAngle(-1)}
               >
-                <Text style={styles.protractorControlBtnText}>-1°</Text>
+                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>-1°</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.protractorAngleBadge}
+                style={[styles.protractorAngleBadge, isPhoneDevice && { paddingHorizontal: 10, paddingVertical: 4, minWidth: 56 }]}
                 onPress={() => {
                   setProtractorAngleInput(Math.abs(protractorAngle).toString());
                   setShowProtractorAngleInput(true);
                 }}
               >
-                <Text style={styles.protractorAngleBadgeText}>
+                <Text style={[styles.protractorAngleBadgeText, isPhoneDevice && { fontSize: 16 }]}>
                   {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
                     ? `${180 - Math.abs(protractorAngle)}°`
                     : `${Math.abs(protractorAngle)}°`}
@@ -9561,49 +9619,49 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.protractorControlBtn}
+                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
                 onPress={() => adjustProtractorAngle(1)}
               >
-                <Text style={styles.protractorControlBtnText}>+1°</Text>
+                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>+1°</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.protractorControlBtn}
+                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
                 onPress={() => adjustProtractorAngle(10)}
               >
-                <Text style={styles.protractorControlBtnText}>+10°</Text>
+                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>+10°</Text>
               </TouchableOpacity>
             </View>
             
-            {/* Innen/Außen + Größe + Reset */}
-            <View style={styles.protractorControlRow}>
+            {/* Innen/Außen + Größe + Reset - kompakte Zeile */}
+            <View style={[styles.protractorControlRow, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8, gap: 4 }]}>
               <TouchableOpacity 
-                style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive]}
+                style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive, isPhoneDevice && { paddingHorizontal: 8, paddingVertical: 3 }]}
                 onPress={() => setProtractorUseComplementary(prev => !prev)}
               >
-                <Ionicons name="swap-horizontal" size={16} color={protractorUseComplementary ? '#fff' : '#333'} />
-                <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive]}>
+                <Ionicons name="swap-horizontal" size={isPhoneDevice ? 14 : 16} color={protractorUseComplementary ? '#fff' : '#333'} />
+                <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive, isPhoneDevice && { fontSize: 10 }]}>
                   {protractorUseComplementary ? 'Außen' : 'Innen'}
                 </Text>
               </TouchableOpacity>
               
               <View style={styles.protractorSizeControl}>
                 <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
+                  style={[styles.protractorControlBtnSmall, isPhoneDevice && { width: 26, height: 26, borderRadius: 13 }]}
                   onPress={() => setProtractorDrawSize(prev => Math.max(30, prev - 10))}
                 >
-                  <Ionicons name="remove" size={16} color="#333" />
+                  <Ionicons name="remove" size={isPhoneDevice ? 12 : 16} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.protractorSizeLabel}>Größe: {protractorDrawSize}px</Text>
+                <Text style={[styles.protractorSizeLabel, isPhoneDevice && { fontSize: 9 }]}>{protractorDrawSize}px</Text>
                 <TouchableOpacity 
-                  style={styles.protractorControlBtnSmall}
+                  style={[styles.protractorControlBtnSmall, isPhoneDevice && { width: 26, height: 26, borderRadius: 13 }]}
                   onPress={() => setProtractorDrawSize(prev => Math.min(120, prev + 10))}
                 >
-                  <Ionicons name="add" size={16} color="#333" />
+                  <Ionicons name="add" size={isPhoneDevice ? 12 : 16} color="#333" />
                 </TouchableOpacity>
               </View>
               
               <TouchableOpacity 
-                style={styles.protractorResetBtn}
+                style={[styles.protractorResetBtn, isPhoneDevice && { paddingHorizontal: 8, paddingVertical: 3 }]}
                 onPress={() => {
                   const cx = screenWidth / 2;
                   const cy = Math.max(200, canvasHeight / 2 + 60);
@@ -9615,54 +9673,36 @@ export default function DrawSketchScreen() {
                   setProtractorDrawSize(60);
                 }}
               >
-                <Text style={styles.protractorResetBtnText}>Reset</Text>
+                <Text style={[styles.protractorResetBtnText, isPhoneDevice && { fontSize: 10 }]}>Reset</Text>
               </TouchableOpacity>
             </View>
             
-            {/* Info-Zeile: Rotation + Linienlängen */}
-            <View style={styles.protractorControlRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#2196f3', marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>
-                    {Math.round(Math.sqrt(Math.pow(protractorRefEnd.x - protractorCenter.x, 2) + Math.pow(protractorRefEnd.y - protractorCenter.y, 2)))}px
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF5722', marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, color: '#666' }}>
-                    {Math.round(Math.sqrt(Math.pow(protractorAngleEnd.x - protractorCenter.x, 2) + Math.pow(protractorAngleEnd.y - protractorCenter.y, 2)))}px
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Hinzufügen- und Abbrechen-Buttons */}
-            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+            {/* Aktions-Buttons - kompakt auf iPhone */}
+            <View style={{ flexDirection: 'row', gap: isPhoneDevice ? 8 : 12, justifyContent: 'center' }}>
               <TouchableOpacity 
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   backgroundColor: '#f44336',
-                  paddingHorizontal: 20,
-                  paddingVertical: 12,
-                  borderRadius: 25,
-                  gap: 8,
+                  paddingHorizontal: isPhoneDevice ? 14 : 20,
+                  paddingVertical: isPhoneDevice ? 8 : 12,
+                  borderRadius: 20,
+                  gap: isPhoneDevice ? 4 : 8,
                 }}
                 onPress={() => setShowProtractor(false)}
               >
-                <Ionicons name="close-circle" size={22} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{t('common.cancel')}</Text>
+                <Ionicons name="close-circle" size={isPhoneDevice ? 18 : 22} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: isPhoneDevice ? 12 : 15 }}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.protractorAddBtn}
+                style={[styles.protractorAddBtn, isPhoneDevice && { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 }]}
                 onPress={addProtractorToSketch}
               >
-                <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                <Text style={styles.protractorAddBtnText}>{t('common.add')}</Text>
+                <Ionicons name="checkmark-circle" size={isPhoneDevice ? 18 : 24} color="#fff" />
+                <Text style={[styles.protractorAddBtnText, isPhoneDevice && { fontSize: 12 }]}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
           
           {/* Winkel-Eingabe Modal */}
           {showProtractorAngleInput && (

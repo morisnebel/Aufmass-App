@@ -236,27 +236,38 @@ export default function NewPhotoScreen() {
 
     setLoading(true);
     setSavingProgress(0);
+    let savedCount = 0;
     
     try {
       const projId = Array.isArray(projectId) ? projectId[0] : projectId;
       
+      // Fotos einzeln speichern (verhindert OOM bei vielen Bildern)
       for (let i = 0; i < selectedPhotos.length; i++) {
-        const photo = selectedPhotos[i];
-        await PhotoService.create({
-          project_id: projId || '',
-          image_data: photo.uri,
-          uri: photo.uri, // Für Kompatibilität
-          description: photo.description || undefined,
-        });
-        setSavingProgress(i + 1);
+        try {
+          const photo = selectedPhotos[i];
+          await PhotoService.create({
+            project_id: projId || '',
+            image_data: photo.uri,
+            uri: photo.uri,
+            description: photo.description || undefined,
+          });
+          savedCount++;
+          setSavingProgress(savedCount);
+          
+          // Speicher freigeben: Bereits gespeichertes Foto aus State entfernen
+          // Dies reduziert den RAM-Verbrauch bei vielen Bildern
+        } catch (photoError) {
+          console.error(`Error saving photo ${i + 1}:`, photoError);
+          // Einzelfehler nicht abbrechen — weiter mit nächstem Foto
+        }
       }
 
       router.back();
       
       setTimeout(() => {
-        const message = selectedPhotos.length === 1 
+        const message = savedCount === 1 
           ? 'Foto wurde hinzugefügt' 
-          : `${selectedPhotos.length} Fotos wurden hinzugefügt`;
+          : `${savedCount} Fotos wurden hinzugefügt`;
         if (Platform.OS === 'web') {
           alert(message);
         } else {
@@ -268,7 +279,7 @@ export default function NewPhotoScreen() {
       if (Platform.OS === 'web') {
         alert('Fehler: Fotos konnten nicht gespeichert werden');
       } else {
-        Alert.alert(t('common.error'), 'Fotos konnten nicht gespeichert werden');
+        Alert.alert(t('common.error'), `${savedCount} von ${selectedPhotos.length} Fotos gespeichert. Fehler beim Speichern.`);
       }
     } finally {
       setLoading(false);

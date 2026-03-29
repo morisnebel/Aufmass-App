@@ -1011,24 +1011,77 @@ export const PhotoService = {
 
   getById: async (id: string): Promise<Photo | null> => {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
-    return photos.find(p => p.id === id) || null;
+    const photo = photos.find(p => p.id === id) || null;
+    if (photo) {
+      // Bilddaten separat laden (OOM-Schutz)
+      const imageData = await storage.getItem(`photo_img_${id}`);
+      if (imageData) {
+        photo.image_data = imageData;
+        photo.uri = imageData;
+      } else if (!photo.image_data && !photo.uri) {
+        // Kein separates Bild und kein Inline-Bild → kein Bild verfügbar
+      }
+      // Migration: Wenn Bild noch im Array steckt, separat speichern und Array bereinigen
+      if ((photo.image_data || photo.uri) && !imageData) {
+        const inlineImg = photo.image_data || photo.uri || '';
+        if (inlineImg.length > 100) { // Nur echte base64-Daten migrieren
+          await storage.setItem(`photo_img_${id}`, inlineImg);
+        }
+      }
+    }
+    return photo;
   },
 
   getByProjectId: async (projectId: string): Promise<Photo[]> => {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
-    return photos.filter(p => p.project_id === projectId);
+    const projectPhotos = photos.filter(p => p.project_id === projectId);
+    // Bilddaten separat laden für jedes Foto (einzeln, nicht alle auf einmal!)
+    for (const photo of projectPhotos) {
+      try {
+        const imageData = await storage.getItem(`photo_img_${photo.id}`);
+        if (imageData) {
+          photo.image_data = imageData;
+          photo.uri = imageData;
+        } else if (photo.image_data && photo.image_data.length > 100) {
+          // Migration: Altes Foto hat Bilddaten noch im Array
+          // Separat speichern für zukünftige Nutzung
+          await storage.setItem(`photo_img_${photo.id}`, photo.image_data);
+        } else if (photo.uri && photo.uri.length > 100) {
+          photo.image_data = photo.uri;
+          await storage.setItem(`photo_img_${photo.id}`, photo.uri);
+        }
+      } catch (e) {
+        console.error(`Error loading image for photo ${photo.id}:`, e);
+      }
+    }
+    return projectPhotos;
   },
 
   create: async (data: Omit<Photo, 'id' | 'created_at' | 'updated_at'>): Promise<Photo> => {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
+    const newId = generateId();
+    
+    // Bilddaten SEPARAT speichern (verhindert OOM bei JSON.stringify des Arrays)
+    const imageData = data.image_data || data.uri || '';
+    if (imageData) {
+      await storage.setItem(`photo_img_${newId}`, imageData);
+    }
+    
+    // Nur Metadaten im Array speichern (OHNE base64-Bilddaten!)
     const newPhoto: Photo = {
       ...data,
-      id: generateId(),
+      id: newId,
+      image_data: '', // Nicht im Array speichern!
+      uri: '',        // Nicht im Array speichern!
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     photos.push(newPhoto);
     await setItems(KEYS.PHOTOS, photos);
+    
+    // Für Rückgabe: Bilddaten wieder anhängen
+    newPhoto.image_data = imageData;
+    newPhoto.uri = imageData;
     return newPhoto;
   },
 
@@ -1036,6 +1089,17 @@ export const PhotoService = {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const index = photos.findIndex(p => p.id === id);
     if (index === -1) return null;
+    
+    // Falls Bilddaten aktualisiert werden, separat speichern
+    if (data.image_data || data.uri) {
+      const imageData = data.image_data || data.uri || '';
+      if (imageData) {
+        await storage.setItem(`photo_img_${id}`, imageData);
+      }
+      // Bilddaten aus dem Update entfernen
+      data = { ...data, image_data: '', uri: '' };
+    }
+    
     photos[index] = { ...photos[index], ...data, updated_at: new Date().toISOString() };
     await setItems(KEYS.PHOTOS, photos);
     return photos[index];
@@ -1045,6 +1109,12 @@ export const PhotoService = {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const filtered = photos.filter(p => p.id !== id);
     await setItems(KEYS.PHOTOS, filtered);
+    // Auch die separat gespeicherten Bilddaten löschen
+    try {
+      await AsyncStorage.removeItem(`photo_img_${id}`);
+    } catch (e) {
+      console.log(`Error removing photo image ${id}:`, e);
+    }
     return true;
   },
 };

@@ -440,6 +440,11 @@ export default function DrawSketchScreen() {
   
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
   const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const canvasLayoutRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  // Halte Ref immer aktuell
+  useEffect(() => {
+    canvasLayoutRef.current = canvasLayout;
+  }, [canvasLayout]);
   
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -823,13 +828,28 @@ export default function DrawSketchScreen() {
         : dragHandle === 'angle' ? protractorAngleEnd 
         : protractorCenter;
       
-      // Für Protractor: Direkt Canvas-relative Koordinaten berechnen
-      const layout = canvasLayout || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
-      setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
-      setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
-      // Verwende den vorab gespeicherten Canvas-Snapshot oder Hintergrundbild
-      setMagnifierSnapshot(protractorCanvasSnapshot.current);
-      setShowMagnifier(true);
+      // Canvas-Position direkt messen für präzise Lupe
+      const activateMagnifier = (layout: { x: number; y: number; width: number; height: number }) => {
+        canvasLayoutRef.current = layout; // Ref sofort aktualisieren
+        setCanvasLayout(layout);
+        setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
+        setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
+        setMagnifierSnapshot(protractorCanvasSnapshot.current);
+        setShowMagnifier(true);
+      };
+      
+      // Frisch messen - canvasRef direkt
+      if (canvasRef.current && Platform.OS !== 'web' && typeof (canvasRef.current as any).measureInWindow === 'function') {
+        (canvasRef.current as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+          const freshLayout = { x, y, width: w, height: h };
+          setCanvasLayout(freshLayout);
+          activateMagnifier(freshLayout);
+        });
+      } else if (canvasLayout) {
+        activateMagnifier(canvasLayout);
+      } else {
+        activateMagnifier({ x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight });
+      }
     }
     
     protractorDragRef.current = {
@@ -870,8 +890,8 @@ export default function DrawSketchScreen() {
         y: protractorDragRef.current.initialAngleEnd.y + dy,
       });
       // Lupe am Mittelpunkt aktualisieren
-      if (canvasLayout) {
-        setMagnifierTargetPosition({ x: newCenter.x - canvasLayout.x, y: newCenter.y - canvasLayout.y });
+      if (canvasLayoutRef.current) {
+        setMagnifierTargetPosition({ x: newCenter.x - canvasLayoutRef.current.x, y: newCenter.y - canvasLayoutRef.current.y });
         setMagnifierPosition({ x: newCenter.x, y: newCenter.y });
       }
     } else if (handle === 'ref') {
@@ -881,8 +901,8 @@ export default function DrawSketchScreen() {
       };
       setProtractorRefEnd(newPos);
       // Lupe aktualisieren
-      if (canvasLayout) {
-        setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
+      if (canvasLayoutRef.current) {
+        setMagnifierTargetPosition({ x: newPos.x - canvasLayoutRef.current.x, y: newPos.y - canvasLayoutRef.current.y });
         setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     } else if (handle === 'angle') {
@@ -892,8 +912,8 @@ export default function DrawSketchScreen() {
       };
       setProtractorAngleEnd(newPos);
       // Lupe aktualisieren
-      if (canvasLayout) {
-        setMagnifierTargetPosition({ x: newPos.x - canvasLayout.x, y: newPos.y - canvasLayout.y });
+      if (canvasLayoutRef.current) {
+        setMagnifierTargetPosition({ x: newPos.x - canvasLayoutRef.current.x, y: newPos.y - canvasLayoutRef.current.y });
         setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     }

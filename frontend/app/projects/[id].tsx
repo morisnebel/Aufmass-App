@@ -2550,13 +2550,21 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
             }
             /* Seitenumbrüche für Abschnitte */
-            .sketches-section, .photos-section, .checklists-section, .roof-section, .calculator-section {
+            .checklists-section, .roof-section, .calculator-section {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
-            /* Wenn Abschnitte zu groß sind, erlaube Umbruch aber nicht mitten im Item */
-            .sketches-section { page-break-inside: auto !important; }
-            .photos-section { page-break-inside: auto !important; }
+            /* Sektionen erlauben Umbrüche, aber starten auf neuer Seite */
+            .sketches-section { 
+              page-break-before: always !important;
+              break-before: page !important;
+              page-break-inside: auto !important; 
+            }
+            .photos-section { 
+              page-break-before: always !important;
+              break-before: page !important;
+              page-break-inside: auto !important; 
+            }
             .sketch-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
@@ -2758,14 +2766,17 @@ export default function ProjectDetailScreen() {
             orphans: 3;
             widows: 3;
           }
-          /* Ensure Skizzen header stays with sketches, but section can break across pages */
+          /* Skizzen-Sektion - neue Seite starten damit Überschrift beim Inhalt bleibt */
           .sketches-section {
+            page-break-before: always !important;
+            break-before: page !important;
             page-break-inside: auto !important;
             break-inside: auto !important;
           }
           .sketches-section h2 {
             page-break-after: avoid !important;
             break-after: avoid !important;
+            margin-top: 0 !important;
             margin-bottom: 10px;
           }
           .sketches-section .sketches-container {
@@ -2783,14 +2794,17 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
           }
-          /* Fotos Sektion */
+          /* Fotos Sektion - neue Seite starten damit Überschrift beim Inhalt bleibt */
           .photos-section {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            page-break-before: always !important;
+            break-before: page !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
           }
           .photos-section h2 {
             page-break-after: avoid !important;
             break-after: avoid !important;
+            margin-top: 0 !important;
           }
           /* Fotos-Wrapper: Überschrift + erstes Foto zusammen */
           .photos-wrapper {

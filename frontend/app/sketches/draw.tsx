@@ -1029,6 +1029,13 @@ export default function DrawSketchScreen() {
         const finalX = (legendPan.x as any)._value;
         const finalY = (legendPan.y as any)._value;
         setLegendPosition({ x: finalX, y: finalY });
+        // Sofort in AsyncStorage speichern (Crash-Schutz)
+        if (lastLoadedSketchId.current) {
+          AsyncStorage.setItem(
+            `sketch_legend_pos_${lastLoadedSketchId.current}`,
+            JSON.stringify({ x: finalX, y: finalY })
+          ).catch(() => {});
+        }
       },
     })
   ).current;
@@ -1775,8 +1782,21 @@ export default function DrawSketchScreen() {
             setLegendPosition(metadata.legendPosition);
             legendPan.setValue(metadata.legendPosition);
           } else {
-            setLegendPosition({ x: 0, y: 0 });
-            legendPan.setValue({ x: 0, y: 0 });
+            // Fallback: Versuche gespeicherte Position aus AsyncStorage zu laden (Crash-Schutz)
+            try {
+              const savedPos = await AsyncStorage.getItem(`sketch_legend_pos_${sketchId}`);
+              if (savedPos) {
+                const pos = JSON.parse(savedPos);
+                setLegendPosition(pos);
+                legendPan.setValue(pos);
+              } else {
+                setLegendPosition({ x: 0, y: 0 });
+                legendPan.setValue({ x: 0, y: 0 });
+              }
+            } catch {
+              setLegendPosition({ x: 0, y: 0 });
+              legendPan.setValue({ x: 0, y: 0 });
+            }
           }
           // Label-Offsets laden wenn vorhanden
           if (metadata.labelOffsets) {
@@ -3218,6 +3238,42 @@ export default function DrawSketchScreen() {
         return el;
       });
       addToHistory(newElements);
+      
+      // Bemaßungs-Indizes aktualisieren: Segment wird geteilt → Indizes nach dem Split verschieben
+      setLineSegmentMeasurements(prev => {
+        const elementMeasurements = prev[selectedElementId];
+        if (!elementMeasurements) return prev;
+        
+        const isClosingSegment = closestSegment === points.length - 1 && selectedEl.data.closed;
+        const newMeasurements: { [segmentIndex: number]: string } = {};
+        
+        for (const [key, value] of Object.entries(elementMeasurements)) {
+          const oldIdx = parseInt(key);
+          
+          if (isClosingSegment) {
+            // Schließende Kante geteilt: altes Schließsegment-Maß löschen, Rest bleibt gleich
+            if (oldIdx === closestSegment) continue; // Altes Schließsegment-Maß entfernen
+            newMeasurements[oldIdx] = value;
+          } else if (oldIdx === closestSegment) {
+            // Geteiltes Segment: altes Maß löschen (Benutzer muss neue Maße für die 2 neuen Segmente eingeben)
+            continue;
+          } else if (oldIdx > closestSegment) {
+            // Segmente nach dem Split: Index um 1 erhöhen
+            newMeasurements[oldIdx + 1] = value;
+          } else {
+            // Segmente vor dem Split: Index bleibt gleich
+            newMeasurements[oldIdx] = value;
+          }
+        }
+        
+        if (Object.keys(newMeasurements).length === 0) {
+          const newAll = { ...prev };
+          delete newAll[selectedElementId];
+          return newAll;
+        }
+        
+        return { ...prev, [selectedElementId]: newMeasurements };
+      });
     }
   };
 
@@ -3283,6 +3339,68 @@ export default function DrawSketchScreen() {
         return el;
       });
       addToHistory(newElements);
+      
+      // Bemaßungen aktualisieren: Gelöschte Segmente entfernen und Indizes neu zuordnen
+      setLineSegmentMeasurements(prev => {
+        const elementMeasurements = prev[selectedElementId];
+        if (!elementMeasurements) return prev;
+        
+        const isClosed = selectedEl.data?.closed;
+        const numPoints = points.length;
+        const numSegments = isClosed ? numPoints : numPoints - 1;
+        
+        // Bestimme betroffene (gelöschte) Segment-Indizes
+        const affectedSegments = new Set<number>();
+        if (closestIndex > 0) {
+          affectedSegments.add(closestIndex - 1); // Segment das am gelöschten Punkt endet
+        }
+        if (closestIndex < numPoints - 1) {
+          affectedSegments.add(closestIndex); // Segment das am gelöschten Punkt startet
+        }
+        if (isClosed) {
+          if (closestIndex === 0) {
+            affectedSegments.add(numSegments - 1); // Schließendes Segment endet bei Punkt 0
+            affectedSegments.add(0); // Segment startet bei Punkt 0
+          }
+          if (closestIndex === numPoints - 1) {
+            affectedSegments.add(numSegments - 1); // Letztes Segment (schließend)
+            affectedSegments.add(closestIndex - 1); // Segment davor
+          }
+        }
+        
+        // Neue Bemaßungen mit verschobenen Indizes erstellen
+        const newMeasurements: { [segmentIndex: number]: string } = {};
+        
+        for (const [key, value] of Object.entries(elementMeasurements)) {
+          const oldIdx = parseInt(key);
+          
+          // Betroffene Segmente überspringen (gelöschte Bemaßungen)
+          if (affectedSegments.has(oldIdx)) continue;
+          
+          // Neuen Index berechnen: Segmente nach dem gelöschten Punkt verschieben sich um 1
+          let newIdx = oldIdx;
+          if (isClosed && closestIndex === 0) {
+            // Erster Punkt bei geschlossenem Polygon: alle Indizes um 1 nach unten
+            newIdx = oldIdx - 1;
+          } else if (oldIdx > closestIndex) {
+            // Segmente nach dem gelöschten Punkt: Index um 1 reduzieren
+            newIdx = oldIdx - 1;
+          }
+          
+          if (newIdx >= 0) {
+            newMeasurements[newIdx] = value;
+          }
+        }
+        
+        // Wenn keine Bemaßungen mehr übrig → Element-Eintrag komplett löschen
+        if (Object.keys(newMeasurements).length === 0) {
+          const newAll = { ...prev };
+          delete newAll[selectedElementId];
+          return newAll;
+        }
+        
+        return { ...prev, [selectedElementId]: newMeasurements };
+      });
     }
   };
 

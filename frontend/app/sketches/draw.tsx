@@ -1936,7 +1936,6 @@ export default function DrawSketchScreen() {
   const addProtractorToSketch = useCallback(() => {
     // Umrechnung auf Canvas-Koordinaten (berücksichtigt Zoom und Scroll!)
     const currentScale = scaleRef.current || 1;
-    const so = scrollOffsetRef.current || { x: 0, y: 0 };
     const layout = canvasLayoutRef.current || canvasLayout;
     
     let centerX: number;
@@ -1952,12 +1951,19 @@ export default function DrawSketchScreen() {
           x: androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w,
           y: androidViewBox.y + ((screenY - ly) / canvasHeight) * androidViewBox.h,
         };
-      } else if (layout) {
-        // iOS / Web: ScrollView-Zoom berücksichtigen
-        // canvasLayout wird bei zoom=1 gemessen, scrollOffset ist der Content-Offset
+      } else if (layout && currentScale !== 1) {
+        // iOS: Gezoomte Ansicht
+        // canvasLayout (via measureInWindow) enthält bereits die Scroll-Position!
+        // Daher KEIN scrollOffset addieren - nur durch Scale teilen
         return {
-          x: (screenX - layout.x + so.x) / currentScale,
-          y: (screenY - layout.y + so.y) / currentScale,
+          x: (screenX - layout.x) / currentScale,
+          y: (screenY - layout.y) / currentScale,
+        };
+      } else if (layout) {
+        // Keine Zoom-Skalierung
+        return {
+          x: screenX - layout.x,
+          y: screenY - layout.y,
         };
       } else {
         // Fallback ohne Layout-Info
@@ -1972,7 +1978,7 @@ export default function DrawSketchScreen() {
     centerX = center.x;
     centerY = center.y;
     
-    console.log('addProtractorToSketch - scale:', currentScale, 'scrollOffset:', so, 'screenCenter:', protractorCenter, 'canvasCenter:', { x: centerX, y: centerY });
+    console.log('addProtractorToSketch - scale:', currentScale, 'layout:', layout ? { x: Math.round(layout.x), y: Math.round(layout.y) } : null, 'screenCenter:', { x: Math.round(protractorCenter.x), y: Math.round(protractorCenter.y) }, 'canvasCenter:', { x: Math.round(centerX), y: Math.round(centerY) });
     
     // Winkel-Anzeige (immer positiv)
     let displayAngle = Math.abs(protractorAngle);
@@ -7578,46 +7584,58 @@ export default function DrawSketchScreen() {
                 const baseId = getAngleGroupBaseId(selectedElementId);
                 const geo = getAngleGroupGeometry(baseId);
                 if (geo && canvasLayout) {
-                  // Canvas → Screen-Koordinaten (berücksichtigt Zoom und Scroll)
+                  // Canvas → Screen-Koordinaten (berücksichtigt Zoom)
                   const currentScale = scaleRef.current || 1;
-                  const so = scrollOffsetRef.current || { x: 0, y: 0 };
                   
-                  // Canvas-Koordinaten → Bildschirm-Koordinaten
-                  const cx = geo.cx * currentScale - so.x + canvasLayout.x;
-                  const cy = geo.cy * currentScale - so.y + canvasLayout.y;
-                  // Linienlängen in Bildschirm-Koordinaten skalieren
-                  const screenRefLength = geo.refLength * currentScale;
-                  const screenAngleLength = geo.anglLineLength * currentScale;
-                  const refEndX = cx + screenRefLength * Math.cos(geo.refAngleRad);
-                  const refEndY = cy + screenRefLength * Math.sin(geo.refAngleRad);
-                  const angleEndX = cx + screenAngleLength * Math.cos(geo.angleLineRad);
-                  const angleEndY = cy + screenAngleLength * Math.sin(geo.angleLineRad);
+                  // Frische Canvas-Position messen für genaue Umrechnung
+                  const doConvert = (freshLayout: { x: number; y: number; width: number; height: number }) => {
+                    // Canvas → Screen: screenX = canvasX * scale + layout.x
+                    // (layout.x enthält bereits Scroll-Position via measureInWindow)
+                    const cx = geo.cx * currentScale + freshLayout.x;
+                    const cy = geo.cy * currentScale + freshLayout.y;
+                    // Linienlängen in Bildschirm-Koordinaten skalieren
+                    const screenRefLength = geo.refLength * currentScale;
+                    const screenAngleLength = geo.anglLineLength * currentScale;
+                    const refEndX = cx + screenRefLength * Math.cos(geo.refAngleRad);
+                    const refEndY = cy + screenRefLength * Math.sin(geo.refAngleRad);
+                    const angleEndX = cx + screenAngleLength * Math.cos(geo.angleLineRad);
+                    const angleEndY = cy + screenAngleLength * Math.sin(geo.angleLineRad);
+                    
+                    // Alte Elemente entfernen
+                    const groupIds = getAngleGroupElementIds(baseId);
+                    const newElements = elements.filter(el => !groupIds.includes(el.id));
+                    addToHistory(newElements);
+                    setSelectedElementId(null);
+                    
+                    // Canvas-Snapshot erstellen bevor Protractor-Overlay geöffnet wird
+                    if (canvasRef.current) {
+                      captureRef(canvasRef.current, {
+                        format: 'png',
+                        quality: 0.8,
+                        result: 'data-uri',
+                      }).then((uri: string) => {
+                        protractorCanvasSnapshot.current = uri;
+                      }).catch(() => {
+                        protractorCanvasSnapshot.current = null;
+                      });
+                    }
+                    
+                    // Winkelmesser mit den Positionen öffnen
+                    setProtractorCenter({ x: cx, y: cy });
+                    setProtractorRefEnd({ x: refEndX, y: refEndY });
+                    setProtractorAngleEnd({ x: angleEndX, y: angleEndY });
+                    setShowProtractorHint(false); // Kein Hinweis beim Bearbeiten
+                    setShowProtractor(true);
+                  };
                   
-                  // Alte Elemente entfernen
-                  const groupIds = getAngleGroupElementIds(baseId);
-                  const newElements = elements.filter(el => !groupIds.includes(el.id));
-                  addToHistory(newElements);
-                  setSelectedElementId(null);
-                  
-                  // Canvas-Snapshot erstellen bevor Protractor-Overlay geöffnet wird
-                  if (canvasRef.current) {
-                    captureRef(canvasRef.current, {
-                      format: 'png',
-                      quality: 0.8,
-                      result: 'data-uri',
-                    }).then((uri: string) => {
-                      protractorCanvasSnapshot.current = uri;
-                    }).catch(() => {
-                      protractorCanvasSnapshot.current = null;
+                  // Frische Messung wenn möglich, sonst canvasLayout verwenden
+                  if (canvasRef.current && Platform.OS !== 'web' && typeof (canvasRef.current as any).measureInWindow === 'function') {
+                    (canvasRef.current as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+                      doConvert({ x, y, width: w, height: h });
                     });
+                  } else {
+                    doConvert(canvasLayout);
                   }
-                  
-                  // Winkelmesser mit den Positionen öffnen
-                  setProtractorCenter({ x: cx, y: cy });
-                  setProtractorRefEnd({ x: refEndX, y: refEndY });
-                  setProtractorAngleEnd({ x: angleEndX, y: angleEndY });
-                  setShowProtractorHint(false); // Kein Hinweis beim Bearbeiten
-                  setShowProtractor(true);
                 }
               }}
             >

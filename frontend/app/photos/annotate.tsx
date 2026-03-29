@@ -348,16 +348,27 @@ export default function AnnotatePhotoScreen() {
 
   const loadPhoto = async () => {
     try {
-      const photos = await PhotoService.getByProjectId(projectId || '');
-      const photo = photos.find((p: any) => p.id === photoId);
+      // Direkt das einzelne Foto laden (statt alle Projekt-Fotos)
+      const photo = await PhotoService.getById(photoId || '');
       if (photo) {
         // Prüfe ob image_data oder uri vorhanden ist
         const imageSource = photo.image_data || photo.uri;
         if (imageSource) {
           setImageUri(imageSource);
         } else {
-          console.error('No image data found for photo:', photoId);
-          Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
+          // Fallback: Versuche Bilddaten direkt aus AsyncStorage zu laden
+          try {
+            const directImage = await AsyncStorage.getItem(`photo_img_${photoId}`);
+            if (directImage) {
+              setImageUri(directImage);
+            } else {
+              console.error('No image data found for photo:', photoId);
+              Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
+            }
+          } catch (e) {
+            console.error('Error loading direct image:', e);
+            Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
+          }
         }
         setPdfSize(photo.pdf_size || 'medium');
         setDescription(photo.description || '');

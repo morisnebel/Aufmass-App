@@ -1651,8 +1651,9 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // Sketches-Container: Immer Flexbox für korrekte Größendarstellung
-    const sketchesContainerClass = 'sketches-container';
+    // Sketches-Container: iPhone bekommt block-Layout für bessere Seitenumbrüche
+    const isIphone = Platform.OS === 'ios' && !Platform.isPad;
+    const sketchesContainerClass = isIphone ? 'sketches-container sketches-container-iphone' : 'sketches-container';
     
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">
@@ -2589,6 +2590,24 @@ export default function ProjectDetailScreen() {
               flex-wrap: wrap !important;
               gap: 10px !important;
             }
+            /* iPhone: Skizzen untereinander für saubere Seitenumbrüche */
+            .sketches-container-iphone {
+              display: block !important;
+            }
+            .sketches-container-iphone .sketch-item {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              max-height: none !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 15px !important;
+            }
+            .sketches-container-iphone .sketch-item img {
+              max-height: none !important;
+              width: 100% !important;
+              object-fit: contain !important;
+            }
             .sketch-item, .photo-item {
               box-sizing: border-box !important;
               max-height: none !important;
@@ -2619,13 +2638,12 @@ export default function ProjectDetailScreen() {
             .sketch-iphone img, .photo-iphone img {
               max-height: none !important;
             }
-            /* Container-Größen zurücksetzen für Druck */
-            .sketches-container-iphone {
-              display: block !important;
-            }
+            /* Container-Größen zurücksetzen für Druck (iPhone) */
             .sketches-container-iphone .sketch-item {
               width: 100% !important;
+              max-width: 100% !important;
               max-height: none !important;
+              overflow: visible !important;
             }
           }
           * {
@@ -2723,10 +2741,10 @@ export default function ProjectDetailScreen() {
             orphans: 3;
             widows: 3;
           }
-          /* Ensure Skizzen header stays with sketches */
+          /* Ensure Skizzen header stays with sketches, but section can break across pages */
           .sketches-section {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
           }
           .sketches-section h2 {
             page-break-after: avoid !important;
@@ -2736,6 +2754,11 @@ export default function ProjectDetailScreen() {
           .sketches-section .sketches-container {
             page-break-before: avoid !important;
             break-before: avoid !important;
+          }
+          /* Einzelne Skizzen-Items nicht umbrechen */
+          .sketches-section .sketch-item {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           /* Skizzen-Wrapper: Überschrift + erste Skizze zusammen */
           .sketch-wrapper {

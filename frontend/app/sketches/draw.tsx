@@ -858,7 +858,11 @@ export default function DrawSketchScreen() {
       const activateMagnifier = (layout: { x: number; y: number; width: number; height: number }) => {
         canvasLayoutRef.current = layout; // Ref sofort aktualisieren
         setCanvasLayout(layout);
-        setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
+        // Bei Zoom: Lupe muss Canvas-Koordinaten verwenden (Snapshot ist in Canvas-Koordinaten)
+        const currentScale = scaleRef.current || 1;
+        const canvasTargetX = (targetPt.x - layout.x) / currentScale;
+        const canvasTargetY = (targetPt.y - layout.y) / currentScale;
+        setMagnifierTargetPosition({ x: canvasTargetX, y: canvasTargetY });
         setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
         // Canvas-Snapshot verwenden (vor Protractor-Overlay aufgenommen)
         // Fallback-Kette: protractorCanvasSnapshot → backgroundImage → Bild-Element → Grid
@@ -929,7 +933,8 @@ export default function DrawSketchScreen() {
       });
       // Lupe am Mittelpunkt aktualisieren
       if (canvasLayoutRef.current) {
-        setMagnifierTargetPosition({ x: newCenter.x - canvasLayoutRef.current.x, y: newCenter.y - canvasLayoutRef.current.y });
+        const cs = scaleRef.current || 1;
+        setMagnifierTargetPosition({ x: (newCenter.x - canvasLayoutRef.current.x) / cs, y: (newCenter.y - canvasLayoutRef.current.y) / cs });
         setMagnifierPosition({ x: newCenter.x, y: newCenter.y });
       }
     } else if (handle === 'ref') {
@@ -940,7 +945,8 @@ export default function DrawSketchScreen() {
       setProtractorRefEnd(newPos);
       // Lupe aktualisieren
       if (canvasLayoutRef.current) {
-        setMagnifierTargetPosition({ x: newPos.x - canvasLayoutRef.current.x, y: newPos.y - canvasLayoutRef.current.y });
+        const cs = scaleRef.current || 1;
+        setMagnifierTargetPosition({ x: (newPos.x - canvasLayoutRef.current.x) / cs, y: (newPos.y - canvasLayoutRef.current.y) / cs });
         setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     } else if (handle === 'angle') {
@@ -951,7 +957,8 @@ export default function DrawSketchScreen() {
       setProtractorAngleEnd(newPos);
       // Lupe aktualisieren
       if (canvasLayoutRef.current) {
-        setMagnifierTargetPosition({ x: newPos.x - canvasLayoutRef.current.x, y: newPos.y - canvasLayoutRef.current.y });
+        const cs = scaleRef.current || 1;
+        setMagnifierTargetPosition({ x: (newPos.x - canvasLayoutRef.current.x) / cs, y: (newPos.y - canvasLayoutRef.current.y) / cs });
         setMagnifierPosition({ x: newPos.x, y: newPos.y });
       }
     }

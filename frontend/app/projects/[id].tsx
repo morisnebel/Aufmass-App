@@ -1594,7 +1594,9 @@ export default function ProjectDetailScreen() {
     
     if (photos.length > 0) {
       const photoItems = photos.map(photo => generatePhotoHtml(photo)).join('');
-      photosHtml = `<div style="font-size: 0;">${photoItems}</div>`;
+      // iPhone: Fotos untereinander für saubere Seitenumbrüche
+      const photosContainerClass = isIphone ? 'photos-print-container photos-print-iphone' : 'photos-print-container';
+      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${photoItems}</div>`;
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
     }
@@ -2558,22 +2560,24 @@ export default function ProjectDetailScreen() {
             .sketch-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              max-height: none !important;
-              overflow: visible !important;
+              max-height: 850px !important;
+              overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: none !important;
+              max-height: 780px !important;
               height: auto !important;
               object-fit: contain !important;
             }
             .photo-item {
-              max-height: none !important;
-              overflow: visible !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              max-height: 450px !important;
+              overflow: hidden !important;
             }
             .photo-item img {
               max-width: 100% !important;
-              max-height: none !important;
+              max-height: 380px !important;
               height: auto !important;
               object-fit: contain !important;
             }
@@ -2630,20 +2634,33 @@ export default function ProjectDetailScreen() {
               flex: 0 0 100% !important;
               max-width: 100% !important;
             }
-            /* iPhone Sketch Container - keine Höhenbeschränkung beim Drucken */
+            /* iPhone Sketch/Photo: Höhenbeschränkung für saubere Seitenumbrüche */
             .sketch-iphone, .photo-iphone {
-              max-height: none !important;
-              overflow: visible !important;
+              max-height: 850px !important;
+              overflow: hidden !important;
             }
             .sketch-iphone img, .photo-iphone img {
-              max-height: none !important;
+              max-height: 780px !important;
             }
             /* Container-Größen zurücksetzen für Druck (iPhone) */
             .sketches-container-iphone .sketch-item {
               width: 100% !important;
               max-width: 100% !important;
-              max-height: none !important;
-              overflow: visible !important;
+              max-height: 850px !important;
+              overflow: hidden !important;
+              margin-bottom: 20px !important;
+            }
+            .sketches-container-iphone .sketch-item img {
+              max-height: 780px !important;
+            }
+            /* iPhone: Fotos untereinander für saubere Seitenumbrüche */
+            .photos-print-iphone > div {
+              display: block !important;
+              width: 100% !important;
+              margin-bottom: 15px !important;
+            }
+            .photos-print-iphone > div img {
+              max-height: 500px !important;
             }
           }
           * {

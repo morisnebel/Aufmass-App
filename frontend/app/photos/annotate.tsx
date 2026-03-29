@@ -322,7 +322,6 @@ export default function AnnotatePhotoScreen() {
       const currentTextElements = textElementsRef.current;
       const currentDescription = descriptionRef.current;
       const currentPdfSize = pdfSizeRef.current;
-      const currentImageUri = imageUriRef.current;
       
       const annotationData = {
         paths: currentPaths,
@@ -331,10 +330,10 @@ export default function AnnotatePhotoScreen() {
         canvasHeight: canvasDimensions.height || 400,
       };
 
+      // NUR Annotationen/Metadaten speichern – NICHT die Bilddaten erneut senden
+      // (verhindert unnötige Speicherlast durch doppeltes Schreiben der base64-Daten)
       await PhotoService.update(photoId || '', {
         project_id: projectId,
-        image_data: currentImageUri,
-        uri: currentImageUri,
         annotations: JSON.stringify(annotationData),
         description: currentDescription,
         pdf_size: currentPdfSize,
@@ -348,32 +347,34 @@ export default function AnnotatePhotoScreen() {
 
   const loadPhoto = async () => {
     try {
-      console.log('[annotate] Loading photo with id:', photoId);
-      // Direkt das einzelne Foto laden (statt alle Projekt-Fotos)
-      const photo = await PhotoService.getById(photoId || '');
-      console.log('[annotate] Photo found:', !!photo, 'image_data length:', photo?.image_data?.length || 0, 'uri length:', photo?.uri?.length || 0);
+      console.log('[annotate] Loading photo with id:', photoId, 'projectId:', projectId);
+      // Alle Projekt-Fotos laden (mit separaten Bilddaten)
+      const photos = await PhotoService.getByProjectId(projectId || '');
+      const photo = photos.find((p: any) => p.id === photoId);
+      console.log('[annotate] Photo found:', !!photo, 'image_data length:', photo?.image_data?.length || 0);
       if (photo) {
         // Prüfe ob image_data oder uri vorhanden ist
-        const imageSource = photo.image_data || photo.uri;
-        console.log('[annotate] imageSource length:', imageSource?.length || 0, 'starts with:', imageSource?.substring(0, 30));
-        if (imageSource) {
+        let imageSource = photo.image_data || photo.uri;
+        
+        // Fallback: direkt aus AsyncStorage laden
+        if (!imageSource || imageSource.length < 100) {
+          console.log('[annotate] Trying direct AsyncStorage fallback');
+          const directImage = await AsyncStorage.getItem(`photo_img_${photoId}`);
+          if (directImage) {
+            imageSource = directImage;
+          }
+        }
+        
+        console.log('[annotate] Final imageSource length:', imageSource?.length || 0);
+        if (imageSource && imageSource.length > 100) {
+          // Sicherstellen, dass der base64-Prefix vorhanden ist
+          if (!imageSource.startsWith('data:')) {
+            imageSource = `data:image/jpeg;base64,${imageSource}`;
+            console.log('[annotate] Added missing data URI prefix');
+          }
           setImageUri(imageSource);
         } else {
-          // Fallback: Versuche Bilddaten direkt aus AsyncStorage zu laden
-          try {
-            console.log('[annotate] Trying direct AsyncStorage for photo_img_' + photoId);
-            const directImage = await AsyncStorage.getItem(`photo_img_${photoId}`);
-            console.log('[annotate] Direct image found:', !!directImage, 'length:', directImage?.length || 0);
-            if (directImage) {
-              setImageUri(directImage);
-            } else {
-              console.error('No image data found for photo:', photoId);
-              Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
-            }
-          } catch (e) {
-            console.error('Error loading direct image:', e);
-            Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
-          }
+          Alert.alert(t('common.error'), 'Keine Bilddaten gefunden');
         }
         setPdfSize(photo.pdf_size || 'medium');
         setDescription(photo.description || '');
@@ -771,11 +772,9 @@ export default function AnnotatePhotoScreen() {
       };
 
       // Update photo with annotations and PDF size
-      // Speichere sowohl image_data als auch uri, falls eines fehlt
+      // NUR Annotationen/Metadaten speichern – Bilddaten sind bereits separat gespeichert
       await PhotoService.update(photoId || '', {
         project_id: projectId,
-        image_data: imageUri, // Keep original image
-        uri: imageUri, // Für Kompatibilität
         annotations: JSON.stringify(annotationData),
         description: description,
         pdf_size: pdfSize,
@@ -1116,10 +1115,23 @@ export default function AnnotatePhotoScreen() {
             { scale: androidZoomScale },
           ],
         } : undefined}>
-        <View style={{ flex: 1 }}>
-          <Image source={{ uri: imageUri }} style={styles.backgroundImage} resizeMode="contain" />
+        <View style={{ width: canvasDimensions.width || width, height: canvasDimensions.height || 400 }}>
+          <Image 
+            source={{ uri: imageUri }} 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: canvasDimensions.width || width,
+              height: canvasDimensions.height || 400,
+              zIndex: 0,
+            }} 
+            resizeMode="contain" 
+            onError={(e) => console.log('[annotate] Image load error:', e.nativeEvent.error)}
+            onLoad={() => console.log('[annotate] Image loaded successfully, dims:', canvasDimensions)}
+          />
           <View
-            style={styles.svgContainer}
+            style={[styles.svgContainer, { zIndex: 1 }]}
             onStartShouldSetResponder={() => Platform.OS === 'android' ? true : drawingEnabled}
             onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : (drawingEnabled && (drawMode === 'draw' || isDraggingText))}
             onResponderGrant={(event) => {
@@ -1241,7 +1253,7 @@ export default function AnnotatePhotoScreen() {
               }
             }}
           >
-            <Svg height="100%" width="100%" style={{ position: 'absolute' }}>
+            <Svg height={canvasDimensions.height || 400} width={canvasDimensions.width || width} style={{ position: 'absolute', top: 0, left: 0 }}>
               {/* Draw paths */}
               {paths.map((p, index) => {
                 return (

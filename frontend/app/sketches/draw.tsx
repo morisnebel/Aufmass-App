@@ -446,6 +446,12 @@ export default function DrawSketchScreen() {
     canvasLayoutRef.current = canvasLayout;
   }, [canvasLayout]);
   
+  // Refs für Zoom/Scroll - verhindert stale closures in Protractor-Callbacks
+  const scaleRef = useRef(1);
+  const scrollOffsetRef = useRef({ x: 0, y: 0 });
+  useEffect(() => { scaleRef.current = scale; }, [scale]);
+  useEffect(() => { scrollOffsetRef.current = scrollOffset; }, [scrollOffset]);
+  
   // Foto-Bearbeitungsmodus - wenn true, kann nur das Hintergrundfoto bearbeitet werden
   const [photoEditMode, setPhotoEditMode] = useState(false);
   
@@ -1928,20 +1934,45 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // Umrechnung auf Canvas-Koordinaten
+    // Umrechnung auf Canvas-Koordinaten (berücksichtigt Zoom und Scroll!)
+    const currentScale = scaleRef.current || 1;
+    const so = scrollOffsetRef.current || { x: 0, y: 0 };
+    const layout = canvasLayoutRef.current || canvasLayout;
+    
     let centerX: number;
     let centerY: number;
     
-    if (canvasLayout) {
-      centerX = protractorCenter.x - canvasLayout.x;
-      centerY = protractorCenter.y - canvasLayout.y;
-    } else {
-      const headerHeight = Platform.OS === 'ios' ? 62 : 24;
-      const toolbarHeight = 70;
-      const topOffset = headerHeight + toolbarHeight;
-      centerX = protractorCenter.x;
-      centerY = protractorCenter.y - topOffset;
-    }
+    // Hilfsfunktion: Screen-Koordinaten → Canvas-Koordinaten
+    const screenToCanvas = (screenX: number, screenY: number) => {
+      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+        // Android: viewBox-basierte Konvertierung
+        const lx = layout ? layout.x : 0;
+        const ly = layout ? layout.y : 0;
+        return {
+          x: androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w,
+          y: androidViewBox.y + ((screenY - ly) / canvasHeight) * androidViewBox.h,
+        };
+      } else if (layout) {
+        // iOS / Web: ScrollView-Zoom berücksichtigen
+        // canvasLayout wird bei zoom=1 gemessen, scrollOffset ist der Content-Offset
+        return {
+          x: (screenX - layout.x + so.x) / currentScale,
+          y: (screenY - layout.y + so.y) / currentScale,
+        };
+      } else {
+        // Fallback ohne Layout-Info
+        const headerHeight = Platform.OS === 'ios' ? 62 : 24;
+        const toolbarHeight = 70;
+        const topOffset = headerHeight + toolbarHeight;
+        return { x: screenX, y: screenY - topOffset };
+      }
+    };
+    
+    const center = screenToCanvas(protractorCenter.x, protractorCenter.y);
+    centerX = center.x;
+    centerY = center.y;
+    
+    console.log('addProtractorToSketch - scale:', currentScale, 'scrollOffset:', so, 'screenCenter:', protractorCenter, 'canvasCenter:', { x: centerX, y: centerY });
     
     // Winkel-Anzeige (immer positiv)
     let displayAngle = Math.abs(protractorAngle);
@@ -1958,9 +1989,9 @@ export default function DrawSketchScreen() {
     const angleDy = protractorAngleEnd.y - protractorCenter.y;
     const angleEndAngle = Math.atan2(angleDy, angleDx);
     
-    // Zeichengröße (vom Benutzer einstellbar)
-    const lineLength = protractorDrawSize;
-    const arcRadius = protractorDrawSize * 0.6;
+    // Zeichengröße: Bei Zoom skalieren, damit der Winkel proportional zum sichtbaren Bereich bleibt
+    const lineLength = protractorDrawSize / currentScale;
+    const arcRadius = (protractorDrawSize * 0.6) / currentScale;
     
     // Generiere eindeutige IDs
     const baseId = Date.now().toString(36);
@@ -1974,7 +2005,7 @@ export default function DrawSketchScreen() {
       type: 'line',
       data: { x1: centerX, y1: centerY, x2: refEndX, y2: refEndY },
       color: '#2196f3',
-      strokeWidth: 3,
+      strokeWidth: Math.max(1, 3 / currentScale),
     });
     
     // 2. Winkellinie
@@ -1985,7 +2016,7 @@ export default function DrawSketchScreen() {
       type: 'line',
       data: { x1: centerX, y1: centerY, x2: angleEndX, y2: angleEndY },
       color: '#FF5722',
-      strokeWidth: 3,
+      strokeWidth: Math.max(1, 3 / currentScale),
     });
     
     // 3. Winkelbogen
@@ -2003,14 +2034,14 @@ export default function DrawSketchScreen() {
         type: 'path',
         data: arcPath,
         color: '#4caf50',
-        strokeWidth: 3,
+        strokeWidth: Math.max(1, 3 / currentScale),
       });
     }
     
     // 4. Winkeltext
     const midAngle = (refAngle + angleEndAngle) / 2;
-    const textX = centerX + (arcRadius + 15) * Math.cos(midAngle);
-    const textY = centerY + (arcRadius + 15) * Math.sin(midAngle);
+    const textX = centerX + (arcRadius + 15 / currentScale) * Math.cos(midAngle);
+    const textY = centerY + (arcRadius + 15 / currentScale) * Math.sin(midAngle);
     newElements.push({
       id: `${baseId}-text`,
       type: 'text',
@@ -2019,7 +2050,7 @@ export default function DrawSketchScreen() {
       strokeWidth: 1,
       x: textX,
       y: textY,
-      fontSize: Math.max(14, protractorDrawSize * 0.25),
+      fontSize: Math.max(10, (protractorDrawSize * 0.25) / currentScale),
       fontWeight: 'bold',
     });
     
@@ -2032,7 +2063,7 @@ export default function DrawSketchScreen() {
     protractorInitializedRef.current = false;
     
     showAlert(t('sketches.angleSnap'), t('sketches.angleAdded', { angle: displayAngle }));
-  }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout, addToHistory]);
+  }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout, addToHistory, androidViewBox, screenWidth, canvasHeight]);
 
   // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
   // Winkel-Elemente haben IDs im Format: {baseId}-ref-line, {baseId}-angle-line, {baseId}-arc, {baseId}-text
@@ -7547,13 +7578,20 @@ export default function DrawSketchScreen() {
                 const baseId = getAngleGroupBaseId(selectedElementId);
                 const geo = getAngleGroupGeometry(baseId);
                 if (geo && canvasLayout) {
-                  // Positionen aus den platzierten Elementen berechnen
-                  const cx = geo.cx + canvasLayout.x;
-                  const cy = geo.cy + canvasLayout.y;
-                  const refEndX = cx + geo.refLength * Math.cos(geo.refAngleRad);
-                  const refEndY = cy + geo.refLength * Math.sin(geo.refAngleRad);
-                  const angleEndX = cx + geo.anglLineLength * Math.cos(geo.angleLineRad);
-                  const angleEndY = cy + geo.anglLineLength * Math.sin(geo.angleLineRad);
+                  // Canvas → Screen-Koordinaten (berücksichtigt Zoom und Scroll)
+                  const currentScale = scaleRef.current || 1;
+                  const so = scrollOffsetRef.current || { x: 0, y: 0 };
+                  
+                  // Canvas-Koordinaten → Bildschirm-Koordinaten
+                  const cx = geo.cx * currentScale - so.x + canvasLayout.x;
+                  const cy = geo.cy * currentScale - so.y + canvasLayout.y;
+                  // Linienlängen in Bildschirm-Koordinaten skalieren
+                  const screenRefLength = geo.refLength * currentScale;
+                  const screenAngleLength = geo.anglLineLength * currentScale;
+                  const refEndX = cx + screenRefLength * Math.cos(geo.refAngleRad);
+                  const refEndY = cy + screenRefLength * Math.sin(geo.refAngleRad);
+                  const angleEndX = cx + screenAngleLength * Math.cos(geo.angleLineRad);
+                  const angleEndY = cy + screenAngleLength * Math.sin(geo.angleLineRad);
                   
                   // Alte Elemente entfernen
                   const groupIds = getAngleGroupElementIds(baseId);

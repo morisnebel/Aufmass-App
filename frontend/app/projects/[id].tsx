@@ -2669,22 +2669,41 @@ export default function ProjectDetailScreen() {
               flex-wrap: wrap !important;
               gap: 10px !important;
             }
-            /* iPhone: Skizzen untereinander für saubere Seitenumbrüche */
+            /* iPhone: inline-block für nebeneinander + saubere Seitenumbrüche */
             .sketches-container-iphone {
               display: block !important;
+              font-size: 0 !important;
             }
             .sketches-container-iphone .sketch-item {
-              display: block !important;
-              width: 100% !important;
-              max-width: 100% !important;
-              max-height: none !important;
+              display: inline-block !important;
+              vertical-align: top !important;
+              font-size: 14px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-bottom: 15px !important;
+              margin-bottom: 10px !important;
+              margin-right: 1% !important;
+            }
+            .sketches-container-iphone .sketch-small {
+              width: 32% !important;
+              max-width: 32% !important;
+            }
+            .sketches-container-iphone .sketch-medium {
+              width: 48% !important;
+              max-width: 48% !important;
+            }
+            .sketches-container-iphone .sketch-large {
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            .sketches-container-iphone .sketch-full {
+              width: 100% !important;
+              max-width: 100% !important;
             }
             .sketches-container-iphone .sketch-item img {
               max-height: none !important;
+              max-width: 100% !important;
               width: 100% !important;
+              height: auto !important;
               object-fit: contain !important;
             }
             /* iPad: inline-block für nebeneinander + saubere Seitenumbrüche */
@@ -2744,30 +2763,15 @@ export default function ProjectDetailScreen() {
               flex: 0 0 100% !important;
               max-width: 100% !important;
             }
-            /* iPhone Sketch/Photo: Höhenbeschränkung für saubere Seitenumbrüche */
-            .sketch-iphone, .photo-iphone {
-              max-height: 850px !important;
-              overflow: hidden !important;
-            }
-            .sketch-iphone img, .photo-iphone img {
-              max-height: 780px !important;
-            }
-            /* Container-Größen zurücksetzen für Druck (iPhone) */
-            .sketches-container-iphone .sketch-item {
-              width: 100% !important;
-              max-width: 100% !important;
-              max-height: 850px !important;
-              overflow: hidden !important;
-              margin-bottom: 20px !important;
-            }
-            .sketches-container-iphone .sketch-item img {
-              max-height: 780px !important;
-            }
-            /* iPhone: Fotos untereinander für saubere Seitenumbrüche */
+            /* Sketch/Photo: Höhenbeschränkung entfernt - inline-block mit page-break-inside: avoid reicht */
+            /* iPhone: Fotos nebeneinander mit sauberen Seitenumbrüchen */
             .photos-print-iphone > div {
-              display: block !important;
-              width: 100% !important;
-              margin-bottom: 15px !important;
+              display: inline-block !important;
+              vertical-align: top !important;
+              font-size: 14px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 10px !important;
             }
             .photos-print-iphone > div img {
               max-height: 500px !important;

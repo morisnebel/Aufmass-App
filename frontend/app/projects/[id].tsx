@@ -1668,7 +1668,6 @@ export default function ProjectDetailScreen() {
     // Generate sketches HTML (embedded as base64/SVG) with size options
     // iPhone: kleinere Skizzen (2 pro Seite) für bessere Kompatibilität
     // iPad: normale Größe
-    const isIpad = Platform.OS === 'ios' && Platform.isPad;
     
     const sketchItems = sketches.map((sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata

@@ -2284,15 +2284,25 @@ export default function DrawSketchScreen() {
         } else if (saveTitle.trim()) {
           // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
           try {
-            const fullMetadata = { ...metadata, backgroundImage: saveBgImage };
+            // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen Bildern)
+            const lightMetadataForCreate = { ...metadata };
+            delete lightMetadataForCreate.backgroundImage;
             await SketchService.create({
               project_id: saveProjectId,
               title: saveTitle,
               notes: saveNotes,
               sketch_data: sketchData,
-              metadata: JSON.stringify(fullMetadata),
+              metadata: JSON.stringify(lightMetadataForCreate),
               pdf_size: savePdfSize,
             });
+            // Hintergrundbild separat speichern (ohne JSON.stringify)
+            if (saveBgImage) {
+              const newSketches = await SketchService.getAll();
+              const newest = newSketches[newSketches.length - 1];
+              if (newest) {
+                await AsyncStorage.setItem(`sketch_bg_${newest.id}`, saveBgImage);
+              }
+            }
             backgroundImageChangedRef.current = false;
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
           } catch (error) {
@@ -6326,16 +6336,22 @@ export default function DrawSketchScreen() {
       } else {
         // Create new sketch - include metadata for SketchService.create to handle
         console.log('Creating new sketch');
-        const fullMetadata = { ...lightMetadataForSave, backgroundImage };
+        // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen base64-Bildern)
+        const lightMetadataForCreate = { ...lightMetadataForSave };
+        delete lightMetadataForCreate.backgroundImage;
         await Promise.all(imageOps);
         const newSketch = await SketchService.create({
           project_id: projectId,
           title,
           notes,
           sketch_data: sketchData,
-          metadata: JSON.stringify(fullMetadata),
+          metadata: JSON.stringify(lightMetadataForCreate),
           pdf_size: pdfSize,
         });
+        // Hintergrundbild separat speichern (ohne JSON.stringify)
+        if (backgroundImage && newSketch?.id) {
+          await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
+        }
         backgroundImageChangedRef.current = false;
         console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert(t('common.success'), t('sketches.sketchSaved'));

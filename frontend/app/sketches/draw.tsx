@@ -6101,16 +6101,23 @@ export default function DrawSketchScreen() {
     const svgLegendHeight = polylinesForLegend.length > 0 ? (55 + polylinesForLegend.length * svgLegendLineHeight + 25) : 0;
     
     // Legend-Position berechnen (wird auch später für das Rendering verwendet)
-    const canvasWidthForLegend = width;
-    const canvasHeightForLegend = height - 120;
+    // Die Legend-Position kommt vom PanResponder Overlay:
+    // Default: position absolute, bottom: 150, right: 12 + legendPosition (Drag-Offset)
+    // Konvertierung in Canvas-Koordinaten:
+    const canvasWidthForLegend = screenWidth;
+    const canvasHeightForLegend = canvasHeight;
+    // X: right: 12 bedeutet der rechte Rand ist 12px vom Container-Rand → linke Kante = containerWidth - 12 - legendWidth
     const uiStartXLegend = canvasWidthForLegend - 12 - svgLegendWidth;
+    // Y: bottom: 150 bedeutet der untere Rand ist 150px vom Container-Bottom
+    // In Canvas-Koordinaten: canvasHeight - 150 (Boden der Legend)
     const uiStartYLegend = canvasHeightForLegend - 150;
     const uiFinalXLegend = uiStartXLegend + legendPosition.x;
     const uiFinalYLegend = uiStartYLegend + legendPosition.y;
     
-    // SVG-Koordinaten für Legend (relativ zur ursprünglichen minX/minY)
-    const svgLegendXPos = origMinX + uiFinalXLegend;
-    const svgLegendYPos = origMinY + uiFinalYLegend;
+    // SVG-Koordinaten: Direkt Canvas-Koordinaten verwenden (KEIN Offset mit origMinX/Y!)
+    // Canvas-Koordinaten = SVG-Koordinaten, die viewBox wird entsprechend erweitert
+    const svgLegendXPos = uiFinalXLegend;
+    const svgLegendYPos = uiFinalYLegend;
     
     // Erweitere die Bounds um die Legend-Position zu berücksichtigen
     if (polylinesForLegend.length > 0) {

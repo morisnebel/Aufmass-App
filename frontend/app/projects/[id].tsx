@@ -173,6 +173,7 @@ export default function ProjectDetailScreen() {
   
   // Photo gallery save state
   const [photoSelectMode, setPhotoSelectMode] = useState(false);
+  const [photoDeleteMode, setPhotoDeleteMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [isSavingToGallery, setIsSavingToGallery] = useState(false);
   
@@ -627,6 +628,52 @@ export default function ProjectDetailScreen() {
     } finally {
       setIsSavingToGallery(false);
     }
+  };
+
+  // Mehrere Fotos auf einmal löschen
+  const handleDeleteSelectedPhotos = async () => {
+    if (selectedPhotos.length === 0) {
+      Alert.alert('Hinweis', 'Bitte wählen Sie mindestens ein Foto aus.');
+      return;
+    }
+
+    Alert.alert(
+      `${selectedPhotos.length} Foto${selectedPhotos.length > 1 ? 's' : ''} löschen`,
+      `Möchten Sie ${selectedPhotos.length} Foto${selectedPhotos.length > 1 ? 's' : ''} unwiderruflich löschen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              let deletedCount = 0;
+              for (const photoId of selectedPhotos) {
+                try {
+                  await PhotoService.delete(photoId);
+                  deletedCount++;
+                } catch (e) {
+                  console.error(`Error deleting photo ${photoId}:`, e);
+                }
+              }
+
+              // Reset und Daten neu laden
+              setPhotoDeleteMode(false);
+              setSelectedPhotos([]);
+              await loadProjectData();
+
+              Alert.alert('Erfolg', `${deletedCount} Foto${deletedCount > 1 ? 's' : ''} gelöscht.`);
+            } catch (error) {
+              console.error('Error deleting photos:', error);
+              Alert.alert('Fehler', 'Fotos konnten nicht gelöscht werden.');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleDeleteSketch = async () => {
@@ -4686,7 +4733,7 @@ export default function ProjectDetailScreen() {
         {activeTab === 'photos' && (
           <View>
             {/* Button-Leiste */}
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
               {photoSelectMode ? (
                 <>
                   <TouchableOpacity
@@ -4716,12 +4763,64 @@ export default function ProjectDetailScreen() {
                     <Text style={styles.photoActionButtonTextWhite}>Abbrechen</Text>
                   </TouchableOpacity>
                 </>
+              ) : photoDeleteMode ? (
+                <>
+                  <TouchableOpacity
+                    style={[styles.photoActionButton, { backgroundColor: selectedPhotos.length > 0 ? '#f44336' : '#ccc', flex: 1 }]}
+                    onPress={handleDeleteSelectedPhotos}
+                    disabled={selectedPhotos.length === 0 || isDeleting}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="trash" size={22} color="#fff" />
+                        <Text style={styles.photoActionButtonTextWhite}>
+                          Löschen ({selectedPhotos.length})
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  {photos.length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.photoActionButton, { backgroundColor: '#e3f2fd', flex: 0, paddingHorizontal: 12 }]}
+                      onPress={() => {
+                        if (selectedPhotos.length === photos.length) {
+                          setSelectedPhotos([]);
+                        } else {
+                          setSelectedPhotos(photos.map(p => p.id));
+                        }
+                      }}
+                    >
+                      <Ionicons 
+                        name={selectedPhotos.length === photos.length ? "checkbox" : "checkbox-outline"} 
+                        size={20} 
+                        color="#1976d2" 
+                      />
+                      <Text style={[styles.photoActionButtonText, { color: '#1976d2', fontSize: 12 }]}>Alle</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.photoActionButton, styles.photoActionButtonCancel]}
+                    onPress={() => {
+                      setPhotoDeleteMode(false);
+                      setSelectedPhotos([]);
+                    }}
+                  >
+                    <Ionicons name="close" size={22} color="#fff" />
+                    <Text style={styles.photoActionButtonTextWhite}>Abbrechen</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <>
-                  {/* In Galerie (Exportieren) - jetzt zuerst */}
+                  {/* Zur Galerie (Exportieren) */}
                   <TouchableOpacity
                     style={[styles.photoActionButton, styles.photoActionButtonExport]}
-                    onPress={() => setPhotoSelectMode(true)}
+                    onPress={() => {
+                      setPhotoSelectMode(true);
+                      setPhotoDeleteMode(false);
+                      setSelectedPhotos([]);
+                    }}
                   >
                     <Ionicons name="cloud-upload-outline" size={22} color="#43a047" />
                     <View style={styles.photoActionButtonTextContainer}>
@@ -4730,7 +4829,25 @@ export default function ProjectDetailScreen() {
                     </View>
                   </TouchableOpacity>
                   
-                  {/* Foto hinzufügen (Importieren) - jetzt zweiter */}
+                  {/* Fotos löschen (Mehrfach) */}
+                  {photos.length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.photoActionButton, { backgroundColor: '#ffebee', borderColor: '#f44336', borderWidth: 1.5 }]}
+                      onPress={() => {
+                        setPhotoDeleteMode(true);
+                        setPhotoSelectMode(false);
+                        setSelectedPhotos([]);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={22} color="#f44336" />
+                      <View style={styles.photoActionButtonTextContainer}>
+                        <Text style={[styles.photoActionButtonText, { color: '#f44336' }]}>Fotos löschen</Text>
+                        <Text style={[styles.photoActionButtonSubtext, { color: '#f44336' }]}>(Mehrfach)</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* Foto hinzufügen (Importieren) */}
                   <TouchableOpacity
                     style={[styles.photoActionButton, styles.photoActionButtonImport]}
                     onPress={() => router.push(`/photos/new?projectId=${id}`)}
@@ -4750,7 +4867,7 @@ export default function ProjectDetailScreen() {
                 <View key={photo.id} style={styles.photoItem}>
                   <TouchableOpacity
                     onPress={() => {
-                      if (photoSelectMode) {
+                      if (photoSelectMode || photoDeleteMode) {
                         togglePhotoSelection(photo.id);
                       } else {
                         router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`);
@@ -4769,7 +4886,7 @@ export default function ProjectDetailScreen() {
                       </Text>
                     )}
                     
-                    {/* Selection Overlay */}
+                    {/* Selection Overlay - Export Modus (grün) */}
                     {photoSelectMode && (
                       <View style={[
                         styles.photoSelectOverlay,
@@ -4782,17 +4899,31 @@ export default function ProjectDetailScreen() {
                         />
                       </View>
                     )}
+                    
+                    {/* Selection Overlay - Lösch Modus (rot) */}
+                    {photoDeleteMode && (
+                      <View style={[
+                        styles.photoSelectOverlay,
+                        selectedPhotos.includes(photo.id) && { backgroundColor: 'rgba(244, 67, 54, 0.3)' }
+                      ]}>
+                        <Ionicons 
+                          name={selectedPhotos.includes(photo.id) ? "checkmark-circle" : "ellipse-outline"} 
+                          size={32} 
+                          color={selectedPhotos.includes(photo.id) ? "#f44336" : "#fff"} 
+                        />
+                      </View>
+                    )}
                   </TouchableOpacity>
                   
                   {/* Edit Icon - Top Right (nur wenn nicht im Auswahl-Modus) */}
-                  {!photoSelectMode && (
+                  {!photoSelectMode && !photoDeleteMode && (
                     <View style={styles.photoEditOverlay}>
                       <Ionicons name="create-outline" size={20} color="#fff" />
                     </View>
                   )}
                   
                   {/* Delete Button - Bottom Right (nur wenn nicht im Auswahl-Modus) */}
-                  {!photoSelectMode && (
+                  {!photoSelectMode && !photoDeleteMode && (
                     <TouchableOpacity
                       style={styles.photoDeleteButton}
                       onPress={() => {

@@ -1578,7 +1578,11 @@ export default function ProjectDetailScreen() {
     
     // iOS (iPhone UND iPad): Block-Layout für saubere Seitenumbrüche
     // WebKit ignoriert page-break-inside: avoid bei Flexbox-Containern
+    // iPhone: Alles untereinander (display: block, width: 100%)
+    // iPad: inline-block Layout (mehrere nebeneinander, aber Seitenumbrüche werden respektiert)
     const isIOSDevice = Platform.OS === 'ios';
+    const isIpad = Platform.OS === 'ios' && Platform.isPad;
+    const isIphone = Platform.OS === 'ios' && !Platform.isPad;
     
     // Hilfsfunktion um Fotos-HTML zu generieren - mit inline styles für zuverlässiges Drucken
     const generatePhotoHtml = (photo: typeof photos[0]) => {
@@ -1648,8 +1652,14 @@ export default function ProjectDetailScreen() {
     
     if (photos.length > 0) {
       const photoItems = photos.map(photo => generatePhotoHtml(photo)).join('');
-      // iOS: Fotos untereinander für saubere Seitenumbrüche
-      const photosContainerClass = isIOSDevice ? 'photos-print-container photos-print-iphone' : 'photos-print-container';
+      // iOS: Saubere Seitenumbrüche
+      // iPhone: block layout (untereinander)
+      // iPad: inline-block layout (nebeneinander, aber Seitenumbrüche respektiert)
+      const photosContainerClass = isIphone 
+        ? 'photos-print-container photos-print-iphone' 
+        : isIpad 
+          ? 'photos-print-container photos-print-ipad'
+          : 'photos-print-container';
       photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${photoItems}</div>`;
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
@@ -1707,9 +1717,13 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // Sketches-Container: iOS (iPhone UND iPad) bekommt block-Layout für bessere Seitenumbrüche
+    // Sketches-Container: iOS bekommt block/inline-block Layout für bessere Seitenumbrüche
     // WebKit (iOS) ignoriert page-break-inside: avoid bei Flexbox-Containern
-    const sketchesContainerClass = isIOSDevice ? 'sketches-container sketches-container-iphone' : 'sketches-container';
+    const sketchesContainerClass = isIphone 
+      ? 'sketches-container sketches-container-iphone' 
+      : isIpad 
+        ? 'sketches-container sketches-container-ipad'
+        : 'sketches-container';
     
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">
@@ -2674,6 +2688,41 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               object-fit: contain !important;
             }
+            /* iPad: inline-block für nebeneinander + saubere Seitenumbrüche */
+            .sketches-container-ipad {
+              display: block !important;
+              font-size: 0 !important;
+            }
+            .sketches-container-ipad .sketch-item {
+              display: inline-block !important;
+              vertical-align: top !important;
+              font-size: 14px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 10px !important;
+              margin-right: 1% !important;
+            }
+            .sketches-container-ipad .sketch-small {
+              width: 32% !important;
+              max-width: 32% !important;
+            }
+            .sketches-container-ipad .sketch-medium {
+              width: 48% !important;
+              max-width: 48% !important;
+            }
+            .sketches-container-ipad .sketch-large {
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            .sketches-container-ipad .sketch-full {
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            .sketches-container-ipad .sketch-item img {
+              max-width: 100% !important;
+              height: auto !important;
+              object-fit: contain !important;
+            }
             .sketch-item, .photo-item {
               box-sizing: border-box !important;
               max-height: none !important;
@@ -2723,6 +2772,19 @@ export default function ProjectDetailScreen() {
             }
             .photos-print-iphone > div img {
               max-height: 500px !important;
+            }
+            /* iPad: Fotos nebeneinander mit sauberen Seitenumbrüchen */
+            .photos-print-ipad {
+              display: block !important;
+              font-size: 0 !important;
+            }
+            .photos-print-ipad > div {
+              display: inline-block !important;
+              vertical-align: top !important;
+              font-size: 14px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 10px !important;
             }
           }
           * {

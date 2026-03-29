@@ -822,40 +822,13 @@ export default function DrawSketchScreen() {
         : dragHandle === 'angle' ? protractorAngleEnd 
         : protractorCenter;
       
-      // Canvas-Layout frisch messen für präzise Koordinaten
-      const measureAndActivate = (layout: { x: number; y: number; width: number; height: number }) => {
-        setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
-        // Magnifier-Position = tatsächliche Position des Endpunkts auf dem Bildschirm
-        setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
-        
-        // Canvas-Snapshot für präzise Lupe erstellen
-        if (canvasRef.current) {
-          captureRef(canvasRef.current, {
-            format: 'png',
-            quality: 1.0,
-            result: 'data-uri',
-          }).then((uri: string) => {
-            setMagnifierSnapshot(uri);
-            setShowMagnifier(true);
-          }).catch((err: Error) => {
-            console.log('Protractor magnifier snapshot error:', err);
-            setShowMagnifier(true);
-          });
-        } else {
-          setShowMagnifier(true);
-        }
-      };
-      
-      // Frisch messen für aktuelle Position
-      if (canvasRef.current && Platform.OS !== 'web' && typeof (canvasRef.current as any).measureInWindow === 'function') {
-        (canvasRef.current as any).measureInWindow((x: number, y: number, w: number, h: number) => {
-          const freshLayout = { x, y, width: w, height: h };
-          setCanvasLayout(freshLayout);
-          measureAndActivate(freshLayout);
-        });
-      } else if (canvasLayout) {
-        measureAndActivate(canvasLayout);
-      }
+      // Für Protractor: Direkt Canvas-relative Koordinaten berechnen
+      const layout = canvasLayout || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
+      setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
+      setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
+      // Kein captureRef nötig - Grid-Lupe ist zuverlässiger im Protractor-Modus
+      setMagnifierSnapshot(null);
+      setShowMagnifier(true);
     }
     
     protractorDragRef.current = {
@@ -9400,25 +9373,9 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
-                      width: (canvasLayout?.width || width) * 3, // 3x vergrößert für bessere Präzision
+                      width: (canvasLayout?.width || width) * 3,
                       height: (canvasLayout?.height || (height - 120)) * 3,
                       position: 'absolute',
-                      // Position so berechnen, dass der Zielpunkt zentriert ist
-                      left: -magnifierTargetPosition.x * 3 + halfSize,
-                      top: -magnifierTargetPosition.y * 3 + halfSize,
-                    }}
-                    resizeMode="stretch"
-                  />
-                </View>
-              ) : backgroundImage ? (
-                <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
-                  <RNImage
-                    source={{ uri: backgroundImage }}
-                    style={{
-                      width: (canvasLayout?.width || width) * 3, // 3x vergrößert
-                      height: (canvasLayout?.height || (height - 120)) * 3,
-                      position: 'absolute',
-                      // Position so berechnen, dass der Zielpunkt zentriert ist
                       left: -magnifierTargetPosition.x * 3 + halfSize,
                       top: -magnifierTargetPosition.y * 3 + halfSize,
                     }}
@@ -9426,21 +9383,48 @@ export default function DrawSketchScreen() {
                   />
                 </View>
               ) : (
-                <View style={styles.magnifierGridFallback}>
-                  <View style={styles.magnifierGridLine} />
-                  <View style={[styles.magnifierGridLine, styles.magnifierGridLineH]} />
-                </View>
+                /* Grid-basierte Lupe - zuverlässig ohne Screenshot */
+                <Svg width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
+                  {/* Hintergrund */}
+                  <Circle cx={halfSize} cy={halfSize} r={halfSize} fill="#f8f9fa" />
+                  {/* Feine Grid-Linien (10px Raster, 3x vergrößert = 30px) */}
+                  {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
+                    const pos = (i * 30) - ((Math.round(magnifierTargetPosition.x) * 3) % 30);
+                    return pos >= 0 && pos <= magnifierSize ? (
+                      <Line key={`gv${i}`} x1={pos} y1={0} x2={pos} y2={magnifierSize} stroke="#e0e0e0" strokeWidth={0.5} />
+                    ) : null;
+                  })}
+                  {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
+                    const pos = (i * 30) - ((Math.round(magnifierTargetPosition.y) * 3) % 30);
+                    return pos >= 0 && pos <= magnifierSize ? (
+                      <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
+                    ) : null;
+                  })}
+                  {/* Dickere Linien alle 50px (= 150px in Grid) */}
+                  {Array.from({ length: Math.ceil(magnifierSize / 150) + 2 }, (_, i) => {
+                    const pos = (i * 150) - ((Math.round(magnifierTargetPosition.x) * 3) % 150);
+                    return pos >= 0 && pos <= magnifierSize ? (
+                      <Line key={`gv50_${i}`} x1={pos} y1={0} x2={pos} y2={magnifierSize} stroke="#bdbdbd" strokeWidth={1} />
+                    ) : null;
+                  })}
+                  {Array.from({ length: Math.ceil(magnifierSize / 150) + 2 }, (_, i) => {
+                    const pos = (i * 150) - ((Math.round(magnifierTargetPosition.y) * 3) % 150);
+                    return pos >= 0 && pos <= magnifierSize ? (
+                      <Line key={`gh50_${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#bdbdbd" strokeWidth={1} />
+                    ) : null;
+                  })}
+                </Svg>
               )}
               
               {/* Fadenkreuz-Overlay */}
               <Svg width={magnifierSize} height={magnifierSize} style={styles.magnifierCrosshair}>
                 {/* Fadenkreuz */}
-                <Line x1={halfSize} y1={10} x2={halfSize} y2={magnifierSize - 10} stroke="#f44336" strokeWidth={1.5} />
-                <Line x1={10} y1={halfSize} x2={magnifierSize - 10} y2={halfSize} stroke="#f44336" strokeWidth={1.5} />
+                <Line x1={halfSize} y1={8} x2={halfSize} y2={magnifierSize - 8} stroke="#f44336" strokeWidth={1.5} opacity={0.8} />
+                <Line x1={8} y1={halfSize} x2={magnifierSize - 8} y2={halfSize} stroke="#f44336" strokeWidth={1.5} opacity={0.8} />
                 {/* Zentraler Kreis */}
-                <Circle cx={halfSize} cy={halfSize} r={4} fill="none" stroke="#f44336" strokeWidth={1.5} />
+                <Circle cx={halfSize} cy={halfSize} r={3} fill="none" stroke="#f44336" strokeWidth={2} />
                 {/* Rahmen */}
-                <Circle cx={halfSize} cy={halfSize} r={halfSize - 3} fill="none" stroke="#1976d2" strokeWidth={3} />
+                <Circle cx={halfSize} cy={halfSize} r={halfSize - 2} fill="none" stroke="#1976d2" strokeWidth={3} />
               </Svg>
             </View>
             

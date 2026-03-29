@@ -1576,6 +1576,10 @@ export default function ProjectDetailScreen() {
     // Jedes Foto bekommt page-break-inside: avoid
     // Die Größe bestimmt nur wie viel Platz das Foto einnimmt
     
+    // iOS (iPhone UND iPad): Block-Layout für saubere Seitenumbrüche
+    // WebKit ignoriert page-break-inside: avoid bei Flexbox-Containern
+    const isIOSDevice = Platform.OS === 'ios';
+    
     // Hilfsfunktion um Fotos-HTML zu generieren - mit inline styles für zuverlässiges Drucken
     const generatePhotoHtml = (photo: typeof photos[0]) => {
       const size = (photo as any).pdf_size || 'medium';
@@ -1644,8 +1648,8 @@ export default function ProjectDetailScreen() {
     
     if (photos.length > 0) {
       const photoItems = photos.map(photo => generatePhotoHtml(photo)).join('');
-      // iPhone: Fotos untereinander für saubere Seitenumbrüche
-      const photosContainerClass = isIphone ? 'photos-print-container photos-print-iphone' : 'photos-print-container';
+      // iOS: Fotos untereinander für saubere Seitenumbrüche
+      const photosContainerClass = isIOSDevice ? 'photos-print-container photos-print-iphone' : 'photos-print-container';
       photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${photoItems}</div>`;
     } else {
       photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
@@ -1703,9 +1707,9 @@ export default function ProjectDetailScreen() {
       `;
     });
     
-    // Sketches-Container: iPhone bekommt block-Layout für bessere Seitenumbrüche
-    const isIphone = Platform.OS === 'ios' && !Platform.isPad;
-    const sketchesContainerClass = isIphone ? 'sketches-container sketches-container-iphone' : 'sketches-container';
+    // Sketches-Container: iOS (iPhone UND iPad) bekommt block-Layout für bessere Seitenumbrüche
+    // WebKit (iOS) ignoriert page-break-inside: avoid bei Flexbox-Containern
+    const sketchesContainerClass = isIOSDevice ? 'sketches-container sketches-container-iphone' : 'sketches-container';
     
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">

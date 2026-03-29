@@ -59,7 +59,6 @@ export default function NewPhotoScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
-        base64: true,
         selectionLimit: 20,
       });
 
@@ -69,14 +68,11 @@ export default function NewPhotoScreen() {
         for (const asset of result.assets) {
           let base64Image: string;
           
-          if (asset.base64) {
-            base64Image = `data:image/jpeg;base64,${asset.base64}`;
-          } else if (asset.uri) {
-            // Fallback für Android: URI in base64 konvertieren
-            console.log('base64 not available for gallery image, converting from URI');
+          // Immer resize auf max. 1200px (verhindert OOM auf iPad bei vielen Bildern)
+          try {
             const manipResult = await ImageManipulator.manipulateAsync(
               asset.uri,
-              [{ resize: { width: 1200 } }],
+              [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
               { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
             );
             if (manipResult.base64) {
@@ -85,8 +81,14 @@ export default function NewPhotoScreen() {
               console.error('Failed to convert image to base64');
               continue;
             }
-          } else {
-            continue;
+          } catch (manipError) {
+            console.error('Error resizing image:', manipError);
+            // Fallback: Verwende direkt base64 wenn vorhanden
+            if (asset.base64) {
+              base64Image = `data:image/jpeg;base64,${asset.base64}`;
+            } else {
+              continue;
+            }
           }
           
           newPhotos.push({ uri: base64Image, description: '' });

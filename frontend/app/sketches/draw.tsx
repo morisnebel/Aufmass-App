@@ -681,6 +681,7 @@ export default function DrawSketchScreen() {
   const [protractorAngleInput, setProtractorAngleInput] = useState('0');
   const [protractorUseComplementary, setProtractorUseComplementary] = useState(false);
   const [protractorDrawSize, setProtractorDrawSize] = useState(60);
+  const protractorCanvasSnapshot = useRef<string | null>(null); // Canvas-Snapshot VOR Protractor-Overlay
   
   // Bildschirmkoordinaten der drei Punkte
   const [protractorCenter, setProtractorCenter] = useState({ x: 0, y: 0 });
@@ -826,8 +827,8 @@ export default function DrawSketchScreen() {
       const layout = canvasLayout || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
       setMagnifierTargetPosition({ x: targetPt.x - layout.x, y: targetPt.y - layout.y });
       setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
-      // Kein captureRef nötig - Grid-Lupe ist zuverlässiger im Protractor-Modus
-      setMagnifierSnapshot(null);
+      // Verwende den vorab gespeicherten Canvas-Snapshot oder Hintergrundbild
+      setMagnifierSnapshot(protractorCanvasSnapshot.current);
       setShowMagnifier(true);
     }
     
@@ -1964,7 +1965,13 @@ export default function DrawSketchScreen() {
     });
     
     addToHistory(newElements);
+    
+    // Protractor-State komplett aufräumen (verhindert Freeze)
+    setShowMagnifier(false);
+    setMagnifierSnapshot(null);
     setShowProtractor(false);
+    protractorInitializedRef.current = false;
+    
     showAlert(t('sketches.angleSnap'), t('sketches.angleAdded', { angle: displayAngle }));
   }, [elements, protractorAngle, protractorCenter, protractorRefEnd, protractorAngleEnd, protractorUseComplementary, protractorDrawSize, canvasLayout]);
 
@@ -6942,6 +6949,20 @@ export default function DrawSketchScreen() {
             style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
             onPress={() => {
               if (!showProtractor) {
+                // Canvas-Snapshot erstellen BEVOR das Protractor-Overlay angezeigt wird
+                if (canvasRef.current) {
+                  captureRef(canvasRef.current, {
+                    format: 'png',
+                    quality: 0.8,
+                    result: 'data-uri',
+                  }).then((uri: string) => {
+                    protractorCanvasSnapshot.current = uri;
+                    console.log('Protractor canvas snapshot captured');
+                  }).catch((err: Error) => {
+                    console.log('Canvas snapshot error:', err);
+                    protractorCanvasSnapshot.current = null;
+                  });
+                }
                 // Neuen Winkelmesser öffnen → Position zurücksetzen
                 setProtractorCenter({ x: 0, y: 0 });
                 setProtractorRefEnd({ x: 0, y: 0 });
@@ -7480,6 +7501,19 @@ export default function DrawSketchScreen() {
                   const newElements = elements.filter(el => !groupIds.includes(el.id));
                   addToHistory(newElements);
                   setSelectedElementId(null);
+                  
+                  // Canvas-Snapshot erstellen bevor Protractor-Overlay geöffnet wird
+                  if (canvasRef.current) {
+                    captureRef(canvasRef.current, {
+                      format: 'png',
+                      quality: 0.8,
+                      result: 'data-uri',
+                    }).then((uri: string) => {
+                      protractorCanvasSnapshot.current = uri;
+                    }).catch(() => {
+                      protractorCanvasSnapshot.current = null;
+                    });
+                  }
                   
                   // Winkelmesser mit den Positionen öffnen
                   setProtractorCenter({ x: cx, y: cy });
@@ -9367,14 +9401,14 @@ export default function DrawSketchScreen() {
           <View style={styles.magnifierContent}>
             {/* Runder Lupen-Container mit Bild */}
             <View style={[styles.magnifierCircle, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
-              {/* Canvas-Snapshot vergrößert - zeigt Bild + SVG-Zeichnungen */}
-              {magnifierSnapshot ? (
+              {/* Canvas-Snapshot oder Hintergrundbild vergrößert */}
+              {(magnifierSnapshot || backgroundImage) ? (
                 <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
                   <RNImage
-                    source={{ uri: magnifierSnapshot }}
+                    source={{ uri: magnifierSnapshot || backgroundImage }}
                     style={{
-                      width: (canvasLayout?.width || width) * 3,
-                      height: (canvasLayout?.height || (height - 120)) * 3,
+                      width: (canvasLayout?.width || screenWidth) * 3,
+                      height: (canvasLayout?.height || canvasHeight) * 3,
                       position: 'absolute',
                       left: -magnifierTargetPosition.x * 3 + halfSize,
                       top: -magnifierTargetPosition.y * 3 + halfSize,
@@ -9383,11 +9417,9 @@ export default function DrawSketchScreen() {
                   />
                 </View>
               ) : (
-                /* Grid-basierte Lupe - zuverlässig ohne Screenshot */
+                /* Grid-basierte Lupe als Fallback (kein Bild verfügbar) */
                 <Svg width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
-                  {/* Hintergrund */}
                   <Circle cx={halfSize} cy={halfSize} r={halfSize} fill="#f8f9fa" />
-                  {/* Feine Grid-Linien (10px Raster, 3x vergrößert = 30px) */}
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
                     const pos = (i * 30) - ((Math.round(magnifierTargetPosition.x) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
@@ -9398,19 +9430,6 @@ export default function DrawSketchScreen() {
                     const pos = (i * 30) - ((Math.round(magnifierTargetPosition.y) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
-                    ) : null;
-                  })}
-                  {/* Dickere Linien alle 50px (= 150px in Grid) */}
-                  {Array.from({ length: Math.ceil(magnifierSize / 150) + 2 }, (_, i) => {
-                    const pos = (i * 150) - ((Math.round(magnifierTargetPosition.x) * 3) % 150);
-                    return pos >= 0 && pos <= magnifierSize ? (
-                      <Line key={`gv50_${i}`} x1={pos} y1={0} x2={pos} y2={magnifierSize} stroke="#bdbdbd" strokeWidth={1} />
-                    ) : null;
-                  })}
-                  {Array.from({ length: Math.ceil(magnifierSize / 150) + 2 }, (_, i) => {
-                    const pos = (i * 150) - ((Math.round(magnifierTargetPosition.y) * 3) % 150);
-                    return pos >= 0 && pos <= magnifierSize ? (
-                      <Line key={`gh50_${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#bdbdbd" strokeWidth={1} />
                     ) : null;
                   })}
                 </Svg>

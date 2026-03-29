@@ -34,6 +34,19 @@ import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
+// Strings sind in JS immutable → werden nur referenziert statt über JSON serialisiert
+function deepCloneElement(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj; // Strings, Numbers, Booleans werden direkt zurückgegeben
+  if (Array.isArray(obj)) return obj.map(deepCloneElement);
+  const clone: any = {};
+  for (const key of Object.keys(obj)) {
+    clone[key] = deepCloneElement(obj[key]);
+  }
+  return clone;
+}
+
 // Key für Tool-Größen-Einstellungen
 const TOOL_SIZES_KEY = 'aufmassprofi_tool_sizes';
 import Svg, { 
@@ -3870,7 +3883,7 @@ export default function DrawSketchScreen() {
             setEditingPolylinePoint(null); // Kein einzelner Punkt, sondern ganzes Polygon
             setDragMode('move');
             setDragStart({ x: locationX, y: locationY });
-            setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+            setOriginalElement(deepCloneElement(selectedEl));
             return;
           }
         }
@@ -3888,7 +3901,7 @@ export default function DrawSketchScreen() {
               setEditingPolylinePoint(i);
               setDragMode('move');
               setDragStart({ x: locationX, y: locationY });
-              setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+              setOriginalElement(deepCloneElement(selectedEl));
               
               // Lupe aktivieren für Polygon-Eckpunkte
               setMagnifierTargetPosition({ x: pt.x, y: pt.y });
@@ -3923,7 +3936,7 @@ export default function DrawSketchScreen() {
           if (handle.type === 'angle-rotate' || handle.type === 'angle-adjust') {
             const baseId = getAngleGroupBaseId(selectedEl.id);
             const groupIds = getAngleGroupElementIds(baseId);
-            const originals = elements.filter(el => groupIds.includes(el.id)).map(el => JSON.parse(JSON.stringify(el)));
+            const originals = elements.filter(el => groupIds.includes(el.id)).map(el => deepCloneElement(el));
             setAngleEditMode(handle.type === 'angle-rotate' ? 'rotate' : 'adjust');
             setAngleEditBaseId(baseId);
             setAngleEditOriginals(originals);
@@ -3934,7 +3947,7 @@ export default function DrawSketchScreen() {
           setDragMode(handle.type === 'rotate' ? 'rotate' : 'resize');
           setResizeHandle(handle.handle);
           setDragStart({ x: locationX, y: locationY });
-          setOriginalElement(JSON.parse(JSON.stringify(selectedEl)));
+          setOriginalElement(deepCloneElement(selectedEl));
           
           // Lupe aktivieren für Maßlinien-Endpunkte (start/end handles)
           if ((selectedEl.type === 'line' || selectedEl.type === 'arrow' || selectedEl.type === 'pointer' || selectedEl.type === 'memo') &&
@@ -4067,10 +4080,10 @@ export default function DrawSketchScreen() {
             console.log('[DEBUG] Angle group: starting move (already selected)');
             setDragMode('move');
             setDragStart({ x: locationX, y: locationY });
-            setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+            setOriginalElement(deepCloneElement(clickedElement));
             const groupIds = getAngleGroupElementIds(baseId);
             const groupElements = elements.filter(el => groupIds.includes(el.id));
-            setOriginalGroupElements(groupElements.map(el => JSON.parse(JSON.stringify(el))));
+            setOriginalGroupElements(groupElements.map(el => deepCloneElement(el)));
             setMovingGroupBaseId(baseId);
           }
           // Erstes Tap → nur auswählen (Handles werden sichtbar)
@@ -4079,7 +4092,7 @@ export default function DrawSketchScreen() {
           console.log('[DEBUG] Setting drag mode to move for:', clickedElement.type);
           setDragMode('move');
           setDragStart({ x: locationX, y: locationY });
-          setOriginalElement(JSON.parse(JSON.stringify(clickedElement)));
+          setOriginalElement(deepCloneElement(clickedElement));
           // Gruppen-State zurücksetzen
           setOriginalGroupElements([]);
           setMovingGroupBaseId(null);

@@ -3951,7 +3951,7 @@ export default function ProjectDetailScreen() {
         ${checklists.length > 0 ? `
         <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
           <table class="checklists-table" style="width: 100%; border-collapse: collapse; border: none;">
-            <thead>
+            <thead style="display: table-header-group;">
               <tr><th style="text-align: left; border: none; padding: 0 0 4px 0; font-size: 11px; color: #c62828; border-bottom: 2px solid #c62828;">
                 ${t('checklists.title')}
               </th></tr>

@@ -2662,9 +2662,16 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
             }
             /* Seitenumbrüche für Abschnitte */
-            .checklists-section, .roof-section, .calculator-section {
+            .roof-section, .calculator-section {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+            }
+            /* Checklisten: Sektion darf umbrechen, nur Kategorien bleiben zusammen */
+            .checklists-section {
+              page-break-inside: auto !important;
+              break-inside: auto !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
             }
             /* Sektionen erlauben Umbrüche, aber starten auf neuer Seite */
             .sketches-section { 
@@ -3932,8 +3939,8 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${checklists.length > 0 ? `
-        <div class="checklists-section" style="page-break-before: auto; page-break-inside: auto;">
-          <h2 style="page-break-after: avoid;">${t('checklists.title')}</h2>
+        <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
+          <h2 style="page-break-after: avoid;">${t('checklists.title')} <span style="font-size:6px;color:#999;">[v2]</span></h2>
           ${checklistsHtml}
         </div>
         ` : ''}

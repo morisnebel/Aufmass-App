@@ -1512,7 +1512,7 @@ export default function ProjectDetailScreen() {
         }).join('');
         
         return `
-          <div class="pdf-category-section cols-${checklistColumns}">
+          <div class="pdf-category-section cols-${checklistColumns}" style="page-break-inside: avoid; break-inside: avoid;">
             <div class="pdf-category-header">
               ${category.categoryLogo ? `<img src="${category.categoryLogo}" class="pdf-category-logo" alt="Logo" />` : ''}
               <span class="pdf-cat-check">✓</span>
@@ -1552,8 +1552,8 @@ export default function ProjectDetailScreen() {
         : '';
       
       return `
-        <div class="checklist-card">
-          <div class="checklist-main-header">
+        <div class="checklist-card" style="page-break-inside: auto; break-inside: auto;">
+          <div class="checklist-main-header" style="page-break-after: avoid; break-after: avoid;">
             ${templateLogoHtml}
             <span class="checklist-main-title">${checklist.template_name}</span>
             <span class="checklist-main-count">${totalChecked} von ${totalItems}</span>
@@ -3911,23 +3911,9 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${checklists.length > 0 ? `
-        <div class="checklists-section">
-          <table class="checklists-table" style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="text-align: left; padding: 0; border: none;">
-                  <h2 style="margin: 0 0 8px 0;">${t('checklists.title')}</h2>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding: 0; border: none;">
-                  ${checklistsHtml}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="checklists-section" style="page-break-before: auto; page-break-inside: auto;">
+          <h2 style="page-break-after: avoid;">${t('checklists.title')}</h2>
+          ${checklistsHtml}
         </div>
         ` : ''}
         

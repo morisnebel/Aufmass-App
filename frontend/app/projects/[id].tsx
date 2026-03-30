@@ -2530,7 +2530,7 @@ export default function ProjectDetailScreen() {
               display: block !important;
               visibility: visible !important;
             }
-            /* Checklisten: Kein Seitenumbruch für platzsparendes Layout */
+            /* Checklisten: Kein Seitenumbruch auf Sektionsebene - fließt natürlich */
             .checklists-page-break {
               /* page-break-before removed for compact layout */
             }
@@ -2540,6 +2540,29 @@ export default function ProjectDetailScreen() {
               break-after: avoid !important;
               orphans: 3;
               widows: 3;
+            }
+            /* Checklist-Kategorien als Einheit halten */
+            .pdf-category-section {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Checklist-Cards dürfen umbrechen */
+            .checklist-card {
+              page-break-inside: auto !important;
+              break-inside: auto !important;
+            }
+            /* Checklisten-Tabelle: Überschrift wiederholt sich auf jeder Seite */
+            .checklists-table {
+              page-break-inside: auto !important;
+            }
+            .checklists-table thead {
+              display: table-header-group !important;
+            }
+            .checklists-table thead th h2 {
+              font-size: 16px !important;
+              color: #c62828 !important;
+              border-bottom: 2px solid #c62828 !important;
+              padding-bottom: 4px !important;
             }
             /* Checklist-Items nicht umbrechen */
             .checklist-item {
@@ -2940,13 +2963,26 @@ export default function ProjectDetailScreen() {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
-          /* Checklisten Sektion */
+          /* Checklisten Sektion - KEIN page-break-inside: avoid damit es auf Seite 1 beginnt */
           .checklists-section {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
             width: 100%;
           }
           .checklists-section h2 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          /* Jede Hauptkategorie bleibt zusammen */
+          .pdf-category-section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          /* Checklist-Card darf umbrechen, aber nicht die einzelnen Kategorien */
+          .checklist-card {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          /* Checklist Header bleibt mit erstem Inhalt zusammen */
+          .checklist-main-header {
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
@@ -3875,9 +3911,23 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${checklists.length > 0 ? `
-        <div class="checklists-section checklists-page-break">
-          <h2>${t('checklists.title')}</h2>
-          ${checklistsHtml}
+        <div class="checklists-section">
+          <table class="checklists-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align: left; padding: 0; border: none;">
+                  <h2 style="margin: 0 0 8px 0;">${t('checklists.title')}</h2>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 0; border: none;">
+                  ${checklistsHtml}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         ` : ''}
         

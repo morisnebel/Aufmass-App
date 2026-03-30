@@ -1565,7 +1565,7 @@ export default function ProjectDetailScreen() {
         ? `<div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px;">${t('checklists.title')}</div>`
         : '';
       
-      // Checklist-Header (z.B. "Dachsanierung 25/25") + erste Kategorie zusammen
+      // Checklist-Header + erste Kategorie zusammen (nicht trennen)
       const cardHeader = `
         <div style="page-break-inside: avoid; break-inside: avoid;">
           ${sectionHeader}
@@ -1578,10 +1578,9 @@ export default function ProjectDetailScreen() {
         </div>
       `;
       
-      // Restliche Kategorien — nur dezente kleine Markierung
+      // Restliche Kategorien — sauber ohne Wiederholung
       const restCategories = categoryHtmls.slice(1).map(catHtml => `
         <div style="page-break-inside: avoid; break-inside: avoid;">
-          <div style="font-size: 7px; color: #999; margin-top: 3px; margin-bottom: 1px;">${t('checklists.title')}</div>
           ${catHtml}
         </div>
       `).join('');

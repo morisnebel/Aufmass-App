@@ -2502,6 +2502,28 @@ export default function ProjectDetailScreen() {
               box-shadow: none;
               border-radius: 0;
             }
+            /* iOS WebKit Fix: Grid/Flex in Eltern-Elementen bricht page-break für alle nachfolgenden Geschwister */
+            .info-grid {
+              display: block !important;
+            }
+            .info-grid .info-box {
+              display: inline-block !important;
+              width: 48% !important;
+              vertical-align: top !important;
+              margin-right: 1% !important;
+              margin-bottom: 5px !important;
+            }
+            .info-row {
+              display: block !important;
+              overflow: hidden !important;
+            }
+            .info-label {
+              float: left !important;
+              display: inline !important;
+            }
+            .info-value {
+              display: inline !important;
+            }
             .page .header {
               margin: 0 0 10px 0 !important;
               -webkit-print-color-adjust: exact !important;

@@ -1567,9 +1567,14 @@ export default function ProjectDetailScreen() {
         </td></tr>
       `;
       
-      const categoryRows = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean).map(catHtml => `
-        <tr><td style="border:none; padding:0;">${catHtml}</td></tr>
-      `).join('');
+      const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
+      const categoryRows = categoryHtmls.map((catHtml, catIdx) => {
+        // Alle 4 Kategorien eine "Checklisten" Überschrift einfügen (für Folgeseiten)
+        const repeatHeader = catIdx > 0 && catIdx % 4 === 0 
+          ? `<div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding: 2px 0 2px 0; margin: 8px 0 6px 0;">${t('checklists.title')}</div>`
+          : '';
+        return `<tr><td style="border:none; padding:0;">${repeatHeader}${catHtml}</td></tr>`;
+      }).join('');
       
       return headerRow + categoryRows;
     }).join('');

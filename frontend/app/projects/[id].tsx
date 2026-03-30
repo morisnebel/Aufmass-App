@@ -3940,7 +3940,7 @@ export default function ProjectDetailScreen() {
         
         ${checklists.length > 0 ? `
         <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
-          <h2 style="page-break-after: avoid;">${t('checklists.title')} <span style="font-size:6px;color:#999;">[v2]</span></h2>
+          <h2 style="page-break-after: avoid;">${t('checklists.title')}</h2>
           ${checklistsHtml}
         </div>
         ` : ''}

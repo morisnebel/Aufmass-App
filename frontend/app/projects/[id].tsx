@@ -1569,9 +1569,11 @@ export default function ProjectDetailScreen() {
       
       const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
       const categoryRows = categoryHtmls.map((catHtml, catIdx) => {
-        // Alle 4 Kategorien eine "Checklisten" Überschrift einfügen (für Folgeseiten)
-        const repeatHeader = catIdx > 0 && catIdx % 4 === 0 
-          ? `<div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding: 2px 0 2px 0; margin: 8px 0 6px 0;">${t('checklists.title')}</div>`
+        // "Checklisten" Überschrift vor jeder Kategorie als dezente Trennlinie
+        // Erste Kategorie der ersten Checkliste braucht keine (Hauptüberschrift ist direkt darüber)
+        const showRepeatHeader = !(idx === 0 && catIdx === 0);
+        const repeatHeader = showRepeatHeader 
+          ? `<div style="font-size: 9px; font-weight: bold; color: #c62828; border-top: 1.5px solid #c62828; padding-top: 2px; margin-top: 4px; margin-bottom: 2px;">${t('checklists.title')}</div>`
           : '';
         return `<tr><td style="border:none; padding:0;">${repeatHeader}${catHtml}</td></tr>`;
       }).join('');

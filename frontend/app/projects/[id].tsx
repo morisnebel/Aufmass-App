@@ -1554,34 +1554,37 @@ export default function ProjectDetailScreen() {
       return { categoriesHtml, totalChecked, totalItems, templateLogoHtml };
     }) : [];
 
-    // Alle Checklisten als Tabellenzeilen generieren
-    const checklistTableRows = checklistItems.map((item, idx) => {
+    // Alle Checklisten als einfache divs generieren
+    // Jede Kategorie bekommt eine "Checklisten" Überschrift für Seitenumbrüche
+    const checklistsHtml = checklistItems.length > 0 ? checklistItems.map((item, idx) => {
       if (!item) return '';
-      const headerRow = `
-        <tr><td style="border:none; padding:0 0 4px 0;">
-          <div class="checklist-main-header" style="margin-top: ${idx > 0 ? '10px' : '0'};">
+      
+      const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
+      
+      // Checklist-Header (z.B. "Dachsanierung 25/25")
+      const cardHeader = `
+        <div style="page-break-inside: avoid; break-inside: avoid;">
+          <div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px; margin-top: ${idx > 0 ? '10px' : '0'};">${t('checklists.title')}</div>
+          <div class="checklist-main-header">
             ${item.templateLogoHtml}
             <span class="checklist-main-title">${checklists[idx]?.template_name || ''}</span>
             <span class="checklist-main-count">${item.totalChecked} von ${item.totalItems}</span>
           </div>
-        </td></tr>
+          ${categoryHtmls.length > 0 ? categoryHtmls[0] : ''}
+        </div>
       `;
       
-      const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
-      const categoryRows = categoryHtmls.map((catHtml, catIdx) => {
-        // "Checklisten" Überschrift vor jeder Kategorie als dezente Trennlinie
-        // Erste Kategorie der ersten Checkliste braucht keine (Hauptüberschrift ist direkt darüber)
-        const showRepeatHeader = !(idx === 0 && catIdx === 0);
-        const repeatHeader = showRepeatHeader 
-          ? `<div style="font-size: 9px; font-weight: bold; color: #c62828; border-top: 1.5px solid #c62828; padding-top: 2px; margin-top: 4px; margin-bottom: 2px;">${t('checklists.title')}</div>`
-          : '';
-        return `<tr><td style="border:none; padding:0;">${repeatHeader}${catHtml}</td></tr>`;
-      }).join('');
+      // Restliche Kategorien — jede als eigener Block mit "Checklisten" Marker
+      const restCategories = categoryHtmls.slice(1).map(catHtml => `
+        <div style="page-break-inside: avoid; break-inside: avoid;">
+          <div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px; margin-top: 6px;">${t('checklists.title')}</div>
+          ${catHtml}
+        </div>
+      `).join('');
       
-      return headerRow + categoryRows;
-    }).join('');
-    
-    const checklistsHtml = checklistTableRows || '<tr><td style="border:none; padding:0;"><p class="empty">Keine Checklisten erfasst</p></td></tr>';
+      return cardHeader + restCategories;
+    }).join('')
+    : '<p class="empty">Keine Checklisten erfasst</p>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
     // Neue Logik: Fotos bleiben in der ursprünglichen Reihenfolge
@@ -3957,16 +3960,7 @@ export default function ProjectDetailScreen() {
         
         ${checklists.length > 0 ? `
         <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
-          <table class="checklists-table" style="width: 100%; border-collapse: collapse; border: none;">
-            <thead style="display: table-header-group;">
-              <tr><th style="text-align: left; border: none; padding: 0 0 4px 0; font-size: 11px; color: #c62828; border-bottom: 2px solid #c62828;">
-                ${t('checklists.title')}
-              </th></tr>
-            </thead>
-            <tbody>
-              ${checklistsHtml}
-            </tbody>
-          </table>
+          ${checklistsHtml}
         </div>
         ` : ''}
         

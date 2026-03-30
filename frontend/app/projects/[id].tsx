@@ -1511,8 +1511,8 @@ export default function ProjectDetailScreen() {
           `;
         }).join('');
         
-        return `
-          <div class="pdf-category-section cols-${checklistColumns}" style="page-break-inside: avoid; break-inside: avoid;">
+        return `<!--CATEGORY_SPLIT-->
+          <div class="pdf-category-section cols-${checklistColumns}" style="page-break-inside: avoid; break-inside: avoid; margin-bottom: 8px;">
             <div class="pdf-category-header">
               ${category.categoryLogo ? `<img src="${category.categoryLogo}" class="pdf-category-logo" alt="Logo" />` : ''}
               <span class="pdf-cat-check">✓</span>
@@ -1551,25 +1551,30 @@ export default function ProjectDetailScreen() {
         ? `<img src="${(checklist as any).templateLogo}" class="pdf-template-logo" alt="Logo" />`
         : '';
       
-      return `
-        <div class="checklist-card" style="page-break-inside: auto; break-inside: auto;">
-          <div class="checklist-main-header" style="page-break-after: avoid; break-after: avoid;">
-            ${templateLogoHtml}
-            <span class="checklist-main-title">${checklist.template_name}</span>
-            <span class="checklist-main-count">${totalChecked} von ${totalItems}</span>
-          </div>
-          <div class="pdf-categories-grid">${categoriesHtml}</div>
-        </div>
-      `;
+      return { categoriesHtml, totalChecked, totalItems, templateLogoHtml };
     }) : [];
+
+    // Alle Checklisten als Tabellenzeilen generieren
+    const checklistTableRows = checklistItems.map((item, idx) => {
+      if (!item) return '';
+      const headerRow = `
+        <tr><td style="border:none; padding:0 0 4px 0;">
+          <div class="checklist-main-header" style="margin-top: ${idx > 0 ? '10px' : '0'};">
+            ${item.templateLogoHtml}
+            <span class="checklist-main-title">${checklists[idx]?.template_name || ''}</span>
+            <span class="checklist-main-count">${item.totalChecked} von ${item.totalItems}</span>
+          </div>
+        </td></tr>
+      `;
+      
+      const categoryRows = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean).map(catHtml => `
+        <tr><td style="border:none; padding:0;">${catHtml}</td></tr>
+      `).join('');
+      
+      return headerRow + categoryRows;
+    }).join('');
     
-    // Erste Checkliste mit Überschrift zusammen (verhindert Trennung)
-    const firstChecklistHtml = checklistItems.length > 0 ? checklistItems[0] : '';
-    const restChecklistsHtml = checklistItems.slice(1).join('');
-    
-    const checklistsHtml = checklists.length > 0 
-      ? checklistItems.join('')
-      : '<p class="empty">Keine Checklisten erfasst</p>';
+    const checklistsHtml = checklistTableRows || '<tr><td style="border:none; padding:0;"><p class="empty">Keine Checklisten erfasst</p></td></tr>';
     
     // Generate photos HTML (embedded as base64) with individual sizes
     // Neue Logik: Fotos bleiben in der ursprünglichen Reihenfolge
@@ -2576,15 +2581,20 @@ export default function ProjectDetailScreen() {
             /* Checklisten-Tabelle: Überschrift wiederholt sich auf jeder Seite */
             .checklists-table {
               page-break-inside: auto !important;
+              width: 100%;
             }
             .checklists-table thead {
               display: table-header-group !important;
             }
-            .checklists-table thead th h2 {
-              font-size: 16px !important;
-              color: #c62828 !important;
-              border-bottom: 2px solid #c62828 !important;
-              padding-bottom: 4px !important;
+            .checklists-table thead th {
+              background: #fff !important;
+            }
+            .checklists-table tbody tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .checklists-table td, .checklists-table th {
+              border: none !important;
             }
             /* Checklist-Items nicht umbrechen */
             .checklist-item {
@@ -3940,8 +3950,16 @@ export default function ProjectDetailScreen() {
         
         ${checklists.length > 0 ? `
         <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
-          <h2 style="page-break-after: avoid;">${t('checklists.title')}</h2>
-          ${checklistsHtml}
+          <table class="checklists-table" style="width: 100%; border-collapse: collapse; border: none;">
+            <thead>
+              <tr><th style="text-align: left; border: none; padding: 0 0 4px 0; font-size: 11px; color: #c62828; border-bottom: 2px solid #c62828;">
+                ${t('checklists.title')}
+              </th></tr>
+            </thead>
+            <tbody>
+              ${checklistsHtml}
+            </tbody>
+          </table>
         </div>
         ` : ''}
         

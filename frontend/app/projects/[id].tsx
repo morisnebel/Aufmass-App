@@ -1555,17 +1555,21 @@ export default function ProjectDetailScreen() {
     }) : [];
 
     // Alle Checklisten als einfache divs generieren
-    // Jede Kategorie bekommt eine "Checklisten" Überschrift für Seitenumbrüche
     const checklistsHtml = checklistItems.length > 0 ? checklistItems.map((item, idx) => {
       if (!item) return '';
       
       const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
       
-      // Checklist-Header (z.B. "Dachsanierung 25/25")
+      // Hauptüberschrift nur bei der ersten Checkliste
+      const sectionHeader = idx === 0 
+        ? `<div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px;">${t('checklists.title')}</div>`
+        : '';
+      
+      // Checklist-Header (z.B. "Dachsanierung 25/25") + erste Kategorie zusammen
       const cardHeader = `
         <div style="page-break-inside: avoid; break-inside: avoid;">
-          <div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px; margin-top: ${idx > 0 ? '10px' : '0'};">${t('checklists.title')}</div>
-          <div class="checklist-main-header">
+          ${sectionHeader}
+          <div class="checklist-main-header" style="margin-top: ${idx > 0 ? '8px' : '0'};">
             ${item.templateLogoHtml}
             <span class="checklist-main-title">${checklists[idx]?.template_name || ''}</span>
             <span class="checklist-main-count">${item.totalChecked} von ${item.totalItems}</span>
@@ -1574,10 +1578,10 @@ export default function ProjectDetailScreen() {
         </div>
       `;
       
-      // Restliche Kategorien — jede als eigener Block mit "Checklisten" Marker
+      // Restliche Kategorien — nur dezente kleine Markierung
       const restCategories = categoryHtmls.slice(1).map(catHtml => `
         <div style="page-break-inside: avoid; break-inside: avoid;">
-          <div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px; margin-top: 6px;">${t('checklists.title')}</div>
+          <div style="font-size: 7px; color: #999; margin-top: 3px; margin-bottom: 1px;">${t('checklists.title')}</div>
           ${catHtml}
         </div>
       `).join('');

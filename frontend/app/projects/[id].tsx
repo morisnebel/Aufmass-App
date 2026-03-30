@@ -3204,9 +3204,7 @@ export default function ProjectDetailScreen() {
           }
           /* Grid container for categories - IMMER 1 Spalte, da Level-1 Items das Grid haben */
           .pdf-categories-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
+            display: block;
             width: 100%;
           }
           .pdf-categories-grid::after {
@@ -3224,6 +3222,7 @@ export default function ProjectDetailScreen() {
             -webkit-column-break-inside: avoid !important;
             box-sizing: border-box;
             width: 100%;
+            margin-bottom: 8px;
           }
           /* Spalten-Layout basierend auf Einstellung */
           .pdf-category-section.cols-1,

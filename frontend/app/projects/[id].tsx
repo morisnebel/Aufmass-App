@@ -547,9 +547,9 @@ export default function ProjectDetailScreen() {
           const filename = `aufmass_photo_${Date.now()}_${savedCount}.jpg`;
           const fileUri = `${baseDir}${filename}`;
           
-          // Datei schreiben
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
+          // Datei schreiben (Legacy-API für Kompatibilität)
+          await writeAsStringAsync(fileUri, base64Data, {
+            encoding: 'base64',
           });
           
           // In Galerie speichern

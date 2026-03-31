@@ -2482,15 +2482,18 @@ export default function ProjectDetailScreen() {
             top: 0;
             left: 0;
             right: 0;
-            font-size: 7px;
-            color: #888;
-            border-bottom: 0.5px solid #ccc;
-            padding-bottom: 2px;
+            font-size: 9px;
+            font-weight: bold;
+            color: #555;
+            border-bottom: 1px solid #999;
+            padding-bottom: 3px;
             z-index: 9999;
+            background: #fff;
           }
           .page-running-header .header-sep {
-            color: #ccc;
-            margin: 0 3px;
+            color: #bbb;
+            margin: 0 4px;
+            font-weight: normal;
           }
           @media screen {
             body {

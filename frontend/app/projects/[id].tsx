@@ -3818,6 +3818,7 @@ export default function ProjectDetailScreen() {
         </style>
       </head>
       <body>
+        <div class="page">
         <!-- Fester Seitenkopf: erscheint auf JEDER Seite -->
         <div class="page-running-header">
           ${companyName ? `<span>${companyName}</span><span class="header-sep">|</span>` : ''}
@@ -3826,7 +3827,6 @@ export default function ProjectDetailScreen() {
           <span>${objektStreet || bauherrName || 'Projekt'}</span>
           ${project?.project_type ? `<span class="header-sep">|</span><span>${project.project_type}</span>` : ''}
         </div>
-        <div class="page">
         <div class="header">
           <div class="header-top">
             <div class="company-header">

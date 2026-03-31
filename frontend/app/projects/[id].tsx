@@ -1560,10 +1560,8 @@ export default function ProjectDetailScreen() {
       
       const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
       
-      // Hauptüberschrift nur bei der ersten Checkliste
-      const sectionHeader = idx === 0 
-        ? `<div style="font-size: 11px; font-weight: bold; color: #c62828; border-bottom: 2px solid #c62828; padding-bottom: 2px; margin-bottom: 4px;">${t('checklists.title')}</div>`
-        : '';
+      // Hauptüberschrift kommt jetzt direkt aus dem Section-div als <h2>
+      const sectionHeader = '';
       
       // Checklist-Header + erste Kategorie zusammen (nicht trennen)
       const cardHeader = `
@@ -2473,27 +2471,7 @@ export default function ProjectDetailScreen() {
         <style>
           @page {
             margin: 15mm;
-            margin-top: 20mm;
             size: A4;
-          }
-          /* Fester Seitenkopf - erscheint auf JEDER gedruckten Seite */
-          .page-running-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            font-size: 9px;
-            font-weight: bold;
-            color: #555;
-            border-bottom: 1px solid #999;
-            padding-bottom: 3px;
-            z-index: 9999;
-            background: #fff;
-          }
-          .page-running-header .header-sep {
-            color: #bbb;
-            margin: 0 4px;
-            font-weight: normal;
           }
           @media screen {
             body {
@@ -3822,14 +3800,6 @@ export default function ProjectDetailScreen() {
       </head>
       <body>
         <div class="page">
-        <!-- Fester Seitenkopf: erscheint auf JEDER Seite -->
-        <div class="page-running-header">
-          ${companyName ? `<span>${companyName}</span><span class="header-sep">|</span>` : ''}
-          <span>AUFMASS-DOKUMENTATION</span>
-          <span class="header-sep">|</span>
-          <span>${objektStreet || bauherrName || 'Projekt'}</span>
-          ${project?.project_type ? `<span class="header-sep">|</span><span>${project.project_type}</span>` : ''}
-        </div>
         <div class="header">
           <div class="header-top">
             <div class="company-header">
@@ -3991,6 +3961,7 @@ export default function ProjectDetailScreen() {
         
         ${checklists.length > 0 ? `
         <div class="checklists-section" style="page-break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important;">
+          <h2>${t('checklists.title')}</h2>
           ${checklistsHtml}
         </div>
         ` : ''}

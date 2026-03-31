@@ -2473,7 +2473,24 @@ export default function ProjectDetailScreen() {
         <style>
           @page {
             margin: 15mm;
+            margin-top: 20mm;
             size: A4;
+          }
+          /* Fester Seitenkopf - erscheint auf JEDER gedruckten Seite */
+          .page-running-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            font-size: 7px;
+            color: #888;
+            border-bottom: 0.5px solid #ccc;
+            padding-bottom: 2px;
+            z-index: 9999;
+          }
+          .page-running-header .header-sep {
+            color: #ccc;
+            margin: 0 3px;
           }
           @media screen {
             body {
@@ -3801,6 +3818,14 @@ export default function ProjectDetailScreen() {
         </style>
       </head>
       <body>
+        <!-- Fester Seitenkopf: erscheint auf JEDER Seite -->
+        <div class="page-running-header">
+          ${companyName ? `<span>${companyName}</span><span class="header-sep">|</span>` : ''}
+          <span>AUFMASS-DOKUMENTATION</span>
+          <span class="header-sep">|</span>
+          <span>${objektStreet || bauherrName || 'Projekt'}</span>
+          ${project?.project_type ? `<span class="header-sep">|</span><span>${project.project_type}</span>` : ''}
+        </div>
         <div class="page">
         <div class="header">
           <div class="header-top">

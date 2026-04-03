@@ -6144,11 +6144,38 @@ export default function DrawSketchScreen() {
         const y = el.y || 0;
         const w = el.width || (el.type === 'text' ? (el.data?.text?.length || 10) * ((el.fontSize || 20) * 0.6) : 50);
         const h = el.height || (el.type === 'text' ? (el.fontSize || 20) + 10 : 50);
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x + w);
-        // For text, y is the baseline, so we need to account for the height above baseline
-        minY = Math.min(minY, y - (el.type === 'text' ? (el.fontSize || 20) : 0));
-        maxY = Math.max(maxY, y + h);
+        
+        // Bei Rotation die gedrehten Ecken berechnen
+        if (el.rotation && el.type === 'image') {
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          const rad = (el.rotation * Math.PI) / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          // Alle 4 Ecken rotieren
+          const corners = [
+            { x: x, y: y },
+            { x: x + w, y: y },
+            { x: x + w, y: y + h },
+            { x: x, y: y + h },
+          ];
+          corners.forEach(corner => {
+            const dx = corner.x - cx;
+            const dy = corner.y - cy;
+            const rx = cx + dx * cos - dy * sin;
+            const ry = cy + dx * sin + dy * cos;
+            minX = Math.min(minX, rx);
+            maxX = Math.max(maxX, rx);
+            minY = Math.min(minY, ry);
+            maxY = Math.max(maxY, ry);
+          });
+        } else {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x + w);
+          // For text, y is the baseline, so we need to account for the height above baseline
+          minY = Math.min(minY, y - (el.type === 'text' ? (el.fontSize || 20) : 0));
+          maxY = Math.max(maxY, y + h);
+        }
         hasValidBounds = true;
       } else if (el.type === 'polyline' && el.data?.points) {
         el.data.points.forEach((pt: { x: number; y: number }) => {
@@ -6253,11 +6280,18 @@ export default function DrawSketchScreen() {
       if (el.type === 'path') {
         svgElements += `<path d="${el.data}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else if (el.type === 'line') {
-        svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${el.color}" stroke-width="${strokeWidth}"/>`;
+        const lineCX = (el.data.x1 + el.data.x2) / 2;
+        const lineCY = (el.data.y1 + el.data.y2) / 2;
+        const lineRot = el.rotation ? ` transform="rotate(${el.rotation} ${lineCX} ${lineCY})"` : '';
+        svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${el.color}" stroke-width="${strokeWidth}"${lineRot}/>`;
       } else if (el.type === 'circle') {
-        svgElements += `<circle cx="${el.data.cx}" cy="${el.data.cy}" r="${el.data.r}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none"/>`;
+        const circRot = el.rotation ? ` transform="rotate(${el.rotation} ${el.data.cx} ${el.data.cy})"` : '';
+        svgElements += `<circle cx="${el.data.cx}" cy="${el.data.cy}" r="${el.data.r}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none"${circRot}/>`;
       } else if (el.type === 'rect') {
-        svgElements += `<rect x="${el.data.x}" y="${el.data.y}" width="${el.data.width}" height="${el.data.height}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none"/>`;
+        const rectCX = el.data.x + el.data.width / 2;
+        const rectCY = el.data.y + el.data.height / 2;
+        const rectRot = el.rotation ? ` transform="rotate(${el.rotation} ${rectCX} ${rectCY})"` : '';
+        svgElements += `<rect x="${el.data.x}" y="${el.data.y}" width="${el.data.width}" height="${el.data.height}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none"${rectRot}/>`;
       } else if (el.type === 'arrow') {
         const { x1, y1, x2, y2, text, heads } = el.data;
         const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -6355,13 +6389,17 @@ export default function DrawSketchScreen() {
         const x = el.x || 0;
         const y = el.y || 0;
         const fontSize = el.fontSize || 20;
-        svgElements += `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${el.color}" font-weight="${el.fontWeight || 'bold'}" font-style="${el.fontStyle || 'normal'}">${el.data.text}</text>`;
+        const textRot = el.rotation ? ` transform="rotate(${el.rotation} ${x} ${y})"` : '';
+        svgElements += `<text x="${x}" y="${y}" font-size="${fontSize}" fill="${el.color}" font-weight="${el.fontWeight || 'bold'}" font-style="${el.fontStyle || 'normal'}"${textRot}>${el.data.text}</text>`;
       } else if (el.type === 'image' && el.data?.uri) {
         const x = el.x || 0;
         const y = el.y || 0;
         const w = el.width || 100;
         const h = el.height || 100;
-        svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+        const imgCenterX = x + w / 2;
+        const imgCenterY = y + h / 2;
+        const imgRotation = el.rotation ? ` transform="rotate(${el.rotation} ${imgCenterX} ${imgCenterY})"` : '';
+        svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"${imgRotation}/>`;
       } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
         const points = el.data.points as { x: number; y: number }[];
         const isClosed = el.data.closed || false;

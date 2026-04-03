@@ -275,22 +275,30 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     try {
       const sketchMetas = await AsyncStorage.multiGet(sketchMetaKeys);
       for (let i = 0; i < sketches.length; i++) {
-        const [key, metaStr] = sketchMetas[i];
-        console.log(`[SKETCH_NOTES_DEBUG] Sketch "${sketches[i].title}" (${sketches[i].id}): notes on main="${sketches[i].notes || '(leer)'}", meta key="${key}", meta exists=${!!metaStr}, meta length=${metaStr?.length || 0}`);
+        const [, metaStr] = sketchMetas[i];
         if (metaStr) {
           try {
             const meta = JSON.parse(metaStr);
-            console.log(`[SKETCH_NOTES_DEBUG] Parsed meta for "${sketches[i].title}": meta.notes="${meta.notes || '(leer)'}", meta keys: ${Object.keys(meta).join(', ')}`);
-            // Notizen aus metadata übernehmen (metadata ist die zuverlässigere Quelle)
+            // Notizen aus metadata.notes übernehmen
             if (meta.notes) {
               sketches[i].notes = meta.notes;
+            }
+            // Memo-Elemente: Text aus Memo-Elementen extrahieren (visuelle Notizen auf der Zeichenfläche)
+            if (!sketches[i].notes && meta.elements && Array.isArray(meta.elements)) {
+              const memoTexts = meta.elements
+                .filter((el: any) => el.type === 'memo' && el.data?.text)
+                .map((el: any) => el.data.text.trim())
+                .filter((t: string) => t.length > 0);
+              if (memoTexts.length > 0) {
+                sketches[i].notes = memoTexts.join(' | ');
+              }
             }
             // pdf_size aus metadata übernehmen falls nicht bereits vorhanden
             if (!sketches[i].pdf_size && meta.pdf_size) {
               sketches[i].pdf_size = meta.pdf_size;
             }
           } catch (parseErr) {
-            console.error(`[SKETCH_NOTES_DEBUG] JSON parse error for sketch ${sketches[i].id}:`, parseErr);
+            // JSON parse error - skip this sketch's metadata
           }
         }
       }

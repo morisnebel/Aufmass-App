@@ -1663,6 +1663,16 @@ export default function ProjectDetailScreen() {
         if (!sketchNotes && metadata.notes) {
           sketchNotes = metadata.notes;
         }
+        // Memo-Elemente: Text aus Memo-Elementen extrahieren (visuelle Notizen auf der Zeichenfläche)
+        if (!sketchNotes && metadata.elements && Array.isArray(metadata.elements)) {
+          const memoTexts = metadata.elements
+            .filter((el: any) => el.type === 'memo' && el.data?.text)
+            .map((el: any) => el.data.text.trim())
+            .filter((t: string) => t.length > 0);
+          if (memoTexts.length > 0) {
+            sketchNotes = memoTexts.join(' | ');
+          }
+        }
       } catch (e) {
         console.log('Error parsing sketch metadata:', e);
       }

@@ -648,11 +648,7 @@ export default function HomeScreen() {
     );
   };
 
-  // Header als stabiles Element (nicht als Funktion-Referenz) um Keyboard-Dismiss zu verhindern
-  const listHeader = useMemo(() => renderListHeader(), [
-    searchQuery, activeFilter, selectionMode, selectedProjects, 
-    filteredProjects, isLandscape, isPhoneDevice, projects.length
-  ]);
+  if (loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#1976d2" />
@@ -899,7 +895,7 @@ export default function HomeScreen() {
         renderItem={renderProject}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.projectList}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={renderListHeader()}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyState}>

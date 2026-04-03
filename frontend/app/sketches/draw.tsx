@@ -1794,7 +1794,7 @@ export default function DrawSketchScreen() {
       if (sketch) {
         setTitle(sketch.title || 'Skizze');
         
-        // Load notes if available
+        // Load notes if available (from main sketch or metadata fallback)
         if (sketch.notes) {
           setNotes(sketch.notes);
         }
@@ -1810,6 +1810,10 @@ export default function DrawSketchScreen() {
         
         if (metadata) {
           console.log('Loaded metadata from optimized storage');
+          // Fallback: Notes aus metadata laden falls nicht im Hauptobjekt
+          if (!sketch.notes && metadata.notes) {
+            setNotes(metadata.notes);
+          }
           if (metadata.elements && Array.isArray(metadata.elements)) {
             console.log('Setting elements:', metadata.elements.length, 'elements');
             console.log('Element IDs:', metadata.elements.map((e: any) => e.id + ' (' + e.type + ')').join(', '));

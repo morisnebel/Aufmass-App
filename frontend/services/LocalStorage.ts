@@ -267,6 +267,36 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
   }
   
   const sketches = (allData.get(KEYS.SKETCHES) || []).filter((s: any) => s.project_id === projectId);
+  
+  // Skizzen-Notizen und pdf_size aus separatem Storage laden (sketch_meta_${id})
+  // Notizen werden dort gespeichert und sind möglicherweise nicht im Hauptobjekt vorhanden
+  if (sketches.length > 0) {
+    const sketchMetaKeys = sketches.map((s: any) => `sketch_meta_${s.id}`);
+    try {
+      const sketchMetas = await AsyncStorage.multiGet(sketchMetaKeys);
+      for (let i = 0; i < sketches.length; i++) {
+        const [, metaStr] = sketchMetas[i];
+        if (metaStr) {
+          try {
+            const meta = JSON.parse(metaStr);
+            // Notizen aus metadata übernehmen falls nicht bereits vorhanden
+            if (!sketches[i].notes && meta.notes) {
+              sketches[i].notes = meta.notes;
+            }
+            // pdf_size aus metadata übernehmen falls nicht bereits vorhanden
+            if (!sketches[i].pdf_size && meta.pdf_size) {
+              sketches[i].pdf_size = meta.pdf_size;
+            }
+          } catch (parseErr) {
+            // JSON parse error - skip this sketch's metadata
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[loadAllProjectDataFast] Error loading sketch metadata:', e);
+    }
+  }
+  
   const checklists = (allData.get(KEYS.CHECKLISTS) || []).filter((c: any) => c.project_id === projectId);
   const documents = (allData.get(KEYS.DOCUMENTS) || []).filter((d: any) => d.project_id === projectId);
   const areaCalculations = (allData.get(KEYS.AREA_CALCULATIONS) || []).filter((a: any) => a.project_id === projectId);

@@ -1639,14 +1639,21 @@ export default function ProjectDetailScreen() {
     // iPhone: kleinere Skizzen (2 pro Seite) für bessere Kompatibilität
     // iPad: normale Größe
     
-    const sketchItems = sketches.map((sketch, index) => {
+    const sketchItems = await Promise.all(sketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
       let sketchNotes = sketch.notes || '';
       
-      // Also try to read from metadata as fallback
+      // Metadata aus separatem Storage laden (zuverlässiger als sketch.metadata)
       try {
-        const metadata = sketch.metadata ? JSON.parse(sketch.metadata) : {};
+        let metadata: any = {};
+        const storedMeta = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
+        if (storedMeta) {
+          metadata = JSON.parse(storedMeta);
+        } else if (sketch.metadata) {
+          metadata = typeof sketch.metadata === 'string' ? JSON.parse(sketch.metadata) : sketch.metadata;
+        }
+        
         if (!size || size === 'large') {
           if (metadata.pdf_size) {
             size = metadata.pdf_size;
@@ -1684,7 +1691,7 @@ export default function ProjectDetailScreen() {
           ${notesHtml}
         </div>
       `;
-    });
+    }));
     
     // Sketches-Container: iOS bekommt block/inline-block Layout für bessere Seitenumbrüche
     // WebKit (iOS) ignoriert page-break-inside: avoid bei Flexbox-Containern
@@ -5440,6 +5447,13 @@ export default function ProjectDetailScreen() {
                         <Text style={styles.sketchPlaceholderText}>Skizze</Text>
                       </View>
                     )}
+                    
+                    {/* Notizen anzeigen */}
+                    {sketch.notes ? (
+                      <Text style={{ fontSize: 12, color: '#666', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
+                        Notizen: {sketch.notes}
+                      </Text>
+                    ) : null}
                     
                   </TouchableOpacity>
                   

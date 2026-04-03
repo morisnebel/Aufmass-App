@@ -546,28 +546,22 @@ export default function EditCustomerScreen() {
           console.log('Existierender Kontakt gefunden:', existingContact ? 'JA' : 'NEIN');
           
           if (existingContact) {
-            // Kontakt existiert - lösche den alten und erstelle einen neuen mit denselben Daten
-            console.log('Lösche alten Kontakt...');
-            await Contacts.removeContactAsync(importedContactId);
-            console.log('Alter Kontakt gelöscht');
+            // Kontakt existiert - direkt aktualisieren (nicht löschen + neu erstellen)
+            console.log('Aktualisiere existierenden Kontakt...');
+            const updatedContact = {
+              id: importedContactId,
+              ...contactData,
+            };
             
-            // Neuen Kontakt mit aktualisierten Daten erstellen
-            console.log('Erstelle neuen Kontakt mit aktualisierten Daten...');
-            const newContactId = await Contacts.addContactAsync(contactData as Contacts.Contact);
-            console.log('Neuer Kontakt erstellt mit ID:', newContactId);
-            
-            // Speichere die neue Contact-ID
-            if (newContactId) {
-              setImportedContactId(newContactId);
-              await CustomerService.update(customerId, { importedContactId: newContactId });
-              console.log('Neue ID gespeichert');
-            }
+            const updatedId = await Contacts.updateContactAsync(updatedContact as any);
+            console.log('Kontakt erfolgreich aktualisiert, ID:', updatedId);
             
             Alert.alert(t('common.success'), t('customers.contactUpdatedInDevice', { name: fullName }));
             return;
           }
         } catch (updateError) {
-          console.log('Fehler beim Update:', updateError);
+          console.log('Fehler beim Update des existierenden Kontakts:', updateError);
+          // Fallback: neuen Kontakt erstellen wenn Update fehlschlägt
         }
       }
 

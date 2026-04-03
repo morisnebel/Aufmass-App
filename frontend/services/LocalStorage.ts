@@ -283,14 +283,14 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
             if (meta.notes) {
               sketches[i].notes = meta.notes;
             }
-            // Memo-Elemente: Text aus Memo-Elementen extrahieren (visuelle Notizen auf der Zeichenfläche)
+            // Memo-Elemente UND Pointer-Elemente: Text extrahieren (visuelle Notizen auf der Zeichenfläche)
             if (!sketches[i].notes && meta.elements && Array.isArray(meta.elements)) {
-              const memoTexts = meta.elements
-                .filter((el: any) => el.type === 'memo' && el.data?.text)
+              const noteTexts = meta.elements
+                .filter((el: any) => (el.type === 'memo' || el.type === 'pointer') && el.data?.text)
                 .map((el: any) => el.data.text.trim())
                 .filter((t: string) => t.length > 0);
-              if (memoTexts.length > 0) {
-                sketches[i].notes = memoTexts.join(' | ');
+              if (noteTexts.length > 0) {
+                sketches[i].notes = noteTexts.join(' | ');
               }
             }
             // pdf_size aus metadata übernehmen falls nicht bereits vorhanden

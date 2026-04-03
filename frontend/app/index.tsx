@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -648,7 +648,11 @@ export default function HomeScreen() {
     );
   };
 
-  if (loading) {
+  // Header als stabiles Element (nicht als Funktion-Referenz) um Keyboard-Dismiss zu verhindern
+  const listHeader = useMemo(() => renderListHeader(), [
+    searchQuery, activeFilter, selectionMode, selectedProjects, 
+    filteredProjects, isLandscape, isPhoneDevice, projects.length
+  ]);
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#1976d2" />
@@ -895,7 +899,8 @@ export default function HomeScreen() {
         renderItem={renderProject}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.projectList}
-        ListHeaderComponent={renderListHeader}
+        ListHeaderComponent={listHeader}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="folder-open-outline" size={64} color="#ccc" />

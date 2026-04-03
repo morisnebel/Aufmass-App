@@ -49,6 +49,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -657,9 +658,13 @@ export default function HomeScreen() {
   }
 
   // Header-Inhalte als ListHeaderComponent für scrollbare Gesamtseite
+  // Suchleiste aktiv = Logo und Buttons ausblenden für mehr Platz
+  const isSearchActive = isSearchFocused || searchQuery.length > 0;
+
   const renderListHeader = () => (
     <>
-      {/* Company Logo - kompakt im Landscape */}
+      {/* Company Logo - nur anzeigen wenn Suche nicht aktiv */}
+      {!isSearchActive && (
       <View style={[styles.logoContainer, isLandscape && isPhoneDevice && styles.logoContainerLandscape]}>
         <Image
           source={require('../assets/images/icon.png')}
@@ -668,6 +673,7 @@ export default function HomeScreen() {
         />
         <Text style={styles.versionCode}>{AppName}</Text>
       </View>
+      )}
 
       {/* Suchleiste */}
       <View style={styles.searchContainer}>
@@ -678,9 +684,11 @@ export default function HomeScreen() {
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => { setSearchQuery(''); setIsSearchFocused(false); }}>
             <Ionicons name="close-circle" size={20} color="#999" />
           </TouchableOpacity>
         )}
@@ -717,6 +725,8 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      {/* Buttons und Quick-Actions - nur anzeigen wenn Suche nicht aktiv */}
+      {!isSearchActive && (
       <View style={styles.actionButtons}>
         {/* Primary action - Neues Projekt */}
         <TouchableOpacity
@@ -876,6 +886,7 @@ export default function HomeScreen() {
         </View>
         )}
       </View>
+      )}
     </>
   );
 

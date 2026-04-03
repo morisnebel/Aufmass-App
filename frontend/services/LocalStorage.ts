@@ -275,12 +275,14 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     try {
       const sketchMetas = await AsyncStorage.multiGet(sketchMetaKeys);
       for (let i = 0; i < sketches.length; i++) {
-        const [, metaStr] = sketchMetas[i];
+        const [key, metaStr] = sketchMetas[i];
+        console.log(`[SKETCH_NOTES_DEBUG] Sketch "${sketches[i].title}" (${sketches[i].id}): notes on main="${sketches[i].notes || '(leer)'}", meta key="${key}", meta exists=${!!metaStr}, meta length=${metaStr?.length || 0}`);
         if (metaStr) {
           try {
             const meta = JSON.parse(metaStr);
-            // Notizen aus metadata übernehmen falls nicht bereits vorhanden
-            if (!sketches[i].notes && meta.notes) {
+            console.log(`[SKETCH_NOTES_DEBUG] Parsed meta for "${sketches[i].title}": meta.notes="${meta.notes || '(leer)'}", meta keys: ${Object.keys(meta).join(', ')}`);
+            // Notizen aus metadata übernehmen (metadata ist die zuverlässigere Quelle)
+            if (meta.notes) {
               sketches[i].notes = meta.notes;
             }
             // pdf_size aus metadata übernehmen falls nicht bereits vorhanden
@@ -288,7 +290,7 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
               sketches[i].pdf_size = meta.pdf_size;
             }
           } catch (parseErr) {
-            // JSON parse error - skip this sketch's metadata
+            console.error(`[SKETCH_NOTES_DEBUG] JSON parse error for sketch ${sketches[i].id}:`, parseErr);
           }
         }
       }

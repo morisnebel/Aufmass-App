@@ -2966,6 +2966,10 @@ export default function DrawSketchScreen() {
       if (mimeType === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
         try {
           console.log('[importFromFiles] Converting PDF to image...');
+          // Prüfe ob PdfThumbnail verfügbar ist (natives Modul - nur in Development Build)
+          if (!PdfThumbnail || !PdfThumbnail.generate) {
+            throw new Error('PDF Thumbnail module not available');
+          }
           // Generiere Thumbnail der ersten Seite
           const { uri, width, height } = await PdfThumbnail.generate(fileUri, 0);
           console.log('[importFromFiles] PDF converted successfully:', uri, width, height);
@@ -2974,10 +2978,10 @@ export default function DrawSketchScreen() {
           return;
         } catch (pdfError) {
           console.error('[importFromFiles] PDF conversion error:', pdfError);
-          // Fallback: Zeige Info-Meldung wenn Konvertierung fehlschlägt
+          // Bessere Fehlermeldung wenn natives Modul nicht verfügbar
           Alert.alert(
             'PDF Import',
-            t('sketches.pdfImportPages', { count: '' }) + '\n' + t('sketches.selectPdfPage'),
+            'PDF-Import ist nur im TestFlight/Production-Build verfügbar.\n\nBitte wähle stattdessen ein Bild (JPG, PNG) aus.',
             [{ text: t('common.ok'), style: 'default' }]
           );
           return;

@@ -6109,7 +6109,7 @@ export default function DrawSketchScreen() {
             }
           }
         }
-      } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
+      } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer' || el.type === 'memo') {
         minX = Math.min(minX, el.data.x1, el.data.x2);
         maxX = Math.max(maxX, el.data.x1, el.data.x2);
         minY = Math.min(minY, el.data.y1, el.data.y2);
@@ -6119,7 +6119,7 @@ export default function DrawSketchScreen() {
           const textOffset = 20;
           minY = Math.min(minY, el.data.y1 - textOffset, el.data.y2 - textOffset);
         }
-        if (el.type === 'pointer' && el.data.text) {
+        if ((el.type === 'pointer' || el.type === 'memo') && el.data.text) {
           const fontSize = el.data.fontSize || 16;
           const textOffset = 30 + fontSize;
           minX = Math.min(minX, el.data.x1 - textOffset);
@@ -6323,6 +6323,33 @@ export default function DrawSketchScreen() {
           
           svgElements += `<rect x="${textX - 5}" y="${textY - fontSize}" width="${textWidth}" height="${textHeight}" fill="white" fill-opacity="0.9" rx="4" stroke="${el.color}" stroke-width="${textStrokeWidth}"/>`;
           svgElements += `<text x="${textX}" y="${textY}" font-size="${fontSize}" fill="${el.color}" font-weight="bold">${text}</text>`;
+        }
+      } else if (el.type === 'memo') {
+        // Memo/Notiz: Roter Ankerpunkt mit gestrichelter Linie zu Textlabel
+        const { x1, y1, x2, y2, text } = el.data;
+        const memoFontSize = el.data.fontSize || 14;
+        const memoScaleFactor = memoFontSize / 14;
+        const memoLineStroke = Math.max(1, 2 * memoScaleFactor);
+        const memoAnchorRadius = Math.max(3, 6 * memoScaleFactor);
+        const memoFrameStroke = Math.max(1, 2 * memoScaleFactor);
+        const memoFrameRadius = Math.max(2, 4 * memoScaleFactor);
+        const memoDashArray = `${6 * memoScaleFactor},${4 * memoScaleFactor}`;
+        
+        // Gestrichelte Verbindungslinie
+        svgElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${el.color}" stroke-width="${memoLineStroke}" stroke-dasharray="${memoDashArray}"/>`;
+        
+        // Roter Ankerpunkt (gefüllter Kreis)
+        svgElements += `<circle cx="${x1}" cy="${y1}" r="${memoAnchorRadius}" fill="${el.color}" stroke="${el.color}" stroke-width="${memoLineStroke}"/>`;
+        
+        // Textlabel mit Rahmen
+        if (text) {
+          const memoLabelWidth = Math.max(60 * memoScaleFactor, text.length * memoFontSize * 0.6 + 20 * memoScaleFactor);
+          const memoLabelHeight = memoFontSize + 14 * memoScaleFactor;
+          
+          // Weißer Hintergrund mit farbigem Rahmen
+          svgElements += `<rect x="${x2 - memoLabelWidth / 2}" y="${y2 - memoLabelHeight / 2}" width="${memoLabelWidth}" height="${memoLabelHeight}" fill="white" rx="${memoFrameRadius}" ry="${memoFrameRadius}" stroke="${el.color}" stroke-width="${memoFrameStroke}"/>`;
+          // Text
+          svgElements += `<text x="${x2}" y="${y2 + memoFontSize / 3}" font-size="${memoFontSize}" fill="${el.color}" font-weight="bold" text-anchor="middle">${text}</text>`;
         }
       } else if (el.type === 'text') {
         const x = el.x || 0;

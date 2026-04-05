@@ -329,12 +329,16 @@ export default function ProjectDetailScreen() {
     }
   }, [activeTab]);
 
+  // Farben für den Zurück-Button: iPad hat hellen Header, iPhone blauen Header
+  const isIPad = Platform.OS === 'ios' && Platform.isPad;
+  const headerBackColor = isIPad ? '#000' : '#fff';
+  
   useEffect(() => {
     if (activeTab !== 'overview') {
       navigation.setOptions({
         title: tabTitles[activeTab] || 'Projektdetails',
-        headerStyle: { backgroundColor: '#1976d2' },
-        headerTintColor: '#fff',
+        headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
+        headerTintColor: headerBackColor,
         headerLeft: () => (
           <TouchableOpacity 
             onPress={() => handleTabChange('overview')} 
@@ -347,16 +351,16 @@ export default function ProjectDetailScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
+            <Ionicons name="chevron-back" size={28} color={headerBackColor} />
+            <Text style={{ color: headerBackColor, fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });
     } else {
       navigation.setOptions({
         title: 'Projektdetails',
-        headerStyle: { backgroundColor: '#1976d2' },
-        headerTintColor: '#fff',
+        headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
+        headerTintColor: headerBackColor,
         headerLeft: undefined,
       });
     }

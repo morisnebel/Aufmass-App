@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, LogBox } from 'react-native';
+import { View, LogBox, Platform } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService } from '../services/LocalStorage';
@@ -17,6 +17,11 @@ LogBox.ignoreLogs([
 
 export default function RootLayout() {
   const { t } = useTranslation();
+  // iPad hat hellen Header-Hintergrund, iPhone blauen
+  const isIPad = Platform.OS === 'ios' && Platform.isPad;
+  const headerBgColor = isIPad ? undefined : '#1976d2';
+  const headerTextColor = isIPad ? '#000' : '#fff';
+  
   // Run one-time migration of sketch data on app startup
   useEffect(() => {
     SketchService.migrateAllSketches().catch(err => 
@@ -28,16 +33,16 @@ export default function RootLayout() {
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#1976d2',
-          },
-          headerTintColor: '#fff',
+          headerStyle: headerBgColor ? {
+            backgroundColor: headerBgColor,
+          } : undefined,
+          headerTintColor: headerTextColor,
           headerTitleStyle: {
             fontWeight: 'bold',
-            color: '#fff',
+            color: headerTextColor,
           },
           headerBackTitleStyle: {
-            color: '#fff',
+            color: headerTextColor,
           },
         }}
       >

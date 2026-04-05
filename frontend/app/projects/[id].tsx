@@ -32,6 +32,7 @@ import * as FileSystem from 'expo-file-system';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
+import Svg, { Path as SvgPath, Text as SvgText } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5033,11 +5034,57 @@ export default function ProjectDetailScreen() {
                     }}
                     style={{ flex: 1 }}
                   >
+                    <View style={{ position: 'relative' }}>
                     <Image
                       source={{ uri: photo.image_data }}
                       style={styles.photoImage}
                       resizeMode="contain"
                     />
+                    {/* Annotationen-Overlay (Zeichnungen, Text) */}
+                    {(photo as any).annotations && (() => {
+                      try {
+                        const annotationData = JSON.parse((photo as any).annotations);
+                        const canvasW = annotationData.canvasWidth || 400;
+                        const canvasH = annotationData.canvasHeight || 300;
+                        const hasPaths = annotationData.paths && annotationData.paths.length > 0;
+                        const hasTexts = annotationData.textElements && annotationData.textElements.length > 0;
+                        if (!hasPaths && !hasTexts) return null;
+                        return (
+                          <Svg
+                            viewBox={`0 0 ${canvasW} ${canvasH}`}
+                            preserveAspectRatio="xMidYMid slice"
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                          >
+                            {hasPaths && annotationData.paths.map((p: any, pi: number) => (
+                              <SvgPath
+                                key={`p${pi}`}
+                                d={p.path}
+                                stroke={p.color || '#FF0000'}
+                                strokeWidth={p.strokeWidth || 3}
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            ))}
+                            {hasTexts && annotationData.textElements.map((t: any, ti: number) => (
+                              <SvgText
+                                key={`t${ti}`}
+                                x={t.x}
+                                y={t.y}
+                                fontSize={t.fontSize || 20}
+                                fill={t.color || '#FFFFFF'}
+                                fontWeight="bold"
+                                stroke="#000000"
+                                strokeWidth={0.5}
+                              >
+                                {t.text}
+                              </SvgText>
+                            ))}
+                          </Svg>
+                        );
+                      } catch (e) { return null; }
+                    })()}
+                    </View>
                     {photo.description && (
                       <Text style={styles.photoDescription} numberOfLines={2}>
                         {photo.description}

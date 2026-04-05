@@ -3491,9 +3491,40 @@ export default function ProjectDetailScreen() {
           }
           /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
           .sketches-container-iphone {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            display: block;
+            font-size: 0;
+          }
+          .sketches-container-iphone .sketch-item {
+            display: inline-block;
+            vertical-align: top;
+            font-size: 14px;
+            margin-bottom: 10px;
+            margin-right: 1%;
+            max-height: 500px;
+            overflow: hidden;
+          }
+          .sketches-container-iphone .sketch-small {
+            width: 32%;
+            max-width: 32%;
+          }
+          .sketches-container-iphone .sketch-medium {
+            width: 48%;
+            max-width: 48%;
+          }
+          .sketches-container-iphone .sketch-large {
+            width: 100%;
+            max-width: 100%;
+          }
+          .sketches-container-iphone .sketch-full {
+            width: 100%;
+            max-width: 100%;
+          }
+          .sketches-container-iphone .sketch-item img {
+            max-height: 420px;
+            max-width: 100%;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
           }
           .sketch-iphone {
             width: 100%;

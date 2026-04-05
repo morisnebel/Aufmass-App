@@ -2994,10 +2994,10 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
           }
-          /* Fotos Sektion - neue Seite starten damit Überschrift beim Inhalt bleibt */
+          /* Fotos Sektion - kein erzwungener Seitenumbruch */
           .photos-section {
-            page-break-before: always !important;
-            break-before: page !important;
+            page-break-before: auto !important;
+            break-before: auto !important;
             page-break-inside: auto !important;
             break-inside: auto !important;
           }

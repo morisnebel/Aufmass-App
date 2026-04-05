@@ -3489,42 +3489,42 @@ export default function ProjectDetailScreen() {
           .photo-grid-large {
             width: 100%;
           }
-          /* iPhone-spezifischer Skizzen-Container: Grid mit 2 Spalten */
+          /* iPhone-spezifischer Skizzen-Container */
           .sketches-container-iphone {
-            display: block;
-            font-size: 0;
+            display: block !important;
+            font-size: 0 !important;
           }
           .sketches-container-iphone .sketch-item {
-            display: inline-block;
-            vertical-align: top;
-            font-size: 14px;
-            margin-bottom: 10px;
-            margin-right: 1%;
-            max-height: 500px;
-            overflow: hidden;
+            display: inline-block !important;
+            vertical-align: top !important;
+            font-size: 14px !important;
+            margin-bottom: 10px !important;
+            margin-right: 1% !important;
+            max-height: 500px !important;
+            overflow: hidden !important;
           }
           .sketches-container-iphone .sketch-small {
-            width: 32%;
-            max-width: 32%;
+            width: 32% !important;
+            max-width: 32% !important;
           }
           .sketches-container-iphone .sketch-medium {
-            width: 48%;
-            max-width: 48%;
+            width: 48% !important;
+            max-width: 48% !important;
           }
           .sketches-container-iphone .sketch-large {
-            width: 100%;
-            max-width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
           }
           .sketches-container-iphone .sketch-full {
-            width: 100%;
-            max-width: 100%;
+            width: 100% !important;
+            max-width: 100% !important;
           }
           .sketches-container-iphone .sketch-item img {
-            max-height: 420px;
-            max-width: 100%;
-            width: 100%;
-            height: auto;
-            object-fit: contain;
+            max-height: 420px !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            height: auto !important;
+            object-fit: contain !important;
           }
           .sketch-iphone {
             width: 100%;

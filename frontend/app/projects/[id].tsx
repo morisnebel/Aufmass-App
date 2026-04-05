@@ -2726,6 +2726,8 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
               margin-bottom: 10px !important;
               margin-right: 1% !important;
+              max-height: 500px !important;
+              overflow: hidden !important;
             }
             .sketches-container-iphone .sketch-small {
               width: 32% !important;
@@ -2744,7 +2746,7 @@ export default function ProjectDetailScreen() {
               max-width: 100% !important;
             }
             .sketches-container-iphone .sketch-item img {
-              max-height: none !important;
+              max-height: 420px !important;
               max-width: 100% !important;
               width: 100% !important;
               height: auto !important;

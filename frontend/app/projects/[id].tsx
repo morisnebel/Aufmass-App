@@ -345,8 +345,8 @@ export default function ProjectDetailScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={28} color="#000" />
-            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
+            <Ionicons name="chevron-back" size={28} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });

@@ -333,6 +333,8 @@ export default function ProjectDetailScreen() {
     if (activeTab !== 'overview') {
       navigation.setOptions({
         title: tabTitles[activeTab] || 'Projektdetails',
+        headerStyle: { backgroundColor: '#1976d2' },
+        headerTintColor: '#fff',
         headerLeft: () => (
           <TouchableOpacity 
             onPress={() => handleTabChange('overview')} 
@@ -353,6 +355,8 @@ export default function ProjectDetailScreen() {
     } else {
       navigation.setOptions({
         title: 'Projektdetails',
+        headerStyle: { backgroundColor: '#1976d2' },
+        headerTintColor: '#fff',
         headerLeft: undefined,
       });
     }

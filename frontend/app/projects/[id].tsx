@@ -5052,7 +5052,7 @@ export default function ProjectDetailScreen() {
                         return (
                           <Svg
                             viewBox={`0 0 ${canvasW} ${canvasH}`}
-                            preserveAspectRatio="xMidYMid slice"
+                            preserveAspectRatio="xMidYMid meet"
                             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
                           >
                             {hasPaths && annotationData.paths.map((p: any, pi: number) => (
@@ -5076,6 +5076,7 @@ export default function ProjectDetailScreen() {
                                 fontWeight="bold"
                                 stroke="#000000"
                                 strokeWidth={0.5}
+                                fontFamily={t.fontFamily === 'System' ? undefined : (t.fontFamily || undefined)}
                               >
                                 {t.text}
                               </SvgText>

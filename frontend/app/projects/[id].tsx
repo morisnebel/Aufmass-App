@@ -1632,10 +1632,11 @@ export default function ProjectDetailScreen() {
     };
     
     // Erzeuge Fotos in der ursprünglichen Reihenfolge
-    let photosHtml = '';
+    // Erstes Foto wird separat generiert, um es mit der Überschrift zusammenzuhalten
+    let firstPhotoHtml = '';
+    let restPhotosHtml = '';
     
     if (photos.length > 0) {
-      const photoItems = photos.map(photo => generatePhotoHtml(photo)).join('');
       // iOS: Saubere Seitenumbrüche
       // iPhone: block layout (untereinander)
       // iPad: inline-block layout (nebeneinander, aber Seitenumbrüche respektiert)
@@ -1644,9 +1645,15 @@ export default function ProjectDetailScreen() {
         : isIpad 
           ? 'photos-print-container photos-print-ipad'
           : 'photos-print-container';
-      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${photoItems}</div>`;
-    } else {
-      photosHtml = '<p class="empty">Keine Fotos erfasst</p>';
+      
+      // Erstes Foto für Wrapper mit Überschrift
+      firstPhotoHtml = generatePhotoHtml(photos[0]);
+      
+      // Restliche Fotos in eigenem Container
+      if (photos.length > 1) {
+        const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
+        restPhotosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${restPhotoItems}</div>`;
+      }
     }
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
@@ -1725,11 +1732,16 @@ export default function ProjectDetailScreen() {
         ? 'sketches-container sketches-container-ipad'
         : 'sketches-container';
     
-    const sketchesHtml = sketches.length > 0 ? `
-      <div class="${sketchesContainerClass}">
-        ${sketchItems.join('')}
-      </div>
-    ` : '<p class="empty">Keine Skizzen erfasst</p>';
+    // Sketches: Erstes Element separat für Wrapper mit Überschrift
+    let firstSketchHtml = '';
+    let restSketchesHtml = '';
+    
+    if (sketches.length > 0) {
+      firstSketchHtml = sketchItems[0];
+      if (sketchItems.length > 1) {
+        restSketchesHtml = `<div class="${sketchesContainerClass}">${sketchItems.slice(1).join('')}</div>`;
+      }
+    }
     
     // Helper function to calculate polygon area
     const calculatePolygonArea = (points: Array<{x: number, y: number}>, scale: number = 100) => {
@@ -2619,8 +2631,9 @@ export default function ProjectDetailScreen() {
               break-before: auto !important;
             }
             .photos-section h2 {
-              page-break-after: auto !important;
-              break-after: auto !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              -webkit-column-break-after: avoid !important;
               page-break-before: auto !important;
               break-before: auto !important;
             }
@@ -4007,15 +4020,21 @@ export default function ProjectDetailScreen() {
         
         ${photos.length > 0 ? `
           <div class="photos-section" style="page-break-before: auto !important; break-before: auto !important;">
-            <h2 style="page-break-before: auto !important;">${t('photos.title')}</h2>
-            ${photosHtml}
+            <div style="display: block; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid;">
+              <h2>${t('photos.title')}</h2>
+              ${firstPhotoHtml}
+            </div>
+            ${restPhotosHtml}
           </div>
         ` : ''}
         
         ${sketches.length > 0 ? `
           <div class="sketches-section" style="page-break-before: auto !important; break-before: auto !important;">
-            <h2>${t('sketches.title')}</h2>
-            ${sketchesHtml}
+            <div style="display: block; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid;">
+              <h2>${t('sketches.title')}</h2>
+              ${firstSketchHtml}
+            </div>
+            ${restSketchesHtml}
           </div>
         ` : ''}
         

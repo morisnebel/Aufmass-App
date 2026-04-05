@@ -2693,8 +2693,8 @@ export default function ProjectDetailScreen() {
             }
             /* Sektionen erlauben Umbrüche, aber starten auf neuer Seite */
             .sketches-section { 
-              page-break-before: always !important;
-              break-before: page !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
               page-break-inside: auto !important; 
             }
             .photos-section { 
@@ -2968,8 +2968,8 @@ export default function ProjectDetailScreen() {
           }
           /* Skizzen-Sektion - neue Seite starten damit Überschrift beim Inhalt bleibt */
           .sketches-section {
-            page-break-before: always !important;
-            break-before: page !important;
+            page-break-before: auto !important;
+            break-before: auto !important;
             page-break-inside: auto !important;
             break-inside: auto !important;
           }
@@ -4013,7 +4013,7 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${sketches.length > 0 ? `
-          <div class="sketches-section">
+          <div class="sketches-section" style="page-break-before: auto !important; break-before: auto !important;">
             <h2>${t('sketches.title')}</h2>
             ${sketchesHtml}
           </div>

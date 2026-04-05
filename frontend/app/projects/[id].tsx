@@ -2616,6 +2616,10 @@ export default function ProjectDetailScreen() {
             .photos-section {
               margin-bottom: 15px !important;
             }
+            .photos-section h2 {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
             .photos-section-small {
               display: grid !important;
               grid-template-columns: repeat(3, 1fr) !important;

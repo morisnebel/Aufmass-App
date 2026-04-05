@@ -32,7 +32,7 @@ import * as FileSystem from 'expo-file-system';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
-import Svg, { Path as SvgPath, Text as SvgText } from 'react-native-svg';
+import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1559,13 +1559,15 @@ export default function ProjectDetailScreen() {
     const generatePhotoHtml = (photo: typeof photos[0]) => {
       const size = (photo as any).pdf_size || 'medium';
       
-      let annotationSvg = '';
+      let svgContent = '';
+      let canvasWidth = 0;
+      let canvasHeight = 0;
+      
       if ((photo as any).annotations) {
         try {
           const annotationData = JSON.parse((photo as any).annotations);
-          const canvasWidth = annotationData.canvasWidth || 400;
-          const canvasHeight = annotationData.canvasHeight || 300;
-          let svgContent = '';
+          canvasWidth = annotationData.canvasWidth || 400;
+          canvasHeight = annotationData.canvasHeight || 300;
           
           // Render paths (drawing annotations)
           if (annotationData.paths && annotationData.paths.length > 0) {
@@ -1581,10 +1583,6 @@ export default function ProjectDetailScreen() {
               const fontFamily = t.fontFamily === 'System' ? 'Arial, sans-serif' : (t.fontFamily || 'Arial, sans-serif');
               return `<text x="${t.x}" y="${t.y}" font-size="${t.fontSize || 20}" fill="${t.color || '#FFFFFF'}" font-family="${fontFamily}" font-weight="bold" stroke="#000000" stroke-width="0.5" paint-order="stroke">${escapedText}</text>`;
             }).join('');
-          }
-          
-          if (svgContent) {
-            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid meet">${svgContent}</svg>`;
           }
         } catch (e) {
           console.error('Error parsing photo annotations:', e);
@@ -1605,12 +1603,27 @@ export default function ProjectDetailScreen() {
         display = 'block';
       }
       
+      // Bild und Annotationen in einem einzigen SVG für korrekte Koordinaten
+      const hasAnnotations = annotationSvg.length > 0;
+      let imageHtml = '';
+      if (hasAnnotations && canvasWidth > 0 && canvasHeight > 0) {
+        // Bild INNERHALB des SVG rendern damit Bild und Annotationen
+        // denselben Koordinatenraum teilen
+        imageHtml = `
+          <svg viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid meet" style="display: block; width: 100%; max-height: ${maxImgHeight}; background: #f5f5f5;">
+            <image href="${photo.image_data}" x="0" y="0" width="${canvasWidth}" height="${canvasHeight}" preserveAspectRatio="xMidYMid meet" />
+            ${svgContent}
+          </svg>
+        `;
+      } else {
+        imageHtml = `<img src="${photo.image_data}" alt="Foto" style="display: block; width: 100%; height: auto; max-height: ${maxImgHeight}; object-fit: contain; background: #f5f5f5;" />`;
+      }
+
       return `
         <div style="display: ${display}; width: ${width}; vertical-align: top; margin: 0 1% 10px 0; page-break-inside: avoid; break-inside: avoid;">
           <div style="border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; background: #fff;">
-            <div style="position: relative; display: block; width: 100%;">
-              <img src="${photo.image_data}" alt="Foto" style="display: block; width: 100%; height: auto; max-height: ${maxImgHeight}; object-fit: contain; background: #f5f5f5;" />
-              ${annotationSvg}
+            <div style="display: block; width: 100%;">
+              ${imageHtml}
             </div>
             ${photo.description ? `<p style="margin: 0; padding: 8px; font-size: 10px; color: #666; background: #f8f9fa;">${photo.description}</p>` : ''}
           </div>
@@ -5042,27 +5055,37 @@ export default function ProjectDetailScreen() {
                     }}
                     style={{ flex: 1 }}
                   >
-                    <View style={{ position: 'relative' }}>
-                    <Image
-                      source={{ uri: photo.image_data }}
-                      style={styles.photoImage}
-                      resizeMode="contain"
-                    />
-                    {/* Annotationen-Overlay (Zeichnungen, Text) */}
-                    {(photo as any).annotations && (() => {
+                    {(photo as any).annotations ? (() => {
                       try {
                         const annotationData = JSON.parse((photo as any).annotations);
                         const canvasW = annotationData.canvasWidth || 400;
                         const canvasH = annotationData.canvasHeight || 300;
                         const hasPaths = annotationData.paths && annotationData.paths.length > 0;
                         const hasTexts = annotationData.textElements && annotationData.textElements.length > 0;
-                        if (!hasPaths && !hasTexts) return null;
+                        if (!hasPaths && !hasTexts) {
+                          return (
+                            <Image
+                              source={{ uri: photo.image_data }}
+                              style={styles.photoImage}
+                              resizeMode="contain"
+                            />
+                          );
+                        }
+                        // Bild + Annotationen in einem einzigen SVG rendern
+                        // damit beide denselben Koordinatenraum teilen
                         return (
                           <Svg
                             viewBox={`0 0 ${canvasW} ${canvasH}`}
                             preserveAspectRatio="xMidYMid meet"
-                            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                            style={[styles.photoImage, { backgroundColor: '#f5f5f5' }]}
                           >
+                            <SvgImage
+                              href={photo.image_data}
+                              x="0" y="0"
+                              width={canvasW}
+                              height={canvasH}
+                              preserveAspectRatio="xMidYMid meet"
+                            />
                             {hasPaths && annotationData.paths.map((p: any, pi: number) => (
                               <SvgPath
                                 key={`p${pi}`}
@@ -5091,9 +5114,22 @@ export default function ProjectDetailScreen() {
                             ))}
                           </Svg>
                         );
-                      } catch (e) { return null; }
-                    })()}
-                    </View>
+                      } catch (e) {
+                        return (
+                          <Image
+                            source={{ uri: photo.image_data }}
+                            style={styles.photoImage}
+                            resizeMode="contain"
+                          />
+                        );
+                      }
+                    })() : (
+                    <Image
+                      source={{ uri: photo.image_data }}
+                      style={styles.photoImage}
+                      resizeMode="contain"
+                    />
+                    )}
                     {photo.description && (
                       <Text style={styles.photoDescription} numberOfLines={2}>
                         {photo.description}

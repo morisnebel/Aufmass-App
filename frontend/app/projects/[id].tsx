@@ -2615,10 +2615,18 @@ export default function ProjectDetailScreen() {
             /* Foto-Layouts für Druck */
             .photos-section {
               margin-bottom: 15px !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
             }
             .photos-section h2 {
               page-break-after: auto !important;
               break-after: auto !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
+            }
+            .photos-print-container {
+              page-break-before: auto !important;
+              break-before: auto !important;
             }
             .photos-section-small {
               display: grid !important;
@@ -2837,8 +2845,9 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
               margin-bottom: 10px !important;
             }
-            .photos-print-iphone > div img {
-              max-height: 500px !important;
+            .photos-print-iphone > div img,
+            .photos-print-iphone > div svg {
+              max-height: 350px !important;
             }
             .photos-print-iphone .photo-annotations {
               position: absolute !important;

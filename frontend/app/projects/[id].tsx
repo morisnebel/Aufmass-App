@@ -1604,7 +1604,7 @@ export default function ProjectDetailScreen() {
       }
       
       // Bild und Annotationen in einem einzigen SVG für korrekte Koordinaten
-      const hasAnnotations = annotationSvg.length > 0;
+      const hasAnnotations = svgContent.length > 0;
       let imageHtml = '';
       if (hasAnnotations && canvasWidth > 0 && canvasHeight > 0) {
         // Bild INNERHALB des SVG rendern damit Bild und Annotationen

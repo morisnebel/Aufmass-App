@@ -4006,8 +4006,8 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${photos.length > 0 ? `
-          <div class="photos-section">
-            <h2>${t('photos.title')}</h2>
+          <div class="photos-section" style="page-break-before: auto !important; break-before: auto !important;">
+            <h2 style="page-break-before: auto !important;">${t('photos.title')}</h2>
             ${photosHtml}
           </div>
         ` : ''}

@@ -1584,7 +1584,7 @@ export default function ProjectDetailScreen() {
           }
           
           if (svgContent) {
-            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid slice">${svgContent}</svg>`;
+            annotationSvg = `<svg class="photo-annotations" viewBox="0 0 ${canvasWidth} ${canvasHeight}" preserveAspectRatio="xMidYMid meet">${svgContent}</svg>`;
           }
         } catch (e) {
           console.error('Error parsing photo annotations:', e);
@@ -2822,6 +2822,14 @@ export default function ProjectDetailScreen() {
             }
             .photos-print-iphone > div img {
               max-height: 500px !important;
+            }
+            .photos-print-iphone .photo-annotations {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: 100% !important;
+              pointer-events: none !important;
             }
             /* iPad: Fotos nebeneinander mit sauberen Seitenumbrüchen */
             .photos-print-ipad {

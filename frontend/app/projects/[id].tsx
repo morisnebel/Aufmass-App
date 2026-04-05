@@ -2698,8 +2698,8 @@ export default function ProjectDetailScreen() {
               page-break-inside: auto !important; 
             }
             .photos-section { 
-              page-break-before: always !important;
-              break-before: page !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
               page-break-inside: auto !important; 
             }
             .sketch-item {

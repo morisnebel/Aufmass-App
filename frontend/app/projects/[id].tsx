@@ -1639,29 +1639,24 @@ export default function ProjectDetailScreen() {
       `;
     };
     
-    // Erzeuge Fotos in der ursprünglichen Reihenfolge
-    // Erstes Foto wird separat generiert, um es mit der Überschrift zusammenzuhalten
-    let firstPhotoHtml = '';
-    let restPhotosHtml = '';
+    // Erzeuge Fotos - Überschrift wird ins erste Foto-Item eingebettet
+    let photosHtml = '';
     
     if (photos.length > 0) {
       // iOS: Saubere Seitenumbrüche
-      // iPhone: block layout (untereinander)
-      // iPad: inline-block layout (nebeneinander, aber Seitenumbrüche respektiert)
       const photosContainerClass = isIphone 
         ? 'photos-print-container photos-print-iphone' 
         : isIpad 
           ? 'photos-print-container photos-print-ipad'
           : 'photos-print-container';
       
-      // Erstes Foto für Wrapper mit Überschrift
-      firstPhotoHtml = generatePhotoHtml(photos[0]);
+      // Erstes Foto mit eingebetteter Überschrift
+      const firstPhotoHtml = generatePhotoHtml(photos[0]);
+      // Überschrift VOR dem ersten Foto-Item einfügen (im Container, nicht außerhalb)
+      const headingHtml = `<h2 class="photo-inline-heading">${t('photos.title')}</h2>`;
       
-      // Restliche Fotos in eigenem Container
-      if (photos.length > 1) {
-        const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
-        restPhotosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${restPhotoItems}</div>`;
-      }
+      const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
+      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${firstPhotoHtml}${restPhotoItems}</div>`;
     }
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
@@ -1725,6 +1720,7 @@ export default function ProjectDetailScreen() {
       
       return `
         <div class="sketch-item ${sizeClass}">
+          ${index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
           ${notesHtml}
@@ -1740,16 +1736,12 @@ export default function ProjectDetailScreen() {
         ? 'sketches-container sketches-container-ipad'
         : 'sketches-container';
     
-    // Sketches: Erstes Element separat für Wrapper mit Überschrift
-    let firstSketchHtml = '';
-    let restSketchesHtml = '';
-    
-    if (sketches.length > 0) {
-      firstSketchHtml = sketchItems[0];
-      if (sketchItems.length > 1) {
-        restSketchesHtml = `<div class="${sketchesContainerClass}">${sketchItems.slice(1).join('')}</div>`;
-      }
-    }
+    // Alle Sketches im Container zusammen - Überschrift ist im ersten Item eingebettet
+    const sketchesHtml = sketches.length > 0 ? `
+      <div class="${sketchesContainerClass}">
+        ${sketchItems.join('')}
+      </div>
+    ` : '';
     
     // Helper function to calculate polygon area
     const calculatePolygonArea = (points: Array<{x: number, y: number}>, scale: number = 100) => {
@@ -3219,9 +3211,12 @@ export default function ProjectDetailScreen() {
             color: ${accentColor};
             border-bottom: 1px solid ${accentColor};
             padding-bottom: 3px;
-            margin-top: 0;
+            margin-top: 8px;
             margin-bottom: 8px;
-            font-size: 11px;
+            font-size: ${toolsSize.h2Size}px;
+            font-weight: bold;
+            display: block !important;
+            width: 100% !important;
           }
           .sketch-inline-title {
             color: ${accentColor};
@@ -4028,21 +4023,13 @@ export default function ProjectDetailScreen() {
         
         ${photos.length > 0 ? `
           <div class="photos-section" style="page-break-before: auto !important; break-before: auto !important;">
-            <div style="display: block; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid;">
-              <h2>${t('photos.title')}</h2>
-              ${firstPhotoHtml}
-            </div>
-            ${restPhotosHtml}
+            ${photosHtml}
           </div>
         ` : ''}
         
         ${sketches.length > 0 ? `
           <div class="sketches-section" style="page-break-before: auto !important; break-before: auto !important;">
-            <div style="display: block; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid;">
-              <h2>${t('sketches.title')}</h2>
-              ${firstSketchHtml}
-            </div>
-            ${restSketchesHtml}
+            ${sketchesHtml}
           </div>
         ` : ''}
         

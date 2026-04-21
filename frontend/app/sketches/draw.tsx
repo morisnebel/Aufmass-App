@@ -3530,6 +3530,18 @@ export default function DrawSketchScreen() {
         const dx = touches[0].pageX - touches[1].pageX;
         const dy = touches[0].pageY - touches[1].pageY;
         const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // FIX: Falls Nutzer Finger sequenziell aufsetzt (sehr häufig!),
+        // wird onResponderGrant nur bei 1 Finger aufgerufen → initialDistance = 0.
+        // Wir initialisieren die Pinch-Referenz beim ERSTEN Frame mit 2 Fingern.
+        if (androidPinchRef.current.initialDistance === 0 || androidPinchRef.current.numTouches < 2) {
+          androidPinchRef.current.initialDistance = distance;
+          androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
+          androidPinchRef.current.isPinching = true;
+          androidPinchRef.current.numTouches = touches.length;
+          return;
+        }
+
         if (androidPinchRef.current.initialDistance > 0) {
           const ratio = distance / androidPinchRef.current.initialDistance;
           const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
@@ -3538,8 +3550,20 @@ export default function DrawSketchScreen() {
         }
         androidPinchRef.current.isPinching = true;
         androidPinchRef.current.numTouches = touches.length;
-      } else if (touches.length === 1 && !androidPinchRef.current.isPinching && androidPinchRef.current.currentScale > 1.05) {
-        // Pan: Nur bei gezoomtem Canvas und einem Finger (nicht direkt nach Pinch)
+      } else if (touches.length === 1 && androidPinchRef.current.currentScale > 1.05) {
+        // Pan: Nur bei gezoomtem Canvas und einem Finger
+        // FIX: isPinching-Check entfernt, damit Pan auch nach abgeschlossenem Pinch
+        // (d.h. Finger 2 losgelassen, Finger 1 zieht weiter) funktioniert.
+        // Nach Pinch → numTouches-Wechsel von 2 auf 1 → lastPan neu setzen, nicht panen
+        if (androidPinchRef.current.numTouches !== 1) {
+          // Wechsel 2→1 (Pinch endet, aber Finger 1 bleibt): Start-Position resetten
+          androidPinchRef.current.lastPanX = touches[0].pageX;
+          androidPinchRef.current.lastPanY = touches[0].pageY;
+          androidPinchRef.current.numTouches = 1;
+          androidPinchRef.current.isPinching = false;
+          androidPinchRef.current.initialDistance = 0;
+          return;
+        }
         const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
         const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
         androidPinchRef.current.currentTranslateX += panDx;

@@ -55,11 +55,18 @@ export default function NewPhotoScreen() {
     if (!hasPermission) return;
 
     try {
+      // FIX: Android expo-image-picker hat einen bekannten Bug wo allowsMultipleSelection
+      // auf echten Geräten/APKs nicht richtig funktioniert. Wir zeigen einen Hinweis
+      // und erlauben wiederholtes Hinzufügen von Einzelfotos.
+      const isAndroid = Platform.OS === 'android';
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
         selectionLimit: 20,
+        // FIX: exif:false kann auf manchen Android-Geräten die Mehrfachauswahl verbessern
+        exif: false,
       });
 
       if (!result.canceled && result.assets.length > 0) {
@@ -68,6 +75,9 @@ export default function NewPhotoScreen() {
         const newPhotos: SelectedPhoto[] = [];
         const failedAssets: { index: number; reason: string }[] = [];
         const total = result.assets.length;
+        
+        // FIX: Zeige Android-Hinweis wenn nur 1 Foto zurückkommt trotz Mehrfachauswahl
+        const showAndroidHint = isAndroid && total === 1 && selectedPhotos.length === 0;
         
         for (let i = 0; i < total; i++) {
           const asset = result.assets[i];
@@ -129,8 +139,16 @@ export default function NewPhotoScreen() {
         setLoading(false);
         setSavingProgress(0);
         
+        // FIX: Android-spezifischer Hinweis für Mehrfachauswahl-Workaround
+        if (showAndroidHint) {
+          Alert.alert(
+            'Foto hinzugefügt',
+            'Auf Android können Sie weitere Fotos hinzufügen, indem Sie erneut auf "Aus Galerie wählen" tippen. Sie können den Vorgang beliebig oft wiederholen.',
+            [{ text: 'Verstanden', style: 'default' }]
+          );
+        }
         // Feedback an User bei teilweisen Fehlern
-        if (failedAssets.length > 0) {
+        else if (failedAssets.length > 0) {
           Alert.alert(
             `${newPhotos.length} von ${total} Fotos geladen`,
             failedAssets.length === total
@@ -359,7 +377,11 @@ export default function NewPhotoScreen() {
             <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
               <Ionicons name="images" size={36} color="#1976d2" />
               <Text style={styles.uploadButtonText}>Aus Galerie wählen</Text>
-              <Text style={styles.uploadButtonSubtext}>Mehrfachauswahl möglich</Text>
+              <Text style={styles.uploadButtonSubtext}>
+                {Platform.OS === 'android' 
+                  ? 'Tippen zum Hinzufügen (wiederholbar)'
+                  : 'Mehrfachauswahl möglich'}
+              </Text>
             </TouchableOpacity>
           </View>
           

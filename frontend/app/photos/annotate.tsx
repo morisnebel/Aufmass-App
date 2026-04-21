@@ -143,6 +143,7 @@ export default function AnnotatePhotoScreen() {
     lastPanX: 0,
     lastPanY: 0,
     isPinching: false,
+    numTouches: 0, // FIX: Tracke Anzahl der Finger für sequenzielles Auflegen
     currentScale: 1,
     currentTranslateX: 0,
     currentTranslateY: 0,
@@ -1158,10 +1159,14 @@ export default function AnnotatePhotoScreen() {
                   androidPinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
                   androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
                   androidPinchRef.current.isPinching = true;
+                  androidPinchRef.current.numTouches = touches.length;
                 } else if (touches && touches.length === 1) {
                   androidPinchRef.current.lastPanX = touches[0].pageX;
                   androidPinchRef.current.lastPanY = touches[0].pageY;
                   androidPinchRef.current.isPinching = false;
+                  androidPinchRef.current.numTouches = 1;
+                  // FIX: initialDistance zurücksetzen für den Fall, dass später ein 2. Finger hinzukommt
+                  androidPinchRef.current.initialDistance = 0;
                 }
                 return;
               }
@@ -1203,6 +1208,18 @@ export default function AnnotatePhotoScreen() {
                   const dx = touches[0].pageX - touches[1].pageX;
                   const dy = touches[0].pageY - touches[1].pageY;
                   const distance = Math.sqrt(dx * dx + dy * dy);
+                  
+                  // FIX: Sequenzielles Finger-Auflegen erkennen
+                  // Wenn der Nutzer erst 1 Finger auflegt, dann 2. Finger hinzufügt,
+                  // wird onResponderGrant nur für den 1. Finger gefeuert.
+                  // Daher hier die Pinch-Initialisierung nachholen wenn nötig.
+                  if (androidPinchRef.current.initialDistance === 0 || androidPinchRef.current.numTouches < 2) {
+                    androidPinchRef.current.initialDistance = distance;
+                    androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
+                    androidPinchRef.current.numTouches = touches.length;
+                    androidPinchRef.current.isPinching = true;
+                  }
+                  
                   if (androidPinchRef.current.initialDistance > 0) {
                     const ratio = distance / androidPinchRef.current.initialDistance;
                     const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
@@ -1210,6 +1227,7 @@ export default function AnnotatePhotoScreen() {
                     androidZoomScale.setValue(newScale);
                   }
                   androidPinchRef.current.isPinching = true;
+                  androidPinchRef.current.numTouches = touches.length;
                 } else if (touches && touches.length === 1 && !androidPinchRef.current.isPinching && androidPinchRef.current.currentScale > 1.05) {
                   const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
                   const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
@@ -1219,6 +1237,7 @@ export default function AnnotatePhotoScreen() {
                   androidTranslateY.setValue(androidPinchRef.current.currentTranslateY);
                   androidPinchRef.current.lastPanX = touches[0].pageX;
                   androidPinchRef.current.lastPanY = touches[0].pageY;
+                  androidPinchRef.current.numTouches = 1;
                 }
                 return;
               }
@@ -1252,6 +1271,7 @@ export default function AnnotatePhotoScreen() {
               if (Platform.OS === 'android' && !drawingEnabled) {
                 androidPinchRef.current.isPinching = false;
                 androidPinchRef.current.initialDistance = 0;
+                androidPinchRef.current.numTouches = 0; // FIX: numTouches zurücksetzen
                 return;
               }
               // Text-Verschiebung beenden

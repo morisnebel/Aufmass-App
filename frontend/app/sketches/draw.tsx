@@ -6690,25 +6690,59 @@ export default function DrawSketchScreen() {
   //  - Fast loading in sketch list thumbnails
   // Original metadata.elements keep their full-resolution URIs for canvas rendering.
   const compressImagesForPreviewSvg = async (originalElements: any[]): Promise<any[]> => {
-    const imageCount = originalElements.filter((el: any) => el.type === 'image' && el.data?.uri).length;
-    if (imageCount === 0) return originalElements;
-    console.log(`[Preview] Compressing ${imageCount} image(s) for SVG embedding...`);
+    const imageElements = originalElements.filter((el: any) => el.type === 'image');
+    if (imageElements.length === 0) return originalElements;
+    console.log(`[Preview] Processing ${imageElements.length} image(s) for SVG embedding...`);
+    
     const results = await Promise.all(originalElements.map(async (el: any) => {
-      if (el.type === 'image' && el.data?.uri && el.data.uri.startsWith('data:') && el.data.uri.length > 50000) {
+      if (el.type !== 'image') return el;
+      
+      let imageUri = el.data?.uri;
+      
+      // FIX: Falls Bild in separatem Storage liegt (__stored__ Platzhalter), lade es zuerst
+      if ((!imageUri || imageUri === '__stored__') && el.data?.imageStorageKey) {
         try {
-          const manip = await ImageManipulator.manipulateAsync(
-            el.data.uri,
-            [{ resize: { width: 600 } }],
-            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-          );
-          if (manip.base64) {
-            return { ...el, data: { ...el.data, uri: `data:image/jpeg;base64,${manip.base64}` } };
+          const storedImage = await AsyncStorage.getItem(el.data.imageStorageKey);
+          if (storedImage) {
+            imageUri = storedImage;
+            console.log(`[Preview] Loaded image from storage: ${el.data.imageStorageKey.substring(0, 30)}...`);
+          } else {
+            console.warn(`[Preview] Image not found in storage: ${el.data.imageStorageKey}`);
+            return el; // Element unverändert zurückgeben
           }
         } catch (err) {
-          console.warn('[Preview] Could not compress image, using original:', err);
+          console.warn(`[Preview] Could not load image from storage:`, err);
+          return el;
         }
       }
-      return el;
+      
+      // Keine gültige URI vorhanden
+      if (!imageUri || !imageUri.startsWith('data:')) {
+        console.warn(`[Preview] Skipping image - no valid data URI`);
+        return el;
+      }
+      
+      // Kleine Bilder brauchen keine Komprimierung
+      if (imageUri.length < 50000) {
+        return { ...el, data: { ...el.data, uri: imageUri } };
+      }
+      
+      // Versuche zu komprimieren
+      try {
+        const manip = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [{ resize: { width: 600 } }],
+          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        if (manip.base64) {
+          return { ...el, data: { ...el.data, uri: `data:image/jpeg;base64,${manip.base64}` } };
+        }
+      } catch (err) {
+        console.warn('[Preview] Could not compress image, using original:', err);
+      }
+      
+      // Fallback: Originaluri verwenden (auch wenn groß - besser als nichts)
+      return { ...el, data: { ...el.data, uri: imageUri } };
     }));
     return results;
   };

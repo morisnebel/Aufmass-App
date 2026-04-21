@@ -36,6 +36,7 @@ import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AUFMASSPROFI_LOGO_BASE64 } from '../../assets/logoBase64';
 
 // API_URL removed - using local storage now
 
@@ -1253,19 +1254,9 @@ export default function ProjectDetailScreen() {
       // Pro Version: Benutzer-Logo aus Einstellungen
       companyLogo = settings.logo_data || '';
     } else {
-      // Basic Version: Aufmassprofi Logo laden
-      try {
-        const Asset = require('expo-asset').Asset;
-        const iconAsset = Asset.fromModule(require('../../assets/images/icon.png'));
-        await iconAsset.downloadAsync();
-        if (iconAsset.localUri) {
-          const base64 = await readAsStringAsync(iconAsset.localUri, { encoding: 'base64' });
-          companyLogo = `data:image/png;base64,${base64}`;
-        }
-      } catch (e) {
-        console.log('Could not load Basic logo for PDF:', e);
-        companyLogo = '';
-      }
+      // Basic Version: Aufmassprofi Logo aus Base64-Konstante
+      // (zuverlässig auf Android Production-Builds, umgeht Asset-URI-Probleme)
+      companyLogo = AUFMASSPROFI_LOGO_BASE64;
     }
     
     // PDF Layout Einstellungen

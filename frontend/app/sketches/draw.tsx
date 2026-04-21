@@ -468,6 +468,8 @@ export default function DrawSketchScreen() {
   const activeCropHandle = useRef<string | null>(null);
   const cropStartPos = useRef({ x: 0, y: 0 });
   const cropStartBox = useRef({ x: 50, y: 50, width: 200, height: 200 });
+  // Ref für dynamische Container-Größe (damit PanResponder aktuelle Größe lesen kann)
+  const cropContainerSizeRef = useRef(300);
   
   // Halte cropBoxRef synchron mit cropBox State
   useEffect(() => {
@@ -2579,6 +2581,9 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Container-Größe für Crop-Modal (dynamisch für Tablet-Support)
+  const [cropContainerSize, setCropContainerSize] = useState(300);
+
   // Zuschneiden-Modus starten
   const startCropMode = () => {
     const selectedEl = elements.find(el => el.id === selectedElementId);
@@ -2590,22 +2595,38 @@ export default function DrawSketchScreen() {
         selectedEl.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          // Initiale Crop-Box = 80% des Bildes, zentriert
-          const boxWidth = Math.min(imgWidth * 0.8, 280);
-          const boxHeight = Math.min(imgHeight * 0.8, 280);
-          setCropBox({
-            x: (300 - boxWidth) / 2,
-            y: (300 - boxHeight) / 2,
-            width: boxWidth,
-            height: boxHeight,
-          });
+          // FIX: Initiale Crop-Box korrekt positionieren.
+          // Berechne zuerst, wo und wie groß das Bild im Container tatsächlich angezeigt wird (resizeMode="contain")
+          const containerSize = cropContainerSize;
+          const imgAspect = imgWidth / imgHeight;
+          let dispW: number, dispH: number, offX: number, offY: number;
+          if (imgAspect >= 1) {
+            // Querformat: volle Breite, vertikal zentriert mit Letterbox
+            dispW = containerSize;
+            dispH = containerSize / imgAspect;
+            offX = 0;
+            offY = (containerSize - dispH) / 2;
+          } else {
+            // Hochformat: volle Höhe, horizontal zentriert mit Letterbox
+            dispH = containerSize;
+            dispW = containerSize * imgAspect;
+            offX = (containerSize - dispW) / 2;
+            offY = 0;
+          }
+          // Crop-Box = 80% des ANGEZEIGTEN Bildes, zentriert auf dem Bild (nicht auf dem Container!)
+          const boxWidth = dispW * 0.8;
+          const boxHeight = dispH * 0.8;
+          const boxX = offX + (dispW - boxWidth) / 2;
+          const boxY = offY + (dispH - boxHeight) / 2;
+          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback
-          setCropImageDimensions({ width: 300, height: 300 });
-          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          // Fallback: verwende ein Quadrat im Zentrum
+          const size = cropContainerSize;
+          setCropImageDimensions({ width: size, height: size });
+          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
           setShowCropModal(true);
         }
       );
@@ -2659,12 +2680,12 @@ export default function DrawSketchScreen() {
     if (!cropImageUri || !cropImageId) return;
     
     try {
-      // Berechne die tatsächliche Bildgröße im Container mit resizeMode="contain"
-      const containerSize = 300;
+      // Verwende die tatsächlich gemessene Container-Größe (responsiv für Tablet)
+      const containerSize = cropContainerSize;
       const imgWidth = cropImageDimensions.width;
       const imgHeight = cropImageDimensions.height;
       const imgAspect = imgWidth / imgHeight;
-      const containerAspect = 1; // Container ist quadratisch (300x300)
+      const containerAspect = 1; // Container ist quadratisch
       
       let displayedWidth: number, displayedHeight: number, offsetX: number, offsetY: number;
       
@@ -2698,21 +2719,62 @@ export default function DrawSketchScreen() {
       const cropWidth = Math.round(cropBoxRelativeWidth * scale);
       const cropHeight = Math.round(cropBoxRelativeHeight * scale);
       
+      // Validiere Crop-Region: Muss mindestens 10x10 Pixel groß sein
+      const finalCropWidth = Math.min(cropWidth, imgWidth - cropOriginX);
+      const finalCropHeight = Math.min(cropHeight, imgHeight - cropOriginY);
+      
+      if (finalCropWidth < 10 || finalCropHeight < 10) {
+        Alert.alert(t('common.note'), 'Der Zuschneide-Bereich ist zu klein. Bitte größer wählen.');
+        return;
+      }
+      
+      console.log('[Crop]', {
+        container: containerSize,
+        image: `${imgWidth}x${imgHeight}`,
+        displayed: `${Math.round(displayedWidth)}x${Math.round(displayedHeight)}@(${Math.round(offsetX)},${Math.round(offsetY)})`,
+        cropBox: `${Math.round(cropBox.width)}x${Math.round(cropBox.height)}@(${Math.round(cropBox.x)},${Math.round(cropBox.y)})`,
+        finalCrop: `${finalCropWidth}x${finalCropHeight}@(${cropOriginX},${cropOriginY})`,
+      });
+      
       // Verwende ImageManipulator zum Zuschneiden
+      // FIX für Android: Bei Data-URIs erst in temporäre Datei schreiben (umgeht ImageManipulator
+      // Probleme mit großen data:image/jpeg;base64 Strings auf Android Production-Builds)
+      let cropSourceUri = cropImageUri;
+      let tempFilePath: string | null = null;
+      if (Platform.OS === 'android' && cropImageUri.startsWith('data:') && cropImageUri.length > 500000) {
+        try {
+          const base64Part = cropImageUri.replace(/^data:image\/[^;]+;base64,/, '');
+          tempFilePath = `${FileSystem.cacheDirectory}crop_src_${Date.now()}.jpg`;
+          await FileSystem.writeAsStringAsync(tempFilePath, base64Part, { encoding: 'base64' as any });
+          cropSourceUri = tempFilePath;
+        } catch (writeErr) {
+          console.warn('[Crop] Could not write temp file, using data URI directly:', writeErr);
+        }
+      }
+      
       const result = await ImageManipulator.manipulateAsync(
-        cropImageUri,
+        cropSourceUri,
         [
           {
             crop: {
               originX: cropOriginX,
               originY: cropOriginY,
-              width: Math.min(cropWidth, cropImageDimensions.width - cropOriginX),
-              height: Math.min(cropHeight, cropImageDimensions.height - cropOriginY),
+              width: finalCropWidth,
+              height: finalCropHeight,
             },
           },
         ],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
+      
+      // Temp-Datei aufräumen
+      if (tempFilePath) {
+        FileSystem.deleteAsync(tempFilePath, { idempotent: true }).catch(() => {});
+      }
+      
+      if (!result.base64) {
+        throw new Error('Crop result has no base64 data');
+      }
       
       // Aktualisiere das Element mit dem zugeschnittenen Bild
       const croppedUri = `data:image/jpeg;base64,${result.base64}`;
@@ -2798,7 +2860,7 @@ export default function DrawSketchScreen() {
         const dx = pageX - cropStartPos.current.x;
         const dy = pageY - cropStartPos.current.y;
         const minSize = 50;
-        const maxSize = 300;
+        const maxSize = cropContainerSizeRef.current; // Dynamisch (responsiv für Tablet)
         
         let newBox = { ...cropStartBox.current };
         
@@ -9605,13 +9667,20 @@ export default function DrawSketchScreen() {
             
             <View 
               ref={cropContainerRef}
-              style={styles.cropImageContainer}
+              style={[styles.cropImageContainer, { width: cropContainerSize, height: cropContainerSize }]}
+              onLayout={(e) => {
+                const { width } = e.nativeEvent.layout;
+                if (width > 0 && Math.abs(width - cropContainerSize) > 1) {
+                  setCropContainerSize(width);
+                  cropContainerSizeRef.current = width;
+                }
+              }}
               {...cropPanResponder.panHandlers}
             >
               {cropImageUri && (
                 <RNImage
                   source={{ uri: cropImageUri }}
-                  style={styles.cropImage}
+                  style={{ width: cropContainerSize, height: cropContainerSize }}
                   resizeMode="contain"
                   pointerEvents="none"
                 />
@@ -9619,9 +9688,9 @@ export default function DrawSketchScreen() {
               
               {/* Dunkle Overlay außerhalb der Crop-Box */}
               <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: cropContainerSize - cropBox.y - cropBox.height }]} pointerEvents="none" />
               <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: cropContainerSize - cropBox.x - cropBox.width }]} pointerEvents="none" />
               
               {/* Crop Box Rahmen */}
               <View 
@@ -11235,8 +11304,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
-    width: '90%',
-    maxWidth: 360,
+    width: '92%',
+    maxWidth: 560, // Größer auf Tablets
     alignItems: 'center',
   },
   cropModalTitle: {
@@ -11252,8 +11321,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cropImageContainer: {
-    width: 300,
-    height: 300,
+    // width/height werden dynamisch via cropContainerSize gesetzt (responsive)
     backgroundColor: '#000',
     borderRadius: 8,
     overflow: 'hidden',

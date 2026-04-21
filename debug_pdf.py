@@ -8,7 +8,7 @@ import json
 import base64
 from datetime import datetime
 
-BACKEND_URL = "https://image-render-test.preview.emergentagent.com/api"
+BACKEND_URL = "https://quick-app-352.preview.emergentagent.com/api"
 
 def debug_pdf_export():
     """Debug PDF export with detailed logging"""

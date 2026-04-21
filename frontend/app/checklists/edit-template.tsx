@@ -726,21 +726,25 @@ export default function EditTemplateScreen() {
           
           {/* Action Buttons */}
           <View style={[styles.itemActions, isPhone && styles.itemActionsPhone]}>
-            {/* Kopieren Button */}
+            {/* Kopieren Button (orange) - prominenter, gut druckbar */}
             <TouchableOpacity
-              style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
+              style={[styles.actionButton, styles.actionButtonCopy, isPhone && styles.actionButtonPhone]}
               onPress={() => copyItem(path)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
-              <Ionicons name="copy-outline" size={isPhone ? 14 : 18} color="#ff9800" />
+              <Ionicons name="copy-outline" size={isPhone ? 22 : 20} color="#ff9800" />
             </TouchableOpacity>
             
-            {/* Einfügen Button (nur wenn etwas kopiert wurde) */}
+            {/* Einfügen Button (grün) - prominenter, nur wenn etwas kopiert wurde */}
             {copiedItem && (
               <TouchableOpacity
-                style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
+                style={[styles.actionButton, styles.actionButtonPaste, isPhone && styles.actionButtonPhone]}
                 onPress={() => pasteItemAfter(path)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               >
-                <Ionicons name="clipboard-outline" size={isPhone ? 14 : 18} color="#4caf50" />
+                <Ionicons name="clipboard-outline" size={isPhone ? 22 : 20} color="#4caf50" />
               </TouchableOpacity>
             )}
             
@@ -748,8 +752,10 @@ export default function EditTemplateScreen() {
             <TouchableOpacity
               style={[styles.actionButton, isPhone && styles.actionButtonPhone]}
               onPress={() => removeItem(path)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             >
-              <Ionicons name="trash-outline" size={isPhone ? 14 : 18} color="#f44336" />
+              <Ionicons name="trash-outline" size={isPhone ? 20 : 18} color="#f44336" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1388,15 +1394,33 @@ const styles = StyleSheet.create({
   itemActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   itemActionsPhone: {
-    gap: 1,
+    gap: 6,
   },
   actionButton: {
-    padding: 6,
+    padding: 10,
+    borderRadius: 8,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionButtonPhone: {
-    padding: 3,
+    padding: 10,
+    minWidth: 44,
+    minHeight: 44,
+  },
+  actionButtonCopy: {
+    backgroundColor: '#fff3e0', // sanftes Orange-Pastell
+    borderWidth: 1,
+    borderColor: '#ffcc80',
+  },
+  actionButtonPaste: {
+    backgroundColor: '#e8f5e9', // sanftes Grün-Pastell
+    borderWidth: 1,
+    borderColor: '#a5d6a7',
   },
   itemInputPhone: {
     fontSize: 14,

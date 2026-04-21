@@ -2454,20 +2454,25 @@ export default function DrawSketchScreen() {
               pdf_size: savePdfSize,
             });
             
-            // FIX: Falls sketchId undefined war, sind die Bilder unter sketch_img_undefined_<elId> gespeichert.
+            // FIX: Falls sketchId undefined oder 'new' war, sind die Bilder unter sketch_img_undefined_<elId> oder sketch_img_new_<elId> gespeichert.
             // Wir müssen sie auf die neue ID ummappen, damit beim späteren Laden die richtigen Keys greifen.
             if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
               try {
                 const remapOps: Promise<any>[] = [];
                 const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
-                  if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_undefined_')) {
+                  if (el.type === 'image' && el.data?.imageStorageKey && 
+                      (el.data.imageStorageKey.includes('_undefined_') || el.data.imageStorageKey.includes('_new_'))) {
                     const oldKey = el.data.imageStorageKey;
-                    const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
+                    // Ersetze sowohl _undefined_ als auch _new_ durch die echte ID
+                    const newKey = oldKey.replace(/_undefined_|_new_/, `_${newSketch.id}_`);
+                    console.log('[autoSave] Remapping image key:', oldKey, '->', newKey);
                     const imgData = await AsyncStorage.getItem(oldKey);
                     if (imgData) {
                       remapOps.push(AsyncStorage.setItem(newKey, imgData));
                       remapOps.push(AsyncStorage.removeItem(oldKey));
                       return { ...el, data: { ...el.data, imageStorageKey: newKey } };
+                    } else {
+                      console.warn('[autoSave] Image data not found for key:', oldKey);
                     }
                   }
                   return el;
@@ -2476,6 +2481,7 @@ export default function DrawSketchScreen() {
                 // Metadata mit neuen Keys überschreiben
                 const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
                 await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+                console.log('[autoSave] Image keys remapped successfully');
               } catch (remapErr) {
                 console.error('Error remapping image keys:', remapErr);
               }
@@ -6926,6 +6932,38 @@ export default function DrawSketchScreen() {
           metadata: JSON.stringify(lightMetadataForCreate),
           pdf_size: pdfSize,
         });
+        
+        // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
+        if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
+          try {
+            const remapOps: Promise<any>[] = [];
+            const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
+              if (el.type === 'image' && el.data?.imageStorageKey && 
+                  (el.data.imageStorageKey.includes('_undefined_') || el.data.imageStorageKey.includes('_new_'))) {
+                const oldKey = el.data.imageStorageKey;
+                const newKey = oldKey.replace(/_undefined_|_new_/, `_${newSketch.id}_`);
+                console.log('[saveSketch] Remapping image key:', oldKey, '->', newKey);
+                const imgData = await AsyncStorage.getItem(oldKey);
+                if (imgData) {
+                  remapOps.push(AsyncStorage.setItem(newKey, imgData));
+                  remapOps.push(AsyncStorage.removeItem(oldKey));
+                  return { ...el, data: { ...el.data, imageStorageKey: newKey } };
+                } else {
+                  console.warn('[saveSketch] Image data not found for key:', oldKey);
+                }
+              }
+              return el;
+            }));
+            await Promise.all(remapOps);
+            // Metadata mit korrekten Keys speichern
+            const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
+            await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+            console.log('[saveSketch] Image keys remapped successfully');
+          } catch (remapErr) {
+            console.error('[saveSketch] Error remapping image keys:', remapErr);
+          }
+        }
+        
         // Hintergrundbild separat speichern (ohne JSON.stringify)
         if (backgroundImage && newSketch?.id) {
           await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);

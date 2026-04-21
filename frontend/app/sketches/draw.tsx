@@ -2298,7 +2298,9 @@ export default function DrawSketchScreen() {
         
         if (elements.length > 0) {
           try {
-            sketchData = generatePreviewSvg();
+            // FIX: Komprimiere Bilder VOR dem SVG-Embedding (verhindert btoa-Crash + zu große PDFs)
+            const compressedElements = await compressImagesForPreviewSvg(elements);
+            sketchData = generatePreviewSvg(compressedElements);
           } catch (previewError) {
             console.error('Error generating preview:', previewError);
           }
@@ -2314,7 +2316,7 @@ export default function DrawSketchScreen() {
                 <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${(title || 'Skizze').replace(/[<>&"']/g, '')}</text>
               </svg>
             `;
-            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+            sketchData = encodeSvgAsDataUri(previewSvg);
           } catch (e) {
             console.error('Error creating placeholder preview:', e);
           }
@@ -2338,7 +2340,7 @@ export default function DrawSketchScreen() {
               </svg>
             `;
             
-            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+            sketchData = encodeSvgAsDataUri(previewSvg);
           } catch (e) {
             console.error('Error creating fallback preview:', e);
           }
@@ -2416,10 +2418,19 @@ export default function DrawSketchScreen() {
         } else if (saveTitle.trim()) {
           // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
           try {
-            // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen Bildern)
-            const lightMetadataForCreate = { ...metadata };
-            delete lightMetadataForCreate.backgroundImage;
-            await SketchService.create({
+            // FIX: Verwende lightMetadata (mit __stored__ Platzhaltern für Bilder),
+            // nicht die Original-Metadata mit vollen Base64-URIs.
+            // Sonst werden große Bilder inline in die JSON gepackt und können AsyncStorage
+            // sprengen oder bei JSON.parse/stringify zu OOM führen → Fotos gehen verloren!
+            const lightMetadataForCreate = { ...lightMetadata };
+            delete (lightMetadataForCreate as any).backgroundImage;
+            
+            // WICHTIG: Bilder einzeln in AsyncStorage speichern BEVOR SketchService.create läuft
+            // und der Sketch seine finale ID bekommt. Die imageStorageKeys in lightMetadata
+            // zeigen auf sketch_img_undefined_<elId> - das passt für den Platzhalter.
+            await Promise.all(extractedImageOps);
+            
+            const newSketch = await SketchService.create({
               project_id: saveProjectId,
               title: saveTitle,
               notes: saveNotes,
@@ -2427,13 +2438,37 @@ export default function DrawSketchScreen() {
               metadata: JSON.stringify(lightMetadataForCreate),
               pdf_size: savePdfSize,
             });
-            // Hintergrundbild separat speichern (ohne JSON.stringify)
-            if (saveBgImage) {
-              const newSketches = await SketchService.getAll();
-              const newest = newSketches[newSketches.length - 1];
-              if (newest) {
-                await AsyncStorage.setItem(`sketch_bg_${newest.id}`, saveBgImage);
+            
+            // FIX: Falls sketchId undefined war, sind die Bilder unter sketch_img_undefined_<elId> gespeichert.
+            // Wir müssen sie auf die neue ID ummappen, damit beim späteren Laden die richtigen Keys greifen.
+            if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
+              try {
+                const remapOps: Promise<any>[] = [];
+                const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
+                  if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_undefined_')) {
+                    const oldKey = el.data.imageStorageKey;
+                    const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
+                    const imgData = await AsyncStorage.getItem(oldKey);
+                    if (imgData) {
+                      remapOps.push(AsyncStorage.setItem(newKey, imgData));
+                      remapOps.push(AsyncStorage.removeItem(oldKey));
+                      return { ...el, data: { ...el.data, imageStorageKey: newKey } };
+                    }
+                  }
+                  return el;
+                }));
+                await Promise.all(remapOps);
+                // Metadata mit neuen Keys überschreiben
+                const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
+                await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+              } catch (remapErr) {
+                console.error('Error remapping image keys:', remapErr);
               }
+            }
+            
+            // Hintergrundbild separat speichern (ohne JSON.stringify)
+            if (saveBgImage && newSketch?.id) {
+              await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, saveBgImage);
             }
             backgroundImageChangedRef.current = false;
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
@@ -6113,7 +6148,8 @@ export default function DrawSketchScreen() {
   };
 
   // Save sketch
-  const generatePreviewSvg = () => {
+  const generatePreviewSvg = (elementsOverride?: any[]) => {
+    const previewElements = elementsOverride || elements;
     // NEW ARCHITECTURE: Use viewBox for scaling instead of transforming coordinates
     // This preserves original element sizes (especially text) and lets the browser handle scaling
     
@@ -6121,7 +6157,7 @@ export default function DrawSketchScreen() {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     let hasValidBounds = false;
     
-    elements.forEach(el => {
+    previewElements.forEach(el => {
       if (el.type === 'path') {
         const matches = el.data.match(/(-?\d+\.?\d*)/g);
         if (matches) {
@@ -6302,7 +6338,7 @@ export default function DrawSketchScreen() {
     // Generate SVG with ORIGINAL coordinates - viewBox handles scaling
     let svgElements = '';
     
-    elements.forEach(el => {
+    previewElements.forEach(el => {
       const strokeWidth = el.strokeWidth || 2;
       
       if (el.type === 'path') {
@@ -6561,9 +6597,58 @@ export default function DrawSketchScreen() {
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions
     const previewSvg = `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
     
-    console.log('Generated SVG preview with viewBox:', `${minX} ${minY} ${drawWidth} ${drawHeight}`);
+    console.log('Generated SVG preview with viewBox:', `${minX} ${minY} ${drawWidth} ${drawHeight}`, '- size:', previewSvg.length, 'chars');
     
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+    return encodeSvgAsDataUri(previewSvg);
+  };
+
+  // Safer SVG data URI encoder:
+  // - Primary: base64 via btoa (compact, compatible)
+  // - Fallback: URL-encoded (safer for very large strings where btoa/unescape may crash on Android)
+  const encodeSvgAsDataUri = (svg: string): string => {
+    try {
+      // btoa(unescape(encodeURIComponent(...))) is the standard UTF-8 -> base64 trick.
+      // Wrapped in try/catch because on Android/Hermes it can throw for strings > ~5MB.
+      const encoded = btoa(unescape(encodeURIComponent(svg)));
+      if (encoded && encoded.length > 0) {
+        return `data:image/svg+xml;base64,${encoded}`;
+      }
+      throw new Error('Empty base64 output');
+    } catch (e) {
+      // Fallback: URL-encoded SVG (slightly larger but no btoa crash risk)
+      console.warn('btoa SVG encoding failed, using URL encoding:', e);
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+  };
+
+  // Async helper: compress image URIs in elements to thumbnails (max 600px, JPEG 60%)
+  // for embedding in preview SVG. Keeps the resulting SVG compact enough for:
+  //  - btoa encoding (< 2MB)
+  //  - Android WebView rendering in PDF preview and print
+  //  - Fast loading in sketch list thumbnails
+  // Original metadata.elements keep their full-resolution URIs for canvas rendering.
+  const compressImagesForPreviewSvg = async (originalElements: any[]): Promise<any[]> => {
+    const imageCount = originalElements.filter((el: any) => el.type === 'image' && el.data?.uri).length;
+    if (imageCount === 0) return originalElements;
+    console.log(`[Preview] Compressing ${imageCount} image(s) for SVG embedding...`);
+    const results = await Promise.all(originalElements.map(async (el: any) => {
+      if (el.type === 'image' && el.data?.uri && el.data.uri.startsWith('data:') && el.data.uri.length > 50000) {
+        try {
+          const manip = await ImageManipulator.manipulateAsync(
+            el.data.uri,
+            [{ resize: { width: 600 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          if (manip.base64) {
+            return { ...el, data: { ...el.data, uri: `data:image/jpeg;base64,${manip.base64}` } };
+          }
+        } catch (err) {
+          console.warn('[Preview] Could not compress image, using original:', err);
+        }
+      }
+      return el;
+    }));
+    return results;
   };
 
   const saveSketch = async () => {
@@ -6597,7 +6682,9 @@ export default function DrawSketchScreen() {
       // Priority 1: Generate mini-sketch from elements if we have any
       if (elements.length > 0) {
         try {
-          sketchData = generatePreviewSvg();
+          // FIX: Komprimiere Bilder VOR dem SVG-Embedding (verhindert btoa-Crash + Preview/PDF fehlt)
+          const compressedElements = await compressImagesForPreviewSvg(elements);
+          sketchData = generatePreviewSvg(compressedElements);
         } catch (previewError) {
           console.error('Error generating preview:', previewError);
         }
@@ -6613,7 +6700,7 @@ export default function DrawSketchScreen() {
             <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
           </svg>
         `;
-        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+        sketchData = encodeSvgAsDataUri(previewSvg);
       }
       
       // Priority 3: Fallback colored badge
@@ -6634,7 +6721,7 @@ export default function DrawSketchScreen() {
           </svg>
         `;
         
-        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+        sketchData = encodeSvgAsDataUri(previewSvg);
       }
 
       const t1 = Date.now();

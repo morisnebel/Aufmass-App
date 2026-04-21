@@ -2669,22 +2669,39 @@ export default function DrawSketchScreen() {
         clickedImage.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          // Initiale Crop-Box = 80% des Bildes, zentriert
-          const boxWidth = Math.min(imgWidth * 0.8, 280);
-          const boxHeight = Math.min(imgHeight * 0.8, 280);
-          setCropBox({
-            x: (300 - boxWidth) / 2,
-            y: (300 - boxHeight) / 2,
-            width: boxWidth,
-            height: boxHeight,
-          });
+          
+          // FIX: Initiale Crop-Box korrekt positionieren wie in der Toolbar-Funktion
+          // Berechne zuerst, wo und wie groß das Bild im Container tatsächlich angezeigt wird (resizeMode="contain")
+          const containerSize = cropContainerSize;
+          const imgAspect = imgWidth / imgHeight;
+          let dispW: number, dispH: number, offX: number, offY: number;
+          if (imgAspect >= 1) {
+            // Querformat: volle Breite, vertikal zentriert mit Letterbox
+            dispW = containerSize;
+            dispH = containerSize / imgAspect;
+            offX = 0;
+            offY = (containerSize - dispH) / 2;
+          } else {
+            // Hochformat: volle Höhe, horizontal zentriert mit Letterbox
+            dispH = containerSize;
+            dispW = containerSize * imgAspect;
+            offX = (containerSize - dispW) / 2;
+            offY = 0;
+          }
+          // Crop-Box = 80% des ANGEZEIGTEN Bildes, zentriert auf dem Bild (nicht auf dem Container!)
+          const boxWidth = dispW * 0.8;
+          const boxHeight = dispH * 0.8;
+          const boxX = offX + (dispW - boxWidth) / 2;
+          const boxY = offY + (dispH - boxHeight) / 2;
+          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback
-          setCropImageDimensions({ width: 300, height: 300 });
-          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          // Fallback: verwende ein Quadrat im Zentrum (dynamisch basierend auf Container-Größe)
+          const size = cropContainerSize;
+          setCropImageDimensions({ width: size, height: size });
+          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
           setShowCropModal(true);
         }
       );

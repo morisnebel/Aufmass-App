@@ -510,76 +510,76 @@ export default function DrawSketchScreen() {
   // Funktion um ein Projektfoto als Bild-Element einzufügen
   const insertProjectPhoto = (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
+    console.log('[insertProjectPhoto] Photo data:', { 
+      hasImageData: !!photo.image_data, 
+      hasUri: !!photo.uri, 
+      imageUriLength: imageUri?.length || 0,
+      imageUriStart: imageUri?.substring(0, 50) 
+    });
+    
     if (!imageUri) {
       Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
     }
     
+    // FIX: Auf manchen Tablets schlägt RNImage.getSize bei data: URIs fehl
+    // Versuche zuerst getSize, bei Fehler verwende Standardgrößen
+    const addImageWithSize = (imgWidth: number, imgHeight: number) => {
+      // Maximale Größe im Canvas
+      const maxWidth = 400;
+      const maxHeight = 300;
+      const aspectRatio = imgWidth / imgHeight;
+      
+      let finalWidth, finalHeight;
+      if (aspectRatio > maxWidth / maxHeight) {
+        finalWidth = maxWidth;
+        finalHeight = maxWidth / aspectRatio;
+      } else {
+        finalHeight = maxHeight;
+        finalWidth = maxHeight * aspectRatio;
+      }
+      
+      const imageElement: DrawElement = {
+        id: generateId(),
+        type: 'image',
+        data: { uri: imageUri },
+        color: '#000000',
+        strokeWidth: 0,
+        x: 50,
+        y: 50,
+        width: finalWidth,
+        height: finalHeight,
+        rotation: 0,
+      };
+      
+      console.log('[insertProjectPhoto] Creating image element:', { 
+        id: imageElement.id, 
+        width: finalWidth, 
+        height: finalHeight,
+        uriLength: imageUri.length 
+      });
+      
+      const newElements = [...elements, imageElement];
+      addToHistory(newElements);
+      setElements(newElements);
+      setSelectedElementId(imageElement.id);
+      setShowProjectPhotosModal(false);
+      setPhotoEditMode(true);
+      selectDrawMode('select');
+    };
+    
     // Berechne korrektes Seitenverhältnis des Bildes
     RNImage.getSize(
       imageUri,
       (imgWidth, imgHeight) => {
-        // Maximale Größe im Canvas
-        const maxWidth = 400;
-        const maxHeight = 300;
-        const aspectRatio = imgWidth / imgHeight;
-        
-        let finalWidth, finalHeight;
-        if (aspectRatio > maxWidth / maxHeight) {
-          // Bild ist breiter - begrenzen durch Breite
-          finalWidth = maxWidth;
-          finalHeight = maxWidth / aspectRatio;
-        } else {
-          // Bild ist höher - begrenzen durch Höhe
-          finalHeight = maxHeight;
-          finalWidth = maxHeight * aspectRatio;
-        }
-        
-        const imageElement: DrawElement = {
-          id: generateId(),
-          type: 'image',
-          data: { uri: imageUri },
-          color: '#000000',
-          strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: finalWidth,
-          height: finalHeight,
-          rotation: 0,
-        };
-        
-        const newElements = [...elements, imageElement];
-        addToHistory(newElements);
-        setElements(newElements);
-        setSelectedElementId(imageElement.id);
-        setShowProjectPhotosModal(false);
-        // Automatisch Foto-Bearbeiten Modus aktivieren
-        setPhotoEditMode(true);
-        selectDrawMode('select');
+        console.log('[insertProjectPhoto] Image size retrieved:', imgWidth, 'x', imgHeight);
+        addImageWithSize(imgWidth, imgHeight);
       },
       (error) => {
-        console.error('Error getting image size:', error);
-        // Fallback: Füge mit Standardgrößen ein
-        const imageElement: DrawElement = {
-          id: generateId(),
-          type: 'image',
-          data: { uri: imageUri },
-          color: '#000000',
-          strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: 300,
-          height: 200,
-          rotation: 0,
-        };
-        
-        const newElements = [...elements, imageElement];
-        addToHistory(newElements);
-        setElements(newElements);
-        setSelectedElementId(imageElement.id);
-        setShowProjectPhotosModal(false);
-        setPhotoEditMode(true);
-        selectDrawMode('select');
+        console.error('[insertProjectPhoto] Error getting image size:', error);
+        // FIX: Standardgröße verwenden wenn getSize fehlschlägt (häufig auf Android Tablets)
+        console.log('[insertProjectPhoto] Using fallback dimensions 300x200');
+        addImageWithSize(300, 200);
       }
     );
   };
@@ -2359,20 +2359,33 @@ export default function DrawSketchScreen() {
 
         // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
         const extractedImageOps: Promise<any>[] = [];
+        console.log('[autoSave] Processing elements for image extraction:', metadata.elements.length, 'elements');
         const lightElements = metadata.elements.map((el: any) => {
-          if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
-            // Speichere das Bild separat
-            const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
-            extractedImageOps.push(
-              AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
-                console.error('Error saving image element:', err)
-              )
-            );
-            // Ersetze die URI durch einen Verweis auf den Speicherkey
-            return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+          if (el.type === 'image') {
+            console.log('[autoSave] Found image element:', {
+              id: el.id,
+              hasUri: !!el.data?.uri,
+              uriLength: el.data?.uri?.length || 0,
+            });
+            
+            if (el.data?.uri && el.data.uri.length > 1000) {
+              // Speichere das Bild separat
+              const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
+              console.log('[autoSave] Saving image to storage:', imageKey);
+              extractedImageOps.push(
+                AsyncStorage.setItem(imageKey, el.data.uri)
+                  .then(() => console.log('[autoSave] Image saved:', imageKey))
+                  .catch(err => console.error('[autoSave] Error saving image:', imageKey, err))
+              );
+              // Ersetze die URI durch einen Verweis auf den Speicherkey
+              return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+            } else {
+              console.warn('[autoSave] Image URI too short or missing:', el.id);
+            }
           }
           return el;
         });
+        console.log('[autoSave] Image operations to execute:', extractedImageOps.length);
         const lightMetadata = { ...metadata, elements: lightElements };
 
         // SPEICHERN: Leichtgewichtige Daten (Sketch-Liste inkl. pdf_size) SOFORT speichern
@@ -6825,18 +6838,32 @@ export default function DrawSketchScreen() {
 
       // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
       const imageOps: Promise<any>[] = [];
+      console.log('[saveSketch] Processing elements for image extraction:', metadata.elements.length, 'elements');
       const lightElementsForSave = metadata.elements.map((el: any) => {
-        if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
-          const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
-          imageOps.push(
-            AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
-              console.error('Error saving image element:', err)
-            )
-          );
-          return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+        if (el.type === 'image') {
+          console.log('[saveSketch] Found image element:', {
+            id: el.id,
+            hasUri: !!el.data?.uri,
+            uriLength: el.data?.uri?.length || 0,
+            uriStart: el.data?.uri?.substring(0, 50),
+          });
+          
+          if (el.data?.uri && el.data.uri.length > 1000) {
+            const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
+            console.log('[saveSketch] Saving image to storage:', imageKey);
+            imageOps.push(
+              AsyncStorage.setItem(imageKey, el.data.uri)
+                .then(() => console.log('[saveSketch] Image saved successfully:', imageKey))
+                .catch(err => console.error('[saveSketch] Error saving image element:', imageKey, err))
+            );
+            return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+          } else {
+            console.warn('[saveSketch] Image URI too short or missing, keeping inline:', el.id);
+          }
         }
         return el;
       });
+      console.log('[saveSketch] Image operations to execute:', imageOps.length);
       const lightMetadataForSave = { ...metadata, elements: lightElementsForSave };
 
       if (sketchId) {

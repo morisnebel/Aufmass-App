@@ -435,12 +435,14 @@ export default function AnnotatePhotoScreen() {
     const touches = event.nativeEvent.touches;
     setTouchCount(touches.length);
     
-    if (touches.length === 2) {
-      // Start pinch zoom
+    if (touches.length >= 2) {
+      // Start pinch zoom (beide Finger gleichzeitig aufgesetzt)
       setIsZooming(true);
       setInitialPinchDistance(getDistance(touches));
       setLastScale(scale);
       setLastPanOffset({ ...panOffset });
+      // Falls Zeichnung bereits begonnen: verwerfen
+      if (currentPath) setCurrentPath('');
       return;
     }
     
@@ -478,7 +480,19 @@ export default function AnnotatePhotoScreen() {
   const onTouchMove = (event: any) => {
     const touches = event.nativeEvent.touches;
     
-    if (touches.length === 2 && initialPinchDistance) {
+    if (touches.length >= 2) {
+      // FIX: Falls Nutzer Finger sequenziell aufsetzt (häufiger Fall!),
+      // onTouchStart feuert nur bei 1 Finger → initialPinchDistance ist null.
+      // Wir initialisieren Pinch hier beim ersten 2-Finger-Frame.
+      if (!initialPinchDistance) {
+        setIsZooming(true);
+        setInitialPinchDistance(getDistance(touches));
+        setLastScale(scale);
+        setLastPanOffset({ ...panOffset });
+        // Falls Zeichnung begonnen: verwerfen (User wollte zoomen, nicht zeichnen)
+        if (currentPath) setCurrentPath('');
+        return;
+      }
       // Handle pinch zoom
       const currentDistance = getDistance(touches);
       const newScale = Math.min(Math.max(lastScale * (currentDistance / initialPinchDistance), 0.5), 4);

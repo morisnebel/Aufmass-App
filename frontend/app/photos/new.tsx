@@ -63,12 +63,17 @@ export default function NewPhotoScreen() {
       });
 
       if (!result.canceled && result.assets.length > 0) {
+        setLoading(true);
+        setSavingProgress(0);
         const newPhotos: SelectedPhoto[] = [];
+        const failedAssets: { index: number; reason: string }[] = [];
+        const total = result.assets.length;
         
-        for (const asset of result.assets) {
-          let base64Image: string;
+        for (let i = 0; i < total; i++) {
+          const asset = result.assets[i];
+          let base64Image: string | null = null;
           
-          // Immer resize auf max. 1200px (verhindert OOM auf iPad bei vielen Bildern)
+          // 1. Versuch: Resize + Compress (Standard-Qualität)
           try {
             const manipResult = await ImageManipulator.manipulateAsync(
               asset.uri,
@@ -77,28 +82,67 @@ export default function NewPhotoScreen() {
             );
             if (manipResult.base64) {
               base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
-            } else {
-              console.error('Failed to convert image to base64');
-              continue;
             }
           } catch (manipError) {
-            console.error('Error resizing image:', manipError);
-            // Fallback: Verwende direkt base64 wenn vorhanden
-            if (asset.base64) {
-              base64Image = `data:image/jpeg;base64,${asset.base64}`;
-            } else {
-              continue;
+            console.warn(`[pickImages] Resize fehlgeschlagen für Foto ${i + 1}:`, manipError);
+          }
+          
+          // 2. Versuch: Kleinere Größe + stärkere Kompression (Memory-sparsamer)
+          if (!base64Image) {
+            try {
+              const manipResult = await ImageManipulator.manipulateAsync(
+                asset.uri,
+                [{ resize: { width: 800 } }],
+                { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+              );
+              if (manipResult.base64) {
+                base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+              }
+            } catch (retryError) {
+              console.warn(`[pickImages] Retry fehlgeschlagen für Foto ${i + 1}:`, retryError);
             }
           }
           
-          newPhotos.push({ uri: base64Image, description: '' });
+          // 3. Fallback: Nutze direkt asset.base64 falls vorhanden
+          if (!base64Image && asset.base64) {
+            base64Image = `data:image/jpeg;base64,${asset.base64}`;
+          }
+          
+          if (base64Image) {
+            newPhotos.push({ uri: base64Image, description: '' });
+          } else {
+            failedAssets.push({ index: i + 1, reason: 'Bild konnte nicht verarbeitet werden' });
+          }
+          
+          setSavingProgress(i + 1);
+          // Kurze Pause zwischen Fotos → gibt Android Zeit für Garbage Collection
+          // Verhindert OOM-Crashes bei vielen großen Bildern
+          if (i < total - 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         }
         
         if (newPhotos.length > 0) {
           setSelectedPhotos(prev => [...prev, ...newPhotos]);
         }
+        
+        setLoading(false);
+        setSavingProgress(0);
+        
+        // Feedback an User bei teilweisen Fehlern
+        if (failedAssets.length > 0) {
+          Alert.alert(
+            `${newPhotos.length} von ${total} Fotos geladen`,
+            failedAssets.length === total
+              ? 'Keines der ausgewählten Fotos konnte geladen werden. Bitte versuchen Sie es erneut oder wählen Sie weniger Fotos auf einmal.'
+              : `${failedAssets.length} ${failedAssets.length === 1 ? 'Foto konnte' : 'Fotos konnten'} nicht geladen werden (z.B. zu groß, Cloud-Foto, oder nicht unterstützt). Bitte einzeln erneut versuchen.`,
+            [{ text: t('common.ok'), style: 'default' }]
+          );
+        }
       }
     } catch (error) {
+      setLoading(false);
+      setSavingProgress(0);
       console.error('Error picking images:', error);
       Alert.alert(t('common.error'), 'Bilder konnten nicht geladen werden');
     }
@@ -292,6 +336,17 @@ export default function NewPhotoScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Loading-Overlay während Import großer Foto-Mengen */}
+      {loading && selectedPhotos.length === 0 && savingProgress > 0 && (
+        <View style={styles.loadingOverlay} pointerEvents="none">
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#1976d2" />
+            <Text style={styles.loadingText}>
+              Fotos werden geladen... ({savingProgress})
+            </Text>
+          </View>
+        </View>
+      )}
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           {/* Upload Buttons - immer sichtbar */}
@@ -509,5 +564,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 2,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  loadingBox: {
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 16,
+    minWidth: 220,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
   },
 });

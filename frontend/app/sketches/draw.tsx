@@ -2417,9 +2417,14 @@ export default function DrawSketchScreen() {
           // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
           try {
             // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen Bildern)
-            const lightMetadataForCreate = { ...metadata };
+            const lightMetadataForCreate = { ...lightMetadata }; // Verwende lightMetadata (mit extrahierten Bildern)
             delete lightMetadataForCreate.backgroundImage;
-            await SketchService.create({
+            
+            // Zuerst die Bilder separat speichern (mit temporärem Key 'undefined')
+            await Promise.all(extractedImageOps);
+            console.log('[autoSave] Saved', extractedImageOps.length, 'images with temporary keys');
+            
+            const newSketch = await SketchService.create({
               project_id: saveProjectId,
               title: saveTitle,
               notes: saveNotes,
@@ -2427,13 +2432,41 @@ export default function DrawSketchScreen() {
               metadata: JSON.stringify(lightMetadataForCreate),
               pdf_size: savePdfSize,
             });
-            // Hintergrundbild separat speichern (ohne JSON.stringify)
-            if (saveBgImage) {
-              const newSketches = await SketchService.getAll();
-              const newest = newSketches[newSketches.length - 1];
-              if (newest) {
-                await AsyncStorage.setItem(`sketch_bg_${newest.id}`, saveBgImage);
+            
+            // FIX: Image-Keys von 'undefined' auf die echte Sketch-ID ummappen
+            if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
+              console.log('[autoSave] Migrating image keys to new sketch ID:', newSketch.id);
+              try {
+                const remapOps: Promise<any>[] = [];
+                const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
+                  if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_undefined_')) {
+                    const oldKey = el.data.imageStorageKey;
+                    const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
+                    console.log('[autoSave] Remapping:', oldKey, '->', newKey);
+                    const imgData = await AsyncStorage.getItem(oldKey);
+                    if (imgData) {
+                      remapOps.push(AsyncStorage.setItem(newKey, imgData));
+                      remapOps.push(AsyncStorage.removeItem(oldKey));
+                      return { ...el, data: { ...el.data, imageStorageKey: newKey } };
+                    } else {
+                      console.warn('[autoSave] Image not found for key:', oldKey);
+                    }
+                  }
+                  return el;
+                }));
+                await Promise.all(remapOps);
+                // Metadata mit korrekten Keys speichern
+                const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
+                await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+                console.log('[autoSave] Image keys migrated successfully');
+              } catch (remapErr) {
+                console.error('[autoSave] Error remapping image keys:', remapErr);
               }
+            }
+            
+            // Hintergrundbild separat speichern (ohne JSON.stringify)
+            if (saveBgImage && newSketch?.id) {
+              await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, saveBgImage);
             }
             backgroundImageChangedRef.current = false;
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
@@ -6692,6 +6725,38 @@ export default function DrawSketchScreen() {
           metadata: JSON.stringify(lightMetadataForCreate),
           pdf_size: pdfSize,
         });
+        
+        // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
+        if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
+          console.log('[saveSketch] Migrating image keys to new sketch ID:', newSketch.id);
+          try {
+            const remapOps: Promise<any>[] = [];
+            const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
+              if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_new_')) {
+                const oldKey = el.data.imageStorageKey;
+                const newKey = oldKey.replace('_new_', `_${newSketch.id}_`);
+                console.log('[saveSketch] Remapping:', oldKey, '->', newKey);
+                const imgData = await AsyncStorage.getItem(oldKey);
+                if (imgData) {
+                  remapOps.push(AsyncStorage.setItem(newKey, imgData));
+                  remapOps.push(AsyncStorage.removeItem(oldKey));
+                  return { ...el, data: { ...el.data, imageStorageKey: newKey } };
+                } else {
+                  console.warn('[saveSketch] Image not found for key:', oldKey);
+                }
+              }
+              return el;
+            }));
+            await Promise.all(remapOps);
+            // Metadata mit korrekten Keys speichern
+            const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
+            await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+            console.log('[saveSketch] Image keys migrated successfully');
+          } catch (remapErr) {
+            console.error('[saveSketch] Error remapping image keys:', remapErr);
+          }
+        }
+        
         // Hintergrundbild separat speichern (ohne JSON.stringify)
         if (backgroundImage && newSketch?.id) {
           await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);

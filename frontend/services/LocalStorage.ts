@@ -253,13 +253,36 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     const photoImageKeys = photos.map((p: any) => `photo_img_${p.id}`);
     try {
       const photoImages = await AsyncStorage.multiGet(photoImageKeys);
+      const migrationOps: Promise<any>[] = [];
+      
       for (let i = 0; i < photos.length; i++) {
         const [, value] = photoImages[i];
         if (value) {
+          // Bild aus separatem Storage gefunden
           photos[i].image_data = value;
           photos[i].uri = value;
+        } else {
+          // FIX: Fallback - Prüfe ob Inline-Daten vorhanden sind (alte Fotos)
+          const inlineData = photos[i].image_data || photos[i].uri;
+          if (inlineData && inlineData.length > 100) {
+            // Inline-Daten vorhanden → behalten und zur Migration vormerken
+            console.log(`[loadAllProjectDataFast] Migrating inline photo ${photos[i].id} to separate storage`);
+            migrationOps.push(
+              AsyncStorage.setItem(`photo_img_${photos[i].id}`, inlineData).catch(err => 
+                console.error(`[loadAllProjectDataFast] Migration error for photo ${photos[i].id}:`, err)
+              )
+            );
+          } else {
+            console.warn(`[loadAllProjectDataFast] No image data for photo ${photos[i].id}`);
+          }
         }
-        // Fallback: Wenn kein separates Bild, aber Inline-Daten vorhanden → OK (alte Fotos)
+      }
+      
+      // Migration im Hintergrund ausführen
+      if (migrationOps.length > 0) {
+        Promise.all(migrationOps).then(() => {
+          console.log(`[loadAllProjectDataFast] Migrated ${migrationOps.length} photos to separate storage`);
+        });
       }
     } catch (e) {
       console.error('[loadAllProjectDataFast] Error loading photo images:', e);

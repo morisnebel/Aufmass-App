@@ -249,43 +249,50 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
   const photos = (allData.get(KEYS.PHOTOS) || []).filter((p: any) => p.project_id === projectId);
   
   // Bilddaten separat laden (neue Speicherstruktur: photo_img_${id})
+  // FIX: Lade Fotos einzeln statt mit multiGet (Android hat Limits bei multiGet)
   if (photos.length > 0) {
-    const photoImageKeys = photos.map((p: any) => `photo_img_${p.id}`);
-    try {
-      const photoImages = await AsyncStorage.multiGet(photoImageKeys);
-      const migrationOps: Promise<any>[] = [];
-      
-      for (let i = 0; i < photos.length; i++) {
-        const [, value] = photoImages[i];
-        if (value) {
-          // Bild aus separatem Storage gefunden
-          photos[i].image_data = value;
-          photos[i].uri = value;
+    const migrationOps: Promise<any>[] = [];
+    
+    for (let i = 0; i < photos.length; i++) {
+      const photoId = photos[i].id;
+      try {
+        const imageData = await AsyncStorage.getItem(`photo_img_${photoId}`);
+        if (imageData && imageData.length > 100) {
+          photos[i].image_data = imageData;
+          photos[i].uri = imageData;
         } else {
-          // FIX: Fallback - Prüfe ob Inline-Daten vorhanden sind (alte Fotos)
+          // Fallback: Prüfe ob Inline-Daten vorhanden sind (alte Fotos)
           const inlineData = photos[i].image_data || photos[i].uri;
           if (inlineData && inlineData.length > 100) {
-            // Inline-Daten vorhanden → behalten und zur Migration vormerken
-            console.log(`[loadAllProjectDataFast] Migrating inline photo ${photos[i].id} to separate storage`);
+            console.log(`[loadAllProjectDataFast] Using inline data for photo ${photoId}`);
+            photos[i].image_data = inlineData;
+            photos[i].uri = inlineData;
+            // Queue migration to separate storage
             migrationOps.push(
-              AsyncStorage.setItem(`photo_img_${photos[i].id}`, inlineData).catch(err => 
-                console.error(`[loadAllProjectDataFast] Migration error for photo ${photos[i].id}:`, err)
+              AsyncStorage.setItem(`photo_img_${photoId}`, inlineData).catch(err => 
+                console.error(`[loadAllProjectDataFast] Migration error for photo ${photoId}:`, err)
               )
             );
           } else {
-            console.warn(`[loadAllProjectDataFast] No image data for photo ${photos[i].id}`);
+            console.warn(`[loadAllProjectDataFast] No image data for photo ${photoId}`);
           }
         }
+      } catch (e) {
+        console.error(`[loadAllProjectDataFast] Error loading photo ${photoId}:`, e);
+        // Try inline fallback even on error
+        const inlineData = photos[i].image_data || photos[i].uri;
+        if (inlineData && inlineData.length > 100) {
+          photos[i].image_data = inlineData;
+          photos[i].uri = inlineData;
+        }
       }
-      
-      // Migration im Hintergrund ausführen
-      if (migrationOps.length > 0) {
-        Promise.all(migrationOps).then(() => {
-          console.log(`[loadAllProjectDataFast] Migrated ${migrationOps.length} photos to separate storage`);
-        });
-      }
-    } catch (e) {
-      console.error('[loadAllProjectDataFast] Error loading photo images:', e);
+    }
+    
+    // Run migrations in background
+    if (migrationOps.length > 0) {
+      Promise.all(migrationOps).then(() => {
+        console.log(`[loadAllProjectDataFast] Migrated ${migrationOps.length} photos to separate storage`);
+      });
     }
   }
   

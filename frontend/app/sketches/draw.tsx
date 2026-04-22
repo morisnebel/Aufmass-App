@@ -1826,8 +1826,30 @@ export default function DrawSketchScreen() {
           if (metadata.elements && Array.isArray(metadata.elements)) {
             console.log('Setting elements:', metadata.elements.length, 'elements');
             console.log('Element IDs:', metadata.elements.map((e: any) => e.id + ' (' + e.type + ')').join(', '));
-            setElements(metadata.elements);
-            setHistory([metadata.elements]);
+            
+            // FIX: Restore image URIs from separate storage BEFORE setting elements
+            const restoredElements = await Promise.all(
+              metadata.elements.map(async (el: any) => {
+                if (el.type === 'image' && el.data?.uri === '__stored__' && el.data?.imageStorageKey) {
+                  console.log(`[loadSketch] Restoring image from storage: ${el.data.imageStorageKey}`);
+                  try {
+                    const uri = await AsyncStorage.getItem(el.data.imageStorageKey);
+                    if (uri && uri.length > 100) {
+                      console.log(`[loadSketch] Image restored successfully, length: ${uri.length}`);
+                      return { ...el, data: { ...el.data, uri } };
+                    } else {
+                      console.warn(`[loadSketch] Image not found or empty for key: ${el.data.imageStorageKey}`);
+                    }
+                  } catch (err) {
+                    console.error(`[loadSketch] Error loading image ${el.data.imageStorageKey}:`, err);
+                  }
+                }
+                return el;
+              })
+            );
+            
+            setElements(restoredElements);
+            setHistory([restoredElements]);
             setHistoryIndex(0);
           } else {
             console.log('No elements in metadata');

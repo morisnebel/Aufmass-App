@@ -508,8 +508,8 @@ export default function DrawSketchScreen() {
   };
 
   // Funktion um ein Projektfoto als Bild-Element einzufügen
-  const insertProjectPhoto = (photo: any) => {
-    const imageUri = photo.image_data || photo.uri;
+  const insertProjectPhoto = async (photo: any) => {
+    let imageUri = photo.image_data || photo.uri;
     console.log('[insertProjectPhoto] Photo data:', { 
       hasImageData: !!photo.image_data, 
       hasUri: !!photo.uri, 
@@ -520,6 +520,25 @@ export default function DrawSketchScreen() {
     if (!imageUri) {
       Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
+    }
+    
+    // FIX: Komprimiere große Bilder bevor sie hinzugefügt werden (verhindert AsyncStorage Limit-Probleme)
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB Ziel-Größe für sichere AsyncStorage Speicherung
+    if (imageUri.length > MAX_IMAGE_SIZE) {
+      console.log('[insertProjectPhoto] Image too large, compressing...', imageUri.length);
+      try {
+        const compressedResult = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        if (compressedResult.base64) {
+          imageUri = `data:image/jpeg;base64,${compressedResult.base64}`;
+          console.log('[insertProjectPhoto] Image compressed from', (photo.image_data || photo.uri).length, 'to', imageUri.length);
+        }
+      } catch (err) {
+        console.warn('[insertProjectPhoto] Compression failed, using original:', err);
+      }
     }
     
     // FIX: Auf manchen Tablets schlägt RNImage.getSize bei data: URIs fehl
@@ -2655,18 +2674,45 @@ export default function DrawSketchScreen() {
   };
 
   // Handler für Crop-Modus Touch - sucht Bild an Position und öffnet Modal
-  const handleCropModeTouch = (locationX: number, locationY: number) => {
+  const handleCropModeTouch = async (locationX: number, locationY: number) => {
     // Suche nach einem Bild an dieser Position (onlyImages = true)
     const clickedImage = findElementAtPoint(locationX, locationY, true);
     
-    if (clickedImage && clickedImage.type === 'image' && clickedImage.data?.uri) {
+    if (clickedImage && clickedImage.type === 'image') {
+      let imageUri = clickedImage.data?.uri;
+      
+      // FIX: Wenn das Bild mit __stored__ Platzhalter gespeichert ist, lade es aus AsyncStorage
+      if ((!imageUri || imageUri === '__stored__') && clickedImage.data?.imageStorageKey) {
+        console.log('[handleCropModeTouch] Loading image from storage:', clickedImage.data.imageStorageKey);
+        try {
+          const storedImage = await AsyncStorage.getItem(clickedImage.data.imageStorageKey);
+          if (storedImage && storedImage.length > 100) {
+            imageUri = storedImage;
+            console.log('[handleCropModeTouch] Image loaded from storage, length:', storedImage.length);
+          } else {
+            console.error('[handleCropModeTouch] Image not found or empty in storage');
+            Alert.alert(t('common.error'), 'Das Bild konnte nicht geladen werden. Bitte fügen Sie es erneut hinzu.');
+            return;
+          }
+        } catch (err) {
+          console.error('[handleCropModeTouch] Error loading image from storage:', err);
+          Alert.alert(t('common.error'), 'Fehler beim Laden des Bildes.');
+          return;
+        }
+      }
+      
+      if (!imageUri || imageUri === '__stored__') {
+        Alert.alert(t('common.error'), 'Das Bild ist nicht verfügbar.');
+        return;
+      }
+      
       // Bild gefunden - Crop-Modal öffnen
-      setCropImageUri(clickedImage.data.uri);
+      setCropImageUri(imageUri);
       setCropImageId(clickedImage.id);
       
       // Lade die Original-Bildgröße
       RNImage.getSize(
-        clickedImage.data.uri,
+        imageUri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
           
@@ -5384,14 +5430,21 @@ export default function DrawSketchScreen() {
         const imgH = element.height || 100;
         const imgCenterX = imgX + imgW / 2;
         const imgCenterY = imgY + imgH / 2;
+        // FIX: Auf Android APK funktioniert SvgImage mit base64 nicht zuverlässig.
+        // Wir rendern nur einen Platzhalter-Rahmen im SVG.
+        // Das eigentliche Bild wird als React Native Image Overlay gerendert (siehe renderImageOverlays).
         return (
           <G key={element.id}>
-            <SvgImage
-              href={element.data.uri}
+            {/* Platzhalter-Rahmen für das Bild im SVG */}
+            <Rect
               x={imgX}
               y={imgY}
               width={imgW}
               height={imgH}
+              fill="transparent"
+              stroke={isSelected ? '#2196F3' : 'transparent'}
+              strokeWidth={isSelected ? 2 : 0}
+              strokeDasharray={isSelected ? '5,5' : undefined}
               transform={element.rotation ? `rotate(${element.rotation} ${imgCenterX} ${imgCenterY})` : undefined}
             />
             {isSelected && renderTransformHandles(element)}
@@ -6861,6 +6914,7 @@ export default function DrawSketchScreen() {
 
       // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
       const imageOps: Promise<any>[] = [];
+      const failedImages: string[] = [];
       console.log('[saveSketch] Processing elements for image extraction:', metadata.elements.length, 'elements');
       const lightElementsForSave = metadata.elements.map((el: any) => {
         if (el.type === 'image') {
@@ -6871,15 +6925,65 @@ export default function DrawSketchScreen() {
             uriStart: el.data?.uri?.substring(0, 50),
           });
           
-          if (el.data?.uri && el.data.uri.length > 1000) {
+          if (el.data?.uri && el.data.uri.length > 1000 && el.data.uri !== '__stored__') {
             const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
-            console.log('[saveSketch] Saving image to storage:', imageKey);
-            imageOps.push(
-              AsyncStorage.setItem(imageKey, el.data.uri)
-                .then(() => console.log('[saveSketch] Image saved successfully:', imageKey))
-                .catch(err => console.error('[saveSketch] Error saving image element:', imageKey, err))
-            );
+            const imageData = el.data.uri;
+            
+            // FIX: Prüfe ob Bild zu groß für AsyncStorage ist (Android Limit ~6MB)
+            // Base64 ist ~33% größer als das Original, also max ~4MB base64 String
+            const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+            if (imageData.length > MAX_IMAGE_SIZE) {
+              console.warn('[saveSketch] Image too large for AsyncStorage, trying to compress:', imageKey, imageData.length);
+              // Versuche zu komprimieren bevor wir aufgeben
+              imageOps.push(
+                ImageManipulator.manipulateAsync(
+                  imageData,
+                  [{ resize: { width: 600 } }],
+                  { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+                ).then(async (result) => {
+                  if (result.base64) {
+                    const compressedUri = `data:image/jpeg;base64,${result.base64}`;
+                    console.log('[saveSketch] Compressed image from', imageData.length, 'to', compressedUri.length);
+                    await AsyncStorage.setItem(imageKey, compressedUri);
+                    // Verifiziere
+                    const verify = await AsyncStorage.getItem(imageKey);
+                    if (!verify) {
+                      failedImages.push(el.id);
+                      console.error('[saveSketch] Verification FAILED after compression:', imageKey);
+                    }
+                  } else {
+                    failedImages.push(el.id);
+                  }
+                }).catch(err => {
+                  console.error('[saveSketch] Compression failed:', imageKey, err);
+                  failedImages.push(el.id);
+                })
+              );
+            } else {
+              console.log('[saveSketch] Saving image to storage:', imageKey, 'size:', imageData.length);
+              imageOps.push(
+                AsyncStorage.setItem(imageKey, imageData)
+                  .then(async () => {
+                    // FIX: Verifiziere dass das Bild wirklich gespeichert wurde
+                    const verify = await AsyncStorage.getItem(imageKey);
+                    if (verify && verify.length > 100) {
+                      console.log('[saveSketch] Image saved and verified:', imageKey);
+                    } else {
+                      console.error('[saveSketch] Image verification FAILED (silent failure):', imageKey);
+                      failedImages.push(el.id);
+                    }
+                  })
+                  .catch(err => {
+                    console.error('[saveSketch] Error saving image element:', imageKey, err);
+                    failedImages.push(el.id);
+                  })
+              );
+            }
             return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+          } else if (el.data?.uri === '__stored__' && el.data?.imageStorageKey) {
+            // Bild ist bereits gespeichert, behalte den Verweis
+            console.log('[saveSketch] Image already stored:', el.data.imageStorageKey);
+            return el;
           } else {
             console.warn('[saveSketch] Image URI too short or missing, keeping inline:', el.id);
           }
@@ -7926,6 +8030,31 @@ export default function DrawSketchScreen() {
             </>
           )}
         </Svg>
+
+        {/* FIX: Image Overlays für Android - SvgImage funktioniert nicht mit base64 auf Android APK */}
+        {/* Rendere Bilder als absolute positionierte React Native Images */}
+        {Platform.OS === 'android' && elements.filter(el => el.type === 'image' && el.data?.uri && el.data.uri !== '__stored__').map(el => {
+          const imgX = el.x || 0;
+          const imgY = el.y || 0;
+          const imgW = el.width || 100;
+          const imgH = el.height || 100;
+          return (
+            <RNImage
+              key={`img-overlay-${el.id}`}
+              source={{ uri: el.data.uri }}
+              style={{
+                position: 'absolute',
+                left: imgX,
+                top: imgY,
+                width: imgW,
+                height: imgH,
+                transform: el.rotation ? [{ rotate: `${el.rotation}deg` }] : undefined,
+              }}
+              resizeMode="cover"
+              pointerEvents="none"
+            />
+          );
+        })}
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
         <View 

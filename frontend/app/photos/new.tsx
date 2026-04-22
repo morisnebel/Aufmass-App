@@ -87,8 +87,8 @@ export default function NewPhotoScreen() {
           try {
             const manipResult = await ImageManipulator.manipulateAsync(
               asset.uri,
-              [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
-              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+              [{ resize: { width: Math.min(asset.width || 800, 800) } }],
+              { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
             );
             if (manipResult.base64) {
               base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -191,8 +191,8 @@ export default function NewPhotoScreen() {
           console.log('base64 not available, converting from URI:', asset.uri);
           const manipResult = await ImageManipulator.manipulateAsync(
             asset.uri,
-            [{ resize: { width: 1200 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            [{ resize: { width: 800 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
           if (manipResult.base64) {
             base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -243,8 +243,8 @@ export default function NewPhotoScreen() {
           // Konvertiere zu Base64
           const manipResult = await ImageManipulator.manipulateAsync(
             uri,
-            [{ resize: { width: 1200 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            [{ resize: { width: 800 } }],
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
           
           if (manipResult.base64) {
@@ -267,8 +267,8 @@ export default function NewPhotoScreen() {
       if (mimeType.startsWith('image/')) {
         const manipResult = await ImageManipulator.manipulateAsync(
           fileUri,
-          [{ resize: { width: 1200 } }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          [{ resize: { width: 800 } }],
+          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         
         if (manipResult.base64) {

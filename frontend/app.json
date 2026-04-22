@@ -64,7 +64,12 @@
       "./plugins/withExcludePdfThumbnailAndroid",
       "./plugins/withAndroidFullScreen",
       "@react-native-community/datetimepicker",
-      "expo-localization"
+      "expo-localization",
+      ["expo-build-properties", {
+        "android": {
+          "AsyncStorage_db_size_in_MB": "500"
+        }
+      }]
     ],
     "experiments": {
       "typedRoutes": true

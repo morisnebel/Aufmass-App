@@ -2773,7 +2773,7 @@ export default function DrawSketchScreen() {
             },
           },
         ],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       
       // Aktualisiere das Element mit dem zugeschnittenen Bild
@@ -3123,7 +3123,7 @@ export default function DrawSketchScreen() {
       // Manipulate image to get base64
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: 1200 } }],
+        [{ resize: { width: 800 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 

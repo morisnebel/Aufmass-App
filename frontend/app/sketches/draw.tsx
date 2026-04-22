@@ -345,9 +345,6 @@ export default function DrawSketchScreen() {
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // Schutz vor Doppelklicks beim Speichern
   
-  // FIX: Cache für geladene Bild-URIs (für Bilder die mit __stored__ gespeichert sind)
-  const [loadedImageUris, setLoadedImageUris] = useState<Record<string, string>>({});
-  
   // Drawing state
   const [currentPath, setCurrentPath] = useState('');
   // Ref für flüssigeres Zeichnen - speichert Pfaddaten ohne Re-Render
@@ -471,8 +468,6 @@ export default function DrawSketchScreen() {
   const activeCropHandle = useRef<string | null>(null);
   const cropStartPos = useRef({ x: 0, y: 0 });
   const cropStartBox = useRef({ x: 50, y: 50, width: 200, height: 200 });
-  // Ref für dynamische Container-Größe (damit PanResponder aktuelle Größe lesen kann)
-  const cropContainerSizeRef = useRef(300);
   
   // Halte cropBoxRef synchron mit cropBox State
   useEffect(() => {
@@ -511,97 +506,78 @@ export default function DrawSketchScreen() {
   };
 
   // Funktion um ein Projektfoto als Bild-Element einzufügen
-  const insertProjectPhoto = async (photo: any) => {
-    let imageUri = photo.image_data || photo.uri;
-    console.log('[insertProjectPhoto] Photo data:', { 
-      hasImageData: !!photo.image_data, 
-      hasUri: !!photo.uri, 
-      imageUriLength: imageUri?.length || 0,
-      imageUriStart: imageUri?.substring(0, 50) 
-    });
-    
+  const insertProjectPhoto = (photo: any) => {
+    const imageUri = photo.image_data || photo.uri;
     if (!imageUri) {
       Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
     }
     
-    // FIX: Komprimiere große Bilder bevor sie hinzugefügt werden (verhindert AsyncStorage Limit-Probleme)
-    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB Ziel-Größe für sichere AsyncStorage Speicherung
-    if (imageUri.length > MAX_IMAGE_SIZE) {
-      console.log('[insertProjectPhoto] Image too large, compressing...', imageUri.length);
-      try {
-        const compressedResult = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [{ resize: { width: 800 } }],
-          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-        );
-        if (compressedResult.base64) {
-          imageUri = `data:image/jpeg;base64,${compressedResult.base64}`;
-          console.log('[insertProjectPhoto] Image compressed from', (photo.image_data || photo.uri).length, 'to', imageUri.length);
-        }
-      } catch (err) {
-        console.warn('[insertProjectPhoto] Compression failed, using original:', err);
-      }
-    }
-    
-    // FIX: Auf manchen Tablets schlägt RNImage.getSize bei data: URIs fehl
-    // Versuche zuerst getSize, bei Fehler verwende Standardgrößen
-    const addImageWithSize = (imgWidth: number, imgHeight: number) => {
-      // Maximale Größe im Canvas
-      const maxWidth = 400;
-      const maxHeight = 300;
-      const aspectRatio = imgWidth / imgHeight;
-      
-      let finalWidth, finalHeight;
-      if (aspectRatio > maxWidth / maxHeight) {
-        finalWidth = maxWidth;
-        finalHeight = maxWidth / aspectRatio;
-      } else {
-        finalHeight = maxHeight;
-        finalWidth = maxHeight * aspectRatio;
-      }
-      
-      const imageElement: DrawElement = {
-        id: generateId(),
-        type: 'image',
-        data: { uri: imageUri },
-        color: '#000000',
-        strokeWidth: 0,
-        x: 50,
-        y: 50,
-        width: finalWidth,
-        height: finalHeight,
-        rotation: 0,
-      };
-      
-      console.log('[insertProjectPhoto] Creating image element:', { 
-        id: imageElement.id, 
-        width: finalWidth, 
-        height: finalHeight,
-        uriLength: imageUri.length 
-      });
-      
-      const newElements = [...elements, imageElement];
-      addToHistory(newElements);
-      setElements(newElements);
-      setSelectedElementId(imageElement.id);
-      setShowProjectPhotosModal(false);
-      setPhotoEditMode(true);
-      selectDrawMode('select');
-    };
-    
     // Berechne korrektes Seitenverhältnis des Bildes
     RNImage.getSize(
       imageUri,
       (imgWidth, imgHeight) => {
-        console.log('[insertProjectPhoto] Image size retrieved:', imgWidth, 'x', imgHeight);
-        addImageWithSize(imgWidth, imgHeight);
+        // Maximale Größe im Canvas
+        const maxWidth = 400;
+        const maxHeight = 300;
+        const aspectRatio = imgWidth / imgHeight;
+        
+        let finalWidth, finalHeight;
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Bild ist breiter - begrenzen durch Breite
+          finalWidth = maxWidth;
+          finalHeight = maxWidth / aspectRatio;
+        } else {
+          // Bild ist höher - begrenzen durch Höhe
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
+        }
+        
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: finalWidth,
+          height: finalHeight,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        // Automatisch Foto-Bearbeiten Modus aktivieren
+        setPhotoEditMode(true);
+        selectDrawMode('select');
       },
       (error) => {
-        console.error('[insertProjectPhoto] Error getting image size:', error);
-        // FIX: Standardgröße verwenden wenn getSize fehlschlägt (häufig auf Android Tablets)
-        console.log('[insertProjectPhoto] Using fallback dimensions 300x200');
-        addImageWithSize(300, 200);
+        console.error('Error getting image size:', error);
+        // Fallback: Füge mit Standardgrößen ein
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: 300,
+          height: 200,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        setPhotoEditMode(true);
+        selectDrawMode('select');
       }
     );
   };
@@ -1967,47 +1943,6 @@ export default function DrawSketchScreen() {
     setElements(newElements);
   }, []);
 
-  // FIX: Lade gespeicherte Bilder aus AsyncStorage wenn elements sich ändern
-  // Dies stellt sicher, dass Bilder mit __stored__ URI korrekt angezeigt werden
-  useEffect(() => {
-    const loadStoredImages = async () => {
-      const imageElements = elements.filter(
-        el => el.type === 'image' && el.data?.uri === '__stored__' && el.data?.imageStorageKey
-      );
-      
-      if (imageElements.length === 0) return;
-      
-      console.log('[loadStoredImages] Loading', imageElements.length, 'images from storage');
-      const newLoadedUris: Record<string, string> = { ...loadedImageUris };
-      let hasNewImages = false;
-      
-      for (const el of imageElements) {
-        const key = el.data!.imageStorageKey!;
-        // Überspringe wenn bereits geladen
-        if (newLoadedUris[el.id]) continue;
-        
-        try {
-          const storedImage = await AsyncStorage.getItem(key);
-          if (storedImage && storedImage.length > 100) {
-            newLoadedUris[el.id] = storedImage;
-            hasNewImages = true;
-            console.log('[loadStoredImages] Loaded image:', el.id, 'from', key);
-          } else {
-            console.warn('[loadStoredImages] Image not found or empty:', key);
-          }
-        } catch (err) {
-          console.error('[loadStoredImages] Error loading image:', key, err);
-        }
-      }
-      
-      if (hasNewImages) {
-        setLoadedImageUris(newLoadedUris);
-      }
-    };
-    
-    loadStoredImages();
-  }, [elements]); // Nur wenn elements sich ändern
-
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
     // Umrechnung auf Canvas-Koordinaten (berücksichtigt Zoom und Scroll!)
@@ -2363,9 +2298,7 @@ export default function DrawSketchScreen() {
         
         if (elements.length > 0) {
           try {
-            // FIX: Komprimiere Bilder VOR dem SVG-Embedding (verhindert btoa-Crash + zu große PDFs)
-            const compressedElements = await compressImagesForPreviewSvg(elements);
-            sketchData = generatePreviewSvg(compressedElements);
+            sketchData = generatePreviewSvg();
           } catch (previewError) {
             console.error('Error generating preview:', previewError);
           }
@@ -2381,7 +2314,7 @@ export default function DrawSketchScreen() {
                 <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${(title || 'Skizze').replace(/[<>&"']/g, '')}</text>
               </svg>
             `;
-            sketchData = encodeSvgAsDataUri(previewSvg);
+            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
           } catch (e) {
             console.error('Error creating placeholder preview:', e);
           }
@@ -2405,7 +2338,7 @@ export default function DrawSketchScreen() {
               </svg>
             `;
             
-            sketchData = encodeSvgAsDataUri(previewSvg);
+            sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
           } catch (e) {
             console.error('Error creating fallback preview:', e);
           }
@@ -2422,33 +2355,20 @@ export default function DrawSketchScreen() {
 
         // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
         const extractedImageOps: Promise<any>[] = [];
-        console.log('[autoSave] Processing elements for image extraction:', metadata.elements.length, 'elements');
         const lightElements = metadata.elements.map((el: any) => {
-          if (el.type === 'image') {
-            console.log('[autoSave] Found image element:', {
-              id: el.id,
-              hasUri: !!el.data?.uri,
-              uriLength: el.data?.uri?.length || 0,
-            });
-            
-            if (el.data?.uri && el.data.uri.length > 1000) {
-              // Speichere das Bild separat
-              const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
-              console.log('[autoSave] Saving image to storage:', imageKey);
-              extractedImageOps.push(
-                AsyncStorage.setItem(imageKey, el.data.uri)
-                  .then(() => console.log('[autoSave] Image saved:', imageKey))
-                  .catch(err => console.error('[autoSave] Error saving image:', imageKey, err))
-              );
-              // Ersetze die URI durch einen Verweis auf den Speicherkey
-              return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
-            } else {
-              console.warn('[autoSave] Image URI too short or missing:', el.id);
-            }
+          if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
+            // Speichere das Bild separat
+            const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
+            extractedImageOps.push(
+              AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
+                console.error('Error saving image element:', err)
+              )
+            );
+            // Ersetze die URI durch einen Verweis auf den Speicherkey
+            return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
           }
           return el;
         });
-        console.log('[autoSave] Image operations to execute:', extractedImageOps.length);
         const lightMetadata = { ...metadata, elements: lightElements };
 
         // SPEICHERN: Leichtgewichtige Daten (Sketch-Liste inkl. pdf_size) SOFORT speichern
@@ -2496,19 +2416,10 @@ export default function DrawSketchScreen() {
         } else if (saveTitle.trim()) {
           // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
           try {
-            // FIX: Verwende lightMetadata (mit __stored__ Platzhaltern für Bilder),
-            // nicht die Original-Metadata mit vollen Base64-URIs.
-            // Sonst werden große Bilder inline in die JSON gepackt und können AsyncStorage
-            // sprengen oder bei JSON.parse/stringify zu OOM führen → Fotos gehen verloren!
-            const lightMetadataForCreate = { ...lightMetadata };
-            delete (lightMetadataForCreate as any).backgroundImage;
-            
-            // WICHTIG: Bilder einzeln in AsyncStorage speichern BEVOR SketchService.create läuft
-            // und der Sketch seine finale ID bekommt. Die imageStorageKeys in lightMetadata
-            // zeigen auf sketch_img_undefined_<elId> - das passt für den Platzhalter.
-            await Promise.all(extractedImageOps);
-            
-            const newSketch = await SketchService.create({
+            // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen Bildern)
+            const lightMetadataForCreate = { ...metadata };
+            delete lightMetadataForCreate.backgroundImage;
+            await SketchService.create({
               project_id: saveProjectId,
               title: saveTitle,
               notes: saveNotes,
@@ -2516,43 +2427,13 @@ export default function DrawSketchScreen() {
               metadata: JSON.stringify(lightMetadataForCreate),
               pdf_size: savePdfSize,
             });
-            
-            // FIX: Falls sketchId undefined oder 'new' war, sind die Bilder unter sketch_img_undefined_<elId> oder sketch_img_new_<elId> gespeichert.
-            // Wir müssen sie auf die neue ID ummappen, damit beim späteren Laden die richtigen Keys greifen.
-            if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
-              try {
-                const remapOps: Promise<any>[] = [];
-                const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
-                  if (el.type === 'image' && el.data?.imageStorageKey && 
-                      (el.data.imageStorageKey.includes('_undefined_') || el.data.imageStorageKey.includes('_new_'))) {
-                    const oldKey = el.data.imageStorageKey;
-                    // Ersetze sowohl _undefined_ als auch _new_ durch die echte ID
-                    const newKey = oldKey.replace(/_undefined_|_new_/, `_${newSketch.id}_`);
-                    console.log('[autoSave] Remapping image key:', oldKey, '->', newKey);
-                    const imgData = await AsyncStorage.getItem(oldKey);
-                    if (imgData) {
-                      remapOps.push(AsyncStorage.setItem(newKey, imgData));
-                      remapOps.push(AsyncStorage.removeItem(oldKey));
-                      return { ...el, data: { ...el.data, imageStorageKey: newKey } };
-                    } else {
-                      console.warn('[autoSave] Image data not found for key:', oldKey);
-                    }
-                  }
-                  return el;
-                }));
-                await Promise.all(remapOps);
-                // Metadata mit neuen Keys überschreiben
-                const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
-                await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
-                console.log('[autoSave] Image keys remapped successfully');
-              } catch (remapErr) {
-                console.error('Error remapping image keys:', remapErr);
-              }
-            }
-            
             // Hintergrundbild separat speichern (ohne JSON.stringify)
-            if (saveBgImage && newSketch?.id) {
-              await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, saveBgImage);
+            if (saveBgImage) {
+              const newSketches = await SketchService.getAll();
+              const newest = newSketches[newSketches.length - 1];
+              if (newest) {
+                await AsyncStorage.setItem(`sketch_bg_${newest.id}`, saveBgImage);
+              }
             }
             backgroundImageChangedRef.current = false;
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
@@ -2663,9 +2544,6 @@ export default function DrawSketchScreen() {
     }
   };
 
-  // Container-Größe für Crop-Modal (dynamisch für Tablet-Support)
-  const [cropContainerSize, setCropContainerSize] = useState(300);
-
   // Zuschneiden-Modus starten
   const startCropMode = () => {
     const selectedEl = elements.find(el => el.id === selectedElementId);
@@ -2677,38 +2555,22 @@ export default function DrawSketchScreen() {
         selectedEl.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          // FIX: Initiale Crop-Box korrekt positionieren.
-          // Berechne zuerst, wo und wie groß das Bild im Container tatsächlich angezeigt wird (resizeMode="contain")
-          const containerSize = cropContainerSize;
-          const imgAspect = imgWidth / imgHeight;
-          let dispW: number, dispH: number, offX: number, offY: number;
-          if (imgAspect >= 1) {
-            // Querformat: volle Breite, vertikal zentriert mit Letterbox
-            dispW = containerSize;
-            dispH = containerSize / imgAspect;
-            offX = 0;
-            offY = (containerSize - dispH) / 2;
-          } else {
-            // Hochformat: volle Höhe, horizontal zentriert mit Letterbox
-            dispH = containerSize;
-            dispW = containerSize * imgAspect;
-            offX = (containerSize - dispW) / 2;
-            offY = 0;
-          }
-          // Crop-Box = 80% des ANGEZEIGTEN Bildes, zentriert auf dem Bild (nicht auf dem Container!)
-          const boxWidth = dispW * 0.8;
-          const boxHeight = dispH * 0.8;
-          const boxX = offX + (dispW - boxWidth) / 2;
-          const boxY = offY + (dispH - boxHeight) / 2;
-          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
+          // Initiale Crop-Box = 80% des Bildes, zentriert
+          const boxWidth = Math.min(imgWidth * 0.8, 280);
+          const boxHeight = Math.min(imgHeight * 0.8, 280);
+          setCropBox({
+            x: (300 - boxWidth) / 2,
+            y: (300 - boxHeight) / 2,
+            width: boxWidth,
+            height: boxHeight,
+          });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback: verwende ein Quadrat im Zentrum
-          const size = cropContainerSize;
-          setCropImageDimensions({ width: size, height: size });
-          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
+          // Fallback
+          setCropImageDimensions({ width: 300, height: 300 });
+          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
           setShowCropModal(true);
         }
       );
@@ -2718,80 +2580,36 @@ export default function DrawSketchScreen() {
   };
 
   // Handler für Crop-Modus Touch - sucht Bild an Position und öffnet Modal
-  const handleCropModeTouch = async (locationX: number, locationY: number) => {
+  const handleCropModeTouch = (locationX: number, locationY: number) => {
     // Suche nach einem Bild an dieser Position (onlyImages = true)
     const clickedImage = findElementAtPoint(locationX, locationY, true);
     
-    if (clickedImage && clickedImage.type === 'image') {
-      let imageUri = clickedImage.data?.uri;
-      
-      // FIX: Wenn das Bild mit __stored__ Platzhalter gespeichert ist, lade es aus AsyncStorage
-      if ((!imageUri || imageUri === '__stored__') && clickedImage.data?.imageStorageKey) {
-        console.log('[handleCropModeTouch] Loading image from storage:', clickedImage.data.imageStorageKey);
-        try {
-          const storedImage = await AsyncStorage.getItem(clickedImage.data.imageStorageKey);
-          if (storedImage && storedImage.length > 100) {
-            imageUri = storedImage;
-            console.log('[handleCropModeTouch] Image loaded from storage, length:', storedImage.length);
-          } else {
-            console.error('[handleCropModeTouch] Image not found or empty in storage');
-            Alert.alert(t('common.error'), 'Das Bild konnte nicht geladen werden. Bitte fügen Sie es erneut hinzu.');
-            return;
-          }
-        } catch (err) {
-          console.error('[handleCropModeTouch] Error loading image from storage:', err);
-          Alert.alert(t('common.error'), 'Fehler beim Laden des Bildes.');
-          return;
-        }
-      }
-      
-      if (!imageUri || imageUri === '__stored__') {
-        Alert.alert(t('common.error'), 'Das Bild ist nicht verfügbar.');
-        return;
-      }
-      
+    if (clickedImage && clickedImage.type === 'image' && clickedImage.data?.uri) {
       // Bild gefunden - Crop-Modal öffnen
-      setCropImageUri(imageUri);
+      setCropImageUri(clickedImage.data.uri);
       setCropImageId(clickedImage.id);
       
       // Lade die Original-Bildgröße
       RNImage.getSize(
-        imageUri,
+        clickedImage.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          
-          // FIX: Initiale Crop-Box korrekt positionieren wie in der Toolbar-Funktion
-          // Berechne zuerst, wo und wie groß das Bild im Container tatsächlich angezeigt wird (resizeMode="contain")
-          const containerSize = cropContainerSize;
-          const imgAspect = imgWidth / imgHeight;
-          let dispW: number, dispH: number, offX: number, offY: number;
-          if (imgAspect >= 1) {
-            // Querformat: volle Breite, vertikal zentriert mit Letterbox
-            dispW = containerSize;
-            dispH = containerSize / imgAspect;
-            offX = 0;
-            offY = (containerSize - dispH) / 2;
-          } else {
-            // Hochformat: volle Höhe, horizontal zentriert mit Letterbox
-            dispH = containerSize;
-            dispW = containerSize * imgAspect;
-            offX = (containerSize - dispW) / 2;
-            offY = 0;
-          }
-          // Crop-Box = 80% des ANGEZEIGTEN Bildes, zentriert auf dem Bild (nicht auf dem Container!)
-          const boxWidth = dispW * 0.8;
-          const boxHeight = dispH * 0.8;
-          const boxX = offX + (dispW - boxWidth) / 2;
-          const boxY = offY + (dispH - boxHeight) / 2;
-          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
+          // Initiale Crop-Box = 80% des Bildes, zentriert
+          const boxWidth = Math.min(imgWidth * 0.8, 280);
+          const boxHeight = Math.min(imgHeight * 0.8, 280);
+          setCropBox({
+            x: (300 - boxWidth) / 2,
+            y: (300 - boxHeight) / 2,
+            width: boxWidth,
+            height: boxHeight,
+          });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback: verwende ein Quadrat im Zentrum (dynamisch basierend auf Container-Größe)
-          const size = cropContainerSize;
-          setCropImageDimensions({ width: size, height: size });
-          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
+          // Fallback
+          setCropImageDimensions({ width: 300, height: 300 });
+          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
           setShowCropModal(true);
         }
       );
@@ -2806,12 +2624,12 @@ export default function DrawSketchScreen() {
     if (!cropImageUri || !cropImageId) return;
     
     try {
-      // Verwende die tatsächlich gemessene Container-Größe (responsiv für Tablet)
-      const containerSize = cropContainerSize;
+      // Berechne die tatsächliche Bildgröße im Container mit resizeMode="contain"
+      const containerSize = 300;
       const imgWidth = cropImageDimensions.width;
       const imgHeight = cropImageDimensions.height;
       const imgAspect = imgWidth / imgHeight;
-      const containerAspect = 1; // Container ist quadratisch
+      const containerAspect = 1; // Container ist quadratisch (300x300)
       
       let displayedWidth: number, displayedHeight: number, offsetX: number, offsetY: number;
       
@@ -2845,62 +2663,21 @@ export default function DrawSketchScreen() {
       const cropWidth = Math.round(cropBoxRelativeWidth * scale);
       const cropHeight = Math.round(cropBoxRelativeHeight * scale);
       
-      // Validiere Crop-Region: Muss mindestens 10x10 Pixel groß sein
-      const finalCropWidth = Math.min(cropWidth, imgWidth - cropOriginX);
-      const finalCropHeight = Math.min(cropHeight, imgHeight - cropOriginY);
-      
-      if (finalCropWidth < 10 || finalCropHeight < 10) {
-        Alert.alert(t('common.note'), 'Der Zuschneide-Bereich ist zu klein. Bitte größer wählen.');
-        return;
-      }
-      
-      console.log('[Crop]', {
-        container: containerSize,
-        image: `${imgWidth}x${imgHeight}`,
-        displayed: `${Math.round(displayedWidth)}x${Math.round(displayedHeight)}@(${Math.round(offsetX)},${Math.round(offsetY)})`,
-        cropBox: `${Math.round(cropBox.width)}x${Math.round(cropBox.height)}@(${Math.round(cropBox.x)},${Math.round(cropBox.y)})`,
-        finalCrop: `${finalCropWidth}x${finalCropHeight}@(${cropOriginX},${cropOriginY})`,
-      });
-      
       // Verwende ImageManipulator zum Zuschneiden
-      // FIX für Android: Bei Data-URIs erst in temporäre Datei schreiben (umgeht ImageManipulator
-      // Probleme mit großen data:image/jpeg;base64 Strings auf Android Production-Builds)
-      let cropSourceUri = cropImageUri;
-      let tempFilePath: string | null = null;
-      if (Platform.OS === 'android' && cropImageUri.startsWith('data:') && cropImageUri.length > 500000) {
-        try {
-          const base64Part = cropImageUri.replace(/^data:image\/[^;]+;base64,/, '');
-          tempFilePath = `${FileSystem.cacheDirectory}crop_src_${Date.now()}.jpg`;
-          await FileSystem.writeAsStringAsync(tempFilePath, base64Part, { encoding: 'base64' as any });
-          cropSourceUri = tempFilePath;
-        } catch (writeErr) {
-          console.warn('[Crop] Could not write temp file, using data URI directly:', writeErr);
-        }
-      }
-      
       const result = await ImageManipulator.manipulateAsync(
-        cropSourceUri,
+        cropImageUri,
         [
           {
             crop: {
               originX: cropOriginX,
               originY: cropOriginY,
-              width: finalCropWidth,
-              height: finalCropHeight,
+              width: Math.min(cropWidth, cropImageDimensions.width - cropOriginX),
+              height: Math.min(cropHeight, cropImageDimensions.height - cropOriginY),
             },
           },
         ],
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
-      
-      // Temp-Datei aufräumen
-      if (tempFilePath) {
-        FileSystem.deleteAsync(tempFilePath, { idempotent: true }).catch(() => {});
-      }
-      
-      if (!result.base64) {
-        throw new Error('Crop result has no base64 data');
-      }
       
       // Aktualisiere das Element mit dem zugeschnittenen Bild
       const croppedUri = `data:image/jpeg;base64,${result.base64}`;
@@ -2986,7 +2763,7 @@ export default function DrawSketchScreen() {
         const dx = pageX - cropStartPos.current.x;
         const dy = pageY - cropStartPos.current.y;
         const minSize = 50;
-        const maxSize = cropContainerSizeRef.current; // Dynamisch (responsiv für Tablet)
+        const maxSize = 300;
         
         let newBox = { ...cropStartBox.current };
         
@@ -3753,18 +3530,6 @@ export default function DrawSketchScreen() {
         const dx = touches[0].pageX - touches[1].pageX;
         const dy = touches[0].pageY - touches[1].pageY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // FIX: Falls Nutzer Finger sequenziell aufsetzt (sehr häufig!),
-        // wird onResponderGrant nur bei 1 Finger aufgerufen → initialDistance = 0.
-        // Wir initialisieren die Pinch-Referenz beim ERSTEN Frame mit 2 Fingern.
-        if (androidPinchRef.current.initialDistance === 0 || androidPinchRef.current.numTouches < 2) {
-          androidPinchRef.current.initialDistance = distance;
-          androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
-          androidPinchRef.current.isPinching = true;
-          androidPinchRef.current.numTouches = touches.length;
-          return;
-        }
-
         if (androidPinchRef.current.initialDistance > 0) {
           const ratio = distance / androidPinchRef.current.initialDistance;
           const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
@@ -3773,20 +3538,8 @@ export default function DrawSketchScreen() {
         }
         androidPinchRef.current.isPinching = true;
         androidPinchRef.current.numTouches = touches.length;
-      } else if (touches.length === 1 && androidPinchRef.current.currentScale > 1.05) {
-        // Pan: Nur bei gezoomtem Canvas und einem Finger
-        // FIX: isPinching-Check entfernt, damit Pan auch nach abgeschlossenem Pinch
-        // (d.h. Finger 2 losgelassen, Finger 1 zieht weiter) funktioniert.
-        // Nach Pinch → numTouches-Wechsel von 2 auf 1 → lastPan neu setzen, nicht panen
-        if (androidPinchRef.current.numTouches !== 1) {
-          // Wechsel 2→1 (Pinch endet, aber Finger 1 bleibt): Start-Position resetten
-          androidPinchRef.current.lastPanX = touches[0].pageX;
-          androidPinchRef.current.lastPanY = touches[0].pageY;
-          androidPinchRef.current.numTouches = 1;
-          androidPinchRef.current.isPinching = false;
-          androidPinchRef.current.initialDistance = 0;
-          return;
-        }
+      } else if (touches.length === 1 && !androidPinchRef.current.isPinching && androidPinchRef.current.currentScale > 1.05) {
+        // Pan: Nur bei gezoomtem Canvas und einem Finger (nicht direkt nach Pinch)
         const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
         const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
         androidPinchRef.current.currentTranslateX += panDx;
@@ -5474,21 +5227,14 @@ export default function DrawSketchScreen() {
         const imgH = element.height || 100;
         const imgCenterX = imgX + imgW / 2;
         const imgCenterY = imgY + imgH / 2;
-        // FIX: Auf Android APK funktioniert SvgImage mit base64 nicht zuverlässig.
-        // Wir rendern nur einen Platzhalter-Rahmen im SVG.
-        // Das eigentliche Bild wird als React Native Image Overlay gerendert (siehe renderImageOverlays).
         return (
           <G key={element.id}>
-            {/* Platzhalter-Rahmen für das Bild im SVG */}
-            <Rect
+            <SvgImage
+              href={element.data.uri}
               x={imgX}
               y={imgY}
               width={imgW}
               height={imgH}
-              fill="transparent"
-              stroke={isSelected ? '#2196F3' : 'transparent'}
-              strokeWidth={isSelected ? 2 : 0}
-              strokeDasharray={isSelected ? '5,5' : undefined}
               transform={element.rotation ? `rotate(${element.rotation} ${imgCenterX} ${imgCenterY})` : undefined}
             />
             {isSelected && renderTransformHandles(element)}
@@ -6343,8 +6089,7 @@ export default function DrawSketchScreen() {
   };
 
   // Save sketch
-  const generatePreviewSvg = (elementsOverride?: any[]) => {
-    const previewElements = elementsOverride || elements;
+  const generatePreviewSvg = () => {
     // NEW ARCHITECTURE: Use viewBox for scaling instead of transforming coordinates
     // This preserves original element sizes (especially text) and lets the browser handle scaling
     
@@ -6352,7 +6097,7 @@ export default function DrawSketchScreen() {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     let hasValidBounds = false;
     
-    previewElements.forEach(el => {
+    elements.forEach(el => {
       if (el.type === 'path') {
         const matches = el.data.match(/(-?\d+\.?\d*)/g);
         if (matches) {
@@ -6533,7 +6278,7 @@ export default function DrawSketchScreen() {
     // Generate SVG with ORIGINAL coordinates - viewBox handles scaling
     let svgElements = '';
     
-    previewElements.forEach(el => {
+    elements.forEach(el => {
       const strokeWidth = el.strokeWidth || 2;
       
       if (el.type === 'path') {
@@ -6792,92 +6537,9 @@ export default function DrawSketchScreen() {
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions
     const previewSvg = `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;
     
-    console.log('Generated SVG preview with viewBox:', `${minX} ${minY} ${drawWidth} ${drawHeight}`, '- size:', previewSvg.length, 'chars');
+    console.log('Generated SVG preview with viewBox:', `${minX} ${minY} ${drawWidth} ${drawHeight}`);
     
-    return encodeSvgAsDataUri(previewSvg);
-  };
-
-  // Safer SVG data URI encoder:
-  // - Primary: base64 via btoa (compact, compatible)
-  // - Fallback: URL-encoded (safer for very large strings where btoa/unescape may crash on Android)
-  const encodeSvgAsDataUri = (svg: string): string => {
-    try {
-      // btoa(unescape(encodeURIComponent(...))) is the standard UTF-8 -> base64 trick.
-      // Wrapped in try/catch because on Android/Hermes it can throw for strings > ~5MB.
-      const encoded = btoa(unescape(encodeURIComponent(svg)));
-      if (encoded && encoded.length > 0) {
-        return `data:image/svg+xml;base64,${encoded}`;
-      }
-      throw new Error('Empty base64 output');
-    } catch (e) {
-      // Fallback: URL-encoded SVG (slightly larger but no btoa crash risk)
-      console.warn('btoa SVG encoding failed, using URL encoding:', e);
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    }
-  };
-
-  // Async helper: compress image URIs in elements to thumbnails (max 600px, JPEG 60%)
-  // for embedding in preview SVG. Keeps the resulting SVG compact enough for:
-  //  - btoa encoding (< 2MB)
-  //  - Android WebView rendering in PDF preview and print
-  //  - Fast loading in sketch list thumbnails
-  // Original metadata.elements keep their full-resolution URIs for canvas rendering.
-  const compressImagesForPreviewSvg = async (originalElements: any[]): Promise<any[]> => {
-    const imageElements = originalElements.filter((el: any) => el.type === 'image');
-    if (imageElements.length === 0) return originalElements;
-    console.log(`[Preview] Processing ${imageElements.length} image(s) for SVG embedding...`);
-    
-    const results = await Promise.all(originalElements.map(async (el: any) => {
-      if (el.type !== 'image') return el;
-      
-      let imageUri = el.data?.uri;
-      
-      // FIX: Falls Bild in separatem Storage liegt (__stored__ Platzhalter), lade es zuerst
-      if ((!imageUri || imageUri === '__stored__') && el.data?.imageStorageKey) {
-        try {
-          const storedImage = await AsyncStorage.getItem(el.data.imageStorageKey);
-          if (storedImage) {
-            imageUri = storedImage;
-            console.log(`[Preview] Loaded image from storage: ${el.data.imageStorageKey.substring(0, 30)}...`);
-          } else {
-            console.warn(`[Preview] Image not found in storage: ${el.data.imageStorageKey}`);
-            return el; // Element unverändert zurückgeben
-          }
-        } catch (err) {
-          console.warn(`[Preview] Could not load image from storage:`, err);
-          return el;
-        }
-      }
-      
-      // Keine gültige URI vorhanden
-      if (!imageUri || !imageUri.startsWith('data:')) {
-        console.warn(`[Preview] Skipping image - no valid data URI`);
-        return el;
-      }
-      
-      // Kleine Bilder brauchen keine Komprimierung
-      if (imageUri.length < 50000) {
-        return { ...el, data: { ...el.data, uri: imageUri } };
-      }
-      
-      // Versuche zu komprimieren
-      try {
-        const manip = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [{ resize: { width: 600 } }],
-          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-        );
-        if (manip.base64) {
-          return { ...el, data: { ...el.data, uri: `data:image/jpeg;base64,${manip.base64}` } };
-        }
-      } catch (err) {
-        console.warn('[Preview] Could not compress image, using original:', err);
-      }
-      
-      // Fallback: Originaluri verwenden (auch wenn groß - besser als nichts)
-      return { ...el, data: { ...el.data, uri: imageUri } };
-    }));
-    return results;
+    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
   };
 
   const saveSketch = async () => {
@@ -6911,9 +6573,7 @@ export default function DrawSketchScreen() {
       // Priority 1: Generate mini-sketch from elements if we have any
       if (elements.length > 0) {
         try {
-          // FIX: Komprimiere Bilder VOR dem SVG-Embedding (verhindert btoa-Crash + Preview/PDF fehlt)
-          const compressedElements = await compressImagesForPreviewSvg(elements);
-          sketchData = generatePreviewSvg(compressedElements);
+          sketchData = generatePreviewSvg();
         } catch (previewError) {
           console.error('Error generating preview:', previewError);
         }
@@ -6929,7 +6589,7 @@ export default function DrawSketchScreen() {
             <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
           </svg>
         `;
-        sketchData = encodeSvgAsDataUri(previewSvg);
+        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
       }
       
       // Priority 3: Fallback colored badge
@@ -6950,7 +6610,7 @@ export default function DrawSketchScreen() {
           </svg>
         `;
         
-        sketchData = encodeSvgAsDataUri(previewSvg);
+        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
       }
 
       const t1 = Date.now();
@@ -6958,83 +6618,18 @@ export default function DrawSketchScreen() {
 
       // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
       const imageOps: Promise<any>[] = [];
-      const failedImages: string[] = [];
-      console.log('[saveSketch] Processing elements for image extraction:', metadata.elements.length, 'elements');
       const lightElementsForSave = metadata.elements.map((el: any) => {
-        if (el.type === 'image') {
-          console.log('[saveSketch] Found image element:', {
-            id: el.id,
-            hasUri: !!el.data?.uri,
-            uriLength: el.data?.uri?.length || 0,
-            uriStart: el.data?.uri?.substring(0, 50),
-          });
-          
-          if (el.data?.uri && el.data.uri.length > 1000 && el.data.uri !== '__stored__') {
-            const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
-            const imageData = el.data.uri;
-            
-            // FIX: Prüfe ob Bild zu groß für AsyncStorage ist (Android Limit ~6MB)
-            // Base64 ist ~33% größer als das Original, also max ~4MB base64 String
-            const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
-            if (imageData.length > MAX_IMAGE_SIZE) {
-              console.warn('[saveSketch] Image too large for AsyncStorage, trying to compress:', imageKey, imageData.length);
-              // Versuche zu komprimieren bevor wir aufgeben
-              imageOps.push(
-                ImageManipulator.manipulateAsync(
-                  imageData,
-                  [{ resize: { width: 600 } }],
-                  { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-                ).then(async (result) => {
-                  if (result.base64) {
-                    const compressedUri = `data:image/jpeg;base64,${result.base64}`;
-                    console.log('[saveSketch] Compressed image from', imageData.length, 'to', compressedUri.length);
-                    await AsyncStorage.setItem(imageKey, compressedUri);
-                    // Verifiziere
-                    const verify = await AsyncStorage.getItem(imageKey);
-                    if (!verify) {
-                      failedImages.push(el.id);
-                      console.error('[saveSketch] Verification FAILED after compression:', imageKey);
-                    }
-                  } else {
-                    failedImages.push(el.id);
-                  }
-                }).catch(err => {
-                  console.error('[saveSketch] Compression failed:', imageKey, err);
-                  failedImages.push(el.id);
-                })
-              );
-            } else {
-              console.log('[saveSketch] Saving image to storage:', imageKey, 'size:', imageData.length);
-              imageOps.push(
-                AsyncStorage.setItem(imageKey, imageData)
-                  .then(async () => {
-                    // FIX: Verifiziere dass das Bild wirklich gespeichert wurde
-                    const verify = await AsyncStorage.getItem(imageKey);
-                    if (verify && verify.length > 100) {
-                      console.log('[saveSketch] Image saved and verified:', imageKey);
-                    } else {
-                      console.error('[saveSketch] Image verification FAILED (silent failure):', imageKey);
-                      failedImages.push(el.id);
-                    }
-                  })
-                  .catch(err => {
-                    console.error('[saveSketch] Error saving image element:', imageKey, err);
-                    failedImages.push(el.id);
-                  })
-              );
-            }
-            return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
-          } else if (el.data?.uri === '__stored__' && el.data?.imageStorageKey) {
-            // Bild ist bereits gespeichert, behalte den Verweis
-            console.log('[saveSketch] Image already stored:', el.data.imageStorageKey);
-            return el;
-          } else {
-            console.warn('[saveSketch] Image URI too short or missing, keeping inline:', el.id);
-          }
+        if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
+          const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
+          imageOps.push(
+            AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
+              console.error('Error saving image element:', err)
+            )
+          );
+          return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
         }
         return el;
       });
-      console.log('[saveSketch] Image operations to execute:', imageOps.length);
       const lightMetadataForSave = { ...metadata, elements: lightElementsForSave };
 
       if (sketchId) {
@@ -7097,38 +6692,6 @@ export default function DrawSketchScreen() {
           metadata: JSON.stringify(lightMetadataForCreate),
           pdf_size: pdfSize,
         });
-        
-        // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
-        if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
-          try {
-            const remapOps: Promise<any>[] = [];
-            const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
-              if (el.type === 'image' && el.data?.imageStorageKey && 
-                  (el.data.imageStorageKey.includes('_undefined_') || el.data.imageStorageKey.includes('_new_'))) {
-                const oldKey = el.data.imageStorageKey;
-                const newKey = oldKey.replace(/_undefined_|_new_/, `_${newSketch.id}_`);
-                console.log('[saveSketch] Remapping image key:', oldKey, '->', newKey);
-                const imgData = await AsyncStorage.getItem(oldKey);
-                if (imgData) {
-                  remapOps.push(AsyncStorage.setItem(newKey, imgData));
-                  remapOps.push(AsyncStorage.removeItem(oldKey));
-                  return { ...el, data: { ...el.data, imageStorageKey: newKey } };
-                } else {
-                  console.warn('[saveSketch] Image data not found for key:', oldKey);
-                }
-              }
-              return el;
-            }));
-            await Promise.all(remapOps);
-            // Metadata mit korrekten Keys speichern
-            const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
-            await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
-            console.log('[saveSketch] Image keys remapped successfully');
-          } catch (remapErr) {
-            console.error('[saveSketch] Error remapping image keys:', remapErr);
-          }
-        }
-        
         // Hintergrundbild separat speichern (ohne JSON.stringify)
         if (backgroundImage && newSketch?.id) {
           await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
@@ -8074,40 +7637,6 @@ export default function DrawSketchScreen() {
             </>
           )}
         </Svg>
-
-        {/* FIX: Image Overlays für Android - SvgImage funktioniert nicht mit base64 auf Android APK */}
-        {/* Rendere Bilder als absolute positionierte React Native Images */}
-        {/* Verwendet loadedImageUris für Bilder mit __stored__ URI */}
-        {Platform.OS === 'android' && elements.filter(el => el.type === 'image').map(el => {
-          // Bestimme die URI: entweder direkt aus el.data.uri oder aus dem Cache loadedImageUris
-          let imgUri = el.data?.uri;
-          if (imgUri === '__stored__' || !imgUri) {
-            imgUri = loadedImageUris[el.id];
-          }
-          // Überspringe wenn keine URI verfügbar
-          if (!imgUri || imgUri === '__stored__') return null;
-          
-          const imgX = el.x || 0;
-          const imgY = el.y || 0;
-          const imgW = el.width || 100;
-          const imgH = el.height || 100;
-          return (
-            <RNImage
-              key={`img-overlay-${el.id}`}
-              source={{ uri: imgUri }}
-              style={{
-                position: 'absolute',
-                left: imgX,
-                top: imgY,
-                width: imgW,
-                height: imgH,
-                transform: el.rotation ? [{ rotate: `${el.rotation}deg` }] : undefined,
-              }}
-              resizeMode="cover"
-              pointerEvents="none"
-            />
-          );
-        })}
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
         <View 
@@ -9965,20 +9494,13 @@ export default function DrawSketchScreen() {
             
             <View 
               ref={cropContainerRef}
-              style={[styles.cropImageContainer, { width: cropContainerSize, height: cropContainerSize }]}
-              onLayout={(e) => {
-                const { width } = e.nativeEvent.layout;
-                if (width > 0 && Math.abs(width - cropContainerSize) > 1) {
-                  setCropContainerSize(width);
-                  cropContainerSizeRef.current = width;
-                }
-              }}
+              style={styles.cropImageContainer}
               {...cropPanResponder.panHandlers}
             >
               {cropImageUri && (
                 <RNImage
                   source={{ uri: cropImageUri }}
-                  style={{ width: cropContainerSize, height: cropContainerSize }}
+                  style={styles.cropImage}
                   resizeMode="contain"
                   pointerEvents="none"
                 />
@@ -9986,9 +9508,9 @@ export default function DrawSketchScreen() {
               
               {/* Dunkle Overlay außerhalb der Crop-Box */}
               <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: cropContainerSize - cropBox.y - cropBox.height }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} pointerEvents="none" />
               <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: cropContainerSize - cropBox.x - cropBox.width }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} pointerEvents="none" />
               
               {/* Crop Box Rahmen */}
               <View 
@@ -11602,8 +11124,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
-    width: '92%',
-    maxWidth: 560, // Größer auf Tablets
+    width: '90%',
+    maxWidth: 360,
     alignItems: 'center',
   },
   cropModalTitle: {
@@ -11619,7 +11141,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cropImageContainer: {
-    // width/height werden dynamisch via cropContainerSize gesetzt (responsive)
+    width: 300,
+    height: 300,
     backgroundColor: '#000',
     borderRadius: 8,
     overflow: 'hidden',

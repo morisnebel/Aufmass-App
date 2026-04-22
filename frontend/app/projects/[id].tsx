@@ -36,7 +36,6 @@ import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AUFMASSPROFI_LOGO_BASE64 } from '../../assets/logoBase64';
 
 // API_URL removed - using local storage now
 
@@ -1254,9 +1253,19 @@ export default function ProjectDetailScreen() {
       // Pro Version: Benutzer-Logo aus Einstellungen
       companyLogo = settings.logo_data || '';
     } else {
-      // Basic Version: Aufmassprofi Logo aus Base64-Konstante
-      // (zuverlässig auf Android Production-Builds, umgeht Asset-URI-Probleme)
-      companyLogo = AUFMASSPROFI_LOGO_BASE64;
+      // Basic Version: Aufmassprofi Logo laden
+      try {
+        const Asset = require('expo-asset').Asset;
+        const iconAsset = Asset.fromModule(require('../../assets/images/icon.png'));
+        await iconAsset.downloadAsync();
+        if (iconAsset.localUri) {
+          const base64 = await readAsStringAsync(iconAsset.localUri, { encoding: 'base64' });
+          companyLogo = `data:image/png;base64,${base64}`;
+        }
+      } catch (e) {
+        console.log('Could not load Basic logo for PDF:', e);
+        companyLogo = '';
+      }
     }
     
     // PDF Layout Einstellungen
@@ -5089,49 +5098,48 @@ export default function ProjectDetailScreen() {
                             />
                           );
                         }
-                        // FIX: Auf Android APK funktioniert SvgImage nicht mit base64.
-                        // Rendere das Bild als React Native Image und die Annotationen als SVG-Overlay.
+                        // Bild + Annotationen in einem einzigen SVG rendern
+                        // damit beide denselben Koordinatenraum teilen
                         return (
-                          <View style={[styles.photoImage, { position: 'relative', backgroundColor: '#f5f5f5' }]}>
-                            <Image
-                              source={{ uri: photo.image_data }}
-                              style={{ width: '100%', height: '100%' }}
-                              resizeMode="contain"
-                            />
-                            {/* SVG-Overlay nur für Annotationen (ohne Bild) */}
-                            <Svg
-                              viewBox={`0 0 ${canvasW} ${canvasH}`}
+                          <Svg
+                            viewBox={`0 0 ${canvasW} ${canvasH}`}
+                            preserveAspectRatio="xMidYMid meet"
+                            style={[styles.photoImage, { backgroundColor: '#f5f5f5' }]}
+                          >
+                            <SvgImage
+                              href={photo.image_data}
+                              x="0" y="0"
+                              width={canvasW}
+                              height={canvasH}
                               preserveAspectRatio="xMidYMid meet"
-                              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                            >
-                              {hasPaths && annotationData.paths.map((p: any, pi: number) => (
-                                <SvgPath
-                                  key={`p${pi}`}
-                                  d={p.path}
-                                  stroke={p.color || '#FF0000'}
-                                  strokeWidth={p.strokeWidth || 3}
-                                  fill="none"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              ))}
-                              {hasTexts && annotationData.textElements.map((t: any, ti: number) => (
-                                <SvgText
-                                  key={`t${ti}`}
-                                  x={t.x}
-                                  y={t.y}
-                                  fontSize={t.fontSize || 20}
-                                  fill={t.color || '#FFFFFF'}
-                                  fontWeight="bold"
-                                  stroke="#000000"
-                                  strokeWidth={0.5}
-                                  fontFamily={t.fontFamily === 'System' ? undefined : (t.fontFamily || undefined)}
-                                >
-                                  {t.text}
-                                </SvgText>
-                              ))}
-                            </Svg>
-                          </View>
+                            />
+                            {hasPaths && annotationData.paths.map((p: any, pi: number) => (
+                              <SvgPath
+                                key={`p${pi}`}
+                                d={p.path}
+                                stroke={p.color || '#FF0000'}
+                                strokeWidth={p.strokeWidth || 3}
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            ))}
+                            {hasTexts && annotationData.textElements.map((t: any, ti: number) => (
+                              <SvgText
+                                key={`t${ti}`}
+                                x={t.x}
+                                y={t.y}
+                                fontSize={t.fontSize || 20}
+                                fill={t.color || '#FFFFFF'}
+                                fontWeight="bold"
+                                stroke="#000000"
+                                strokeWidth={0.5}
+                                fontFamily={t.fontFamily === 'System' ? undefined : (t.fontFamily || undefined)}
+                              >
+                                {t.text}
+                              </SvgText>
+                            ))}
+                          </Svg>
                         );
                       } catch (e) {
                         return (

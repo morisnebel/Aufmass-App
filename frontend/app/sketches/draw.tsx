@@ -345,6 +345,9 @@ export default function DrawSketchScreen() {
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // Schutz vor Doppelklicks beim Speichern
   
+  // FIX: Cache für geladene Bild-URIs (für Bilder die mit __stored__ gespeichert sind)
+  const [loadedImageUris, setLoadedImageUris] = useState<Record<string, string>>({});
+  
   // Drawing state
   const [currentPath, setCurrentPath] = useState('');
   // Ref für flüssigeres Zeichnen - speichert Pfaddaten ohne Re-Render
@@ -1963,6 +1966,47 @@ export default function DrawSketchScreen() {
     setHistoryIndex(newHistory.length - 1);
     setElements(newElements);
   }, []);
+
+  // FIX: Lade gespeicherte Bilder aus AsyncStorage wenn elements sich ändern
+  // Dies stellt sicher, dass Bilder mit __stored__ URI korrekt angezeigt werden
+  useEffect(() => {
+    const loadStoredImages = async () => {
+      const imageElements = elements.filter(
+        el => el.type === 'image' && el.data?.uri === '__stored__' && el.data?.imageStorageKey
+      );
+      
+      if (imageElements.length === 0) return;
+      
+      console.log('[loadStoredImages] Loading', imageElements.length, 'images from storage');
+      const newLoadedUris: Record<string, string> = { ...loadedImageUris };
+      let hasNewImages = false;
+      
+      for (const el of imageElements) {
+        const key = el.data!.imageStorageKey!;
+        // Überspringe wenn bereits geladen
+        if (newLoadedUris[el.id]) continue;
+        
+        try {
+          const storedImage = await AsyncStorage.getItem(key);
+          if (storedImage && storedImage.length > 100) {
+            newLoadedUris[el.id] = storedImage;
+            hasNewImages = true;
+            console.log('[loadStoredImages] Loaded image:', el.id, 'from', key);
+          } else {
+            console.warn('[loadStoredImages] Image not found or empty:', key);
+          }
+        } catch (err) {
+          console.error('[loadStoredImages] Error loading image:', key, err);
+        }
+      }
+      
+      if (hasNewImages) {
+        setLoadedImageUris(newLoadedUris);
+      }
+    };
+    
+    loadStoredImages();
+  }, [elements]); // Nur wenn elements sich ändern
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
@@ -8033,7 +8077,16 @@ export default function DrawSketchScreen() {
 
         {/* FIX: Image Overlays für Android - SvgImage funktioniert nicht mit base64 auf Android APK */}
         {/* Rendere Bilder als absolute positionierte React Native Images */}
-        {Platform.OS === 'android' && elements.filter(el => el.type === 'image' && el.data?.uri && el.data.uri !== '__stored__').map(el => {
+        {/* Verwendet loadedImageUris für Bilder mit __stored__ URI */}
+        {Platform.OS === 'android' && elements.filter(el => el.type === 'image').map(el => {
+          // Bestimme die URI: entweder direkt aus el.data.uri oder aus dem Cache loadedImageUris
+          let imgUri = el.data?.uri;
+          if (imgUri === '__stored__' || !imgUri) {
+            imgUri = loadedImageUris[el.id];
+          }
+          // Überspringe wenn keine URI verfügbar
+          if (!imgUri || imgUri === '__stored__') return null;
+          
           const imgX = el.x || 0;
           const imgY = el.y || 0;
           const imgW = el.width || 100;
@@ -8041,7 +8094,7 @@ export default function DrawSketchScreen() {
           return (
             <RNImage
               key={`img-overlay-${el.id}`}
-              source={{ uri: el.data.uri }}
+              source={{ uri: imgUri }}
               style={{
                 position: 'absolute',
                 left: imgX,

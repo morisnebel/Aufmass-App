@@ -461,6 +461,8 @@ export default function DrawSketchScreen() {
   const [cropImageId, setCropImageId] = useState<string | null>(null);
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 200 });
   const [cropImageDimensions, setCropImageDimensions] = useState({ width: 300, height: 300 });
+  // FIX: Dynamische Container-Größe für Tablets und verschiedene Bildschirmgrößen
+  const [cropContainerSize, setCropContainerSize] = useState(300);
   
   // Refs für Crop-Interaktion (verwende Refs statt State für bessere Performance)
   const cropContainerRef = useRef<View>(null);
@@ -468,11 +470,18 @@ export default function DrawSketchScreen() {
   const activeCropHandle = useRef<string | null>(null);
   const cropStartPos = useRef({ x: 0, y: 0 });
   const cropStartBox = useRef({ x: 50, y: 50, width: 200, height: 200 });
+  // Ref für dynamische Container-Größe (damit PanResponder aktuelle Größe lesen kann)
+  const cropContainerSizeRef = useRef(300);
   
   // Halte cropBoxRef synchron mit cropBox State
   useEffect(() => {
     cropBoxRef.current = cropBox;
   }, [cropBox]);
+
+  // Halte cropContainerSizeRef synchron mit cropContainerSize State
+  useEffect(() => {
+    cropContainerSizeRef.current = cropContainerSize;
+  }, [cropContainerSize]);
   
   // Helper-Funktion: Wechselt den Zeichenmodus
   // Zoom bleibt erhalten, aber scrollEnabled wird deaktiviert damit Zeichnen funktioniert
@@ -2588,22 +2597,35 @@ export default function DrawSketchScreen() {
         selectedEl.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          // Initiale Crop-Box = 80% des Bildes, zentriert
-          const boxWidth = Math.min(imgWidth * 0.8, 280);
-          const boxHeight = Math.min(imgHeight * 0.8, 280);
-          setCropBox({
-            x: (300 - boxWidth) / 2,
-            y: (300 - boxHeight) / 2,
-            width: boxWidth,
-            height: boxHeight,
-          });
+          // FIX: Verwende dynamische Container-Größe für die Crop-Box-Initialisierung
+          const containerSize = cropContainerSizeRef.current;
+          const imgAspect = imgWidth / imgHeight;
+          let dispW: number, dispH: number, offX: number, offY: number;
+          if (imgAspect >= 1) {
+            dispW = containerSize;
+            dispH = containerSize / imgAspect;
+            offX = 0;
+            offY = (containerSize - dispH) / 2;
+          } else {
+            dispH = containerSize;
+            dispW = containerSize * imgAspect;
+            offX = (containerSize - dispW) / 2;
+            offY = 0;
+          }
+          // Crop-Box = 80% des angezeigten Bildes, zentriert auf dem Bild
+          const boxWidth = dispW * 0.8;
+          const boxHeight = dispH * 0.8;
+          const boxX = offX + (dispW - boxWidth) / 2;
+          const boxY = offY + (dispH - boxHeight) / 2;
+          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback
-          setCropImageDimensions({ width: 300, height: 300 });
-          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          // Fallback mit dynamischer Container-Größe
+          const size = cropContainerSizeRef.current;
+          setCropImageDimensions({ width: size, height: size });
+          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
           setShowCropModal(true);
         }
       );
@@ -2627,22 +2649,35 @@ export default function DrawSketchScreen() {
         clickedImage.data.uri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
-          // Initiale Crop-Box = 80% des Bildes, zentriert
-          const boxWidth = Math.min(imgWidth * 0.8, 280);
-          const boxHeight = Math.min(imgHeight * 0.8, 280);
-          setCropBox({
-            x: (300 - boxWidth) / 2,
-            y: (300 - boxHeight) / 2,
-            width: boxWidth,
-            height: boxHeight,
-          });
+          // FIX: Verwende dynamische Container-Größe für die Crop-Box-Initialisierung
+          const containerSize = cropContainerSizeRef.current;
+          const imgAspect = imgWidth / imgHeight;
+          let dispW: number, dispH: number, offX: number, offY: number;
+          if (imgAspect >= 1) {
+            dispW = containerSize;
+            dispH = containerSize / imgAspect;
+            offX = 0;
+            offY = (containerSize - dispH) / 2;
+          } else {
+            dispH = containerSize;
+            dispW = containerSize * imgAspect;
+            offX = (containerSize - dispW) / 2;
+            offY = 0;
+          }
+          // Crop-Box = 80% des angezeigten Bildes, zentriert auf dem Bild
+          const boxWidth = dispW * 0.8;
+          const boxHeight = dispH * 0.8;
+          const boxX = offX + (dispW - boxWidth) / 2;
+          const boxY = offY + (dispH - boxHeight) / 2;
+          setCropBox({ x: boxX, y: boxY, width: boxWidth, height: boxHeight });
           setShowCropModal(true);
         },
         (error) => {
           console.error('Error getting image size:', error);
-          // Fallback
-          setCropImageDimensions({ width: 300, height: 300 });
-          setCropBox({ x: 30, y: 30, width: 240, height: 240 });
+          // Fallback mit dynamischer Container-Größe
+          const size = cropContainerSizeRef.current;
+          setCropImageDimensions({ width: size, height: size });
+          setCropBox({ x: size * 0.1, y: size * 0.1, width: size * 0.8, height: size * 0.8 });
           setShowCropModal(true);
         }
       );
@@ -2657,12 +2692,15 @@ export default function DrawSketchScreen() {
     if (!cropImageUri || !cropImageId) return;
     
     try {
-      // Berechne die tatsächliche Bildgröße im Container mit resizeMode="contain"
-      const containerSize = 300;
+      // FIX: Verwende die dynamische Container-Größe statt hardcoded 300
+      const containerSize = cropContainerSizeRef.current;
       const imgWidth = cropImageDimensions.width;
       const imgHeight = cropImageDimensions.height;
       const imgAspect = imgWidth / imgHeight;
-      const containerAspect = 1; // Container ist quadratisch (300x300)
+      const containerAspect = 1; // Container ist quadratisch
+      
+      console.log('[applyCrop] Container size:', containerSize, 'Image dimensions:', imgWidth, 'x', imgHeight);
+      console.log('[applyCrop] CropBox:', cropBox);
       
       let displayedWidth: number, displayedHeight: number, offsetX: number, offsetY: number;
       
@@ -2680,6 +2718,8 @@ export default function DrawSketchScreen() {
         offsetY = 0;
       }
       
+      console.log('[applyCrop] Displayed size:', displayedWidth, 'x', displayedHeight, 'Offset:', offsetX, offsetY);
+      
       // Skalierungsfaktor vom angezeigten Bild zum Originalbild (sollte für beide Achsen gleich sein bei contain)
       const scale = imgWidth / displayedWidth;
       
@@ -2695,6 +2735,8 @@ export default function DrawSketchScreen() {
       const cropOriginY = Math.max(0, Math.round(cropBoxRelativeY * scale));
       const cropWidth = Math.round(cropBoxRelativeWidth * scale);
       const cropHeight = Math.round(cropBoxRelativeHeight * scale);
+      
+      console.log('[applyCrop] Crop coordinates:', { cropOriginX, cropOriginY, cropWidth, cropHeight });
       
       // Verwende ImageManipulator zum Zuschneiden
       const result = await ImageManipulator.manipulateAsync(
@@ -9559,13 +9601,31 @@ export default function DrawSketchScreen() {
             
             <View 
               ref={cropContainerRef}
-              style={styles.cropImageContainer}
+              style={[styles.cropImageContainer, { width: cropContainerSize, height: cropContainerSize }]}
+              onLayout={(event) => {
+                const { width } = event.nativeEvent.layout;
+                if (width > 0 && width !== cropContainerSize) {
+                  console.log('[Crop] Container size measured:', width);
+                  setCropContainerSize(width);
+                  cropContainerSizeRef.current = width;
+                  // Passe CropBox proportional an wenn Container-Größe sich ändert
+                  const scale = width / cropContainerSize;
+                  if (scale !== 1) {
+                    setCropBox(prev => ({
+                      x: prev.x * scale,
+                      y: prev.y * scale,
+                      width: prev.width * scale,
+                      height: prev.height * scale,
+                    }));
+                  }
+                }
+              }}
               {...cropPanResponder.panHandlers}
             >
               {cropImageUri && (
                 <RNImage
                   source={{ uri: cropImageUri }}
-                  style={styles.cropImage}
+                  style={[styles.cropImage, { width: cropContainerSize, height: cropContainerSize }]}
                   resizeMode="contain"
                   pointerEvents="none"
                 />
@@ -9573,9 +9633,9 @@ export default function DrawSketchScreen() {
               
               {/* Dunkle Overlay außerhalb der Crop-Box */}
               <View style={[styles.cropOverlay, styles.cropOverlayTop, { height: cropBox.y }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: 300 - cropBox.y - cropBox.height }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayBottom, { top: cropBox.y + cropBox.height, height: Math.max(0, cropContainerSize - cropBox.y - cropBox.height) }]} pointerEvents="none" />
               <View style={[styles.cropOverlay, styles.cropOverlayLeft, { top: cropBox.y, height: cropBox.height, width: cropBox.x }]} pointerEvents="none" />
-              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: 300 - cropBox.x - cropBox.width }]} pointerEvents="none" />
+              <View style={[styles.cropOverlay, styles.cropOverlayRight, { top: cropBox.y, height: cropBox.height, left: cropBox.x + cropBox.width, width: Math.max(0, cropContainerSize - cropBox.x - cropBox.width) }]} pointerEvents="none" />
               
               {/* Crop Box Rahmen */}
               <View 

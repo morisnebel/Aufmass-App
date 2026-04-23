@@ -2613,14 +2613,38 @@ export default function DrawSketchScreen() {
   };
 
   // Zuschneiden-Modus starten
-  const startCropMode = () => {
+  const startCropMode = async () => {
     const selectedEl = elements.find(el => el.id === selectedElementId);
-    if (selectedEl && selectedEl.type === 'image' && selectedEl.data?.uri) {
-      setCropImageUri(selectedEl.data.uri);
+    if (selectedEl && selectedEl.type === 'image') {
+      // FIX: Lade Bild aus Datei-Storage wenn URI '__stored__' ist
+      let imageUri = selectedEl.data?.uri;
+      if (imageUri === '__stored__' && selectedEl.data?.imageStorageKey) {
+        console.log('[startCropMode] Loading image from file storage:', selectedEl.data.imageStorageKey);
+        try {
+          const loadedUri = await loadImageFromFile(selectedEl.data.imageStorageKey);
+          if (loadedUri && loadedUri.length > 100) {
+            imageUri = loadedUri;
+          } else {
+            Alert.alert(t('common.error'), 'Das Bild konnte nicht geladen werden.');
+            return;
+          }
+        } catch (err) {
+          console.error('[startCropMode] Error loading image:', err);
+          Alert.alert(t('common.error'), 'Fehler beim Laden des Bildes.');
+          return;
+        }
+      }
+      
+      if (!imageUri || imageUri === '__stored__') {
+        Alert.alert(t('common.error'), 'Kein Bild verfügbar.');
+        return;
+      }
+      
+      setCropImageUri(imageUri);
       setCropImageId(selectedEl.id);
       // Lade die Original-Bildgröße
       RNImage.getSize(
-        selectedEl.data.uri,
+        imageUri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
           // FIX: Verwende dynamische Container-Größe für die Crop-Box-Initialisierung
@@ -2661,18 +2685,42 @@ export default function DrawSketchScreen() {
   };
 
   // Handler für Crop-Modus Touch - sucht Bild an Position und öffnet Modal
-  const handleCropModeTouch = (locationX: number, locationY: number) => {
+  const handleCropModeTouch = async (locationX: number, locationY: number) => {
     // Suche nach einem Bild an dieser Position (onlyImages = true)
     const clickedImage = findElementAtPoint(locationX, locationY, true);
     
-    if (clickedImage && clickedImage.type === 'image' && clickedImage.data?.uri) {
+    if (clickedImage && clickedImage.type === 'image') {
+      // FIX: Lade Bild aus Datei-Storage wenn URI '__stored__' ist
+      let imageUri = clickedImage.data?.uri;
+      if (imageUri === '__stored__' && clickedImage.data?.imageStorageKey) {
+        console.log('[handleCropModeTouch] Loading image from file storage:', clickedImage.data.imageStorageKey);
+        try {
+          const loadedUri = await loadImageFromFile(clickedImage.data.imageStorageKey);
+          if (loadedUri && loadedUri.length > 100) {
+            imageUri = loadedUri;
+          } else {
+            Alert.alert(t('common.error'), 'Das Bild konnte nicht geladen werden.');
+            return;
+          }
+        } catch (err) {
+          console.error('[handleCropModeTouch] Error loading image:', err);
+          Alert.alert(t('common.error'), 'Fehler beim Laden des Bildes.');
+          return;
+        }
+      }
+      
+      if (!imageUri || imageUri === '__stored__') {
+        Alert.alert(t('common.error'), 'Kein Bild verfügbar.');
+        return;
+      }
+      
       // Bild gefunden - Crop-Modal öffnen
-      setCropImageUri(clickedImage.data.uri);
+      setCropImageUri(imageUri);
       setCropImageId(clickedImage.id);
       
       // Lade die Original-Bildgröße
       RNImage.getSize(
-        clickedImage.data.uri,
+        imageUri,
         (imgWidth, imgHeight) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
           // FIX: Verwende dynamische Container-Größe für die Crop-Box-Initialisierung

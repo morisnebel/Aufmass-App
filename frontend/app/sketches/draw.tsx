@@ -2445,8 +2445,10 @@ export default function DrawSketchScreen() {
             }
           };
           saveHeavyDataInBackground();
-        } else if (saveTitle.trim()) {
+        } else if (saveTitle.trim() || elements.length > 0) {
           // NEUE Skizze: Alles synchron speichern, damit sie in der Vorschau erscheint
+          // FIX: Auch ohne Titel speichern wenn Elemente vorhanden sind
+          const finalTitle = saveTitle.trim() || `Skizze ${new Date().toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
           try {
             // Metadata OHNE backgroundImage stringifyen (verhindert OOM bei großen Bildern)
             const lightMetadataForCreate = { ...lightMetadata }; // Verwende lightMetadata (mit extrahierten Bildern)
@@ -2458,7 +2460,7 @@ export default function DrawSketchScreen() {
             
             const newSketch = await SketchService.create({
               project_id: saveProjectId,
-              title: saveTitle,
+              title: finalTitle,
               notes: saveNotes,
               sketch_data: sketchData,
               metadata: JSON.stringify(lightMetadataForCreate),
@@ -2475,10 +2477,11 @@ export default function DrawSketchScreen() {
                     const oldKey = el.data.imageStorageKey;
                     const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
                     console.log('[autoSave] Remapping:', oldKey, '->', newKey);
-                    const imgData = await AsyncStorage.getItem(oldKey);
+                    // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
+                    const imgData = await loadImageFromFile(oldKey);
                     if (imgData) {
-                      remapOps.push(AsyncStorage.setItem(newKey, imgData));
-                      remapOps.push(AsyncStorage.removeItem(oldKey));
+                      remapOps.push(saveImageToFile(newKey, imgData));
+                      remapOps.push(deleteImageFile(oldKey));
                       return { ...el, data: { ...el.data, imageStorageKey: newKey } };
                     } else {
                       console.warn('[autoSave] Image not found for key:', oldKey);
@@ -6801,10 +6804,11 @@ export default function DrawSketchScreen() {
                 const oldKey = el.data.imageStorageKey;
                 const newKey = oldKey.replace('_new_', `_${newSketch.id}_`);
                 console.log('[saveSketch] Remapping:', oldKey, '->', newKey);
-                const imgData = await AsyncStorage.getItem(oldKey);
+                // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
+                const imgData = await loadImageFromFile(oldKey);
                 if (imgData) {
-                  remapOps.push(AsyncStorage.setItem(newKey, imgData));
-                  remapOps.push(AsyncStorage.removeItem(oldKey));
+                  remapOps.push(saveImageToFile(newKey, imgData));
+                  remapOps.push(deleteImageFile(oldKey));
                   return { ...el, data: { ...el.data, imageStorageKey: newKey } };
                 } else {
                   console.warn('[saveSketch] Image not found for key:', oldKey);

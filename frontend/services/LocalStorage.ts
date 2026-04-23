@@ -7,18 +7,30 @@ import * as FileSystem from 'expo-file-system';
 let CloudKitStorage: any = null;
 
 // FIX: Dateibasierte Bildspeicherung für große Bilder (umgeht AsyncStorage-Limits)
-const IMAGE_DIR = `${FileSystem.documentDirectory}images/`;
+// Verwende cacheDirectory als Fallback wenn documentDirectory nicht verfügbar
+const getImageDir = () => {
+  const baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory || '';
+  return `${baseDir}images/`;
+};
+const IMAGE_DIR = getImageDir();
 
 // Initialisiere Image-Verzeichnis
 const initImageDir = async () => {
   try {
-    const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(IMAGE_DIR, { intermediates: true });
-      console.log('[ImageStorage] Created image directory:', IMAGE_DIR);
+    const imageDir = getImageDir();
+    if (!imageDir) {
+      console.error('[ImageStorage] No valid directory available');
+      return false;
     }
+    const dirInfo = await FileSystem.getInfoAsync(imageDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(imageDir, { intermediates: true });
+      console.log('[ImageStorage] Created image directory:', imageDir);
+    }
+    return true;
   } catch (e) {
     console.error('[ImageStorage] Error creating image directory:', e);
+    return false;
   }
 };
 
@@ -28,8 +40,12 @@ initImageDir();
 // Bild als Datei speichern (robuster als AsyncStorage für große Daten)
 const saveImageToFile = async (key: string, base64Data: string): Promise<boolean> => {
   try {
-    await initImageDir();
-    const filePath = `${IMAGE_DIR}${key}.txt`;
+    const dirReady = await initImageDir();
+    if (!dirReady) {
+      throw new Error('Image directory not available');
+    }
+    const imageDir = getImageDir();
+    const filePath = `${imageDir}${key}.txt`;
     await FileSystem.writeAsStringAsync(filePath, base64Data, { encoding: FileSystem.EncodingType.UTF8 });
     console.log(`[ImageStorage] Saved image to file: ${key} (${Math.round(base64Data.length / 1024)}KB)`);
     return true;

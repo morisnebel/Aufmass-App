@@ -642,13 +642,24 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
+  // FIX: Auch photoId tracken - bei neuen Skizzen ist sketchId immer undefined,
+  // aber photoId unterscheidet zwischen verschiedenen neuen Skizzen
+  const lastLoadedPhotoId = useRef<string | null | undefined>(undefined);
+  // FIX TABLET BUG: Visit-Counter für neue Skizzen ohne photoId
+  // Bei jedem Seitenbesuch wird dieser Counter erhöht, um einen Reset zu erzwingen
+  const visitCountRef = useRef(0);
   const isMountedRef = useRef(true);
   
   // Cleanup beim Unmount - verhindert Crashes durch State-Updates nach Navigation
+  // FIX TABLET BUG: Reset tracking refs beim Verlassen, damit nächster Besuch sauber startet
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      // Reset tracking refs beim Unmount - nächste Skizze beginnt mit sauberem State
+      lastLoadedSketchId.current = undefined;
+      lastLoadedPhotoId.current = undefined;
+      visitCountRef.current = 0;
     };
   }, []);
 
@@ -1747,12 +1758,17 @@ export default function DrawSketchScreen() {
   // Load existing sketch when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current);
+      // FIX TABLET BUG: Erhöhe Visit-Counter bei jedem Focus
+      // Dies ermöglicht Erkennung von mehreren neuen Skizzen ohne sketchId/photoId
+      visitCountRef.current += 1;
+      const currentVisit = visitCountRef.current;
+      
+      console.log('useFocusEffect triggered, visit:', currentVisit, 'sketchId:', sketchId, 'photoId:', photoId, 'lastLoaded:', lastLoadedSketchId.current, 'lastPhotoId:', lastLoadedPhotoId.current);
       
       // IMMER den State für die aktuelle Skizze initialisieren
       // Dies verhindert, dass alte Daten aus vorherigen Skizzen angezeigt werden
       const resetToCleanState = () => {
-        console.log('Resetting to clean state for new/different sketch');
+        console.log('Resetting to clean state for new/different sketch (visit:', currentVisit, ')');
         setLineSegmentMeasurements({});
         setSelectedLineSegment(null);
         setElements([]);
@@ -1767,13 +1783,22 @@ export default function DrawSketchScreen() {
         initialImageAdded.current = false;
       };
       
-      // Prüfen, ob sich die Skizze geändert hat
-      if (lastLoadedSketchId.current !== sketchId) {
-        console.log('Sketch ID changed from', lastLoadedSketchId.current, 'to', sketchId);
+      // FIX TABLET BUG: Prüfen ob sich die Skizze ODER das Foto geändert hat
+      // Bei neuen Skizzen ist sketchId immer undefined, also müssen wir auch photoId prüfen
+      // Zusätzlich: Bei visit > 1 UND keiner sketchId → immer Reset (neue Skizze nach Speichern)
+      const sketchChanged = lastLoadedSketchId.current !== sketchId;
+      const photoChanged = lastLoadedPhotoId.current !== photoId;
+      // Neue Skizze ohne photoId: Reset wenn bereits etwas geladen war
+      const isNewSketchWithoutPhoto = !sketchId && !photoId && lastLoadedSketchId.current !== undefined;
+      const needsReset = sketchChanged || (photoChanged && !sketchId) || isNewSketchWithoutPhoto;
+      
+      if (needsReset) {
+        console.log('Sketch/Photo changed - sketchChanged:', sketchChanged, 'photoChanged:', photoChanged, 'isNewSketchWithoutPhoto:', isNewSketchWithoutPhoto);
         
         // Immer zuerst reset, dann laden falls nötig
         resetToCleanState();
         lastLoadedSketchId.current = sketchId;
+        lastLoadedPhotoId.current = photoId;
         
         // Existierende Skizze laden, wenn vorhanden
         if (sketchId) {
@@ -1784,7 +1809,7 @@ export default function DrawSketchScreen() {
         // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
         console.log('useFocusEffect: Re-focused on same sketch', sketchId);
       }
-    }, [sketchId])
+    }, [sketchId, photoId])
   );
 
   const loadSketch = async () => {

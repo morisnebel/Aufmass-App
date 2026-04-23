@@ -1,9 +1,99 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 
 // CloudKit storage disabled for now - using AsyncStorage only
 // The iCloud integration requires additional native configuration
 let CloudKitStorage: any = null;
+
+// FIX: Dateibasierte Bildspeicherung für große Bilder (umgeht AsyncStorage-Limits)
+const IMAGE_DIR = `${FileSystem.documentDirectory}images/`;
+
+// Initialisiere Image-Verzeichnis
+const initImageDir = async () => {
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(IMAGE_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(IMAGE_DIR, { intermediates: true });
+      console.log('[ImageStorage] Created image directory:', IMAGE_DIR);
+    }
+  } catch (e) {
+    console.error('[ImageStorage] Error creating image directory:', e);
+  }
+};
+
+// Rufe initImageDir beim Import auf
+initImageDir();
+
+// Bild als Datei speichern (robuster als AsyncStorage für große Daten)
+const saveImageToFile = async (key: string, base64Data: string): Promise<boolean> => {
+  try {
+    await initImageDir();
+    const filePath = `${IMAGE_DIR}${key}.txt`;
+    await FileSystem.writeAsStringAsync(filePath, base64Data, { encoding: FileSystem.EncodingType.UTF8 });
+    console.log(`[ImageStorage] Saved image to file: ${key} (${Math.round(base64Data.length / 1024)}KB)`);
+    return true;
+  } catch (e) {
+    console.error(`[ImageStorage] Error saving image to file ${key}:`, e);
+    // Fallback zu AsyncStorage
+    try {
+      await AsyncStorage.setItem(key, base64Data);
+      console.log(`[ImageStorage] Fallback: Saved to AsyncStorage: ${key}`);
+      return true;
+    } catch (e2) {
+      console.error(`[ImageStorage] Fallback also failed for ${key}:`, e2);
+      return false;
+    }
+  }
+};
+
+// Bild aus Datei laden
+const loadImageFromFile = async (key: string): Promise<string | null> => {
+  try {
+    const filePath = `${IMAGE_DIR}${key}.txt`;
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    if (fileInfo.exists) {
+      const data = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.UTF8 });
+      console.log(`[ImageStorage] Loaded image from file: ${key} (${Math.round(data.length / 1024)}KB)`);
+      return data;
+    }
+  } catch (e) {
+    console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
+  }
+  
+  // Fallback zu AsyncStorage (für alte Daten)
+  try {
+    const data = await AsyncStorage.getItem(key);
+    if (data) {
+      console.log(`[ImageStorage] Loaded from AsyncStorage: ${key}`);
+      // Migriere zu Datei für zukünftige Zugriffe
+      saveImageToFile(key, data).catch(() => {});
+    }
+    return data;
+  } catch (e) {
+    console.error(`[ImageStorage] Error loading ${key}:`, e);
+    return null;
+  }
+};
+
+// Bild-Datei löschen
+const deleteImageFile = async (key: string): Promise<void> => {
+  try {
+    const filePath = `${IMAGE_DIR}${key}.txt`;
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(filePath);
+    }
+  } catch (e) {
+    console.log(`[ImageStorage] Error deleting file ${key}:`, e);
+  }
+  // Auch aus AsyncStorage löschen (falls dort noch vorhanden)
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (e) {
+    // Ignorieren
+  }
+};
 
 // Storage Keys
 const KEYS = {
@@ -248,15 +338,16 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
   const roofs = (allData.get(KEYS.ROOFS) || []).filter((r: any) => r.project_id === projectId);
   const photos = (allData.get(KEYS.PHOTOS) || []).filter((p: any) => p.project_id === projectId);
   
-  // Bilddaten separat laden (neue Speicherstruktur: photo_img_${id})
-  // FIX: Lade Fotos einzeln statt mit multiGet (Android hat Limits bei multiGet)
+  // Bilddaten separat laden (neue Speicherstruktur: Datei statt AsyncStorage)
+  // FIX: Lade Fotos einzeln aus Datei (umgeht AsyncStorage-Limits auf Samsung/Android)
   if (photos.length > 0) {
     const migrationOps: Promise<any>[] = [];
     
     for (let i = 0; i < photos.length; i++) {
       const photoId = photos[i].id;
       try {
-        const imageData = await AsyncStorage.getItem(`photo_img_${photoId}`);
+        // Primär: Aus Datei laden
+        const imageData = await loadImageFromFile(`photo_img_${photoId}`);
         if (imageData && imageData.length > 100) {
           photos[i].image_data = imageData;
           photos[i].uri = imageData;
@@ -267,9 +358,9 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
             console.log(`[loadAllProjectDataFast] Using inline data for photo ${photoId}`);
             photos[i].image_data = inlineData;
             photos[i].uri = inlineData;
-            // Queue migration to separate storage
+            // Queue migration to file storage
             migrationOps.push(
-              AsyncStorage.setItem(`photo_img_${photoId}`, inlineData).catch(err => 
+              saveImageToFile(`photo_img_${photoId}`, inlineData).catch(err => 
                 console.error(`[loadAllProjectDataFast] Migration error for photo ${photoId}:`, err)
               )
             );
@@ -291,7 +382,7 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     // Run migrations in background
     if (migrationOps.length > 0) {
       Promise.all(migrationOps).then(() => {
-        console.log(`[loadAllProjectDataFast] Migrated ${migrationOps.length} photos to separate storage`);
+        console.log(`[loadAllProjectDataFast] Migrated ${migrationOps.length} photos to file storage`);
       });
     }
   }
@@ -1141,20 +1232,14 @@ export const PhotoService = {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const photo = photos.find(p => p.id === id) || null;
     if (photo) {
-      // Bilddaten separat laden (OOM-Schutz)
-      const imageData = await storage.getItem(`photo_img_${id}`);
+      // FIX: Bilddaten aus Datei laden (primär) oder AsyncStorage (Fallback)
+      const imageData = await loadImageFromFile(`photo_img_${id}`);
       if (imageData) {
         photo.image_data = imageData;
         photo.uri = imageData;
       } else if (!photo.image_data && !photo.uri) {
         // Kein separates Bild und kein Inline-Bild → kein Bild verfügbar
-      }
-      // Migration: Wenn Bild noch im Array steckt, separat speichern und Array bereinigen
-      if ((photo.image_data || photo.uri) && !imageData) {
-        const inlineImg = photo.image_data || photo.uri || '';
-        if (inlineImg.length > 100) { // Nur echte base64-Daten migrieren
-          await storage.setItem(`photo_img_${id}`, inlineImg);
-        }
+        console.warn(`[PhotoService.getById] No image data for photo ${id}`);
       }
     }
     return photo;
@@ -1163,20 +1248,20 @@ export const PhotoService = {
   getByProjectId: async (projectId: string): Promise<Photo[]> => {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const projectPhotos = photos.filter(p => p.project_id === projectId);
-    // Bilddaten separat laden für jedes Foto (einzeln, nicht alle auf einmal!)
+    // FIX: Bilddaten aus DATEI laden für jedes Foto (nicht AsyncStorage - umgeht Limits)
     for (const photo of projectPhotos) {
       try {
-        const imageData = await storage.getItem(`photo_img_${photo.id}`);
+        const imageData = await loadImageFromFile(`photo_img_${photo.id}`);
         if (imageData) {
           photo.image_data = imageData;
           photo.uri = imageData;
         } else if (photo.image_data && photo.image_data.length > 100) {
           // Migration: Altes Foto hat Bilddaten noch im Array
-          // Separat speichern für zukünftige Nutzung
-          await storage.setItem(`photo_img_${photo.id}`, photo.image_data);
+          // Als Datei speichern für zukünftige Nutzung
+          await saveImageToFile(`photo_img_${photo.id}`, photo.image_data);
         } else if (photo.uri && photo.uri.length > 100) {
           photo.image_data = photo.uri;
-          await storage.setItem(`photo_img_${photo.id}`, photo.uri);
+          await saveImageToFile(`photo_img_${photo.id}`, photo.uri);
         }
       } catch (e) {
         console.error(`Error loading image for photo ${photo.id}:`, e);
@@ -1189,10 +1274,14 @@ export const PhotoService = {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const newId = generateId();
     
-    // Bilddaten SEPARAT speichern (verhindert OOM bei JSON.stringify des Arrays)
+    // FIX: Bilddaten als DATEI speichern (nicht AsyncStorage - umgeht Limits auf Samsung/Android)
     const imageData = data.image_data || data.uri || '';
-    if (imageData) {
-      await storage.setItem(`photo_img_${newId}`, imageData);
+    if (imageData && imageData.length > 100) {
+      const success = await saveImageToFile(`photo_img_${newId}`, imageData);
+      if (!success) {
+        console.error(`[PhotoService.create] Failed to save image for photo ${newId}`);
+        // Trotzdem fortfahren - Metadaten werden gespeichert
+      }
     }
     
     // MIGRATION: Alte Fotos mit Inline-Bilddaten ebenfalls migrieren
@@ -1200,11 +1289,11 @@ export const PhotoService = {
     for (const existingPhoto of photos) {
       const inlineData = existingPhoto.image_data || existingPhoto.uri || '';
       if (inlineData.length > 200) {
-        // Bilddaten separat speichern (falls noch nicht geschehen)
+        // Bilddaten als Datei speichern (falls noch nicht geschehen)
         try {
-          const alreadyMigrated = await storage.getItem(`photo_img_${existingPhoto.id}`);
+          const alreadyMigrated = await loadImageFromFile(`photo_img_${existingPhoto.id}`);
           if (!alreadyMigrated) {
-            await storage.setItem(`photo_img_${existingPhoto.id}`, inlineData);
+            await saveImageToFile(`photo_img_${existingPhoto.id}`, inlineData);
           }
         } catch (e) {
           console.error(`Migration error for photo ${existingPhoto.id}:`, e);
@@ -1257,15 +1346,18 @@ export const PhotoService = {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const filtered = photos.filter(p => p.id !== id);
     await setItems(KEYS.PHOTOS, filtered);
-    // Auch die separat gespeicherten Bilddaten löschen
+    // FIX: Bild aus Datei UND AsyncStorage löschen
     try {
-      await AsyncStorage.removeItem(`photo_img_${id}`);
+      await deleteImageFile(`photo_img_${id}`);
     } catch (e) {
       console.log(`Error removing photo image ${id}:`, e);
     }
     return true;
   },
 };
+
+// Exportiere Image-Storage-Funktionen für externe Nutzung (z.B. Skizzen)
+export { saveImageToFile, loadImageFromFile, deleteImageFile };
 
 // ============ ROOFS ============
 export interface Roof {

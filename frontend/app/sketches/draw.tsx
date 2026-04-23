@@ -28,7 +28,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
 import PdfThumbnail from '../../utils/PdfThumbnailShim';
-import { SketchService, PhotoService } from '../../services/LocalStorage';
+import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
@@ -1827,18 +1827,19 @@ export default function DrawSketchScreen() {
             console.log('Setting elements:', metadata.elements.length, 'elements');
             console.log('Element IDs:', metadata.elements.map((e: any) => e.id + ' (' + e.type + ')').join(', '));
             
-            // FIX: Restore image URIs from separate storage BEFORE setting elements
+            // FIX: Restore image URIs from FILE storage (primär) oder AsyncStorage (Fallback)
             const restoredElements = await Promise.all(
               metadata.elements.map(async (el: any) => {
                 if (el.type === 'image' && el.data?.uri === '__stored__' && el.data?.imageStorageKey) {
                   console.log(`[loadSketch] Restoring image from storage: ${el.data.imageStorageKey}`);
                   try {
-                    const uri = await AsyncStorage.getItem(el.data.imageStorageKey);
+                    // Primär: Aus Datei laden (umgeht AsyncStorage-Limits)
+                    const uri = await loadImageFromFile(el.data.imageStorageKey);
                     if (uri && uri.length > 100) {
                       console.log(`[loadSketch] Image restored successfully, length: ${uri.length}`);
                       return { ...el, data: { ...el.data, uri } };
                     } else {
-                      console.warn(`[loadSketch] Image not found or empty for key: ${el.data.imageStorageKey}`);
+                      console.warn(`[loadSketch] Image not found for key: ${el.data.imageStorageKey}`);
                     }
                   } catch (err) {
                     console.error(`[loadSketch] Error loading image ${el.data.imageStorageKey}:`, err);
@@ -2384,16 +2385,16 @@ export default function DrawSketchScreen() {
         const saveBgChanged = backgroundImageChangedRef.current;
         const saveBgImage = backgroundImage;
 
-        // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
+        // FIX: Bild-URIs aus Elementen extrahieren und als DATEI speichern (umgeht AsyncStorage-Limits)
         const extractedImageOps: Promise<any>[] = [];
         const lightElements = metadata.elements.map((el: any) => {
           if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
-            // Speichere das Bild separat
+            // Speichere das Bild als DATEI (nicht AsyncStorage!)
             const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
             extractedImageOps.push(
-              AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
-                console.error('Error saving image element:', err)
-              )
+              saveImageToFile(imageKey, el.data.uri).then(success => {
+                if (!success) console.error(`[autoSave] Failed to save image ${imageKey}`);
+              })
             );
             // Ersetze die URI durch einen Verweis auf den Speicherkey
             return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
@@ -6713,15 +6714,15 @@ export default function DrawSketchScreen() {
       const t1 = Date.now();
       console.log('Preview generated in', t1 - startTime, 'ms');
 
-      // Bild-URIs aus Elementen extrahieren und separat speichern (verhindert JSON.parse OOM crash)
+      // FIX: Bild-URIs aus Elementen extrahieren und als DATEI speichern (umgeht AsyncStorage-Limits)
       const imageOps: Promise<any>[] = [];
       const lightElementsForSave = metadata.elements.map((el: any) => {
         if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
           const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
           imageOps.push(
-            AsyncStorage.setItem(imageKey, el.data.uri).catch(err => 
-              console.error('Error saving image element:', err)
-            )
+            saveImageToFile(imageKey, el.data.uri).then(success => {
+              if (!success) console.error(`[saveSketch] Failed to save image ${imageKey}`);
+            })
           );
           return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
         }

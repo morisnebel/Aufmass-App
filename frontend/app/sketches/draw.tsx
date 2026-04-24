@@ -2448,10 +2448,13 @@ export default function DrawSketchScreen() {
 
         // FIX: Bild-URIs aus Elementen extrahieren und als DATEI speichern (umgeht AsyncStorage-Limits)
         const extractedImageOps: Promise<any>[] = [];
+        // FIX TABLET BUG: Verwende eindeutigen temporären Prefix für neue Skizzen
+        // Dies verhindert Kollisionen wenn mehrere neue Skizzen nacheinander erstellt werden
+        const tempSketchPrefix = saveSketchId || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const lightElements = metadata.elements.map((el: any) => {
           if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
             // Speichere das Bild als DATEI (nicht AsyncStorage!)
-            const imageKey = `sketch_img_${saveSketchId}_${el.id}`;
+            const imageKey = `sketch_img_${tempSketchPrefix}_${el.id}`;
             extractedImageOps.push(
               saveImageToFile(imageKey, el.data.uri).then(success => {
                 if (!success) console.error(`[autoSave] Failed to save image ${imageKey}`);
@@ -2534,7 +2537,7 @@ export default function DrawSketchScreen() {
               pdf_size: savePdfSize,
             });
             
-            // FIX: Image-Keys von 'undefined' auf die echte Sketch-ID ummappen
+            // FIX TABLET BUG: Image-Keys vom temporären Prefix auf die echte Sketch-ID ummappen
             if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
               console.log('[autoSave] Migrating image keys to new sketch ID:', newSketch.id);
               
@@ -2557,9 +2560,11 @@ export default function DrawSketchScreen() {
               try {
                 const remapOps: Promise<any>[] = [];
                 const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
-                  if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_undefined_')) {
+                  // FIX TABLET BUG: Suche nach dem temporären Prefix (temp_timestamp_random)
+                  if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_temp_')) {
                     const oldKey = el.data.imageStorageKey;
-                    const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
+                    // Ersetze das temporäre Prefix durch die echte Sketch-ID
+                    const newKey = oldKey.replace(/_temp_[^_]+_[^_]+_/, `_${newSketch.id}_`);
                     console.log('[autoSave] Remapping:', oldKey, '->', newKey);
                     // FIX: Verwende Retry-Logik für Tablets
                     const imgData = await loadWithRetry(oldKey);
@@ -6853,9 +6858,11 @@ export default function DrawSketchScreen() {
 
       // FIX: Bild-URIs aus Elementen extrahieren und als DATEI speichern (umgeht AsyncStorage-Limits)
       const imageOps: Promise<any>[] = [];
+      // FIX TABLET BUG: Verwende eindeutigen temporären Prefix für neue Skizzen
+      const tempSketchPrefixForSave = sketchId || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const lightElementsForSave = metadata.elements.map((el: any) => {
         if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
-          const imageKey = `sketch_img_${sketchId || 'new'}_${el.id}`;
+          const imageKey = `sketch_img_${tempSketchPrefixForSave}_${el.id}`;
           imageOps.push(
             saveImageToFile(imageKey, el.data.uri).then(success => {
               if (!success) console.error(`[saveSketch] Failed to save image ${imageKey}`);
@@ -6928,15 +6935,15 @@ export default function DrawSketchScreen() {
           pdf_size: pdfSize,
         });
         
-        // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
+        // FIX TABLET BUG: Image-Keys vom temporären Prefix auf die echte Sketch-ID ummappen
         if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
           console.log('[saveSketch] Migrating image keys to new sketch ID:', newSketch.id);
           try {
             const remapOps: Promise<any>[] = [];
             const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
-              if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_new_')) {
+              if (el.type === 'image' && el.data?.imageStorageKey && el.data.imageStorageKey.includes('_temp_')) {
                 const oldKey = el.data.imageStorageKey;
-                const newKey = oldKey.replace('_new_', `_${newSketch.id}_`);
+                const newKey = oldKey.replace(/_temp_[^_]+_[^_]+_/, `_${newSketch.id}_`);
                 console.log('[saveSketch] Remapping:', oldKey, '->', newKey);
                 // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
                 const imgData = await loadImageFromFile(oldKey);

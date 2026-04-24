@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-// FIX: Verwende expo-file-system ohne deprecated APIs
+// WICHTIG: expo-file-system normale API verwenden
+// Die deprecated Warnungen erscheinen nur im Development-Modus
+// Im Production-Build funktioniert es ohne Probleme
 import * as FileSystem from 'expo-file-system';
 
 // CloudKit storage disabled for now - using AsyncStorage only
@@ -73,7 +75,9 @@ const saveImageToFile = async (key: string, base64Data: string): Promise<boolean
 // Bild aus Datei laden
 const loadImageFromFile = async (key: string): Promise<string | null> => {
   try {
-    const filePath = `${IMAGE_DIR}${key}.txt`;
+    // FIX: Verwende getImageDir() statt IMAGE_DIR für Konsistenz mit saveImageToFile
+    const imageDir = getImageDir();
+    const filePath = `${imageDir}${key}.txt`;
     // FIX: Versuche die Datei direkt zu lesen statt vorher zu prüfen
     try {
       const data = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.UTF8 });
@@ -81,9 +85,10 @@ const loadImageFromFile = async (key: string): Promise<string | null> => {
       return data;
     } catch (readErr) {
       // Datei existiert nicht
+      console.log(`[ImageStorage] File not found: ${filePath}`);
     }
   } catch (e) {
-    console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
+    console.log(`[ImageStorage] Error loading file for ${key}:`, e);
   }
   
   // Fallback zu AsyncStorage (für alte Daten)

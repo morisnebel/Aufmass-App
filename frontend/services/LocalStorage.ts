@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+// FIX: Verwende expo-file-system ohne deprecated APIs
 import * as FileSystem from 'expo-file-system';
 
 // CloudKit storage disabled for now - using AsyncStorage only
@@ -22,10 +23,16 @@ const initImageDir = async () => {
       console.error('[ImageStorage] No valid directory available');
       return false;
     }
-    const dirInfo = await FileSystem.getInfoAsync(imageDir);
-    if (!dirInfo.exists) {
+    // FIX: Versuche das Verzeichnis zu erstellen ohne vorher zu prüfen ob es existiert
+    // makeDirectoryAsync mit intermediates: true erstellt das Verzeichnis nur wenn nötig
+    try {
       await FileSystem.makeDirectoryAsync(imageDir, { intermediates: true });
-      console.log('[ImageStorage] Created image directory:', imageDir);
+      console.log('[ImageStorage] Created/verified image directory:', imageDir);
+    } catch (mkdirErr: any) {
+      // Ignoriere "already exists" Fehler
+      if (!mkdirErr.message?.includes('already exists') && !mkdirErr.message?.includes('File exists')) {
+        throw mkdirErr;
+      }
     }
     return true;
   } catch (e) {
@@ -67,11 +74,13 @@ const saveImageToFile = async (key: string, base64Data: string): Promise<boolean
 const loadImageFromFile = async (key: string): Promise<string | null> => {
   try {
     const filePath = `${IMAGE_DIR}${key}.txt`;
-    const fileInfo = await FileSystem.getInfoAsync(filePath);
-    if (fileInfo.exists) {
+    // FIX: Versuche die Datei direkt zu lesen statt vorher zu prüfen
+    try {
       const data = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.UTF8 });
       console.log(`[ImageStorage] Loaded image from file: ${key} (${Math.round(data.length / 1024)}KB)`);
       return data;
+    } catch (readErr) {
+      // Datei existiert nicht
     }
   } catch (e) {
     console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
@@ -96,9 +105,12 @@ const loadImageFromFile = async (key: string): Promise<string | null> => {
 const deleteImageFile = async (key: string): Promise<void> => {
   try {
     const filePath = `${IMAGE_DIR}${key}.txt`;
-    const fileInfo = await FileSystem.getInfoAsync(filePath);
-    if (fileInfo.exists) {
+    // FIX: Versuche direkt zu löschen ohne vorher zu prüfen
+    try {
       await FileSystem.deleteAsync(filePath);
+      console.log(`[ImageStorage] Deleted file: ${key}`);
+    } catch (deleteErr) {
+      // Datei existiert nicht - ignorieren
     }
   } catch (e) {
     console.log(`[ImageStorage] Error deleting file ${key}:`, e);

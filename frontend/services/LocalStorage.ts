@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-// FIX: Verwende legacy API für expo-file-system (SDK 54 Kompatibilität)
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 
 // CloudKit storage disabled for now - using AsyncStorage only
 // The iCloud integration requires additional native configuration
@@ -23,15 +22,10 @@ const initImageDir = async () => {
       console.error('[ImageStorage] No valid directory available');
       return false;
     }
-    // FIX: Verwende try-catch für Directory-Check statt getInfoAsync
-    try {
+    const dirInfo = await FileSystem.getInfoAsync(imageDir);
+    if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(imageDir, { intermediates: true });
-      console.log('[ImageStorage] Created/verified image directory:', imageDir);
-    } catch (dirError: any) {
-      // Directory existiert bereits - das ist OK
-      if (!dirError.message?.includes('already exists') && !dirError.message?.includes('File exists')) {
-        throw dirError;
-      }
+      console.log('[ImageStorage] Created image directory:', imageDir);
     }
     return true;
   } catch (e) {
@@ -73,17 +67,14 @@ const saveImageToFile = async (key: string, base64Data: string): Promise<boolean
 const loadImageFromFile = async (key: string): Promise<string | null> => {
   try {
     const filePath = `${IMAGE_DIR}${key}.txt`;
-    // FIX: Verwende try-catch statt getInfoAsync für File-Check
-    try {
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    if (fileInfo.exists) {
       const data = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.UTF8 });
       console.log(`[ImageStorage] Loaded image from file: ${key} (${Math.round(data.length / 1024)}KB)`);
       return data;
-    } catch (readError) {
-      // Datei existiert nicht - das ist OK, versuche AsyncStorage
-      console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
     }
   } catch (e) {
-    console.log(`[ImageStorage] Error reading file for ${key}, trying AsyncStorage`);
+    console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
   }
   
   // Fallback zu AsyncStorage (für alte Daten)
@@ -105,11 +96,9 @@ const loadImageFromFile = async (key: string): Promise<string | null> => {
 const deleteImageFile = async (key: string): Promise<void> => {
   try {
     const filePath = `${IMAGE_DIR}${key}.txt`;
-    // FIX: Verwende try-catch statt getInfoAsync für File-Check
-    try {
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+    if (fileInfo.exists) {
       await FileSystem.deleteAsync(filePath);
-    } catch (deleteError) {
-      // Datei existiert nicht - das ist OK
     }
   } catch (e) {
     console.log(`[ImageStorage] Error deleting file ${key}:`, e);
@@ -1057,12 +1046,6 @@ export const SketchService = {
   },
 
   create: async (data: Omit<Sketch, 'id' | 'created_at' | 'updated_at'>): Promise<Sketch> => {
-    // FIX TABLET: Validiere project_id BEVOR die Skizze erstellt wird
-    if (!data.project_id) {
-      console.error('[SketchService.create] CRITICAL: project_id is undefined or empty!');
-      throw new Error('project_id is required to create a sketch');
-    }
-    
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const id = generateId();
 

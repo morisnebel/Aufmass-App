@@ -319,6 +319,8 @@ export default function DrawSketchScreen() {
     : params.backgroundImageUri;
   // Get photo ID for loading from LocalStorage (faster than passing base64 via URL)
   const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
+  // FIX TABLET BUG: Eindeutiger Key für jede neue Skizze - ermöglicht Reset-Erkennung
+  const newSketchKey = Array.isArray(params.newSketchKey) ? params.newSketchKey[0] : params.newSketchKey;
   
   // iPhone-Erkennung für responsive Layout
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -380,8 +382,7 @@ export default function DrawSketchScreen() {
   // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   // Zoom-Modus: manuell gesteuert über Lupe-Button
-  // FIX: Standard auf false, damit grüner Button "Zoom aktivieren" bedeutet
-  const [zoomMode, setZoomMode] = useState(false);
+  const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -516,109 +517,80 @@ export default function DrawSketchScreen() {
   };
 
   // Funktion um ein Projektfoto als Bild-Element einzufügen
-  const insertProjectPhoto = async (photo: any) => {
+  const insertProjectPhoto = (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
     if (!imageUri) {
       Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
     }
     
-    try {
-      // FIX: Komprimiere das Bild vor dem Einfügen, um Speicherprobleme zu vermeiden
-      // Große Bilder können das Speicherlimit überschreiten
-      console.log('[insertProjectPhoto] Original image size:', Math.round(imageUri.length / 1024), 'KB');
-      
-      let finalUri = imageUri;
-      
-      // Wenn das Bild größer als 500KB ist, komprimieren
-      if (imageUri.length > 500000) {
-        console.log('[insertProjectPhoto] Compressing large image...');
-        try {
-          const manipResult = await ImageManipulator.manipulateAsync(
-            imageUri,
-            [{ resize: { width: 1200 } }], // Max 1200px Breite
-            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-          );
-          finalUri = `data:image/jpeg;base64,${manipResult.base64}`;
-          console.log('[insertProjectPhoto] Compressed image size:', Math.round(finalUri.length / 1024), 'KB');
-        } catch (compressError) {
-          console.error('[insertProjectPhoto] Compression failed, using original:', compressError);
+    // Berechne korrektes Seitenverhältnis des Bildes
+    RNImage.getSize(
+      imageUri,
+      (imgWidth, imgHeight) => {
+        // Maximale Größe im Canvas
+        const maxWidth = 400;
+        const maxHeight = 300;
+        const aspectRatio = imgWidth / imgHeight;
+        
+        let finalWidth, finalHeight;
+        if (aspectRatio > maxWidth / maxHeight) {
+          // Bild ist breiter - begrenzen durch Breite
+          finalWidth = maxWidth;
+          finalHeight = maxWidth / aspectRatio;
+        } else {
+          // Bild ist höher - begrenzen durch Höhe
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
         }
+        
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: finalWidth,
+          height: finalHeight,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        // Automatisch Foto-Bearbeiten Modus aktivieren
+        setPhotoEditMode(true);
+        selectDrawMode('select');
+      },
+      (error) => {
+        console.error('Error getting image size:', error);
+        // Fallback: Füge mit Standardgrößen ein
+        const imageElement: DrawElement = {
+          id: generateId(),
+          type: 'image',
+          data: { uri: imageUri },
+          color: '#000000',
+          strokeWidth: 0,
+          x: 50,
+          y: 50,
+          width: 300,
+          height: 200,
+          rotation: 0,
+        };
+        
+        const newElements = [...elements, imageElement];
+        addToHistory(newElements);
+        setElements(newElements);
+        setSelectedElementId(imageElement.id);
+        setShowProjectPhotosModal(false);
+        setPhotoEditMode(true);
+        selectDrawMode('select');
       }
-      
-      // FIX: Wrap RNImage.getSize in Promise um Race Conditions zu vermeiden
-      const getImageSize = (uri: string): Promise<{width: number, height: number}> => {
-        return new Promise((resolve, reject) => {
-          RNImage.getSize(uri, 
-            (width, height) => resolve({width, height}),
-            (error) => reject(error)
-          );
-        });
-      };
-      
-      let imgWidth = 300, imgHeight = 200;
-      try {
-        const size = await getImageSize(finalUri);
-        imgWidth = size.width;
-        imgHeight = size.height;
-      } catch (sizeError) {
-        console.error('[insertProjectPhoto] Error getting image size, using defaults:', sizeError);
-      }
-      
-      // Maximale Größe im Canvas
-      const maxWidth = 400;
-      const maxHeight = 300;
-      const aspectRatio = imgWidth / imgHeight;
-      
-      let finalWidth, finalHeight;
-      if (aspectRatio > maxWidth / maxHeight) {
-        finalWidth = maxWidth;
-        finalHeight = maxWidth / aspectRatio;
-      } else {
-        finalHeight = maxHeight;
-        finalWidth = maxHeight * aspectRatio;
-      }
-      
-      const imageElement: DrawElement = {
-        id: generateId(),
-        type: 'image',
-        data: { uri: finalUri },
-        color: '#000000',
-        strokeWidth: 0,
-        x: 50,
-        y: 50,
-        width: finalWidth,
-        height: finalHeight,
-        rotation: 0,
-      };
-      
-      // FIX RACE CONDITION: Verwende functional state update statt closure
-      // Das verhindert, dass schnelle Einfügungen sich gegenseitig überschreiben
-      setElements(prevElements => {
-        const newElements = [...prevElements, imageElement];
-        // addToHistory muss separat aufgerufen werden
-        return newElements;
-      });
-      
-      // History separat updaten (nach dem State-Update)
-      setTimeout(() => {
-        setElements(current => {
-          addToHistory(current);
-          return current;
-        });
-      }, 0);
-      
-      setSelectedElementId(imageElement.id);
-      setShowProjectPhotosModal(false);
-      setPhotoEditMode(true);
-      selectDrawMode('select');
-      
-      console.log('[insertProjectPhoto] Image inserted successfully');
-      
-    } catch (error) {
-      console.error('[insertProjectPhoto] Error:', error);
-      Alert.alert(t('common.error'), 'Fehler beim Einfügen des Bildes');
-    }
+    );
   };
   
   // Kästchenpapier Hintergrund
@@ -672,19 +644,27 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
-  // FIX TABLET: Timestamp der letzten Fokussierung - ermöglicht Reset-Erkennung auch ohne Unmount
-  const lastFocusTimestamp = useRef<number>(0);
+  // FIX: Auch photoId tracken - bei neuen Skizzen ist sketchId immer undefined,
+  // aber photoId unterscheidet zwischen verschiedenen neuen Skizzen
+  const lastLoadedPhotoId = useRef<string | null | undefined>(undefined);
+  // FIX TABLET BUG: newSketchKey tracken - eindeutiger Key für jede neue Skizze
+  const lastNewSketchKey = useRef<string | null | undefined>(undefined);
+  // FIX TABLET BUG: Visit-Counter für neue Skizzen ohne photoId
+  // Bei jedem Seitenbesuch wird dieser Counter erhöht, um einen Reset zu erzwingen
+  const visitCountRef = useRef(0);
   const isMountedRef = useRef(true);
   
   // Cleanup beim Unmount - verhindert Crashes durch State-Updates nach Navigation
-  // FIX TABLET: Reset lastLoadedSketchId beim Unmount, damit nächste Skizze sauber startet
+  // FIX TABLET BUG: Reset tracking refs beim Verlassen, damit nächster Besuch sauber startet
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // WICHTIG: Reset des Tracking-Refs beim Verlassen
-      // Ohne dies erkennt useFocusEffect auf Tablets keine neue Skizze
-      lastLoadedSketchId.current = null; // null statt undefined um Unterschied zu erkennen
+      // Reset tracking refs beim Unmount - nächste Skizze beginnt mit sauberem State
+      lastLoadedSketchId.current = undefined;
+      lastLoadedPhotoId.current = undefined;
+      lastNewSketchKey.current = undefined;
+      visitCountRef.current = 0;
     };
   }, []);
 
@@ -705,6 +685,17 @@ export default function DrawSketchScreen() {
   useEffect(() => {
     currentSketchIdRef.current = sketchId;
   }, [sketchId]);
+  
+  // FIX TABLET BUG V3: Track ob wir bereits eine Skizze bearbeitet haben
+  // Wenn die Parameter sich ändern (neue Navigation), müssen wir den "dirty" state prüfen
+  const hasEditedCurrentSketchRef = useRef(false);
+  
+  // Markiere als "dirty" wenn Elemente hinzugefügt werden
+  useEffect(() => {
+    if (elements.length > 0 && !sketchId) {
+      hasEditedCurrentSketchRef.current = true;
+    }
+  }, [elements.length, sketchId]);
   
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
@@ -1778,21 +1769,22 @@ export default function DrawSketchScreen() {
       const decodedUri = decodeURIComponent(backgroundImageUri);
       addImageElement(decodedUri);
     }
-  }, [backgroundImageUri, photoId, sketchId]);
+  }, [backgroundImageUri, photoId, sketchId, newSketchKey]); // FIX: newSketchKey hinzugefügt für Tablet-Kompatibilität
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      const currentTime = Date.now();
-      const timeSinceLastFocus = currentTime - lastFocusTimestamp.current;
+      // FIX TABLET BUG: Erhöhe Visit-Counter bei jedem Focus
+      // Dies ermöglicht Erkennung von mehreren neuen Skizzen ohne sketchId/photoId
+      visitCountRef.current += 1;
+      const currentVisit = visitCountRef.current;
       
-      console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current, 
-                  'timeSinceLastFocus:', timeSinceLastFocus, 'ms');
+      console.log('useFocusEffect triggered, visit:', currentVisit, 'sketchId:', sketchId, 'photoId:', photoId, 'newSketchKey:', newSketchKey, 'lastLoaded:', lastLoadedSketchId.current, 'lastPhotoId:', lastLoadedPhotoId.current, 'lastNewSketchKey:', lastNewSketchKey.current);
       
       // IMMER den State für die aktuelle Skizze initialisieren
       // Dies verhindert, dass alte Daten aus vorherigen Skizzen angezeigt werden
       const resetToCleanState = () => {
-        console.log('Resetting to clean state for new/different sketch');
+        console.log('Resetting to clean state for new/different sketch (visit:', currentVisit, ')');
         setLineSegmentMeasurements({});
         setSelectedLineSegment(null);
         setElements([]);
@@ -1805,41 +1797,55 @@ export default function DrawSketchScreen() {
         setLegendPosition({ x: 0, y: 0 }); // Reset Legend-Position
         legendPan.setValue({ x: 0, y: 0 }); // Reset Pan-Animation
         initialImageAdded.current = false;
+        hasEditedCurrentSketchRef.current = false;
       };
       
-      // FIX TABLET: Bei neuen Skizzen (sketchId undefined) IMMER resetten wenn:
-      // 1. Es mehr als 500ms seit dem letzten Focus vergangen sind (User hat navigiert)
-      // 2. ODER lastLoadedSketchId ist nicht undefined (vorherige Skizze war geladen)
-      const isNewSketch = !sketchId;
-      const hasNavigatedAway = timeSinceLastFocus > 500;
-      const hadPreviousSketch = lastLoadedSketchId.current !== undefined;
-      
-      // Reset wenn sketchId sich geändert hat ODER bei neuer Skizze nach Navigation
+      // FIX TABLET BUG V5: Einfachere und robustere Reset-Logik
+      // Der newSketchKey ist ein Timestamp, der bei jeder neuen Skizze anders ist
       const sketchChanged = lastLoadedSketchId.current !== sketchId;
-      const needsReset = sketchChanged || (isNewSketch && hasNavigatedAway && hadPreviousSketch);
+      const photoChanged = lastLoadedPhotoId.current !== photoId;
+      const newSketchKeyChanged = lastNewSketchKey.current !== newSketchKey && newSketchKey !== undefined;
       
-      console.log('Reset check - sketchChanged:', sketchChanged, 'isNewSketch:', isNewSketch, 
-                  'hasNavigatedAway:', hasNavigatedAway, 'hadPreviousSketch:', hadPreviousSketch, 
-                  'needsReset:', needsReset);
+      // KRITISCH: Bei newSketchKey-Änderung nur resetten, wenn es die ERSTE Fokussierung ist
+      // (lastNewSketchKey ist noch undefined) ODER wenn explizit eine andere Skizze geladen wird
+      const isFirstFocusForNewSketch = newSketchKeyChanged && lastNewSketchKey.current === undefined;
+      const isNavigatingToNewSketch = newSketchKeyChanged && lastNewSketchKey.current !== undefined;
+      
+      // Reset wenn:
+      // 1. sketchId hat sich geändert (andere existierende Skizze)
+      // 2. photoId hat sich geändert (andere Foto-basierte Skizze)
+      // 3. Wir navigieren zu einer NEUEN Skizze (newSketchKey ändert sich UND es gab bereits eine vorherige)
+      const needsReset = sketchChanged || photoChanged || isNavigatingToNewSketch;
+      
+      console.log('Reset check - sketchChanged:', sketchChanged, 'photoChanged:', photoChanged, 
+                  'newSketchKeyChanged:', newSketchKeyChanged, 'isFirstFocusForNewSketch:', isFirstFocusForNewSketch,
+                  'isNavigatingToNewSketch:', isNavigatingToNewSketch, 'needsReset:', needsReset);
       
       if (needsReset) {
-        console.log('>>> Performing reset');
+        console.log('>>> RESETTING STATE for new/different sketch');
+        
+        // Immer zuerst reset, dann laden falls nötig
         resetToCleanState();
         lastLoadedSketchId.current = sketchId;
+        lastLoadedPhotoId.current = photoId;
+        lastNewSketchKey.current = newSketchKey;
         
         // Existierende Skizze laden, wenn vorhanden
         if (sketchId) {
           console.log('useFocusEffect: Loading sketch', sketchId);
           loadSketch();
         }
-      } else if (sketchId && lastLoadedSketchId.current === sketchId) {
-        // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
-        console.log('useFocusEffect: Re-focused on same sketch', sketchId);
+      } else {
+        // Auch wenn kein Reset nötig ist, müssen wir die Refs aktualisieren
+        if (isFirstFocusForNewSketch) {
+          lastNewSketchKey.current = newSketchKey;
+        }
+        if (sketchId && lastLoadedSketchId.current === sketchId) {
+          // Gleiche Skizze, nur neu fokussiert - nichts tun
+          console.log('useFocusEffect: Re-focused on same sketch', sketchId);
+        }
       }
-      
-      // Update timestamp
-      lastFocusTimestamp.current = currentTime;
-    }, [sketchId])
+    }, [sketchId, photoId, newSketchKey])
   );
 
   const loadSketch = async () => {
@@ -2360,26 +2366,8 @@ export default function DrawSketchScreen() {
     // Nur auto-speichern wenn wir die aktuelle Skizze bearbeiten (nicht beim Reset)
     const currentSketchId = lastLoadedSketchId.current;
     
-    // FIX TABLET: Bei neuen Skizzen (sketchId === undefined) IMMER speichern wenn Elemente vorhanden
-    // Bei existierenden Skizzen nur speichern wenn currentSketchId === sketchId
-    const isNewSketch = !sketchId;
-    const isExistingSketchMatch = sketchId && currentSketchId === sketchId;
-    const shouldSave = elements.length > 0 && (isNewSketch || isExistingSketchMatch);
-    
-    console.log('[handleBackPress] elements:', elements.length, 'isNewSketch:', isNewSketch, 
-                'sketchId:', sketchId, 'currentSketchId:', currentSketchId, 'shouldSave:', shouldSave,
-                'projectId:', projectId);
-    
-    // FIX TABLET: Validiere projectId BEVOR gespeichert wird
-    if (shouldSave && !projectId) {
-      console.error('[handleBackPress] CRITICAL: projectId is undefined! Cannot save.');
-      // Trotzdem zurück navigieren, aber ohne zu speichern
-      router.back();
-      return;
-    }
-    
-    // Only auto-save if there are elements to save
-    if (shouldSave) {
+    // Only auto-save if there are elements to save AND we're still on the same sketch
+    if (elements.length > 0 && currentSketchId === sketchId) {
       try {
         setIsSaving(true); // Blockiere weitere Klicks
         const startTime = Date.now();
@@ -2577,11 +2565,6 @@ export default function DrawSketchScreen() {
               await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, saveBgImage);
             }
             backgroundImageChangedRef.current = false;
-            
-            // WICHTIG: lastLoadedSketchId NICHT hier aktualisieren!
-            // Das würde eine Race-Condition verursachen auf Tablets, wo die Komponente
-            // länger gemountet bleibt. Der Reset wird stattdessen über useFocusEffect gesteuert.
-            
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
           } catch (error) {
             console.error('Error saving new sketch:', error);
@@ -6630,17 +6613,7 @@ export default function DrawSketchScreen() {
         const imgCenterX = x + w / 2;
         const imgCenterY = y + h / 2;
         const imgRotation = el.rotation ? ` transform="rotate(${el.rotation} ${imgCenterX} ${imgCenterY})"` : '';
-        
-        // FIX: Wenn uri === '__stored__' ist, zeige ein Platzhalter-Rechteck in der Preview
-        // Das eigentliche Bild ist im Speicher, aber wir laden es nicht für die Preview
-        if (el.data.uri === '__stored__') {
-          // Platzhalter für gespeichertes Bild
-          svgElements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#e0e0e0" stroke="#999" stroke-width="1"${imgRotation}/>`;
-          svgElements += `<text x="${x + w/2}" y="${y + h/2}" font-size="12" fill="#666" text-anchor="middle" dominant-baseline="middle"${imgRotation}>📷</text>`;
-        } else {
-          // Echtes base64 Bild
-          svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"${imgRotation}/>`;
-        }
+        svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"${imgRotation}/>`;
       } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
         const points = el.data.points as { x: number; y: number }[];
         const isClosed = el.data.closed || false;
@@ -6784,21 +6757,10 @@ export default function DrawSketchScreen() {
       showAlert(t('common.error'), t('sketches.enterTitle'));
       return;
     }
-    
-    // FIX TABLET: Validiere projectId BEVOR gespeichert wird
-    // Auf Tablets kann projectId manchmal undefined sein durch Navigation-Timing
-    if (!projectId) {
-      console.error('[saveSketch] CRITICAL: projectId is undefined!');
-      showAlert(t('common.error'), 'Projekt-ID fehlt. Bitte kehren Sie zur Projektliste zurück und versuchen Sie es erneut.');
-      return;
-    }
 
     try {
       setLoading(true);
       const startTime = Date.now();
-      
-      // FIX TABLET: Logging für Debugging
-      console.log('[saveSketch] Starting save - projectId:', projectId, 'sketchId:', sketchId, 'elements:', elements.length);
       
       // Create metadata WITHOUT backgroundImage (stored separately for performance)
       const metadata = {
@@ -6944,27 +6906,6 @@ export default function DrawSketchScreen() {
         // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
         if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
           console.log('[saveSketch] Migrating image keys to new sketch ID:', newSketch.id);
-          
-          // FIX TABLET: Warte kurz, damit das Dateisystem synchronisiert ist
-          // Tablets haben langsamere Dateisysteme, die Datei ist möglicherweise noch nicht lesbar
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          // FIX TABLET: Retry-Logik für das Laden von Bildern
-          const loadWithRetry = async (key: string, retries = 5): Promise<string | null> => {
-            for (let i = 0; i < retries; i++) {
-              const data = await loadImageFromFile(key);
-              if (data) {
-                console.log(`[saveSketch] Loaded image ${key} on attempt ${i + 1}`);
-                return data;
-              }
-              // Exponentielles Backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
-              const delay = 100 * Math.pow(2, i);
-              console.log(`[saveSketch] Retry ${i + 1}/${retries} for ${key}, waiting ${delay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-            return null;
-          };
-          
           try {
             const remapOps: Promise<any>[] = [];
             const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
@@ -6972,16 +6913,14 @@ export default function DrawSketchScreen() {
                 const oldKey = el.data.imageStorageKey;
                 const newKey = oldKey.replace('_new_', `_${newSketch.id}_`);
                 console.log('[saveSketch] Remapping:', oldKey, '->', newKey);
-                // FIX TABLET: Verwende Retry-Logik statt direktem Load
-                const imgData = await loadWithRetry(oldKey);
+                // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
+                const imgData = await loadImageFromFile(oldKey);
                 if (imgData) {
                   remapOps.push(saveImageToFile(newKey, imgData));
                   remapOps.push(deleteImageFile(oldKey));
                   return { ...el, data: { ...el.data, imageStorageKey: newKey } };
                 } else {
-                  console.error('[saveSketch] CRITICAL: Image not found after retries for key:', oldKey);
-                  // FIX: Behalte den alten Key - lösche ihn NICHT, damit das Bild nicht verloren geht
-                  return el;
+                  console.warn('[saveSketch] Image not found for key:', oldKey);
                 }
               }
               return el;
@@ -7001,10 +6940,6 @@ export default function DrawSketchScreen() {
           await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
         }
         backgroundImageChangedRef.current = false;
-        
-        // WICHTIG: lastLoadedSketchId NICHT hier aktualisieren!
-        // Das würde eine Race-Condition verursachen auf Tablets.
-        
         console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert(t('common.success'), t('sketches.sketchSaved'));
       }
@@ -7208,14 +7143,8 @@ export default function DrawSketchScreen() {
             onPress={() => {
               const newZoomMode = !zoomMode;
               setZoomMode(newZoomMode);
-              // FIX: Wenn Zoom aktiviert wird, drawMode auf 'select' setzen
-              // damit die Touch-Events nicht vom Zeichnen abgefangen werden
-              if (newZoomMode) {
-                setDrawMode('select');
-                setPhotoEditMode(false);
-                setSelectedElementId(null);
-              }
               // Bei Zoom aus → Android-Zoom beibehalten aber Pan zurücksetzen
+              // Bei Zoom an → nichts weiter nötig
               if (!newZoomMode && Platform.OS === 'android') {
                 // Pan zurücksetzen, Skala beibehalten
                 androidPinchRef.current.currentTranslateX = 0;

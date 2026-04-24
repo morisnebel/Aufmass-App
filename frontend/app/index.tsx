@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, Project, Customer } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, Project, Customer, LocalStorage } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
@@ -61,6 +61,16 @@ export default function HomeScreen() {
         setActiveFilter(saved);
       }
     }).catch(() => {});
+    
+    // CRITICAL FIX: Cleanup verwaister Bild-Dateien beim App-Start
+    // Dies bereinigt Dateien, die beim Löschen von Skizzen nicht gelöscht wurden
+    LocalStorage.cleanupOrphanedImageFiles().then(result => {
+      if (result.removed > 0) {
+        console.log(`[App Startup] Cleaned up ${result.removed} orphaned image files`);
+      }
+    }).catch(e => {
+      console.error('[App Startup] Error during cleanup:', e);
+    });
   }, []);
 
   // Filter-Änderung speichern

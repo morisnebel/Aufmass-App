@@ -111,6 +111,98 @@ const deleteImageFile = async (key: string): Promise<void> => {
   }
 };
 
+// Cleanup-Funktion: Entfernt verwaiste Bild-Dateien die nicht mehr zu Skizzen gehören
+// Diese Funktion sollte beim App-Start aufgerufen werden
+const cleanupOrphanedImageFiles = async (): Promise<{ removed: number; errors: number }> => {
+  try {
+    const imageDir = getImageDir();
+    if (!imageDir) return { removed: 0, errors: 0 };
+    
+    // Prüfe ob Verzeichnis existiert
+    let files: string[] = [];
+    try {
+      files = await FileSystem.readDirectoryAsync(imageDir);
+    } catch (e) {
+      // Verzeichnis existiert nicht
+      return { removed: 0, errors: 0 };
+    }
+    
+    if (files.length === 0) return { removed: 0, errors: 0 };
+    
+    console.log(`[cleanupOrphanedImageFiles] Found ${files.length} files in image directory`);
+    
+    let removed = 0;
+    let errors = 0;
+    
+    // Sammle alle gültigen Bild-Keys von existierenden Skizzen
+    const validKeys = new Set<string>();
+    
+    try {
+      const sketchesStr = await AsyncStorage.getItem(KEYS.SKETCHES);
+      if (sketchesStr) {
+        const sketches = JSON.parse(sketchesStr);
+        for (const sketch of sketches) {
+          // Hintergrundbild
+          validKeys.add(`sketch_bg_${sketch.id}.txt`);
+          
+          // Lade Metadata für Bild-Elemente
+          try {
+            const metaStr = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
+            if (metaStr) {
+              const meta = JSON.parse(metaStr);
+              if (meta?.elements) {
+                for (const el of meta.elements) {
+                  if (el.data?.imageStorageKey) {
+                    validKeys.add(`${el.data.imageStorageKey}.txt`);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Überspringe ungültige Metadata
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[cleanupOrphanedImageFiles] Error loading sketches:', e);
+    }
+    
+    // Auch Photo-Service Bilder als gültig markieren
+    try {
+      const photosStr = await AsyncStorage.getItem(KEYS.PHOTOS);
+      if (photosStr) {
+        const photos = JSON.parse(photosStr);
+        for (const photo of photos) {
+          validKeys.add(`photo_img_${photo.id}.txt`);
+        }
+      }
+    } catch (e) {
+      // Ignorieren
+    }
+    
+    console.log(`[cleanupOrphanedImageFiles] Found ${validKeys.size} valid image keys`);
+    
+    // Lösche verwaiste Dateien (die nicht in validKeys sind)
+    for (const file of files) {
+      if (!validKeys.has(file)) {
+        try {
+          await FileSystem.deleteAsync(`${imageDir}${file}`);
+          removed++;
+          console.log(`[cleanupOrphanedImageFiles] Removed orphaned file: ${file}`);
+        } catch (e) {
+          errors++;
+        }
+      }
+    }
+    
+    console.log(`[cleanupOrphanedImageFiles] Cleanup complete: removed ${removed} files, ${errors} errors`);
+    return { removed, errors };
+  } catch (e) {
+    console.error('[cleanupOrphanedImageFiles] Error:', e);
+    return { removed: 0, errors: 1 };
+  }
+};
+
 // Storage Keys
 const KEYS = {
   CUSTOMERS: 'aufmassprofi_customers',
@@ -1121,12 +1213,38 @@ export const SketchService = {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const filtered = sketches.filter(s => s.id !== id);
 
-    // Delete main array entry + separate heavy data keys in parallel
-    await Promise.all([
-      setItems(KEYS.SKETCHES, filtered),
-      AsyncStorage.removeItem(`sketch_meta_${id}`),
-      AsyncStorage.removeItem(`sketch_bg_${id}`),
-    ]);
+    // CRITICAL FIX: Lade Metadata um alle Bild-Dateien zu finden BEVOR gelöscht wird
+    const cleanupOps: Promise<void>[] = [];
+    
+    try {
+      const metaStr = await AsyncStorage.getItem(`sketch_meta_${id}`);
+      if (metaStr) {
+        const meta = JSON.parse(metaStr);
+        if (meta?.elements) {
+          for (const el of meta.elements) {
+            // Lösche Bild-Dateien aus dem Dateisystem
+            if (el.data?.imageStorageKey) {
+              console.log(`[SketchService.delete] Cleaning up image file: ${el.data.imageStorageKey}`);
+              cleanupOps.push(deleteImageFile(el.data.imageStorageKey));
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`[SketchService.delete] Error loading metadata for cleanup:`, e);
+    }
+    
+    // Lösche Hintergrundbild-Datei
+    console.log(`[SketchService.delete] Cleaning up background image: sketch_bg_${id}`);
+    cleanupOps.push(deleteImageFile(`sketch_bg_${id}`));
+    
+    // Lösche Haupteintrag + separate Daten-Keys parallel
+    cleanupOps.push(setItems(KEYS.SKETCHES, filtered));
+    cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${id}`));
+    cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${id}`));
+    
+    await Promise.all(cleanupOps);
+    console.log(`[SketchService.delete] Successfully deleted sketch ${id} and all associated files`);
     return true;
   },
 
@@ -2031,6 +2149,8 @@ export const LocalStorage = {
   AreaCalculations: AreaCalculationService,
   LineCategories: LineCategoryService,
   TextShortcuts: TextShortcutService,
+  // Utility-Funktionen
+  cleanupOrphanedImageFiles,
 };
 
 export default LocalStorage;

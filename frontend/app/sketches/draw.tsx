@@ -546,70 +546,75 @@ export default function DrawSketchScreen() {
         }
       }
       
-      // Berechne korrektes Seitenverhältnis des Bildes
-      RNImage.getSize(
-        finalUri,
-        (imgWidth, imgHeight) => {
-          // Maximale Größe im Canvas
-          const maxWidth = 400;
-          const maxHeight = 300;
-          const aspectRatio = imgWidth / imgHeight;
-          
-          let finalWidth, finalHeight;
-          if (aspectRatio > maxWidth / maxHeight) {
-            finalWidth = maxWidth;
-            finalHeight = maxWidth / aspectRatio;
-          } else {
-            finalHeight = maxHeight;
-            finalWidth = maxHeight * aspectRatio;
-          }
-          
-          const imageElement: DrawElement = {
-            id: generateId(),
-            type: 'image',
-            data: { uri: finalUri },
-            color: '#000000',
-            strokeWidth: 0,
-            x: 50,
-            y: 50,
-            width: finalWidth,
-            height: finalHeight,
-            rotation: 0,
-          };
-          
-          const newElements = [...elements, imageElement];
-          addToHistory(newElements);
-          setElements(newElements);
-          setSelectedElementId(imageElement.id);
-          setShowProjectPhotosModal(false);
-          setPhotoEditMode(true);
-          selectDrawMode('select');
-        },
-        (error) => {
-          console.error('Error getting image size:', error);
-          // Fallback: Füge mit Standardgrößen ein
-          const imageElement: DrawElement = {
-            id: generateId(),
-            type: 'image',
-            data: { uri: finalUri },
-            color: '#000000',
-            strokeWidth: 0,
-            x: 50,
-            y: 50,
-            width: 300,
-            height: 200,
-            rotation: 0,
-          };
-          
-          const newElements = [...elements, imageElement];
-          addToHistory(newElements);
-          setElements(newElements);
-          setSelectedElementId(imageElement.id);
-          setShowProjectPhotosModal(false);
-          setPhotoEditMode(true);
-          selectDrawMode('select');
-        }
-      );
+      // FIX: Wrap RNImage.getSize in Promise um Race Conditions zu vermeiden
+      const getImageSize = (uri: string): Promise<{width: number, height: number}> => {
+        return new Promise((resolve, reject) => {
+          RNImage.getSize(uri, 
+            (width, height) => resolve({width, height}),
+            (error) => reject(error)
+          );
+        });
+      };
+      
+      let imgWidth = 300, imgHeight = 200;
+      try {
+        const size = await getImageSize(finalUri);
+        imgWidth = size.width;
+        imgHeight = size.height;
+      } catch (sizeError) {
+        console.error('[insertProjectPhoto] Error getting image size, using defaults:', sizeError);
+      }
+      
+      // Maximale Größe im Canvas
+      const maxWidth = 400;
+      const maxHeight = 300;
+      const aspectRatio = imgWidth / imgHeight;
+      
+      let finalWidth, finalHeight;
+      if (aspectRatio > maxWidth / maxHeight) {
+        finalWidth = maxWidth;
+        finalHeight = maxWidth / aspectRatio;
+      } else {
+        finalHeight = maxHeight;
+        finalWidth = maxHeight * aspectRatio;
+      }
+      
+      const imageElement: DrawElement = {
+        id: generateId(),
+        type: 'image',
+        data: { uri: finalUri },
+        color: '#000000',
+        strokeWidth: 0,
+        x: 50,
+        y: 50,
+        width: finalWidth,
+        height: finalHeight,
+        rotation: 0,
+      };
+      
+      // FIX RACE CONDITION: Verwende functional state update statt closure
+      // Das verhindert, dass schnelle Einfügungen sich gegenseitig überschreiben
+      setElements(prevElements => {
+        const newElements = [...prevElements, imageElement];
+        // addToHistory muss separat aufgerufen werden
+        return newElements;
+      });
+      
+      // History separat updaten (nach dem State-Update)
+      setTimeout(() => {
+        setElements(current => {
+          addToHistory(current);
+          return current;
+        });
+      }, 0);
+      
+      setSelectedElementId(imageElement.id);
+      setShowProjectPhotosModal(false);
+      setPhotoEditMode(true);
+      selectDrawMode('select');
+      
+      console.log('[insertProjectPhoto] Image inserted successfully');
+      
     } catch (error) {
       console.error('[insertProjectPhoto] Error:', error);
       Alert.alert(t('common.error'), 'Fehler beim Einfügen des Bildes');

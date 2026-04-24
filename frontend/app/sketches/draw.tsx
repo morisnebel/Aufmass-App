@@ -6885,6 +6885,27 @@ export default function DrawSketchScreen() {
         // FIX: Image-Keys von 'new' auf die echte Sketch-ID ummappen
         if (newSketch?.id && lightElementsForSave.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
           console.log('[saveSketch] Migrating image keys to new sketch ID:', newSketch.id);
+          
+          // FIX TABLET: Warte kurz, damit das Dateisystem synchronisiert ist
+          // Tablets haben langsamere Dateisysteme, die Datei ist möglicherweise noch nicht lesbar
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // FIX TABLET: Retry-Logik für das Laden von Bildern
+          const loadWithRetry = async (key: string, retries = 5): Promise<string | null> => {
+            for (let i = 0; i < retries; i++) {
+              const data = await loadImageFromFile(key);
+              if (data) {
+                console.log(`[saveSketch] Loaded image ${key} on attempt ${i + 1}`);
+                return data;
+              }
+              // Exponentielles Backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+              const delay = 100 * Math.pow(2, i);
+              console.log(`[saveSketch] Retry ${i + 1}/${retries} for ${key}, waiting ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            return null;
+          };
+          
           try {
             const remapOps: Promise<any>[] = [];
             const updatedElements = await Promise.all(lightElementsForSave.map(async (el: any) => {
@@ -6892,14 +6913,16 @@ export default function DrawSketchScreen() {
                 const oldKey = el.data.imageStorageKey;
                 const newKey = oldKey.replace('_new_', `_${newSketch.id}_`);
                 console.log('[saveSketch] Remapping:', oldKey, '->', newKey);
-                // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
-                const imgData = await loadImageFromFile(oldKey);
+                // FIX TABLET: Verwende Retry-Logik statt direktem Load
+                const imgData = await loadWithRetry(oldKey);
                 if (imgData) {
                   remapOps.push(saveImageToFile(newKey, imgData));
                   remapOps.push(deleteImageFile(oldKey));
                   return { ...el, data: { ...el.data, imageStorageKey: newKey } };
                 } else {
-                  console.warn('[saveSketch] Image not found for key:', oldKey);
+                  console.error('[saveSketch] CRITICAL: Image not found after retries for key:', oldKey);
+                  // FIX: Behalte den alten Key - lösche ihn NICHT, damit das Bild nicht verloren geht
+                  return el;
                 }
               }
               return el;

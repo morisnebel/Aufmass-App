@@ -2309,8 +2309,17 @@ export default function DrawSketchScreen() {
     // Nur auto-speichern wenn wir die aktuelle Skizze bearbeiten (nicht beim Reset)
     const currentSketchId = lastLoadedSketchId.current;
     
-    // Only auto-save if there are elements to save AND we're still on the same sketch
-    if (elements.length > 0 && currentSketchId === sketchId) {
+    // FIX TABLET: Bei neuen Skizzen (sketchId === undefined) IMMER speichern wenn Elemente vorhanden
+    // Bei existierenden Skizzen nur speichern wenn currentSketchId === sketchId
+    const isNewSketch = !sketchId;
+    const isExistingSketchMatch = sketchId && currentSketchId === sketchId;
+    const shouldSave = elements.length > 0 && (isNewSketch || isExistingSketchMatch);
+    
+    console.log('[handleBackPress] elements:', elements.length, 'isNewSketch:', isNewSketch, 
+                'sketchId:', sketchId, 'currentSketchId:', currentSketchId, 'shouldSave:', shouldSave);
+    
+    // Only auto-save if there are elements to save
+    if (shouldSave) {
       try {
         setIsSaving(true); // Blockiere weitere Klicks
         const startTime = Date.now();
@@ -7103,8 +7112,14 @@ export default function DrawSketchScreen() {
             onPress={() => {
               const newZoomMode = !zoomMode;
               setZoomMode(newZoomMode);
+              // FIX: Wenn Zoom aktiviert wird, drawMode auf 'select' setzen
+              // damit die Touch-Events nicht vom Zeichnen abgefangen werden
+              if (newZoomMode) {
+                setDrawMode('select');
+                setPhotoEditMode(false);
+                setSelectedElementId(null);
+              }
               // Bei Zoom aus → Android-Zoom beibehalten aber Pan zurücksetzen
-              // Bei Zoom an → nichts weiter nötig
               if (!newZoomMode && Platform.OS === 'android') {
                 // Pan zurücksetzen, Skala beibehalten
                 androidPinchRef.current.currentTranslateX = 0;

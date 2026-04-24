@@ -6601,7 +6601,17 @@ export default function DrawSketchScreen() {
         const imgCenterX = x + w / 2;
         const imgCenterY = y + h / 2;
         const imgRotation = el.rotation ? ` transform="rotate(${el.rotation} ${imgCenterX} ${imgCenterY})"` : '';
-        svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"${imgRotation}/>`;
+        
+        // FIX: Wenn uri === '__stored__' ist, zeige ein Platzhalter-Rechteck in der Preview
+        // Das eigentliche Bild ist im Speicher, aber wir laden es nicht für die Preview
+        if (el.data.uri === '__stored__') {
+          // Platzhalter für gespeichertes Bild
+          svgElements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#e0e0e0" stroke="#999" stroke-width="1"${imgRotation}/>`;
+          svgElements += `<text x="${x + w/2}" y="${y + h/2}" font-size="12" fill="#666" text-anchor="middle" dominant-baseline="middle"${imgRotation}>📷</text>`;
+        } else {
+          // Echtes base64 Bild
+          svgElements += `<image href="${el.data.uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"${imgRotation}/>`;
+        }
       } else if (el.type === 'polyline' && el.data?.points && el.data.points.length >= 2) {
         const points = el.data.points as { x: number; y: number }[];
         const isClosed = el.data.closed || false;

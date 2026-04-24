@@ -5213,7 +5213,7 @@ export default function ProjectDetailScreen() {
           <View>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => router.push(`/sketches/draw?projectId=${id}&newSketchKey=${Date.now()}`)}
+              onPress={() => router.push(`/sketches/draw?projectId=${id}`)}
             >
               <Ionicons name="add-circle" size={24} color="#1976d2" />
               <Text style={styles.addButtonText}>{t('sketches.newSketch')}</Text>

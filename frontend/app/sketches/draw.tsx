@@ -319,8 +319,6 @@ export default function DrawSketchScreen() {
     : params.backgroundImageUri;
   // Get photo ID for loading from LocalStorage (faster than passing base64 via URL)
   const photoId = Array.isArray(params.photoId) ? params.photoId[0] : params.photoId;
-  // FIX TABLET BUG: Eindeutiger Key für jede neue Skizze - ermöglicht Reset-Erkennung
-  const newSketchKey = Array.isArray(params.newSketchKey) ? params.newSketchKey[0] : params.newSketchKey;
   
   // iPhone-Erkennung für responsive Layout
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -644,27 +642,17 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
-  // FIX: Auch photoId tracken - bei neuen Skizzen ist sketchId immer undefined,
-  // aber photoId unterscheidet zwischen verschiedenen neuen Skizzen
-  const lastLoadedPhotoId = useRef<string | null | undefined>(undefined);
-  // FIX TABLET BUG: newSketchKey tracken - eindeutiger Key für jede neue Skizze
-  const lastNewSketchKey = useRef<string | null | undefined>(undefined);
-  // FIX TABLET BUG: Visit-Counter für neue Skizzen ohne photoId
-  // Bei jedem Seitenbesuch wird dieser Counter erhöht, um einen Reset zu erzwingen
-  const visitCountRef = useRef(0);
   const isMountedRef = useRef(true);
   
   // Cleanup beim Unmount - verhindert Crashes durch State-Updates nach Navigation
-  // FIX TABLET BUG: Reset tracking refs beim Verlassen, damit nächster Besuch sauber startet
+  // FIX TABLET: Reset lastLoadedSketchId beim Unmount, damit nächste Skizze sauber startet
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // Reset tracking refs beim Unmount - nächste Skizze beginnt mit sauberem State
-      lastLoadedSketchId.current = undefined;
-      lastLoadedPhotoId.current = undefined;
-      lastNewSketchKey.current = undefined;
-      visitCountRef.current = 0;
+      // WICHTIG: Reset des Tracking-Refs beim Verlassen
+      // Ohne dies erkennt useFocusEffect auf Tablets keine neue Skizze
+      lastLoadedSketchId.current = null; // null statt undefined um Unterschied zu erkennen
     };
   }, []);
 
@@ -685,17 +673,6 @@ export default function DrawSketchScreen() {
   useEffect(() => {
     currentSketchIdRef.current = sketchId;
   }, [sketchId]);
-  
-  // FIX TABLET BUG V3: Track ob wir bereits eine Skizze bearbeitet haben
-  // Wenn die Parameter sich ändern (neue Navigation), müssen wir den "dirty" state prüfen
-  const hasEditedCurrentSketchRef = useRef(false);
-  
-  // Markiere als "dirty" wenn Elemente hinzugefügt werden
-  useEffect(() => {
-    if (elements.length > 0 && !sketchId) {
-      hasEditedCurrentSketchRef.current = true;
-    }
-  }, [elements.length, sketchId]);
   
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
@@ -1769,22 +1746,17 @@ export default function DrawSketchScreen() {
       const decodedUri = decodeURIComponent(backgroundImageUri);
       addImageElement(decodedUri);
     }
-  }, [backgroundImageUri, photoId, sketchId, newSketchKey]); // FIX: newSketchKey hinzugefügt für Tablet-Kompatibilität
+  }, [backgroundImageUri, photoId, sketchId]);
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      // FIX TABLET BUG: Erhöhe Visit-Counter bei jedem Focus
-      // Dies ermöglicht Erkennung von mehreren neuen Skizzen ohne sketchId/photoId
-      visitCountRef.current += 1;
-      const currentVisit = visitCountRef.current;
-      
-      console.log('useFocusEffect triggered, visit:', currentVisit, 'sketchId:', sketchId, 'photoId:', photoId, 'newSketchKey:', newSketchKey, 'lastLoaded:', lastLoadedSketchId.current, 'lastPhotoId:', lastLoadedPhotoId.current, 'lastNewSketchKey:', lastNewSketchKey.current);
+      console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current);
       
       // IMMER den State für die aktuelle Skizze initialisieren
       // Dies verhindert, dass alte Daten aus vorherigen Skizzen angezeigt werden
       const resetToCleanState = () => {
-        console.log('Resetting to clean state for new/different sketch (visit:', currentVisit, ')');
+        console.log('Resetting to clean state for new/different sketch');
         setLineSegmentMeasurements({});
         setSelectedLineSegment(null);
         setElements([]);
@@ -1797,55 +1769,26 @@ export default function DrawSketchScreen() {
         setLegendPosition({ x: 0, y: 0 }); // Reset Legend-Position
         legendPan.setValue({ x: 0, y: 0 }); // Reset Pan-Animation
         initialImageAdded.current = false;
-        hasEditedCurrentSketchRef.current = false;
       };
       
-      // FIX TABLET BUG V5: Einfachere und robustere Reset-Logik
-      // Der newSketchKey ist ein Timestamp, der bei jeder neuen Skizze anders ist
-      const sketchChanged = lastLoadedSketchId.current !== sketchId;
-      const photoChanged = lastLoadedPhotoId.current !== photoId;
-      const newSketchKeyChanged = lastNewSketchKey.current !== newSketchKey && newSketchKey !== undefined;
-      
-      // KRITISCH: Bei newSketchKey-Änderung nur resetten, wenn es die ERSTE Fokussierung ist
-      // (lastNewSketchKey ist noch undefined) ODER wenn explizit eine andere Skizze geladen wird
-      const isFirstFocusForNewSketch = newSketchKeyChanged && lastNewSketchKey.current === undefined;
-      const isNavigatingToNewSketch = newSketchKeyChanged && lastNewSketchKey.current !== undefined;
-      
-      // Reset wenn:
-      // 1. sketchId hat sich geändert (andere existierende Skizze)
-      // 2. photoId hat sich geändert (andere Foto-basierte Skizze)
-      // 3. Wir navigieren zu einer NEUEN Skizze (newSketchKey ändert sich UND es gab bereits eine vorherige)
-      const needsReset = sketchChanged || photoChanged || isNavigatingToNewSketch;
-      
-      console.log('Reset check - sketchChanged:', sketchChanged, 'photoChanged:', photoChanged, 
-                  'newSketchKeyChanged:', newSketchKeyChanged, 'isFirstFocusForNewSketch:', isFirstFocusForNewSketch,
-                  'isNavigatingToNewSketch:', isNavigatingToNewSketch, 'needsReset:', needsReset);
-      
-      if (needsReset) {
-        console.log('>>> RESETTING STATE for new/different sketch');
+      // Prüfen, ob sich die Skizze geändert hat
+      if (lastLoadedSketchId.current !== sketchId) {
+        console.log('Sketch ID changed from', lastLoadedSketchId.current, 'to', sketchId);
         
         // Immer zuerst reset, dann laden falls nötig
         resetToCleanState();
         lastLoadedSketchId.current = sketchId;
-        lastLoadedPhotoId.current = photoId;
-        lastNewSketchKey.current = newSketchKey;
         
         // Existierende Skizze laden, wenn vorhanden
         if (sketchId) {
           console.log('useFocusEffect: Loading sketch', sketchId);
           loadSketch();
         }
-      } else {
-        // Auch wenn kein Reset nötig ist, müssen wir die Refs aktualisieren
-        if (isFirstFocusForNewSketch) {
-          lastNewSketchKey.current = newSketchKey;
-        }
-        if (sketchId && lastLoadedSketchId.current === sketchId) {
-          // Gleiche Skizze, nur neu fokussiert - nichts tun
-          console.log('useFocusEffect: Re-focused on same sketch', sketchId);
-        }
+      } else if (sketchId && lastLoadedSketchId.current === sketchId) {
+        // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
+        console.log('useFocusEffect: Re-focused on same sketch', sketchId);
       }
-    }, [sketchId, photoId, newSketchKey])
+    }, [sketchId])
   );
 
   const loadSketch = async () => {
@@ -2565,6 +2508,15 @@ export default function DrawSketchScreen() {
               await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, saveBgImage);
             }
             backgroundImageChangedRef.current = false;
+            
+            // FIX TABLET: Nach dem Speichern einer neuen Skizze den Tracking-Ref aktualisieren
+            // So erkennt useFocusEffect beim nächsten Besuch (neue Skizze), dass ein Reset nötig ist
+            // Weil dann: lastLoadedSketchId.current (= newSketch.id) !== sketchId (= undefined)
+            if (newSketch?.id) {
+              lastLoadedSketchId.current = newSketch.id;
+              console.log('[autoSave] Updated lastLoadedSketchId to:', newSketch.id);
+            }
+            
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
           } catch (error) {
             console.error('Error saving new sketch:', error);
@@ -6940,6 +6892,14 @@ export default function DrawSketchScreen() {
           await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
         }
         backgroundImageChangedRef.current = false;
+        
+        // FIX TABLET: Nach dem Speichern einer neuen Skizze den Tracking-Ref aktualisieren
+        // So erkennt useFocusEffect beim nächsten Besuch (neue Skizze), dass ein Reset nötig ist
+        if (newSketch?.id) {
+          lastLoadedSketchId.current = newSketch.id;
+          console.log('[saveSketch] Updated lastLoadedSketchId to:', newSketch.id);
+        }
+        
         console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert(t('common.success'), t('sketches.sketchSaved'));
       }

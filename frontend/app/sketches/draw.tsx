@@ -2516,8 +2516,14 @@ export default function DrawSketchScreen() {
             delete lightMetadataForCreate.backgroundImage;
             
             // Zuerst die Bilder separat speichern (mit temporärem Key 'undefined')
-            await Promise.all(extractedImageOps);
-            console.log('[autoSave] Saved', extractedImageOps.length, 'images with temporary keys');
+            // FIX: WARTEN bis alle Bilder geschrieben sind BEVOR wir weitermachen
+            if (extractedImageOps.length > 0) {
+              console.log('[autoSave] Saving', extractedImageOps.length, 'images with temporary keys...');
+              await Promise.all(extractedImageOps);
+              // FIX: Warte kurz, damit das Dateisystem synchronisiert (wichtig für Tablets)
+              await new Promise(resolve => setTimeout(resolve, 100));
+              console.log('[autoSave] Saved', extractedImageOps.length, 'images successfully');
+            }
             
             const newSketch = await SketchService.create({
               project_id: saveProjectId,
@@ -2531,6 +2537,23 @@ export default function DrawSketchScreen() {
             // FIX: Image-Keys von 'undefined' auf die echte Sketch-ID ummappen
             if (newSketch?.id && lightElements.some((el: any) => el.type === 'image' && el.data?.imageStorageKey)) {
               console.log('[autoSave] Migrating image keys to new sketch ID:', newSketch.id);
+              
+              // FIX: Retry-Funktion für das Laden von Bildern (Tablets haben langsame Dateisysteme)
+              const loadWithRetry = async (key: string, maxRetries = 5): Promise<string | null> => {
+                for (let i = 0; i < maxRetries; i++) {
+                  const data = await loadImageFromFile(key);
+                  if (data) {
+                    console.log(`[autoSave] Loaded image ${key} on attempt ${i + 1}`);
+                    return data;
+                  }
+                  // Exponentielles Backoff
+                  const delay = 100 * Math.pow(2, i);
+                  console.log(`[autoSave] Retry ${i + 1}/${maxRetries} for ${key}, waiting ${delay}ms`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                return null;
+              };
+              
               try {
                 const remapOps: Promise<any>[] = [];
                 const updatedElements = await Promise.all(lightElements.map(async (el: any) => {
@@ -2538,14 +2561,16 @@ export default function DrawSketchScreen() {
                     const oldKey = el.data.imageStorageKey;
                     const newKey = oldKey.replace('_undefined_', `_${newSketch.id}_`);
                     console.log('[autoSave] Remapping:', oldKey, '->', newKey);
-                    // FIX: Verwende loadImageFromFile/saveImageToFile statt AsyncStorage
-                    const imgData = await loadImageFromFile(oldKey);
+                    // FIX: Verwende Retry-Logik für Tablets
+                    const imgData = await loadWithRetry(oldKey);
                     if (imgData) {
                       remapOps.push(saveImageToFile(newKey, imgData));
                       remapOps.push(deleteImageFile(oldKey));
                       return { ...el, data: { ...el.data, imageStorageKey: newKey } };
                     } else {
-                      console.warn('[autoSave] Image not found for key:', oldKey);
+                      console.error('[autoSave] CRITICAL: Image not found after retries for key:', oldKey);
+                      // Behalte den alten Key - lösche ihn NICHT
+                      return el;
                     }
                   }
                   return el;

@@ -1769,7 +1769,7 @@ export default function DrawSketchScreen() {
       const decodedUri = decodeURIComponent(backgroundImageUri);
       addImageElement(decodedUri);
     }
-  }, [backgroundImageUri, photoId, sketchId]);
+  }, [backgroundImageUri, photoId, sketchId, newSketchKey]); // FIX: newSketchKey hinzugefügt für Tablet-Kompatibilität
 
   // Load existing sketch when screen comes into focus
   useFocusEffect(
@@ -1800,20 +1800,26 @@ export default function DrawSketchScreen() {
         hasEditedCurrentSketchRef.current = false;
       };
       
-      // FIX TABLET BUG V4: Robustere Reset-Erkennung für Tablets mit newSketchKey
+      // FIX TABLET BUG V5: Einfachere und robustere Reset-Logik
       // Der newSketchKey ist ein Timestamp, der bei jeder neuen Skizze anders ist
       const sketchChanged = lastLoadedSketchId.current !== sketchId;
       const photoChanged = lastLoadedPhotoId.current !== photoId;
       const newSketchKeyChanged = lastNewSketchKey.current !== newSketchKey && newSketchKey !== undefined;
       
-      // KRITISCH: Reset wenn einer dieser Fälle zutrifft:
+      // KRITISCH: Bei newSketchKey-Änderung nur resetten, wenn es die ERSTE Fokussierung ist
+      // (lastNewSketchKey ist noch undefined) ODER wenn explizit eine andere Skizze geladen wird
+      const isFirstFocusForNewSketch = newSketchKeyChanged && lastNewSketchKey.current === undefined;
+      const isNavigatingToNewSketch = newSketchKeyChanged && lastNewSketchKey.current !== undefined;
+      
+      // Reset wenn:
       // 1. sketchId hat sich geändert (andere existierende Skizze)
       // 2. photoId hat sich geändert (andere Foto-basierte Skizze)
-      // 3. newSketchKey hat sich geändert (neue Skizze wurde über Button erstellt)
-      const needsReset = sketchChanged || photoChanged || newSketchKeyChanged;
+      // 3. Wir navigieren zu einer NEUEN Skizze (newSketchKey ändert sich UND es gab bereits eine vorherige)
+      const needsReset = sketchChanged || photoChanged || isNavigatingToNewSketch;
       
       console.log('Reset check - sketchChanged:', sketchChanged, 'photoChanged:', photoChanged, 
-                  'newSketchKeyChanged:', newSketchKeyChanged, 'needsReset:', needsReset);
+                  'newSketchKeyChanged:', newSketchKeyChanged, 'isFirstFocusForNewSketch:', isFirstFocusForNewSketch,
+                  'isNavigatingToNewSketch:', isNavigatingToNewSketch, 'needsReset:', needsReset);
       
       if (needsReset) {
         console.log('>>> RESETTING STATE for new/different sketch');
@@ -1829,9 +1835,15 @@ export default function DrawSketchScreen() {
           console.log('useFocusEffect: Loading sketch', sketchId);
           loadSketch();
         }
-      } else if (sketchId && lastLoadedSketchId.current === sketchId) {
-        // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
-        console.log('useFocusEffect: Re-focused on same sketch', sketchId);
+      } else {
+        // Auch wenn kein Reset nötig ist, müssen wir die Refs aktualisieren
+        if (isFirstFocusForNewSketch) {
+          lastNewSketchKey.current = newSketchKey;
+        }
+        if (sketchId && lastLoadedSketchId.current === sketchId) {
+          // Gleiche Skizze, nur neu fokussiert - nichts tun
+          console.log('useFocusEffect: Re-focused on same sketch', sketchId);
+        }
       }
     }, [sketchId, photoId, newSketchKey])
   );

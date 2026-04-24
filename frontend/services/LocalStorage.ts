@@ -1057,6 +1057,12 @@ export const SketchService = {
   },
 
   create: async (data: Omit<Sketch, 'id' | 'created_at' | 'updated_at'>): Promise<Sketch> => {
+    // FIX TABLET: Validiere project_id BEVOR die Skizze erstellt wird
+    if (!data.project_id) {
+      console.error('[SketchService.create] CRITICAL: project_id is undefined or empty!');
+      throw new Error('project_id is required to create a sketch');
+    }
+    
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const id = generateId();
 

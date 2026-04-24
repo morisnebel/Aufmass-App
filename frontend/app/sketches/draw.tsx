@@ -2338,7 +2338,16 @@ export default function DrawSketchScreen() {
     const shouldSave = elements.length > 0 && (isNewSketch || isExistingSketchMatch);
     
     console.log('[handleBackPress] elements:', elements.length, 'isNewSketch:', isNewSketch, 
-                'sketchId:', sketchId, 'currentSketchId:', currentSketchId, 'shouldSave:', shouldSave);
+                'sketchId:', sketchId, 'currentSketchId:', currentSketchId, 'shouldSave:', shouldSave,
+                'projectId:', projectId);
+    
+    // FIX TABLET: Validiere projectId BEVOR gespeichert wird
+    if (shouldSave && !projectId) {
+      console.error('[handleBackPress] CRITICAL: projectId is undefined! Cannot save.');
+      // Trotzdem zurück navigieren, aber ohne zu speichern
+      router.back();
+      return;
+    }
     
     // Only auto-save if there are elements to save
     if (shouldSave) {
@@ -6736,10 +6745,21 @@ export default function DrawSketchScreen() {
       showAlert(t('common.error'), t('sketches.enterTitle'));
       return;
     }
+    
+    // FIX TABLET: Validiere projectId BEVOR gespeichert wird
+    // Auf Tablets kann projectId manchmal undefined sein durch Navigation-Timing
+    if (!projectId) {
+      console.error('[saveSketch] CRITICAL: projectId is undefined!');
+      showAlert(t('common.error'), 'Projekt-ID fehlt. Bitte kehren Sie zur Projektliste zurück und versuchen Sie es erneut.');
+      return;
+    }
 
     try {
       setLoading(true);
       const startTime = Date.now();
+      
+      // FIX TABLET: Logging für Debugging
+      console.log('[saveSketch] Starting save - projectId:', projectId, 'sketchId:', sketchId, 'elements:', elements.length);
       
       // Create metadata WITHOUT backgroundImage (stored separately for performance)
       const metadata = {

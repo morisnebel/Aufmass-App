@@ -380,7 +380,8 @@ export default function DrawSketchScreen() {
   // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   // Zoom-Modus: manuell gesteuert über Lupe-Button
-  const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
+  // FIX: Standard auf false, damit grüner Button "Zoom aktivieren" bedeutet
+  const [zoomMode, setZoomMode] = useState(false);
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -642,6 +643,8 @@ export default function DrawSketchScreen() {
   
   // Tracking für Skizzen-Wechsel (Reset-Erkennung)
   const lastLoadedSketchId = useRef<string | null | undefined>(undefined);
+  // FIX TABLET: Timestamp der letzten Fokussierung - ermöglicht Reset-Erkennung auch ohne Unmount
+  const lastFocusTimestamp = useRef<number>(0);
   const isMountedRef = useRef(true);
   
   // Cleanup beim Unmount - verhindert Crashes durch State-Updates nach Navigation
@@ -1751,7 +1754,11 @@ export default function DrawSketchScreen() {
   // Load existing sketch when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current);
+      const currentTime = Date.now();
+      const timeSinceLastFocus = currentTime - lastFocusTimestamp.current;
+      
+      console.log('useFocusEffect triggered, sketchId:', sketchId, 'lastLoaded:', lastLoadedSketchId.current, 
+                  'timeSinceLastFocus:', timeSinceLastFocus, 'ms');
       
       // IMMER den State für die aktuelle Skizze initialisieren
       // Dies verhindert, dass alte Daten aus vorherigen Skizzen angezeigt werden
@@ -1771,11 +1778,23 @@ export default function DrawSketchScreen() {
         initialImageAdded.current = false;
       };
       
-      // Prüfen, ob sich die Skizze geändert hat
-      if (lastLoadedSketchId.current !== sketchId) {
-        console.log('Sketch ID changed from', lastLoadedSketchId.current, 'to', sketchId);
-        
-        // Immer zuerst reset, dann laden falls nötig
+      // FIX TABLET: Bei neuen Skizzen (sketchId undefined) IMMER resetten wenn:
+      // 1. Es mehr als 500ms seit dem letzten Focus vergangen sind (User hat navigiert)
+      // 2. ODER lastLoadedSketchId ist nicht undefined (vorherige Skizze war geladen)
+      const isNewSketch = !sketchId;
+      const hasNavigatedAway = timeSinceLastFocus > 500;
+      const hadPreviousSketch = lastLoadedSketchId.current !== undefined;
+      
+      // Reset wenn sketchId sich geändert hat ODER bei neuer Skizze nach Navigation
+      const sketchChanged = lastLoadedSketchId.current !== sketchId;
+      const needsReset = sketchChanged || (isNewSketch && hasNavigatedAway && hadPreviousSketch);
+      
+      console.log('Reset check - sketchChanged:', sketchChanged, 'isNewSketch:', isNewSketch, 
+                  'hasNavigatedAway:', hasNavigatedAway, 'hadPreviousSketch:', hadPreviousSketch, 
+                  'needsReset:', needsReset);
+      
+      if (needsReset) {
+        console.log('>>> Performing reset');
         resetToCleanState();
         lastLoadedSketchId.current = sketchId;
         
@@ -1788,6 +1807,9 @@ export default function DrawSketchScreen() {
         // Gleiche Skizze, nur neu fokussiert - neu laden falls nötig
         console.log('useFocusEffect: Re-focused on same sketch', sketchId);
       }
+      
+      // Update timestamp
+      lastFocusTimestamp.current = currentTime;
     }, [sketchId])
   );
 
@@ -2518,13 +2540,9 @@ export default function DrawSketchScreen() {
             }
             backgroundImageChangedRef.current = false;
             
-            // FIX TABLET: Nach dem Speichern einer neuen Skizze den Tracking-Ref aktualisieren
-            // So erkennt useFocusEffect beim nächsten Besuch (neue Skizze), dass ein Reset nötig ist
-            // Weil dann: lastLoadedSketchId.current (= newSketch.id) !== sketchId (= undefined)
-            if (newSketch?.id) {
-              lastLoadedSketchId.current = newSketch.id;
-              console.log('[autoSave] Updated lastLoadedSketchId to:', newSketch.id);
-            }
+            // WICHTIG: lastLoadedSketchId NICHT hier aktualisieren!
+            // Das würde eine Race-Condition verursachen auf Tablets, wo die Komponente
+            // länger gemountet bleibt. Der Reset wird stattdessen über useFocusEffect gesteuert.
             
             console.log('Saved new sketch in', Date.now() - startTime, 'ms');
           } catch (error) {
@@ -6902,12 +6920,8 @@ export default function DrawSketchScreen() {
         }
         backgroundImageChangedRef.current = false;
         
-        // FIX TABLET: Nach dem Speichern einer neuen Skizze den Tracking-Ref aktualisieren
-        // So erkennt useFocusEffect beim nächsten Besuch (neue Skizze), dass ein Reset nötig ist
-        if (newSketch?.id) {
-          lastLoadedSketchId.current = newSketch.id;
-          console.log('[saveSketch] Updated lastLoadedSketchId to:', newSketch.id);
-        }
+        // WICHTIG: lastLoadedSketchId NICHT hier aktualisieren!
+        // Das würde eine Race-Condition verursachen auf Tablets.
         
         console.log('Sketch created in', Date.now() - startTime, 'ms');
         showAlert(t('common.success'), t('sketches.sketchSaved'));

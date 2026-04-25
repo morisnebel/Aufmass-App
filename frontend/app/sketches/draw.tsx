@@ -434,6 +434,44 @@ export default function DrawSketchScreen() {
     setScale(1);
   }, [androidZoomScale, androidTranslateX, androidTranslateY, screenWidth, canvasHeight]);
 
+  // === EINFACHE ZOOM-BUTTONS ===
+  // Zoom-Stufen: 50%, 75%, 100%, 150%, 200%
+  const ZOOM_LEVELS = [0.5, 0.75, 1, 1.5, 2];
+  
+  const zoomIn = useCallback(() => {
+    const currentScale = androidPinchRef.current.currentScale || scale;
+    // Finde nächst-höhere Zoom-Stufe
+    const nextLevel = ZOOM_LEVELS.find(level => level > currentScale + 0.05) || ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
+    
+    if (Platform.OS === 'android') {
+      androidPinchRef.current.currentScale = nextLevel;
+      androidZoomScale.setValue(nextLevel);
+    }
+    setScale(nextLevel);
+    console.log('[Zoom] Zoom In:', Math.round(nextLevel * 100) + '%');
+  }, [scale, androidZoomScale]);
+
+  const zoomOut = useCallback(() => {
+    const currentScale = androidPinchRef.current.currentScale || scale;
+    // Finde nächst-niedrigere Zoom-Stufe
+    const prevLevels = ZOOM_LEVELS.filter(level => level < currentScale - 0.05);
+    const nextLevel = prevLevels.length > 0 ? prevLevels[prevLevels.length - 1] : ZOOM_LEVELS[0];
+    
+    if (Platform.OS === 'android') {
+      androidPinchRef.current.currentScale = nextLevel;
+      androidZoomScale.setValue(nextLevel);
+      // Bei Zoom Out auch Translation zurücksetzen um nicht aus dem Bild zu scrollen
+      if (nextLevel <= 1) {
+        androidPinchRef.current.currentTranslateX = 0;
+        androidPinchRef.current.currentTranslateY = 0;
+        androidTranslateX.setValue(0);
+        androidTranslateY.setValue(0);
+      }
+    }
+    setScale(nextLevel);
+    console.log('[Zoom] Zoom Out:', Math.round(nextLevel * 100) + '%');
+  }, [scale, androidZoomScale, androidTranslateX, androidTranslateY]);
+
   // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
   const canvasWidth = screenWidth;
   // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
@@ -3419,8 +3457,8 @@ export default function DrawSketchScreen() {
       }
       return;
     }
-    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
-    if (zoomMode) return;
+    // VEREINFACHT: Zeichnen funktioniert jetzt immer, Zoom über Buttons
+    // Alte Logik mit zoomMode-Toggle wurde entfernt
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     // Die locationX/Y sind relativ zum inneren View (Canvas-Container)
@@ -3429,10 +3467,17 @@ export default function DrawSketchScreen() {
     let locationX = touch.locationX || touch.pageX;
     let locationY = touch.locationY || touch.pageY;
 
-    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten via viewBox
-    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-      locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
-      locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten (Button-Zoom)
+    if (Platform.OS === 'android') {
+      const currentZoom = androidPinchRef.current.currentScale || 1;
+      const currentTransX = androidPinchRef.current.currentTranslateX || 0;
+      const currentTransY = androidPinchRef.current.currentTranslateY || 0;
+      
+      // Bei Zoom: Koordinaten entsprechend transformieren
+      if (currentZoom !== 1 || currentTransX !== 0 || currentTransY !== 0) {
+        locationX = (locationX - currentTransX) / currentZoom;
+        locationY = (locationY - currentTransY) / currentZoom;
+      }
     }
 
     if (drawMode === 'select') {
@@ -3791,18 +3836,24 @@ export default function DrawSketchScreen() {
       }
       return;
     }
-    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
-    if (zoomMode) return;
+    // VEREINFACHT: Zeichnen funktioniert jetzt immer (Zoom über Buttons)
     
     const touch = event.nativeEvent.touches ? event.nativeEvent.touches[0] : event.nativeEvent;
     // Gleiche Formel wie onTouchStart - locationX/Y sind bereits Canvas-Koordinaten
     let locationX = touch.locationX || touch.pageX;
     let locationY = touch.locationY || touch.pageY;
 
-    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten via viewBox
-    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-      locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
-      locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
+    // Android: Konvertiere Screen-Koordinaten → Canvas-Koordinaten (Button-Zoom)
+    if (Platform.OS === 'android') {
+      const currentZoom = androidPinchRef.current.currentScale || 1;
+      const currentTransX = androidPinchRef.current.currentTranslateX || 0;
+      const currentTransY = androidPinchRef.current.currentTranslateY || 0;
+      
+      // Bei Zoom: Koordinaten entsprechend transformieren
+      if (currentZoom !== 1 || currentTransX !== 0 || currentTransY !== 0) {
+        locationX = (locationX - currentTransX) / currentZoom;
+        locationY = (locationY - currentTransY) / currentZoom;
+      }
     }
 
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
@@ -3874,8 +3925,7 @@ export default function DrawSketchScreen() {
       androidPinchRef.current.numTouches = 0;
       return;
     }
-    // Im Zoom-Modus keine Zeichnung (iOS → ScrollView handelt)
-    if (zoomMode) return;
+    // VEREINFACHT: Zeichnen funktioniert jetzt immer (Zoom über Buttons)
     
     if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
       // Verwende den kompletten Pfad aus dem Ref für maximale Genauigkeit
@@ -7161,39 +7211,50 @@ export default function DrawSketchScreen() {
 
         {/* ========== ZEICHEN-TOOLS ========== */}
         
-        {/* Zoom an/aus Toggle - vor Bearbeiten */}
+        {/* Zoom Buttons - EINFACHE LÖSUNG mit + und - */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity
-            style={[
-              styles.toolButtonInner, 
-              { 
-                backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
-                borderWidth: 2,
-                borderColor: zoomMode ? '#4caf50' : '#f44336',
-              }
-            ]}
-            onPress={() => {
-              const newZoomMode = !zoomMode;
-              setZoomMode(newZoomMode);
-              // Bei Zoom aus → Android-Zoom beibehalten aber Pan zurücksetzen
-              // Bei Zoom an → nichts weiter nötig
-              if (!newZoomMode && Platform.OS === 'android') {
-                // Pan zurücksetzen, Skala beibehalten
-                androidPinchRef.current.currentTranslateX = 0;
-                androidPinchRef.current.currentTranslateY = 0;
-                androidTranslateX.setValue(0);
-                androidTranslateY.setValue(0);
-              }
-            }}
-          >
-            <Ionicons 
-              name="search" 
-              size={18} 
-              color={zoomMode ? '#4caf50' : '#f44336'} 
-            />
-          </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: zoomMode ? '#4caf50' : '#f44336' }]}>
-            {zoomMode ? 'Zoom' : 'Zoom'}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <TouchableOpacity
+              style={[
+                styles.toolButtonInner, 
+                { 
+                  width: 32,
+                  backgroundColor: scale <= 0.5 ? '#f5f5f5' : '#e3f2fd',
+                  borderWidth: 1,
+                  borderColor: scale <= 0.5 ? '#ccc' : '#1976d2',
+                }
+              ]}
+              onPress={zoomOut}
+              disabled={scale <= 0.5}
+            >
+              <Ionicons 
+                name="remove" 
+                size={18} 
+                color={scale <= 0.5 ? '#ccc' : '#1976d2'} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toolButtonInner, 
+                { 
+                  width: 32,
+                  backgroundColor: scale >= 2 ? '#f5f5f5' : '#e3f2fd',
+                  borderWidth: 1,
+                  borderColor: scale >= 2 ? '#ccc' : '#1976d2',
+                }
+              ]}
+              onPress={zoomIn}
+              disabled={scale >= 2}
+            >
+              <Ionicons 
+                name="add" 
+                size={18} 
+                color={scale >= 2 ? '#ccc' : '#1976d2'} 
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.toolButtonLabel, { color: '#1976d2' }]}>
+            {Math.round(scale * 100)}%
           </Text>
         </View>
         
@@ -8052,15 +8113,14 @@ export default function DrawSketchScreen() {
               <Text style={styles.photoEditBadgeText}>{t('sketches.photoMode')}</Text>
             </View>
           )}
-          {zoomMode && (
+          {/* Zoom-Badge zeigen wenn nicht 100% */}
+          {Math.abs(scale - 1) > 0.05 && (
             <View style={[styles.photoEditBadge, { backgroundColor: '#FF9800', flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
               <Ionicons name="search-outline" size={14} color="#fff" />
               <Text style={styles.photoEditBadgeText}>Zoom {Math.round(scale * 100)}%</Text>
-              {Platform.OS === 'android' && scale > 1.05 && (
-                <TouchableOpacity onPress={resetAndroidZoom} style={{ marginLeft: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>Reset</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={resetAndroidZoom} style={{ marginLeft: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>100%</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>

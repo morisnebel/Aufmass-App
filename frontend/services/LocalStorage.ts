@@ -1,53 +1,59 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-// WICHTIG: Neue expo-file-system API mit File und Directory Klassen (SDK 54+)
-import { File, Directory, Paths } from 'expo-file-system';
+// FIX: Verwende expo-file-system ohne deprecated APIs
+import * as FileSystem from 'expo-file-system';
 
 // CloudKit storage disabled for now - using AsyncStorage only
 // The iCloud integration requires additional native configuration
 let CloudKitStorage: any = null;
 
 // FIX: Dateibasierte Bildspeicherung für große Bilder (umgeht AsyncStorage-Limits)
-// Neue API: Verwende Directory-Klasse mit Paths.document
-let imageDirectory: Directory | null = null;
+// Verwende cacheDirectory als Fallback wenn documentDirectory nicht verfügbar
+const getImageDir = () => {
+  const baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory || '';
+  return `${baseDir}images/`;
+};
+const IMAGE_DIR = getImageDir();
 
-// Initialisiere Image-Verzeichnis (synchron möglich mit neuer API)
-const initImageDir = (): boolean => {
+// Initialisiere Image-Verzeichnis
+const initImageDir = async () => {
   try {
-    if (imageDirectory) return true;
-    
-    // Verwende documentDirectory als primären Speicherort
-    imageDirectory = new Directory(Paths.document, 'images');
-    imageDirectory.create(); // Idempotent - erstellt nur wenn nötig
-    console.log('[ImageStorage] Image directory ready:', imageDirectory.uri);
+    const imageDir = getImageDir();
+    if (!imageDir) {
+      console.error('[ImageStorage] No valid directory available');
+      return false;
+    }
+    // FIX: Versuche das Verzeichnis zu erstellen ohne vorher zu prüfen ob es existiert
+    // makeDirectoryAsync mit intermediates: true erstellt das Verzeichnis nur wenn nötig
+    try {
+      await FileSystem.makeDirectoryAsync(imageDir, { intermediates: true });
+      console.log('[ImageStorage] Created/verified image directory:', imageDir);
+    } catch (mkdirErr: any) {
+      // Ignoriere "already exists" Fehler
+      if (!mkdirErr.message?.includes('already exists') && !mkdirErr.message?.includes('File exists')) {
+        throw mkdirErr;
+      }
+    }
     return true;
   } catch (e) {
     console.error('[ImageStorage] Error creating image directory:', e);
-    // Fallback zu cacheDirectory
-    try {
-      imageDirectory = new Directory(Paths.cache, 'images');
-      imageDirectory.create();
-      console.log('[ImageStorage] Using cache directory as fallback:', imageDirectory.uri);
-      return true;
-    } catch (e2) {
-      console.error('[ImageStorage] Cache fallback also failed:', e2);
-      return false;
-    }
+    return false;
   }
 };
 
-// Initialisiere beim Import
+// Rufe initImageDir beim Import auf
 initImageDir();
 
 // Bild als Datei speichern (robuster als AsyncStorage für große Daten)
 const saveImageToFile = async (key: string, base64Data: string): Promise<boolean> => {
   try {
-    if (!initImageDir() || !imageDirectory) {
+    const dirReady = await initImageDir();
+    if (!dirReady) {
       throw new Error('Image directory not available');
     }
-    
-    const file = new File(imageDirectory, `${key}.txt`);
-    file.write(base64Data); // Synchron schreiben (effizienter für große Daten)
+    const imageDir = getImageDir();
+    const filePath = `${imageDir}${key}.txt`;
+    await FileSystem.writeAsStringAsync(filePath, base64Data, { encoding: FileSystem.EncodingType.UTF8 });
     console.log(`[ImageStorage] Saved image to file: ${key} (${Math.round(base64Data.length / 1024)}KB)`);
     return true;
   } catch (e) {
@@ -67,20 +73,17 @@ const saveImageToFile = async (key: string, base64Data: string): Promise<boolean
 // Bild aus Datei laden
 const loadImageFromFile = async (key: string): Promise<string | null> => {
   try {
-    if (!initImageDir() || !imageDirectory) {
-      throw new Error('Image directory not available');
-    }
-    
-    const file = new File(imageDirectory, `${key}.txt`);
-    if (file.exists) {
-      const data = file.text(); // Synchron lesen
+    const filePath = `${IMAGE_DIR}${key}.txt`;
+    // FIX: Versuche die Datei direkt zu lesen statt vorher zu prüfen
+    try {
+      const data = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.UTF8 });
       console.log(`[ImageStorage] Loaded image from file: ${key} (${Math.round(data.length / 1024)}KB)`);
       return data;
-    } else {
-      console.log(`[ImageStorage] File not found: ${key}`);
+    } catch (readErr) {
+      // Datei existiert nicht
     }
   } catch (e) {
-    console.log(`[ImageStorage] Error loading file for ${key}:`, e);
+    console.log(`[ImageStorage] File not found for ${key}, trying AsyncStorage`);
   }
   
   // Fallback zu AsyncStorage (für alte Daten)
@@ -101,12 +104,13 @@ const loadImageFromFile = async (key: string): Promise<string | null> => {
 // Bild-Datei löschen
 const deleteImageFile = async (key: string): Promise<void> => {
   try {
-    if (initImageDir() && imageDirectory) {
-      const file = new File(imageDirectory, `${key}.txt`);
-      if (file.exists) {
-        file.delete();
-        console.log(`[ImageStorage] Deleted file: ${key}`);
-      }
+    const filePath = `${IMAGE_DIR}${key}.txt`;
+    // FIX: Versuche direkt zu löschen ohne vorher zu prüfen
+    try {
+      await FileSystem.deleteAsync(filePath);
+      console.log(`[ImageStorage] Deleted file: ${key}`);
+    } catch (deleteErr) {
+      // Datei existiert nicht - ignorieren
     }
   } catch (e) {
     console.log(`[ImageStorage] Error deleting file ${key}:`, e);
@@ -123,16 +127,13 @@ const deleteImageFile = async (key: string): Promise<void> => {
 // Diese Funktion sollte beim App-Start aufgerufen werden
 const cleanupOrphanedImageFiles = async (): Promise<{ removed: number; errors: number }> => {
   try {
-    if (!initImageDir() || !imageDirectory) {
-      return { removed: 0, errors: 0 };
-    }
+    const imageDir = getImageDir();
+    if (!imageDir) return { removed: 0, errors: 0 };
     
-    // Prüfe ob Verzeichnis existiert und lese Dateien
+    // Prüfe ob Verzeichnis existiert
     let files: string[] = [];
     try {
-      if (imageDirectory.exists) {
-        files = imageDirectory.list() || [];
-      }
+      files = await FileSystem.readDirectoryAsync(imageDir);
     } catch (e) {
       // Verzeichnis existiert nicht
       return { removed: 0, errors: 0 };
@@ -194,15 +195,12 @@ const cleanupOrphanedImageFiles = async (): Promise<{ removed: number; errors: n
     console.log(`[cleanupOrphanedImageFiles] Found ${validKeys.size} valid image keys`);
     
     // Lösche verwaiste Dateien (die nicht in validKeys sind)
-    for (const fileName of files) {
-      if (!validKeys.has(fileName)) {
+    for (const file of files) {
+      if (!validKeys.has(file)) {
         try {
-          const file = new File(imageDirectory, fileName);
-          if (file.exists) {
-            file.delete();
-            removed++;
-            console.log(`[cleanupOrphanedImageFiles] Removed orphaned file: ${fileName}`);
-          }
+          await FileSystem.deleteAsync(`${imageDir}${file}`);
+          removed++;
+          console.log(`[cleanupOrphanedImageFiles] Removed orphaned file: ${file}`);
         } catch (e) {
           errors++;
         }

@@ -3399,23 +3399,17 @@ export default function DrawSketchScreen() {
     let y = touch.locationY || touch.pageY;
     
     // Android mit Zoom: Koordinaten müssen transformiert werden
-    // Die Animated.View hat: translateX, translateY, scale
-    // Touch-Koordinaten sind relativ zum View NACH der Transformation
-    // Wir müssen sie auf die Original-Canvas-Koordinaten zurückrechnen
-    if (Platform.OS === 'android') {
+    if (Platform.OS === 'android' && zoomMode) {
       const currentZoom = androidPinchRef.current.currentScale || 1;
       const translateX = androidPinchRef.current.currentTranslateX || 0;
       const translateY = androidPinchRef.current.currentTranslateY || 0;
       
-      // Die locationX/Y sind bereits im skalierten Koordinatensystem
-      // Wir müssen sie auf das Original-Koordinatensystem zurückrechnen
-      // Formel: originalX = (touchX - translateX) / scale
       if (currentZoom !== 1 || translateX !== 0 || translateY !== 0) {
-        // Wichtig: Touch-Position ist relativ zum transformierten View
-        // Die Transformation ist: translate -> scale (in dieser Reihenfolge)
-        // Umkehrung: /scale -> -translate
-        x = x / currentZoom;
-        y = y / currentZoom;
+        // Die Animated.View Transformation ist: translate(tx, ty) -> scale(s)
+        // Also: screenPos = (canvasPos * scale) + translate
+        // Umkehrung: canvasPos = (screenPos - translate) / scale
+        x = (x - translateX) / currentZoom;
+        y = (y - translateY) / currentZoom;
       }
     }
     
@@ -3430,19 +3424,38 @@ export default function DrawSketchScreen() {
     if (Platform.OS === 'android' && zoomMode && touches.length >= 2) {
       const dx = touches[0].pageX - touches[1].pageX;
       const dy = touches[0].pageY - touches[1].pageY;
-      androidPinchRef.current.initialDistance = Math.sqrt(dx * dx + dy * dy);
-      androidPinchRef.current.initialScale = androidPinchRef.current.currentScale;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Berechne Mittelpunkt der beiden Finger für zentriertes Zoomen
+      const centerX = (touches[0].pageX + touches[1].pageX) / 2;
+      const centerY = (touches[0].pageY + touches[1].pageY) / 2;
+      
+      androidPinchRef.current.initialDistance = distance;
+      androidPinchRef.current.initialScale = androidPinchRef.current.currentScale || 1;
+      androidPinchRef.current.initialTranslateX = androidPinchRef.current.currentTranslateX || 0;
+      androidPinchRef.current.initialTranslateY = androidPinchRef.current.currentTranslateY || 0;
+      androidPinchRef.current.pinchCenterX = centerX;
+      androidPinchRef.current.pinchCenterY = centerY;
       androidPinchRef.current.isPinching = true;
       androidPinchRef.current.numTouches = touches.length;
-      return; // Bei Zoom: nicht zeichnen
+      return;
     }
     
-    // === 1 Finger = Zeichnen (IMMER, auch bei aktivem zoomMode) ===
-    // Merke Position für eventuelles Panning falls 2. Finger kommt
+    // === 1 Finger bei gezoomtem Canvas = Pan ===
+    if (Platform.OS === 'android' && zoomMode && (androidPinchRef.current.currentScale || 1) > 1.05) {
+      androidPinchRef.current.lastPanX = touches[0].pageX;
+      androidPinchRef.current.lastPanY = touches[0].pageY;
+      androidPinchRef.current.isPanning = true;
+      androidPinchRef.current.numTouches = 1;
+      return; // Bei Pan im Zoom-Modus: nicht zeichnen
+    }
+    
+    // === 1 Finger = Zeichnen ===
     if (Platform.OS === 'android') {
       androidPinchRef.current.lastPanX = touches[0].pageX;
       androidPinchRef.current.lastPanY = touches[0].pageY;
       androidPinchRef.current.isPinching = false;
+      androidPinchRef.current.isPanning = false;
       androidPinchRef.current.numTouches = 1;
     }
     
@@ -3783,20 +3796,58 @@ export default function DrawSketchScreen() {
       const dx = touches[0].pageX - touches[1].pageX;
       const dy = touches[0].pageY - touches[1].pageY;
       const distance = Math.sqrt(dx * dx + dy * dy);
+      
       if (androidPinchRef.current.initialDistance > 0) {
         const ratio = distance / androidPinchRef.current.initialDistance;
-        const newScale = Math.max(0.5, Math.min(4, androidPinchRef.current.initialScale * ratio));
+        const newScale = Math.max(0.5, Math.min(4, (androidPinchRef.current.initialScale || 1) * ratio));
+        
+        // Berechne neuen Mittelpunkt
+        const centerX = (touches[0].pageX + touches[1].pageX) / 2;
+        const centerY = (touches[0].pageY + touches[1].pageY) / 2;
+        
+        // Zoom um den Mittelpunkt der Finger
+        const oldScale = androidPinchRef.current.currentScale || 1;
+        const scaleDiff = newScale - oldScale;
+        
+        // Translation anpassen um Zoom-Zentrum beizubehalten
+        const newTranslateX = (androidPinchRef.current.currentTranslateX || 0) - centerX * scaleDiff / newScale;
+        const newTranslateY = (androidPinchRef.current.currentTranslateY || 0) - centerY * scaleDiff / newScale;
+        
         androidPinchRef.current.currentScale = newScale;
+        androidPinchRef.current.currentTranslateX = newTranslateX;
+        androidPinchRef.current.currentTranslateY = newTranslateY;
+        
         androidZoomScale.setValue(newScale);
+        androidTranslateX.setValue(newTranslateX);
+        androidTranslateY.setValue(newTranslateY);
+        setScale(newScale);
       }
       androidPinchRef.current.isPinching = true;
       androidPinchRef.current.numTouches = touches.length;
-      return; // Bei Zoom: nicht zeichnen
+      return;
     }
     
-    // === 1 Finger = Zeichnen (aber nicht wenn gerade noch gepincht wird) ===
-    if (androidPinchRef.current.isPinching) {
-      return; // Warte bis Pinch komplett beendet
+    // === 1 Finger bei gezoomtem Canvas = Pan ===
+    if (Platform.OS === 'android' && zoomMode && androidPinchRef.current.isPanning && (androidPinchRef.current.currentScale || 1) > 1.05) {
+      const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
+      const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
+      
+      const newTranslateX = (androidPinchRef.current.currentTranslateX || 0) + panDx;
+      const newTranslateY = (androidPinchRef.current.currentTranslateY || 0) + panDy;
+      
+      androidPinchRef.current.currentTranslateX = newTranslateX;
+      androidPinchRef.current.currentTranslateY = newTranslateY;
+      androidTranslateX.setValue(newTranslateX);
+      androidTranslateY.setValue(newTranslateY);
+      
+      androidPinchRef.current.lastPanX = touches[0].pageX;
+      androidPinchRef.current.lastPanY = touches[0].pageY;
+      return;
+    }
+    
+    // === 1 Finger = Zeichnen (aber nicht wenn gerade gepincht/gepannt wird) ===
+    if (androidPinchRef.current.isPinching || androidPinchRef.current.isPanning) {
+      return;
     }
     
     // Konvertiere Touch-Koordinaten zu Canvas-Koordinaten
@@ -3836,11 +3887,12 @@ export default function DrawSketchScreen() {
   const onTouchEnd = (event: any) => {
     const touches = event.nativeEvent.touches;
     
-    // === Android: Pinch-Status zurücksetzen wenn alle Finger gehoben ===
+    // === Android: Pinch/Pan-Status zurücksetzen ===
     if (Platform.OS === 'android') {
       if (!touches || touches.length === 0) {
         // Alle Finger gehoben
         androidPinchRef.current.isPinching = false;
+        androidPinchRef.current.isPanning = false;
         androidPinchRef.current.initialDistance = 0;
         androidPinchRef.current.numTouches = 0;
       } else {
@@ -3850,6 +3902,12 @@ export default function DrawSketchScreen() {
           androidPinchRef.current.isPinching = false;
         }
       }
+    }
+    
+    // === Bei Pan/Pinch nicht zeichnen ===
+    if (androidPinchRef.current.isPanning) {
+      androidPinchRef.current.isPanning = false;
+      return;
     }
     
     // === Zeichnung abschließen ===

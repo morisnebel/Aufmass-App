@@ -3936,13 +3936,8 @@ export default function DrawSketchScreen() {
       setDraggingLabelId(null);
     } else if (startPoint && drawMode === 'arrow') {
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      let locationX = touch.locationX || touch.pageX;
-      let locationY = touch.locationY || touch.pageY;
-      // Android: Konvertiere via viewBox
-      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
-        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
-      }
+      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
+      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
       
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3952,13 +3947,8 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'pointer') {
       // Memo-Pfeil: Modal öffnen für optionale Notiz
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      let locationX = touch.locationX || touch.pageX;
-      let locationY = touch.locationY || touch.pageY;
-      // Android: Konvertiere via viewBox
-      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
-        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
-      }
+      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
+      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
       
       // Speichere die Pointer-Koordinaten und öffne Modal
       setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -3969,13 +3959,8 @@ export default function DrawSketchScreen() {
     } else if (startPoint && drawMode === 'memo') {
       // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
       const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      let locationX = touch.locationX || touch.pageX;
-      let locationY = touch.locationY || touch.pageY;
-      // Android: Konvertiere via viewBox
-      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-        locationX = androidViewBox.x + (locationX / screenWidth) * androidViewBox.w;
-        locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
-      }
+      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
+      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
       
       // Speichere die Memo-Koordinaten und öffne Modal
       setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
@@ -7137,16 +7122,53 @@ export default function DrawSketchScreen() {
 
         {/* ========== ZEICHEN-TOOLS ========== */}
         
-        {/* Zoom-Anzeige: Nur sichtbar wenn gezoomt (Pinch mit 2 Fingern zum Zoomen) */}
-        {(androidPinchRef.current?.currentScale > 1.05 || androidPinchRef.current?.currentScale < 0.95) && (
+        {/* Zoom-Toggle-Button: Ein/Aus für Pinch-to-Zoom */}
+        <View style={styles.toolButtonWithLabel}>
+          <TouchableOpacity
+            style={[
+              styles.toolButtonInner, 
+              { 
+                backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
+                borderWidth: 2,
+                borderColor: zoomMode ? '#4caf50' : '#f44336',
+              }
+            ]}
+            onPress={() => {
+              const newZoomMode = !zoomMode;
+              setZoomMode(newZoomMode);
+              // Bei Zoom aus → Zoom zurücksetzen
+              if (!newZoomMode) {
+                androidPinchRef.current.currentScale = 1;
+                androidPinchRef.current.currentTranslateX = 0;
+                androidPinchRef.current.currentTranslateY = 0;
+                androidZoomScale.setValue(1);
+                androidTranslateX.setValue(0);
+                androidTranslateY.setValue(0);
+                setScale(1);
+              }
+            }}
+          >
+            <Ionicons 
+              name="search" 
+              size={18} 
+              color={zoomMode ? '#4caf50' : '#f44336'} 
+            />
+          </TouchableOpacity>
+          <Text style={[styles.toolButtonLabel, { color: zoomMode ? '#4caf50' : '#f44336', fontSize: 9 }]}>
+            {zoomMode ? 'Zoom AN' : 'Zoom AUS'}
+          </Text>
+        </View>
+
+        {/* Zoom-Reset: Nur sichtbar wenn gezoomt */}
+        {zoomMode && (androidPinchRef.current?.currentScale > 1.05 || androidPinchRef.current?.currentScale < 0.95) && (
           <View style={styles.toolButtonWithLabel}>
             <TouchableOpacity
               style={[
                 styles.toolButtonInner, 
                 { 
-                  backgroundColor: '#e3f2fd',
+                  backgroundColor: '#fff3e0',
                   borderWidth: 1,
-                  borderColor: '#1976d2',
+                  borderColor: '#ff9800',
                 }
               ]}
               onPress={() => {
@@ -7160,11 +7182,11 @@ export default function DrawSketchScreen() {
                 setScale(1);
               }}
             >
-              <Text style={{ color: '#1976d2', fontWeight: '700', fontSize: 11 }}>
+              <Text style={{ color: '#ff9800', fontWeight: '700', fontSize: 10 }}>
                 {Math.round((androidPinchRef.current?.currentScale || 1) * 100)}%
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.toolButtonLabel, { color: '#1976d2', fontSize: 9 }]}>
+            <Text style={[styles.toolButtonLabel, { color: '#ff9800', fontSize: 9 }]}>
               Reset
             </Text>
           </View>

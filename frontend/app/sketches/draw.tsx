@@ -379,10 +379,15 @@ export default function DrawSketchScreen() {
   // Zoom & Pan - use dynamic dimensions
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [lastScale, setLastScale] = useState(1);
   // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
-  // Zoom-Modus: manuell gesteuert über Lupe-Button
-  const [zoomMode, setZoomMode] = useState(true); // Standard: Zoom erlaubt
+  // Zeichnen-Modus: wenn true, kann gezeichnet werden; wenn false, ist Zoom aktiv
+  // (umgekehrte Logik zu vorherigem zoomMode für Konsistenz mit annotate.tsx)
+  const [drawingEnabled, setDrawingEnabled] = useState(false); // Standard: Zoom erlaubt (Zeichnen aus)
+  // Trackt ob gerade Pinch-Zoom aktiv ist (verhindert versehentliches Zeichnen)
+  const [isZooming, setIsZooming] = useState(false);
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
   // Referenz für ScrollView um Zoom zurückzusetzen
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -406,6 +411,13 @@ export default function DrawSketchScreen() {
     currentTranslateX: 0,
     currentTranslateY: 0,
   });
+
+  // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
+  // WICHTIG: Muss VOR den useEffects definiert werden die canvasHeight verwenden
+  const canvasWidth = screenWidth;
+  // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
+  const canvasOverhead = isPhoneLandscape ? 80 : (isPhoneDevice ? 100 : 120);
+  const canvasHeight = Math.max(100, screenHeight - canvasOverhead);
 
   // Initialisiere viewBox wenn Bildschirm-Dimensionen sich ändern
   useEffect(() => {
@@ -434,12 +446,6 @@ export default function DrawSketchScreen() {
     setScale(1);
   }, [androidZoomScale, androidTranslateX, androidTranslateY, screenWidth, canvasHeight]);
 
-  // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
-  const canvasWidth = screenWidth;
-  // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
-  const canvasOverhead = isPhoneLandscape ? 80 : (isPhoneDevice ? 100 : 120);
-  const canvasHeight = Math.max(100, screenHeight - canvasOverhead);
-  
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
   const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const canvasLayoutRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -496,9 +502,9 @@ export default function DrawSketchScreen() {
       // Auch die Auswahl aufheben, damit die grünen Handles verschwinden
       setSelectedElementId(null);
     }
-    // Zoom-Modus ausschalten damit Zeichnen/Bearbeiten funktioniert
+    // Zeichnen-Modus aktivieren wenn ein Werkzeug gewählt wird
     // aber den aktuellen Zoom-Level beibehalten!
-    setZoomMode(false);
+    setDrawingEnabled(true);
   };
   
   // State für Projektfotos-Modal
@@ -3393,126 +3399,78 @@ export default function DrawSketchScreen() {
   };
 
   // Touch handlers
-  // Hilfsfunktion: Konvertiert Touch-Koordinaten zu Canvas-Koordinaten unter Berücksichtigung von Zoom
-  const touchToCanvasCoords = (touch: any): { x: number; y: number } => {
-    let x = touch.locationX || touch.pageX;
-    let y = touch.locationY || touch.pageY;
-    
-    // Android mit Zoom: Koordinaten müssen transformiert werden
-    if (Platform.OS === 'android' && zoomMode) {
-      const currentZoom = androidPinchRef.current.currentScale || 1;
-      const translateX = androidPinchRef.current.currentTranslateX || 0;
-      const translateY = androidPinchRef.current.currentTranslateY || 0;
-      
-      if (currentZoom !== 1 || translateX !== 0 || translateY !== 0) {
-        // Die Animated.View Transformation ist: translate(tx, ty) -> scale(s)
-        // Also: screenPos = (canvasPos * scale) + translate
-        // Umkehrung: canvasPos = (screenPos - translate) / scale
-        x = (x - translateX) / currentZoom;
-        y = (y - translateY) / currentZoom;
-      }
-    }
-    
-    return { x, y };
+  // Hilfsfunktion: Berechnet Distanz zwischen zwei Touch-Punkten (für Pinch-Zoom)
+  const getDistance = (touches: any[]) => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].pageX - touches[1].pageX;
+    const dy = touches[0].pageY - touches[1].pageY;
+    return Math.sqrt(dx * dx + dy * dy);
   };
 
   const onTouchStart = (event: any) => {
     const touches = event.nativeEvent.touches;
     if (!touches || touches.length === 0) return;
     
-    // Debug-Log um zu sehen ob Touches ankommen
-    console.log('[TouchStart] touches:', touches.length, 'zoomMode:', zoomMode, 'Platform:', Platform.OS);
+    // Debug-Log
+    console.log('[TouchStart] touches:', touches.length, 'drawingEnabled:', drawingEnabled, 'isZooming:', isZooming);
     
-    // === 2+ Finger = Pinch-to-Zoom ===
-    if (zoomMode && touches.length >= 2) {
-      console.log('[TouchStart] Pinch detected - starting zoom');
-      const dx = touches[0].pageX - touches[1].pageX;
-      const dy = touches[0].pageY - touches[1].pageY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // Berechne Mittelpunkt der beiden Finger für zentriertes Zoomen
-      const centerX = (touches[0].pageX + touches[1].pageX) / 2;
-      const centerY = (touches[0].pageY + touches[1].pageY) / 2;
-      
-      androidPinchRef.current.initialDistance = distance;
-      androidPinchRef.current.initialScale = androidPinchRef.current.currentScale || 1;
-      androidPinchRef.current.initialTranslateX = androidPinchRef.current.currentTranslateX || 0;
-      androidPinchRef.current.initialTranslateY = androidPinchRef.current.currentTranslateY || 0;
-      androidPinchRef.current.pinchCenterX = centerX;
-      androidPinchRef.current.pinchCenterY = centerY;
-      androidPinchRef.current.isPinching = true;
-      androidPinchRef.current.numTouches = touches.length;
+    // === 2+ Finger = Pinch-to-Zoom (beide Finger gleichzeitig aufgesetzt) ===
+    if (touches.length >= 2) {
+      setIsZooming(true);
+      setInitialPinchDistance(getDistance(touches));
+      setLastScale(scale);
+      // Falls Zeichnung bereits begonnen: verwerfen
+      if (currentPath) setCurrentPath('');
+      currentPathRef.current = '';
       return;
     }
     
-    // === 1 Finger bei gezoomtem Canvas = Pan ===
-    if (zoomMode && (androidPinchRef.current.currentScale || 1) > 1.05) {
-      console.log('[TouchStart] Pan mode - zoomed canvas');
-      androidPinchRef.current.lastPanX = touches[0].pageX;
-      androidPinchRef.current.lastPanY = touches[0].pageY;
-      androidPinchRef.current.isPanning = true;
-      androidPinchRef.current.numTouches = 1;
-      return; // Bei Pan im Zoom-Modus: nicht zeichnen
-    }
-    
-    // === 1 Finger = Zeichnen ===
-    androidPinchRef.current.lastPanX = touches[0].pageX;
-    androidPinchRef.current.lastPanY = touches[0].pageY;
-    androidPinchRef.current.isPinching = false;
-    androidPinchRef.current.isPanning = false;
-    androidPinchRef.current.numTouches = 1;
-    
-    // Konvertiere Touch-Koordinaten zu Canvas-Koordinaten
-    const { x: locationX, y: locationY } = touchToCanvasCoords(touches[0]);
+    // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
+    if (touches.length === 1 && !isZooming && drawingEnabled) {
+      const touch = touches[0];
+      // Einfache Koordinaten-Berechnung wie in annotate.tsx
+      const locationX = touch.locationX / scale;
+      const locationY = touch.locationY / scale;
 
-    if (drawMode === 'select') {
-      handleSelectTouchStart(locationX, locationY);
-    } else if (drawMode === 'crop') {
-      // Im Crop-Modus: Suche nach einem Bild an dieser Position
-      handleCropModeTouch(locationX, locationY);
-    } else if (drawMode === 'text') {
-      // Show text input modal
-      setPendingPosition({ x: locationX, y: locationY });
-      setShowTextModal(true);
-    } else if (drawMode === 'pen') {
-      // Initialisiere sowohl Ref (für Performance) als auch State (für Rendering)
-      const pathStart = `M ${locationX} ${locationY}`;
-      currentPathRef.current = pathStart;
-      drawPointCountRef.current = 0;
-      setCurrentPath(pathStart);
-    } else if (drawMode === 'polygon') {
-      // Start polygon drawing
-      setCurrentPath(`M ${locationX} ${locationY}`);
-    } else if (drawMode === 'polyline') {
-      // Polyline: Füge Punkt hinzu
-      const snappedPoint = snapPointToAngle(locationX, locationY);
-      const newPoint = { x: snappedPoint.x, y: snappedPoint.y };
-      
-      // Prüfe ob wir nahe am ersten Punkt sind (schließen)
-      if (polylinePoints.length >= 3) {
-        const firstPoint = polylinePoints[0];
-        const distance = Math.sqrt(
-          Math.pow(snappedPoint.x - firstPoint.x, 2) + 
-          Math.pow(snappedPoint.y - firstPoint.y, 2)
-        );
+      if (drawMode === 'select') {
+        handleSelectTouchStart(locationX, locationY);
+      } else if (drawMode === 'crop') {
+        handleCropModeTouch(locationX, locationY);
+      } else if (drawMode === 'text') {
+        setPendingPosition({ x: locationX, y: locationY });
+        setShowTextModal(true);
+      } else if (drawMode === 'pen') {
+        const pathStart = `M ${locationX} ${locationY}`;
+        currentPathRef.current = pathStart;
+        drawPointCountRef.current = 0;
+        setCurrentPath(pathStart);
+      } else if (drawMode === 'polygon') {
+        setCurrentPath(`M ${locationX} ${locationY}`);
+      } else if (drawMode === 'polyline') {
+        const snappedPoint = snapPointToAngle(locationX, locationY);
+        const newPoint = { x: snappedPoint.x, y: snappedPoint.y };
         
-        if (distance < 30) {
-          // Schließe die Polyline als geschlossenen Grundriss
-          finishPolyline(true);
-          return;
+        if (polylinePoints.length >= 3) {
+          const firstPoint = polylinePoints[0];
+          const distance = Math.sqrt(
+            Math.pow(snappedPoint.x - firstPoint.x, 2) + 
+            Math.pow(snappedPoint.y - firstPoint.y, 2)
+          );
+          
+          if (distance < 30) {
+            finishPolyline(true);
+            return;
+          }
         }
+        
+        setPolylinePoints([...polylinePoints, newPoint]);
+      } else if (drawMode === 'addPoint') {
+        handleAddPointTouch(locationX, locationY);
+      } else if (drawMode === 'removePoint') {
+        handleRemovePointTouch(locationX, locationY);
+      } else {
+        setStartPoint({ x: locationX, y: locationY });
       }
-      
-      setPolylinePoints([...polylinePoints, newPoint]);
-    } else if (drawMode === 'addPoint') {
-      // addPoint Modus: Punkt zu bestehender Polyline hinzufügen
-      handleAddPointTouch(locationX, locationY);
-    } else if (drawMode === 'removePoint') {
-      // removePoint Modus: Punkt aus bestehender Polyline entfernen
-      handleRemovePointTouch(locationX, locationY);
-    } else {
-      // Other drawing modes
-      setStartPoint({ x: locationX, y: locationY });
     }
   };
 
@@ -3795,246 +3753,186 @@ export default function DrawSketchScreen() {
     if (!touches || touches.length === 0) return;
     
     // === 2+ Finger = Pinch-to-Zoom ===
-    if (zoomMode && touches.length >= 2) {
-      const dx = touches[0].pageX - touches[1].pageX;
-      const dy = touches[0].pageY - touches[1].pageY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (androidPinchRef.current.initialDistance > 0) {
-        const ratio = distance / androidPinchRef.current.initialDistance;
-        const newScale = Math.max(0.5, Math.min(4, (androidPinchRef.current.initialScale || 1) * ratio));
-        
-        // Berechne neuen Mittelpunkt
-        const centerX = (touches[0].pageX + touches[1].pageX) / 2;
-        const centerY = (touches[0].pageY + touches[1].pageY) / 2;
-        
-        // Zoom um den Mittelpunkt der Finger
-        const oldScale = androidPinchRef.current.currentScale || 1;
-        const scaleDiff = newScale - oldScale;
-        
-        // Translation anpassen um Zoom-Zentrum beizubehalten
-        const newTranslateX = (androidPinchRef.current.currentTranslateX || 0) - centerX * scaleDiff / newScale;
-        const newTranslateY = (androidPinchRef.current.currentTranslateY || 0) - centerY * scaleDiff / newScale;
-        
-        androidPinchRef.current.currentScale = newScale;
-        androidPinchRef.current.currentTranslateX = newTranslateX;
-        androidPinchRef.current.currentTranslateY = newTranslateY;
-        
-        androidZoomScale.setValue(newScale);
-        androidTranslateX.setValue(newTranslateX);
-        androidTranslateY.setValue(newTranslateY);
-        setScale(newScale);
-        
-        console.log('[TouchMove] Zoom:', Math.round(newScale * 100) + '%');
+    if (touches.length >= 2) {
+      // FIX: Falls Nutzer Finger sequenziell aufsetzt (häufiger Fall!),
+      // onTouchStart feuert nur bei 1 Finger → initialPinchDistance ist null.
+      // Wir initialisieren Pinch hier beim ersten 2-Finger-Frame.
+      if (!initialPinchDistance) {
+        setIsZooming(true);
+        setInitialPinchDistance(getDistance(touches));
+        setLastScale(scale);
+        // Falls Zeichnung begonnen: verwerfen (User wollte zoomen, nicht zeichnen)
+        if (currentPath) setCurrentPath('');
+        currentPathRef.current = '';
+        return;
       }
-      androidPinchRef.current.isPinching = true;
-      androidPinchRef.current.numTouches = touches.length;
+      // Handle pinch zoom
+      const currentDistance = getDistance(touches);
+      const newScale = Math.min(Math.max(lastScale * (currentDistance / initialPinchDistance), 0.5), 4);
+      setScale(newScale);
       return;
     }
     
-    // === 1 Finger bei gezoomtem Canvas = Pan ===
-    if (zoomMode && androidPinchRef.current.isPanning && (androidPinchRef.current.currentScale || 1) > 1.05) {
-      const panDx = touches[0].pageX - androidPinchRef.current.lastPanX;
-      const panDy = touches[0].pageY - androidPinchRef.current.lastPanY;
-      
-      const newTranslateX = (androidPinchRef.current.currentTranslateX || 0) + panDx;
-      const newTranslateY = (androidPinchRef.current.currentTranslateY || 0) + panDy;
-      
-      androidPinchRef.current.currentTranslateX = newTranslateX;
-      androidPinchRef.current.currentTranslateY = newTranslateY;
-      androidTranslateX.setValue(newTranslateX);
-      androidTranslateY.setValue(newTranslateY);
-      
-      androidPinchRef.current.lastPanX = touches[0].pageX;
-      androidPinchRef.current.lastPanY = touches[0].pageY;
-      return;
-    }
-    
-    // === 1 Finger = Zeichnen (aber nicht wenn gerade gepincht/gepannt wird) ===
-    if (androidPinchRef.current.isPinching || androidPinchRef.current.isPanning) {
-      return;
-    }
-    
-    // Konvertiere Touch-Koordinaten zu Canvas-Koordinaten
-    const { x: locationX, y: locationY } = touchToCanvasCoords(touches[0]);
+    // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
+    if (touches.length === 1 && !isZooming && drawingEnabled) {
+      const touch = touches[0];
+      // Einfache Koordinaten-Berechnung wie in annotate.tsx
+      const locationX = touch.locationX / scale;
+      const locationY = touch.locationY / scale;
 
-    if (drawMode === 'select' && dragMode && originalElement && dragStart) {
-      handleSelectTouchMove(locationX, locationY);
-    } else if (drawMode === 'pen' && currentPathRef.current) {
-      // Füge Punkt zum Ref hinzu (keine Re-Renders)
-      currentPathRef.current = `${currentPathRef.current} L ${locationX} ${locationY}`;
-      drawPointCountRef.current++;
-      
-      // Aktualisiere State nur alle 3 Punkte für visuelles Feedback
-      // Dies reduziert Re-Renders um ~66% bei gleichbleibender visueller Qualität
-      if (drawPointCountRef.current % 3 === 0) {
-        setCurrentPath(currentPathRef.current);
+      if (drawMode === 'select' && dragMode && originalElement && dragStart) {
+        handleSelectTouchMove(locationX, locationY);
+      } else if (drawMode === 'pen' && currentPathRef.current) {
+        // Füge Punkt zum Ref hinzu (keine Re-Renders)
+        currentPathRef.current = `${currentPathRef.current} L ${locationX} ${locationY}`;
+        drawPointCountRef.current++;
+        
+        // Aktualisiere State nur alle 3 Punkte für visuelles Feedback
+        if (drawPointCountRef.current % 3 === 0) {
+          setCurrentPath(currentPathRef.current);
+        }
+      } else if (drawMode === 'select' && draggingLabelId) {
+        // Label-Verschiebung während des Ziehens
+        const dx = locationX - labelDragStartRef.current.x;
+        const dy = locationY - labelDragStartRef.current.y;
+        setLabelOffsets(prev => ({
+          ...prev,
+          [draggingLabelId]: {
+            x: labelDragStartRef.current.offsetX + dx,
+            y: labelDragStartRef.current.offsetY + dy,
+          },
+        }));
+      } else if (drawMode === 'polygon' && currentPath) {
+        setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+      } else if (startPoint && drawMode !== 'text') {
+        // Preview for other shapes
+        createTempElement(startPoint, locationX, locationY);
       }
-    } else if (drawMode === 'select' && draggingLabelId) {
-      // Label-Verschiebung während des Ziehens
-      const dx = locationX - labelDragStartRef.current.x;
-      const dy = locationY - labelDragStartRef.current.y;
-      setLabelOffsets(prev => ({
-        ...prev,
-        [draggingLabelId]: {
-          x: labelDragStartRef.current.offsetX + dx,
-          y: labelDragStartRef.current.offsetY + dy,
-        },
-      }));
-    } else if (drawMode === 'polygon' && currentPath) {
-      setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
-    } else if (startPoint && drawMode !== 'text') {
-      // Preview for other shapes
-      createTempElement(startPoint, locationX, locationY);
     }
   };
 
   const onTouchEnd = (event: any) => {
     const touches = event.nativeEvent.touches;
     
-    // === Pinch/Pan-Status zurücksetzen ===
-    if (!touches || touches.length === 0) {
-      // Alle Finger gehoben
-      androidPinchRef.current.isPinching = false;
-      androidPinchRef.current.isPanning = false;
-      androidPinchRef.current.initialDistance = 0;
-      androidPinchRef.current.numTouches = 0;
-    } else {
-      // Noch Finger auf dem Screen
-      androidPinchRef.current.numTouches = touches.length;
-      if (touches.length < 2) {
-        androidPinchRef.current.isPinching = false;
-      }
+    // === Zoom-Status zurücksetzen ===
+    if (touches.length < 2) {
+      setIsZooming(false);
+      setInitialPinchDistance(null);
     }
     
-    // === Bei Pan/Pinch nicht zeichnen ===
-    if (androidPinchRef.current.isPanning) {
-      androidPinchRef.current.isPanning = false;
-      return;
-    }
-    
-    // === Zeichnung abschließen ===
-    if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
-      // Verwende den kompletten Pfad aus dem Ref für maximale Genauigkeit
-      const finalPath = currentPathRef.current;
-      const newElement: DrawElement = {
-        id: generateId(),
-        type: 'path',
-        data: finalPath,
-        color: drawColor,
-        strokeWidth,
-        rotation: 0,
-      };
-      addToHistory([...elements, newElement]);
-      // Refs und State zurücksetzen
-      currentPathRef.current = '';
-      setCurrentPath('');
-    } else if (drawMode === 'polygon' && currentPath && currentPath.length > 0) {
-      // Close the polygon path by adding 'Z' and simplify lines
-      const simplifiedPath = simplifyPath(currentPath, 10);
-      const newElement: DrawElement = {
-        id: generateId(),
-        type: 'polygon',
-        data: simplifiedPath + ' Z',
-        color: drawColor,
-        strokeWidth,
-        rotation: 0,
-      };
-      addToHistory([...elements, newElement]);
-      setCurrentPath('');
-    } else if (drawMode === 'select' && angleEditMode) {
-      // Winkelgruppen-Bearbeitung (Drehen/Verlängern) abgeschlossen
-      addToHistory(elements);
-      setAngleEditMode(null);
-      setAngleEditBaseId(null);
-      setAngleEditOriginals([]);
-      setDragStart(null);
-    } else if (drawMode === 'select' && dragMode) {
-      // Finish transform - add to history if elements changed
-      if (editingPolylinePoint !== null) {
-        // Save polyline point edit to history
+    // === Zeichnung abschließen wenn alle Finger gehoben und Zeichnen aktiv ===
+    if (touches.length === 0 && drawingEnabled && !isZooming) {
+      if (drawMode === 'pen' && currentPathRef.current && currentPathRef.current.length > 0) {
+        // Verwende den kompletten Pfad aus dem Ref für maximale Genauigkeit
+        const finalPath = currentPathRef.current;
+        const newElement: DrawElement = {
+          id: generateId(),
+          type: 'path',
+          data: finalPath,
+          color: drawColor,
+          strokeWidth,
+          rotation: 0,
+        };
+        addToHistory([...elements, newElement]);
+        // Refs und State zurücksetzen
+        currentPathRef.current = '';
+        setCurrentPath('');
+      } else if (drawMode === 'polygon' && currentPath && currentPath.length > 0) {
+        // Close the polygon path by adding 'Z' and simplify lines
+        const simplifiedPath = simplifyPath(currentPath, 10);
+        const newElement: DrawElement = {
+          id: generateId(),
+          type: 'polygon',
+          data: simplifiedPath + ' Z',
+          color: drawColor,
+          strokeWidth,
+          rotation: 0,
+        };
+        addToHistory([...elements, newElement]);
+        setCurrentPath('');
+      } else if (drawMode === 'select' && angleEditMode) {
+        // Winkelgruppen-Bearbeitung (Drehen/Verlängern) abgeschlossen
         addToHistory(elements);
-        
-        // Automatisch Maß-Eingabe öffnen für das bearbeitete Segment
-        const editedPointIdx = editingPolylinePoint;
-        const polyEl = elements.find(el => el.id === selectedElementId);
-        if (polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
-          const points = polyEl.data.points;
-          // Das Segment VOR dem Punkt (Punkt i-1 → i) ist das natürlichste
-          const segmentIdx = editedPointIdx > 0 ? editedPointIdx - 1 : 0;
-          // Nur öffnen wenn das Segment existiert
-          if (segmentIdx < points.length - 1) {
-            setSelectedLineSegment({ elementId: polyEl.id, segmentIndex: segmentIdx });
-            // Bestehende Stil-Einstellungen für dieses Element laden
-            const existingStyle = measureLineStyles[polyEl.id];
-            setTempMeasureLineColor(existingStyle?.color || '#1976d2');
-            setTempMeasureLineStrokeWidth(existingStyle?.strokeWidth || 1.2);
-            setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
-            setLineMeasurementExpression('');
-            setShowLineMeasurementNumpad(true);
-            setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);
+        setAngleEditMode(null);
+        setAngleEditBaseId(null);
+        setAngleEditOriginals([]);
+        setDragStart(null);
+      } else if (drawMode === 'select' && dragMode) {
+        // Finish transform - add to history if elements changed
+        if (editingPolylinePoint !== null) {
+          // Save polyline point edit to history
+          addToHistory(elements);
+          
+          // Automatisch Maß-Eingabe öffnen für das bearbeitete Segment
+          const editedPointIdx = editingPolylinePoint;
+          const polyEl = elements.find(el => el.id === selectedElementId);
+          if (polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
+            const points = polyEl.data.points;
+            const segmentIdx = editedPointIdx > 0 ? editedPointIdx - 1 : 0;
+            if (segmentIdx < points.length - 1) {
+              setSelectedLineSegment({ elementId: polyEl.id, segmentIndex: segmentIdx });
+              const existingStyle = measureLineStyles[polyEl.id];
+              setTempMeasureLineColor(existingStyle?.color || '#1976d2');
+              setTempMeasureLineStrokeWidth(existingStyle?.strokeWidth || 1.2);
+              setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
+              setLineMeasurementExpression('');
+              setShowLineMeasurementNumpad(true);
+              setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);
+            }
           }
+        } else if (movingGroupBaseId && originalGroupElements.length > 0) {
+          addToHistory(elements);
         }
-      } else if (movingGroupBaseId && originalGroupElements.length > 0) {
-        // Winkel-Gruppen-Bewegung abgeschlossen - zum History hinzufügen
-        addToHistory(elements);
+        setEditingPolylinePoint(null);
+        setDragMode(null);
+        setResizeHandle(null);
+        setDragStart(null);
+        setOriginalElement(null);
+        setOriginalGroupElements([]);
+        setMovingGroupBaseId(null);
+        setShowMagnifier(false);
+        setMagnifierPosition(null);
+        setMagnifierTargetPosition(null);
+        setMagnifierSnapshot(null);
+      } else if (drawMode === 'select' && draggingLabelId) {
+        setDraggingLabelId(null);
+      } else if (startPoint && drawMode === 'arrow') {
+        const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
+        // Einfache Koordinaten-Berechnung wie in annotate.tsx
+        const locationX = touch.locationX / scale;
+        const locationY = touch.locationY / scale;
+        
+        setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+        setShowArrowModal(true);
+        setStartPoint(null);
+        setTempElement(null);
+      } else if (startPoint && drawMode === 'pointer') {
+        const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
+        const locationX = touch.locationX / scale;
+        const locationY = touch.locationY / scale;
+        
+        setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+        setPointerText('');
+        setShowPointerModal(true);
+        setStartPoint(null);
+        setTempElement(null);
+      } else if (startPoint && drawMode === 'memo') {
+        const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
+        const locationX = touch.locationX / scale;
+        const locationY = touch.locationY / scale;
+        
+        setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
+        setMemoText('');
+        setShowMemoModal(true);
+        setStartPoint(null);
+        setTempElement(null);
+      } else if (startPoint && tempElement) {
+        // Wichtig: Neue eindeutige ID vergeben beim Hinzufügen
+        const finalElement = { ...tempElement, id: Date.now().toString() };
+        addToHistory([...elements, finalElement]);
+        setStartPoint(null);
+        setTempElement(null);
       }
-      setEditingPolylinePoint(null);
-      setDragMode(null);
-      setResizeHandle(null);
-      setDragStart(null);
-      setOriginalElement(null);
-      // Winkel-Gruppen-State zurücksetzen
-      setOriginalGroupElements([]);
-      setMovingGroupBaseId(null);
-      // Lupe ausblenden
-      setShowMagnifier(false);
-      setMagnifierPosition(null);
-      setMagnifierTargetPosition(null);
-      setMagnifierSnapshot(null);
-    } else if (drawMode === 'select' && draggingLabelId) {
-      // Label-Verschiebung beenden
-      setDraggingLabelId(null);
-    } else if (startPoint && drawMode === 'arrow') {
-      const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
-      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
-      
-      // Show arrow text input
-      setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
-      setShowArrowModal(true);
-      setStartPoint(null);
-      setTempElement(null);
-    } else if (startPoint && drawMode === 'pointer') {
-      // Memo-Pfeil: Modal öffnen für optionale Notiz
-      const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
-      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
-      
-      // Speichere die Pointer-Koordinaten und öffne Modal
-      setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
-      setPointerText(''); // Text zurücksetzen
-      setShowPointerModal(true);
-      setStartPoint(null);
-      setTempElement(null);
-    } else if (startPoint && drawMode === 'memo') {
-      // Memo/Notiz: Annotation mit gestrichelter Linie und Textlabel
-      const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-      // Verwende die gleiche Koordinaten-Transformation wie in onTouchStart/Move
-      const { x: locationX, y: locationY } = touchToCanvasCoords(touch);
-      
-      // Speichere die Memo-Koordinaten und öffne Modal
-      setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
-      setMemoText(''); // Leerer Anfangstext
-      setShowMemoModal(true);
-      setStartPoint(null);
-      setTempElement(null);
-    } else if (startPoint && tempElement) {
-      // Wichtig: Neue eindeutige ID vergeben beim Hinzufügen
-      const finalElement = { ...tempElement, id: Date.now().toString() };
-      addToHistory([...elements, finalElement]);
-      setStartPoint(null);
-      setTempElement(null);
     }
   };
 
@@ -7159,7 +7057,7 @@ export default function DrawSketchScreen() {
               if (newPhotoEditMode) {
                 // Nur drawMode setzen, ohne photoEditMode zu deaktivieren
                 setDrawMode('select');
-                setZoomMode(false);
+                setDrawingEnabled(true);
               }
             }}
           >
@@ -7183,45 +7081,41 @@ export default function DrawSketchScreen() {
 
         {/* ========== ZEICHEN-TOOLS ========== */}
         
-        {/* Zoom-Toggle-Button: Ein/Aus für Pinch-to-Zoom */}
+        {/* Zeichnen-Toggle-Button: Ein/Aus für Zeichenmodus (wenn AUS, ist Zoom erlaubt) */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[
               styles.toolButtonInner, 
               { 
-                backgroundColor: zoomMode ? '#e8f5e9' : '#ffebee',
+                backgroundColor: drawingEnabled ? '#e8f5e9' : '#ffebee',
                 borderWidth: 2,
-                borderColor: zoomMode ? '#4caf50' : '#f44336',
+                borderColor: drawingEnabled ? '#4caf50' : '#f44336',
               }
             ]}
             onPress={() => {
-              const newZoomMode = !zoomMode;
-              setZoomMode(newZoomMode);
-              // Bei Zoom aus → Zoom zurücksetzen
-              if (!newZoomMode) {
-                androidPinchRef.current.currentScale = 1;
-                androidPinchRef.current.currentTranslateX = 0;
-                androidPinchRef.current.currentTranslateY = 0;
-                androidZoomScale.setValue(1);
-                androidTranslateX.setValue(0);
-                androidTranslateY.setValue(0);
+              const newDrawingEnabled = !drawingEnabled;
+              setDrawingEnabled(newDrawingEnabled);
+              // Bei Zeichnen AN → Zoom zurücksetzen (optional, für sauberen Start)
+              if (newDrawingEnabled) {
                 setScale(1);
+                setIsZooming(false);
+                setInitialPinchDistance(null);
               }
             }}
           >
             <Ionicons 
-              name="search" 
+              name={drawingEnabled ? "brush" : "search"} 
               size={18} 
-              color={zoomMode ? '#4caf50' : '#f44336'} 
+              color={drawingEnabled ? '#4caf50' : '#f44336'} 
             />
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: zoomMode ? '#4caf50' : '#f44336', fontSize: 9 }]}>
-            {zoomMode ? 'Zoom AN' : 'Zoom AUS'}
+          <Text style={[styles.toolButtonLabel, { color: drawingEnabled ? '#4caf50' : '#f44336', fontSize: 9 }]}>
+            {drawingEnabled ? 'Zeichnen' : 'Zoom'}
           </Text>
         </View>
 
-        {/* Zoom-Reset: Nur sichtbar wenn gezoomt */}
-        {zoomMode && (androidPinchRef.current?.currentScale > 1.05 || androidPinchRef.current?.currentScale < 0.95) && (
+        {/* Zoom-Reset: Nur sichtbar wenn gezoomt (scale > 1) */}
+        {!drawingEnabled && scale > 1.05 && (
           <View style={styles.toolButtonWithLabel}>
             <TouchableOpacity
               style={[
@@ -7234,17 +7128,13 @@ export default function DrawSketchScreen() {
               ]}
               onPress={() => {
                 // Zoom zurücksetzen
-                androidPinchRef.current.currentScale = 1;
-                androidPinchRef.current.currentTranslateX = 0;
-                androidPinchRef.current.currentTranslateY = 0;
-                androidZoomScale.setValue(1);
-                androidTranslateX.setValue(0);
-                androidTranslateY.setValue(0);
                 setScale(1);
+                setIsZooming(false);
+                setInitialPinchDistance(null);
               }}
             >
               <Text style={{ color: '#ff9800', fontWeight: '700', fontSize: 10 }}>
-                {Math.round((androidPinchRef.current?.currentScale || 1) * 100)}%
+                {Math.round(scale * 100)}%
               </Text>
             </TouchableOpacity>
             <Text style={[styles.toolButtonLabel, { color: '#ff9800', fontSize: 9 }]}>
@@ -7797,11 +7687,11 @@ export default function DrawSketchScreen() {
         ref={scrollViewRef}
         style={[styles.canvasScrollView, isPhoneLandscape && { paddingLeft: insets.left, paddingRight: insets.right }]}
         contentContainerStyle={{ flexGrow: 1 }}
-        minimumZoomScale={Platform.OS === 'ios' ? (zoomMode ? 0.5 : scale) : 1}
-        maximumZoomScale={Platform.OS === 'ios' ? (zoomMode ? 4 : scale) : 1}
-        bouncesZoom={Platform.OS === 'ios' && zoomMode}
-        scrollEnabled={Platform.OS === 'ios' ? zoomMode : false}
-        pinchGestureEnabled={Platform.OS === 'ios' && zoomMode}
+        minimumZoomScale={Platform.OS === 'ios' ? (!drawingEnabled ? 0.5 : scale) : 1}
+        maximumZoomScale={Platform.OS === 'ios' ? (!drawingEnabled ? 4 : scale) : 1}
+        bouncesZoom={Platform.OS === 'ios' && !drawingEnabled}
+        scrollEnabled={Platform.OS === 'ios' ? !drawingEnabled : false}
+        pinchGestureEnabled={Platform.OS === 'ios' && !drawingEnabled}
         directionalLockEnabled={false}
         centerContent={Platform.OS === 'ios'}
         showsHorizontalScrollIndicator={false}
@@ -7819,19 +7709,12 @@ export default function DrawSketchScreen() {
         } : undefined}
         scrollEventThrottle={16}
       >
-        {/* Android: Animated.View Wrapper für Pinch-to-Zoom Transforms */}
-        <Animated.View style={Platform.OS === 'android' ? {
-          transform: [
-            { translateX: androidTranslateX },
-            { translateY: androidTranslateY },
-            { scale: androidZoomScale },
-          ],
-        } : undefined}>
+        {/* Vereinfachte Struktur ohne Animated.View Transform - wie in annotate.tsx */}
         <View
           ref={canvasRef}
           style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
-          onStartShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}
-          onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}
+          onStartShouldSetResponder={() => Platform.OS === 'android' ? true : drawingEnabled}
+          onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : drawingEnabled}
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}
@@ -8121,7 +8004,6 @@ export default function DrawSketchScreen() {
         </View>
 
       </View>
-      </Animated.View>
       </ScrollView>
 
       {/* Polyline Steuerung - kompakt und verschiebbar */}

@@ -7709,7 +7709,12 @@ export default function DrawSketchScreen() {
         } : undefined}
         scrollEventThrottle={16}
       >
-        {/* Vereinfachte Struktur ohne Animated.View Transform - wie in annotate.tsx */}
+        {/* Android: Animated.View Wrapper für visuellen Zoom-Effekt */}
+        <Animated.View style={Platform.OS === 'android' ? {
+          transform: [
+            { scale: scale }, // Visueller Zoom basierend auf scale state
+          ],
+        } : undefined}>
         <View
           ref={canvasRef}
           style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
@@ -7736,10 +7741,7 @@ export default function DrawSketchScreen() {
           width={screenWidth}
           height={canvasHeight}
           style={styles.svg}
-          viewBox={Platform.OS === 'android' && androidViewBox.w > 0
-            ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
-            : `0 0 ${screenWidth} ${canvasHeight}`
-          }
+          viewBox={`0 0 ${screenWidth} ${canvasHeight}`}
         >
           {/* Kästchenpapier Gitter - nur wenn kein Hintergrundbild und Gitter aktiviert */}
           {showGrid && !backgroundImage && (
@@ -8004,6 +8006,7 @@ export default function DrawSketchScreen() {
         </View>
 
       </View>
+      </Animated.View>
       </ScrollView>
 
       {/* Polyline Steuerung - kompakt und verschiebbar */}

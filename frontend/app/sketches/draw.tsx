@@ -2045,6 +2045,7 @@ export default function DrawSketchScreen() {
     const currentIndex = historyIndexRef.current;
     const newHistory = currentHistory.slice(0, currentIndex + 1);
     newHistory.push(newElements);
+    console.log('[addToHistory] Adding to history. New length:', newHistory.length, 'elements:', newElements.length);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setElements(newElements);
@@ -7573,7 +7574,10 @@ export default function DrawSketchScreen() {
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
               style={[styles.toolButtonInner, !canUndo && styles.toolButtonDisabled]}
-              onPress={undo}
+              onPress={() => {
+                console.log('[Button Undo] Pressed! canUndo:', canUndo, 'historyIndex:', historyIndex, 'history.length:', history.length);
+                undo();
+              }}
               disabled={!canUndo}
             >
               <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
@@ -7583,7 +7587,10 @@ export default function DrawSketchScreen() {
             
             <TouchableOpacity
               style={[styles.toolButtonInner, !canRedo && styles.toolButtonDisabled]}
-              onPress={redo}
+              onPress={() => {
+                console.log('[Button Redo] Pressed! canRedo:', canRedo, 'historyIndex:', historyIndex, 'history.length:', history.length);
+                redo();
+              }}
               disabled={!canRedo}
             >
               <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
@@ -7591,7 +7598,10 @@ export default function DrawSketchScreen() {
               <Text style={{ fontSize: 8, color: canRedo ? '#1976d2' : '#ccc', marginTop: 2 }}>↪</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.toolButtonLabel}>{t('sketches.undoRedo')}</Text>
+          {/* Debug: Zeige History Status */}
+          <Text style={[styles.toolButtonLabel, { fontSize: 8 }]}>
+            {history.length > 1 ? `${historyIndex + 1}/${history.length}` : t('sketches.undoRedo')}
+          </Text>
         </View>
 
         <View style={styles.separator} />

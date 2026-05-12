@@ -380,6 +380,10 @@ export default function DrawSketchScreen() {
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [lastScale, setLastScale] = useState(1);
+  const [lastPanOffset, setLastPanOffset] = useState({ x: 0, y: 0 });
+  // Trackt ob gerade gepannt wird (1-Finger-Drag im Zoom-Modus)
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   // ScrollView Content-Offset für korrekte Koordinatenberechnung beim Zeichnen
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   // Zeichnen-Modus: wenn true, kann gezeichnet werden; wenn false, ist Zoom aktiv
@@ -444,6 +448,10 @@ export default function DrawSketchScreen() {
     androidTranslateY.setValue(0);
     setAndroidViewBox({ x: 0, y: 0, w: screenWidth, h: canvasHeight });
     setScale(1);
+    // Auch Pan zurücksetzen
+    setPanOffset({ x: 0, y: 0 });
+    setLastPanOffset({ x: 0, y: 0 });
+    setIsPanning(false);
   }, [androidZoomScale, androidTranslateX, androidTranslateY, screenWidth, canvasHeight]);
 
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
@@ -3432,16 +3440,28 @@ export default function DrawSketchScreen() {
     if (!touches || touches.length === 0) return;
     
     // Debug-Log
-    console.log('[TouchStart] touches:', touches.length, 'drawingEnabled:', drawingEnabled, 'isZooming:', isZooming);
+    console.log('[TouchStart] touches:', touches.length, 'drawingEnabled:', drawingEnabled, 'isZooming:', isZooming, 'scale:', scale);
     
     // === 2+ Finger = Pinch-to-Zoom (beide Finger gleichzeitig aufgesetzt) ===
     if (touches.length >= 2) {
       setIsZooming(true);
+      setIsPanning(false);
       setInitialPinchDistance(getDistance(touches));
       setLastScale(scale);
+      setLastPanOffset({ ...panOffset });
       // Falls Zeichnung bereits begonnen: verwerfen
       if (currentPath) setCurrentPath('');
       currentPathRef.current = '';
+      return;
+    }
+    
+    // === 1 Finger + Zoom-Modus (nicht Zeichnen) + gezoomt = Pan ===
+    if (touches.length === 1 && !drawingEnabled && scale > 1.05) {
+      const touch = touches[0];
+      setIsPanning(true);
+      setPanStart({ x: touch.pageX, y: touch.pageY });
+      setLastPanOffset({ ...panOffset });
+      console.log('[TouchStart] Pan-Modus gestartet');
       return;
     }
     
@@ -3778,8 +3798,10 @@ export default function DrawSketchScreen() {
       // Wir initialisieren Pinch hier beim ersten 2-Finger-Frame.
       if (!initialPinchDistance) {
         setIsZooming(true);
+        setIsPanning(false);
         setInitialPinchDistance(getDistance(touches));
         setLastScale(scale);
+        setLastPanOffset({ ...panOffset });
         // Falls Zeichnung begonnen: verwerfen (User wollte zoomen, nicht zeichnen)
         if (currentPath) setCurrentPath('');
         currentPathRef.current = '';
@@ -3789,6 +3811,23 @@ export default function DrawSketchScreen() {
       const currentDistance = getDistance(touches);
       const newScale = Math.min(Math.max(lastScale * (currentDistance / initialPinchDistance), 0.5), 4);
       setScale(newScale);
+      return;
+    }
+    
+    // === 1 Finger + Panning aktiv = Canvas verschieben ===
+    if (touches.length === 1 && isPanning && !drawingEnabled) {
+      const touch = touches[0];
+      const dx = touch.pageX - panStart.x;
+      const dy = touch.pageY - panStart.y;
+      
+      // Neue Pan-Position berechnen (mit Begrenzung)
+      const maxPanX = (scale - 1) * screenWidth / 2;
+      const maxPanY = (scale - 1) * canvasHeight / 2;
+      
+      const newPanX = Math.min(maxPanX, Math.max(-maxPanX, lastPanOffset.x + dx));
+      const newPanY = Math.min(maxPanY, Math.max(-maxPanY, lastPanOffset.y + dy));
+      
+      setPanOffset({ x: newPanX, y: newPanY });
       return;
     }
     
@@ -3836,6 +3875,11 @@ export default function DrawSketchScreen() {
     if (touches.length < 2) {
       setIsZooming(false);
       setInitialPinchDistance(null);
+    }
+    
+    // === Pan-Status zurücksetzen ===
+    if (touches.length === 0) {
+      setIsPanning(false);
     }
     
     // === Zeichnung abschließen wenn alle Finger gehoben und Zeichnen aktiv ===
@@ -7726,9 +7770,11 @@ export default function DrawSketchScreen() {
         } : undefined}
         scrollEventThrottle={16}
       >
-        {/* Android: Animated.View Wrapper für visuellen Zoom-Effekt */}
+        {/* Android: Animated.View Wrapper für visuellen Zoom + Pan Effekt */}
         <Animated.View style={Platform.OS === 'android' ? {
           transform: [
+            { translateX: panOffset.x }, // Pan X
+            { translateY: panOffset.y }, // Pan Y
             { scale: scale }, // Visueller Zoom basierend auf scale state
           ],
         } : undefined}>

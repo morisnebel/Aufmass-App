@@ -2351,17 +2351,23 @@ export default function DrawSketchScreen() {
   }, [elements]);
 
   const undo = () => {
+    console.log('[Undo] historyIndex:', historyIndex, 'history.length:', history.length, 'canUndo:', canUndo);
     if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setElements(history[historyIndex - 1]);
+      const newIndex = historyIndex - 1;
+      console.log('[Undo] Setting index to:', newIndex, 'elements:', history[newIndex]?.length);
+      setHistoryIndex(newIndex);
+      setElements(history[newIndex]);
       setSelectedElementId(null);
     }
   };
 
   const redo = () => {
+    console.log('[Redo] historyIndex:', historyIndex, 'history.length:', history.length, 'canRedo:', canRedo);
     if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setElements(history[historyIndex + 1]);
+      const newIndex = historyIndex + 1;
+      console.log('[Redo] Setting index to:', newIndex, 'elements:', history[newIndex]?.length);
+      setHistoryIndex(newIndex);
+      setElements(history[newIndex]);
       setSelectedElementId(null);
     }
   };
@@ -7571,6 +7577,8 @@ export default function DrawSketchScreen() {
               disabled={!canUndo}
             >
               <Ionicons name="arrow-undo" size={18} color={canUndo ? '#1976d2' : '#ccc'} />
+              {/* Fallback Text falls Icon nicht lädt */}
+              <Text style={{ fontSize: 8, color: canUndo ? '#1976d2' : '#ccc', marginTop: 2 }}>↩</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -7579,6 +7587,8 @@ export default function DrawSketchScreen() {
               disabled={!canRedo}
             >
               <Ionicons name="arrow-redo" size={18} color={canRedo ? '#1976d2' : '#ccc'} />
+              {/* Fallback Text falls Icon nicht lädt */}
+              <Text style={{ fontSize: 8, color: canRedo ? '#1976d2' : '#ccc', marginTop: 2 }}>↪</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.toolButtonLabel}>{t('sketches.undoRedo')}</Text>

@@ -3407,6 +3407,26 @@ export default function DrawSketchScreen() {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
+  // Hilfsfunktion: Konvertiert Touch-Koordinaten zu Canvas-Koordinaten
+  // WICHTIG: Plattformspezifische Logik!
+  // - iOS mit ScrollView Zoom: Koordinaten müssen durch scale geteilt werden
+  // - Android mit Animated.View Transform: Koordinaten sind bereits korrekt (nicht teilen!)
+  const getCanvasCoordinates = (touch: any): { x: number; y: number } => {
+    if (Platform.OS === 'ios') {
+      // iOS: ScrollView Zoom erfordert Division durch scale
+      return {
+        x: touch.locationX / scale,
+        y: touch.locationY / scale,
+      };
+    } else {
+      // Android/Web: Animated.View Transform - Koordinaten sind bereits korrekt
+      return {
+        x: touch.locationX,
+        y: touch.locationY,
+      };
+    }
+  };
+
   const onTouchStart = (event: any) => {
     const touches = event.nativeEvent.touches;
     if (!touches || touches.length === 0) return;
@@ -3428,9 +3448,8 @@ export default function DrawSketchScreen() {
     // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
     if (touches.length === 1 && !isZooming && drawingEnabled) {
       const touch = touches[0];
-      // Einfache Koordinaten-Berechnung wie in annotate.tsx
-      const locationX = touch.locationX / scale;
-      const locationY = touch.locationY / scale;
+      // Plattformspezifische Koordinaten-Berechnung
+      const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
 
       if (drawMode === 'select') {
         handleSelectTouchStart(locationX, locationY);
@@ -3776,9 +3795,8 @@ export default function DrawSketchScreen() {
     // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
     if (touches.length === 1 && !isZooming && drawingEnabled) {
       const touch = touches[0];
-      // Einfache Koordinaten-Berechnung wie in annotate.tsx
-      const locationX = touch.locationX / scale;
-      const locationY = touch.locationY / scale;
+      // Plattformspezifische Koordinaten-Berechnung
+      const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
 
       if (drawMode === 'select' && dragMode && originalElement && dragStart) {
         handleSelectTouchMove(locationX, locationY);
@@ -3898,9 +3916,8 @@ export default function DrawSketchScreen() {
         setDraggingLabelId(null);
       } else if (startPoint && drawMode === 'arrow') {
         const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-        // Einfache Koordinaten-Berechnung wie in annotate.tsx
-        const locationX = touch.locationX / scale;
-        const locationY = touch.locationY / scale;
+        // Plattformspezifische Koordinaten-Berechnung
+        const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
         
         setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
         setShowArrowModal(true);
@@ -3908,8 +3925,8 @@ export default function DrawSketchScreen() {
         setTempElement(null);
       } else if (startPoint && drawMode === 'pointer') {
         const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-        const locationX = touch.locationX / scale;
-        const locationY = touch.locationY / scale;
+        // Plattformspezifische Koordinaten-Berechnung
+        const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
         
         setPendingPointer({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
         setPointerText('');
@@ -3918,8 +3935,8 @@ export default function DrawSketchScreen() {
         setTempElement(null);
       } else if (startPoint && drawMode === 'memo') {
         const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
-        const locationX = touch.locationX / scale;
-        const locationY = touch.locationY / scale;
+        // Plattformspezifische Koordinaten-Berechnung
+        const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
         
         setPendingMemo({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
         setMemoText('');

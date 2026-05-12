@@ -158,6 +158,18 @@ export default function EditChecklistScreen() {
     loadChecklist();
   }, [id]);
 
+  // Auto-Save bei Änderungen (mit 2 Sekunden Debounce)
+  useEffect(() => {
+    if (!hasChanges || !checklist) return;
+    
+    const timer = setTimeout(() => {
+      saveChecklistSilent();
+      console.log('[Checklist] Auto-saved changes');
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [hasChanges, checklist?.items]);
+
   // Auto-Save wenn die Seite verlassen wird
   useFocusEffect(
     useCallback(() => {
@@ -1042,7 +1054,14 @@ export default function EditChecklistScreen() {
                 onPress={() => startEditing(path, item.text)}
                 activeOpacity={0.7}
               >
-                <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchablePhone}>
+                <TouchableOpacity 
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    toggleItemChecked(path);
+                  }} 
+                  style={styles.checkboxTouchablePhone}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <Ionicons
                     name={item.checked ? 'checkbox' : 'square-outline'}
                     size={20}
@@ -1199,7 +1218,11 @@ export default function EditChecklistScreen() {
             )}
             
             {/* Checkbox */}
-            <TouchableOpacity onPress={() => toggleItemChecked(path)} style={styles.checkboxTouchable}>
+            <TouchableOpacity 
+              onPress={() => toggleItemChecked(path)} 
+              style={styles.checkboxTouchable}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Ionicons
                 name={item.checked ? 'checkbox' : 'square-outline'}
                 size={isMainItem ? 28 : 22}

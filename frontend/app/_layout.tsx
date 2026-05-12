@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, LogBox, Platform } from 'react-native';
@@ -13,6 +13,8 @@ LogBox.ignoreLogs([
   'PDF Error:',
   'Cannot use the same canvas',
   'RenderingCancelledException',
+  'ExpoFontLoader', // Ignore font loading warnings
+  'Font file for ionicons', // Ignore ionicons warning
 ]);
 
 export default function RootLayout() {
@@ -28,6 +30,7 @@ export default function RootLayout() {
       console.error('[App] Sketch migration error:', err)
     );
   }, []);
+  
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="auto" />

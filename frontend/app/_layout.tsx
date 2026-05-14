@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, LogBox, Platform } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
-import { SketchService } from '../services/LocalStorage';
+import { SketchService, LocalStorage } from '../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
 import '../i18n'; // i18n initialisieren
 
@@ -26,9 +26,21 @@ export default function RootLayout() {
   
   // Run one-time migration of sketch data on app startup
   useEffect(() => {
+    // Sketch Migration
     SketchService.migrateAllSketches().catch(err => 
       console.error('[App] Sketch migration error:', err)
     );
+    
+    // Cleanup verwaister Bilddateien (nur auf nativen Plattformen, nicht Web)
+    if (Platform.OS !== 'web') {
+      LocalStorage.cleanupOrphanedImageFiles().then(result => {
+        if (result.removed > 0) {
+          console.log(`[App] Cleaned up ${result.removed} orphaned image files`);
+        }
+      }).catch(err => 
+        console.error('[App] Image cleanup error:', err)
+      );
+    }
   }, []);
   
   return (

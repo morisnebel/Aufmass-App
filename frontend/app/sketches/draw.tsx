@@ -531,80 +531,127 @@ export default function DrawSketchScreen() {
   };
 
   // Funktion um ein Projektfoto als Bild-Element einzufügen
-  const insertProjectPhoto = (photo: any) => {
+  const insertProjectPhoto = async (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
     if (!imageUri) {
       Alert.alert(t('common.error'), t('sketches.invalidImageData'));
       return;
     }
     
-    // Berechne korrektes Seitenverhältnis des Bildes
-    RNImage.getSize(
-      imageUri,
-      (imgWidth, imgHeight) => {
-        // Maximale Größe im Canvas
-        const maxWidth = 400;
-        const maxHeight = 300;
-        const aspectRatio = imgWidth / imgHeight;
-        
-        let finalWidth, finalHeight;
-        if (aspectRatio > maxWidth / maxHeight) {
-          // Bild ist breiter - begrenzen durch Breite
-          finalWidth = maxWidth;
-          finalHeight = maxWidth / aspectRatio;
-        } else {
-          // Bild ist höher - begrenzen durch Höhe
-          finalHeight = maxHeight;
-          finalWidth = maxHeight * aspectRatio;
-        }
-        
-        const imageElement: DrawElement = {
-          id: generateId(),
-          type: 'image',
-          data: { uri: imageUri },
-          color: '#000000',
-          strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: finalWidth,
-          height: finalHeight,
-          rotation: 0,
-        };
-        
-        const newElements = [...elements, imageElement];
-        addToHistory(newElements);
-        setElements(newElements);
-        setSelectedElementId(imageElement.id);
-        setShowProjectPhotosModal(false);
-        // Automatisch Foto-Bearbeiten Modus aktivieren
-        setPhotoEditMode(true);
-        selectDrawMode('select');
-      },
-      (error) => {
-        console.error('Error getting image size:', error);
-        // Fallback: Füge mit Standardgrößen ein
-        const imageElement: DrawElement = {
-          id: generateId(),
-          type: 'image',
-          data: { uri: imageUri },
-          color: '#000000',
-          strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: 300,
-          height: 200,
-          rotation: 0,
-        };
-        
-        const newElements = [...elements, imageElement];
-        addToHistory(newElements);
-        setElements(newElements);
-        setSelectedElementId(imageElement.id);
-        setShowProjectPhotosModal(false);
-        setPhotoEditMode(true);
-        selectDrawMode('select');
+    try {
+      // Komprimiere das Bild für bessere Performance (wie bei anderen Bild-Einfüge-Funktionen)
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: Math.min(1200, 1200) } }], // Max 1200px Breite
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      
+      const compressedUri = `data:image/jpeg;base64,${manipResult.base64}`;
+      const imgWidth = manipResult.width;
+      const imgHeight = manipResult.height;
+      
+      // Maximale Größe im Canvas
+      const maxWidth = 400;
+      const maxHeight = 300;
+      const aspectRatio = imgWidth / imgHeight;
+      
+      let finalWidth, finalHeight;
+      if (aspectRatio > maxWidth / maxHeight) {
+        // Bild ist breiter - begrenzen durch Breite
+        finalWidth = maxWidth;
+        finalHeight = maxWidth / aspectRatio;
+      } else {
+        // Bild ist höher - begrenzen durch Höhe
+        finalHeight = maxHeight;
+        finalWidth = maxHeight * aspectRatio;
       }
-    );
+      
+      const imageElement: DrawElement = {
+        id: generateId(),
+        type: 'image',
+        data: { uri: compressedUri },
+        color: '#000000',
+        strokeWidth: 0,
+        x: 50,
+        y: 50,
+        width: finalWidth,
+        height: finalHeight,
+        rotation: 0,
+      };
+      
+      const newElements = [...elements, imageElement];
+      addToHistory(newElements);
+      setSelectedElementId(imageElement.id);
+      setShowProjectPhotosModal(false);
+      // Automatisch Foto-Bearbeiten Modus aktivieren
+      setPhotoEditMode(true);
+      selectDrawMode('select');
+      
+      console.log(`[insertProjectPhoto] Compressed image: ${Math.round((compressedUri.length / 1024))}KB`);
+    } catch (error) {
+      console.error('Error compressing project photo:', error);
+      
+      // Fallback: Originalbild verwenden ohne Komprimierung
+      RNImage.getSize(
+        imageUri,
+        (imgWidth, imgHeight) => {
+          const maxWidth = 400;
+          const maxHeight = 300;
+          const aspectRatio = imgWidth / imgHeight;
+          
+          let finalWidth, finalHeight;
+          if (aspectRatio > maxWidth / maxHeight) {
+            finalWidth = maxWidth;
+            finalHeight = maxWidth / aspectRatio;
+          } else {
+            finalHeight = maxHeight;
+            finalWidth = maxHeight * aspectRatio;
+          }
+          
+          const imageElement: DrawElement = {
+            id: generateId(),
+            type: 'image',
+            data: { uri: imageUri },
+            color: '#000000',
+            strokeWidth: 0,
+            x: 50,
+            y: 50,
+            width: finalWidth,
+            height: finalHeight,
+            rotation: 0,
+          };
+          
+          const newElements = [...elements, imageElement];
+          addToHistory(newElements);
+          setSelectedElementId(imageElement.id);
+          setShowProjectPhotosModal(false);
+          setPhotoEditMode(true);
+          selectDrawMode('select');
+        },
+        () => {
+          // Fallback mit Standardgrößen
+          const imageElement: DrawElement = {
+            id: generateId(),
+            type: 'image',
+            data: { uri: imageUri },
+            color: '#000000',
+            strokeWidth: 0,
+            x: 50,
+            y: 50,
+            width: 300,
+            height: 200,
+            rotation: 0,
+          };
+          
+          const newElements = [...elements, imageElement];
+          addToHistory(newElements);
+          setSelectedElementId(imageElement.id);
+          setShowProjectPhotosModal(false);
+          setPhotoEditMode(true);
+          selectDrawMode('select');
+        }
+      );
+    }
   };
   
   // Kästchenpapier Hintergrund

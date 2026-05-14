@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-// FIX: Verwende expo-file-system ohne deprecated APIs
-import * as FileSystem from 'expo-file-system';
+// FIX: Verwende legacy expo-file-system API um Deprecation-Fehler zu vermeiden
+import * as FileSystem from 'expo-file-system/legacy';
 
 // CloudKit storage disabled for now - using AsyncStorage only
 // The iCloud integration requires additional native configuration

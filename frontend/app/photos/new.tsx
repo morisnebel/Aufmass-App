@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,15 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import PdfThumbnail from '../../utils/PdfThumbnailShim';
+import { WebView } from 'react-native-webview';
+import { File } from 'expo-file-system/next';
 import { PhotoService } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
 
@@ -33,6 +35,13 @@ export default function NewPhotoScreen() {
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(0);
+  
+  // PDF Konverter State (pdf.js via WebView)
+  const [showPdfConverter, setShowPdfConverter] = useState(false);
+  const [pdfBase64Data, setPdfBase64Data] = useState<string | null>(null);
+  const [pdfTotalPages, setPdfTotalPages] = useState(1);
+  const [selectedPdfPage, setSelectedPdfPage] = useState(1);
+  const pdfWebViewRef = useRef<WebView>(null);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -215,7 +224,7 @@ export default function NewPhotoScreen() {
     setSelectedPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Import from Files (including PDF conversion)
+  // Import from Files (including PDF conversion via pdf.js WebView)
   const importFromFiles = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -233,31 +242,33 @@ export default function NewPhotoScreen() {
       
       console.log('[importFromFiles] Selected file:', file.name, mimeType);
 
-      // Wenn es ein PDF ist, konvertiere es zu einem Bild
+      // Wenn es ein PDF ist, öffne den PDF-Konverter (pdf.js via WebView)
       if (mimeType === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
         try {
-          console.log('[importFromFiles] Converting PDF to image...');
-          const { uri } = await PdfThumbnail.generate(fileUri, 0);
-          console.log('[importFromFiles] PDF converted successfully:', uri);
+          console.log('[importFromFiles] Loading PDF for conversion via pdf.js...');
+          setLoading(true);
           
-          // Konvertiere zu Base64
-          const manipResult = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 800 } }],
-            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-          );
+          // Lese PDF als Base64 mit dem neuen expo-file-system/next API
+          const pdfFile = new File(fileUri);
+          const base64 = await pdfFile.base64();
+          const pdfDataUri = `data:application/pdf;base64,${base64}`;
           
-          if (manipResult.base64) {
-            const base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
-            setSelectedPhotos(prev => [...prev, { uri: base64Image, description: file.name || 'PDF Import' }]);
-          }
+          console.log('[importFromFiles] PDF loaded, base64 length:', base64.length);
+          
+          // Setze State und zeige Konverter-Modal
+          setPdfBase64Data(pdfDataUri);
+          setSelectedPdfPage(1);
+          setPdfTotalPages(1);
+          setShowPdfConverter(true);
+          setLoading(false);
           return;
         } catch (pdfError) {
-          console.error('[importFromFiles] PDF conversion error:', pdfError);
+          console.error('[importFromFiles] PDF loading error:', pdfError);
+          setLoading(false);
           Alert.alert(
             'PDF Import',
-            'Das PDF konnte nicht automatisch konvertiert werden. Dies funktioniert nur in der TestFlight/App Store Version, nicht in Expo Go.\n\nAlternativ: Machen Sie einen Screenshot des PDFs.',
-            [{ text: t('common.ok'), style: 'default' }]
+            'Die PDF-Datei konnte nicht geladen werden. Bitte versuchen Sie es mit einer anderen Datei.',
+            [{ text: 'OK', style: 'default' }]
           );
           return;
         }
@@ -282,6 +293,173 @@ export default function NewPhotoScreen() {
       console.error('Error importing from files:', error);
       Alert.alert(t('common.error'), 'Datei konnte nicht importiert werden');
     }
+  };
+  
+  // PDF WebView Message Handler
+  const handlePdfWebViewMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      console.log('[PDF WebView] Message received:', data.type);
+      
+      if (data.type === 'pageCount') {
+        setPdfTotalPages(data.count);
+      } else if (data.type === 'pageRendered') {
+        console.log('[PDF WebView] Page rendered, adding to photos...');
+        setShowPdfConverter(false);
+        setPdfBase64Data(null);
+        
+        // Füge das Bild zu den ausgewählten Fotos hinzu
+        setSelectedPhotos(prev => [...prev, { uri: data.imageData, description: `PDF Seite ${data.pageNum}` }]);
+      } else if (data.type === 'error') {
+        Alert.alert('PDF Fehler', data.message || 'Ein Fehler ist aufgetreten');
+      }
+    } catch (e) {
+      console.error('[PDF WebView] Message parse error:', e);
+    }
+  };
+  
+  // Konvertiert die ausgewählte PDF-Seite zu einem Bild
+  const convertPdfPageToImage = () => {
+    if (pdfWebViewRef.current) {
+      pdfWebViewRef.current.injectJavaScript(`renderPageAsImage(${selectedPdfPage}); true;`);
+    }
+  };
+  
+  // Generiert den HTML-Code für den PDF-Konverter
+  const getPdfConverterHtml = () => {
+    if (!pdfBase64Data) return '<html><body></body></html>';
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            background: #525659; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+          }
+          #preview-container {
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+          }
+          #preview-canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+          }
+          .loading {
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="preview-container">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+        <p class="loading" id="status">Lade PDF...</p>
+        <canvas id="export-canvas" style="display:none;"></canvas>
+        
+        <script>
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          let pdf = null;
+          let currentPage = 1;
+          
+          const pdfData = '${pdfBase64Data}';
+          const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+          
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          pdfjsLib.getDocument({ data: bytes }).promise.then(async loadedPdf => {
+            pdf = loadedPdf;
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'pageCount', 
+              count: pdf.numPages 
+            }));
+            document.getElementById('status').textContent = 'Seite 1 von ' + pdf.numPages;
+            await showPagePreview(1);
+          }).catch(err => {
+            document.getElementById('status').textContent = 'Fehler beim Laden';
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'error', 
+              message: 'PDF konnte nicht geladen werden: ' + err.message 
+            }));
+          });
+          
+          async function showPagePreview(pageNum) {
+            if (!pdf) return;
+            try {
+              currentPage = pageNum;
+              const page = await pdf.getPage(pageNum);
+              const viewport = page.getViewport({ scale: 1.5 });
+              const canvas = document.getElementById('preview-canvas');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, viewport.width, viewport.height);
+              await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+              document.getElementById('status').textContent = 'Seite ' + pageNum + ' von ' + pdf.numPages + ' - Bereit';
+            } catch (err) {
+              console.error('Page preview error:', err);
+            }
+          }
+          
+          async function renderPageAsImage(pageNum) {
+            if (!pdf) return;
+            try {
+              document.getElementById('status').textContent = 'Konvertiere...';
+              const page = await pdf.getPage(pageNum);
+              const scale = 2.5;
+              const viewport = page.getViewport({ scale: scale });
+              const canvas = document.getElementById('export-canvas');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, viewport.width, viewport.height);
+              await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+              const imageData = canvas.toDataURL('image/jpeg', 0.9);
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'pageRendered', 
+                imageData: imageData,
+                pageNum: pageNum
+              }));
+            } catch (err) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'error', 
+                message: 'Seite konnte nicht gerendert werden: ' + err.message 
+              }));
+            }
+          }
+          
+          window.showPage = function(pageNum) {
+            if (pageNum >= 1 && pageNum <= pdf.numPages) {
+              showPagePreview(pageNum);
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `;
   };
 
   const updateDescription = (index: number, description: string) => {
@@ -448,6 +626,94 @@ export default function NewPhotoScreen() {
         )}
         </View>
       </ScrollView>
+      
+      {/* PDF Konverter Modal (pdf.js via WebView) */}
+      <Modal visible={showPdfConverter} transparent animationType="fade">
+        <View style={styles.pdfModalOverlay}>
+          <View style={styles.pdfModalContent}>
+            <Text style={styles.pdfModalTitle}>PDF importieren</Text>
+            <Text style={styles.pdfModalSubtitle}>
+              Seite {selectedPdfPage} von {pdfTotalPages}
+            </Text>
+            
+            {/* PDF Vorschau via WebView */}
+            <View style={styles.pdfPreviewContainer}>
+              {pdfBase64Data && (
+                <WebView
+                  ref={pdfWebViewRef}
+                  originWhitelist={['*']}
+                  source={{ html: getPdfConverterHtml() }}
+                  onMessage={handlePdfWebViewMessage}
+                  style={{ flex: 1 }}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+            
+            {/* Seitennavigation bei mehrseitigen PDFs */}
+            {pdfTotalPages > 1 && (
+              <View style={styles.pdfNavigation}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedPdfPage > 1) {
+                      const newPage = selectedPdfPage - 1;
+                      setSelectedPdfPage(newPage);
+                      pdfWebViewRef.current?.injectJavaScript(`showPage(${newPage}); true;`);
+                    }
+                  }}
+                  disabled={selectedPdfPage <= 1}
+                  style={[styles.pdfNavButton, selectedPdfPage <= 1 && styles.pdfNavButtonDisabled]}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#fff" />
+                  <Text style={styles.pdfNavButtonText}>Zurück</Text>
+                </TouchableOpacity>
+                
+                <Text style={styles.pdfPageIndicator}>
+                  {selectedPdfPage} / {pdfTotalPages}
+                </Text>
+                
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedPdfPage < pdfTotalPages) {
+                      const newPage = selectedPdfPage + 1;
+                      setSelectedPdfPage(newPage);
+                      pdfWebViewRef.current?.injectJavaScript(`showPage(${newPage}); true;`);
+                    }
+                  }}
+                  disabled={selectedPdfPage >= pdfTotalPages}
+                  style={[styles.pdfNavButton, selectedPdfPage >= pdfTotalPages && styles.pdfNavButtonDisabled]}
+                >
+                  <Text style={styles.pdfNavButtonText}>Weiter</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            {/* Aktionsbuttons */}
+            <View style={styles.pdfActionButtons}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowPdfConverter(false);
+                  setPdfBase64Data(null);
+                }}
+                style={[styles.pdfActionButton, styles.pdfCancelButton]}
+              >
+                <Text style={styles.pdfActionButtonText}>Abbrechen</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={convertPdfPageToImage}
+                style={[styles.pdfActionButton, styles.pdfConfirmButton]}
+              >
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.pdfActionButtonText}>Seite hinzufügen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -612,5 +878,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1976d2',
+  },
+  // PDF Modal Styles
+  pdfModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pdfModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+  },
+  pdfModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  pdfModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  pdfPreviewContainer: {
+    width: '100%',
+    height: 350,
+    backgroundColor: '#525659',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  pdfNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 16,
+  },
+  pdfNavButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1976d2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 4,
+  },
+  pdfNavButtonDisabled: {
+    opacity: 0.4,
+  },
+  pdfNavButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pdfPageIndicator: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  pdfActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
+  },
+  pdfActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
+  },
+  pdfCancelButton: {
+    backgroundColor: '#757575',
+  },
+  pdfConfirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  pdfActionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

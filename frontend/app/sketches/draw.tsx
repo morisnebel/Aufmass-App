@@ -27,7 +27,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
-import PdfThumbnail from '../../utils/PdfThumbnailShim';
+import { WebView } from 'react-native-webview';
+import { File } from 'expo-file-system/next';
 import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -790,6 +791,14 @@ export default function DrawSketchScreen() {
   const [protractorUseComplementary, setProtractorUseComplementary] = useState(false);
   const [protractorDrawSize, setProtractorDrawSize] = useState(60);
   const protractorCanvasSnapshot = useRef<string | null>(null); // Canvas-Snapshot VOR Protractor-Overlay
+  
+  // PDF-Konverter State (pdf.js via WebView - funktioniert ohne native Module)
+  const [showPdfConverter, setShowPdfConverter] = useState(false);
+  const [pdfBase64Data, setPdfBase64Data] = useState<string | null>(null);
+  const [pdfConversionLoading, setPdfConversionLoading] = useState(false);
+  const [pdfTotalPages, setPdfTotalPages] = useState(1);
+  const [selectedPdfPage, setSelectedPdfPage] = useState(1);
+  const pdfWebViewRef = useRef<WebView>(null);
   
   // Bildschirmkoordinaten der drei Punkte
   const [protractorCenter, setProtractorCenter] = useState({ x: 0, y: 0 });
@@ -3294,36 +3303,33 @@ export default function DrawSketchScreen() {
       
       console.log('[importFromFiles] Selected file:', file.name, mimeType);
 
-      // Wenn es ein PDF ist, konvertiere es zu einem Bild
+      // Wenn es ein PDF ist, öffne den PDF-Konverter (pdf.js via WebView)
       if (mimeType === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
         try {
-          console.log('[importFromFiles] Converting PDF to image...');
-          // Prüfe ob PdfThumbnail verfügbar ist (natives Modul - nur in Development Build)
-          if (!PdfThumbnail || !PdfThumbnail.generate) {
-            throw new Error('PDF Thumbnail module not available');
-          }
-          // Generiere Thumbnail der ersten Seite mit höherer Qualität
-          const { uri, width, height } = await PdfThumbnail.generate(fileUri, 0, { quality: 100 });
-          console.log('[importFromFiles] PDF converted successfully:', uri, 'Size:', width, 'x', height);
+          console.log('[importFromFiles] Loading PDF for conversion via pdf.js...');
+          setPdfConversionLoading(true);
           
-          await insertImageFromUri(uri);
+          // Lese PDF als Base64 mit dem neuen expo-file-system/next API
+          const pdfFile = new File(fileUri);
+          const base64 = await pdfFile.base64();
+          const pdfDataUri = `data:application/pdf;base64,${base64}`;
+          
+          console.log('[importFromFiles] PDF loaded, base64 length:', base64.length);
+          
+          // Setze State und zeige Konverter-Modal
+          setPdfBase64Data(pdfDataUri);
+          setSelectedPdfPage(1);
+          setPdfTotalPages(1); // Wird vom WebView aktualisiert
+          setShowPdfConverter(true);
+          setPdfConversionLoading(false);
           return;
         } catch (pdfError) {
-          console.error('[importFromFiles] PDF conversion error:', pdfError);
-          // Bessere Fehlermeldung 
+          console.error('[importFromFiles] PDF loading error:', pdfError);
+          setPdfConversionLoading(false);
           Alert.alert(
             'PDF Import',
-            'PDF-Dateien können in diesem Build nicht automatisch konvertiert werden.\n\n' +
-            'Tipp: Öffnen Sie das PDF in einer anderen App und erstellen Sie einen Screenshot, ' +
-            'den Sie dann hier importieren können.',
-            [
-              { text: 'Verstanden', style: 'default' },
-              { 
-                text: 'Bild wählen', 
-                onPress: () => importImageFromFiles(),
-                style: 'default'
-              }
-            ]
+            'Die PDF-Datei konnte nicht geladen werden. Bitte versuchen Sie es mit einer anderen Datei.',
+            [{ text: 'OK', style: 'default' }]
           );
           return;
         }
@@ -3339,6 +3345,211 @@ export default function DrawSketchScreen() {
       console.error('Error importing from files:', error);
       showAlert(t('common.error'), t('sketches.fileImportError'));
     }
+  };
+  
+  // PDF WebView Message Handler - verarbeitet Nachrichten vom pdf.js WebView
+  const handlePdfWebViewMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      console.log('[PDF WebView] Message received:', data.type);
+      
+      if (data.type === 'pageCount') {
+        setPdfTotalPages(data.count);
+        console.log('[PDF WebView] Total pages:', data.count);
+      } else if (data.type === 'pageRendered') {
+        // PDF-Seite wurde als Bild gerendert - füge in Skizze ein
+        console.log('[PDF WebView] Page rendered, inserting image...');
+        setShowPdfConverter(false);
+        setPdfBase64Data(null);
+        
+        // Das Bild direkt einfügen (data.imageData ist ein data:image/png;base64,... URI)
+        await insertImageFromUri(data.imageData);
+      } else if (data.type === 'error') {
+        console.error('[PDF WebView] Error:', data.message);
+        Alert.alert('PDF Fehler', data.message || 'Ein Fehler ist aufgetreten');
+      }
+    } catch (e) {
+      console.error('[PDF WebView] Message parse error:', e);
+    }
+  };
+  
+  // Rendert die ausgewählte PDF-Seite und fügt sie als Bild ein
+  const convertPdfPageToImage = () => {
+    if (pdfWebViewRef.current) {
+      console.log('[PDF] Converting page', selectedPdfPage, 'to image...');
+      pdfWebViewRef.current.injectJavaScript(`renderPageAsImage(${selectedPdfPage}); true;`);
+    }
+  };
+  
+  // Generiert den HTML-Code für den PDF-Konverter WebView
+  const getPdfConverterHtml = () => {
+    if (!pdfBase64Data) return '<html><body></body></html>';
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            background: #525659; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+          }
+          #preview-container {
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+          }
+          #preview-canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+          }
+          .loading {
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 16px;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="preview-container">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+        <p class="loading" id="status">Lade PDF...</p>
+        <canvas id="export-canvas" style="display:none;"></canvas>
+        
+        <script>
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          
+          let pdf = null;
+          let currentPage = 1;
+          
+          const pdfData = '${pdfBase64Data}';
+          const base64 = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+          
+          // Konvertiere Base64 zu Uint8Array
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          // Lade PDF
+          pdfjsLib.getDocument({ data: bytes }).promise.then(async loadedPdf => {
+            pdf = loadedPdf;
+            const numPages = pdf.numPages;
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'pageCount', 
+              count: numPages 
+            }));
+            
+            document.getElementById('status').textContent = 'Seite ' + currentPage + ' von ' + numPages;
+            
+            // Zeige erste Seite als Vorschau
+            await showPagePreview(1);
+          }).catch(err => {
+            console.error('PDF load error:', err);
+            document.getElementById('status').textContent = 'Fehler beim Laden';
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'error', 
+              message: 'PDF konnte nicht geladen werden: ' + err.message 
+            }));
+          });
+          
+          // Zeigt Vorschau einer Seite
+          async function showPagePreview(pageNum) {
+            if (!pdf) return;
+            try {
+              currentPage = pageNum;
+              const page = await pdf.getPage(pageNum);
+              const viewport = page.getViewport({ scale: 1.5 });
+              
+              const canvas = document.getElementById('preview-canvas');
+              const container = document.getElementById('preview-container');
+              
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, viewport.width, viewport.height);
+              
+              await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+              
+              document.getElementById('status').textContent = 'Seite ' + pageNum + ' von ' + pdf.numPages + ' - Bereit zum Import';
+            } catch (err) {
+              console.error('Page preview error:', err);
+            }
+          }
+          
+          // Rendert Seite in hoher Qualität und sendet als Bild
+          async function renderPageAsImage(pageNum) {
+            if (!pdf) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'error', 
+                message: 'PDF nicht geladen' 
+              }));
+              return;
+            }
+            
+            try {
+              document.getElementById('status').textContent = 'Konvertiere Seite ' + pageNum + '...';
+              
+              const page = await pdf.getPage(pageNum);
+              // Hohe Auflösung für gute Bildqualität
+              const scale = 2.5;
+              const viewport = page.getViewport({ scale: scale });
+              
+              const canvas = document.getElementById('export-canvas');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, viewport.width, viewport.height);
+              
+              await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+              
+              // Konvertiere zu JPEG für kleinere Dateigröße
+              const imageData = canvas.toDataURL('image/jpeg', 0.9);
+              
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'pageRendered', 
+                imageData: imageData,
+                width: viewport.width,
+                height: viewport.height,
+                pageNum: pageNum
+              }));
+            } catch (err) {
+              console.error('Render error:', err);
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'error', 
+                message: 'Seite konnte nicht gerendert werden: ' + err.message 
+              }));
+            }
+          }
+          
+          // Navigation zwischen Seiten (wird von React Native aufgerufen)
+          window.showPage = function(pageNum) {
+            if (pageNum >= 1 && pageNum <= pdf.numPages) {
+              showPagePreview(pageNum);
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `;
   };
 
   // Import only images from Files
@@ -9876,6 +10087,94 @@ export default function DrawSketchScreen() {
                 onPress={() => setShowProjectPhotosModal(false)}
               >
                 <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PDF Konverter Modal (pdf.js via WebView - funktioniert ohne native Module) */}
+      <Modal visible={showPdfConverter} transparent animationType="fade">
+        <View style={styles.cropModalOverlay}>
+          <View style={[styles.cropModalContent, { maxHeight: '90%' }]}>
+            <Text style={styles.cropModalTitle}>PDF importieren</Text>
+            <Text style={styles.cropModalSubtitle}>
+              Seite {selectedPdfPage} von {pdfTotalPages} wird als Bild eingefügt
+            </Text>
+            
+            {/* PDF Vorschau via WebView */}
+            <View style={{ width: '100%', height: 400, backgroundColor: '#525659', borderRadius: 8, overflow: 'hidden' }}>
+              {pdfBase64Data && (
+                <WebView
+                  ref={pdfWebViewRef}
+                  originWhitelist={['*']}
+                  source={{ html: getPdfConverterHtml() }}
+                  onMessage={handlePdfWebViewMessage}
+                  style={{ flex: 1 }}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+            
+            {/* Seitennavigation bei mehrseitigen PDFs */}
+            {pdfTotalPages > 1 && (
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12, gap: 16 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedPdfPage > 1) {
+                      const newPage = selectedPdfPage - 1;
+                      setSelectedPdfPage(newPage);
+                      pdfWebViewRef.current?.injectJavaScript(`showPage(${newPage}); true;`);
+                    }
+                  }}
+                  disabled={selectedPdfPage <= 1}
+                  style={[styles.cropActionButton, { opacity: selectedPdfPage <= 1 ? 0.4 : 1, minWidth: 100 }]}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#fff" />
+                  <Text style={styles.cropActionText}>Zurück</Text>
+                </TouchableOpacity>
+                
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>
+                  {selectedPdfPage} / {pdfTotalPages}
+                </Text>
+                
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedPdfPage < pdfTotalPages) {
+                      const newPage = selectedPdfPage + 1;
+                      setSelectedPdfPage(newPage);
+                      pdfWebViewRef.current?.injectJavaScript(`showPage(${newPage}); true;`);
+                    }
+                  }}
+                  disabled={selectedPdfPage >= pdfTotalPages}
+                  style={[styles.cropActionButton, { opacity: selectedPdfPage >= pdfTotalPages ? 0.4 : 1, minWidth: 100 }]}
+                >
+                  <Text style={styles.cropActionText}>Weiter</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            {/* Aktionsbuttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowPdfConverter(false);
+                  setPdfBase64Data(null);
+                }}
+                style={[styles.cropActionButton, { backgroundColor: '#757575', flex: 1 }]}
+              >
+                <Text style={styles.cropActionText}>Abbrechen</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={convertPdfPageToImage}
+                style={[styles.cropActionButton, { backgroundColor: '#4CAF50', flex: 1 }]}
+              >
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.cropActionText}>Seite einfügen</Text>
               </TouchableOpacity>
             </View>
           </View>

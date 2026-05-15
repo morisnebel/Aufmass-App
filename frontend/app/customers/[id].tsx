@@ -92,6 +92,7 @@ export default function EditCustomerScreen() {
   const [customerNumber, setCustomerNumber] = useState('');
   const [originalCustomerNumber, setOriginalCustomerNumber] = useState('');
   const [salutation, setSalutation] = useState('');
+  const [customerType, setCustomerType] = useState(''); // Kundentyp
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -105,6 +106,21 @@ export default function EditCustomerScreen() {
   
   // Anrede-Picker Modal
   const [showSalutationPicker, setShowSalutationPicker] = useState(false);
+  
+  // Kundentyp-Picker Modal
+  const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
+  
+  // Kundentyp-Optionen
+  const customerTypeOptions = [
+    { label: t('customers.typePrivate'), value: 'privat' },
+    { label: t('customers.typeCompany'), value: 'firma' },
+    { label: t('customers.typePropertyManagement'), value: 'hausverwaltung' },
+    { label: t('customers.typeArchitect'), value: 'architekturbuero' },
+    { label: t('customers.typePlanning'), value: 'planungsbuero' },
+    { label: t('customers.typeGeneralContractor'), value: 'generalunternehmen' },
+    { label: t('customers.typeInsurance'), value: 'versicherung' },
+    { label: t('customers.typeOther'), value: 'sonstiges' },
+  ];
   
   // Contact sync state
   const [importedContactId, setImportedContactId] = useState<string | null>(null);
@@ -157,6 +173,7 @@ export default function EditCustomerScreen() {
         setCustomerNumber(customer.customer_number || '');
         setOriginalCustomerNumber(customer.customer_number || '');
         setSalutation(customer.salutation || '');
+        setCustomerType(customer.customerType || ''); // Kundentyp laden
         setFirstName(customer.firstName || '');
         setLastName(customer.lastName || '');
         setEmail(customer.email || '');
@@ -396,6 +413,7 @@ export default function EditCustomerScreen() {
       await CustomerService.update(customerId, {
         customer_number: finalCustomerNumber,
         salutation: salutation,
+        customerType: customerType, // Kundentyp speichern
         firstName: firstName,
         lastName: lastName,
         name: fullName,
@@ -658,7 +676,7 @@ export default function EditCustomerScreen() {
           {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>{t('common.firstName')} *</Text>
+              <Text style={styles.label}>{t('common.firstName')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={t('common.firstName')}
@@ -675,6 +693,22 @@ export default function EditCustomerScreen() {
                 onChangeText={setLastName}
               />
             </View>
+          </View>
+
+          {/* Kundentyp */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('customers.customerType')}</Text>
+            <TouchableOpacity
+              style={styles.pickerButton}
+              onPress={() => setShowCustomerTypePicker(true)}
+            >
+              <Text style={[styles.pickerButtonText, !customerType && { color: '#999' }]}>
+                {customerType 
+                  ? customerTypeOptions.find(o => o.value === customerType)?.label || customerType
+                  : t('customers.selectCustomerType')}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -1080,6 +1114,50 @@ export default function EditCustomerScreen() {
               }}
             >
               <Text style={styles.salutationOptionText}>{t('common.noSalutation')}</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Kundentyp Picker Modal */}
+      <Modal
+        visible={showCustomerTypePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCustomerTypePicker(false)}
+      >
+        <Pressable 
+          style={styles.salutationModalOverlay}
+          onPress={() => setShowCustomerTypePicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>{t('customers.selectCustomerType')}</Text>
+            {customerTypeOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setCustomerType(option.value);
+                  setShowCustomerTypePicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  customerType === option.value && styles.salutationOptionSelected
+                ]}>{option.label}</Text>
+                {customerType === option.value && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setCustomerType('');
+                setShowCustomerTypePicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>{t('customers.noCustomerType')}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

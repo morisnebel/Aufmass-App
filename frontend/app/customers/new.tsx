@@ -332,6 +332,7 @@ export default function NewCustomerScreen() {
       
       const newCustomer = await CustomerService.create({
         salutation: salutation || undefined,
+        customerType: customerType || undefined, // Kundentyp speichern
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         name: fullName,

@@ -419,7 +419,18 @@
     "createdAndContactUpdatedShort": "Kunde erstellt und Kontakt aktualisiert",
     "createdAndContactSavedShort": "Kunde erstellt und in Kontakten gespeichert",
     "createdShort": "Kunde wurde erstellt",
-    "enterAtLeastName": "Bitte geben Sie mindestens einen Namen ein"
+    "enterAtLeastName": "Bitte geben Sie mindestens einen Namen ein",
+    "customerType": "Kundentyp",
+    "selectCustomerType": "Kundentyp wählen",
+    "noCustomerType": "Kein Typ",
+    "typePrivate": "Privat",
+    "typeCompany": "Firma",
+    "typePropertyManagement": "Hausverwaltung",
+    "typeArchitect": "Architekturbüro",
+    "typePlanning": "Planungsbüro",
+    "typeGeneralContractor": "Generalunternehmen",
+    "typeInsurance": "Versicherung",
+    "typeOther": "Sonstiges"
   },
   "sketches": {
     "title": "Skizzen",

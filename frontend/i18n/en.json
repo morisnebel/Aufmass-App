@@ -419,7 +419,18 @@
     "createdAndContactUpdatedShort": "Customer created and contact updated",
     "createdAndContactSavedShort": "Customer created and saved to contacts",
     "createdShort": "Customer created",
-    "enterAtLeastName": "Please enter at least a name"
+    "enterAtLeastName": "Please enter at least a name",
+    "customerType": "Customer Type",
+    "selectCustomerType": "Select customer type",
+    "noCustomerType": "No type",
+    "typePrivate": "Private",
+    "typeCompany": "Company",
+    "typePropertyManagement": "Property Management",
+    "typeArchitect": "Architecture Firm",
+    "typePlanning": "Planning Office",
+    "typeGeneralContractor": "General Contractor",
+    "typeInsurance": "Insurance",
+    "typeOther": "Other"
   },
   "sketches": {
     "title": "Sketches",

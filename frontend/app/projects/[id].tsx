@@ -82,10 +82,17 @@ interface Project {
 interface Customer {
   id: string;
   customer_number?: string; // KD-26001 format
+  customerType?: string; // Kundentyp: privat, hausverwaltung, etc.
+  salutation?: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   email?: string;
   phone?: string;
   mobile?: string;
+  street?: string;
+  zip?: string;
+  city?: string;
   address?: string;
 }
 
@@ -217,6 +224,7 @@ export default function ProjectDetailScreen() {
   const [editProjectStatus, setEditProjectStatus] = useState('');
   // Bauherr edit fields (separate) - erweitert für Anrede, Vorname, Nachname
   const [editCustomerNumber, setEditCustomerNumber] = useState(''); // KD-26001
+  const [editCustomerType, setEditCustomerType] = useState(''); // Kundentyp
   const [editBauherrSalutation, setEditBauherrSalutation] = useState('');
   const [editBauherrFirstName, setEditBauherrFirstName] = useState('');
   const [editBauherrLastName, setEditBauherrLastName] = useState('');
@@ -228,6 +236,27 @@ export default function ProjectDetailScreen() {
   const [editBauherrCity, setEditBauherrCity] = useState('');
   // Anrede-Picker Modal für Bauherr
   const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
+  // Kundentyp-Picker Modal
+  const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
+  
+  // Kundentyp-Optionen
+  const customerTypeOptions = [
+    { label: t('customers.typePrivate'), value: 'privat' },
+    { label: t('customers.typeCompany'), value: 'firma' },
+    { label: t('customers.typePropertyManagement'), value: 'hausverwaltung' },
+    { label: t('customers.typeArchitect'), value: 'architekturbuero' },
+    { label: t('customers.typePlanning'), value: 'planungsbuero' },
+    { label: t('customers.typeGeneralContractor'), value: 'generalunternehmen' },
+    { label: t('customers.typeInsurance'), value: 'versicherung' },
+    { label: t('customers.typeOther'), value: 'sonstiges' },
+  ];
+  
+  // Helper: Kundentyp Label ermitteln
+  const getCustomerTypeLabel = (typeValue: string | undefined) => {
+    if (!typeValue) return '';
+    const option = customerTypeOptions.find(o => o.value === typeValue);
+    return option?.label || typeValue;
+  };
   // Objektadresse edit fields (separate)
   const [editObjektNumber, setEditObjektNumber] = useState(''); // OBJ-26001
   const [editObjektName, setEditObjektName] = useState('');
@@ -791,8 +820,9 @@ export default function ProjectDetailScreen() {
       // Parse customer address as fallback
       const customerAddr = parseCustomerAddress(customer?.address);
       
-      // Customer number and Bauherr data - use project-specific or fall back to customer (mit separaten Feldern)
+      // Customer number, type and Bauherr data - use project-specific or fall back to customer (mit separaten Feldern)
       setEditCustomerNumber(customer?.customer_number || '');
+      setEditCustomerType(project.customer_type || customer?.customerType || ''); // Kundentyp laden
       setEditBauherrSalutation(project.bauherr_salutation || customer?.salutation || '');
       setEditBauherrFirstName(project.bauherr_first_name || customer?.firstName || '');
       setEditBauherrLastName(project.bauherr_last_name || customer?.lastName || '');
@@ -3954,6 +3984,12 @@ export default function ProjectDetailScreen() {
                 <span class="info-value" style="color: #1976d2; font-weight: 600;">${customer.customer_number}</span>
               </div>
             ` : ''}
+            ${(editCustomerType || customer?.customerType) ? `
+              <div class="info-row">
+                <span class="info-label">${t('customers.customerType')}:</span>
+                <span class="info-value">${getCustomerTypeLabel(editCustomerType || customer?.customerType)}</span>
+              </div>
+            ` : ''}
             ${bauherrName ? `
               <div class="info-row">
                 <span class="info-label">Name:</span>
@@ -4770,6 +4806,13 @@ export default function ProjectDetailScreen() {
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Kunden Nr.:</Text>
                   <Text style={[styles.infoValue, {color: '#1976d2', fontWeight: '600'}]}>{customer.customer_number}</Text>
+                </View>
+              )}
+              {/* Kundentyp */}
+              {(editCustomerType || customer?.customerType) && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{t('customers.customerType')}:</Text>
+                  <Text style={[styles.infoValue, {color: '#666'}]}>{getCustomerTypeLabel(editCustomerType || customer?.customerType)}</Text>
                 </View>
               )}
               <View style={styles.infoRow}>

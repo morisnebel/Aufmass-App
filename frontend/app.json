@@ -61,7 +61,6 @@
       "expo-web-browser",
       "./plugins/withICloudConfig",
       "./plugins/withExcludeCloudKitAndroid",
-      "./plugins/withExcludePdfThumbnailAndroid",
       "./plugins/withAndroidFullScreen",
       "@react-native-community/datetimepicker",
       "expo-localization",

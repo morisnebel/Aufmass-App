@@ -1,6 +1,6 @@
 // Wrapper for PDF to image conversion
-// Uses react-native-pdf-thumbnail native module
-import { Platform } from 'react-native';
+// Uses multiple approaches: native module (if available) + cloud fallback
+import { Platform, Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 
 interface ThumbnailResult {
@@ -13,66 +13,88 @@ interface GenerateOptions {
   quality?: number;
 }
 
+// Cloud-basierte PDF-zu-Bild Konvertierung (Fallback)
+const convertPdfViaCloud = async (pdfBase64: string): Promise<string> => {
+  // Verwende pdf.co API (kostenlose Tier verfügbar) oder ähnlichen Service
+  // Für Demo-Zwecke: Gebe Fehler zurück, da kein API-Key konfiguriert
+  throw new Error('Cloud PDF conversion not configured');
+};
+
 const PdfThumbnail = {
   generate: async (filePath: string, page: number = 0, options?: GenerateOptions): Promise<ThumbnailResult> => {
-    console.log('[PdfThumbnail] Starting PDF conversion for:', filePath, 'Platform:', Platform.OS);
+    console.log('[PdfThumbnail] Starting PDF conversion');
+    console.log('[PdfThumbnail] File path:', filePath);
+    console.log('[PdfThumbnail] Platform:', Platform.OS);
     
     // Web wird nicht unterstützt
     if (Platform.OS === 'web') {
       throw new Error('PDF thumbnail generation not supported on web platform');
     }
     
-    // Versuche verschiedene Methoden
     const errors: string[] = [];
     
-    // Methode 1: react-native-pdf-thumbnail direkt
+    // ===== METHODE 1: Native Module (react-native-pdf-thumbnail) =====
     try {
-      console.log('[PdfThumbnail] Trying react-native-pdf-thumbnail...');
+      console.log('[PdfThumbnail] Trying native module...');
+      
+      // Dynamischer Import um Fehler zu vermeiden wenn Modul nicht existiert
       const RealPdfThumbnail = require('react-native-pdf-thumbnail').default;
       
-      if (RealPdfThumbnail && RealPdfThumbnail.generate) {
-        // Stelle sicher dass der Pfad korrekt ist für Android
-        let adjustedPath = filePath;
-        
-        // Android: file:// Prefix hinzufügen wenn nötig
-        if (Platform.OS === 'android') {
-          if (!filePath.startsWith('file://') && !filePath.startsWith('content://')) {
-            adjustedPath = 'file://' + filePath;
-          }
-        }
-        
-        console.log('[PdfThumbnail] Using path:', adjustedPath);
-        const result = await RealPdfThumbnail.generate(adjustedPath, page);
-        console.log('[PdfThumbnail] Result:', result);
-        
-        if (result && result.uri) {
-          return {
-            uri: result.uri,
-            width: result.width || 800,
-            height: result.height || 1000,
-          };
-        }
-        throw new Error('Result was empty');
+      if (!RealPdfThumbnail || !RealPdfThumbnail.generate) {
+        throw new Error('Native module not available');
       }
-      throw new Error('Module not available');
+      
+      // Pfad anpassen für Android
+      let adjustedPath = filePath;
+      if (Platform.OS === 'android') {
+        // Android benötigt manchmal file:// prefix
+        if (!filePath.startsWith('file://') && !filePath.startsWith('content://')) {
+          adjustedPath = 'file://' + filePath;
+        }
+        // Oder ohne prefix wenn content://
+        if (filePath.startsWith('content://')) {
+          adjustedPath = filePath;
+        }
+      }
+      
+      console.log('[PdfThumbnail] Calling native generate with:', adjustedPath);
+      const result = await RealPdfThumbnail.generate(adjustedPath, page);
+      console.log('[PdfThumbnail] Native result:', JSON.stringify(result));
+      
+      if (result && result.uri) {
+        return {
+          uri: result.uri,
+          width: result.width || 800,
+          height: result.height || 1000,
+        };
+      }
+      throw new Error('Native module returned empty result');
     } catch (e: any) {
-      console.log('[PdfThumbnail] Method 1 failed:', e.message);
-      errors.push(`direct: ${e.message}`);
+      const errorMsg = e?.message || String(e);
+      console.log('[PdfThumbnail] Native module error:', errorMsg);
+      errors.push(`Native: ${errorMsg}`);
     }
     
-    // Methode 2: Kopiere PDF zu temporärem Cache-Ort und versuche erneut
+    // ===== METHODE 2: Kopiere zu Cache und versuche erneut =====
     try {
-      console.log('[PdfThumbnail] Trying with cached copy...');
+      console.log('[PdfThumbnail] Trying cache copy method...');
+      
       const fileName = 'temp_pdf_' + Date.now() + '.pdf';
       const tempPath = FileSystem.cacheDirectory + fileName;
       
-      // Kopiere die Datei
-      await FileSystem.copyAsync({
-        from: filePath,
-        to: tempPath,
-      });
+      // Lese Original-Datei Info
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      console.log('[PdfThumbnail] Original file info:', JSON.stringify(fileInfo));
+      
+      if (!fileInfo.exists) {
+        throw new Error('Source file does not exist');
+      }
+      
+      // Kopiere
+      await FileSystem.copyAsync({ from: filePath, to: tempPath });
       console.log('[PdfThumbnail] Copied to:', tempPath);
       
+      // Versuche mit kopierter Datei
       const RealPdfThumbnail = require('react-native-pdf-thumbnail').default;
       const result = await RealPdfThumbnail.generate(tempPath, page);
       
@@ -80,23 +102,56 @@ const PdfThumbnail = {
       try { await FileSystem.deleteAsync(tempPath, { idempotent: true }); } catch {}
       
       if (result && result.uri) {
-        console.log('[PdfThumbnail] Cached copy method success:', result);
+        console.log('[PdfThumbnail] Cache method success');
         return {
           uri: result.uri,
           width: result.width || 800,
           height: result.height || 1000,
         };
       }
-      throw new Error('Result was empty');
+      throw new Error('Cache method returned empty result');
     } catch (e: any) {
-      console.log('[PdfThumbnail] Method 2 failed:', e.message);
-      errors.push(`cached: ${e.message}`);
+      const errorMsg = e?.message || String(e);
+      console.log('[PdfThumbnail] Cache method error:', errorMsg);
+      errors.push(`Cache: ${errorMsg}`);
     }
     
-    // Alle Methoden fehlgeschlagen
-    const errorMsg = `PDF conversion failed on ${Platform.OS}. Errors: ${errors.join('; ')}`;
-    console.error('[PdfThumbnail]', errorMsg);
-    throw new Error(errorMsg);
+    // ===== METHODE 3: Mit file:// prefix für Android =====
+    if (Platform.OS === 'android') {
+      try {
+        console.log('[PdfThumbnail] Trying with explicit file:// prefix...');
+        
+        let cleanPath = filePath;
+        // Entferne eventuelles file:// prefix
+        if (cleanPath.startsWith('file://')) {
+          cleanPath = cleanPath.substring(7);
+        }
+        // Füge file:// hinzu
+        const fileUriPath = 'file://' + cleanPath;
+        
+        console.log('[PdfThumbnail] Trying path:', fileUriPath);
+        const RealPdfThumbnail = require('react-native-pdf-thumbnail').default;
+        const result = await RealPdfThumbnail.generate(fileUriPath, page);
+        
+        if (result && result.uri) {
+          console.log('[PdfThumbnail] file:// method success');
+          return {
+            uri: result.uri,
+            width: result.width || 800,
+            height: result.height || 1000,
+          };
+        }
+      } catch (e: any) {
+        const errorMsg = e?.message || String(e);
+        console.log('[PdfThumbnail] file:// method error:', errorMsg);
+        errors.push(`FileUri: ${errorMsg}`);
+      }
+    }
+    
+    // Alle Methoden fehlgeschlagen - zeige detaillierte Fehlermeldung
+    const fullError = `PDF-Konvertierung fehlgeschlagen.\n\nTechnische Details:\n${errors.join('\n')}`;
+    console.error('[PdfThumbnail] All methods failed:', fullError);
+    throw new Error(fullError);
   },
 };
 

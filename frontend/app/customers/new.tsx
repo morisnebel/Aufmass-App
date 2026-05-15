@@ -89,6 +89,7 @@ export default function NewCustomerScreen() {
   // Form state - neue erweiterte Felder
   const [customerNumber, setCustomerNumber] = useState(''); // KD-26001 etc.
   const [salutation, setSalutation] = useState('');
+  const [customerType, setCustomerType] = useState(''); // Kundentyp: Privat, Hausverwaltung, etc.
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -104,6 +105,21 @@ export default function NewCustomerScreen() {
   
   // Anrede-Picker Modal
   const [showSalutationPicker, setShowSalutationPicker] = useState(false);
+  
+  // Kundentyp-Picker Modal
+  const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
+  
+  // Kundentyp-Optionen
+  const customerTypeOptions = [
+    { label: t('customers.typePrivate') || 'Privat', value: 'privat' },
+    { label: t('customers.typeCompany') || 'Firma', value: 'firma' },
+    { label: t('customers.typePropertyManagement') || 'Hausverwaltung', value: 'hausverwaltung' },
+    { label: t('customers.typeArchitect') || 'Architekturbüro', value: 'architekturbuero' },
+    { label: t('customers.typePlanning') || 'Planungsbüro', value: 'planungsbuero' },
+    { label: t('customers.typeGeneralContractor') || 'Generalunternehmen', value: 'generalunternehmen' },
+    { label: t('customers.typeInsurance') || 'Versicherung', value: 'versicherung' },
+    { label: t('customers.typeOther') || 'Sonstiges', value: 'sonstiges' },
+  ];
   
   // Import options modal
   const [showImportOptions, setShowImportOptions] = useState(false);
@@ -533,7 +549,7 @@ export default function NewCustomerScreen() {
           {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>{t('common.firstName')} *</Text>
+              <Text style={styles.label}>{t('common.firstName')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={t('common.firstName')}
@@ -552,6 +568,22 @@ export default function NewCustomerScreen() {
                 autoComplete="family-name"
               />
             </View>
+          </View>
+
+          {/* Kundentyp */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('customers.customerType') || 'Kundentyp'}</Text>
+            <TouchableOpacity
+              style={styles.pickerButton}
+              onPress={() => setShowCustomerTypePicker(true)}
+            >
+              <Text style={[styles.pickerButtonText, !customerType && { color: '#999' }]}>
+                {customerType 
+                  ? customerTypeOptions.find(o => o.value === customerType)?.label || customerType
+                  : t('customers.selectCustomerType') || 'Kundentyp wählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -676,6 +708,50 @@ export default function NewCustomerScreen() {
               }}
             >
               <Text style={styles.salutationOptionText}>{t('common.noSalutation')}</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Kundentyp Picker Modal */}
+      <Modal
+        visible={showCustomerTypePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCustomerTypePicker(false)}
+      >
+        <Pressable 
+          style={styles.salutationModalOverlay}
+          onPress={() => setShowCustomerTypePicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>{t('customers.selectCustomerType') || 'Kundentyp wählen'}</Text>
+            {customerTypeOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setCustomerType(option.value);
+                  setShowCustomerTypePicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  customerType === option.value && styles.salutationOptionSelected
+                ]}>{option.label}</Text>
+                {customerType === option.value && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.salutationOption}
+              onPress={() => {
+                setCustomerType('');
+                setShowCustomerTypePicker(false);
+              }}
+            >
+              <Text style={styles.salutationOptionText}>{t('customers.noCustomerType') || 'Kein Typ'}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

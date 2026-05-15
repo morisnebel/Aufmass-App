@@ -602,10 +602,11 @@ export default function CustomersScreen() {
         
         {/* Neues Projekt Button */}
         <TouchableOpacity
-          style={styles.newProjectButton}
+          style={[styles.newProjectButton, { flexDirection: 'row', alignItems: 'center' }]}
           onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
         >
           <Ionicons name="add-circle" size={isPhone ? 22 : 28} color="#4caf50" />
+          {!isPhone && <Text style={{ color: '#4caf50', fontSize: 11, marginLeft: 4 }}>Projekt</Text>}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => openDeleteModal(item)}

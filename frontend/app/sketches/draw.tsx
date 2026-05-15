@@ -2771,6 +2771,30 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Linie zu Pfeil umwandeln (und umgekehrt)
+  const convertLineToArrow = () => {
+    if (!selectedElementId) return;
+    const element = elements.find(el => el.id === selectedElementId);
+    if (!element) return;
+    
+    // Nur Linien und Pfeile können umgewandelt werden
+    if (element.type !== 'line' && element.type !== 'arrow') {
+      Alert.alert('Hinweis', 'Nur Linien und Pfeile können umgewandelt werden.');
+      return;
+    }
+    
+    const newType = element.type === 'line' ? 'arrow' : 'line';
+    const newElements = elements.map(el => {
+      if (el.id === selectedElementId) {
+        return { ...el, type: newType as DrawElement['type'] };
+      }
+      return el;
+    });
+    
+    addToHistory(newElements);
+    console.log(`[convertLineToArrow] Converted ${element.type} to ${newType}`);
+  };
+
   // Zuschneiden-Modus starten
   const startCropMode = async () => {
     const selectedEl = elements.find(el => el.id === selectedElementId);
@@ -3278,19 +3302,28 @@ export default function DrawSketchScreen() {
           if (!PdfThumbnail || !PdfThumbnail.generate) {
             throw new Error('PDF Thumbnail module not available');
           }
-          // Generiere Thumbnail der ersten Seite
-          const { uri, width, height } = await PdfThumbnail.generate(fileUri, 0);
-          console.log('[importFromFiles] PDF converted successfully:', uri, width, height);
+          // Generiere Thumbnail der ersten Seite mit höherer Qualität
+          const { uri, width, height } = await PdfThumbnail.generate(fileUri, 0, { quality: 100 });
+          console.log('[importFromFiles] PDF converted successfully:', uri, 'Size:', width, 'x', height);
           
           await insertImageFromUri(uri);
           return;
         } catch (pdfError) {
           console.error('[importFromFiles] PDF conversion error:', pdfError);
-          // Bessere Fehlermeldung wenn natives Modul nicht verfügbar
+          // Bessere Fehlermeldung 
           Alert.alert(
             'PDF Import',
-            'PDF-Import ist nur im TestFlight/Production-Build verfügbar.\n\nBitte wähle stattdessen ein Bild (JPG, PNG) aus.',
-            [{ text: t('common.ok'), style: 'default' }]
+            'PDF-Dateien können in diesem Build nicht automatisch konvertiert werden.\n\n' +
+            'Tipp: Öffnen Sie das PDF in einer anderen App und erstellen Sie einen Screenshot, ' +
+            'den Sie dann hier importieren können.',
+            [
+              { text: 'Verstanden', style: 'default' },
+              { 
+                text: 'Bild wählen', 
+                onPress: () => importImageFromFiles(),
+                style: 'default'
+              }
+            ]
           );
           return;
         }
@@ -7412,6 +7445,25 @@ export default function DrawSketchScreen() {
           </TouchableOpacity>
           <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#1976d2' : '#ccc' }]}>{t('sketches.editStyle')}</Text>
         </View>
+
+        {/* Linie ↔ Pfeil umwandeln Button - nur bei Linien/Pfeilen sichtbar */}
+        {selectedElementId && (elements.find(el => el.id === selectedElementId)?.type === 'line' || elements.find(el => el.id === selectedElementId)?.type === 'arrow') && (
+          <View style={styles.toolButtonWithLabel}>
+            <TouchableOpacity
+              style={[styles.toolButtonInner, { borderColor: '#ff9800', borderWidth: 1 }]}
+              onPress={convertLineToArrow}
+            >
+              <Ionicons 
+                name={elements.find(el => el.id === selectedElementId)?.type === 'line' ? 'arrow-forward' : 'remove'} 
+                size={18} 
+                color="#ff9800" 
+              />
+            </TouchableOpacity>
+            <Text style={[styles.toolButtonLabel, { color: '#ff9800', fontSize: 8 }]}>
+              {elements.find(el => el.id === selectedElementId)?.type === 'line' ? '→ Pfeil' : '→ Linie'}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.separator} />
 

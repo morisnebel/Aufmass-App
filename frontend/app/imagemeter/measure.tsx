@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
+import * as FileSystem from 'expo-file-system';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 const CUSTOM_COMPONENTS_KEY = 'aufmassprofi_custom_components';
@@ -241,11 +242,11 @@ export default function ImageMeterMeasureScreen() {
 
   // ---- Save as project photo (screenshot + data) ----
   const saveAsProjectPhoto = async () => {
-    if (!photo || !canvasCaptureRef.current) return;
+    if (!photo) return;
     
     const projectId = photo.projectId;
     if (!projectId) {
-      Alert.alert('Hinweis', 'Dieses Foto ist keinem Projekt zugeordnet. Bitte zuerst einem Projekt zuweisen.');
+      Alert.alert('Hinweis', 'Dieses Foto ist keinem Projekt zugeordnet.');
       return;
     }
 
@@ -255,18 +256,18 @@ export default function ImageMeterMeasureScreen() {
       // First save current state
       await autoSave();
       
-      // Capture the canvas as image
-      const uri = await captureRef(canvasCaptureRef, { format: 'png', quality: 0.9 });
+      // Capture using the ref - findNodeHandle to get the native view
+      const { findNodeHandle } = require('react-native');
+      const tag = findNodeHandle(canvasCaptureRef.current);
+      if (!tag) {
+        throw new Error('Canvas view not found');
+      }
       
-      // Read as base64
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      const uri = await captureRef(tag, { format: 'png', quality: 0.9 });
+      
+      // Read as base64 using expo-file-system
+      const base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const base64WithPrefix = `data:image/png;base64,${base64Data}`;
 
       // Build description with measurement summary
       const summary = buildSummaryText();
@@ -281,16 +282,16 @@ export default function ImageMeterMeasureScreen() {
       });
       
       // Save image data separately (avoid OOM)
-      await AsyncStorage.setItem(`photo_img_${newPhotoId}`, base64);
+      await AsyncStorage.setItem(`photo_img_${newPhotoId}`, base64WithPrefix);
       
       Alert.alert(
-        '✅ Als Projektfoto gespeichert',
-        'Das Messbild wurde in den Projektfotos gespeichert und erscheint im PDF Export.\n\nMessungen-Zusammenfassung wird als Beschreibung angezeigt.',
+        '✅ Gespeichert!',
+        'Das Messbild wurde als Projektfoto gespeichert und erscheint im PDF.',
         [{ text: 'OK' }]
       );
     } catch (error) {
       console.error('Error saving as project photo:', error);
-      Alert.alert(t('common.error'), 'Screenshot konnte nicht gespeichert werden. Versuchen Sie es erneut.');
+      Alert.alert('Fehler', 'Screenshot konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
     } finally {
       setLoading(false);
     }

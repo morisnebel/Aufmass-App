@@ -108,7 +108,6 @@ export default function ImageMeterMeasureScreen() {
   const [currentLine, setCurrentLine] = useState<{ start: Point; end: Point } | null>(null);
   const [selectedMeasurement, setSelectedMeasurement] = useState<string | null>(null);
   const [tapPoints, setTapPoints] = useState<Point[]>([]);
-  const [magnifierPos, setMagnifierPos] = useState<Point | null>(null);
   const [showEdgeLengths, setShowEdgeLengths] = useState(true);
 
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
@@ -136,6 +135,11 @@ export default function ImageMeterMeasureScreen() {
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
   const justDraggedRef = useRef(false); // prevent tap after drag
+  
+  // Smooth drag: store current drag position in ref, only commit on release
+  const [dragPos, setDragPos] = useState<Point | null>(null);
+  const dragPosRef = useRef<Point | null>(null);
+  const dragAnimFrame = useRef<number | null>(null);
 
   // Load
   useEffect(() => { loadPhoto(); loadCustomComponents(); }, [photoId]);
@@ -245,8 +249,8 @@ export default function ImageMeterMeasureScreen() {
     return null;
   };
 
-  // ---- Move handle ----
-  const moveHandle = (handle: DragHandle, newImgPt: Point) => {
+  // ---- Move handle: only called on RELEASE for final commit ----
+  const commitHandle = (handle: DragHandle, newImgPt: Point) => {
     if (handle.measureType === 'line') {
       setMeasurements(prev => prev.map(m => {
         if (m.id !== handle.measureId) return m;
@@ -294,12 +298,13 @@ export default function ImageMeterMeasureScreen() {
         dragHandleRef.current = handle;
         isDraggingRef.current = true;
         dragStartRef.current = imgPt;
-        setMagnifierPos(imgPt); // Show magnifier during drag
+        dragPosRef.current = imgPt;
+        setDragPos(imgPt);
         return;
       }
     }
 
-    // Also check for direct component dragging (tap on component to start drag, no prior selection needed)
+    // Direct component dragging (no prior selection needed)
     if (drawMode === 'none') {
       for (const comp of buildingComponents) {
         if (calcDist(imgPt, comp.position) < 50) {
@@ -307,45 +312,52 @@ export default function ImageMeterMeasureScreen() {
           dragHandleRef.current = { measureId: comp.id, measureType: 'component', pointIndex: 0 };
           isDraggingRef.current = true;
           dragStartRef.current = imgPt;
-          setMagnifierPos(imgPt);
+          dragPosRef.current = imgPt;
+          setDragPos(imgPt);
           return;
         }
       }
     }
 
     if (drawMode === 'none' || drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
-    setCurrentLine({ start: imgPt, end: imgPt }); setMagnifierPos(imgPt);
+    setCurrentLine({ start: imgPt, end: imgPt }); setDragPos(imgPt);
   };
 
   const handleTouchMove = (event: any) => {
     const touch = event.nativeEvent;
     const imgPt = toImg(touch.locationX, touch.locationY);
 
-    // Dragging a handle
+    // Smooth drag: only update lightweight preview position
     if (isDraggingRef.current && dragHandleRef.current) {
-      moveHandle(dragHandleRef.current, imgPt);
-      setMagnifierPos(imgPt); // Magnifier follows during drag
+      dragPosRef.current = imgPt;
       justDraggedRef.current = true;
+      // Throttled state update for visual feedback
+      if (dragAnimFrame.current) cancelAnimationFrame(dragAnimFrame.current);
+      dragAnimFrame.current = requestAnimationFrame(() => {
+        setDragPos({ ...imgPt });
+      });
       return;
     }
 
     if (drawMode === 'none' || !currentLine) return;
     if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
     setCurrentLine(prev => prev ? { ...prev, end: imgPt } : null);
-    setMagnifierPos(imgPt);
+    setDragPos(imgPt);
   };
 
-  const handleTouchEnd = (event: any) => {
-    // End handle drag
-    if (isDraggingRef.current) {
+  const handleTouchEnd = () => {
+    // Commit drag to actual measurement data
+    if (isDraggingRef.current && dragHandleRef.current && dragPosRef.current) {
+      commitHandle(dragHandleRef.current, dragPosRef.current);
       isDraggingRef.current = false;
       dragHandleRef.current = null;
-      setMagnifierPos(null);
-      // justDraggedRef stays true to prevent tap
+      dragPosRef.current = null;
+      setDragPos(null);
+      if (dragAnimFrame.current) { cancelAnimationFrame(dragAnimFrame.current); dragAnimFrame.current = null; }
       return;
     }
 
-    setMagnifierPos(null);
+    setDragPos(null);
     if (drawMode === 'none' || !currentLine) return;
     if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
 
@@ -363,7 +375,6 @@ export default function ImageMeterMeasureScreen() {
 
   // ---- Tap (for area/angle/component/selection) ----
   const handleCanvasTap = (event: any) => {
-    // Skip if we just finished dragging
     if (justDraggedRef.current) { justDraggedRef.current = false; return; }
     if (isDraggingRef.current) return;
     
@@ -371,20 +382,18 @@ export default function ImageMeterMeasureScreen() {
     const imgPt = toImg(touch.locationX, touch.locationY);
 
     if (drawMode === 'none') {
-      // Selection
       for (const m of measurements) { const mid = { x: (m.startPoint.x + m.endPoint.x) / 2, y: (m.startPoint.y + m.endPoint.y) / 2 }; if (calcDist(imgPt, mid) < 50) { setSelectedMeasurement(m.id === selectedMeasurement ? null : m.id); return; } }
       for (const a of areaMeasurements) { const cx = a.points.reduce((s, p) => s + p.x, 0) / a.points.length; const cy = a.points.reduce((s, p) => s + p.y, 0) / a.points.length; if (calcDist(imgPt, { x: cx, y: cy }) < 60) { setSelectedMeasurement(a.id === selectedMeasurement ? null : a.id); return; } }
       for (const ang of angleMeasurements) { if (calcDist(imgPt, ang.vertex) < 50) { setSelectedMeasurement(ang.id === selectedMeasurement ? null : ang.id); return; } }
       for (const comp of buildingComponents) { if (calcDist(imgPt, comp.position) < 50) { setSelectedMeasurement(comp.id === selectedMeasurement ? null : comp.id); return; } }
       setSelectedMeasurement(null); return;
     }
-    if (drawMode === 'area') { setTapPoints(prev => [...prev, imgPt]); setMagnifierPos(imgPt); }
+    if (drawMode === 'area') { setTapPoints(prev => [...prev, imgPt]); }
     else if (drawMode === 'angle') {
       const pts = [...tapPoints, imgPt]; setTapPoints(pts);
-      setMagnifierPos(imgPt);
       if (pts.length === 3) {
         setAngleMeasurements(prev => [...prev, { id: `ang_${Date.now()}`, p1: pts[0], vertex: pts[1], p2: pts[2], angle: calcAngle(pts[0], pts[1], pts[2]), color: '#E91E63' }]);
-        setTapPoints([]); setHasChanges(true); setMagnifierPos(null);
+        setTapPoints([]); setHasChanges(true);
       }
     }
     else if (drawMode === 'component') { setPendingComponentPos(imgPt); setShowComponentPicker(true); }
@@ -692,28 +701,31 @@ export default function ImageMeterMeasureScreen() {
             })}
             {drawMode === 'area' && tapPoints.length >= 3 && (() => { const f = toDisp(tapPoints[0]); const l = toDisp(tapPoints[tapPoints.length - 1]); return <Line x1={l.x} y1={l.y} x2={f.x} y2={f.y} stroke="#2196F3" strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />; })()}
 
-            {/* Magnifier - shows for ALL modes */}
-            {magnifierPos && drawMode !== 'none' && (() => {
-              const dp = toDisp(magnifierPos);
-              const mc = drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : drawMode === 'component' ? '#9C27B0' : '#1976d2';
+            {/* Magnifier crosshair at touch point */}
+            {dragPos && (drawMode === 'line' || drawMode === 'reference') && (() => {
+              const dp = toDisp(dragPos);
+              const mc = drawMode === 'reference' ? '#4CAF50' : '#1976d2';
               return (
                 <G>
-                  <Circle cx={dp.x} cy={dp.y - 50} r={24} fill="rgba(255,255,255,0.9)" stroke={mc} strokeWidth={2.5} />
-                  <Line x1={dp.x - 10} y1={dp.y - 50} x2={dp.x + 10} y2={dp.y - 50} stroke={mc} strokeWidth={1.5} />
-                  <Line x1={dp.x} y1={dp.y - 60} x2={dp.x} y2={dp.y - 40} stroke={mc} strokeWidth={1.5} />
-                  <Line x1={dp.x} y1={dp.y - 26} x2={dp.x} y2={dp.y} stroke={mc} strokeWidth={1} strokeDasharray="3,2" />
+                  {/* Crosshair lines */}
+                  <Line x1={dp.x - 20} y1={dp.y} x2={dp.x + 20} y2={dp.y} stroke={mc} strokeWidth={1.5} opacity={0.8} />
+                  <Line x1={dp.x} y1={dp.y - 20} x2={dp.x} y2={dp.y + 20} stroke={mc} strokeWidth={1.5} opacity={0.8} />
+                  {/* Outer ring */}
+                  <Circle cx={dp.x} cy={dp.y} r={15} fill="none" stroke={mc} strokeWidth={2} opacity={0.6} />
+                  <Circle cx={dp.x} cy={dp.y} r={3} fill={mc} />
                 </G>
               );
             })()}
-            {/* Magnifier during drag editing */}
-            {magnifierPos && isDraggingRef.current && drawMode === 'none' && (() => {
-              const dp = toDisp(magnifierPos);
+            {/* Drag preview: show point being moved at new position */}
+            {isDraggingRef.current && dragPos && (() => {
+              const dp = toDisp(dragPos);
               return (
                 <G>
-                  <Circle cx={dp.x} cy={dp.y - 50} r={24} fill="rgba(255,255,255,0.9)" stroke="#FF9800" strokeWidth={2.5} />
-                  <Line x1={dp.x - 10} y1={dp.y - 50} x2={dp.x + 10} y2={dp.y - 50} stroke="#FF9800" strokeWidth={1.5} />
-                  <Line x1={dp.x} y1={dp.y - 60} x2={dp.x} y2={dp.y - 40} stroke="#FF9800" strokeWidth={1.5} />
-                  <Line x1={dp.x} y1={dp.y - 26} x2={dp.x} y2={dp.y} stroke="#FF9800" strokeWidth={1} strokeDasharray="3,2" />
+                  {/* Big crosshair for precise positioning */}
+                  <Line x1={dp.x - 30} y1={dp.y} x2={dp.x + 30} y2={dp.y} stroke="#FF9800" strokeWidth={1} opacity={0.6} />
+                  <Line x1={dp.x} y1={dp.y - 30} x2={dp.x} y2={dp.y + 30} stroke="#FF9800" strokeWidth={1} opacity={0.6} />
+                  <Circle cx={dp.x} cy={dp.y} r={12} fill="none" stroke="#FF9800" strokeWidth={2.5} />
+                  <Circle cx={dp.x} cy={dp.y} r={4} fill="#FF9800" />
                 </G>
               );
             })()}

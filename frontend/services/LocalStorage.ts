@@ -362,6 +362,7 @@ export interface Customer {
   address?: string; // Legacy: kombinierte Adresse (für Abwärtskompatibilität)
   notes?: string;
   customer_number?: string; // KD-25001 format - auto-generated
+  customerType?: string; // Kundentyp: Privat, Firma, Hausverwaltung, etc.
   importedContactId?: string; // ID des importierten Telefonkontakts für Synchronisation
   projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;

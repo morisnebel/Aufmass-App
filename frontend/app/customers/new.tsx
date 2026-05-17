@@ -25,6 +25,19 @@ import { useTranslation } from 'react-i18next';
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
 
+// Kundentyp-Optionen
+const CUSTOMER_TYPE_OPTIONS = [
+  'Privat',
+  'Firma', 
+  'Hausverwaltung',
+  'Architekturbüro',
+  'Planungsbüro',
+  'Generalunternehmen',
+  'Versicherung',
+  'Sonstiges',
+  'Kein Typ',
+];
+
 // Helper function to extract contact data with separate address fields
 function extractContactData(contact: Contacts.Contact) {
   let extractedFirstName = '';
@@ -104,6 +117,10 @@ export default function NewCustomerScreen() {
   
   // Anrede-Picker Modal
   const [showSalutationPicker, setShowSalutationPicker] = useState(false);
+  
+  // Kundentyp
+  const [customerType, setCustomerType] = useState('');
+  const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
   
   // Import options modal
   const [showImportOptions, setShowImportOptions] = useState(false);
@@ -224,8 +241,8 @@ export default function NewCustomerScreen() {
   };
 
   const handleSave = async () => {
-    if (!firstName.trim() && !lastName.trim()) {
-      Alert.alert(t('common.error'), t('customers.enterNameError'));
+    if (!lastName.trim()) {
+      Alert.alert(t('common.error'), t('customers.enterLastNameError'));
       return;
     }
 
@@ -328,6 +345,7 @@ export default function NewCustomerScreen() {
         address: fullAddress || undefined,
         importedContactId: importedContactId || undefined,
         customer_number: finalCustomerNumber,
+        customerType: customerType || undefined,
       });
       
       // Hilfsfunktion für Navigation nach Kundenerstellung
@@ -533,7 +551,7 @@ export default function NewCustomerScreen() {
           {/* Vorname & Nachname */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>{t('common.firstName')} *</Text>
+              <Text style={styles.label}>{t('common.firstName')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={t('common.firstName')}
@@ -552,6 +570,20 @@ export default function NewCustomerScreen() {
                 autoComplete="family-name"
               />
             </View>
+          </View>
+
+          {/* Kundentyp */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Kundentyp</Text>
+            <TouchableOpacity 
+              style={styles.pickerButton}
+              onPress={() => setShowCustomerTypePicker(true)}
+            >
+              <Text style={customerType ? styles.pickerText : styles.pickerPlaceholder}>
+                {customerType || 'Kundentyp auswählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -677,6 +709,41 @@ export default function NewCustomerScreen() {
             >
               <Text style={styles.salutationOptionText}>{t('common.noSalutation')}</Text>
             </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Kundentyp Picker Modal */}
+      <Modal
+        visible={showCustomerTypePicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCustomerTypePicker(false)}
+      >
+        <Pressable 
+          style={styles.salutationModalOverlay}
+          onPress={() => setShowCustomerTypePicker(false)}
+        >
+          <View style={styles.salutationModalContent}>
+            <Text style={styles.salutationModalTitle}>Kundentyp wählen</Text>
+            {CUSTOMER_TYPE_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.salutationOption}
+                onPress={() => {
+                  setCustomerType(option === 'Kein Typ' ? '' : option);
+                  setShowCustomerTypePicker(false);
+                }}
+              >
+                <Text style={[
+                  styles.salutationOptionText,
+                  customerType === option && styles.salutationOptionSelected
+                ]}>{option}</Text>
+                {customerType === option && (
+                  <Ionicons name="checkmark" size={20} color="#1976d2" />
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
         </Pressable>
       </Modal>

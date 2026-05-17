@@ -391,6 +391,7 @@
     "createCustomerBtn": "Kunde erstellen",
     "saveChanges": "Änderungen speichern",
     "enterNameError": "Bitte geben Sie mindestens einen Vor- oder Nachnamen ein",
+    "enterLastNameError": "Bitte geben Sie einen Nachnamen ein",
     "syncContactQuestion": "Kontakt synchronisieren?",
     "syncContactImportedMessage": "Dieser Kunde wurde aus Ihren iPad-Kontakten importiert. Möchten Sie die Änderungen auch dort aktualisieren?",
     "syncContactEditMessage": "Möchten Sie die Änderungen auch in Ihren iPad-Kontakten aktualisieren?",

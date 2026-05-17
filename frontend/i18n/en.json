@@ -391,6 +391,7 @@
     "createCustomerBtn": "Create Customer",
     "saveChanges": "Save Changes",
     "enterNameError": "Please enter at least a first or last name",
+    "enterLastNameError": "Please enter a last name",
     "syncContactQuestion": "Sync Contact?",
     "syncContactImportedMessage": "This customer was imported from your iPad contacts. Would you like to update the changes there as well?",
     "syncContactEditMessage": "Would you like to also update the changes in your iPad contacts?",

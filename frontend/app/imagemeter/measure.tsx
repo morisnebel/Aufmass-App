@@ -240,7 +240,7 @@ export default function ImageMeterMeasureScreen() {
     return lines.join('\n');
   };
 
-  // ---- Save as project photo (screenshot + data) ----
+  // ---- Save as project photo (use original image + measurement text) ----
   const saveAsProjectPhoto = async () => {
     if (!photo) return;
     
@@ -252,22 +252,20 @@ export default function ImageMeterMeasureScreen() {
 
     try {
       setLoading(true);
-      
-      // First save current state
       await autoSave();
       
-      // Capture using the ref - findNodeHandle to get the native view
-      const { findNodeHandle } = require('react-native');
-      const tag = findNodeHandle(canvasCaptureRef.current);
-      if (!tag) {
-        throw new Error('Canvas view not found');
+      // Read original image as base64
+      let base64WithPrefix = '';
+      const imageUri = photo.imageUri;
+      
+      if (imageUri.startsWith('data:')) {
+        // Already base64
+        base64WithPrefix = imageUri;
+      } else {
+        // Local file - read with FileSystem
+        const base64Data = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
+        base64WithPrefix = `data:image/jpeg;base64,${base64Data}`;
       }
-      
-      const uri = await captureRef(tag, { format: 'png', quality: 0.9 });
-      
-      // Read as base64 using expo-file-system
-      const base64Data = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-      const base64WithPrefix = `data:image/png;base64,${base64Data}`;
 
       // Build description with measurement summary
       const summary = buildSummaryText();
@@ -286,15 +284,33 @@ export default function ImageMeterMeasureScreen() {
       
       Alert.alert(
         '✅ Gespeichert!',
-        'Das Messbild wurde als Projektfoto gespeichert und erscheint im PDF.',
+        'Das Foto und die Messungen wurden als Projektfoto gespeichert.\n\nDie Messungen-Zusammenfassung erscheint im PDF.',
         [{ text: 'OK' }]
       );
     } catch (error) {
       console.error('Error saving as project photo:', error);
-      Alert.alert('Fehler', 'Screenshot konnte nicht erstellt werden. Bitte versuchen Sie es erneut.');
+      Alert.alert('Fehler', 'Foto konnte nicht gespeichert werden.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // ---- Toggle PDF visibility ----
+  const togglePdfVisibility = async () => {
+    if (!photo) return;
+    try {
+      const newVal = !photo.showInPdf;
+      const data = await AsyncStorage.getItem(IMAGEMETER_STORAGE_KEY);
+      if (data) {
+        const ps: ImageMeterPhoto[] = JSON.parse(data);
+        const i = ps.findIndex(p => p.id === photoId);
+        if (i !== -1) {
+          ps[i] = { ...ps[i], showInPdf: newVal };
+          await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps));
+          setPhoto({ ...photo, showInPdf: newVal });
+        }
+      }
+    } catch (e) { console.error(e); }
   };
 
   // ---- Coordinates ----

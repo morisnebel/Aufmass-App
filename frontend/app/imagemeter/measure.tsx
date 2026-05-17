@@ -287,14 +287,29 @@ export default function ImageMeterMeasureScreen() {
     const imgPt = toImg(touch.locationX, touch.locationY);
     justDraggedRef.current = false;
 
-    // Check for handle dragging first (when something selected)
-    if (drawMode === 'none' && selectedMeasurement) {
+    // Check for handle dragging first (when something selected, in ANY mode)
+    if (selectedMeasurement) {
       const handle = findHandle(imgPt);
       if (handle) {
         dragHandleRef.current = handle;
         isDraggingRef.current = true;
         dragStartRef.current = imgPt;
+        setMagnifierPos(imgPt); // Show magnifier during drag
         return;
+      }
+    }
+
+    // Also check for direct component dragging (tap on component to start drag, no prior selection needed)
+    if (drawMode === 'none') {
+      for (const comp of buildingComponents) {
+        if (calcDist(imgPt, comp.position) < 50) {
+          setSelectedMeasurement(comp.id);
+          dragHandleRef.current = { measureId: comp.id, measureType: 'component', pointIndex: 0 };
+          isDraggingRef.current = true;
+          dragStartRef.current = imgPt;
+          setMagnifierPos(imgPt);
+          return;
+        }
       }
     }
 
@@ -309,6 +324,7 @@ export default function ImageMeterMeasureScreen() {
     // Dragging a handle
     if (isDraggingRef.current && dragHandleRef.current) {
       moveHandle(dragHandleRef.current, imgPt);
+      setMagnifierPos(imgPt); // Magnifier follows during drag
       justDraggedRef.current = true;
       return;
     }
@@ -324,6 +340,7 @@ export default function ImageMeterMeasureScreen() {
     if (isDraggingRef.current) {
       isDraggingRef.current = false;
       dragHandleRef.current = null;
+      setMagnifierPos(null);
       // justDraggedRef stays true to prevent tap
       return;
     }
@@ -361,12 +378,13 @@ export default function ImageMeterMeasureScreen() {
       for (const comp of buildingComponents) { if (calcDist(imgPt, comp.position) < 50) { setSelectedMeasurement(comp.id === selectedMeasurement ? null : comp.id); return; } }
       setSelectedMeasurement(null); return;
     }
-    if (drawMode === 'area') { setTapPoints(prev => [...prev, imgPt]); }
+    if (drawMode === 'area') { setTapPoints(prev => [...prev, imgPt]); setMagnifierPos(imgPt); }
     else if (drawMode === 'angle') {
       const pts = [...tapPoints, imgPt]; setTapPoints(pts);
+      setMagnifierPos(imgPt);
       if (pts.length === 3) {
         setAngleMeasurements(prev => [...prev, { id: `ang_${Date.now()}`, p1: pts[0], vertex: pts[1], p2: pts[2], angle: calcAngle(pts[0], pts[1], pts[2]), color: '#E91E63' }]);
-        setTapPoints([]); setHasChanges(true);
+        setTapPoints([]); setHasChanges(true); setMagnifierPos(null);
       }
     }
     else if (drawMode === 'component') { setPendingComponentPos(imgPt); setShowComponentPicker(true); }
@@ -674,15 +692,28 @@ export default function ImageMeterMeasureScreen() {
             })}
             {drawMode === 'area' && tapPoints.length >= 3 && (() => { const f = toDisp(tapPoints[0]); const l = toDisp(tapPoints[tapPoints.length - 1]); return <Line x1={l.x} y1={l.y} x2={f.x} y2={f.y} stroke="#2196F3" strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />; })()}
 
-            {/* Magnifier */}
-            {magnifierPos && (drawMode === 'line' || drawMode === 'reference') && (() => {
-              const dp = toDisp(magnifierPos); const mc = drawMode === 'reference' ? '#4CAF50' : '#1976d2';
+            {/* Magnifier - shows for ALL modes */}
+            {magnifierPos && drawMode !== 'none' && (() => {
+              const dp = toDisp(magnifierPos);
+              const mc = drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : drawMode === 'component' ? '#9C27B0' : '#1976d2';
               return (
                 <G>
-                  <Circle cx={dp.x} cy={dp.y - 45} r={22} fill="rgba(255,255,255,0.85)" stroke={mc} strokeWidth={2} />
-                  <Line x1={dp.x - 8} y1={dp.y - 45} x2={dp.x + 8} y2={dp.y - 45} stroke={mc} strokeWidth={1} />
-                  <Line x1={dp.x} y1={dp.y - 53} x2={dp.x} y2={dp.y - 37} stroke={mc} strokeWidth={1} />
-                  <Line x1={dp.x} y1={dp.y - 23} x2={dp.x} y2={dp.y} stroke={mc} strokeWidth={1} strokeDasharray="3,2" />
+                  <Circle cx={dp.x} cy={dp.y - 50} r={24} fill="rgba(255,255,255,0.9)" stroke={mc} strokeWidth={2.5} />
+                  <Line x1={dp.x - 10} y1={dp.y - 50} x2={dp.x + 10} y2={dp.y - 50} stroke={mc} strokeWidth={1.5} />
+                  <Line x1={dp.x} y1={dp.y - 60} x2={dp.x} y2={dp.y - 40} stroke={mc} strokeWidth={1.5} />
+                  <Line x1={dp.x} y1={dp.y - 26} x2={dp.x} y2={dp.y} stroke={mc} strokeWidth={1} strokeDasharray="3,2" />
+                </G>
+              );
+            })()}
+            {/* Magnifier during drag editing */}
+            {magnifierPos && isDraggingRef.current && drawMode === 'none' && (() => {
+              const dp = toDisp(magnifierPos);
+              return (
+                <G>
+                  <Circle cx={dp.x} cy={dp.y - 50} r={24} fill="rgba(255,255,255,0.9)" stroke="#FF9800" strokeWidth={2.5} />
+                  <Line x1={dp.x - 10} y1={dp.y - 50} x2={dp.x + 10} y2={dp.y - 50} stroke="#FF9800" strokeWidth={1.5} />
+                  <Line x1={dp.x} y1={dp.y - 60} x2={dp.x} y2={dp.y - 40} stroke="#FF9800" strokeWidth={1.5} />
+                  <Line x1={dp.x} y1={dp.y - 26} x2={dp.x} y2={dp.y} stroke="#FF9800" strokeWidth={1} strokeDasharray="3,2" />
                 </G>
               );
             })()}

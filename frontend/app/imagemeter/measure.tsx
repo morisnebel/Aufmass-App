@@ -71,6 +71,7 @@ interface ImageMeterPhoto {
   measurements: Measurement[]; areaMeasurements?: AreaMeasurement[];
   angleMeasurements?: AngleMeasurement[]; buildingComponents?: BuildingComponent[];
   referenceScale?: number; createdAt: string; updatedAt: string;
+  showInPdf?: boolean;
 }
 
 interface DragHandle {
@@ -240,7 +241,7 @@ export default function ImageMeterMeasureScreen() {
     return lines.join('\n');
   };
 
-  // ---- Save as project photo (use original image + measurement text) ----
+  // ---- Save as project photo (capture canvas with all drawings) ----
   const saveAsProjectPhoto = async () => {
     if (!photo) return;
     
@@ -254,37 +255,50 @@ export default function ImageMeterMeasureScreen() {
       setLoading(true);
       await autoSave();
       
-      // Read original image as base64
       let base64WithPrefix = '';
-      const imageUri = photo.imageUri;
       
-      if (imageUri.startsWith('data:')) {
-        // Already base64
-        base64WithPrefix = imageUri;
-      } else {
-        // Local file - read with FileSystem
-        const base64Data = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
-        base64WithPrefix = `data:image/jpeg;base64,${base64Data}`;
+      // Try to capture the canvas view (image + SVG drawings)
+      if (canvasCaptureRef.current) {
+        try {
+          const base64Data = await captureRef(canvasCaptureRef, {
+            format: 'jpg',
+            quality: 0.85,
+            result: 'base64',
+          });
+          base64WithPrefix = `data:image/jpeg;base64,${base64Data}`;
+          console.log('[saveAsProjectPhoto] captureRef success, size:', base64Data.length);
+        } catch (captureError) {
+          console.warn('[saveAsProjectPhoto] captureRef failed, using fallback:', captureError);
+        }
+      }
+      
+      // Fallback: Use original image if captureRef failed
+      if (!base64WithPrefix) {
+        const imageUri = photo.imageUri;
+        if (imageUri.startsWith('data:')) {
+          base64WithPrefix = imageUri;
+        } else {
+          const base64Data = await FileSystem.readAsStringAsync(imageUri, { encoding: FileSystem.EncodingType.Base64 });
+          base64WithPrefix = `data:image/jpeg;base64,${base64Data}`;
+        }
       }
 
       // Build description with measurement summary
       const summary = buildSummaryText();
       
-      // Create photo in project
-      const newPhotoId = `photo_measure_${Date.now()}`;
-      await PhotoService.create({
-        id: newPhotoId,
+      // Create photo in project (PhotoService handles separate image storage)
+      const newPhoto = await PhotoService.create({
         project_id: projectId,
+        uri: base64WithPrefix,
         description: summary,
         pdf_size: 'large',
       });
       
-      // Save image data separately (avoid OOM)
-      await AsyncStorage.setItem(`photo_img_${newPhotoId}`, base64WithPrefix);
+      console.log('[saveAsProjectPhoto] Created project photo:', newPhoto.id);
       
       Alert.alert(
         '✅ Gespeichert!',
-        'Das Foto und die Messungen wurden als Projektfoto gespeichert.\n\nDie Messungen-Zusammenfassung erscheint im PDF.',
+        'Das Messbild wurde als Projektfoto gespeichert und erscheint im PDF.',
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -295,7 +309,7 @@ export default function ImageMeterMeasureScreen() {
     }
   };
 
-  // ---- Toggle PDF visibility ----
+  // ---- Toggle PDF visibility & capture snapshot ----
   const togglePdfVisibility = async () => {
     if (!photo) return;
     try {
@@ -308,9 +322,43 @@ export default function ImageMeterMeasureScreen() {
           ps[i] = { ...ps[i], showInPdf: newVal };
           await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps));
           setPhoto({ ...photo, showInPdf: newVal });
+          
+          // When enabling PDF, capture and save a snapshot
+          if (newVal && canvasCaptureRef.current) {
+            try {
+              const base64Data = await captureRef(canvasCaptureRef, {
+                format: 'jpg',
+                quality: 0.85,
+                result: 'base64',
+              });
+              await AsyncStorage.setItem(`imagemeter_pdf_${photoId}`, `data:image/jpeg;base64,${base64Data}`);
+              console.log('[togglePdfVisibility] Snapshot saved for PDF');
+            } catch (snapErr) {
+              console.warn('[togglePdfVisibility] Snapshot failed, will use original image:', snapErr);
+              // Fallback: save original image for PDF
+              if (photo.imageUri.startsWith('data:')) {
+                await AsyncStorage.setItem(`imagemeter_pdf_${photoId}`, photo.imageUri);
+              } else {
+                try {
+                  const b64 = await FileSystem.readAsStringAsync(photo.imageUri, { encoding: FileSystem.EncodingType.Base64 });
+                  await AsyncStorage.setItem(`imagemeter_pdf_${photoId}`, `data:image/jpeg;base64,${b64}`);
+                } catch (fsErr) {
+                  console.error('[togglePdfVisibility] Fallback image save failed:', fsErr);
+                }
+              }
+            }
+          } else if (!newVal) {
+            // Cleanup snapshot when toggling off
+            try { await AsyncStorage.removeItem(`imagemeter_pdf_${photoId}`); } catch (_) {}
+          }
         }
       }
-    } catch (e) { console.error(e); }
+      Alert.alert(newVal ? '✅ PDF aktiviert' : 'PDF deaktiviert', 
+        newVal ? 'Diese Messung wird im PDF angezeigt.' : 'Diese Messung wird nicht mehr im PDF angezeigt.');
+    } catch (e) { 
+      console.error('togglePdfVisibility error:', e); 
+      Alert.alert('Fehler', 'PDF-Einstellung konnte nicht gespeichert werden.');
+    }
   };
 
   // ---- Coordinates ----
@@ -940,11 +988,26 @@ export default function ImageMeterMeasureScreen() {
       {/* Export Buttons */}
       {totalItems > 0 && photo?.projectId && (
         <View style={styles.exportBar}>
-          <TouchableOpacity style={styles.exportButton} onPress={saveAsProjectPhoto}>
-            <Ionicons name="images" size={18} color="#fff" />
-            <Text style={styles.exportButtonText}>Als Projektfoto speichern</Text>
-          </TouchableOpacity>
-          <Text style={styles.exportHint}>Messbild erscheint im PDF Export</Text>
+          <View style={styles.exportRow}>
+            <TouchableOpacity style={styles.exportButton} onPress={saveAsProjectPhoto}>
+              <Ionicons name="images" size={18} color="#fff" />
+              <Text style={styles.exportButtonText}>Als Projektfoto speichern</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.pdfToggleBtn, photo?.showInPdf && styles.pdfToggleBtnActive]} 
+              onPress={togglePdfVisibility}
+            >
+              <Ionicons name={photo?.showInPdf ? "document-text" : "document-text-outline"} size={18} color={photo?.showInPdf ? "#fff" : "#1976d2"} />
+              <Text style={[styles.pdfToggleText, photo?.showInPdf && styles.pdfToggleTextActive]}>
+                {photo?.showInPdf ? 'Im PDF ✓' : 'Im PDF'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.exportHint}>
+            {photo?.showInPdf 
+              ? '✅ Messung wird im PDF angezeigt' 
+              : 'Messbild als Projektfoto speichern oder direkt im PDF anzeigen'}
+          </Text>
         </View>
       )}
 
@@ -1111,9 +1174,14 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '500', color: '#333' },
   // Export bar
   exportBar: { backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: '#e0e0e0', alignItems: 'center', gap: 4 },
-  exportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1976d2', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, gap: 8 },
-  exportButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  exportHint: { fontSize: 11, color: '#999' },
+  exportRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  exportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1976d2', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, gap: 8, flex: 1, justifyContent: 'center' },
+  exportButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  pdfToggleBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, gap: 6, borderWidth: 1.5, borderColor: '#1976d2', backgroundColor: '#fff' },
+  pdfToggleBtnActive: { backgroundColor: '#1976d2', borderColor: '#1565c0' },
+  pdfToggleText: { fontSize: 13, fontWeight: '700', color: '#1976d2' },
+  pdfToggleTextActive: { color: '#fff' },
+  exportHint: { fontSize: 11, color: '#999', textAlign: 'center' },
   // Modals
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   pickerContent: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '90%', maxWidth: 380 },

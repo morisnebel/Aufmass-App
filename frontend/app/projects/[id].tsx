@@ -1768,6 +1768,130 @@ export default function ProjectDetailScreen() {
       </div>
     ` : '';
     
+    // ===== IMAGEMETER SECTION FOR PDF =====
+    // Load ImageMeter photos that have showInPdf enabled
+    const pdfImagemeterPhotos = imagemeterPhotos.filter((p: any) => p.showInPdf === true);
+    let imagemeterHtml = '';
+    
+    if (pdfImagemeterPhotos.length > 0) {
+      const imagemeterItems = await Promise.all(pdfImagemeterPhotos.map(async (imPhoto: any) => {
+        // Load snapshot image
+        let snapshotData = '';
+        try {
+          const stored = await AsyncStorage.getItem(`imagemeter_pdf_${imPhoto.id}`);
+          if (stored) {
+            snapshotData = stored;
+          }
+        } catch (e) {
+          console.warn('[PDF] Could not load imagemeter snapshot:', e);
+        }
+        
+        // Fallback: use original image
+        if (!snapshotData && imPhoto.imageUri) {
+          if (imPhoto.imageUri.startsWith('data:')) {
+            snapshotData = imPhoto.imageUri;
+          } else {
+            try {
+              const b64 = await readAsStringAsync(imPhoto.imageUri, { encoding: 'base64' });
+              snapshotData = `data:image/jpeg;base64,${b64}`;
+            } catch (e) {
+              console.warn('[PDF] Could not load imagemeter original image:', e);
+            }
+          }
+        }
+        
+        // Build measurement summary HTML
+        const refScale = imPhoto.referenceScale;
+        const measurements = imPhoto.measurements || [];
+        const areas = imPhoto.areaMeasurements || [];
+        const angles = imPhoto.angleMeasurements || [];
+        const components = imPhoto.buildingComponents || [];
+        
+        const fmtLen = (pixLen: number) => {
+          if (!refScale) return `${Math.round(pixLen)} px`;
+          const cm = pixLen / refScale;
+          return cm >= 100 ? `${(cm / 100).toFixed(2).replace('.', ',')} m` : `${cm.toFixed(1).replace('.', ',')} cm`;
+        };
+        
+        const fmtArea = (pixArea: number) => {
+          if (!refScale) return `${Math.round(pixArea)} px²`;
+          const cmSq = pixArea / (refScale * refScale);
+          return cmSq >= 10000 ? `${(cmSq / 10000).toFixed(2).replace('.', ',')} m²` : `${cmSq.toFixed(2).replace('.', ',')} cm²`;
+        };
+        
+        let summaryRows = '';
+        
+        // Line measurements
+        const lineMeasures = measurements.filter((m: any) => m.type !== 'reference');
+        if (lineMeasures.length > 0) {
+          summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">📏 Maßlinien</td></tr>`;
+          lineMeasures.forEach((m: any, idx: number) => {
+            const dist = Math.sqrt(Math.pow(m.endPoint.x - m.startPoint.x, 2) + Math.pow(m.endPoint.y - m.startPoint.y, 2));
+            const label = m.label || fmtLen(dist);
+            summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">${idx + 1}. ${m.label ? m.label : 'Maßlinie'}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${label}</td></tr>`;
+          });
+        }
+        
+        // Area measurements
+        if (areas.length > 0) {
+          summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">📊 Flächen</td></tr>`;
+          areas.forEach((a: any, idx: number) => {
+            summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${a.label || fmtArea(a.pixelArea)}</td></tr>`;
+          });
+        }
+        
+        // Angle measurements
+        if (angles.length > 0) {
+          summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">📐 Winkel</td></tr>`;
+          angles.forEach((ang: any, idx: number) => {
+            summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Winkel ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${ang.angle}°</td></tr>`;
+          });
+        }
+        
+        // Components
+        if (components.length > 0) {
+          summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">🏷️ Bauteile</td></tr>`;
+          components.forEach((c: any, idx: number) => {
+            summaryRows += `<tr><td colspan="2" style="padding: 4px 10px; font-size: 10px; color: #666;">${idx + 1}. ${c.label || c.type}</td></tr>`;
+          });
+        }
+        
+        // Reference info
+        const refMeasure = measurements.find((m: any) => m.type === 'reference');
+        let refInfo = '';
+        if (refMeasure && refScale) {
+          const refLen = refMeasure.realLength;
+          refInfo = `<div style="font-size: 9px; color: #888; margin-top: 6px; text-align: right;">Referenzmaß: ${refLen ? (refLen >= 100 ? `${(refLen / 100).toFixed(2).replace('.', ',')} m` : `${refLen.toFixed(1).replace('.', ',')} cm`) : '?'}</div>`;
+        }
+        
+        return `
+          <div style="page-break-inside: avoid; break-inside: avoid; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fff;">
+            <div style="padding: 10px; background: #f8f9fa; border-bottom: 1px solid #eee;">
+              <div style="font-size: 13px; font-weight: bold; color: #333;">📷 ${imPhoto.name || 'Fotomessung'}</div>
+            </div>
+            ${snapshotData ? `
+              <div style="text-align: center; background: #000;">
+                <img src="${snapshotData}" style="display: block; max-width: 100%; max-height: 500px; margin: 0 auto; object-fit: contain;" />
+              </div>
+            ` : ''}
+            ${summaryRows ? `
+              <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                ${summaryRows}
+              </table>
+            ` : ''}
+            ${refInfo}
+          </div>
+        `;
+      }));
+      
+      imagemeterHtml = `
+        <div style="page-break-before: always;">
+          <h2 style="background: ${toolsBgColor}; color: ${toolsTextColor}; padding: ${toolsSize.padding}px 14px; border-radius: 4px; font-size: ${toolsSize.h1Size}px; margin: 0 0 16px 0;">📐 Fotomessungen</h2>
+          ${imagemeterItems.join('')}
+        </div>
+      `;
+    }
+    
     // Helper function to calculate polygon area
     const calculatePolygonArea = (points: Array<{x: number, y: number}>, scale: number = 100) => {
       if (points.length < 3) return 0;
@@ -4064,7 +4188,9 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        ${areaCalculations.length === 0 && (photos.length > 0 || sketches.length > 0) ? `
+        ${imagemeterHtml}
+        
+        ${areaCalculations.length === 0 && (photos.length > 0 || sketches.length > 0 || imagemeterHtml) ? `
           <div class="footer-container">
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">
@@ -4103,7 +4229,7 @@ export default function ProjectDetailScreen() {
           </div>
         ` : ''}
         
-        ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 ? `
+        ${photos.length === 0 && sketches.length === 0 && areaCalculations.length === 0 && !imagemeterHtml ? `
           <div class="footer-container">
             ${(remarks || project?.remarks) ? `
               <div class="remarks-section" style="margin-top: 30px;">
@@ -6481,6 +6607,12 @@ export default function ProjectDetailScreen() {
                         <Text style={{ fontSize: 10, color: '#4CAF50', marginLeft: 4 }}>Kalibriert</Text>
                       </View>
                     )}
+                    {photo.showInPdf && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Ionicons name="document-text" size={12} color="#1976d2" />
+                        <Text style={{ fontSize: 10, color: '#1976d2', marginLeft: 4 }}>Im PDF</Text>
+                      </View>
+                    )}
                     <Text style={styles.documentDate}>
                       {new Date(photo.updatedAt).toLocaleDateString('de-DE')}
                     </Text>
@@ -6503,6 +6635,8 @@ export default function ProjectDetailScreen() {
                                     const allPhotos = JSON.parse(data);
                                     const filtered = allPhotos.filter((p: any) => p.id !== photo.id);
                                     await AsyncStorage.setItem('aufmassprofi_imagemeter_photos', JSON.stringify(filtered));
+                                    // Cleanup PDF snapshot
+                                    try { await AsyncStorage.removeItem(`imagemeter_pdf_${photo.id}`); } catch (_) {}
                                     await loadProjectData();
                                     Alert.alert(t('common.success'), t('roof.photoMeasurementDeleted'));
                                   }

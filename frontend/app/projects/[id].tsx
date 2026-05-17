@@ -3963,6 +3963,12 @@ export default function ProjectDetailScreen() {
                 <span class="info-value" style="color: #1976d2; font-weight: 600;">${customer.customer_number}</span>
               </div>
             ` : ''}
+            ${bauherrCustomerType ? `
+              <div class="info-row">
+                <span class="info-label">Kundentyp:</span>
+                <span class="info-value" style="color: #1976d2; font-weight: 600;">${bauherrCustomerType}</span>
+              </div>
+            ` : ''}
             ${bauherrName ? `
               <div class="info-row">
                 <span class="info-label">Name:</span>
@@ -3997,12 +4003,6 @@ export default function ProjectDetailScreen() {
               <div class="info-row">
                 <span class="info-label">${t('common.email')}:</span>
                 <span class="info-value">${bauherrEmail}</span>
-              </div>
-            ` : ''}
-            ${bauherrCustomerType ? `
-              <div class="info-row">
-                <span class="info-label">Kundentyp:</span>
-                <span class="info-value">${bauherrCustomerType}</span>
               </div>
             ` : ''}
           </div>
@@ -4787,6 +4787,12 @@ export default function ProjectDetailScreen() {
                   <Text style={[styles.infoValue, {color: '#1976d2', fontWeight: '600'}]}>{customer.customer_number}</Text>
                 </View>
               )}
+              {customer?.customerType && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Kundentyp:</Text>
+                  <Text style={[styles.infoValue, { color: '#1976d2', fontWeight: '600' }]}>{customer.customerType}</Text>
+                </View>
+              )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Name:</Text>
                 <Text style={styles.infoValue}>{project?.bauherr_name || customer?.name || '-'}</Text>
@@ -4801,12 +4807,6 @@ export default function ProjectDetailScreen() {
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('settings.email')}:</Text>
                   <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
-                </View>
-              )}
-              {customer?.customerType && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Kundentyp:</Text>
-                  <Text style={[styles.infoValue, { color: '#1976d2', fontWeight: '600' }]}>{customer.customerType}</Text>
                 </View>
               )}
               {/* Bauherr-Adresse (separate Felder) */}

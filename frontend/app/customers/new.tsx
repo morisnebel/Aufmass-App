@@ -246,12 +246,15 @@ export default function NewCustomerScreen() {
       return;
     }
 
-    // Prüfe ob der Kontakt aus iPad-Kontakten importiert wurde
+    // Gerätetyp für Kontakt-Meldungen
+    const deviceName = Platform.OS === 'ios' && Platform.isPad ? 'Tablett' : 'Handy';
+
+    // Prüfe ob der Kontakt aus Gerätekontakten importiert wurde
     if (Platform.OS !== 'web' && importedContactId) {
       // Kontakt wurde importiert - biete Option zum Aktualisieren an
       Alert.alert(
         t('customers.syncContactQuestion'),
-        t('customers.syncContactImportedMessage'),
+        t('customers.syncContactImportedMessage', { device: deviceName }),
         [
           {
             text: t('customers.saveOnlyHere'),
@@ -268,7 +271,7 @@ export default function NewCustomerScreen() {
       // Neuer Kontakt - frage ob in Kontakten speichern
       Alert.alert(
         t('customers.saveToContactsQuestion'),
-        t('customers.saveToContactsMessage'),
+        t('customers.saveToContactsMessage', { device: deviceName }),
         [
           {
             text: t('common.no'),
@@ -377,11 +380,11 @@ export default function NewCustomerScreen() {
           city: city || undefined,
         });
         if (success) {
-          Alert.alert(t('common.success'), t('customers.createdAndContactUpdated'), [
+          Alert.alert(t('common.success'), t('customers.createdAndContactUpdated', { device: deviceName }), [
             { text: t('common.ok'), onPress: handleNavigateBack },
           ]);
         } else {
-          Alert.alert(t('common.partialSuccess'), t('customers.createdContactNotUpdated'), [
+          Alert.alert(t('common.partialSuccess'), t('customers.createdContactNotUpdated', { device: deviceName }), [
             { text: t('common.ok'), onPress: handleNavigateBack },
           ]);
         }

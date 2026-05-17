@@ -539,12 +539,18 @@ export default function CustomersScreen() {
               {item.customer_number && (
                 <Text style={styles.customerNumberAbove}>{item.customer_number}</Text>
               )}
+              {item.customerType && (
+                <Text style={{ color: '#1976d2', fontSize: 11, fontWeight: '600' }}>{item.customerType}</Text>
+              )}
               <Text style={styles.customerNamePhone} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
             </View>
           ) : (
             <View style={styles.customerNameRow}>
               {item.customer_number && (
                 <Text style={styles.customerNumber}>{item.customer_number}</Text>
+              )}
+              {item.customerType && (
+                <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600', marginRight: 6 }}>{item.customerType}</Text>
               )}
               <Text style={styles.customerName} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
             </View>
@@ -557,11 +563,6 @@ export default function CustomersScreen() {
           {item.phone && (
             <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone]} numberOfLines={1} ellipsizeMode="tail">
               <Ionicons name="call" size={isPhone ? 10 : 12} color="#666" /> {item.phone}
-            </Text>
-          )}
-          {item.customerType && (
-            <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone, { color: '#1976d2', fontWeight: '600' }]} numberOfLines={1}>
-              <Ionicons name="briefcase" size={isPhone ? 10 : 12} color="#1976d2" /> {item.customerType}
             </Text>
           )}
         </View>
@@ -611,7 +612,7 @@ export default function CustomersScreen() {
           onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
         >
           <Ionicons name="add-circle" size={isPhone ? 22 : 28} color="#4caf50" />
-          {!isPhone && <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: '600' }}>Neues Projekt</Text>}
+          <Text style={{ color: '#4caf50', fontSize: isPhone ? 10 : 12, fontWeight: '600' }}>Neues Projekt</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => openDeleteModal(item)}

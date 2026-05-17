@@ -529,7 +529,7 @@ export default function CustomersScreen() {
       >
         <View style={[styles.customerAvatar, isPhone && styles.customerAvatarPhone]}>
           <Text style={[styles.customerInitial, isPhone && styles.customerInitialPhone]}>
-            {item.name?.charAt(0).toUpperCase() || '?'}
+            {(item.lastName?.charAt(0) || item.name?.charAt(0) || '?').toUpperCase()}
           </Text>
         </View>
         <View style={styles.customerInfo}>
@@ -617,17 +617,17 @@ export default function CustomersScreen() {
                 <Ionicons name="add-circle" size={28} color="#4caf50" />
                 <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: '600' }}>Neues Projekt</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => openDeleteModal(item)}
-                style={styles.deleteButton}
-              >
-                <Ionicons name="trash-outline" size={20} color="#f44336" />
-              </TouchableOpacity>
             </>
           )}
+          <TouchableOpacity
+            onPress={() => openDeleteModal(item)}
+            style={styles.deleteButton}
+          >
+            <Ionicons name="trash-outline" size={isPhone ? 16 : 20} color="#f44336" />
+          </TouchableOpacity>
         </View>
         
-        {/* iPhone: Zweite Zeile mit Neues Projekt + Löschen */}
+        {/* iPhone: Zweite Zeile mit Neues Projekt */}
         {isPhone && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 8, paddingRight: 2 }}>
             <TouchableOpacity
@@ -636,12 +636,6 @@ export default function CustomersScreen() {
             >
               <Ionicons name="add-circle" size={18} color="#4caf50" />
               <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: '600' }}>Neues Projekt</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => openDeleteModal(item)}
-              style={styles.deleteButton}
-            >
-              <Ionicons name="trash-outline" size={16} color="#f44336" />
             </TouchableOpacity>
           </View>
         )}

@@ -5151,8 +5151,35 @@ export default function DrawSketchScreen() {
       case 'line':
         const lineCenterX = (element.data.x1 + element.data.x2) / 2;
         const lineCenterY = (element.data.y1 + element.data.y2) / 2;
+        const lineArrowHeads = element.data.arrowHeads || 'none';
         return (
           <G key={element.id}>
+            {lineArrowHeads !== 'none' && (
+              <Defs>
+                <Marker
+                  id={`line-arrow-end-${element.id}`}
+                  markerWidth="10"
+                  markerHeight="10"
+                  refX="9"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <Polygon points="0,0 0,6 9,3" fill={element.color} />
+                </Marker>
+                <Marker
+                  id={`line-arrow-start-${element.id}`}
+                  markerWidth="10"
+                  markerHeight="10"
+                  refX="0"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <Polygon points="9,0 9,6 0,3" fill={element.color} />
+                </Marker>
+              </Defs>
+            )}
             <Line
               x1={element.data.x1}
               y1={element.data.y1}
@@ -5160,6 +5187,8 @@ export default function DrawSketchScreen() {
               y2={element.data.y2}
               stroke={element.color}
               strokeWidth={element.strokeWidth}
+              markerEnd={lineArrowHeads === 'end' || lineArrowHeads === 'both' ? `url(#line-arrow-end-${element.id})` : undefined}
+              markerStart={lineArrowHeads === 'both' ? `url(#line-arrow-start-${element.id})` : undefined}
               transform={element.rotation ? `rotate(${element.rotation} ${lineCenterX} ${lineCenterY})` : undefined}
             />
             {isSelected && renderTransformHandles(element)}
@@ -6287,7 +6316,19 @@ export default function DrawSketchScreen() {
         const lineCX = (el.data.x1 + el.data.x2) / 2;
         const lineCY = (el.data.y1 + el.data.y2) / 2;
         const lineRot = el.rotation ? ` transform="rotate(${el.rotation} ${lineCX} ${lineCY})"` : '';
-        svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${el.color}" stroke-width="${strokeWidth}"${lineRot}/>`;
+        const lineAH = el.data.arrowHeads || 'none';
+        if (lineAH !== 'none') {
+          svgElements += `<defs>`;
+          svgElements += `<marker id="la-end-${el.id}" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><polygon points="0,0 0,6 9,3" fill="${el.color}"/></marker>`;
+          if (lineAH === 'both') {
+            svgElements += `<marker id="la-start-${el.id}" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth"><polygon points="9,0 9,6 0,3" fill="${el.color}"/></marker>`;
+          }
+          svgElements += `</defs>`;
+          const meStart = lineAH === 'both' ? ` marker-start="url(#la-start-${el.id})"` : '';
+          svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${el.color}" stroke-width="${strokeWidth}" marker-end="url(#la-end-${el.id})"${meStart}${lineRot}/>`;
+        } else {
+          svgElements += `<line x1="${el.data.x1}" y1="${el.data.y1}" x2="${el.data.x2}" y2="${el.data.y2}" stroke="${el.color}" stroke-width="${strokeWidth}"${lineRot}/>`;
+        }
       } else if (el.type === 'circle') {
         const circRot = el.rotation ? ` transform="rotate(${el.rotation} ${el.data.cx} ${el.data.cy})"` : '';
         svgElements += `<circle cx="${el.data.cx}" cy="${el.data.cy}" r="${el.data.r}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="none"${circRot}/>`;
@@ -7076,6 +7117,64 @@ export default function DrawSketchScreen() {
           </TouchableOpacity>
           <Text style={[styles.toolButtonLabel, { color: selectedElementId ? '#1976d2' : '#ccc' }]}>{t('sketches.editStyle')}</Text>
         </View>
+
+        {/* Pfeil-Konvertierung Button - nur sichtbar wenn Linie ausgewählt */}
+        {selectedElementId && elements.find(el => el.id === selectedElementId)?.type === 'line' && (
+          <View style={styles.toolGroupWithLabel}>
+            <View style={styles.toolGroupRow}>
+              {/* Einfacher Pfeil → */}
+              <TouchableOpacity
+                style={[
+                  styles.toolButtonInner,
+                  elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'end' && styles.toolButtonActive,
+                ]}
+                onPress={() => {
+                  const el = elements.find(e => e.id === selectedElementId);
+                  if (el && el.type === 'line') {
+                    const currentHeads = el.data.arrowHeads || 'none';
+                    const newHeads = currentHeads === 'end' ? 'none' : 'end';
+                    setElements(prev => prev.map(e => 
+                      e.id === selectedElementId 
+                        ? { ...e, data: { ...e.data, arrowHeads: newHeads } }
+                        : e
+                    ));
+                  }
+                }}
+              >
+                <Svg width={24} height={18} viewBox="0 0 24 18">
+                  <Line x1="2" y1="9" x2="18" y2="9" stroke={elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'end' ? '#fff' : '#333'} strokeWidth={2.5} />
+                  <Polygon points="22,9 16,4 16,14" fill={elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'end' ? '#fff' : '#333'} />
+                </Svg>
+              </TouchableOpacity>
+              {/* Doppelpfeil ↔ */}
+              <TouchableOpacity
+                style={[
+                  styles.toolButtonInner,
+                  elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'both' && styles.toolButtonActive,
+                ]}
+                onPress={() => {
+                  const el = elements.find(e => e.id === selectedElementId);
+                  if (el && el.type === 'line') {
+                    const currentHeads = el.data.arrowHeads || 'none';
+                    const newHeads = currentHeads === 'both' ? 'none' : 'both';
+                    setElements(prev => prev.map(e => 
+                      e.id === selectedElementId 
+                        ? { ...e, data: { ...e.data, arrowHeads: newHeads } }
+                        : e
+                    ));
+                  }
+                }}
+              >
+                <Svg width={24} height={18} viewBox="0 0 24 18">
+                  <Polygon points="2,9 8,4 8,14" fill={elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'both' ? '#fff' : '#333'} />
+                  <Line x1="6" y1="9" x2="18" y2="9" stroke={elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'both' ? '#fff' : '#333'} strokeWidth={2.5} />
+                  <Polygon points="22,9 16,4 16,14" fill={elements.find(el => el.id === selectedElementId)?.data?.arrowHeads === 'both' ? '#fff' : '#333'} />
+                </Svg>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.toolGroupLabel}>Pfeil</Text>
+          </View>
+        )}
 
         <View style={styles.separator} />
 

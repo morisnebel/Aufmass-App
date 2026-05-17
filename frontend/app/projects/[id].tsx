@@ -224,6 +224,8 @@ export default function ProjectDetailScreen() {
   const [editBauherrStreet, setEditBauherrStreet] = useState('');
   const [editBauherrPlz, setEditBauherrPlz] = useState('');
   const [editBauherrCity, setEditBauherrCity] = useState('');
+  const [editBauherrCustomerType, setEditBauherrCustomerType] = useState('');
+  const [showEditCustomerTypePicker, setShowEditCustomerTypePicker] = useState(false);
   // Anrede-Picker Modal für Bauherr
   const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
   // Objektadresse edit fields (separate)
@@ -800,6 +802,7 @@ export default function ProjectDetailScreen() {
       setEditBauherrStreet(project.bauherr_street || customer?.street || customerAddr.street || '');
       setEditBauherrPlz(project.bauherr_plz || customer?.zip || customerAddr.plz || '');
       setEditBauherrCity(project.bauherr_city || customer?.city || customerAddr.city || '');
+      setEditBauherrCustomerType(customer?.customerType || '');
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
       setEditObjektNumber(project.objekt_number || '');
@@ -998,6 +1001,7 @@ export default function ProjectDetailScreen() {
               city: editBauherrCity || existingCustomer.city,
               address: newAddress,
               customer_number: customerNumber || existingCustomer.customer_number,
+              customerType: editBauherrCustomerType || existingCustomer.customerType,
             });
           }
         } catch (syncError) {
@@ -6883,6 +6887,19 @@ export default function ProjectDetailScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Kundentyp</Text>
+                    <TouchableOpacity 
+                      style={styles.compactPickerButton}
+                      onPress={() => setShowEditCustomerTypePicker(true)}
+                    >
+                      <Text style={editBauherrCustomerType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                        {editBauherrCustomerType || 'Kundentyp...'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+
                   <View style={styles.addressRow}>
                     <View style={styles.cityInput}>
                       <Text style={styles.compactLabel}>Vorname</Text>
@@ -7123,6 +7140,48 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
         )}
+
+        {/* Kundentyp Picker */}
+        {showEditCustomerTypePicker && (
+          <View style={styles.salutationPickerOverlay}>
+            <TouchableOpacity 
+              style={styles.salutationPickerBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowEditCustomerTypePicker(false)}
+            />
+            <View style={styles.salutationPickerContent}>
+              <Text style={styles.salutationModalTitle}>Kundentyp auswählen</Text>
+              {['Privat', 'Firma', 'Hausverwaltung', 'Architekturbüro', 'Planungsbüro', 'Generalunternehmen', 'Versicherung', 'Sonstiges'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.salutationOption}
+                  onPress={() => {
+                    setEditBauherrCustomerType(option);
+                    setShowEditCustomerTypePicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.salutationOptionText,
+                    editBauherrCustomerType === option && styles.salutationOptionSelected
+                  ]}>{option}</Text>
+                  {editBauherrCustomerType === option && (
+                    <Ionicons name="checkmark" size={20} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.salutationOption}
+                onPress={() => {
+                  setEditBauherrCustomerType('');
+                  setShowEditCustomerTypePicker(false);
+                }}
+              >
+                <Text style={styles.salutationOptionText}>Kein Typ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
 
         {/* Projektart Picker */}
         {showProjectTypePicker && (

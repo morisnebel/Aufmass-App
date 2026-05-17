@@ -131,10 +131,11 @@ export default function ImageMeterMeasureScreen() {
   const [newCompEmoji, setNewCompEmoji] = useState('📌');
   const [newCompColor, setNewCompColor] = useState('#607D8B');
 
-  // Drag editing
-  const [dragHandle, setDragHandle] = useState<DragHandle | null>(null);
-  const [isDraggingHandle, setIsDraggingHandle] = useState(false);
+  // Drag editing - USE REFS for synchronous access during touch events
+  const dragHandleRef = useRef<DragHandle | null>(null);
+  const isDraggingRef = useRef(false);
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
+  const justDraggedRef = useRef(false); // prevent tap after drag
 
   // Load
   useEffect(() => { loadPhoto(); loadCustomComponents(); }, [photoId]);
@@ -284,12 +285,14 @@ export default function ImageMeterMeasureScreen() {
   const handleTouchStart = (event: any) => {
     const touch = event.nativeEvent;
     const imgPt = toImg(touch.locationX, touch.locationY);
+    justDraggedRef.current = false;
 
     // Check for handle dragging first (when something selected)
     if (drawMode === 'none' && selectedMeasurement) {
       const handle = findHandle(imgPt);
       if (handle) {
-        setDragHandle(handle); setIsDraggingHandle(true);
+        dragHandleRef.current = handle;
+        isDraggingRef.current = true;
         dragStartRef.current = imgPt;
         return;
       }
@@ -304,8 +307,9 @@ export default function ImageMeterMeasureScreen() {
     const imgPt = toImg(touch.locationX, touch.locationY);
 
     // Dragging a handle
-    if (isDraggingHandle && dragHandle) {
-      moveHandle(dragHandle, imgPt);
+    if (isDraggingRef.current && dragHandleRef.current) {
+      moveHandle(dragHandleRef.current, imgPt);
+      justDraggedRef.current = true;
       return;
     }
 
@@ -317,8 +321,10 @@ export default function ImageMeterMeasureScreen() {
 
   const handleTouchEnd = (event: any) => {
     // End handle drag
-    if (isDraggingHandle) {
-      setIsDraggingHandle(false); setDragHandle(null);
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      dragHandleRef.current = null;
+      // justDraggedRef stays true to prevent tap
       return;
     }
 
@@ -340,7 +346,10 @@ export default function ImageMeterMeasureScreen() {
 
   // ---- Tap (for area/angle/component/selection) ----
   const handleCanvasTap = (event: any) => {
-    if (isDraggingHandle) return; // skip if we were dragging
+    // Skip if we just finished dragging
+    if (justDraggedRef.current) { justDraggedRef.current = false; return; }
+    if (isDraggingRef.current) return;
+    
     const touch = event.nativeEvent;
     const imgPt = toImg(touch.locationX, touch.locationY);
 
@@ -452,7 +461,7 @@ export default function ImageMeterMeasureScreen() {
     return '?';
   };
 
-  const activateTool = (mode: DrawModeType) => { setDrawMode(mode); setTapPoints([]); setCurrentLine(null); setSelectedMeasurement(null); setDragHandle(null); setShowToolPicker(false); };
+  const activateTool = (mode: DrawModeType) => { setDrawMode(mode); setTapPoints([]); setCurrentLine(null); setSelectedMeasurement(null); dragHandleRef.current = null; isDraggingRef.current = false; setShowToolPicker(false); };
 
   // ============ RENDER ============
   const renderLine = (m: Measurement) => {
@@ -635,7 +644,7 @@ export default function ImageMeterMeasureScreen() {
           onResponderGrant={handleTouchStart}
           onResponderMove={handleTouchMove}
           onResponderRelease={handleTouchEnd}
-          onTouchEnd={(e) => { if (!isDraggingHandle && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'none')) handleCanvasTap(e); }}
+          onTouchEnd={(e) => { if (!isDraggingRef.current && !justDraggedRef.current && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'none')) handleCanvasTap(e); }}
         >
           <Svg style={StyleSheet.absoluteFill}>
             {measurements.map(renderLine)}
@@ -746,7 +755,8 @@ export default function ImageMeterMeasureScreen() {
 
       {/* ===== COMPONENT PICKER ===== */}
       <Modal visible={showComponentPicker} transparent animationType="fade">
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => { setShowComponentPicker(false); setPendingComponentPos(null); }}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => { setShowComponentPicker(false); setPendingComponentPos(null); }} />
           <View style={styles.pickerContent}>
             <Text style={styles.pickerTitle}>Bauteil wählen</Text>
             <ScrollView style={{ maxHeight: 400 }}>
@@ -756,10 +766,8 @@ export default function ImageMeterMeasureScreen() {
                     <Text style={{ fontSize: 22 }}>{ct.emoji}</Text>
                   </View>
                   <Text style={[styles.pickerItemTitle, { flex: 1 }]}>{ct.label}</Text>
-                  {/* Delete button for custom */}
                   {customComponents.find(c => c.type === ct.type) && (
-                    <TouchableOpacity onPress={(e) => { e.stopPropagation && e.stopPropagation(); deleteCustomComponent(ct.type); }}
-                      style={{ padding: 8 }}>
+                    <TouchableOpacity onPress={() => deleteCustomComponent(ct.type)} style={{ padding: 8 }}>
                       <Ionicons name="close-circle" size={20} color="#ccc" />
                     </TouchableOpacity>
                   )}
@@ -767,13 +775,13 @@ export default function ImageMeterMeasureScreen() {
               ))}
             </ScrollView>
             {/* Add custom component */}
-            <TouchableOpacity style={[styles.pickerItem, { backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: '#4CAF50', borderStyle: 'dashed', marginTop: 4 }]}
-              onPress={() => setShowNewComponentModal(true)}>
+            <TouchableOpacity style={[styles.pickerItem, { backgroundColor: '#e8f5e9', borderWidth: 1, borderColor: '#4CAF50', marginTop: 4 }]}
+              onPress={() => { setShowComponentPicker(false); setTimeout(() => setShowNewComponentModal(true), 300); }}>
               <View style={[styles.pickerIcon, { backgroundColor: '#c8e6c9' }]}><Ionicons name="add" size={28} color="#4CAF50" /></View>
               <Text style={[styles.pickerItemTitle, { color: '#388E3C' }]}>Eigenes Bauteil erstellen</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* ===== NEW COMPONENT MODAL ===== */}

@@ -341,6 +341,8 @@ export default function ProjectDetailScreen() {
         title: tabTitles[activeTab] || 'Projektdetails',
         headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
         headerTintColor: headerBackColor,
+        headerShadowVisible: false,
+        headerTransparent: false,
         headerLeft: () => (
           <TouchableOpacity 
             onPress={() => handleTabChange('overview')} 
@@ -354,7 +356,7 @@ export default function ProjectDetailScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="chevron-back" size={28} color={headerBackColor} />
-            <Text style={{ color: headerBackColor, fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
+            <Text style={{ color: headerBackColor, fontSize: 17, fontWeight: '700' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });
@@ -363,6 +365,8 @@ export default function ProjectDetailScreen() {
         title: 'Projektdetails',
         headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
         headerTintColor: headerBackColor,
+        headerShadowVisible: false,
+        headerTransparent: false,
         headerLeft: undefined,
       });
     }

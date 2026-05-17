@@ -331,18 +331,15 @@ export default function ProjectDetailScreen() {
     }
   }, [activeTab]);
 
-  // Farben für den Zurück-Button: iPad hat hellen Header, iPhone blauen Header
-  const isIPad = Platform.OS === 'ios' && Platform.isPad;
-  const headerBackColor = isIPad ? '#000' : '#fff';
-  
+  // Einheitlicher Header: Weißer Hintergrund, schwarze Schrift (wie iPad)
   useEffect(() => {
     if (activeTab !== 'overview') {
       navigation.setOptions({
         title: tabTitles[activeTab] || 'Projektdetails',
-        headerStyle: { backgroundColor: '#1976d2' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
-        headerShadowVisible: false,
+        headerStyle: { backgroundColor: '#ffffff' },
+        headerTintColor: '#000',
+        headerTitleStyle: { color: '#000', fontWeight: 'bold' },
+        headerShadowVisible: true,
         headerTransparent: false,
         headerBackVisible: false,
         headerLeft: () => (
@@ -357,18 +354,18 @@ export default function ProjectDetailScreen() {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700' }}>Projektdetails</Text>
+            <Ionicons name="chevron-back" size={28} color="#000" />
+            <Text style={{ color: '#000', fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
           </TouchableOpacity>
         ),
       });
     } else {
       navigation.setOptions({
         title: 'Projektdetails',
-        headerStyle: { backgroundColor: '#1976d2' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { color: '#fff', fontWeight: 'bold' },
-        headerShadowVisible: false,
+        headerStyle: { backgroundColor: '#ffffff' },
+        headerTintColor: '#000',
+        headerTitleStyle: { color: '#000', fontWeight: 'bold' },
+        headerShadowVisible: true,
         headerTransparent: false,
         headerBackVisible: false,
         headerLeft: undefined,

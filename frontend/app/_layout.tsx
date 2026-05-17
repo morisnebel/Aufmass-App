@@ -63,7 +63,12 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="projects/[id]" 
-          options={{ title: t('screenTitles.projectDetails') }} 
+          options={{ 
+            title: t('screenTitles.projectDetails'),
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTintColor: '#000',
+            headerTitleStyle: { color: '#000', fontWeight: 'bold' },
+          }} 
         />
         <Stack.Screen 
           name="roofs/new" 

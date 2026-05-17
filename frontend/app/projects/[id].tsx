@@ -368,7 +368,22 @@ export default function ProjectDetailScreen() {
         headerShadowVisible: true,
         headerTransparent: false,
         headerBackVisible: false,
-        headerLeft: undefined,
+        headerLeft: () => (
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              paddingRight: 8,
+              paddingVertical: 8,
+              minHeight: 44,
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={28} color="#000" />
+            <Text style={{ color: '#000', fontSize: 17 }}>Zurück</Text>
+          </TouchableOpacity>
+        ),
       });
     }
   }, [activeTab, navigation]);

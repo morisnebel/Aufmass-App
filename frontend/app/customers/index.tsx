@@ -486,17 +486,20 @@ export default function CustomersScreen() {
 
   const filteredCustomers = customers
     .filter(customer =>
+      customer.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.phone?.includes(searchQuery) ||
-      customer.customer_number?.toLowerCase().includes(searchQuery.toLowerCase())
+      customer.customer_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.customerType?.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
         case 'name_asc':
-          return (a.name || '').localeCompare(b.name || '', 'de');
+          return (a.lastName || a.name || '').localeCompare(b.lastName || b.name || '', 'de');
         case 'name_desc':
-          return (b.name || '').localeCompare(a.name || '', 'de');
+          return (b.lastName || b.name || '').localeCompare(a.lastName || a.name || '', 'de');
         case 'number_asc':
           return (a.customer_number || 'ZZZ').localeCompare(b.customer_number || 'ZZZ');
         case 'number_desc':

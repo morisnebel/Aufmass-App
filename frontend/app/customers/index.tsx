@@ -571,55 +571,80 @@ export default function CustomersScreen() {
         )}
       </TouchableOpacity>
       {!selectMode && (
-      <View style={[styles.customerActions, isPhone && styles.customerActionsPhone]}>
-        {/* Projekte-Button mit Label */}
-        <TouchableOpacity
-          style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
-          onPress={() => openProjectsModal(item)}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name="folder-open" size={isPhone ? 18 : 22} color="#9c27b0" />
-            {projects.filter(p => p.customer_id === item.id).length > 0 && (
-              <View style={styles.projectsBadge}>
-                <Text style={styles.projectsBadgeText}>
-                  {projects.filter(p => p.customer_id === item.id).length}
-                </Text>
-              </View>
-            )}
-          </View>
-          {!isPhone && <Text style={styles.actionButtonLabel}>Projekte</Text>}
-        </TouchableOpacity>
+      <View>
+        <View style={[styles.customerActions, isPhone && styles.customerActionsPhone]}>
+          {/* Projekte-Button mit Label */}
+          <TouchableOpacity
+            style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
+            onPress={() => openProjectsModal(item)}
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name="folder-open" size={isPhone ? 18 : 22} color="#9c27b0" />
+              {projects.filter(p => p.customer_id === item.id).length > 0 && (
+                <View style={styles.projectsBadge}>
+                  <Text style={styles.projectsBadgeText}>
+                    {projects.filter(p => p.customer_id === item.id).length}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {!isPhone && <Text style={styles.actionButtonLabel}>Projekte</Text>}
+          </TouchableOpacity>
+          
+          {/* Objekte/Adressen-Button mit Label */}
+          <TouchableOpacity
+            style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
+            onPress={() => openAddressModal(item)}
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name="home" size={isPhone ? 18 : 22} color="#ff9800" />
+              {(item.projectAddresses?.length || 0) > 0 && (
+                <View style={styles.addressBadge}>
+                  <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
+                </View>
+              )}
+            </View>
+            {!isPhone && <Text style={styles.actionButtonLabel}>Objekte</Text>}
+          </TouchableOpacity>
+          
+          {/* Auf iPad: Neues Projekt + Löschen in gleicher Zeile */}
+          {!isPhone && (
+            <>
+              <TouchableOpacity
+                style={[styles.newProjectButton, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}
+                onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
+              >
+                <Ionicons name="add-circle" size={28} color="#4caf50" />
+                <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: '600' }}>Neues Projekt</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => openDeleteModal(item)}
+                style={styles.deleteButton}
+              >
+                <Ionicons name="trash-outline" size={20} color="#f44336" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
         
-        {/* Objekte/Adressen-Button mit Label */}
-        <TouchableOpacity
-          style={[styles.actionButtonWithLabel, isPhone && styles.actionButtonWithLabelPhone]}
-          onPress={() => openAddressModal(item)}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name="home" size={isPhone ? 18 : 22} color="#ff9800" />
-            {(item.projectAddresses?.length || 0) > 0 && (
-              <View style={styles.addressBadge}>
-                <Text style={styles.addressBadgeText}>{item.projectAddresses?.length}</Text>
-              </View>
-            )}
+        {/* iPhone: Zweite Zeile mit Neues Projekt + Löschen */}
+        {isPhone && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 8, paddingRight: 2 }}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4, paddingHorizontal: 6, backgroundColor: '#e8f5e9', borderRadius: 8 }}
+              onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
+            >
+              <Ionicons name="add-circle" size={18} color="#4caf50" />
+              <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: '600' }}>Neues Projekt</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => openDeleteModal(item)}
+              style={styles.deleteButton}
+            >
+              <Ionicons name="trash-outline" size={16} color="#f44336" />
+            </TouchableOpacity>
           </View>
-          {!isPhone && <Text style={styles.actionButtonLabel}>Objekte</Text>}
-        </TouchableOpacity>
-        
-        {/* Neues Projekt Button */}
-        <TouchableOpacity
-          style={[styles.newProjectButton, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}
-          onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
-        >
-          <Ionicons name="add-circle" size={isPhone ? 22 : 28} color="#4caf50" />
-          <Text style={{ color: '#4caf50', fontSize: isPhone ? 10 : 12, fontWeight: '600' }}>Neues Projekt</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => openDeleteModal(item)}
-          style={styles.deleteButton}
-        >
-          <Ionicons name="trash-outline" size={isPhone ? 16 : 20} color="#f44336" />
-        </TouchableOpacity>
+        )}
       </View>
       )}
     </View>

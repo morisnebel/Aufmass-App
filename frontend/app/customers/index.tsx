@@ -559,6 +559,11 @@ export default function CustomersScreen() {
               <Ionicons name="call" size={isPhone ? 10 : 12} color="#666" /> {item.phone}
             </Text>
           )}
+          {item.customerType && (
+            <Text style={[styles.customerDetail, isPhone && styles.customerDetailPhone, { color: '#1976d2', fontWeight: '600' }]} numberOfLines={1}>
+              <Ionicons name="briefcase" size={isPhone ? 10 : 12} color="#1976d2" /> {item.customerType}
+            </Text>
+          )}
         </View>
         {selectMode && (
           <Ionicons name="chevron-forward" size={20} color="#1976d2" />
@@ -602,10 +607,11 @@ export default function CustomersScreen() {
         
         {/* Neues Projekt Button */}
         <TouchableOpacity
-          style={styles.newProjectButton}
+          style={[styles.newProjectButton, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}
           onPress={() => router.push(`/projects/new?customer_id=${item.id}`)}
         >
           <Ionicons name="add-circle" size={isPhone ? 22 : 28} color="#4caf50" />
+          {!isPhone && <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: '600' }}>Neues Projekt</Text>}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => openDeleteModal(item)}

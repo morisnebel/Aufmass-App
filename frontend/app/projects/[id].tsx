@@ -1222,6 +1222,7 @@ export default function ProjectDetailScreen() {
     const bauherrPhone = project?.bauherr_phone || customer?.phone || '';
     const bauherrMobile = project?.bauherr_mobile || customer?.mobile || '';
     const bauherrEmail = project?.bauherr_email || customer?.email || '';
+    const bauherrCustomerType = customer?.customerType || '';
     
     // Build objekt info - alle Felder
     const objektNumber = project?.objekt_number || ''; // OBJ-26001
@@ -3998,6 +3999,12 @@ export default function ProjectDetailScreen() {
                 <span class="info-value">${bauherrEmail}</span>
               </div>
             ` : ''}
+            ${bauherrCustomerType ? `
+              <div class="info-row">
+                <span class="info-label">Kundentyp:</span>
+                <span class="info-value">${bauherrCustomerType}</span>
+              </div>
+            ` : ''}
           </div>
         </div>
         
@@ -4794,6 +4801,12 @@ export default function ProjectDetailScreen() {
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('settings.email')}:</Text>
                   <Text style={styles.infoValue}>{project?.bauherr_email || customer?.email}</Text>
+                </View>
+              )}
+              {customer?.customerType && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Kundentyp:</Text>
+                  <Text style={[styles.infoValue, { color: '#1976d2', fontWeight: '600' }]}>{customer.customerType}</Text>
                 </View>
               )}
               {/* Bauherr-Adresse (separate Felder) */}

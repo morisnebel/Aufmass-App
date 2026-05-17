@@ -344,6 +344,10 @@ export default function EditCustomerScreen() {
     return contactName.includes(query);
   });
 
+  // Gerätetyp für Kontakt-Meldungen
+  const deviceName = Platform.OS === 'ios' && Platform.isPad ? 'Tablett' : 'Handy';
+
+  // Prüfe ob der Kontakt aus Gerätekontakten importiert wurde
   const handleSave = async () => {
     if (!lastName.trim()) {
       Alert.alert(t('common.error'), t('customers.enterLastNameError'));
@@ -354,7 +358,7 @@ export default function EditCustomerScreen() {
     if (Platform.OS !== 'web' && importedContactId) {
       Alert.alert(
         t('customers.syncContactQuestion'),
-        t('customers.syncContactEditMessage'),
+        t('customers.syncContactEditMessage', { device: deviceName }),
         [
           {
             text: t('customers.saveOnlyHere'),
@@ -437,7 +441,7 @@ export default function EditCustomerScreen() {
       const customerProjects = allProjects.filter(p => p.customer_id === customerId);
       
       const successMessage = syncToContacts 
-        ? t('customers.customerUpdatedAndSynced')
+        ? t('customers.customerUpdatedAndSynced', { device: deviceName })
         : t('customers.customerUpdated');
       
       if (customerProjects.length > 0) {

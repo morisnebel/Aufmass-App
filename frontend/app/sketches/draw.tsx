@@ -408,6 +408,12 @@ export default function DrawSketchScreen() {
     currentTranslateY: 0,
   });
 
+  // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
+  const canvasWidth = screenWidth;
+  // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
+  const canvasOverhead = isPhoneLandscape ? 80 : (isPhoneDevice ? 100 : 120);
+  const canvasHeight = Math.max(100, screenHeight - canvasOverhead);
+
   // Initialisiere viewBox wenn Bildschirm-Dimensionen sich ändern
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -434,12 +440,6 @@ export default function DrawSketchScreen() {
     setAndroidViewBox({ x: 0, y: 0, w: screenWidth, h: canvasHeight });
     setScale(1);
   }, [androidZoomScale, androidTranslateX, androidTranslateY, screenWidth, canvasHeight]);
-
-  // Canvas-Dimensionen für zoomToRect - dynamisch basierend auf Bildschirmgröße
-  const canvasWidth = screenWidth;
-  // Im Querformat auf dem iPhone: Kompaktere Header + Toolbar → weniger Overhead abziehen
-  const canvasOverhead = isPhoneLandscape ? 80 : (isPhoneDevice ? 100 : 120);
-  const canvasHeight = Math.max(100, screenHeight - canvasOverhead);
   
   // Canvas Layout für präzise Koordinaten-Berechnung (Protractor)
   const [canvasLayout, setCanvasLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);

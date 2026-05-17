@@ -482,9 +482,16 @@ export default function ImageMeterMeasureScreen() {
   };
 
   const formatLength = (m: Measurement): string => {
-    if (m.type === 'reference') return `${m.realLength?.toFixed(1)} ${m.unit} (Referenz)`;
-    if (referenceScale && m.pixelLength) { const c = m.pixelLength / referenceScale; return c >= 100 ? `${(c / 100).toFixed(2)} m` : `${c.toFixed(1)} cm`; }
-    if (m.realLength) return m.unit === 'm' ? `${(m.realLength / 100).toFixed(2)} m` : `${m.realLength.toFixed(1)} cm`;
+    if (m.type === 'reference') {
+      // realLength is stored in cm internally
+      if (m.realLength !== undefined) {
+        if (m.unit === 'm') return `${(m.realLength / 100).toFixed(2).replace('.', ',')} m (Referenz)`;
+        return `${m.realLength.toFixed(1).replace('.', ',')} cm (Referenz)`;
+      }
+      return '? (Referenz)';
+    }
+    if (referenceScale && m.pixelLength) { const c = m.pixelLength / referenceScale; return c >= 100 ? `${(c / 100).toFixed(2).replace('.', ',')} m` : `${c.toFixed(1).replace('.', ',')} cm`; }
+    if (m.realLength) return m.unit === 'm' ? `${(m.realLength / 100).toFixed(2).replace('.', ',')} m` : `${m.realLength.toFixed(1).replace('.', ',')} cm`;
     return '?';
   };
 
@@ -701,36 +708,75 @@ export default function ImageMeterMeasureScreen() {
             })}
             {drawMode === 'area' && tapPoints.length >= 3 && (() => { const f = toDisp(tapPoints[0]); const l = toDisp(tapPoints[tapPoints.length - 1]); return <Line x1={l.x} y1={l.y} x2={f.x} y2={f.y} stroke="#2196F3" strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />; })()}
 
-            {/* Magnifier crosshair at touch point */}
-            {dragPos && (drawMode === 'line' || drawMode === 'reference') && (() => {
+            {/* Crosshair at touch point */}
+            {dragPos && drawMode !== 'none' && (() => {
               const dp = toDisp(dragPos);
-              const mc = drawMode === 'reference' ? '#4CAF50' : '#1976d2';
+              const mc = drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : drawMode === 'component' ? '#9C27B0' : '#1976d2';
               return (
                 <G>
-                  {/* Crosshair lines */}
-                  <Line x1={dp.x - 20} y1={dp.y} x2={dp.x + 20} y2={dp.y} stroke={mc} strokeWidth={1.5} opacity={0.8} />
-                  <Line x1={dp.x} y1={dp.y - 20} x2={dp.x} y2={dp.y + 20} stroke={mc} strokeWidth={1.5} opacity={0.8} />
-                  {/* Outer ring */}
-                  <Circle cx={dp.x} cy={dp.y} r={15} fill="none" stroke={mc} strokeWidth={2} opacity={0.6} />
+                  <Line x1={dp.x - 20} y1={dp.y} x2={dp.x + 20} y2={dp.y} stroke={mc} strokeWidth={1.5} opacity={0.7} />
+                  <Line x1={dp.x} y1={dp.y - 20} x2={dp.x} y2={dp.y + 20} stroke={mc} strokeWidth={1.5} opacity={0.7} />
                   <Circle cx={dp.x} cy={dp.y} r={3} fill={mc} />
                 </G>
               );
             })()}
-            {/* Drag preview: show point being moved at new position */}
+            {/* Drag preview crosshair */}
             {isDraggingRef.current && dragPos && (() => {
               const dp = toDisp(dragPos);
               return (
                 <G>
-                  {/* Big crosshair for precise positioning */}
-                  <Line x1={dp.x - 30} y1={dp.y} x2={dp.x + 30} y2={dp.y} stroke="#FF9800" strokeWidth={1} opacity={0.6} />
-                  <Line x1={dp.x} y1={dp.y - 30} x2={dp.x} y2={dp.y + 30} stroke="#FF9800" strokeWidth={1} opacity={0.6} />
-                  <Circle cx={dp.x} cy={dp.y} r={12} fill="none" stroke="#FF9800" strokeWidth={2.5} />
+                  <Line x1={dp.x - 30} y1={dp.y} x2={dp.x + 30} y2={dp.y} stroke="#FF9800" strokeWidth={1} opacity={0.5} />
+                  <Line x1={dp.x} y1={dp.y - 30} x2={dp.x} y2={dp.y + 30} stroke="#FF9800" strokeWidth={1} opacity={0.5} />
                   <Circle cx={dp.x} cy={dp.y} r={4} fill="#FF9800" />
                 </G>
               );
             })()}
           </Svg>
         </View>
+
+        {/* ===== REAL MAGNIFIER LENS — zoomed image view ===== */}
+        {dragPos && (drawMode !== 'none' || isDraggingRef.current) && (() => {
+          const LENS_SIZE = 120;
+          const ZOOM = 3;
+          const dp = toDisp(dragPos);
+          const imgScale = getScale();
+          const dispW = imageDimensions.width * imgScale;
+          const dispH = imageDimensions.height * imgScale;
+          const imgOffX = (containerDimensions.width - dispW) / 2;
+          const imgOffY = (containerDimensions.height - dispH) / 2;
+          // Position of touch within the displayed image
+          const imgTouchX = dp.x - imgOffX;
+          const imgTouchY = dp.y - imgOffY;
+          // Lens position: top-left corner of screen, or top-right if touch is on left
+          const lensLeft = dp.x < containerDimensions.width / 2 ? containerDimensions.width - LENS_SIZE - 12 : 12;
+          const lensTop = 12;
+          const mc = isDraggingRef.current ? '#FF9800' : (drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : '#1976d2');
+          return (
+            <View style={{
+              position: 'absolute', left: lensLeft, top: lensTop,
+              width: LENS_SIZE, height: LENS_SIZE, borderRadius: LENS_SIZE / 2,
+              overflow: 'hidden', borderWidth: 3, borderColor: mc,
+              backgroundColor: '#000',
+            }} pointerEvents="none">
+              <Image source={{ uri: photo.imageUri }}
+                style={{
+                  width: dispW * ZOOM,
+                  height: dispH * ZOOM,
+                  position: 'absolute',
+                  left: -(imgTouchX * ZOOM) + LENS_SIZE / 2,
+                  top: -(imgTouchY * ZOOM) + LENS_SIZE / 2,
+                }}
+                resizeMode="contain"
+              />
+              {/* Crosshair in center of lens */}
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ position: 'absolute', width: 1.5, height: LENS_SIZE, backgroundColor: mc, opacity: 0.5 }} />
+                <View style={{ position: 'absolute', height: 1.5, width: LENS_SIZE, backgroundColor: mc, opacity: 0.5 }} />
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: mc }} />
+              </View>
+            </View>
+          );
+        })()}
       </View>
 
       {/* Measurements List */}

@@ -19,6 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line, Circle, G, Text as SvgText, Rect, Path, Polygon } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import { captureRef } from 'react-native-view-shot';
+import { PhotoService } from '../../services/LocalStorage';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 const CUSTOM_COMPONENTS_KEY = 'aufmassprofi_custom_components';
@@ -94,6 +96,7 @@ export default function ImageMeterMeasureScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const photoId = params.id as string;
+  const canvasCaptureRef = useRef<View>(null);
 
   const [photo, setPhoto] = useState<ImageMeterPhoto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -193,6 +196,104 @@ export default function ImageMeterMeasureScreen() {
       const data = await AsyncStorage.getItem(IMAGEMETER_STORAGE_KEY);
       if (data) { const ps: ImageMeterPhoto[] = JSON.parse(data); const i = ps.findIndex(p => p.id === photoId); if (i !== -1) { ps[i] = { ...ps[i], ...buildSave() }; await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps)); setHasChanges(false); Alert.alert(t('common.success'), 'Messungen wurden gespeichert'); } }
     } catch (e) { console.error(e); Alert.alert(t('common.error'), 'Speichern fehlgeschlagen'); }
+  };
+
+  // ---- Generate measurement summary text ----
+  const buildSummaryText = (): string => {
+    const lines: string[] = [];
+    lines.push(`Fotomessung: ${photo?.name || 'Messung'}`);
+    lines.push('');
+    if (measurements.length > 0) {
+      lines.push('--- Maßlinien ---');
+      measurements.forEach((m, i) => {
+        const label = m.label || formatLength(m);
+        lines.push(`  ${i + 1}. ${label}`);
+      });
+      lines.push('');
+    }
+    if (areaMeasurements.length > 0) {
+      lines.push('--- Flächen ---');
+      areaMeasurements.forEach((a, i) => {
+        lines.push(`  ${i + 1}. ${a.label}`);
+        if (showEdgeLengths) {
+          a.points.forEach((pt, j) => {
+            const next = a.points[(j + 1) % a.points.length];
+            lines.push(`     Kante ${j + 1}: ${formatPixelLen(calcDist(pt, next))}`);
+          });
+        }
+      });
+      lines.push('');
+    }
+    if (angleMeasurements.length > 0) {
+      lines.push('--- Winkel ---');
+      angleMeasurements.forEach((ang, i) => lines.push(`  ${i + 1}. ${ang.angle}°`));
+      lines.push('');
+    }
+    if (buildingComponents.length > 0) {
+      lines.push('--- Bauteile ---');
+      buildingComponents.forEach((c, i) => {
+        const ct = allComponentTypes.find(t => t.type === c.type);
+        lines.push(`  ${i + 1}. ${ct?.emoji || ''} ${ct?.label || c.type}`);
+      });
+    }
+    return lines.join('\n');
+  };
+
+  // ---- Save as project photo (screenshot + data) ----
+  const saveAsProjectPhoto = async () => {
+    if (!photo || !canvasCaptureRef.current) return;
+    
+    const projectId = photo.projectId;
+    if (!projectId) {
+      Alert.alert('Hinweis', 'Dieses Foto ist keinem Projekt zugeordnet. Bitte zuerst einem Projekt zuweisen.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // First save current state
+      await autoSave();
+      
+      // Capture the canvas as image
+      const uri = await captureRef(canvasCaptureRef, { format: 'png', quality: 0.9 });
+      
+      // Read as base64
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      // Build description with measurement summary
+      const summary = buildSummaryText();
+      
+      // Create photo in project
+      const newPhotoId = `photo_measure_${Date.now()}`;
+      await PhotoService.create({
+        id: newPhotoId,
+        project_id: projectId,
+        description: summary,
+        pdf_size: 'large',
+      });
+      
+      // Save image data separately (avoid OOM)
+      await AsyncStorage.setItem(`photo_img_${newPhotoId}`, base64);
+      
+      Alert.alert(
+        '✅ Als Projektfoto gespeichert',
+        'Das Messbild wurde in den Projektfotos gespeichert und erscheint im PDF Export.\n\nMessungen-Zusammenfassung wird als Beschreibung angezeigt.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error saving as project photo:', error);
+      Alert.alert(t('common.error'), 'Screenshot konnte nicht gespeichert werden. Versuchen Sie es erneut.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ---- Coordinates ----
@@ -670,7 +771,7 @@ export default function ImageMeterMeasureScreen() {
       )}
 
       {/* Canvas */}
-      <View style={styles.canvasContainer} onLayout={(e) => setContainerDimensions({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
+      <View style={styles.canvasContainer} ref={canvasCaptureRef} collapsable={false} onLayout={(e) => setContainerDimensions({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
         <Image source={{ uri: photo.imageUri }} style={styles.image} resizeMode="contain" />
         <View style={StyleSheet.absoluteFill}
           onStartShouldSetResponder={() => true}
@@ -816,6 +917,17 @@ export default function ImageMeterMeasureScreen() {
               );
             })}
           </ScrollView>
+        </View>
+      )}
+
+      {/* Export Buttons */}
+      {totalItems > 0 && photo?.projectId && (
+        <View style={styles.exportBar}>
+          <TouchableOpacity style={styles.exportButton} onPress={saveAsProjectPhoto}>
+            <Ionicons name="images" size={18} color="#fff" />
+            <Text style={styles.exportButtonText}>Als Projektfoto speichern</Text>
+          </TouchableOpacity>
+          <Text style={styles.exportHint}>Messbild erscheint im PDF Export</Text>
         </View>
       )}
 
@@ -980,6 +1092,11 @@ const styles = StyleSheet.create({
   chipRef: { backgroundColor: '#e8f5e9', borderColor: '#4CAF50' },
   chipSel: { backgroundColor: '#fff3e0', borderColor: '#FF9800' },
   chipText: { fontSize: 12, fontWeight: '500', color: '#333' },
+  // Export bar
+  exportBar: { backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: '#e0e0e0', alignItems: 'center', gap: 4 },
+  exportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1976d2', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, gap: 8 },
+  exportButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  exportHint: { fontSize: 11, color: '#999' },
   // Modals
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   pickerContent: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '90%', maxWidth: 380 },

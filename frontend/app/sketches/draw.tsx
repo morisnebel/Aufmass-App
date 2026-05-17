@@ -7232,13 +7232,13 @@ export default function DrawSketchScreen() {
               {showLineTypePicker && drawMode === 'line' && (
                 <View style={{
                   position: 'absolute',
-                  bottom: 44,
+                  top: 44,
                   left: -16,
                   backgroundColor: '#fff',
                   borderRadius: 10,
                   padding: 6,
                   shadowColor: '#000',
-                  shadowOffset: { width: 0, height: -2 },
+                  shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.25,
                   shadowRadius: 6,
                   elevation: 8,

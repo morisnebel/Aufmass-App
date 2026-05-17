@@ -340,6 +340,9 @@ export default function DrawSketchScreen() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<DrawMode>('select');
+  // Linien-Pfeiltyp: none = normale Linie, end = Pfeil →, both = Doppelpfeil ↔
+  const [lineArrowType, setLineArrowType] = useState<'none' | 'end' | 'both'>('none');
+  const [showLineTypePicker, setShowLineTypePicker] = useState(false);
   const [drawColor, setDrawColor] = useState('#FF0000');
   const [strokeWidth, setStrokeWidth] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -479,6 +482,10 @@ export default function DrawSketchScreen() {
   // PhotoEditMode wird automatisch deaktiviert wenn ein anderes Werkzeug gewählt wird
   const selectDrawMode = (mode: DrawMode) => {
     setDrawMode(mode);
+    // Linien-Typ-Picker schließen wenn nicht Linie gewählt
+    if (mode !== 'line') {
+      setShowLineTypePicker(false);
+    }
     // PhotoEditMode deaktivieren wenn anderes Werkzeug gewählt wird
     if (photoEditMode) {
       setPhotoEditMode(false);
@@ -3785,7 +3792,7 @@ export default function DrawSketchScreen() {
         element = {
           id: 'temp',
           type: 'line',
-          data: { x1: start.x, y1: start.y, x2: endX, y2: endY },
+          data: { x1: start.x, y1: start.y, x2: endX, y2: endY, arrowHeads: lineArrowType },
           color: drawColor,
           strokeWidth,
           rotation: 0,
@@ -7189,30 +7196,142 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>{t('sketches.pen')}</Text>
         </View>
 
-        {/* 8. Formen (Linie, Kreis, Rechteck) */}
+        {/* 8. Formen (Linie/Pfeil, Kreis, Rechteck) */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
-            <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('line')}
-            >
-              <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
-            </TouchableOpacity>
+            {/* Linie/Pfeil Button mit Auswahl-Popup */}
+            <View>
+              <TouchableOpacity
+                style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
+                onPress={() => {
+                  if (drawMode === 'line') {
+                    // Bereits aktiv → Popup toggle
+                    setShowLineTypePicker(!showLineTypePicker);
+                  } else {
+                    selectDrawMode('line');
+                    setShowLineTypePicker(true);
+                  }
+                }}
+              >
+                {lineArrowType === 'none' ? (
+                  <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
+                ) : lineArrowType === 'end' ? (
+                  <Svg width={20} height={16} viewBox="0 0 24 18">
+                    <Line x1="2" y1="9" x2="17" y2="9" stroke={drawMode === 'line' ? '#fff' : '#333'} strokeWidth={2.5} />
+                    <Polygon points="22,9 16,4 16,14" fill={drawMode === 'line' ? '#fff' : '#333'} />
+                  </Svg>
+                ) : (
+                  <Svg width={20} height={16} viewBox="0 0 24 18">
+                    <Polygon points="2,9 8,4 8,14" fill={drawMode === 'line' ? '#fff' : '#333'} />
+                    <Line x1="6" y1="9" x2="18" y2="9" stroke={drawMode === 'line' ? '#fff' : '#333'} strokeWidth={2.5} />
+                    <Polygon points="22,9 16,4 16,14" fill={drawMode === 'line' ? '#fff' : '#333'} />
+                  </Svg>
+                )}
+              </TouchableOpacity>
+              {/* Popup-Menü für Linientyp */}
+              {showLineTypePicker && drawMode === 'line' && (
+                <View style={{
+                  position: 'absolute',
+                  bottom: 44,
+                  left: -16,
+                  backgroundColor: '#fff',
+                  borderRadius: 10,
+                  padding: 6,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: -2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 6,
+                  elevation: 8,
+                  zIndex: 999,
+                  flexDirection: 'column',
+                  gap: 4,
+                  borderWidth: 1,
+                  borderColor: '#e0e0e0',
+                }}>
+                  {/* Normale Linie */}
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: lineArrowType === 'none' ? '#1976d2' : '#f5f5f5',
+                      minWidth: 120,
+                    }}
+                    onPress={() => {
+                      setLineArrowType('none');
+                      setShowLineTypePicker(false);
+                    }}
+                  >
+                    <Ionicons name="remove" size={18} color={lineArrowType === 'none' ? '#fff' : '#333'} />
+                    <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '600', color: lineArrowType === 'none' ? '#fff' : '#333' }}>Linie</Text>
+                  </TouchableOpacity>
+                  {/* Einfacher Pfeil */}
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: lineArrowType === 'end' ? '#1976d2' : '#f5f5f5',
+                      minWidth: 120,
+                    }}
+                    onPress={() => {
+                      setLineArrowType('end');
+                      setShowLineTypePicker(false);
+                    }}
+                  >
+                    <Svg width={18} height={14} viewBox="0 0 24 18">
+                      <Line x1="2" y1="9" x2="17" y2="9" stroke={lineArrowType === 'end' ? '#fff' : '#333'} strokeWidth={2.5} />
+                      <Polygon points="22,9 16,4 16,14" fill={lineArrowType === 'end' ? '#fff' : '#333'} />
+                    </Svg>
+                    <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '600', color: lineArrowType === 'end' ? '#fff' : '#333' }}>Pfeil</Text>
+                  </TouchableOpacity>
+                  {/* Doppelpfeil */}
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: lineArrowType === 'both' ? '#1976d2' : '#f5f5f5',
+                      minWidth: 120,
+                    }}
+                    onPress={() => {
+                      setLineArrowType('both');
+                      setShowLineTypePicker(false);
+                    }}
+                  >
+                    <Svg width={18} height={14} viewBox="0 0 24 18">
+                      <Polygon points="2,9 8,4 8,14" fill={lineArrowType === 'both' ? '#fff' : '#333'} />
+                      <Line x1="6" y1="9" x2="18" y2="9" stroke={lineArrowType === 'both' ? '#fff' : '#333'} strokeWidth={2.5} />
+                      <Polygon points="22,9 16,4 16,14" fill={lineArrowType === 'both' ? '#fff' : '#333'} />
+                    </Svg>
+                    <Text style={{ marginLeft: 8, fontSize: 13, fontWeight: '600', color: lineArrowType === 'both' ? '#fff' : '#333' }}>Doppelpfeil</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('circle')}
+              onPress={() => { selectDrawMode('circle'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('rect')}
+              onPress={() => { selectDrawMode('rect'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.line')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>
+              {lineArrowType === 'none' ? t('sketches.line') : lineArrowType === 'end' ? 'Pfeil' : 'Doppel'}
+            </Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.circle')}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.rect')}</Text>
           </View>

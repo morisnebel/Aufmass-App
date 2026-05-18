@@ -3575,22 +3575,54 @@ export default function DrawSketchScreen() {
   // Helper function to insert image from URI
   const insertImageFromUri = async (uri: string) => {
     try {
-      // Manipulate image to get base64
-      const manipResult = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
+      let base64Image: string;
+      let imgWidth: number;
+      let imgHeight: number;
+      
+      // Prüfe, ob das Bild bereits ein base64 data-URI ist
+      if (uri.startsWith('data:image/')) {
+        console.log('[insertImageFromUri] Image is already base64, using directly');
+        base64Image = uri;
+        
+        // Versuche, die Bildgröße zu ermitteln (kann fehlschlagen bei base64)
+        try {
+          // Für base64-Bilder: verwende einen Schätzwert oder lade das Bild
+          imgWidth = 800;
+          imgHeight = 600;
+          
+          // Alternativ: Resize das base64-Bild für konsistente Größe
+          const manipResult = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 800 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          if (manipResult.base64) {
+            base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+            imgWidth = manipResult.width || 800;
+            imgHeight = manipResult.height || 600;
+          }
+        } catch (resizeError) {
+          console.log('[insertImageFromUri] Could not resize base64 image, using as-is:', resizeError);
+          // Verwende das Original-base64 wenn Resize fehlschlägt
+        }
+      } else {
+        // Normales Bild von URI - manipulieren
+        const manipResult = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
 
-      if (!manipResult.base64) {
-        throw new Error('Konnte kein Base64 generieren');
+        if (!manipResult.base64) {
+          throw new Error('Konnte kein Base64 generieren');
+        }
+
+        base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
+        imgWidth = manipResult.width || 200;
+        imgHeight = manipResult.height || 200;
       }
-
-      const base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
       
       // Berechne Seitenverhältnis
-      const imgWidth = manipResult.width || 200;
-      const imgHeight = manipResult.height || 200;
       const maxWidth = 400;
       const maxHeight = 300;
       const aspectRatio = imgWidth / imgHeight;
@@ -7089,8 +7121,12 @@ export default function DrawSketchScreen() {
       // Generate preview image
       let sketchData = '';
       
-      // Priority 1: Generate mini-sketch from elements if we have any
-      if (elements.length > 0) {
+      // Prüfe ob wir Bilder oder andere Elemente haben
+      const hasImages = elements.some(el => el.type === 'image');
+      const hasDrawnElements = elements.some(el => el.type !== 'image');
+      
+      // Priority 1: Generate mini-sketch from non-image elements if we have any
+      if (hasDrawnElements) {
         try {
           sketchData = generatePreviewSvg();
         } catch (previewError) {
@@ -7098,14 +7134,16 @@ export default function DrawSketchScreen() {
         }
       }
       
-      // Priority 2: Use background image if no elements preview available
-      if (!sketchData && backgroundImage) {
-        // Use a small placeholder instead of the full background image for preview
+      // Priority 2: If only images or preview failed, create a placeholder
+      if (!sketchData && (hasImages || backgroundImage)) {
+        // Use a small placeholder for image-only sketches
+        const elementCount = elements.length;
         const previewSvg = `
           <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-            <rect width="200" height="200" fill="#f0f0f0"/>
-            <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
-            <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
+            <rect width="200" height="200" fill="#e3f2fd"/>
+            <rect x="30" y="30" width="140" height="100" fill="#fff" stroke="#1976d2" stroke-width="2" rx="8"/>
+            <text x="100" y="85" text-anchor="middle" font-size="14" fill="#1976d2">📷 ${elementCount > 0 ? elementCount + ' Bild' + (elementCount > 1 ? 'er' : '') : 'Foto-Skizze'}</text>
+            <text x="100" y="160" text-anchor="middle" font-size="12" fill="#666">${title || 'Skizze'}</text>
           </svg>
         `;
         sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;

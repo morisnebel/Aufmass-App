@@ -7121,28 +7121,39 @@ export default function DrawSketchScreen() {
       // Generate preview image
       let sketchData = '';
       
-      // Prüfe ob wir Bilder oder andere Elemente haben
-      const hasImages = elements.some(el => el.type === 'image');
+      // Priority 1: Generate mini-sketch from elements if we have any drawn elements
+      // (Bilder werden in generatePreviewSvg nicht gerendert, also nur wenn andere Elemente vorhanden sind)
       const hasDrawnElements = elements.some(el => el.type !== 'image');
-      
-      // Priority 1: Generate mini-sketch from non-image elements if we have any
       if (hasDrawnElements) {
         try {
           sketchData = generatePreviewSvg();
         } catch (previewError) {
           console.error('Error generating preview:', previewError);
+          sketchData = ''; // Fallback
         }
       }
       
-      // Priority 2: If only images or preview failed, create a placeholder
-      if (!sketchData && (hasImages || backgroundImage)) {
-        // Use a small placeholder for image-only sketches
-        const elementCount = elements.length;
+      // Priority 2: Use background image placeholder if no drawable elements preview
+      if (!sketchData && backgroundImage) {
+        const previewSvg = `
+          <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="200" fill="#f0f0f0"/>
+            <text x="100" y="90" text-anchor="middle" font-size="16" fill="#333">Foto-Skizze</text>
+            <text x="100" y="115" text-anchor="middle" font-size="14" fill="#666">${title || 'Skizze'}</text>
+          </svg>
+        `;
+        sketchData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(previewSvg)))}`;
+      }
+      
+      // Priority 3: Placeholder for image-only sketches (no background, but has image elements)
+      const hasImages = elements.some(el => el.type === 'image');
+      if (!sketchData && hasImages) {
+        const imageCount = elements.filter(el => el.type === 'image').length;
         const previewSvg = `
           <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
             <rect width="200" height="200" fill="#e3f2fd"/>
-            <rect x="30" y="30" width="140" height="100" fill="#fff" stroke="#1976d2" stroke-width="2" rx="8"/>
-            <text x="100" y="85" text-anchor="middle" font-size="14" fill="#1976d2">📷 ${elementCount > 0 ? elementCount + ' Bild' + (elementCount > 1 ? 'er' : '') : 'Foto-Skizze'}</text>
+            <rect x="30" y="40" width="140" height="90" fill="#fff" stroke="#1976d2" stroke-width="2" rx="8"/>
+            <text x="100" y="90" text-anchor="middle" font-size="14" fill="#1976d2">${imageCount} Bild${imageCount > 1 ? 'er' : ''}</text>
             <text x="100" y="160" text-anchor="middle" font-size="12" fill="#666">${title || 'Skizze'}</text>
           </svg>
         `;

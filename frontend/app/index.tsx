@@ -397,14 +397,32 @@ export default function HomeScreen() {
         }
       }
       
-      // Import sketches
+      // Import sketches - ROBUST VERSION: Continue even if some fail
       if (importData.sketches && importData.sketches.length > 0) {
+        console.log(`[Import] Importing ${importData.sketches.length} sketches...`);
+        let successCount = 0;
+        let failCount = 0;
         for (const sketch of importData.sketches) {
-          const sketchData = { ...sketch, project_id: newProject.id };
-          delete sketchData.id;
-          delete sketchData.created_at;
-          delete sketchData.updated_at;
-          await SketchService.create(sketchData);
+          try {
+            const sketchData = { ...sketch, project_id: newProject.id };
+            delete sketchData.id;
+            delete sketchData.created_at;
+            delete sketchData.updated_at;
+            await SketchService.create(sketchData);
+            successCount++;
+          } catch (sketchError) {
+            console.error('[Import] Failed to import sketch:', sketchError);
+            failCount++;
+            // Continue with next sketch instead of aborting entire import
+          }
+        }
+        console.log(`[Import] Sketches imported: ${successCount} success, ${failCount} failed`);
+        if (failCount > 0) {
+          // Show warning but don't abort
+          Alert.alert(
+            'Import Warnung',
+            `${failCount} von ${importData.sketches.length} Skizzen konnten nicht importiert werden (möglicherweise Speicher voll). ${successCount} Skizzen wurden erfolgreich importiert.`
+          );
         }
       }
       

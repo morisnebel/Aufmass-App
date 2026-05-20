@@ -1158,7 +1158,6 @@ export const SketchService = {
   },
 
   create: async (data: Omit<Sketch, 'id' | 'created_at' | 'updated_at'>): Promise<Sketch> => {
-    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const id = generateId();
 
     // Extract heavy data before storing in main array
@@ -1170,27 +1169,34 @@ export const SketchService = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    sketches.push(lightSketch);
 
-    // Save lightweight array + heavy data in parallel
-    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    // CRITICAL FIX: Save heavy data FIRST, then update list
+    // This prevents data loss if heavy data save fails
     if (heavyMetadata) {
       try {
         const meta = JSON.parse(heavyMetadata);
         const bg = meta.backgroundImage || null;
         const metaWithoutBg = { ...meta };
         delete metaWithoutBg.backgroundImage;
-        // CRITICAL FIX: Use storage wrapper to catch quota errors
-        saveOps.push(storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        
+        // Save metadata first
+        await storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
+        
+        // Then save background image if exists
         if (bg) {
-          saveOps.push(storage.setItem(`sketch_bg_${id}`, bg));
+          await storage.setItem(`sketch_bg_${id}`, bg);
         }
-      } catch (e) {
-        // If metadata isn't valid JSON, store as-is in separate key
-        saveOps.push(storage.setItem(`sketch_meta_${id}`, heavyMetadata));
+      } catch (e: any) {
+        // If metadata save fails, throw error BEFORE updating the list
+        console.error(`[SketchService.create] Failed to save metadata for ${id}:`, e);
+        throw new Error(`Skizze konnte nicht gespeichert werden: ${e.message || 'Speicher voll'}`);
       }
     }
-    await Promise.all(saveOps);
+
+    // Only update the list AFTER heavy data is saved successfully
+    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    sketches.push(lightSketch);
+    await setItems(KEYS.SKETCHES, sketches);
 
     return { ...lightSketch, metadata: heavyMetadata };
   },
@@ -1205,28 +1211,33 @@ export const SketchService = {
     const lightData = { ...data };
     delete lightData.metadata; // Don't store metadata in main array
 
-    sketches[index] = { ...sketches[index], ...lightData, updated_at: new Date().toISOString() };
-
-    // Save lightweight array + heavy data in parallel
-    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    // CRITICAL FIX: Save heavy data FIRST, then update list
     if (heavyMetadata) {
       try {
         const meta = JSON.parse(heavyMetadata);
         const bg = meta.backgroundImage || null;
         const metaWithoutBg = { ...meta };
         delete metaWithoutBg.backgroundImage;
-        // CRITICAL FIX: Use storage wrapper to catch quota errors
-        saveOps.push(storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        
+        // Save metadata first
+        await storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
+        
+        // Then handle background image
         if (bg) {
-          saveOps.push(storage.setItem(`sketch_bg_${id}`, bg));
+          await storage.setItem(`sketch_bg_${id}`, bg);
         } else {
-          saveOps.push(storage.removeItem(`sketch_bg_${id}`));
+          await storage.removeItem(`sketch_bg_${id}`);
         }
-      } catch (e) {
-        saveOps.push(storage.setItem(`sketch_meta_${id}`, heavyMetadata));
+      } catch (e: any) {
+        // If metadata save fails, throw error BEFORE updating the list
+        console.error(`[SketchService.update] Failed to save metadata for ${id}:`, e);
+        throw new Error(`Skizze konnte nicht aktualisiert werden: ${e.message || 'Speicher voll'}`);
       }
     }
-    await Promise.all(saveOps);
+
+    // Only update the list AFTER heavy data is saved successfully
+    sketches[index] = { ...sketches[index], ...lightData, updated_at: new Date().toISOString() };
+    await setItems(KEYS.SKETCHES, sketches);
 
     return sketches[index];
   },

@@ -1139,20 +1139,21 @@ export const SketchService = {
       delete metaWithoutBg.backgroundImage;
 
       const saveOps: Promise<void>[] = [
-        AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)),
+        storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)),
       ];
 
       // Save background image to its own key
       if (backgroundImage) {
-        saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, backgroundImage));
+        saveOps.push(storage.setItem(`sketch_bg_${id}`, backgroundImage));
       } else {
         // Remove old background if cleared
-        saveOps.push(AsyncStorage.removeItem(`sketch_bg_${id}`));
+        saveOps.push(storage.removeItem(`sketch_bg_${id}`));
       }
 
       await Promise.all(saveOps);
     } catch (error) {
       console.error(`[SketchService] Error saving sketch data for ${id}:`, error);
+      throw error; // RE-THROW to propagate error to caller
     }
   },
 
@@ -1179,13 +1180,14 @@ export const SketchService = {
         const bg = meta.backgroundImage || null;
         const metaWithoutBg = { ...meta };
         delete metaWithoutBg.backgroundImage;
-        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        // CRITICAL FIX: Use storage wrapper to catch quota errors
+        saveOps.push(storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
         if (bg) {
-          saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));
+          saveOps.push(storage.setItem(`sketch_bg_${id}`, bg));
         }
       } catch (e) {
         // If metadata isn't valid JSON, store as-is in separate key
-        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, heavyMetadata));
+        saveOps.push(storage.setItem(`sketch_meta_${id}`, heavyMetadata));
       }
     }
     await Promise.all(saveOps);
@@ -1213,14 +1215,15 @@ export const SketchService = {
         const bg = meta.backgroundImage || null;
         const metaWithoutBg = { ...meta };
         delete metaWithoutBg.backgroundImage;
-        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
+        // CRITICAL FIX: Use storage wrapper to catch quota errors
+        saveOps.push(storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
         if (bg) {
-          saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));
+          saveOps.push(storage.setItem(`sketch_bg_${id}`, bg));
         } else {
-          saveOps.push(AsyncStorage.removeItem(`sketch_bg_${id}`));
+          saveOps.push(storage.removeItem(`sketch_bg_${id}`));
         }
       } catch (e) {
-        saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, heavyMetadata));
+        saveOps.push(storage.setItem(`sketch_meta_${id}`, heavyMetadata));
       }
     }
     await Promise.all(saveOps);

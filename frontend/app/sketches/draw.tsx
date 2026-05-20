@@ -29,7 +29,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
 import { WebView } from 'react-native-webview';
 import { File } from 'expo-file-system/next';
-import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile } from '../../services/LocalStorage';
+import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile, storage } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
@@ -7227,8 +7227,9 @@ export default function DrawSketchScreen() {
         }
         console.log(`[saveSketch] Total elements: ${lightElementsForSave.length}, images to save: ${imageOps.length}`);
         
+        // CRITICAL FIX: Use storage wrapper instead of direct AsyncStorage to catch errors!
         const criticalOps: Promise<any>[] = [
-          AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr),
+          storage.setItem(`sketch_meta_${sketchId}`, metaStr),
           ...imageOps,
         ];
         
@@ -7236,9 +7237,9 @@ export default function DrawSketchScreen() {
         if (backgroundImageChangedRef.current) {
           console.log('Background image changed, saving...');
           if (backgroundImage) {
-            criticalOps.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+            criticalOps.push(storage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
           } else {
-            criticalOps.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+            criticalOps.push(storage.removeItem(`sketch_bg_${sketchId}`));
           }
         }
         
@@ -7249,22 +7250,18 @@ export default function DrawSketchScreen() {
         const t2 = Date.now();
         console.log('Critical data saved in', t2 - startTime, 'ms');
         
-        // STEP 2: Update lightweight sketch entry in main array (fire-and-forget)
-        // This updates the preview SVG, title, notes for the list view
-        // It runs in the background so the user doesn't have to wait
-        SketchService.update(sketchId, {
+        // STEP 2: Update lightweight sketch entry in main array
+        // CHANGED: Now awaiting instead of fire-and-forget to catch errors
+        await SketchService.update(sketchId, {
           project_id: projectId,
           title,
           notes,
           sketch_data: sketchData,
           pdf_size: pdfSize,
-        }).then(() => {
-          console.log('Main array updated in background:', Date.now() - startTime, 'ms');
-        }).catch(err => {
-          console.error('Background update error:', err);
         });
+        console.log('Main array updated:', Date.now() - startTime, 'ms');
         
-        console.log('Sketch saved in', Date.now() - startTime, 'ms (list update in background)');
+        console.log('Sketch saved in', Date.now() - startTime, 'ms');
         showAlert(t('common.success'), t('sketches.sketchUpdated'));
       } else {
         // Create new sketch - include metadata for SketchService.create to handle
@@ -7305,18 +7302,19 @@ export default function DrawSketchScreen() {
               return el;
             }));
             await Promise.all(remapOps);
-            // Metadata mit korrekten Keys speichern
+            // Metadata mit korrekten Keys speichern - CRITICAL FIX: Use storage wrapper!
             const finalMetadata = { ...lightMetadataForCreate, elements: updatedElements };
-            await AsyncStorage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
+            await storage.setItem(`sketch_meta_${newSketch.id}`, JSON.stringify(finalMetadata));
             console.log('[saveSketch] Image keys migrated successfully');
           } catch (remapErr) {
             console.error('[saveSketch] Error remapping image keys:', remapErr);
+            throw remapErr; // Re-throw to trigger error handling
           }
         }
         
-        // Hintergrundbild separat speichern (ohne JSON.stringify)
+        // Hintergrundbild separat speichern - CRITICAL FIX: Use storage wrapper!
         if (backgroundImage && newSketch?.id) {
-          await AsyncStorage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
+          await storage.setItem(`sketch_bg_${newSketch.id}`, backgroundImage);
         }
         backgroundImageChangedRef.current = false;
         console.log('Sketch created in', Date.now() - startTime, 'ms');

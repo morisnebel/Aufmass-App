@@ -267,9 +267,11 @@ const storage = {
       if (Platform.OS === 'ios' && CloudKitStorage) {
         await CloudKitStorage.setItem(key, value);
       }
-    } catch (error) {
-      console.log(`Error saving ${key} to CloudKit:`, error);
-      // Data is already in AsyncStorage, so we're safe
+    } catch (error: any) {
+      console.error(`[storage.setItem] CRITICAL ERROR saving ${key}:`, error);
+      console.error(`[storage.setItem] Value size: ${Math.round(value.length / 1024)}KB`);
+      // RE-THROW the error so callers know the save failed!
+      throw error;
     }
   },
 
@@ -280,7 +282,8 @@ const storage = {
         await CloudKitStorage.removeItem(key);
       }
     } catch (error) {
-      console.log(`Error removing ${key}:`, error);
+      console.error(`[storage.removeItem] Error removing ${key}:`, error);
+      throw error;
     }
   },
 };
@@ -566,9 +569,13 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
 
 const setItems = async <T>(key: string, items: T[]): Promise<void> => {
   try {
-    await storage.setItem(key, JSON.stringify(items));
-  } catch (error) {
-    console.error(`Error setting ${key}:`, error);
+    const jsonStr = JSON.stringify(items);
+    console.log(`[setItems] Saving ${key}, size: ${Math.round(jsonStr.length / 1024)}KB`);
+    await storage.setItem(key, jsonStr);
+  } catch (error: any) {
+    console.error(`[setItems] CRITICAL ERROR setting ${key}:`, error);
+    // RE-THROW so the caller knows the save failed!
+    throw error;
   }
 };
 

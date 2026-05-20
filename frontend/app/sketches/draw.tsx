@@ -7219,6 +7219,14 @@ export default function DrawSketchScreen() {
         
         // STEP 1: Save metadata (elements etc.) to separate key - this is the critical data
         const metaStr = JSON.stringify(lightMetadataForSave);
+        
+        // LOG SIZE FOR DEBUGGING PHONE VS TABLET ISSUES
+        console.log(`[saveSketch] Metadata size: ${Math.round(metaStr.length / 1024)}KB`);
+        if (backgroundImage) {
+          console.log(`[saveSketch] Background image size: ${Math.round(backgroundImage.length / 1024)}KB`);
+        }
+        console.log(`[saveSketch] Total elements: ${lightElementsForSave.length}, images to save: ${imageOps.length}`);
+        
         const criticalOps: Promise<any>[] = [
           AsyncStorage.setItem(`sketch_meta_${sketchId}`, metaStr),
           ...imageOps,
@@ -7316,10 +7324,24 @@ export default function DrawSketchScreen() {
       }
 
       router.back();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving sketch:', error);
       if (isMountedRef.current) {
-        showAlert(t('common.error'), t('sketches.sketchSaveError'));
+        // Prüfe auf Speicher-Quota-Fehler
+        const errorMsg = error?.message || String(error) || '';
+        const isQuotaError = errorMsg.toLowerCase().includes('quota') || 
+                            errorMsg.toLowerCase().includes('storage') ||
+                            errorMsg.toLowerCase().includes('full') ||
+                            errorMsg.toLowerCase().includes('exceeded');
+        
+        if (isQuotaError) {
+          showAlert(
+            'Speicher voll',
+            'Der Gerätespeicher ist voll. Bitte löschen Sie alte Skizzen, Fotos oder Projekte und versuchen Sie es erneut.'
+          );
+        } else {
+          showAlert(t('common.error'), t('sketches.sketchSaveError') + '\n\nFehler: ' + errorMsg.substring(0, 100));
+        }
       }
     } finally {
       if (isMountedRef.current) {

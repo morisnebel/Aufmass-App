@@ -384,9 +384,38 @@ export const SyncService = {
 const getItems = async <T>(key: string): Promise<T[]> => {
   try {
     const data = await storage.getItem(key);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error(`Error getting ${key}:`, error);
+    if (!data) {
+      // Key existiert nicht oder ist leer - das ist OK, leeres Array zurückgeben
+      return [];
+    }
+    
+    // Versuche JSON zu parsen
+    try {
+      const parsed = JSON.parse(data);
+      // Validiere dass es ein Array ist
+      if (!Array.isArray(parsed)) {
+        console.error(`[getItems] WARNUNG: ${key} ist kein Array, sondern:`, typeof parsed);
+        return [];
+      }
+      return parsed;
+    } catch (parseError) {
+      // KRITISCH: JSON Parse Fehler bedeutet korrupte Daten
+      console.error(`[getItems] KRITISCHER FEHLER: JSON parse für ${key} fehlgeschlagen:`, parseError);
+      console.error(`[getItems] Daten-Länge: ${data.length} Zeichen, Anfang: ${data.substring(0, 100)}...`);
+      
+      // NICHT leeres Array zurückgeben! Das würde alle Daten löschen!
+      // Stattdessen Fehler werfen, damit der Aufrufer reagieren kann
+      throw new Error(`Daten für ${key} sind beschädigt. Parse-Fehler: ${parseError}`);
+    }
+  } catch (error: any) {
+    // Wenn es ein Parse-Fehler war, den wir selbst geworfen haben, weiterwerfen
+    if (error.message?.includes('beschädigt') || error.message?.includes('Parse-Fehler')) {
+      throw error;
+    }
+    // Für andere Fehler (z.B. Storage nicht verfügbar) loggen und leeres Array
+    console.error(`[getItems] Fehler beim Lesen von ${key}:`, error);
+    // Bei echten Storage-Fehlern (nicht Parse-Fehlern) ist leeres Array OK
+    // weil die Daten möglicherweise noch nie existiert haben
     return [];
   }
 };
@@ -399,19 +428,45 @@ const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => 
     const result = new Map<string, any[]>();
     for (const [key, value] of pairs) {
       try {
-        result.set(key, value ? JSON.parse(value) : []);
-      } catch (e) {
-        result.set(key, []);
+        if (!value) {
+          result.set(key, []);
+        } else {
+          const parsed = JSON.parse(value);
+          // Validiere dass es ein Array ist
+          if (!Array.isArray(parsed)) {
+            console.warn(`[multiGet] ${key} ist kein Array`);
+            result.set(key, []);
+          } else {
+            result.set(key, parsed);
+          }
+        }
+      } catch (parseError) {
+        // KRITISCH: Bei Parse-Fehler nicht einfach leeres Array setzen!
+        console.error(`[multiGet] KRITISCHER FEHLER: JSON parse für ${key} fehlgeschlagen:`, parseError);
+        console.error(`[multiGet] Daten-Länge: ${value?.length || 0} Zeichen`);
+        // Bei Batch-Read werfen wir einen Fehler damit der Aufrufer weiß dass Daten beschädigt sind
+        throw new Error(`Daten für ${key} sind beschädigt beim Batch-Read`);
       }
     }
     console.log('[multiGet] Read', keys.length, 'keys in', Date.now() - startTime, 'ms');
     return result;
-  } catch (error) {
-    console.error('Error in multiGet:', error);
-    // Fallback to individual reads
+  } catch (error: any) {
+    console.error('[multiGet] Fehler:', error);
+    
+    // Bei Parse-Fehlern nicht fallback zu einzelnen Reads - das würde das Problem nur verlagern
+    if (error.message?.includes('beschädigt')) {
+      throw error;
+    }
+    
+    // Fallback to individual reads nur bei anderen Fehlern (z.B. Netzwerk)
     const result = new Map<string, any[]>();
     for (const key of keys) {
-      result.set(key, await getItems(key));
+      try {
+        result.set(key, await getItems(key));
+      } catch (itemError) {
+        console.error(`[multiGet] Fallback-Read für ${key} fehlgeschlagen:`, itemError);
+        throw itemError; // Nicht verschlucken!
+      }
     }
     return result;
   }
@@ -1194,7 +1249,16 @@ export const SketchService = {
     }
 
     // Only update the list AFTER heavy data is saved successfully
-    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    // KRITISCH: Wenn getItems fehlschlägt (z.B. korrupte Daten), NICHT mit leerem Array weitermachen!
+    let sketches: Sketch[];
+    try {
+      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    } catch (getError: any) {
+      console.error('[SketchService.create] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
+      // Fehler nach oben werfen - NICHT mit leerem Array weitermachen, das würde alle Daten löschen!
+      throw new Error(`Skizzen-Liste konnte nicht gelesen werden: ${getError.message}`);
+    }
+    
     sketches.push(lightSketch);
     await setItems(KEYS.SKETCHES, sketches);
 
@@ -1202,7 +1266,15 @@ export const SketchService = {
   },
 
   update: async (id: string, data: Partial<Sketch>): Promise<Sketch | null> => {
-    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    // KRITISCH: Wenn getItems fehlschlägt, nicht weitermachen!
+    let sketches: Sketch[];
+    try {
+      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    } catch (getError: any) {
+      console.error('[SketchService.update] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
+      throw new Error(`Skizzen-Liste konnte nicht gelesen werden: ${getError.message}`);
+    }
+    
     const index = sketches.findIndex(s => s.id === id);
     if (index === -1) return null;
 
@@ -1243,7 +1315,15 @@ export const SketchService = {
   },
 
   delete: async (id: string): Promise<boolean> => {
-    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    // KRITISCH: Wenn getItems fehlschlägt, nicht löschen!
+    let sketches: Sketch[];
+    try {
+      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    } catch (getError: any) {
+      console.error('[SketchService.delete] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
+      throw new Error(`Skizzen-Liste konnte nicht gelesen werden: ${getError.message}`);
+    }
+    
     const filtered = sketches.filter(s => s.id !== id);
 
     // CRITICAL FIX: Lade Metadata um alle Bild-Dateien zu finden BEVOR gelöscht wird

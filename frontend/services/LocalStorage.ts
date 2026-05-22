@@ -412,11 +412,11 @@ const getItems = async <T>(key: string): Promise<T[]> => {
     if (error.message?.includes('beschädigt') || error.message?.includes('Parse-Fehler')) {
       throw error;
     }
-    // Für andere Fehler (z.B. Storage nicht verfügbar) loggen und leeres Array
-    console.error(`[getItems] Fehler beim Lesen von ${key}:`, error);
-    // Bei echten Storage-Fehlern (nicht Parse-Fehlern) ist leeres Array OK
-    // weil die Daten möglicherweise noch nie existiert haben
-    return [];
+    // KRITISCH FIX: Auch bei Storage-Fehlern NICHT leeres Array zurückgeben!
+    // Das würde ALLE DATEN LÖSCHEN wenn Migration oder andere Funktionen laufen!
+    console.error(`[getItems] KRITISCHER STORAGE-FEHLER für ${key}:`, error);
+    // Werfe Fehler statt leeres Array - der Aufrufer muss entscheiden was zu tun ist
+    throw new Error(`Storage-Fehler für ${key}: ${error.message || 'Speicher möglicherweise voll oder nicht verfügbar'}`);
   }
 };
 
@@ -1376,7 +1376,31 @@ export const SketchService = {
 
       console.log('[SketchService] Starting batch migration of sketches...');
       const startTime = Date.now();
-      const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      
+      // KRITISCHER SICHERHEITS-CHECK: Verifikation dass Daten wirklich gelesen werden können
+      let sketches: Sketch[];
+      try {
+        sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      } catch (getError: any) {
+        console.error('[SketchService] KRITISCH: Migration abgebrochen - Sketches konnten nicht gelesen werden:', getError);
+        // NICHT weitermachen - das würde alle Daten löschen!
+        return;
+      }
+      
+      // ZUSÄTZLICHER SICHERHEITS-CHECK: Wenn 0 Sketches, prüfe ob wirklich leer oder Fehler
+      if (sketches.length === 0) {
+        try {
+          const rawData = await AsyncStorage.getItem(KEYS.SKETCHES);
+          if (rawData && rawData !== '[]' && rawData !== 'null' && rawData.length > 2) {
+            console.error('[SketchService] WARNUNG: getItems gab leeres Array zurück, aber rawData existiert! Länge:', rawData.length);
+            console.error('[SketchService] Migration abgebrochen um Datenverlust zu verhindern');
+            return; // Nicht weitermachen!
+          }
+        } catch (e) {
+          console.log('[SketchService] Keine existierenden Sketches gefunden, Migration nicht nötig');
+        }
+      }
+      
       let migratedCount = 0;
       let needsSave = false;
 

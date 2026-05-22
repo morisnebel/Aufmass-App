@@ -361,7 +361,59 @@ export default function HomeScreen() {
         return;
       }
       
-      // Generate new IDs for imported data
+      // DUPLIKAT-ERKENNUNG: Prüfe ob dieses Projekt bereits importiert wurde
+      const existingProjects = await ProjectService.getAll();
+      const originalProjectName = importData.project.name;
+      const importDate = importData.exportDate ? new Date(importData.exportDate).toISOString().split('T')[0] : '';
+      
+      // Suche nach bereits importierten Versionen dieses Projekts
+      const duplicates = existingProjects.filter(p => {
+        const pName = p.name || '';
+        // Prüfe ob es eine Import-Version dieses Projekts ist
+        return pName.includes(originalProjectName) && pName.includes('(Import');
+      });
+      
+      if (duplicates.length > 0) {
+        // Frage den Benutzer ob er trotzdem importieren möchte
+        return new Promise<void>((resolve) => {
+          Alert.alert(
+            'Projekt bereits importiert',
+            `Es existiert bereits ein Import von "${originalProjectName}":\n\n${duplicates.map(d => `• ${d.name}`).join('\n')}\n\nMöchten Sie trotzdem erneut importieren?`,
+            [
+              {
+                text: 'Abbrechen',
+                style: 'cancel',
+                onPress: () => {
+                  setLoading(false);
+                  resolve();
+                },
+              },
+              {
+                text: 'Trotzdem importieren',
+                style: 'default',
+                onPress: async () => {
+                  await performImport(importData);
+                  resolve();
+                },
+              },
+            ]
+          );
+        });
+      }
+      
+      await performImport(importData);
+      
+    } catch (error) {
+      console.error('Error importing project:', error);
+      Alert.alert(t('common.error'), t('home.importFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Eigentliche Import-Logik (ausgelagert für Duplikat-Prüfung)
+  const performImport = async (importData: any) => {
+    try {
       const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
       const newProjectId = generateId();
       const now = new Date().toISOString();
@@ -420,12 +472,23 @@ export default function HomeScreen() {
         console.log(`[Import] Importing ${importData.sketches.length} sketches...`);
         let successCount = 0;
         let failCount = 0;
+        let noMetadataCount = 0;
+        
         for (const sketch of importData.sketches) {
           try {
             const sketchData = { ...sketch, project_id: newProject.id };
             delete sketchData.id;
             delete sketchData.created_at;
             delete sketchData.updated_at;
+            
+            // DEBUG: Prüfe ob Metadaten vorhanden sind
+            if (sketchData.metadata) {
+              console.log(`[Import] Skizze "${sketch.title || 'Unbenannt'}" hat Metadaten (${typeof sketchData.metadata === 'string' ? sketchData.metadata.length : 'object'} chars)`);
+            } else {
+              console.warn(`[Import] Skizze "${sketch.title || 'Unbenannt'}" hat KEINE Metadaten - wird leer sein!`);
+              noMetadataCount++;
+            }
+            
             await SketchService.create(sketchData);
             successCount++;
           } catch (sketchError) {
@@ -434,13 +497,18 @@ export default function HomeScreen() {
             // Continue with next sketch instead of aborting entire import
           }
         }
-        console.log(`[Import] Sketches imported: ${successCount} success, ${failCount} failed`);
-        if (failCount > 0) {
-          // Show warning but don't abort
-          Alert.alert(
-            'Import Warnung',
-            `${failCount} von ${importData.sketches.length} Skizzen konnten nicht importiert werden (möglicherweise Speicher voll). ${successCount} Skizzen wurden erfolgreich importiert.`
-          );
+        console.log(`[Import] Sketches imported: ${successCount} success, ${failCount} failed, ${noMetadataCount} without metadata`);
+        
+        if (failCount > 0 || noMetadataCount > 0) {
+          let warningMsg = '';
+          if (failCount > 0) {
+            warningMsg += `${failCount} Skizzen konnten nicht importiert werden.\n`;
+          }
+          if (noMetadataCount > 0) {
+            warningMsg += `${noMetadataCount} Skizzen haben keine Zeichnungsdaten (alte Export-Version?).\n`;
+            warningMsg += '\nTipp: Exportieren Sie das Projekt erneut mit der neuesten App-Version.';
+          }
+          Alert.alert('Import Warnung', warningMsg);
         }
       }
       

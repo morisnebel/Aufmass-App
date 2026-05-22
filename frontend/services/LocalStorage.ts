@@ -414,7 +414,26 @@ const getItemsStrict = async <T>(key: string): Promise<T[]> => {
   try {
     const data = await storage.getItem(key);
     if (!data) {
-      // Key existiert nicht oder ist leer - das ist OK, leeres Array zurückgeben
+      // KRITISCH: Prüfe ob wirklich keine Daten existieren oder ob ein Fehler vorliegt
+      // Versuche nochmal direkt mit AsyncStorage zu lesen
+      const directRead = await AsyncStorage.getItem(key);
+      if (directRead && directRead !== 'null' && directRead !== '[]' && directRead.length > 2) {
+        // Es gibt Daten, aber storage.getItem hat sie nicht zurückgegeben!
+        console.error(`[getItemsStrict] WARNUNG: storage.getItem gab null zurück, aber AsyncStorage hat Daten! Länge: ${directRead.length}`);
+        // Versuche die direkt gelesenen Daten zu parsen
+        try {
+          const parsed = JSON.parse(directRead);
+          if (Array.isArray(parsed)) {
+            console.log(`[getItemsStrict] Erfolgreich ${parsed.length} Einträge aus direktem Read geladen`);
+            return parsed;
+          }
+        } catch (e) {
+          console.error(`[getItemsStrict] Direktes Parsen fehlgeschlagen:`, e);
+        }
+        // Wenn wir hier sind, existieren Daten aber wir können sie nicht lesen - FEHLER werfen!
+        throw new Error(`Daten für ${key} existieren aber können nicht gelesen werden`);
+      }
+      // Wirklich keine Daten - OK, leeres Array zurückgeben
       return [];
     }
     
@@ -436,8 +455,8 @@ const getItemsStrict = async <T>(key: string): Promise<T[]> => {
       throw new Error(`Daten für ${key} sind beschädigt. Parse-Fehler: ${parseError}`);
     }
   } catch (error: any) {
-    // Wenn es ein Parse-Fehler war, den wir selbst geworfen haben, weiterwerfen
-    if (error.message?.includes('beschädigt') || error.message?.includes('Parse-Fehler')) {
+    // Wenn es ein Fehler war, den wir selbst geworfen haben, weiterwerfen
+    if (error.message?.includes('beschädigt') || error.message?.includes('Parse-Fehler') || error.message?.includes('existieren')) {
       throw error;
     }
     // Bei Storage-Fehlern auch Fehler werfen

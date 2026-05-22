@@ -381,7 +381,36 @@ export const SyncService = {
 };
 
 // Generic CRUD operations using unified storage
-const getItems = async <T>(key: string): Promise<T[]> => {
+// SAFE VERSION: Für Lesevorgänge - gibt leeres Array bei Fehlern zurück
+// Verwenden für: getAll, getByProjectId, loadSketchData, etc.
+const getItemsSafe = async <T>(key: string): Promise<T[]> => {
+  try {
+    const data = await storage.getItem(key);
+    if (!data) {
+      return [];
+    }
+    
+    try {
+      const parsed = JSON.parse(data);
+      if (!Array.isArray(parsed)) {
+        console.warn(`[getItemsSafe] ${key} ist kein Array, gebe leeres Array zurück`);
+        return [];
+      }
+      return parsed;
+    } catch (parseError) {
+      console.error(`[getItemsSafe] JSON parse für ${key} fehlgeschlagen:`, parseError);
+      // Bei Lesevorgängen: Leeres Array zurückgeben, damit App weiter funktioniert
+      return [];
+    }
+  } catch (error: any) {
+    console.error(`[getItemsSafe] Storage-Fehler für ${key}:`, error);
+    return [];
+  }
+};
+
+// STRICT VERSION: Für Schreibvorgänge - wirft Fehler um Datenverlust zu verhindern
+// Verwenden für: create, update, delete - wo wir danach setItems aufrufen
+const getItemsStrict = async <T>(key: string): Promise<T[]> => {
   try {
     const data = await storage.getItem(key);
     if (!data) {
@@ -394,17 +423,16 @@ const getItems = async <T>(key: string): Promise<T[]> => {
       const parsed = JSON.parse(data);
       // Validiere dass es ein Array ist
       if (!Array.isArray(parsed)) {
-        console.error(`[getItems] WARNUNG: ${key} ist kein Array, sondern:`, typeof parsed);
+        console.error(`[getItemsStrict] WARNUNG: ${key} ist kein Array, sondern:`, typeof parsed);
         return [];
       }
       return parsed;
     } catch (parseError) {
       // KRITISCH: JSON Parse Fehler bedeutet korrupte Daten
-      console.error(`[getItems] KRITISCHER FEHLER: JSON parse für ${key} fehlgeschlagen:`, parseError);
-      console.error(`[getItems] Daten-Länge: ${data.length} Zeichen, Anfang: ${data.substring(0, 100)}...`);
+      console.error(`[getItemsStrict] KRITISCHER FEHLER: JSON parse für ${key} fehlgeschlagen:`, parseError);
+      console.error(`[getItemsStrict] Daten-Länge: ${data.length} Zeichen`);
       
       // NICHT leeres Array zurückgeben! Das würde alle Daten löschen!
-      // Stattdessen Fehler werfen, damit der Aufrufer reagieren kann
       throw new Error(`Daten für ${key} sind beschädigt. Parse-Fehler: ${parseError}`);
     }
   } catch (error: any) {
@@ -412,15 +440,17 @@ const getItems = async <T>(key: string): Promise<T[]> => {
     if (error.message?.includes('beschädigt') || error.message?.includes('Parse-Fehler')) {
       throw error;
     }
-    // KRITISCH FIX: Auch bei Storage-Fehlern NICHT leeres Array zurückgeben!
-    // Das würde ALLE DATEN LÖSCHEN wenn Migration oder andere Funktionen laufen!
-    console.error(`[getItems] KRITISCHER STORAGE-FEHLER für ${key}:`, error);
-    // Werfe Fehler statt leeres Array - der Aufrufer muss entscheiden was zu tun ist
-    throw new Error(`Storage-Fehler für ${key}: ${error.message || 'Speicher möglicherweise voll oder nicht verfügbar'}`);
+    // Bei Storage-Fehlern auch Fehler werfen
+    console.error(`[getItemsStrict] KRITISCHER STORAGE-FEHLER für ${key}:`, error);
+    throw new Error(`Storage-Fehler für ${key}: ${error.message || 'Speicher möglicherweise voll'}`);
   }
 };
 
+// ALIAS: Standardmäßig die sichere Version verwenden für Abwärtskompatibilität
+const getItems = getItemsSafe;
+
 // Batch-read multiple keys in ONE native call (much faster than individual reads)
+// SAFE VERSION: Für Lesevorgänge - gibt leeres Array bei Fehlern zurück
 const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => {
   try {
     const startTime = Date.now();
@@ -434,18 +464,16 @@ const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => 
           const parsed = JSON.parse(value);
           // Validiere dass es ein Array ist
           if (!Array.isArray(parsed)) {
-            console.warn(`[multiGet] ${key} ist kein Array`);
+            console.warn(`[multiGet] ${key} ist kein Array, gebe leeres Array zurück`);
             result.set(key, []);
           } else {
             result.set(key, parsed);
           }
         }
       } catch (parseError) {
-        // KRITISCH: Bei Parse-Fehler nicht einfach leeres Array setzen!
-        console.error(`[multiGet] KRITISCHER FEHLER: JSON parse für ${key} fehlgeschlagen:`, parseError);
-        console.error(`[multiGet] Daten-Länge: ${value?.length || 0} Zeichen`);
-        // Bei Batch-Read werfen wir einen Fehler damit der Aufrufer weiß dass Daten beschädigt sind
-        throw new Error(`Daten für ${key} sind beschädigt beim Batch-Read`);
+        // Bei Lesevorgängen: Leeres Array für diesen Key, damit App weiter funktioniert
+        console.error(`[multiGet] JSON parse für ${key} fehlgeschlagen, überspringe:`, parseError);
+        result.set(key, []);
       }
     }
     console.log('[multiGet] Read', keys.length, 'keys in', Date.now() - startTime, 'ms');
@@ -453,20 +481,10 @@ const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => 
   } catch (error: any) {
     console.error('[multiGet] Fehler:', error);
     
-    // Bei Parse-Fehlern nicht fallback zu einzelnen Reads - das würde das Problem nur verlagern
-    if (error.message?.includes('beschädigt')) {
-      throw error;
-    }
-    
-    // Fallback to individual reads nur bei anderen Fehlern (z.B. Netzwerk)
+    // Fallback to individual reads
     const result = new Map<string, any[]>();
     for (const key of keys) {
-      try {
-        result.set(key, await getItems(key));
-      } catch (itemError) {
-        console.error(`[multiGet] Fallback-Read für ${key} fehlgeschlagen:`, itemError);
-        throw itemError; // Nicht verschlucken!
-      }
+      result.set(key, await getItemsSafe(key));
     }
     return result;
   }
@@ -1249,10 +1267,10 @@ export const SketchService = {
     }
 
     // Only update the list AFTER heavy data is saved successfully
-    // KRITISCH: Wenn getItems fehlschlägt (z.B. korrupte Daten), NICHT mit leerem Array weitermachen!
+    // KRITISCH: Verwende getItemsStrict für Schreiboperationen um Datenverlust zu verhindern
     let sketches: Sketch[];
     try {
-      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      sketches = await getItemsStrict<Sketch>(KEYS.SKETCHES);
     } catch (getError: any) {
       console.error('[SketchService.create] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
       // Fehler nach oben werfen - NICHT mit leerem Array weitermachen, das würde alle Daten löschen!
@@ -1266,10 +1284,10 @@ export const SketchService = {
   },
 
   update: async (id: string, data: Partial<Sketch>): Promise<Sketch | null> => {
-    // KRITISCH: Wenn getItems fehlschlägt, nicht weitermachen!
+    // KRITISCH: Verwende getItemsStrict für Schreiboperationen um Datenverlust zu verhindern
     let sketches: Sketch[];
     try {
-      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      sketches = await getItemsStrict<Sketch>(KEYS.SKETCHES);
     } catch (getError: any) {
       console.error('[SketchService.update] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
       throw new Error(`Skizzen-Liste konnte nicht gelesen werden: ${getError.message}`);
@@ -1315,10 +1333,10 @@ export const SketchService = {
   },
 
   delete: async (id: string): Promise<boolean> => {
-    // KRITISCH: Wenn getItems fehlschlägt, nicht löschen!
+    // KRITISCH: Verwende getItemsStrict für Schreiboperationen um Datenverlust zu verhindern
     let sketches: Sketch[];
     try {
-      sketches = await getItems<Sketch>(KEYS.SKETCHES);
+      sketches = await getItemsStrict<Sketch>(KEYS.SKETCHES);
     } catch (getError: any) {
       console.error('[SketchService.delete] KRITISCH: Fehler beim Lesen der Skizzen-Liste:', getError);
       throw new Error(`Skizzen-Liste konnte nicht gelesen werden: ${getError.message}`);

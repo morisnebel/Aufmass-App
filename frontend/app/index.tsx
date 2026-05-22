@@ -171,12 +171,30 @@ export default function HomeScreen() {
         if (!project) continue;
         
         const customer = customers[project.customer_id];
-        const [roofs, photos, sketches, checklists] = await Promise.all([
+        const [roofs, photos, sketchesBasic, checklists] = await Promise.all([
           RoofService.getByProjectId(projectId),
           PhotoService.getByProjectId(projectId),
           SketchService.getByProjectId(projectId),
           ChecklistService.getByProjectId(projectId),
         ]);
+        
+        // KRITISCHER FIX: Lade auch die Sketch-Metadaten für den Export!
+        // Ohne diese sind die Skizzen beim Import leer!
+        const sketchesWithMetadata = await Promise.all(
+          sketchesBasic.map(async (sketch) => {
+            try {
+              const { metadata, backgroundImage } = await SketchService.loadSketchData(sketch.id);
+              return {
+                ...sketch,
+                // Füge Metadaten als JSON-String hinzu (wie es SketchService.create erwartet)
+                metadata: metadata ? JSON.stringify({ ...metadata, backgroundImage }) : null,
+              };
+            } catch (e) {
+              console.warn(`[Export] Konnte Metadaten für Skizze ${sketch.id} nicht laden:`, e);
+              return sketch;
+            }
+          })
+        );
         
         exportDataArray.push({
           version: '1.0',
@@ -185,7 +203,7 @@ export default function HomeScreen() {
           customer: customer || {},
           roofs: roofs || [],
           photos: photos || [],
-          sketches: sketches || [],
+          sketches: sketchesWithMetadata || [],
           checklists: checklists || [],
         });
       }

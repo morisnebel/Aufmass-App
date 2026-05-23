@@ -7228,8 +7228,14 @@ export default function DrawSketchScreen() {
         console.log(`[saveSketch] Total elements: ${lightElementsForSave.length}, images to save: ${imageOps.length}`);
         
         // CRITICAL FIX: Use storage wrapper instead of direct AsyncStorage to catch errors!
+        console.log(`[saveSketch] Saving sketch_meta_${sketchId} (${Math.round(metaStr.length / 1024)}KB)...`);
         const criticalOps: Promise<any>[] = [
-          storage.setItem(`sketch_meta_${sketchId}`, metaStr),
+          storage.setItem(`sketch_meta_${sketchId}`, metaStr).then(() => {
+            console.log(`[saveSketch] ✓ sketch_meta_${sketchId} saved successfully`);
+          }).catch(err => {
+            console.error(`[saveSketch] ✗ Failed to save sketch_meta_${sketchId}:`, err);
+            throw err;
+          }),
           ...imageOps,
         ];
         

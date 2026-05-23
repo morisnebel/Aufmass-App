@@ -1144,17 +1144,23 @@ export const SketchService = {
   // This avoids parsing all sketches just to load one sketch's elements/background
   loadSketchData: async (id: string): Promise<{ metadata: any | null; backgroundImage: string | null }> => {
     try {
+      console.log(`[loadSketchData] Loading data for sketch ${id}...`);
+      
       // Try loading from separate optimized keys first
       const [metaStr, bgImage] = await Promise.all([
         AsyncStorage.getItem(`sketch_meta_${id}`),
         AsyncStorage.getItem(`sketch_bg_${id}`),
       ]);
+      
+      console.log(`[loadSketchData] sketch_meta_${id}: ${metaStr ? `${metaStr.length} chars` : 'NULL'}`);
+      console.log(`[loadSketchData] sketch_bg_${id}: ${bgImage ? `${bgImage.length} chars` : 'NULL'}`);
 
       if (metaStr) {
         // Found in optimized storage - parse with error handling
         let metadata: any;
         try {
           metadata = JSON.parse(metaStr);
+          console.log(`[loadSketchData] Metadata parsed successfully, elements: ${metadata.elements?.length || 0}`);
         } catch (parseErr) {
           console.error(`[SketchService] Failed to parse metadata for sketch ${id}:`, parseErr);
           return { metadata: null, backgroundImage: bgImage };

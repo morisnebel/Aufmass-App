@@ -1272,23 +1272,36 @@ export const SketchService = {
     // This prevents data loss if heavy data save fails
     if (heavyMetadata) {
       try {
-        const meta = JSON.parse(heavyMetadata);
+        // heavyMetadata kann ein String oder ein Objekt sein
+        let meta: any;
+        if (typeof heavyMetadata === 'string') {
+          meta = JSON.parse(heavyMetadata);
+        } else {
+          meta = heavyMetadata;
+        }
+        
         const bg = meta.backgroundImage || null;
         const metaWithoutBg = { ...meta };
         delete metaWithoutBg.backgroundImage;
         
         // Save metadata first
+        console.log(`[SketchService.create] Saving metadata for ${id}, elements: ${metaWithoutBg.elements?.length || 0}`);
         await storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
+        console.log(`[SketchService.create] ✓ Metadata saved for ${id}`);
         
         // Then save background image if exists
         if (bg) {
+          console.log(`[SketchService.create] Saving background image for ${id}`);
           await storage.setItem(`sketch_bg_${id}`, bg);
+          console.log(`[SketchService.create] ✓ Background saved for ${id}`);
         }
       } catch (e: any) {
         // If metadata save fails, throw error BEFORE updating the list
         console.error(`[SketchService.create] Failed to save metadata for ${id}:`, e);
         throw new Error(`Skizze konnte nicht gespeichert werden: ${e.message || 'Speicher voll'}`);
       }
+    } else {
+      console.warn(`[SketchService.create] No metadata provided for sketch ${id}`);
     }
 
     // Only update the list AFTER heavy data is saved successfully

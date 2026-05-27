@@ -964,14 +964,24 @@ export default function DrawSketchScreen() {
       const activateMagnifier = (layout: { x: number; y: number; width: number; height: number }) => {
         canvasLayoutRef.current = layout; // Ref sofort aktualisieren
         setCanvasLayout(layout);
-        // Bei Zoom UND Pan: Lupe muss Canvas-Koordinaten verwenden
-        // Formel: canvasX = (screenX - layout.x - panOffset.x) / scale
+        
+        // VEREINFACHTE BERECHNUNG: 
+        // targetPt ist in Screen-Koordinaten
+        // Wir brauchen die Position relativ zum Hintergrundbild
+        // Das Bild füllt den Canvas, also müssen wir nur den Canvas-Offset abziehen
         const currentScale = scaleRef.current || 1;
-        const currentPanX = panOffset.x;
-        const currentPanY = panOffset.y;
-        const canvasTargetX = (targetPt.x - layout.x - currentPanX) / currentScale;
-        const canvasTargetY = (targetPt.y - layout.y - currentPanY) / currentScale;
-        console.log('[Magnifier] Screen:', targetPt.x, targetPt.y, '-> Canvas:', canvasTargetX, canvasTargetY, 'scale:', currentScale, 'pan:', currentPanX, currentPanY);
+        
+        // Berechne die Position relativ zum Canvas (ohne Pan/Zoom Komplikationen)
+        // Da der Winkelmesser direkt auf dem Screen gezeichnet wird, 
+        // müssen wir nur den Canvas-Offset abziehen
+        const canvasTargetX = (targetPt.x - layout.x) / currentScale;
+        const canvasTargetY = (targetPt.y - layout.y) / currentScale;
+        
+        console.log('[Magnifier] Screen:', targetPt.x.toFixed(0), targetPt.y.toFixed(0), 
+          '-> Canvas:', canvasTargetX.toFixed(0), canvasTargetY.toFixed(0), 
+          'layout:', layout.x.toFixed(0), layout.y.toFixed(0),
+          'scale:', currentScale.toFixed(2));
+        
         setMagnifierTargetPosition({ x: canvasTargetX, y: canvasTargetY });
         setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
         // Canvas-Snapshot verwenden (vor Protractor-Overlay aufgenommen)
@@ -1031,11 +1041,10 @@ export default function DrawSketchScreen() {
       const layout = canvasLayoutRef.current;
       if (!layout) return { x: screenX, y: screenY };
       const cs = scaleRef.current || 1;
-      const px = panOffset.x;
-      const py = panOffset.y;
+      // Vereinfachte Berechnung ohne panOffset
       return {
-        x: (screenX - layout.x - px) / cs,
-        y: (screenY - layout.y - py) / cs
+        x: (screenX - layout.x) / cs,
+        y: (screenY - layout.y) / cs
       };
     };
     
@@ -10572,7 +10581,7 @@ export default function DrawSketchScreen() {
                 transform: protractorPanelPan.getTranslateTransform(),
               },
               isPhoneDevice && {
-                bottom: 20,
+                bottom: 70, // Erhöht von 20 auf 70 um Navigationsleiste zu vermeiden
                 left: 10,
                 right: 10,
                 gap: 6,

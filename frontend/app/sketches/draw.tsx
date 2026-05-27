@@ -801,9 +801,37 @@ export default function DrawSketchScreen() {
   const pdfWebViewRef = useRef<WebView>(null);
   
   // Bildschirmkoordinaten der drei Punkte
+  // Protractor wird jetzt in CANVAS-Koordinaten gespeichert (wie Maßlinien)
+  // Das bedeutet: die Koordinaten sind relativ zum ungezoomten/unverschobenen Canvas
   const [protractorCenter, setProtractorCenter] = useState({ x: 0, y: 0 });
   const [protractorRefEnd, setProtractorRefEnd] = useState({ x: 0, y: 0 });
   const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
+  
+  // Helper: Konvertiert Screen-Koordinaten zu Canvas-Koordinaten
+  const screenToCanvasCoords = useCallback((screenX: number, screenY: number) => {
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
+    const currentScale = scaleRef.current || 1;
+    const currentPanX = panOffset.x;
+    const currentPanY = panOffset.y;
+    
+    // Formel: canvasX = (screenX - layout.x - panX) / scale
+    const canvasX = (screenX - layout.x - currentPanX) / currentScale;
+    const canvasY = (screenY - layout.y - currentPanY) / currentScale;
+    return { x: canvasX, y: canvasY };
+  }, [panOffset, canvasOverhead]);
+  
+  // Helper: Konvertiert Canvas-Koordinaten zu Screen-Koordinaten (für Rendering)
+  const canvasToScreenCoords = useCallback((canvasX: number, canvasY: number) => {
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
+    const currentScale = scaleRef.current || 1;
+    const currentPanX = panOffset.x;
+    const currentPanY = panOffset.y;
+    
+    // Formel: screenX = canvasX * scale + layout.x + panX
+    const screenX = canvasX * currentScale + layout.x + currentPanX;
+    const screenY = canvasY * currentScale + layout.y + currentPanY;
+    return { x: screenX, y: screenY };
+  }, [panOffset, canvasOverhead]);
   
   // Verschiebbare Position des Protractor-Panels
   const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -832,14 +860,18 @@ export default function DrawSketchScreen() {
   const protractorInitializedRef = useRef(false);
   useEffect(() => {
     if (showProtractor && !protractorInitializedRef.current) {
-      const cx = screenWidth / 2;
-      const cy = Math.max(200, canvasHeight / 2 + 60); // unterhalb der Toolbar
-      const defaultLen = Math.min(screenWidth * 0.3, 150);
+      // Berechne die Mitte des Canvas in CANVAS-Koordinaten (nicht Screen!)
+      const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
+      const canvasCenterX = (layout.width || screenWidth) / 2;
+      const canvasCenterY = (layout.height || canvasHeight) / 2;
+      const defaultLen = Math.min((layout.width || screenWidth) * 0.2, 120);
+      
       // Nur initialisieren wenn Center bei (0,0) ist (= komplett neuer Winkelmesser)
       if (protractorCenter.x === 0 && protractorCenter.y === 0) {
-        setProtractorCenter({ x: cx, y: cy });
-        setProtractorRefEnd({ x: cx + defaultLen, y: cy });
-        setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
+        // Setze Koordinaten in CANVAS-Koordinaten
+        setProtractorCenter({ x: canvasCenterX, y: canvasCenterY });
+        setProtractorRefEnd({ x: canvasCenterX + defaultLen, y: canvasCenterY });
+        setProtractorAngleEnd({ x: canvasCenterX + defaultLen * Math.cos(-Math.PI/4), y: canvasCenterY + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben
         setShowProtractorHint(true); // Hinweis nur bei neuem Winkelmesser
       }
       protractorInitializedRef.current = true;
@@ -870,6 +902,15 @@ export default function DrawSketchScreen() {
       protractorCanvasSnapshot.current = null; // Snapshot freigeben
     }
   }, [showProtractor]);
+  
+  // Berechnete Screen-Koordinaten für das Protractor-Rendering
+  // (Protractor-Koordinaten sind in Canvas-Koordinaten, müssen für SVG-Overlay in Screen umgerechnet werden)
+  const protractorScreenCoords = useMemo(() => {
+    const center = canvasToScreenCoords(protractorCenter.x, protractorCenter.y);
+    const refEnd = canvasToScreenCoords(protractorRefEnd.x, protractorRefEnd.y);
+    const angleEnd = canvasToScreenCoords(protractorAngleEnd.x, protractorAngleEnd.y);
+    return { center, refEnd, angleEnd };
+  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasToScreenCoords]);
   
   // Berechneter Winkel aus den Positionen
   const protractorAngle = useMemo(() => {
@@ -937,10 +978,15 @@ export default function DrawSketchScreen() {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    // Abstand zu jedem Handle berechnen
-    const distRef = Math.sqrt(Math.pow(pageX - protractorRefEnd.x, 2) + Math.pow(pageY - protractorRefEnd.y, 2));
-    const distAngle = Math.sqrt(Math.pow(pageX - protractorAngleEnd.x, 2) + Math.pow(pageY - protractorAngleEnd.y, 2));
-    const distCenter = Math.sqrt(Math.pow(pageX - protractorCenter.x, 2) + Math.pow(pageY - protractorCenter.y, 2));
+    // Konvertiere die Protractor-Punkte (Canvas-Koordinaten) zu Screen-Koordinaten für Distanz-Berechnung
+    const refScreen = canvasToScreenCoords(protractorRefEnd.x, protractorRefEnd.y);
+    const angleScreen = canvasToScreenCoords(protractorAngleEnd.x, protractorAngleEnd.y);
+    const centerScreen = canvasToScreenCoords(protractorCenter.x, protractorCenter.y);
+    
+    // Abstand zu jedem Handle berechnen (in Screen-Koordinaten)
+    const distRef = Math.sqrt(Math.pow(pageX - refScreen.x, 2) + Math.pow(pageY - refScreen.y, 2));
+    const distAngle = Math.sqrt(Math.pow(pageX - angleScreen.x, 2) + Math.pow(pageY - angleScreen.y, 2));
+    const distCenter = Math.sqrt(Math.pow(pageX - centerScreen.x, 2) + Math.pow(pageY - centerScreen.y, 2));
     
     const handleRadius = 50; // Touch-Zielgröße
     let dragHandle: 'body' | 'ref' | 'angle' = 'body';
@@ -954,46 +1000,33 @@ export default function DrawSketchScreen() {
       dragHandle = 'body'; // Mittelpunkt = ganzer Körper bewegen
     }
     
-    // Lupe für Drag aktivieren (auch am Mittelpunkt!)
+    // Lupe für Drag aktivieren
     if (dragHandle === 'ref' || dragHandle === 'angle' || dragHandle === 'body') {
+      // targetPt ist jetzt in Canvas-Koordinaten
       const targetPt = dragHandle === 'ref' ? protractorRefEnd 
         : dragHandle === 'angle' ? protractorAngleEnd 
         : protractorCenter;
+      const targetScreen = canvasToScreenCoords(targetPt.x, targetPt.y);
       
       // Canvas-Position direkt messen für präzise Lupe
       const activateMagnifier = (layout: { x: number; y: number; width: number; height: number }) => {
-        canvasLayoutRef.current = layout; // Ref sofort aktualisieren
+        canvasLayoutRef.current = layout;
         setCanvasLayout(layout);
         
-        // VEREINFACHTE BERECHNUNG: 
-        // targetPt ist in Screen-Koordinaten
-        // Wir brauchen die Position relativ zum Hintergrundbild
-        // Das Bild füllt den Canvas, also müssen wir nur den Canvas-Offset abziehen
-        const currentScale = scaleRef.current || 1;
+        // targetPt ist bereits in Canvas-Koordinaten - direkt für Lupe verwenden!
+        console.log('[Magnifier] Canvas:', targetPt.x.toFixed(0), targetPt.y.toFixed(0), 
+          'Screen:', targetScreen.x.toFixed(0), targetScreen.y.toFixed(0));
         
-        // Berechne die Position relativ zum Canvas (ohne Pan/Zoom Komplikationen)
-        // Da der Winkelmesser direkt auf dem Screen gezeichnet wird, 
-        // müssen wir nur den Canvas-Offset abziehen
-        const canvasTargetX = (targetPt.x - layout.x) / currentScale;
-        const canvasTargetY = (targetPt.y - layout.y) / currentScale;
+        setMagnifierTargetPosition({ x: targetPt.x, y: targetPt.y });
+        setMagnifierPosition({ x: targetScreen.x, y: targetScreen.y });
         
-        console.log('[Magnifier] Screen:', targetPt.x.toFixed(0), targetPt.y.toFixed(0), 
-          '-> Canvas:', canvasTargetX.toFixed(0), canvasTargetY.toFixed(0), 
-          'layout:', layout.x.toFixed(0), layout.y.toFixed(0),
-          'scale:', currentScale.toFixed(2));
-        
-        setMagnifierTargetPosition({ x: canvasTargetX, y: canvasTargetY });
-        setMagnifierPosition({ x: targetPt.x, y: targetPt.y });
-        // Canvas-Snapshot verwenden (vor Protractor-Overlay aufgenommen)
-        // Fallback-Kette: protractorCanvasSnapshot → backgroundImage → Bild-Element → Grid
+        // Canvas-Snapshot verwenden
         const snapshot = protractorCanvasSnapshot.current;
-        console.log('Magnifier activation - snapshot:', !!snapshot, 'bgImage:', !!backgroundImage, 'elements with images:', elements.filter(el => el.type === 'image').length);
         if (snapshot) {
           setMagnifierSnapshot(snapshot);
         } else if (backgroundImage) {
           setMagnifierSnapshot(backgroundImage);
         } else {
-          // Letzter Fallback: Bild aus Elementen suchen
           const imgEl = elements.find(el => el.type === 'image' && el.data?.uri);
           setMagnifierSnapshot(imgEl?.data?.uri || null);
         }
@@ -1022,7 +1055,7 @@ export default function DrawSketchScreen() {
       initialRefEnd: { ...protractorRefEnd },
       initialAngleEnd: { ...protractorAngleEnd },
     };
-  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasLayout, panOffset]);
+  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasLayout, canvasToScreenCoords]);
   
   // Drag Move - Position direkt aktualisieren
   const handleProtractorDragMove = useCallback((e: any) => {
@@ -1031,25 +1064,17 @@ export default function DrawSketchScreen() {
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     const handle = protractorDragRef.current.dragHandle;
     
+    // Screen-Bewegung zu Canvas-Bewegung umrechnen
+    const currentScale = scaleRef.current || 1;
+    
     // Endpunkte: reduzierte Empfindlichkeit für Präzision
     const sensitivity = handle === 'body' ? 1.0 : 0.5;
-    const dx = (pageX - protractorDragRef.current.startX) * sensitivity;
-    const dy = (pageY - protractorDragRef.current.startY) * sensitivity;
-    
-    // Helper: Berechne Canvas-Koordinaten aus Screen-Position
-    const screenToCanvas = (screenX: number, screenY: number) => {
-      const layout = canvasLayoutRef.current;
-      if (!layout) return { x: screenX, y: screenY };
-      const cs = scaleRef.current || 1;
-      // Vereinfachte Berechnung ohne panOffset
-      return {
-        x: (screenX - layout.x) / cs,
-        y: (screenY - layout.y) / cs
-      };
-    };
+    // WICHTIG: dx/dy durch Scale teilen, weil wir in Canvas-Koordinaten arbeiten
+    const dx = ((pageX - protractorDragRef.current.startX) * sensitivity) / currentScale;
+    const dy = ((pageY - protractorDragRef.current.startY) * sensitivity) / currentScale;
     
     if (handle === 'body') {
-      // Alles verschieben
+      // Alles verschieben (in Canvas-Koordinaten)
       const newCenter = { 
         x: protractorDragRef.current.initialCenter.x + dx,
         y: protractorDragRef.current.initialCenter.y + dy,
@@ -1063,10 +1088,10 @@ export default function DrawSketchScreen() {
         x: protractorDragRef.current.initialAngleEnd.x + dx,
         y: protractorDragRef.current.initialAngleEnd.y + dy,
       });
-      // Lupe am Mittelpunkt aktualisieren
-      const canvasPos = screenToCanvas(newCenter.x, newCenter.y);
-      setMagnifierTargetPosition(canvasPos);
-      setMagnifierPosition({ x: newCenter.x, y: newCenter.y });
+      // Lupe am Mittelpunkt aktualisieren (Koordinaten sind bereits in Canvas)
+      setMagnifierTargetPosition({ x: newCenter.x, y: newCenter.y });
+      const screenPos = canvasToScreenCoords(newCenter.x, newCenter.y);
+      setMagnifierPosition({ x: screenPos.x, y: screenPos.y });
     } else if (handle === 'ref') {
       const newPos = {
         x: protractorDragRef.current.initialRefEnd.x + dx,
@@ -1074,9 +1099,9 @@ export default function DrawSketchScreen() {
       };
       setProtractorRefEnd(newPos);
       // Lupe aktualisieren
-      const canvasPos = screenToCanvas(newPos.x, newPos.y);
-      setMagnifierTargetPosition(canvasPos);
-      setMagnifierPosition({ x: newPos.x, y: newPos.y });
+      setMagnifierTargetPosition({ x: newPos.x, y: newPos.y });
+      const screenPos = canvasToScreenCoords(newPos.x, newPos.y);
+      setMagnifierPosition({ x: screenPos.x, y: screenPos.y });
     } else if (handle === 'angle') {
       const newPos = {
         x: protractorDragRef.current.initialAngleEnd.x + dx,
@@ -1084,11 +1109,11 @@ export default function DrawSketchScreen() {
       };
       setProtractorAngleEnd(newPos);
       // Lupe aktualisieren
-      const canvasPos = screenToCanvas(newPos.x, newPos.y);
-      setMagnifierTargetPosition(canvasPos);
-      setMagnifierPosition({ x: newPos.x, y: newPos.y });
+      setMagnifierTargetPosition({ x: newPos.x, y: newPos.y });
+      const screenPos = canvasToScreenCoords(newPos.x, newPos.y);
+      setMagnifierPosition({ x: screenPos.x, y: screenPos.y });
     }
-  }, [canvasLayout, panOffset]);
+  }, [canvasToScreenCoords]);
   
   // Drag End
   const handleProtractorDragEnd = useCallback(() => {
@@ -10494,27 +10519,28 @@ export default function DrawSketchScreen() {
             >
               {/* Referenzlinie (blau) */}
               <Line 
-                x1={protractorCenter.x} y1={protractorCenter.y}
-                x2={protractorRefEnd.x} y2={protractorRefEnd.y}
+                x1={protractorScreenCoords.center.x} y1={protractorScreenCoords.center.y}
+                x2={protractorScreenCoords.refEnd.x} y2={protractorScreenCoords.refEnd.y}
                 stroke="#2196f3" strokeWidth={3}
               />
               
               {/* Winkellinie (orange) */}
               <Line 
-                x1={protractorCenter.x} y1={protractorCenter.y}
-                x2={protractorAngleEnd.x} y2={protractorAngleEnd.y}
+                x1={protractorScreenCoords.center.x} y1={protractorScreenCoords.center.y}
+                x2={protractorScreenCoords.angleEnd.x} y2={protractorScreenCoords.angleEnd.y}
                 stroke="#FF5722" strokeWidth={3}
               />
               
               {/* Winkelbogen */}
               {protractorAngle !== 0 && (() => {
-                const refAng = Math.atan2(protractorRefEnd.y - protractorCenter.y, protractorRefEnd.x - protractorCenter.x);
-                const angAng = Math.atan2(protractorAngleEnd.y - protractorCenter.y, protractorAngleEnd.x - protractorCenter.x);
+                const { center, refEnd, angleEnd } = protractorScreenCoords;
+                const refAng = Math.atan2(refEnd.y - center.y, refEnd.x - center.x);
+                const angAng = Math.atan2(angleEnd.y - center.y, angleEnd.x - center.x);
                 const arcR = 40;
-                const arcX1 = protractorCenter.x + arcR * Math.cos(refAng);
-                const arcY1 = protractorCenter.y + arcR * Math.sin(refAng);
-                const arcX2 = protractorCenter.x + arcR * Math.cos(angAng);
-                const arcY2 = protractorCenter.y + arcR * Math.sin(angAng);
+                const arcX1 = center.x + arcR * Math.cos(refAng);
+                const arcY1 = center.y + arcR * Math.sin(refAng);
+                const arcX2 = center.x + arcR * Math.cos(angAng);
+                const arcY2 = center.y + arcR * Math.sin(angAng);
                 const largeArc = Math.abs(protractorAngle) > 180 ? 1 : 0;
                 const sweep = protractorAngle > 0 ? 1 : 0;
                 return (
@@ -10527,8 +10553,8 @@ export default function DrawSketchScreen() {
               
               {/* Winkelwert am Mittelpunkt */}
               <SvgText
-                x={protractorCenter.x}
-                y={protractorCenter.y - 20}
+                x={protractorScreenCoords.center.x}
+                y={protractorScreenCoords.center.y - 20}
                 fill="#FF5722"
                 fontSize={20}
                 fontWeight="bold"
@@ -10540,18 +10566,18 @@ export default function DrawSketchScreen() {
               </SvgText>
               
               {/* Mittelpunkt (kleiner Kreis) */}
-              <Circle cx={protractorCenter.x} cy={protractorCenter.y} r={8} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+              <Circle cx={protractorScreenCoords.center.x} cy={protractorScreenCoords.center.y} r={8} fill="#FF5722" stroke="#fff" strokeWidth={2} />
               
               {/* Griffpunkt Referenzlinie (blau, größer) */}
-              <Circle cx={protractorRefEnd.x} cy={protractorRefEnd.y} r={14} fill="#2196f3" stroke="#fff" strokeWidth={3} />
+              <Circle cx={protractorScreenCoords.refEnd.x} cy={protractorScreenCoords.refEnd.y} r={14} fill="#2196f3" stroke="#fff" strokeWidth={3} />
               
               {/* Griffpunkt Winkellinie (orange, größer) */}
-              <Circle cx={protractorAngleEnd.x} cy={protractorAngleEnd.y} r={14} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+              <Circle cx={protractorScreenCoords.angleEnd.x} cy={protractorScreenCoords.angleEnd.y} r={14} fill="#FF5722" stroke="#fff" strokeWidth={3} />
               
               {/* Labels an den Griffpunkten */}
               <SvgText
-                x={protractorRefEnd.x}
-                y={protractorRefEnd.y - 20}
+                x={protractorScreenCoords.refEnd.x}
+                y={protractorScreenCoords.refEnd.y - 20}
                 fill="#2196f3"
                 fontSize={12}
                 fontWeight="bold"
@@ -10560,8 +10586,8 @@ export default function DrawSketchScreen() {
                 Ref
               </SvgText>
               <SvgText
-                x={protractorAngleEnd.x}
-                y={protractorAngleEnd.y - 20}
+                x={protractorScreenCoords.angleEnd.x}
+                y={protractorScreenCoords.angleEnd.y - 20}
                 fill="#FF5722"
                 fontSize={12}
                 fontWeight="bold"

@@ -10473,9 +10473,11 @@ export default function DrawSketchScreen() {
                       height: canvasHeight * 3,
                       position: 'absolute',
                       // Position: logische Koordinaten × 3 (Vergrößerung)
-                      // Das Bild wird von React Native automatisch auf die Ausgabegröße skaliert
+                      // KORREKTUR: Der Canvas-Snapshot enthält möglicherweise einen Offset
+                      // durch den canvasOverhead. Wir addieren diesen zum Y, um das Bild
+                      // nach oben zu verschieben und den Parallelversatz auszugleichen.
                       left: -targetX * 3 + halfSize,
-                      top: -targetY * 3 + halfSize,
+                      top: -(targetY + canvasOverhead) * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
@@ -10491,7 +10493,7 @@ export default function DrawSketchScreen() {
                     ) : null;
                   })}
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(targetY) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(targetY + canvasOverhead) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;

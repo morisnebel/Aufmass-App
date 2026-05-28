@@ -1622,21 +1622,21 @@ export default function ProjectDetailScreen() {
       }
       
       // Bestimme Breite und max-height basierend auf Größe
-      // ANDROID: Radikal vereinfacht - alle Fotos als 100% Block für zuverlässiges Drucken
-      let width = isAndroidDevice ? '100%' : '48%'; // medium default
-      let maxImgHeight = isAndroidDevice ? '350px' : '280px';
+      // ANDROID: Vereinfachtes Layout, aber Größenoptionen beibehalten
+      let width = '48%'; // medium default
+      let maxImgHeight = '280px';
       let display = isAndroidDevice ? 'block' : 'inline-block';
       
-      if (!isAndroidDevice) {
-        // iOS und Web: Größenoptionen verwenden
-        if (size === 'small') {
-          width = '31%';
-          maxImgHeight = '180px';
-        } else if (size === 'large' || size === 'full') {
-          width = '100%';
-          maxImgHeight = '400px';
-          display = 'block';
-        }
+      if (size === 'small') {
+        width = isAndroidDevice ? '100%' : '31%';
+        maxImgHeight = isAndroidDevice ? '200px' : '180px'; // Kleinere Höhe für "klein"
+      } else if (size === 'medium') {
+        width = isAndroidDevice ? '100%' : '48%';
+        maxImgHeight = isAndroidDevice ? '300px' : '280px'; // Mittlere Höhe
+      } else if (size === 'large' || size === 'full') {
+        width = '100%';
+        maxImgHeight = isAndroidDevice ? '450px' : '400px'; // Größere Höhe für "groß"
+        display = 'block';
       }
       
       // Bild und Annotationen in einem einzigen SVG für korrekte Koordinaten
@@ -2969,8 +2969,9 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
               margin-bottom: 10px !important;
             }
-            /* ANDROID: Radikal vereinfachtes Layout für zuverlässiges Drucken */
+            /* ANDROID: Vereinfachtes Layout für zuverlässiges Drucken */
             /* Android Print Spooler hat Probleme mit inline-block, flex, grid */
+            /* Aber verschiedene Größen werden über max-height unterstützt */
             .photos-print-android {
               display: block !important;
             }
@@ -2986,7 +2987,7 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
-              max-height: 350px !important;
+              /* Höhe wird inline über max-height gesteuert (klein/mittel/groß) */
             }
             .sketches-container-android {
               display: block !important;
@@ -3002,7 +3003,18 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
-              max-height: 500px !important;
+              /* Höhe wird inline über max-height gesteuert */
+            }
+            /* Android Sketch-Größenklassen - unterschiedliche max-heights */
+            .sketches-container-android .sketch-small img {
+              max-height: 250px !important;
+            }
+            .sketches-container-android .sketch-medium img {
+              max-height: 380px !important;
+            }
+            .sketches-container-android .sketch-large img,
+            .sketches-container-android .sketch-full img {
+              max-height: 550px !important;
             }
           }
           * {

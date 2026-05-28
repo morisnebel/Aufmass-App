@@ -801,37 +801,20 @@ export default function DrawSketchScreen() {
   const pdfWebViewRef = useRef<WebView>(null);
   
   // Bildschirmkoordinaten der drei Punkte
-  // Protractor wird jetzt in CANVAS-Koordinaten gespeichert (wie Maßlinien)
-  // Das bedeutet: die Koordinaten sind relativ zum ungezoomten/unverschobenen Canvas
+  // Protractor arbeitet in SCREEN-Koordinaten (einfacher, funktioniert zuverlässig)
   const [protractorCenter, setProtractorCenter] = useState({ x: 0, y: 0 });
   const [protractorRefEnd, setProtractorRefEnd] = useState({ x: 0, y: 0 });
   const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
   
-  // Helper: Konvertiert Screen-Koordinaten zu Canvas-Koordinaten
-  const screenToCanvasCoords = useCallback((screenX: number, screenY: number) => {
+  // Helper: Konvertiert Screen-Koordinaten zu Canvas-Koordinaten (NUR für Lupe)
+  const screenToCanvasForMagnifier = useCallback((screenX: number, screenY: number) => {
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     const currentScale = scaleRef.current || 1;
-    const currentPanX = panOffset.x;
-    const currentPanY = panOffset.y;
-    
-    // Formel: canvasX = (screenX - layout.x - panX) / scale
-    const canvasX = (screenX - layout.x - currentPanX) / currentScale;
-    const canvasY = (screenY - layout.y - currentPanY) / currentScale;
+    // Einfache Berechnung: nur Offset abziehen und durch Scale teilen
+    const canvasX = (screenX - layout.x) / currentScale;
+    const canvasY = (screenY - layout.y) / currentScale;
     return { x: canvasX, y: canvasY };
-  }, [panOffset, canvasOverhead]);
-  
-  // Helper: Konvertiert Canvas-Koordinaten zu Screen-Koordinaten (für Rendering)
-  const canvasToScreenCoords = useCallback((canvasX: number, canvasY: number) => {
-    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
-    const currentScale = scaleRef.current || 1;
-    const currentPanX = panOffset.x;
-    const currentPanY = panOffset.y;
-    
-    // Formel: screenX = canvasX * scale + layout.x + panX
-    const screenX = canvasX * currentScale + layout.x + currentPanX;
-    const screenY = canvasY * currentScale + layout.y + currentPanY;
-    return { x: screenX, y: screenY };
-  }, [panOffset, canvasOverhead]);
+  }, [canvasOverhead]);
   
   // Verschiebbare Position des Protractor-Panels
   const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;

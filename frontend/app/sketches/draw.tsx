@@ -909,16 +909,21 @@ export default function DrawSketchScreen() {
     const center = canvasToScreenCoords(protractorCenter.x, protractorCenter.y);
     const refEnd = canvasToScreenCoords(protractorRefEnd.x, protractorRefEnd.y);
     const angleEnd = canvasToScreenCoords(protractorAngleEnd.x, protractorAngleEnd.y);
-    
-    // Debug-Log
-    console.log('[Protractor] Canvas->Screen transformation:',
-      'center:', protractorCenter.x.toFixed(0), protractorCenter.y.toFixed(0), '->', center.x.toFixed(0), center.y.toFixed(0),
-      'layout:', canvasLayoutRef.current?.x?.toFixed(0), canvasLayoutRef.current?.y?.toFixed(0),
-      'pan:', panOffset.x.toFixed(0), panOffset.y.toFixed(0),
-      'scale:', scaleRef.current?.toFixed(2));
-    
     return { center, refEnd, angleEnd };
-  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasToScreenCoords, panOffset]);
+  }, [protractorCenter, protractorRefEnd, protractorAngleEnd, canvasToScreenCoords]);
+  
+  // Debug-Info für Winkelmesser (wird auf dem Bildschirm angezeigt)
+  const protractorDebugInfo = useMemo(() => {
+    if (!showProtractor) return null;
+    const layout = canvasLayoutRef.current;
+    return {
+      canvasCenter: `${protractorCenter.x.toFixed(0)}, ${protractorCenter.y.toFixed(0)}`,
+      screenCenter: `${protractorScreenCoords.center.x.toFixed(0)}, ${protractorScreenCoords.center.y.toFixed(0)}`,
+      layoutXY: layout ? `${layout.x.toFixed(0)}, ${layout.y.toFixed(0)}` : 'null',
+      scale: scaleRef.current?.toFixed(2) || '1',
+      pan: `${panOffset.x.toFixed(0)}, ${panOffset.y.toFixed(0)}`,
+    };
+  }, [showProtractor, protractorCenter, protractorScreenCoords, panOffset]);
   
   // Berechneter Winkel aus den Positionen
   const protractorAngle = useMemo(() => {
@@ -10629,6 +10634,18 @@ export default function DrawSketchScreen() {
                 backgroundColor: '#ccc', alignSelf: 'center', marginBottom: isPhoneDevice ? 2 : 6,
               }} />
             </View>
+            
+            {/* DEBUG: Koordinaten-Anzeige */}
+            {protractorDebugInfo && (
+              <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', padding: 4, marginBottom: 4, borderRadius: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 9 }}>
+                  Canvas: {protractorDebugInfo.canvasCenter} | Screen: {protractorDebugInfo.screenCenter}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 9 }}>
+                  Layout: {protractorDebugInfo.layoutXY} | Scale: {protractorDebugInfo.scale} | Pan: {protractorDebugInfo.pan}
+                </Text>
+              </View>
+            )}
             
             {/* Winkelsteuerung - kompakt auf iPhone */}
             <View style={[styles.protractorControlRow, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8, gap: 4 }]}>

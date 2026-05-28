@@ -2646,11 +2646,52 @@ export default function ProjectDetailScreen() {
               page-break-before: always !important;
               break-before: always !important;
             }
-            /* Foto-Layouts für Druck */
+            /* Foto-Layouts für Druck - ERZWINGE Block-Layout für Android Print Spooler */
             .photos-section {
               margin-bottom: 15px !important;
               page-break-before: auto !important;
               break-before: auto !important;
+              display: block !important;
+            }
+            /* FORCE: Alle Foto-Container auf Block-Layout */
+            .photos-section-small,
+            .photos-section-medium,
+            .photos-section-large {
+              display: block !important;
+              width: 100% !important;
+            }
+            /* FORCE: Alle Fotos als Block-Elemente */
+            .photo-item {
+              display: block !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 10px !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+            .photo-item img {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 400px !important;
+              object-fit: contain !important;
+            }
+            /* Skizzen auch als Block */
+            .sketch-item {
+              display: block !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-bottom: 15px !important;
+              width: 100% !important;
+            }
+            .sketch-item img {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 500px !important;
+              object-fit: contain !important;
             }
             .photos-section h2 {
               page-break-after: avoid !important;

@@ -10441,8 +10441,7 @@ export default function DrawSketchScreen() {
         
         const halfSize = magnifierSize / 2;
         
-        // Canvas-Koordinaten direkt verwenden (OHNE Scale-Multiplikation)
-        // Der Snapshot zeigt das gleiche wie der Canvas, also sind die Koordinaten identisch
+        // Canvas-Koordinaten direkt verwenden
         const targetX = magnifierTargetPosition.x;
         const targetY = magnifierTargetPosition.y;
         
@@ -10468,10 +10467,13 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot || backgroundImage }}
                     style={{
-                      width: (canvasLayout?.width || screenWidth) * 3,
-                      height: (canvasLayout?.height || canvasHeight) * 3,
+                      // Der Snapshot ist in nativer Auflösung (pixelDensity × logische Größe)
+                      // Für die Anzeige mit 3x Vergrößerung: Snapshot-Größe auf logische Größe × 3 skalieren
+                      width: screenWidth * 3,
+                      height: canvasHeight * 3,
                       position: 'absolute',
-                      // Canvas-Koordinaten direkt verwenden (gleiche wie im SVG-Koordinatensystem)
+                      // Position: logische Koordinaten × 3 (Vergrößerung)
+                      // Das Bild wird von React Native automatisch auf die Ausgabegröße skaliert
                       left: -targetX * 3 + halfSize,
                       top: -targetY * 3 + halfSize,
                     }}

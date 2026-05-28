@@ -2664,40 +2664,51 @@ export default function ProjectDetailScreen() {
               break-before: auto !important;
             }
             .photos-section-small {
-              display: grid !important;
-              grid-template-columns: repeat(3, 1fr) !important;
-              gap: 8px !important;
+              display: block !important;
             }
             .photos-section-small .photo-item {
+              display: inline-block !important;
+              width: 32% !important;
+              vertical-align: top !important;
+              margin-right: 1% !important;
+              margin-bottom: 8px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
             .photos-section-small .photo-item img {
               max-height: 180px !important;
+              width: 100% !important;
             }
             .photos-section-medium {
-              display: grid !important;
-              grid-template-columns: repeat(2, 1fr) !important;
-              gap: 12px !important;
+              display: block !important;
             }
             .photos-section-medium .photo-item {
+              display: inline-block !important;
+              width: 48% !important;
+              vertical-align: top !important;
+              margin-right: 1% !important;
+              margin-bottom: 12px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
             .photos-section-medium .photo-item img {
               max-height: 280px !important;
+              width: 100% !important;
             }
             .photos-section-large {
-              display: flex !important;
-              flex-direction: column !important;
-              gap: 15px !important;
+              display: block !important;
             }
             .photos-section-large .photo-item {
+              display: block !important;
+              width: 100% !important;
+              margin-bottom: 15px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
             .photos-section-large .photo-item img {
               max-height: 340px !important;
+              width: 100% !important;
+            }
             }
             .photo-item {
               page-break-inside: avoid !important;

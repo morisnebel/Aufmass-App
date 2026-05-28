@@ -818,12 +818,15 @@ export default function DrawSketchScreen() {
   
   // Helper: Konvertiert Canvas-Koordinaten zu Screen-Koordinaten (für Protractor-SVG-Overlay)
   // Dies ist die inverse Funktion von screenToCanvasForMagnifier
+  // WICHTIG: Verwendet canvasOverhead als festen Y-Offset, nicht layout.y
+  // Das SVG-Viewbox ist "0 0 ${screenWidth} ${canvasHeight}" und beginnt bei Screen Y = canvasOverhead
   const canvasToScreenCoords = useCallback((canvasX: number, canvasY: number) => {
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     const currentScale = scaleRef.current || 1;
-    // Inverse Berechnung: mit Scale multiplizieren und Offset addieren
-    const screenX = canvasX * currentScale + layout.x;
-    const screenY = canvasY * currentScale + layout.y;
+    // Verwende layout.x für X (normalerweise 0), aber canvasOverhead für Y (konstant)
+    // layout.y kann variieren je nach measureInWindow-Timing, canvasOverhead ist stabil
+    const screenX = canvasX * currentScale + (layout.x || 0);
+    const screenY = canvasY * currentScale + canvasOverhead;
     return { x: screenX, y: screenY };
   }, [canvasOverhead]);
   
@@ -854,15 +857,16 @@ export default function DrawSketchScreen() {
   const protractorInitializedRef = useRef(false);
   useEffect(() => {
     if (showProtractor && !protractorInitializedRef.current) {
-      // Berechne die Mitte des Canvas in CANVAS-Koordinaten (nicht Screen!)
-      const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
-      const canvasCenterX = (layout.width || screenWidth) / 2;
-      const canvasCenterY = (layout.height || canvasHeight) / 2;
-      const defaultLen = Math.min((layout.width || screenWidth) * 0.2, 120);
+      // Berechne die Mitte des Canvas in CANVAS-Koordinaten
+      // WICHTIG: Verwende screenWidth und canvasHeight (SVG viewBox), NICHT layout-Dimensionen!
+      // Das SVG hat viewBox="0 0 ${screenWidth} ${canvasHeight}"
+      const canvasCenterX = screenWidth / 2;
+      const canvasCenterY = canvasHeight / 2;
+      const defaultLen = Math.min(screenWidth * 0.2, 120);
       
       // Nur initialisieren wenn Center bei (0,0) ist (= komplett neuer Winkelmesser)
       if (protractorCenter.x === 0 && protractorCenter.y === 0) {
-        // Setze Koordinaten in CANVAS-Koordinaten
+        // Setze Koordinaten in CANVAS-Koordinaten (passend zum SVG viewBox)
         setProtractorCenter({ x: canvasCenterX, y: canvasCenterY });
         setProtractorRefEnd({ x: canvasCenterX + defaultLen, y: canvasCenterY });
         setProtractorAngleEnd({ x: canvasCenterX + defaultLen * Math.cos(-Math.PI/4), y: canvasCenterY + defaultLen * Math.sin(-Math.PI/4) }); // 45° nach oben

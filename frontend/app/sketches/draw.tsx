@@ -1027,17 +1027,37 @@ export default function DrawSketchScreen() {
         setMagnifierTargetPosition({ x: targetPt.x, y: targetPt.y });
         setMagnifierPosition({ x: targetScreen.x, y: targetScreen.y });
         
-        // Canvas-Snapshot verwenden
-        const snapshot = protractorCanvasSnapshot.current;
-        if (snapshot) {
-          setMagnifierSnapshot(snapshot);
-        } else if (backgroundImage) {
-          setMagnifierSnapshot(backgroundImage);
+        // WICHTIG: Frischen Canvas-Snapshot erstellen wie bei Maßlinien!
+        // Der alte protractorCanvasSnapshot kann veraltet sein (Zoom/Pan geändert)
+        if (canvasRef.current) {
+          captureRef(canvasRef.current, {
+            format: 'png',
+            quality: 1.0,
+            result: 'data-uri',
+          }).then((uri: string) => {
+            setMagnifierSnapshot(uri);
+            setShowMagnifier(true);
+          }).catch((err: Error) => {
+            console.log('[Protractor Magnifier] Snapshot error:', err);
+            // Fallback: backgroundImage oder alte Snapshot verwenden
+            const snapshot = protractorCanvasSnapshot.current;
+            if (snapshot) {
+              setMagnifierSnapshot(snapshot);
+            } else if (backgroundImage) {
+              setMagnifierSnapshot(backgroundImage);
+            }
+            setShowMagnifier(true);
+          });
         } else {
-          const imgEl = elements.find(el => el.type === 'image' && el.data?.uri);
-          setMagnifierSnapshot(imgEl?.data?.uri || null);
+          // Kein canvasRef - Fallback verwenden
+          const snapshot = protractorCanvasSnapshot.current;
+          if (snapshot) {
+            setMagnifierSnapshot(snapshot);
+          } else if (backgroundImage) {
+            setMagnifierSnapshot(backgroundImage);
+          }
+          setShowMagnifier(true);
         }
-        setShowMagnifier(true);
       };
       
       // Frisch messen - canvasRef direkt

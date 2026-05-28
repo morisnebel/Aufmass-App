@@ -1622,20 +1622,21 @@ export default function ProjectDetailScreen() {
       }
       
       // Bestimme Breite und max-height basierend auf Größe
-      // ANDROID: Vereinfachtes Layout, aber Größenoptionen beibehalten
+      // ANDROID: Tabellen-basiertes Grid-Layout für zuverlässiges Drucken
+      // iOS/Web: Standard inline-block Layout
       let width = '48%'; // medium default
       let maxImgHeight = '280px';
-      let display = isAndroidDevice ? 'block' : 'inline-block';
+      let display = 'inline-block';
       
       if (size === 'small') {
-        width = isAndroidDevice ? '100%' : '31%';
-        maxImgHeight = isAndroidDevice ? '200px' : '180px'; // Kleinere Höhe für "klein"
+        width = '31%';
+        maxImgHeight = '180px';
       } else if (size === 'medium') {
-        width = isAndroidDevice ? '100%' : '48%';
-        maxImgHeight = isAndroidDevice ? '300px' : '280px'; // Mittlere Höhe
+        width = '48%';
+        maxImgHeight = '280px';
       } else if (size === 'large' || size === 'full') {
         width = '100%';
-        maxImgHeight = isAndroidDevice ? '450px' : '400px'; // Größere Höhe für "groß"
+        maxImgHeight = '400px';
         display = 'block';
       }
       
@@ -1672,7 +1673,7 @@ export default function ProjectDetailScreen() {
     
     if (photos.length > 0) {
       // iOS: Saubere Seitenumbrüche
-      // Android: Radikal vereinfacht
+      // Android: Tabellen-basiertes Grid-Layout
       const photosContainerClass = isAndroidDevice
         ? 'photos-print-container photos-print-android'
         : isIphone 
@@ -1681,13 +1682,73 @@ export default function ProjectDetailScreen() {
             ? 'photos-print-container photos-print-ipad'
             : 'photos-print-container';
       
-      // Erstes Foto mit eingebetteter Überschrift
-      const firstPhotoHtml = generatePhotoHtml(photos[0]);
-      // Überschrift VOR dem ersten Foto-Item einfügen (im Container, nicht außerhalb)
       const headingHtml = `<h2 class="photo-inline-heading">${t('photos.title')}</h2>`;
       
-      const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
-      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${firstPhotoHtml}${restPhotoItems}</div>`;
+      if (isAndroidDevice) {
+        // ANDROID: Tabellen-basiertes Layout für zuverlässiges Drucken
+        // Klein: 3 pro Reihe, Mittel: 2 pro Reihe, Groß: 1 pro Reihe
+        const photosBySize: { [key: string]: typeof photos } = { small: [], medium: [], large: [] };
+        photos.forEach(photo => {
+          const size = photo.pdf_size || 'medium';
+          if (size === 'small') photosBySize.small.push(photo);
+          else if (size === 'large' || size === 'full') photosBySize.large.push(photo);
+          else photosBySize.medium.push(photo);
+        });
+        
+        let tableHtml = headingHtml;
+        
+        // Kleine Fotos: 3 pro Reihe
+        if (photosBySize.small.length > 0) {
+          tableHtml += `<table class="android-photo-table" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">`;
+          for (let i = 0; i < photosBySize.small.length; i += 3) {
+            tableHtml += '<tr>';
+            for (let j = 0; j < 3; j++) {
+              const photo = photosBySize.small[i + j];
+              if (photo) {
+                tableHtml += `<td style="width: 33%; vertical-align: top; padding: 5px;">${generatePhotoHtml(photo)}</td>`;
+              } else {
+                tableHtml += '<td style="width: 33%;"></td>';
+              }
+            }
+            tableHtml += '</tr>';
+          }
+          tableHtml += '</table>';
+        }
+        
+        // Mittlere Fotos: 2 pro Reihe
+        if (photosBySize.medium.length > 0) {
+          tableHtml += `<table class="android-photo-table" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">`;
+          for (let i = 0; i < photosBySize.medium.length; i += 2) {
+            tableHtml += '<tr>';
+            for (let j = 0; j < 2; j++) {
+              const photo = photosBySize.medium[i + j];
+              if (photo) {
+                tableHtml += `<td style="width: 50%; vertical-align: top; padding: 5px;">${generatePhotoHtml(photo)}</td>`;
+              } else {
+                tableHtml += '<td style="width: 50%;"></td>';
+              }
+            }
+            tableHtml += '</tr>';
+          }
+          tableHtml += '</table>';
+        }
+        
+        // Große Fotos: 1 pro Reihe (volle Breite)
+        if (photosBySize.large.length > 0) {
+          tableHtml += `<table class="android-photo-table" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">`;
+          photosBySize.large.forEach(photo => {
+            tableHtml += `<tr><td style="width: 100%; vertical-align: top; padding: 5px;">${generatePhotoHtml(photo)}</td></tr>`;
+          });
+          tableHtml += '</table>';
+        }
+        
+        photosHtml = `<div class="${photosContainerClass}">${tableHtml}</div>`;
+      } else {
+        // iOS/Web: Standard inline-block Layout
+        const firstPhotoHtml = generatePhotoHtml(photos[0]);
+        const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
+        photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${firstPhotoHtml}${restPhotoItems}</div>`;
+      }
     }
     
     // Generate sketches HTML (embedded as base64/SVG) with size options
@@ -1761,7 +1822,7 @@ export default function ProjectDetailScreen() {
     
     // Sketches-Container: iOS bekommt block/inline-block Layout für bessere Seitenumbrüche
     // WebKit (iOS) ignoriert page-break-inside: avoid bei Flexbox-Containern
-    // Android: Radikal vereinfacht - nur block-Elemente
+    // Android: Tabellen-basiertes Grid-Layout
     const sketchesContainerClass = isAndroidDevice
       ? 'sketches-container sketches-container-android'
       : isIphone 
@@ -1771,11 +1832,72 @@ export default function ProjectDetailScreen() {
           : 'sketches-container';
     
     // Alle Sketches im Container zusammen - Überschrift ist im ersten Item eingebettet
-    const sketchesHtml = sketches.length > 0 ? `
-      <div class="${sketchesContainerClass}">
-        ${sketchItems.join('')}
-      </div>
-    ` : '';
+    let sketchesHtml = '';
+    if (sketches.length > 0) {
+      if (isAndroidDevice) {
+        // ANDROID: Tabellen-basiertes Layout für Skizzen
+        // Klein: 2 pro Reihe, Mittel: 1 pro Reihe, Groß/Voll: 1 pro Seite
+        const sketchesBySize: { small: string[], medium: string[], large: string[] } = { small: [], medium: [], large: [] };
+        
+        sketchItems.forEach((itemHtml, index) => {
+          const sketch = sketches[index];
+          const meta = sketch.metadata || {};
+          const size = (typeof meta === 'object' && meta.pdf_size) || sketch.pdf_size || 'large';
+          
+          if (size === 'small') sketchesBySize.small.push(itemHtml);
+          else if (size === 'medium') sketchesBySize.medium.push(itemHtml);
+          else sketchesBySize.large.push(itemHtml);
+        });
+        
+        const headingHtml = `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>`;
+        let tableHtml = headingHtml;
+        
+        // Kleine Skizzen: 2 pro Reihe
+        if (sketchesBySize.small.length > 0) {
+          tableHtml += `<table class="android-sketch-table" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">`;
+          for (let i = 0; i < sketchesBySize.small.length; i += 2) {
+            tableHtml += '<tr>';
+            for (let j = 0; j < 2; j++) {
+              const html = sketchesBySize.small[i + j];
+              if (html) {
+                // Überschrift aus dem Item entfernen (wird bereits oben angezeigt)
+                const cleanHtml = html.replace(/<h2 class="sketch-inline-heading">[^<]*<\/h2>/g, '');
+                tableHtml += `<td style="width: 50%; vertical-align: top; padding: 5px;">${cleanHtml}</td>`;
+              } else {
+                tableHtml += '<td style="width: 50%;"></td>';
+              }
+            }
+            tableHtml += '</tr>';
+          }
+          tableHtml += '</table>';
+        }
+        
+        // Mittlere Skizzen: 1 pro Reihe
+        if (sketchesBySize.medium.length > 0) {
+          tableHtml += `<table class="android-sketch-table" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">`;
+          sketchesBySize.medium.forEach(html => {
+            const cleanHtml = html.replace(/<h2 class="sketch-inline-heading">[^<]*<\/h2>/g, '');
+            tableHtml += `<tr><td style="width: 100%; vertical-align: top; padding: 5px;">${cleanHtml}</td></tr>`;
+          });
+          tableHtml += '</table>';
+        }
+        
+        // Große Skizzen: 1 pro Seite (volle Breite mit page-break)
+        if (sketchesBySize.large.length > 0) {
+          tableHtml += `<table class="android-sketch-table android-sketch-large" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">`;
+          sketchesBySize.large.forEach(html => {
+            const cleanHtml = html.replace(/<h2 class="sketch-inline-heading">[^<]*<\/h2>/g, '');
+            tableHtml += `<tr style="page-break-before: auto;"><td style="width: 100%; vertical-align: top; padding: 5px;">${cleanHtml}</td></tr>`;
+          });
+          tableHtml += '</table>';
+        }
+        
+        sketchesHtml = `<div class="${sketchesContainerClass}">${tableHtml}</div>`;
+      } else {
+        // iOS/Web: Standard-Layout
+        sketchesHtml = `<div class="${sketchesContainerClass}">${sketchItems.join('')}</div>`;
+      }
+    }
     
     // Helper function to calculate polygon area
     const calculatePolygonArea = (points: Array<{x: number, y: number}>, scale: number = 100) => {
@@ -2969,52 +3091,59 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
               margin-bottom: 10px !important;
             }
-            /* ANDROID: Vereinfachtes Layout für zuverlässiges Drucken */
-            /* Android Print Spooler hat Probleme mit inline-block, flex, grid */
-            /* Aber verschiedene Größen werden über max-height unterstützt */
+            /* ANDROID: Tabellen-basiertes Grid-Layout für zuverlässiges Drucken */
+            /* Android Print Spooler verarbeitet <table>-Elemente zuverlässiger */
             .photos-print-android {
               display: block !important;
             }
-            .photos-print-android > div {
+            .photos-print-android table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+            }
+            .photos-print-android td {
+              vertical-align: top !important;
+              padding: 5px !important;
+            }
+            .photos-print-android td > div {
               display: block !important;
               width: 100% !important;
-              font-size: 14px !important;
-              margin-bottom: 15px !important;
             }
-            .photos-print-android > div img,
-            .photos-print-android > div svg {
+            .photos-print-android img,
+            .photos-print-android svg {
               display: block !important;
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
-              /* Höhe wird inline über max-height gesteuert (klein/mittel/groß) */
             }
             .sketches-container-android {
               display: block !important;
             }
+            .sketches-container-android table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+            }
+            .sketches-container-android td {
+              vertical-align: top !important;
+              padding: 5px !important;
+            }
             .sketches-container-android .sketch-item {
               display: block !important;
               width: 100% !important;
-              font-size: 14px !important;
-              margin-bottom: 20px !important;
+              margin-bottom: 10px !important;
             }
             .sketches-container-android .sketch-item img {
               display: block !important;
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
-              /* Höhe wird inline über max-height gesteuert */
             }
-            /* Android Sketch-Größenklassen - unterschiedliche max-heights */
-            .sketches-container-android .sketch-small img {
-              max-height: 250px !important;
+            /* Android Tabellen-Stil für bessere Darstellung */
+            .android-photo-table,
+            .android-sketch-table {
+              page-break-inside: avoid !important;
             }
-            .sketches-container-android .sketch-medium img {
-              max-height: 380px !important;
-            }
-            .sketches-container-android .sketch-large img,
-            .sketches-container-android .sketch-full img {
-              max-height: 550px !important;
+            .android-sketch-large tr {
+              page-break-before: always !important;
             }
           }
           * {

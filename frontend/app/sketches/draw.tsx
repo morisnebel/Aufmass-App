@@ -990,22 +990,39 @@ export default function DrawSketchScreen() {
     const angleScreen = canvasToScreenCoords(protractorAngleEnd.x, protractorAngleEnd.y);
     const centerScreen = canvasToScreenCoords(protractorCenter.x, protractorCenter.y);
     
+    // DEBUG: Koordinaten-Info
+    console.log('[Protractor Drag] Touch:', pageX.toFixed(0), pageY.toFixed(0));
+    console.log('[Protractor Drag] Ref Screen:', refScreen.x.toFixed(0), refScreen.y.toFixed(0));
+    console.log('[Protractor Drag] Angle Screen:', angleScreen.x.toFixed(0), angleScreen.y.toFixed(0));
+    console.log('[Protractor Drag] Center Screen:', centerScreen.x.toFixed(0), centerScreen.y.toFixed(0));
+    
     // Abstand zu jedem Handle berechnen (in Screen-Koordinaten)
     const distRef = Math.sqrt(Math.pow(pageX - refScreen.x, 2) + Math.pow(pageY - refScreen.y, 2));
     const distAngle = Math.sqrt(Math.pow(pageX - angleScreen.x, 2) + Math.pow(pageY - angleScreen.y, 2));
     const distCenter = Math.sqrt(Math.pow(pageX - centerScreen.x, 2) + Math.pow(pageY - centerScreen.y, 2));
     
-    const handleRadius = 50; // Touch-Zielgröße
+    console.log('[Protractor Drag] Distances - Ref:', distRef.toFixed(0), 'Angle:', distAngle.toFixed(0), 'Center:', distCenter.toFixed(0));
+    
+    const handleRadius = 60; // Größerer Touch-Bereich für bessere Erkennung
     let dragHandle: 'body' | 'ref' | 'angle' = 'body';
     
-    // Endpunkte haben Priorität
-    if (distRef < handleRadius && distRef <= distAngle) {
-      dragHandle = 'ref';
-    } else if (distAngle < handleRadius) {
-      dragHandle = 'angle';
-    } else if (distCenter < handleRadius * 1.5) {
-      dragHandle = 'body'; // Mittelpunkt = ganzer Körper bewegen
+    // Finde den nächsten Handle
+    const minDist = Math.min(distRef, distAngle, distCenter);
+    
+    if (minDist < handleRadius) {
+      if (distRef === minDist) {
+        dragHandle = 'ref';
+      } else if (distAngle === minDist) {
+        dragHandle = 'angle';
+      } else {
+        dragHandle = 'body';
+      }
+    } else if (distCenter < handleRadius * 2) {
+      // Auch weiter entfernte Touches am Center akzeptieren für Body-Drag
+      dragHandle = 'body';
     }
+    
+    console.log('[Protractor Drag] Selected handle:', dragHandle);
     
     // Lupe für Drag aktivieren
     if (dragHandle === 'ref' || dragHandle === 'angle' || dragHandle === 'body') {

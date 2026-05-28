@@ -10471,11 +10471,10 @@ export default function DrawSketchScreen() {
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
-                      // Offset-Korrektur: layout.y enthält Status-Bar + Header-Offset,
-                      // aber canvasOverhead ist nur der geplante Header-Offset.
-                      // Die Differenz (layout.y - canvasOverhead) muss von targetY subtrahiert werden.
+                      // Offset-Korrektur: Die Hälfte der Differenz zwischen layout.y und canvasOverhead
+                      // um die Mitte zwischen den beiden Extremen zu finden
                       left: -targetX * 3 + halfSize,
-                      top: -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead)) * 3 + halfSize,
+                      top: -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) / 2) * 3 + halfSize,
                     }}
                     resizeMode="contain"
                   />
@@ -10489,7 +10488,7 @@ export default function DrawSketchScreen() {
                       height: canvasHeight * 3,
                       position: 'absolute',
                       left: -targetX * 3 + halfSize,
-                      top: -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead)) * 3 + halfSize,
+                      top: -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) / 2) * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />

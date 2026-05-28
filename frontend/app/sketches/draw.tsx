@@ -10462,22 +10462,34 @@ export default function DrawSketchScreen() {
             {/* Runder Lupen-Container mit Bild */}
             <View style={[styles.magnifierCircle, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
               {/* Canvas-Snapshot oder Hintergrundbild vergrößert */}
-              {(magnifierSnapshot || backgroundImage) ? (
+              {backgroundImage ? (
                 <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
                   <RNImage
-                    source={{ uri: magnifierSnapshot || backgroundImage }}
+                    source={{ uri: backgroundImage }}
                     style={{
-                      // Der Snapshot ist in nativer Auflösung (pixelDensity × logische Größe)
-                      // Für die Anzeige mit 3x Vergrößerung: Snapshot-Größe auf logische Größe × 3 skalieren
+                      // Hintergrundbild direkt verwenden (nicht Snapshot)
+                      // Das Bild wird im SVG mit preserveAspectRatio="xMidYMid meet" gerendert
+                      // Also müssen wir die gleiche Skalierung anwenden
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
-                      // Position: logische Koordinaten × 3 (Vergrößerung)
-                      // KORREKTUR: Der Canvas-Snapshot enthält möglicherweise einen Offset
-                      // durch den canvasOverhead. Wir addieren diesen zum Y, um das Bild
-                      // nach oben zu verschieben und den Parallelversatz auszugleichen.
+                      // Canvas-Koordinaten entsprechen dem SVG-Koordinatensystem
                       left: -targetX * 3 + halfSize,
-                      top: -(targetY + canvasOverhead) * 3 + halfSize,
+                      top: -targetY * 3 + halfSize,
+                    }}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : magnifierSnapshot ? (
+                <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
+                  <RNImage
+                    source={{ uri: magnifierSnapshot }}
+                    style={{
+                      width: screenWidth * 3,
+                      height: canvasHeight * 3,
+                      position: 'absolute',
+                      left: -targetX * 3 + halfSize,
+                      top: -targetY * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
@@ -10493,7 +10505,7 @@ export default function DrawSketchScreen() {
                     ) : null;
                   })}
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(targetY + canvasOverhead) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(targetY) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;

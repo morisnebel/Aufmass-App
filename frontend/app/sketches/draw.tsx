@@ -10441,12 +10441,10 @@ export default function DrawSketchScreen() {
         
         const halfSize = magnifierSize / 2;
         
-        // Aktueller Scale für korrekte Bildpositionierung
-        // Der Snapshot zeigt den Canvas im aktuellen Zoom-Zustand,
-        // daher müssen Canvas-Koordinaten mit Scale multipliziert werden
-        const currentScale = scaleRef.current || 1;
-        const scaledTargetX = magnifierTargetPosition.x * currentScale;
-        const scaledTargetY = magnifierTargetPosition.y * currentScale;
+        // Canvas-Koordinaten direkt verwenden (OHNE Scale-Multiplikation)
+        // Der Snapshot zeigt das gleiche wie der Canvas, also sind die Koordinaten identisch
+        const targetX = magnifierTargetPosition.x;
+        const targetY = magnifierTargetPosition.y;
         
         return (
         <View
@@ -10473,9 +10471,9 @@ export default function DrawSketchScreen() {
                       width: (canvasLayout?.width || screenWidth) * 3,
                       height: (canvasLayout?.height || canvasHeight) * 3,
                       position: 'absolute',
-                      // Skalierte Koordinaten für korrekte Positionierung im gezoomten Snapshot
-                      left: -scaledTargetX * 3 + halfSize,
-                      top: -scaledTargetY * 3 + halfSize,
+                      // Canvas-Koordinaten direkt verwenden (gleiche wie im SVG-Koordinatensystem)
+                      left: -targetX * 3 + halfSize,
+                      top: -targetY * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
@@ -10485,13 +10483,13 @@ export default function DrawSketchScreen() {
                 <Svg width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
                   <Circle cx={halfSize} cy={halfSize} r={halfSize} fill="#f8f9fa" />
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(scaledTargetX) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(targetX) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gv${i}`} x1={pos} y1={0} x2={pos} y2={magnifierSize} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;
                   })}
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(scaledTargetY) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(targetY) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;

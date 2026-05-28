@@ -1581,7 +1581,9 @@ export default function ProjectDetailScreen() {
     // WebKit ignoriert page-break-inside: avoid bei Flexbox-Containern
     // iPhone: Alles untereinander (display: block, width: 100%)
     // iPad: inline-block Layout (mehrere nebeneinander, aber Seitenumbrüche werden respektiert)
+    // Android: Radikal vereinfacht - nur block-Elemente für zuverlässiges Drucken
     const isIOSDevice = Platform.OS === 'ios';
+    const isAndroidDevice = Platform.OS === 'android';
     const isIpad = Platform.OS === 'ios' && Platform.isPad;
     const isIphone = Platform.OS === 'ios' && !Platform.isPad;
     
@@ -1620,17 +1622,21 @@ export default function ProjectDetailScreen() {
       }
       
       // Bestimme Breite und max-height basierend auf Größe
-      let width = '48%'; // medium default
-      let maxImgHeight = '280px';
-      let display = 'inline-block';
+      // ANDROID: Radikal vereinfacht - alle Fotos als 100% Block für zuverlässiges Drucken
+      let width = isAndroidDevice ? '100%' : '48%'; // medium default
+      let maxImgHeight = isAndroidDevice ? '350px' : '280px';
+      let display = isAndroidDevice ? 'block' : 'inline-block';
       
-      if (size === 'small') {
-        width = '31%';
-        maxImgHeight = '180px';
-      } else if (size === 'large' || size === 'full') {
-        width = '100%';
-        maxImgHeight = '400px';
-        display = 'block';
+      if (!isAndroidDevice) {
+        // iOS und Web: Größenoptionen verwenden
+        if (size === 'small') {
+          width = '31%';
+          maxImgHeight = '180px';
+        } else if (size === 'large' || size === 'full') {
+          width = '100%';
+          maxImgHeight = '400px';
+          display = 'block';
+        }
       }
       
       // Bild und Annotationen in einem einzigen SVG für korrekte Koordinaten
@@ -1666,11 +1672,14 @@ export default function ProjectDetailScreen() {
     
     if (photos.length > 0) {
       // iOS: Saubere Seitenumbrüche
-      const photosContainerClass = isIphone 
-        ? 'photos-print-container photos-print-iphone' 
-        : isIpad 
-          ? 'photos-print-container photos-print-ipad'
-          : 'photos-print-container';
+      // Android: Radikal vereinfacht
+      const photosContainerClass = isAndroidDevice
+        ? 'photos-print-container photos-print-android'
+        : isIphone 
+          ? 'photos-print-container photos-print-iphone' 
+          : isIpad 
+            ? 'photos-print-container photos-print-ipad'
+            : 'photos-print-container';
       
       // Erstes Foto mit eingebetteter Überschrift
       const firstPhotoHtml = generatePhotoHtml(photos[0]);
@@ -1752,11 +1761,14 @@ export default function ProjectDetailScreen() {
     
     // Sketches-Container: iOS bekommt block/inline-block Layout für bessere Seitenumbrüche
     // WebKit (iOS) ignoriert page-break-inside: avoid bei Flexbox-Containern
-    const sketchesContainerClass = isIphone 
-      ? 'sketches-container sketches-container-iphone' 
-      : isIpad 
-        ? 'sketches-container sketches-container-ipad'
-        : 'sketches-container';
+    // Android: Radikal vereinfacht - nur block-Elemente
+    const sketchesContainerClass = isAndroidDevice
+      ? 'sketches-container sketches-container-android'
+      : isIphone 
+        ? 'sketches-container sketches-container-iphone' 
+        : isIpad 
+          ? 'sketches-container sketches-container-ipad'
+          : 'sketches-container';
     
     // Alle Sketches im Container zusammen - Überschrift ist im ersten Item eingebettet
     const sketchesHtml = sketches.length > 0 ? `
@@ -2956,6 +2968,41 @@ export default function ProjectDetailScreen() {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               margin-bottom: 10px !important;
+            }
+            /* ANDROID: Radikal vereinfachtes Layout für zuverlässiges Drucken */
+            /* Android Print Spooler hat Probleme mit inline-block, flex, grid */
+            .photos-print-android {
+              display: block !important;
+            }
+            .photos-print-android > div {
+              display: block !important;
+              width: 100% !important;
+              font-size: 14px !important;
+              margin-bottom: 15px !important;
+            }
+            .photos-print-android > div img,
+            .photos-print-android > div svg {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 350px !important;
+            }
+            .sketches-container-android {
+              display: block !important;
+            }
+            .sketches-container-android .sketch-item {
+              display: block !important;
+              width: 100% !important;
+              font-size: 14px !important;
+              margin-bottom: 20px !important;
+            }
+            .sketches-container-android .sketch-item img {
+              display: block !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              max-height: 500px !important;
             }
           }
           * {

@@ -816,6 +816,17 @@ export default function DrawSketchScreen() {
     return { x: canvasX, y: canvasY };
   }, [canvasOverhead]);
   
+  // Helper: Konvertiert Canvas-Koordinaten zu Screen-Koordinaten (für Protractor-SVG-Overlay)
+  // Dies ist die inverse Funktion von screenToCanvasForMagnifier
+  const canvasToScreenCoords = useCallback((canvasX: number, canvasY: number) => {
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
+    const currentScale = scaleRef.current || 1;
+    // Inverse Berechnung: mit Scale multiplizieren und Offset addieren
+    const screenX = canvasX * currentScale + layout.x;
+    const screenY = canvasY * currentScale + layout.y;
+    return { x: screenX, y: screenY };
+  }, [canvasOverhead]);
+  
   // Verschiebbare Position des Protractor-Panels
   const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const protractorPanelPanResponder = useRef(
@@ -10410,6 +10421,13 @@ export default function DrawSketchScreen() {
         
         const halfSize = magnifierSize / 2;
         
+        // Aktueller Scale für korrekte Bildpositionierung
+        // Der Snapshot zeigt den Canvas im aktuellen Zoom-Zustand,
+        // daher müssen Canvas-Koordinaten mit Scale multipliziert werden
+        const currentScale = scaleRef.current || 1;
+        const scaledTargetX = magnifierTargetPosition.x * currentScale;
+        const scaledTargetY = magnifierTargetPosition.y * currentScale;
+        
         return (
         <View
           style={[
@@ -10435,8 +10453,9 @@ export default function DrawSketchScreen() {
                       width: (canvasLayout?.width || screenWidth) * 3,
                       height: (canvasLayout?.height || canvasHeight) * 3,
                       position: 'absolute',
-                      left: -magnifierTargetPosition.x * 3 + halfSize,
-                      top: -magnifierTargetPosition.y * 3 + halfSize,
+                      // Skalierte Koordinaten für korrekte Positionierung im gezoomten Snapshot
+                      left: -scaledTargetX * 3 + halfSize,
+                      top: -scaledTargetY * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />
@@ -10446,13 +10465,13 @@ export default function DrawSketchScreen() {
                 <Svg width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
                   <Circle cx={halfSize} cy={halfSize} r={halfSize} fill="#f8f9fa" />
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(magnifierTargetPosition.x) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(scaledTargetX) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gv${i}`} x1={pos} y1={0} x2={pos} y2={magnifierSize} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;
                   })}
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
-                    const pos = (i * 30) - ((Math.round(magnifierTargetPosition.y) * 3) % 30);
+                    const pos = (i * 30) - ((Math.round(scaledTargetY) * 3) % 30);
                     return pos >= 0 && pos <= magnifierSize ? (
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;

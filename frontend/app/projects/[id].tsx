@@ -3099,14 +3099,24 @@ export default function ProjectDetailScreen() {
             .photos-print-android table {
               width: 100% !important;
               border-collapse: collapse !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .photos-print-android tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .photos-print-android td {
               vertical-align: top !important;
               padding: 5px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .photos-print-android td > div {
               display: block !important;
               width: 100% !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .photos-print-android img,
             .photos-print-android svg {
@@ -3114,6 +3124,9 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
+              max-height: 300px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketches-container-android {
               display: block !important;
@@ -3121,26 +3134,45 @@ export default function ProjectDetailScreen() {
             .sketches-container-android table {
               width: 100% !important;
               border-collapse: collapse !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .sketches-container-android tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketches-container-android td {
               vertical-align: top !important;
               padding: 5px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketches-container-android .sketch-item {
               display: block !important;
               width: 100% !important;
               margin-bottom: 10px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketches-container-android .sketch-item img {
               display: block !important;
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
+              max-height: 450px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             /* Android Tabellen-Stil für bessere Darstellung */
             .android-photo-table,
             .android-sketch-table {
               page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            .android-photo-table tr,
+            .android-sketch-table tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .android-sketch-large tr {
               page-break-before: always !important;

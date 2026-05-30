@@ -1877,16 +1877,16 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // Mittlere Skizzen: 1 pro Zeile, 2 untereinander pro Seite - Bilder sollen Container füllen
+        // Mittlere Skizzen: 2 nebeneinander (wie mittlere Fotos)
         if (sketchesBySize.medium.length > 0) {
-          sketchListHtml += `<div style="margin-bottom: 10px;">`;
+          sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
             const modifiedHtml = html
               .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 450px; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 450px;"');
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 450px; display: block; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 450px; display: block;"');
             sketchListHtml += `
-              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
+              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">
                   ${modifiedHtml}
                 </div>
@@ -3144,6 +3144,7 @@ export default function ProjectDetailScreen() {
             }
             .sketches-container-android {
               display: block !important;
+              font-size: 0 !important;
             }
             .sketches-container-android table {
               width: 100% !important;
@@ -3157,16 +3158,36 @@ export default function ProjectDetailScreen() {
               vertical-align: top !important;
               padding: 5px !important;
             }
+            /* Android Skizzen: inline-block Layout beibehalten */
             .sketches-container-android .sketch-item {
-              display: block !important;
-              width: 100% !important;
+              font-size: 12px !important;
               margin-bottom: 10px !important;
+              box-sizing: border-box !important;
             }
             .sketches-container-android .sketch-item img {
               display: block !important;
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
+            }
+            /* Android Skizzen Größen - wie bei Fotos */
+            .sketches-container-android .sketch-small {
+              display: inline-block !important;
+              width: 49% !important;
+              vertical-align: top !important;
+              padding: 3px !important;
+            }
+            .sketches-container-android .sketch-medium {
+              display: inline-block !important;
+              width: 49% !important;
+              vertical-align: top !important;
+              padding: 3px !important;
+            }
+            .sketches-container-android .sketch-large,
+            .sketches-container-android .sketch-full {
+              display: block !important;
+              width: 100% !important;
+              padding: 5px !important;
             }
             /* Android Tabellen: Nur auf table-Ebene page-break vermeiden */
             .android-photo-table {

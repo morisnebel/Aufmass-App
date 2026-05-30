@@ -1699,11 +1699,13 @@ export default function ProjectDetailScreen() {
         
         // Kleine Fotos: 3 nebeneinander (33% Breite)
         if (photosBySize.small.length > 0) {
-          photoListHtml += `<div style="margin-bottom: 10px;">`;
+          photoListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           photosBySize.small.forEach((photo, idx) => {
             photoListHtml += `
-              <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box;">
-                ${generatePhotoHtml(photo)}
+              <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
+                <div style="width: 100%;">
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 200px;"')}
+                </div>
               </div>
             `;
           });
@@ -1712,11 +1714,13 @@ export default function ProjectDetailScreen() {
         
         // Mittlere Fotos: 2 nebeneinander (50% Breite)
         if (photosBySize.medium.length > 0) {
-          photoListHtml += `<div style="margin-bottom: 10px;">`;
+          photoListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           photosBySize.medium.forEach((photo, idx) => {
             photoListHtml += `
-              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box;">
-                ${generatePhotoHtml(photo)}
+              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
+                <div style="width: 100%;">
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 320px;"')}
+                </div>
               </div>
             `;
           });
@@ -1729,7 +1733,9 @@ export default function ProjectDetailScreen() {
           photosBySize.large.forEach((photo, idx) => {
             photoListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
-                ${generatePhotoHtml(photo)}
+                <div style="width: 100%;">
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 450px;"')}
+                </div>
               </div>
             `;
           });
@@ -1850,26 +1856,39 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // Kleine Skizzen: 2 nebeneinander (50% Breite)
+        // Kleine Skizzen: 2 nebeneinander (50% Breite) - Bilder sollen Container füllen
         if (sketchesBySize.small.length > 0) {
-          sketchListHtml += `<div style="margin-bottom: 10px;">`;
+          sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.small.forEach((html, idx) => {
+            // Ersetze img-Styles um die Breite zu maximieren
+            const modifiedHtml = html
+              .replace(/max-height:\s*\d+px;?/g, '')
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 350px; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 350px;"');
             sketchListHtml += `
-              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box;">
-                ${html}
+              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
+                <div style="width: 100%;">
+                  ${modifiedHtml}
+                </div>
               </div>
             `;
           });
           sketchListHtml += `</div>`;
         }
         
-        // Mittlere Skizzen: 1 pro Zeile, 2 untereinander pro Seite
+        // Mittlere Skizzen: 1 pro Zeile, 2 untereinander pro Seite - Bilder sollen Container füllen
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px;">`;
           sketchesBySize.medium.forEach((html, idx) => {
+            const modifiedHtml = html
+              .replace(/max-height:\s*\d+px;?/g, '')
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 450px; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 450px;"');
             sketchListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
-                ${html}
+                <div style="width: 100%;">
+                  ${modifiedHtml}
+                </div>
               </div>
             `;
           });
@@ -1879,9 +1898,15 @@ export default function ProjectDetailScreen() {
         // Große Skizzen: 1 pro Seite (volle Breite, page-break)
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
+            const modifiedHtml = html
+              .replace(/max-height:\s*\d+px;?/g, '')
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 700px; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 700px;"');
             sketchListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; page-break-before: ${idx > 0 ? 'always' : 'auto'};">
-                ${html}
+                <div style="width: 100%;">
+                  ${modifiedHtml}
+                </div>
               </div>
             `;
           });

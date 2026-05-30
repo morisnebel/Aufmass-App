@@ -1685,26 +1685,56 @@ export default function ProjectDetailScreen() {
       const headingHtml = `<h2 class="photo-inline-heading">${t('photos.title')}</h2>`;
       
       if (isAndroidDevice) {
-        // ANDROID: Einfaches Block-Layout - alle Fotos untereinander
-        // Keine separaten Tabellen, um Seitenumbruch-Probleme zu vermeiden
+        // ANDROID: Grid-Layout mit inline-block
+        // Klein: 3 nebeneinander, Mittel: 2 nebeneinander, Groß: 1 (volle Breite)
+        const photosBySize: { [key: string]: typeof photos } = { small: [], medium: [], large: [] };
+        photos.forEach(photo => {
+          const size = photo.pdf_size || 'medium';
+          if (size === 'small') photosBySize.small.push(photo);
+          else if (size === 'large' || size === 'full') photosBySize.large.push(photo);
+          else photosBySize.medium.push(photo);
+        });
+        
         let photoListHtml = headingHtml;
         
-        // Alle Fotos in Originalreihenfolge, aber mit angepasster Größe
-        photos.forEach((photo, index) => {
-          const size = photo.pdf_size || 'medium';
-          let maxHeight = '250px';
-          if (size === 'small') maxHeight = '180px';
-          else if (size === 'large' || size === 'full') maxHeight = '400px';
-          
-          // Einfacher div-Container pro Foto
-          photoListHtml += `
-            <div style="margin-bottom: 15px; page-break-inside: avoid;">
-              <div style="max-height: ${maxHeight}; overflow: hidden;">
+        // Kleine Fotos: 3 nebeneinander (33% Breite)
+        if (photosBySize.small.length > 0) {
+          photoListHtml += `<div style="margin-bottom: 10px;">`;
+          photosBySize.small.forEach((photo, idx) => {
+            photoListHtml += `
+              <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box;">
                 ${generatePhotoHtml(photo)}
               </div>
-            </div>
-          `;
-        });
+            `;
+          });
+          photoListHtml += `</div>`;
+        }
+        
+        // Mittlere Fotos: 2 nebeneinander (50% Breite)
+        if (photosBySize.medium.length > 0) {
+          photoListHtml += `<div style="margin-bottom: 10px;">`;
+          photosBySize.medium.forEach((photo, idx) => {
+            photoListHtml += `
+              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box;">
+                ${generatePhotoHtml(photo)}
+              </div>
+            `;
+          });
+          photoListHtml += `</div>`;
+        }
+        
+        // Große Fotos: 1 pro Zeile (100% Breite), 2 untereinander pro Seite
+        if (photosBySize.large.length > 0) {
+          photoListHtml += `<div style="margin-bottom: 10px;">`;
+          photosBySize.large.forEach((photo, idx) => {
+            photoListHtml += `
+              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
+                ${generatePhotoHtml(photo)}
+              </div>
+            `;
+          });
+          photoListHtml += `</div>`;
+        }
         
         photosHtml = `<div class="${photosContainerClass}">${photoListHtml}</div>`;
       } else {
@@ -1799,32 +1829,63 @@ export default function ProjectDetailScreen() {
     let sketchesHtml = '';
     if (sketches.length > 0) {
       if (isAndroidDevice) {
-        // ANDROID: Einfaches Block-Layout - alle Skizzen untereinander
-        // Keine separaten Tabellen, um Seitenumbruch-Probleme zu vermeiden
+        // ANDROID: Grid-Layout mit inline-block
+        // Klein: 2 nebeneinander, Mittel: 1 pro Zeile (2 untereinander), Groß: 1 pro Seite
         const headingHtml = `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>`;
-        let sketchListHtml = headingHtml;
+        
+        const sketchesBySize: { small: string[], medium: string[], large: string[] } = { small: [], medium: [], large: [] };
         
         sketchItems.forEach((itemHtml, index) => {
           const sketch = sketches[index];
           const meta = sketch.metadata || {};
           const size = (typeof meta === 'object' && meta.pdf_size) || sketch.pdf_size || 'large';
           
-          let maxHeight = '400px';
-          if (size === 'small') maxHeight = '280px';
-          else if (size === 'medium') maxHeight = '350px';
-          
-          // Überschrift aus dem Item entfernen (wird bereits oben angezeigt)
+          // Überschrift aus dem Item entfernen
           const cleanHtml = itemHtml.replace(/<h2 class="sketch-inline-heading">[^<]*<\/h2>/g, '');
           
-          // Einfacher div-Container pro Skizze
-          sketchListHtml += `
-            <div style="margin-bottom: 15px; page-break-inside: avoid;">
-              <div style="max-height: ${maxHeight}; overflow: hidden;">
-                ${cleanHtml}
-              </div>
-            </div>
-          `;
+          if (size === 'small') sketchesBySize.small.push(cleanHtml);
+          else if (size === 'medium') sketchesBySize.medium.push(cleanHtml);
+          else sketchesBySize.large.push(cleanHtml);
         });
+        
+        let sketchListHtml = headingHtml;
+        
+        // Kleine Skizzen: 2 nebeneinander (50% Breite)
+        if (sketchesBySize.small.length > 0) {
+          sketchListHtml += `<div style="margin-bottom: 10px;">`;
+          sketchesBySize.small.forEach((html, idx) => {
+            sketchListHtml += `
+              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box;">
+                ${html}
+              </div>
+            `;
+          });
+          sketchListHtml += `</div>`;
+        }
+        
+        // Mittlere Skizzen: 1 pro Zeile, 2 untereinander pro Seite
+        if (sketchesBySize.medium.length > 0) {
+          sketchListHtml += `<div style="margin-bottom: 10px;">`;
+          sketchesBySize.medium.forEach((html, idx) => {
+            sketchListHtml += `
+              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
+                ${html}
+              </div>
+            `;
+          });
+          sketchListHtml += `</div>`;
+        }
+        
+        // Große Skizzen: 1 pro Seite (volle Breite, page-break)
+        if (sketchesBySize.large.length > 0) {
+          sketchesBySize.large.forEach((html, idx) => {
+            sketchListHtml += `
+              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; page-break-before: ${idx > 0 ? 'always' : 'auto'};">
+                ${html}
+              </div>
+            `;
+          });
+        }
         
         sketchesHtml = `<div class="${sketchesContainerClass}">${sketchListHtml}</div>`;
       } else {

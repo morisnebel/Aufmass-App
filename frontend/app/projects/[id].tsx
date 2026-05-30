@@ -1697,14 +1697,14 @@ export default function ProjectDetailScreen() {
         
         let photoListHtml = headingHtml;
         
-        // Kleine Fotos: 3 nebeneinander (33% Breite)
+        // Kleine Fotos: 3 nebeneinander (33% Breite) - GRÖSSERE Bilder
         if (photosBySize.small.length > 0) {
           photoListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           photosBySize.small.forEach((photo, idx) => {
             photoListHtml += `
               <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">
-                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 200px;"')}
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, 'max-height: 280px;').replace(/width:\s*\d+%;?/g, 'width: 100%;').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 280px; display: block;"')}
                 </div>
               </div>
             `;
@@ -1712,14 +1712,14 @@ export default function ProjectDetailScreen() {
           photoListHtml += `</div>`;
         }
         
-        // Mittlere Fotos: 2 nebeneinander (50% Breite)
+        // Mittlere Fotos: 2 nebeneinander (50% Breite) - GRÖSSERE Bilder
         if (photosBySize.medium.length > 0) {
           photoListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           photosBySize.medium.forEach((photo, idx) => {
             photoListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">
-                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 320px;"')}
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, 'max-height: 400px;').replace(/width:\s*\d+%;?/g, 'width: 100%;').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 400px; display: block;"')}
                 </div>
               </div>
             `;
@@ -1734,7 +1734,7 @@ export default function ProjectDetailScreen() {
             photoListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; margin-bottom: 10px;">
                 <div style="width: 100%;">
-                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 450px;"')}
+                  ${generatePhotoHtml(photo).replace(/max-height:\s*\d+px;?/g, '').replace(/<img/g, '<img style="width: 100%; height: auto; max-height: 450px; display: block;"')}
                 </div>
               </div>
             `;
@@ -1856,15 +1856,16 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // Kleine Skizzen: 2 nebeneinander (50% Breite) - Bilder sollen Container füllen
+        // Kleine Skizzen: 2 nebeneinander (50% Breite) - GRÖSSERE Bilder
         if (sketchesBySize.small.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.small.forEach((html, idx) => {
-            // Ersetze img-Styles um die Breite zu maximieren
+            // Ersetze img-Styles um die Breite zu maximieren - GRÖSSER
             const modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 350px; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 350px;"');
+              .replace(/max-height:\s*\d+px;?/g, 'max-height: 400px;')
+              .replace(/width:\s*\d+%;?/g, 'width: 100%;')
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 400px; display: block; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 400px; display: block;"');
             sketchListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">

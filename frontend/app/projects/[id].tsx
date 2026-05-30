@@ -1856,18 +1856,17 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // Kleine Skizzen: 2 nebeneinander (50% Breite) - GRÖSSERE Bilder
+        // Kleine Skizzen: 3 nebeneinander (wie kleine Fotos - 32% Breite)
         if (sketchesBySize.small.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.small.forEach((html, idx) => {
-            // Ersetze img-Styles um die Breite zu maximieren - GRÖSSER
+            // Bilder sollen Container füllen
             const modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/g, 'max-height: 400px;')
-              .replace(/width:\s*\d+%;?/g, 'width: 100%;')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 400px; display: block; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 400px; display: block;"');
+              .replace(/max-height:\s*\d+px;?/g, '')
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 280px; display: block; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 280px; display: block;"');
             sketchListHtml += `
-              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
+              <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">
                   ${modifiedHtml}
                 </div>
@@ -1877,14 +1876,14 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // Mittlere Skizzen: 2 nebeneinander (wie mittlere Fotos)
+        // Mittlere Skizzen: 2 nebeneinander (wie mittlere Fotos - 49% Breite)
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
             const modifiedHtml = html
               .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 450px; display: block; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 450px; display: block;"');
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 400px; display: block; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 400px; display: block;"');
             sketchListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%;">
@@ -3173,7 +3172,7 @@ export default function ProjectDetailScreen() {
             /* Android Skizzen Größen - wie bei Fotos */
             .sketches-container-android .sketch-small {
               display: inline-block !important;
-              width: 49% !important;
+              width: 32% !important;
               vertical-align: top !important;
               padding: 3px !important;
             }

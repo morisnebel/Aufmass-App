@@ -10513,11 +10513,11 @@ export default function DrawSketchScreen() {
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
-                      // Android-Handy: Offset hinzufügen um Bild nach OBEN zu verschieben (Punkt in Lupe war zu niedrig)
+                      // Android-Handy: Offset ABZIEHEN um Bild nach OBEN zu verschieben
                       // iOS/Tablet: Offset-Korrektur: 0.4 (40%) der Differenz zwischen layout.y und canvasOverhead
                       left: -targetX * 3 + halfSize,
                       top: Platform.OS === 'android' && isPhoneDevice 
-                        ? -(targetY + canvasOverhead * 0.6) * 3 + halfSize
+                        ? -(targetY - canvasOverhead * 0.6) * 3 + halfSize
                         : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}
                     resizeMode="contain"
@@ -10533,7 +10533,7 @@ export default function DrawSketchScreen() {
                       position: 'absolute',
                       left: -targetX * 3 + halfSize,
                       top: Platform.OS === 'android' && isPhoneDevice 
-                        ? -(targetY + canvasOverhead * 0.6) * 3 + halfSize
+                        ? -(targetY - canvasOverhead * 0.6) * 3 + halfSize
                         : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}
                     resizeMode="stretch"

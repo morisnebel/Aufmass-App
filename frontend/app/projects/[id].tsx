@@ -1856,17 +1856,17 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // 66% Skizzen: 2 nebeneinander (49% Breite je Skizze)
+        // 66% Skizzen: 2 nebeneinander (49% Breite je Skizze) - Container voll ausnutzen
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
             const modifiedHtml = html
               .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 400px; display: block; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 400px; display: block;"');
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; display: block; object-fit: contain; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; display: block; object-fit: contain;"');
             sketchListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
-                <div style="width: 100%;">
+                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -1880,11 +1880,11 @@ export default function ProjectDetailScreen() {
           sketchesBySize.large.forEach((html, idx) => {
             const modifiedHtml = html
               .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 700px; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 700px;"');
+              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; display: block; object-fit: contain; $2"')
+              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; display: block; object-fit: contain;"');
             sketchListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box;">
-                <div style="width: 100%;">
+                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box;">
                   ${modifiedHtml}
                 </div>
               </div>

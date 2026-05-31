@@ -7513,7 +7513,7 @@ export default function DrawSketchScreen() {
           style={styles.pdfSizeHeaderButton}
         >
           <Ionicons 
-            name={pdfSize === 'medium' ? 'grid-outline' : 'square-outline'} 
+            name={pdfSize === 'medium' ? 'copy-outline' : 'square-outline'} 
             size={20} 
             color="#fff" 
           />

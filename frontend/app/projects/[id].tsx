@@ -2956,8 +2956,6 @@ export default function ProjectDetailScreen() {
             /* ANDROID-HANDY: Alle Sektionen sollen fließend sein - KEINE page-break-after */
             .photos-section,
             .project-overview,
-            .info-container,
-            .info-box,
             .project-type-header,
             .checklists-section {
               page-break-inside: auto !important;
@@ -2966,6 +2964,13 @@ export default function ProjectDetailScreen() {
               break-after: auto !important;
               page-break-before: auto !important;
               break-before: auto !important;
+            }
+            /* Info-Grid muss Grid-Layout beibehalten */
+            .info-grid {
+              display: grid !important;
+              grid-template-columns: 1fr 1fr !important;
+              page-break-inside: auto !important;
+              break-inside: auto !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;

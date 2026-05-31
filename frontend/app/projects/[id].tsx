@@ -2942,6 +2942,8 @@ export default function ProjectDetailScreen() {
               margin-top: 5px !important;
               page-break-inside: auto !important;
               break-inside: auto !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
             }
             .photos-print-android-phone .photo-item {
               max-height: 200px !important;
@@ -2951,10 +2953,19 @@ export default function ProjectDetailScreen() {
             .photos-print-android-phone .photo-item img {
               max-height: 180px !important;
             }
-            /* ANDROID-HANDY: Fotos-Sektion soll über Seiten fließen können */
-            .photos-section {
+            /* ANDROID-HANDY: Alle Sektionen sollen fließend sein - KEINE page-break-after */
+            .photos-section,
+            .project-overview,
+            .info-container,
+            .info-box,
+            .project-type-header,
+            .checklists-section {
               page-break-inside: auto !important;
               break-inside: auto !important;
+              page-break-after: auto !important;
+              break-after: auto !important;
+              page-break-before: auto !important;
+              break-before: auto !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;
@@ -4354,7 +4365,7 @@ export default function ProjectDetailScreen() {
         ` : ''}
         
         ${photos.length > 0 ? `
-          <div class="photos-section" style="page-break-before: auto !important; break-before: auto !important;">
+          <div class="photos-section" style="page-break-before: auto !important; break-before: auto !important; page-break-inside: auto !important; break-inside: auto !important; margin-top: 10px !important;">
             ${photosHtml}
           </div>
         ` : ''}

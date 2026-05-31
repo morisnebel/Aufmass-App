@@ -7494,11 +7494,11 @@ export default function DrawSketchScreen() {
           placeholder={t('sketches.sketchTitle')}
           placeholderTextColor="#ccc"
         />
-        {/* PDF-Größe Button mit Label */}
+        {/* PDF-Größe Button mit Label - nur 2 Optionen: 66% (2 nebeneinander) und 100% (volle Breite) */}
         <TouchableOpacity 
           onPress={() => {
-            const sizes = ['small', 'medium', 'large'];
-            const labels = ['Klein (3/Zeile)', 'Mittel (2/Zeile)', 'Groß (1/Zeile)'];
+            const sizes = ['medium', 'large'];
+            const labels = ['66% (2 nebeneinander)', '100% (volle Breite)'];
             const currentIndex = sizes.indexOf(pdfSize);
             const nextIndex = (currentIndex + 1) % sizes.length;
             setPdfSize(sizes[nextIndex]);
@@ -7513,7 +7513,7 @@ export default function DrawSketchScreen() {
           style={styles.pdfSizeHeaderButton}
         >
           <Ionicons 
-            name={pdfSize === 'small' ? 'apps-outline' : pdfSize === 'medium' ? 'grid-outline' : 'square-outline'} 
+            name={pdfSize === 'medium' ? 'grid-outline' : 'square-outline'} 
             size={20} 
             color="#fff" 
           />

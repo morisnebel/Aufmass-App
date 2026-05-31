@@ -1836,10 +1836,10 @@ export default function ProjectDetailScreen() {
     if (sketches.length > 0) {
       if (isAndroidDevice) {
         // ANDROID: Grid-Layout mit inline-block
-        // Klein: 2 nebeneinander, Mittel: 1 pro Zeile (2 untereinander), Groß: 1 pro Seite
+        // Nur 2 Größen: 66% (2 nebeneinander) und 100% (volle Breite, untereinander)
         const headingHtml = `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>`;
         
-        const sketchesBySize: { small: string[], medium: string[], large: string[] } = { small: [], medium: [], large: [] };
+        const sketchesBySize: { medium: string[], large: string[] } = { medium: [], large: [] };
         
         sketchItems.forEach((itemHtml, index) => {
           const sketch = sketches[index];
@@ -1849,34 +1849,14 @@ export default function ProjectDetailScreen() {
           // Überschrift aus dem Item entfernen
           const cleanHtml = itemHtml.replace(/<h2 class="sketch-inline-heading">[^<]*<\/h2>/g, '');
           
-          if (size === 'small') sketchesBySize.small.push(cleanHtml);
-          else if (size === 'medium') sketchesBySize.medium.push(cleanHtml);
+          // small wird zu medium gemappt (falls alte Daten vorhanden)
+          if (size === 'small' || size === 'medium') sketchesBySize.medium.push(cleanHtml);
           else sketchesBySize.large.push(cleanHtml);
         });
         
         let sketchListHtml = headingHtml;
         
-        // Kleine Skizzen: 3 nebeneinander (wie kleine Fotos - 32% Breite)
-        if (sketchesBySize.small.length > 0) {
-          sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
-          sketchesBySize.small.forEach((html, idx) => {
-            // Bilder sollen Container füllen
-            const modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 280px; display: block; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 280px; display: block;"');
-            sketchListHtml += `
-              <div style="display: inline-block; width: 32%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
-                <div style="width: 100%;">
-                  ${modifiedHtml}
-                </div>
-              </div>
-            `;
-          });
-          sketchListHtml += `</div>`;
-        }
-        
-        // Mittlere Skizzen: 2 nebeneinander (wie mittlere Fotos - 49% Breite)
+        // 66% Skizzen: 2 nebeneinander (49% Breite je Skizze)
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
@@ -1895,7 +1875,7 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // Große Skizzen: 1 pro Seite (volle Breite, page-break)
+        // 100% Skizzen: Volle Breite, untereinander
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
             const modifiedHtml = html
@@ -1903,7 +1883,7 @@ export default function ProjectDetailScreen() {
               .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; max-height: 700px; $2"')
               .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; max-height: 700px;"');
             sketchListHtml += `
-              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box; page-break-before: ${idx > 0 ? 'always' : 'auto'};">
+              <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box;">
                 <div style="width: 100%;">
                   ${modifiedHtml}
                 </div>
@@ -3169,13 +3149,8 @@ export default function ProjectDetailScreen() {
               max-width: 100% !important;
               height: auto !important;
             }
-            /* Android Skizzen Größen - wie bei Fotos */
-            .sketches-container-android .sketch-small {
-              display: inline-block !important;
-              width: 32% !important;
-              vertical-align: top !important;
-              padding: 3px !important;
-            }
+            /* Android Skizzen Größen - nur 2 Optionen: 66% und 100% */
+            .sketches-container-android .sketch-small,
             .sketches-container-android .sketch-medium {
               display: inline-block !important;
               width: 49% !important;

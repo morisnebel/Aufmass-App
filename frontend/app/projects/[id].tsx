@@ -3423,39 +3423,39 @@ export default function ProjectDetailScreen() {
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-bottom: 6px;
+            gap: 10px;
+            margin-bottom: 10px;
           }
           .info-box {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
-            padding: 4px 6px;
+            padding: 8px 10px;
           }
           .info-box h3 {
             margin-top: 0;
             color: #1976d2;
-            font-size: 8px;
+            font-size: 11px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 2px;
-            margin-bottom: 3px;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
           }
           .info-row {
             display: flex;
-            margin-bottom: 1px;
-            font-size: 7px;
-            line-height: 1.3;
+            margin-bottom: 3px;
+            font-size: 10px;
+            line-height: 1.4;
           }
           .info-label {
             font-weight: 800;
-            min-width: 80px;
+            min-width: 90px;
             flex-shrink: 0;
             color: #000;
-            font-size: 7.5px;
+            font-size: 10px;
           }
           .info-value {
             flex: 1;
-            font-size: 7.5px;
+            font-size: 10px;
           }
           .stats-grid {
             display: grid;

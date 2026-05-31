@@ -807,25 +807,50 @@ export default function DrawSketchScreen() {
   const [protractorAngleEnd, setProtractorAngleEnd] = useState({ x: 0, y: 0 });
   
   // Helper: Konvertiert Screen-Koordinaten zu Canvas-Koordinaten (NUR für Lupe)
+  // WICHTIG: Muss auch Android-ViewBox berücksichtigen!
   const screenToCanvasForMagnifier = useCallback((screenX: number, screenY: number) => {
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     const currentScale = scaleRef.current || 1;
-    // Einfache Berechnung: nur Offset abziehen und durch Scale teilen
+    
+    // Android mit ViewBox-Transformation
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      const lx = layout.x;
+      const ly = layout.y;
+      return {
+        x: androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w,
+        y: androidViewBox.y + ((screenY - ly) / canvasHeight) * androidViewBox.h,
+      };
+    }
+    
+    // Standard: nur Offset abziehen und durch Scale teilen
     const canvasX = (screenX - layout.x) / currentScale;
     const canvasY = (screenY - layout.y) / currentScale;
     return { x: canvasX, y: canvasY };
-  }, [canvasOverhead]);
+  }, [canvasOverhead, androidViewBox, screenWidth, canvasHeight]);
   
   // Helper: Konvertiert Canvas-Koordinaten zu Screen-Koordinaten (für Protractor-SVG-Overlay)
   // Dies ist die inverse Funktion von screenToCanvasForMagnifier
+  // WICHTIG: Muss auch Android-ViewBox berücksichtigen!
   const canvasToScreenCoords = useCallback((canvasX: number, canvasY: number) => {
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     const currentScale = scaleRef.current || 1;
-    // Inverse Berechnung: mit Scale multiplizieren und Offset addieren
+    
+    // Android mit ViewBox-Transformation: inverse Berechnung
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      const lx = layout.x;
+      const ly = layout.y;
+      // Inverse Formel: canvasX = androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w
+      // => screenX = ((canvasX - androidViewBox.x) / androidViewBox.w) * screenWidth + lx
+      const screenX = ((canvasX - androidViewBox.x) / androidViewBox.w) * screenWidth + lx;
+      const screenY = ((canvasY - androidViewBox.y) / androidViewBox.h) * canvasHeight + ly;
+      return { x: screenX, y: screenY };
+    }
+    
+    // Standard: mit Scale multiplizieren und Offset addieren
     const screenX = canvasX * currentScale + layout.x;
     const screenY = canvasY * currentScale + layout.y;
     return { x: screenX, y: screenY };
-  }, [canvasOverhead]);
+  }, [canvasOverhead, androidViewBox, screenWidth, canvasHeight]);
   
   // Verschiebbare Position des Protractor-Panels
   const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;

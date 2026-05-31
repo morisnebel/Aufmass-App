@@ -2940,12 +2940,21 @@ export default function ProjectDetailScreen() {
             /* ANDROID-HANDY: Kompaktes Layout - Fotos sollen auf erste Seite passen */
             .photos-print-android-phone {
               margin-top: 5px !important;
+              page-break-inside: auto !important;
+              break-inside: auto !important;
             }
             .photos-print-android-phone .photo-item {
               max-height: 200px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .photos-print-android-phone .photo-item img {
               max-height: 180px !important;
+            }
+            /* ANDROID-HANDY: Fotos-Sektion soll über Seiten fließen können */
+            .photos-section {
+              page-break-inside: auto !important;
+              break-inside: auto !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;

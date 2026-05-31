@@ -1860,14 +1860,14 @@ export default function ProjectDetailScreen() {
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
-            // Alle Größenbeschränkungen entfernen und Bilder auf volle Breite setzen
+            // Das sketch-item div direkt mit inline-styles überschreiben
+            // und das img-Tag mit voller Breite versehen
             let modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/gi, '')
-              .replace(/max-width:\s*\d+px;?/gi, '')
-              .replace(/width:\s*\d+px;?/gi, '')
-              .replace(/height:\s*\d+px;?/gi, '');
-            // Alle img-Tags mit voller Breite versehen
-            modifiedHtml = modifiedHtml.replace(/<img([^>]*)>/g, '<img$1 style="width: 100% !important; height: auto !important; display: block !important;">');
+              // Erst vorhandene style-Attribute bei img entfernen
+              .replace(/<img\s+style="[^"]*"/gi, '<img')
+              // Dann neues style hinzufügen
+              .replace(/<img/gi, '<img style="width: 100% !important; height: auto !important; display: block !important; max-width: none !important;"');
+            
             sketchListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box; overflow: hidden;">
@@ -1882,14 +1882,13 @@ export default function ProjectDetailScreen() {
         // 100% Skizzen: Volle Breite, untereinander
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
-            // Alle Größenbeschränkungen entfernen und Bilder auf volle Breite setzen
+            // Das sketch-item div direkt mit inline-styles überschreiben
             let modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/gi, '')
-              .replace(/max-width:\s*\d+px;?/gi, '')
-              .replace(/width:\s*\d+px;?/gi, '')
-              .replace(/height:\s*\d+px;?/gi, '');
-            // Alle img-Tags mit voller Breite versehen
-            modifiedHtml = modifiedHtml.replace(/<img([^>]*)>/g, '<img$1 style="width: 100% !important; height: auto !important; display: block !important;">');
+              // Erst vorhandene style-Attribute bei img entfernen
+              .replace(/<img\s+style="[^"]*"/gi, '<img')
+              // Dann neues style hinzufügen
+              .replace(/<img/gi, '<img style="width: 100% !important; height: auto !important; display: block !important; max-width: none !important;"');
+            
             sketchListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box;">
                 <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box; overflow: hidden;">

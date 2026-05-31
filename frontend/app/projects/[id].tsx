@@ -4231,8 +4231,8 @@ export default function ProjectDetailScreen() {
         </div>
         
         <h2>${t('pdf.projectOverview')}</h2>
-        <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;">
-          <div class="info-box" style="width: 100%; box-sizing: border-box;">
+        <div class="info-grid" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; width: 100% !important; max-width: none !important;">
+          <div class="info-box" style="width: 100% !important; box-sizing: border-box !important;">
             <h3>${t('pdf.project')}</h3>
             ${project?.project_number ? `
               <div class="info-row">
@@ -4305,7 +4305,7 @@ export default function ProjectDetailScreen() {
             ` : ''}
           </div>
           
-          <div class="info-box" style="width: 100%; box-sizing: border-box;">
+          <div class="info-box" style="width: 100% !important; box-sizing: border-box !important;">
             <h3>${t('projects.bauherr')}</h3>
             ${customer?.customer_number ? `
               <div class="info-row">

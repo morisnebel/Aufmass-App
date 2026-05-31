@@ -1586,6 +1586,8 @@ export default function ProjectDetailScreen() {
     const isAndroidDevice = Platform.OS === 'android';
     const isIpad = Platform.OS === 'ios' && Platform.isPad;
     const isIphone = Platform.OS === 'ios' && !Platform.isPad;
+    const isAndroidPhone = Platform.OS === 'android' && screenWidth < 768;
+    const isAndroidTablet = Platform.OS === 'android' && screenWidth >= 768;
     
     // Hilfsfunktion um Fotos-HTML zu generieren - mit inline styles für zuverlässiges Drucken
     const generatePhotoHtml = (photo: typeof photos[0]) => {
@@ -1674,13 +1676,18 @@ export default function ProjectDetailScreen() {
     if (photos.length > 0) {
       // iOS: Saubere Seitenumbrüche
       // Android: Tabellen-basiertes Grid-Layout
-      const photosContainerClass = isAndroidDevice
-        ? 'photos-print-container photos-print-android'
-        : isIphone 
-          ? 'photos-print-container photos-print-iphone' 
-          : isIpad 
-            ? 'photos-print-container photos-print-ipad'
-            : 'photos-print-container';
+      // Android-Handy: Spezielle Klasse für kompaktes Layout (Fotos auf erste Seite)
+      const photosContainerClass = isAndroidPhone
+        ? 'photos-print-container photos-print-android photos-print-android-phone'
+        : isAndroidTablet
+          ? 'photos-print-container photos-print-android photos-print-android-tablet'
+          : isAndroidDevice
+            ? 'photos-print-container photos-print-android'
+            : isIphone 
+              ? 'photos-print-container photos-print-iphone' 
+              : isIpad 
+                ? 'photos-print-container photos-print-ipad'
+                : 'photos-print-container';
       
       const headingHtml = `<h2 class="photo-inline-heading">${t('photos.title')}</h2>`;
       
@@ -2929,6 +2936,23 @@ export default function ProjectDetailScreen() {
               page-break-before: auto !important;
               break-before: auto !important;
               page-break-inside: auto !important; 
+            }
+            /* ANDROID-HANDY: Kompaktes Layout - Fotos sollen auf erste Seite passen */
+            .photos-print-android-phone {
+              page-break-before: avoid !important;
+              break-before: avoid !important;
+              margin-top: 5px !important;
+            }
+            .photos-print-android-phone .photo-item {
+              max-height: 200px !important;
+            }
+            .photos-print-android-phone .photo-item img {
+              max-height: 180px !important;
+            }
+            /* ANDROID-HANDY: Checklisten sollen keinen Seitenumbruch danach erzwingen */
+            .checklists-section {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;

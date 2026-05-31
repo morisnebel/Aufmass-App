@@ -1856,17 +1856,21 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // 66% Skizzen: 2 nebeneinander (49% Breite je Skizze) - Container voll ausnutzen
+        // 66% Skizzen: 2 nebeneinander - Bilder sollen Container voll ausfüllen
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
-            const modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; display: block; object-fit: contain; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; display: block; object-fit: contain;"');
+            // Alle Größenbeschränkungen entfernen und Bilder auf volle Breite setzen
+            let modifiedHtml = html
+              .replace(/max-height:\s*\d+px;?/gi, '')
+              .replace(/max-width:\s*\d+px;?/gi, '')
+              .replace(/width:\s*\d+px;?/gi, '')
+              .replace(/height:\s*\d+px;?/gi, '');
+            // Alle img-Tags mit voller Breite versehen
+            modifiedHtml = modifiedHtml.replace(/<img([^>]*)>/g, '<img$1 style="width: 100% !important; height: auto !important; display: block !important;">');
             sketchListHtml += `
               <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
-                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box;">
+                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box; overflow: hidden;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -1878,13 +1882,17 @@ export default function ProjectDetailScreen() {
         // 100% Skizzen: Volle Breite, untereinander
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
-            const modifiedHtml = html
-              .replace(/max-height:\s*\d+px;?/g, '')
-              .replace(/<img([^>]*)style="([^"]*)"/g, '<img$1style="width: 100%; height: auto; display: block; object-fit: contain; $2"')
-              .replace(/<img(?![^>]*style)/g, '<img style="width: 100%; height: auto; display: block; object-fit: contain;"');
+            // Alle Größenbeschränkungen entfernen und Bilder auf volle Breite setzen
+            let modifiedHtml = html
+              .replace(/max-height:\s*\d+px;?/gi, '')
+              .replace(/max-width:\s*\d+px;?/gi, '')
+              .replace(/width:\s*\d+px;?/gi, '')
+              .replace(/height:\s*\d+px;?/gi, '');
+            // Alle img-Tags mit voller Breite versehen
+            modifiedHtml = modifiedHtml.replace(/<img([^>]*)>/g, '<img$1 style="width: 100% !important; height: auto !important; display: block !important;">');
             sketchListHtml += `
               <div style="display: block; width: 100%; padding: 5px; box-sizing: border-box;">
-                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box;">
+                <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box; overflow: hidden;">
                   ${modifiedHtml}
                 </div>
               </div>

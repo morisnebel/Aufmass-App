@@ -2939,8 +2939,6 @@ export default function ProjectDetailScreen() {
             }
             /* ANDROID-HANDY: Kompaktes Layout - Fotos sollen auf erste Seite passen */
             .photos-print-android-phone {
-              page-break-before: avoid !important;
-              break-before: avoid !important;
               margin-top: 5px !important;
             }
             .photos-print-android-phone .photo-item {
@@ -2948,11 +2946,6 @@ export default function ProjectDetailScreen() {
             }
             .photos-print-android-phone .photo-item img {
               max-height: 180px !important;
-            }
-            /* ANDROID-HANDY: Checklisten sollen keinen Seitenumbruch danach erzwingen */
-            .checklists-section {
-              page-break-after: avoid !important;
-              break-after: avoid !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;

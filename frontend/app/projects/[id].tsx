@@ -2965,12 +2965,18 @@ export default function ProjectDetailScreen() {
               page-break-before: auto !important;
               break-before: auto !important;
             }
-            /* Info-Grid muss Grid-Layout beibehalten */
+            /* Info-Grid muss Grid-Layout beibehalten und volle Breite haben */
             .info-grid {
               display: grid !important;
               grid-template-columns: 1fr 1fr !important;
+              width: 100% !important;
+              max-width: 100% !important;
               page-break-inside: auto !important;
               break-inside: auto !important;
+            }
+            .info-box {
+              width: 100% !important;
+              box-sizing: border-box !important;
             }
             .sketch-item {
               page-break-inside: avoid !important;
@@ -3423,39 +3429,39 @@ export default function ProjectDetailScreen() {
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 5px;
+            margin-bottom: 6px;
           }
           .info-box {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
-            padding: 8px 10px;
+            padding: 4px 6px;
           }
           .info-box h3 {
             margin-top: 0;
             color: #1976d2;
-            font-size: 11px;
+            font-size: 8px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 3px;
           }
           .info-row {
             display: flex;
-            margin-bottom: 3px;
-            font-size: 10px;
-            line-height: 1.4;
+            margin-bottom: 1px;
+            font-size: 7px;
+            line-height: 1.3;
           }
           .info-label {
             font-weight: 800;
-            min-width: 90px;
+            min-width: 80px;
             flex-shrink: 0;
             color: #000;
-            font-size: 10px;
+            font-size: 7.5px;
           }
           .info-value {
             flex: 1;
-            font-size: 10px;
+            font-size: 7.5px;
           }
           .stats-grid {
             display: grid;

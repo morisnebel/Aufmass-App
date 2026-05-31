@@ -1856,17 +1856,17 @@ export default function ProjectDetailScreen() {
         
         let sketchListHtml = headingHtml;
         
-        // 66% Skizzen: 2x2 Grid (2 nebeneinander, 2 untereinander = 4 pro Seite)
+        // 66% Skizzen: 2 nebeneinander, je ca. 48% Breite (mit Abstand = 100%)
         if (sketchesBySize.medium.length > 0) {
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
-            // Das img-Tag mit angepasster Größe für 2x2 Grid
+            // Das img-Tag - Bild füllt Container komplett aus
             let modifiedHtml = html
               .replace(/<img\s+style="[^"]*"/gi, '<img')
-              .replace(/<img/gi, '<img style="width: 100% !important; height: auto !important; display: block !important; max-width: none !important; max-height: 280px !important; object-fit: contain !important;"');
+              .replace(/<img/gi, '<img style="width: 100% !important; height: auto !important; display: block !important; max-width: none !important;"');
             
             sketchListHtml += `
-              <div style="display: inline-block; width: 49%; vertical-align: top; padding: 3px; box-sizing: border-box; font-size: 12px;">
+              <div style="display: inline-block; width: 48%; vertical-align: top; padding: 4px; box-sizing: border-box; font-size: 12px;">
                 <div style="width: 100%; border: 1px solid #ddd; padding: 5px; box-sizing: border-box; overflow: hidden;">
                   ${modifiedHtml}
                 </div>

@@ -3429,42 +3429,42 @@ export default function ProjectDetailScreen() {
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 5px;
+            margin-bottom: 6px;
             width: 100%;
           }
           .info-box {
             background: #f8f9fa;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
-            padding: 8px 10px;
+            padding: 4px 6px;
             width: 100%;
             box-sizing: border-box;
           }
           .info-box h3 {
             margin-top: 0;
             color: #1976d2;
-            font-size: 11px;
+            font-size: 8px;
             border-bottom: 1px solid #e0e0e0;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
+            padding-bottom: 2px;
+            margin-bottom: 3px;
           }
           .info-row {
             display: flex;
-            margin-bottom: 3px;
-            font-size: 10px;
-            line-height: 1.4;
+            margin-bottom: 1px;
+            font-size: 7px;
+            line-height: 1.3;
           }
           .info-label {
             font-weight: 800;
-            min-width: 90px;
+            min-width: 80px;
             flex-shrink: 0;
             color: #000;
-            font-size: 10px;
+            font-size: 7.5px;
           }
           .info-value {
             flex: 1;
-            font-size: 10px;
+            font-size: 7.5px;
           }
           .stats-grid {
             display: grid;

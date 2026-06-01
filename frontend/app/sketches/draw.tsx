@@ -10551,14 +10551,30 @@ export default function DrawSketchScreen() {
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
-                      // Android-Handy mit Hintergrundbild: Offset ABZIEHEN um Bild nach OBEN zu verschieben
-                      // iOS/Tablet: Offset-Korrektur: 0.4 (40%) der Differenz zwischen layout.y und canvasOverhead
+                      // Android-Handy mit Hintergrundbild: Offset für Winkelmesser und andere Tools
                       left: -targetX * 3 + halfSize,
                       top: Platform.OS === 'android' && isPhoneDevice 
-                        ? -(targetY - canvasOverhead * 0.6) * 3 + halfSize
+                        ? -(targetY - canvasOverhead * 0.4) * 3 + halfSize
                         : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}
                     resizeMode="contain"
+                  />
+                </View>
+              ) : (showProtractor && protractorCanvasSnapshot.current) ? (
+                /* WINKELMESSER: Eigener Canvas-Snapshot MIT Android-Offset */
+                <View style={[styles.magnifierImageContainer, isPhoneDevice && { width: magnifierSize, height: magnifierSize, borderRadius: magnifierSize / 2 }]}>
+                  <RNImage
+                    source={{ uri: protractorCanvasSnapshot.current }}
+                    style={{
+                      width: screenWidth * 3,
+                      height: canvasHeight * 3,
+                      position: 'absolute',
+                      left: -targetX * 3 + halfSize,
+                      top: Platform.OS === 'android' && isPhoneDevice 
+                        ? -(targetY - canvasOverhead * 0.4) * 3 + halfSize
+                        : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
+                    }}
+                    resizeMode="stretch"
                   />
                 </View>
               ) : magnifierSnapshot ? (
@@ -10566,7 +10582,7 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
-                      // Canvas-Snapshot: Android (Handy UND Tablet) braucht KEINEN Offset, iOS nutzt Standard-Formel
+                      // Canvas-Snapshot für Maßlinien/Polygone: Android braucht KEINEN Offset
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',

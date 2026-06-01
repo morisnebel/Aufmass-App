@@ -3959,7 +3959,10 @@ export default function DrawSketchScreen() {
         setSimpleAnglePoints(newPoints);
         
         // Lupe anzeigen für präzise Positionierung
+        // Benötigt: magnifierTargetPosition (Canvas-Koordinaten) UND magnifierPosition (Screen-Koordinaten)
         setMagnifierTargetPosition({ x: locationX, y: locationY });
+        const screenCoords = canvasToScreenCoords(locationX, locationY);
+        setMagnifierPosition({ x: screenCoords.x, y: screenCoords.y });
         setShowMagnifier(true);
         
         if (newPoints.length === 3) {
@@ -3968,6 +3971,9 @@ export default function DrawSketchScreen() {
           setSimpleAngleResult(angle);
           // Lupe nach kurzer Zeit ausblenden
           setTimeout(() => setShowMagnifier(false), 1500);
+        } else {
+          // Lupe nach kurzer Zeit ausblenden (für nächsten Punkt)
+          setTimeout(() => setShowMagnifier(false), 800);
         }
       }
       return;

@@ -2957,13 +2957,21 @@ export default function ProjectDetailScreen() {
             .photos-section,
             .project-overview,
             .project-type-header,
-            .checklists-section {
+            .checklists-section,
+            .info-grid,
+            h2 {
               page-break-inside: auto !important;
               break-inside: auto !important;
               page-break-after: auto !important;
               break-after: auto !important;
               page-break-before: auto !important;
               break-before: auto !important;
+            }
+            /* Verhindere dass nach der Projektübersicht ein Seitenumbruch kommt */
+            .info-grid {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              margin-bottom: 5px !important;
             }
             /* Info-Grid muss Grid-Layout beibehalten und volle Breite haben */
             .info-grid {

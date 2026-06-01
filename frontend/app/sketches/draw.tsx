@@ -10555,7 +10555,7 @@ export default function DrawSketchScreen() {
                       // iOS/Tablet: Offset-Korrektur: 0.4 (40%) der Differenz zwischen layout.y und canvasOverhead
                       left: -targetX * 3 + halfSize,
                       top: Platform.OS === 'android' && isPhoneDevice 
-                        ? -(targetY - canvasOverhead * 0.3) * 3 + halfSize
+                        ? -(targetY - canvasOverhead * 0.6) * 3 + halfSize
                         : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}
                     resizeMode="contain"

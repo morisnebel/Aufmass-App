@@ -3947,6 +3947,32 @@ export default function DrawSketchScreen() {
       return;
     }
     
+    // === 1 Finger + NICHT zoomen + Einfacher Winkelmesser aktiv ===
+    if (touches.length === 1 && !isZooming && simpleAngleMode) {
+      const touch = touches[0];
+      const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
+      
+      // ========== EINFACHER WINKELMESSER MIT LUPE: Punkt hinzufügen ==========
+      const newPoints = [...simpleAnglePoints, { x: locationX, y: locationY }];
+      
+      if (newPoints.length <= 3) {
+        setSimpleAnglePoints(newPoints);
+        
+        // Lupe anzeigen für präzise Positionierung
+        setMagnifierTargetPosition({ x: locationX, y: locationY });
+        setShowMagnifier(true);
+        
+        if (newPoints.length === 3) {
+          // Alle 3 Punkte gesetzt → Winkel berechnen
+          const angle = calculateSimpleAngle(newPoints);
+          setSimpleAngleResult(angle);
+          // Lupe nach kurzer Zeit ausblenden
+          setTimeout(() => setShowMagnifier(false), 1500);
+        }
+      }
+      return;
+    }
+    
     // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
     if (touches.length === 1 && !isZooming && drawingEnabled) {
       const touch = touches[0];
@@ -3957,26 +3983,6 @@ export default function DrawSketchScreen() {
         handleSelectTouchStart(locationX, locationY);
       } else if (drawMode === 'crop') {
         handleCropModeTouch(locationX, locationY);
-      } else if (simpleAngleMode) {
-        // ========== EINFACHER WINKELMESSER MIT LUPE: Punkt hinzufügen ==========
-        const newPoints = [...simpleAnglePoints, { x: locationX, y: locationY }];
-        
-        if (newPoints.length <= 3) {
-          setSimpleAnglePoints(newPoints);
-          
-          // Lupe anzeigen für präzise Positionierung
-          setMagnifierTargetPosition({ x: locationX, y: locationY });
-          setShowMagnifier(true);
-          
-          if (newPoints.length === 3) {
-            // Alle 3 Punkte gesetzt → Winkel berechnen
-            const angle = calculateSimpleAngle(newPoints);
-            setSimpleAngleResult(angle);
-            // Lupe nach kurzer Zeit ausblenden
-            setTimeout(() => setShowMagnifier(false), 1500);
-          }
-        }
-        return;
       } else if (drawMode === 'text') {
         setPendingPosition({ x: locationX, y: locationY });
         setShowTextModal(true);

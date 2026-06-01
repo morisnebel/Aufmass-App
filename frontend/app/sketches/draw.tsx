@@ -792,6 +792,44 @@ export default function DrawSketchScreen() {
   const [protractorDrawSize, setProtractorDrawSize] = useState(60);
   const protractorCanvasSnapshot = useRef<string | null>(null); // Canvas-Snapshot VOR Protractor-Overlay
   
+  // ========== NEUER EINFACHER WINKELMESSER (ohne Lupe) ==========
+  const [simpleAngleMode, setSimpleAngleMode] = useState(false);
+  const [simpleAnglePoints, setSimpleAnglePoints] = useState<{x: number, y: number}[]>([]);
+  const [simpleAngleResult, setSimpleAngleResult] = useState<number | null>(null);
+  
+  // Berechne den Winkel aus 3 Punkten (Punkt 1 = erster Schenkel, Punkt 2 = Scheitelpunkt, Punkt 3 = zweiter Schenkel)
+  const calculateSimpleAngle = useCallback((points: {x: number, y: number}[]) => {
+    if (points.length !== 3) return null;
+    const [p1, vertex, p3] = points;
+    
+    // Vektoren von Scheitelpunkt zu den Schenkelpunkten
+    const v1x = p1.x - vertex.x;
+    const v1y = p1.y - vertex.y;
+    const v2x = p3.x - vertex.x;
+    const v2y = p3.y - vertex.y;
+    
+    // Längen der Vektoren
+    const len1 = Math.sqrt(v1x * v1x + v1y * v1y);
+    const len2 = Math.sqrt(v2x * v2x + v2y * v2y);
+    
+    if (len1 < 1 || len2 < 1) return null;
+    
+    // Winkel berechnen mit atan2 für korrektes Vorzeichen
+    const angle1 = Math.atan2(v1y, v1x);
+    const angle2 = Math.atan2(v2y, v2x);
+    
+    let angleDiff = (angle2 - angle1) * (180 / Math.PI);
+    
+    // Normalisieren auf 0-360
+    while (angleDiff < 0) angleDiff += 360;
+    while (angleDiff > 360) angleDiff -= 360;
+    
+    // Kleineren Winkel zurückgeben (0-180)
+    if (angleDiff > 180) angleDiff = 360 - angleDiff;
+    
+    return Math.round(angleDiff * 10) / 10; // Eine Dezimalstelle
+  }, []);
+  
   // PDF-Konverter State (pdf.js via WebView - funktioniert ohne native Module)
   const [showPdfConverter, setShowPdfConverter] = useState(false);
   const [pdfBase64Data, setPdfBase64Data] = useState<string | null>(null);
@@ -3919,6 +3957,22 @@ export default function DrawSketchScreen() {
         handleSelectTouchStart(locationX, locationY);
       } else if (drawMode === 'crop') {
         handleCropModeTouch(locationX, locationY);
+      } else if (simpleAngleMode) {
+        // ========== EINFACHER WINKELMESSER: Punkt hinzufügen ==========
+        const newPoints = [...simpleAnglePoints, { x: locationX, y: locationY }];
+        
+        if (newPoints.length <= 3) {
+          setSimpleAnglePoints(newPoints);
+          
+          if (newPoints.length === 3) {
+            // Alle 3 Punkte gesetzt → Winkel berechnen
+            const angle = calculateSimpleAngle(newPoints);
+            setSimpleAngleResult(angle);
+          } else {
+            setSimpleAngleResult(null);
+          }
+        }
+        return;
       } else if (drawMode === 'text') {
         setPendingPosition({ x: locationX, y: locationY });
         setShowTextModal(true);
@@ -7907,52 +7961,43 @@ export default function DrawSketchScreen() {
           </View>
         </View>
 
-        {/* Winkelmesser */}
+        {/* Einfacher Winkelmesser (NEUER ANSATZ - ohne Lupe) */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
-            style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
+            style={[styles.toolButtonInner, simpleAngleMode && styles.toolButtonActive]}
             onPress={() => {
-              if (!showProtractor) {
-                // Canvas-Snapshot erstellen BEVOR das Protractor-Overlay angezeigt wird
-                if (canvasRef.current) {
-                  captureRef(canvasRef.current, {
-                    format: 'png',
-                    quality: 0.8,
-                    result: 'data-uri',
-                  }).then((uri: string) => {
-                    protractorCanvasSnapshot.current = uri;
-                    console.log('Protractor canvas snapshot captured');
-                  }).catch((err: Error) => {
-                    console.log('Canvas snapshot error:', err);
-                    protractorCanvasSnapshot.current = null;
-                  });
-                }
-                // Neuen Winkelmesser öffnen → Position zurücksetzen
-                setProtractorCenter({ x: 0, y: 0 });
-                setProtractorRefEnd({ x: 0, y: 0 });
-                setProtractorAngleEnd({ x: 0, y: 0 });
+              if (simpleAngleMode) {
+                // Ausschalten: Punkte zurücksetzen
+                setSimpleAngleMode(false);
+                setSimpleAnglePoints([]);
+                setSimpleAngleResult(null);
+              } else {
+                // Einschalten: Alten Winkelmesser deaktivieren
+                setShowProtractor(false);
+                setSimpleAngleMode(true);
+                setSimpleAnglePoints([]);
+                setSimpleAngleResult(null);
               }
-              setShowProtractor(!showProtractor);
             }}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24">
               <Path 
                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" 
                 fill="none"
-                stroke={showProtractor ? '#fff' : '#FF5722'}
+                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
-              <Line x1="12" y1="12" x2="12" y2="4" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
-              <Line x1="12" y1="12" x2="20" y2="12" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="12" y2="4" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="20" y2="12" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
               <Path 
                 d="M12 8 A4 4 0 0 1 16 12" 
                 fill="none"
-                stroke={showProtractor ? '#fff' : '#FF5722'}
+                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
             </Svg>
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
+          <Text style={[styles.toolButtonLabel, { color: simpleAngleMode ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
         </View>
 
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}
@@ -10587,6 +10632,144 @@ export default function DrawSketchScreen() {
         </View>
         );
       })()}
+
+      {/* ========== EINFACHER WINKELMESSER OVERLAY (ohne Lupe) ========== */}
+      {simpleAngleMode && (
+        <View style={styles.protractorOverlay} pointerEvents="box-none">
+          <Svg 
+            width={screenWidth} 
+            height={screenHeight} 
+            viewBox={`0 0 ${screenWidth} ${screenHeight}`}
+            style={{ position: 'absolute', top: 0, left: 0 }}
+            pointerEvents="none"
+          >
+            {/* Punkte zeichnen */}
+            {simpleAnglePoints.map((pt, idx) => {
+              const screenPt = canvasToScreenCoords(pt.x, pt.y);
+              const color = idx === 0 ? '#2196f3' : idx === 1 ? '#4caf50' : '#FF5722';
+              const label = idx === 0 ? '1' : idx === 1 ? 'S' : '2';
+              return (
+                <G key={idx}>
+                  <Circle cx={screenPt.x} cy={screenPt.y} r={12} fill={color} />
+                  <SvgText x={screenPt.x} y={screenPt.y + 5} fill="#fff" fontSize={14} fontWeight="bold" textAnchor="middle">{label}</SvgText>
+                </G>
+              );
+            })}
+            
+            {/* Linien vom Scheitelpunkt zu den Schenkelpunkten */}
+            {simpleAnglePoints.length >= 2 && (() => {
+              const p1 = canvasToScreenCoords(simpleAnglePoints[0].x, simpleAnglePoints[0].y);
+              const vertex = canvasToScreenCoords(simpleAnglePoints[1].x, simpleAnglePoints[1].y);
+              return (
+                <Line x1={vertex.x} y1={vertex.y} x2={p1.x} y2={p1.y} stroke="#2196f3" strokeWidth={3} />
+              );
+            })()}
+            
+            {simpleAnglePoints.length === 3 && (() => {
+              const vertex = canvasToScreenCoords(simpleAnglePoints[1].x, simpleAnglePoints[1].y);
+              const p3 = canvasToScreenCoords(simpleAnglePoints[2].x, simpleAnglePoints[2].y);
+              return (
+                <Line x1={vertex.x} y1={vertex.y} x2={p3.x} y2={p3.y} stroke="#FF5722" strokeWidth={3} />
+              );
+            })()}
+            
+            {/* Winkelbogen */}
+            {simpleAnglePoints.length === 3 && simpleAngleResult !== null && (() => {
+              const p1 = canvasToScreenCoords(simpleAnglePoints[0].x, simpleAnglePoints[0].y);
+              const vertex = canvasToScreenCoords(simpleAnglePoints[1].x, simpleAnglePoints[1].y);
+              const p3 = canvasToScreenCoords(simpleAnglePoints[2].x, simpleAnglePoints[2].y);
+              
+              const angle1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
+              const angle3 = Math.atan2(p3.y - vertex.y, p3.x - vertex.x);
+              const arcR = 35;
+              
+              const arcX1 = vertex.x + arcR * Math.cos(angle1);
+              const arcY1 = vertex.y + arcR * Math.sin(angle1);
+              const arcX2 = vertex.x + arcR * Math.cos(angle3);
+              const arcY2 = vertex.y + arcR * Math.sin(angle3);
+              
+              const largeArc = simpleAngleResult > 180 ? 1 : 0;
+              
+              return (
+                <Path 
+                  d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} 1 ${arcX2} ${arcY2}`}
+                  fill="none" stroke="#4caf50" strokeWidth={3}
+                />
+              );
+            })()}
+          </Svg>
+          
+          {/* Anleitung & Ergebnis-Box */}
+          <View style={{
+            position: 'absolute',
+            top: 60,
+            left: 10,
+            right: 10,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            borderRadius: 10,
+            padding: 12,
+          }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>
+              📐 Einfacher Winkelmesser
+            </Text>
+            
+            {simpleAnglePoints.length === 0 && (
+              <Text style={{ color: '#2196f3', fontSize: 13 }}>
+                ① Tippen Sie auf den ersten Schenkel-Punkt
+              </Text>
+            )}
+            {simpleAnglePoints.length === 1 && (
+              <Text style={{ color: '#4caf50', fontSize: 13 }}>
+                ② Tippen Sie auf den Scheitelpunkt (Ecke)
+              </Text>
+            )}
+            {simpleAnglePoints.length === 2 && (
+              <Text style={{ color: '#FF5722', fontSize: 13 }}>
+                ③ Tippen Sie auf den zweiten Schenkel-Punkt
+              </Text>
+            )}
+            {simpleAnglePoints.length === 3 && simpleAngleResult !== null && (
+              <View>
+                <Text style={{ color: '#4caf50', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+                  Winkel: {simpleAngleResult}°
+                </Text>
+                <TouchableOpacity 
+                  style={{ 
+                    backgroundColor: '#2196f3', 
+                    padding: 10, 
+                    borderRadius: 8, 
+                    marginTop: 10 
+                  }}
+                  onPress={() => {
+                    setSimpleAnglePoints([]);
+                    setSimpleAngleResult(null);
+                  }}
+                >
+                  <Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>
+                    Neuen Winkel messen
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              style={{ 
+                backgroundColor: '#666', 
+                padding: 8, 
+                borderRadius: 8, 
+                marginTop: 10 
+              }}
+              onPress={() => {
+                setSimpleAngleMode(false);
+                setSimpleAnglePoints([]);
+                setSimpleAngleResult(null);
+              }}
+            >
+              <Text style={{ color: '#fff', textAlign: 'center' }}>Schließen</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Winkelmesser Overlay - NEU: Bildschirmkoordinaten-basiert */}
       {showProtractor && (

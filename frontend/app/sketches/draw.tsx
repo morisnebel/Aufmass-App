@@ -3947,38 +3947,6 @@ export default function DrawSketchScreen() {
       return;
     }
     
-    // === 1 Finger + NICHT zoomen + Einfacher Winkelmesser aktiv ===
-    if (touches.length === 1 && !isZooming && simpleAngleMode) {
-      const touch = touches[0];
-      const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
-      
-      // ========== EINFACHER WINKELMESSER MIT LUPE: Punkt hinzufügen ==========
-      const newPoints = [...simpleAnglePoints, { x: locationX, y: locationY }];
-      
-      if (newPoints.length <= 3) {
-        setSimpleAnglePoints(newPoints);
-        
-        // Lupe anzeigen für präzise Positionierung
-        // Benötigt: magnifierTargetPosition (Canvas-Koordinaten) UND magnifierPosition (Screen-Koordinaten)
-        setMagnifierTargetPosition({ x: locationX, y: locationY });
-        const screenCoords = canvasToScreenCoords(locationX, locationY);
-        setMagnifierPosition({ x: screenCoords.x, y: screenCoords.y });
-        setShowMagnifier(true);
-        
-        if (newPoints.length === 3) {
-          // Alle 3 Punkte gesetzt → Winkel berechnen
-          const angle = calculateSimpleAngle(newPoints);
-          setSimpleAngleResult(angle);
-          // Lupe nach kurzer Zeit ausblenden
-          setTimeout(() => setShowMagnifier(false), 1500);
-        } else {
-          // Lupe nach kurzer Zeit ausblenden (für nächsten Punkt)
-          setTimeout(() => setShowMagnifier(false), 800);
-        }
-      }
-      return;
-    }
-    
     // === 1 Finger + NICHT zoomen + Zeichnen aktiviert = Zeichnen ===
     if (touches.length === 1 && !isZooming && drawingEnabled) {
       const touch = touches[0];
@@ -7977,56 +7945,52 @@ export default function DrawSketchScreen() {
           </View>
         </View>
 
-        {/* NEUER Einfacher Winkelmesser mit Lupe */}
+        {/* Winkelmesser (alter bewährter Ansatz) */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
-            style={[styles.toolButtonInner, simpleAngleMode && styles.toolButtonActive]}
+            style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
             onPress={() => {
-              if (simpleAngleMode) {
-                // Ausschalten
-                setSimpleAngleMode(false);
-                setSimpleAnglePoints([]);
-                setSimpleAngleResult(null);
-                setShowMagnifier(false);
-              } else {
-                // Einschalten - Canvas-Snapshot für Lupe erstellen
+              if (!showProtractor) {
+                // Canvas-Snapshot erstellen BEVOR das Protractor-Overlay angezeigt wird
                 if (canvasRef.current) {
                   captureRef(canvasRef.current, {
                     format: 'png',
                     quality: 0.8,
                     result: 'data-uri',
                   }).then((uri: string) => {
-                    setMagnifierSnapshot(uri);
+                    protractorCanvasSnapshot.current = uri;
+                    console.log('Protractor canvas snapshot captured');
                   }).catch((err: Error) => {
                     console.log('Canvas snapshot error:', err);
+                    protractorCanvasSnapshot.current = null;
                   });
                 }
-                // Alten Winkelmesser deaktivieren
-                setShowProtractor(false);
-                setSimpleAngleMode(true);
-                setSimpleAnglePoints([]);
-                setSimpleAngleResult(null);
+                // Neuen Winkelmesser öffnen → Position zurücksetzen
+                setProtractorCenter({ x: 0, y: 0 });
+                setProtractorRefEnd({ x: 0, y: 0 });
+                setProtractorAngleEnd({ x: 0, y: 0 });
               }
+              setShowProtractor(!showProtractor);
             }}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24">
               <Path 
                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" 
                 fill="none"
-                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
+                stroke={showProtractor ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
-              <Line x1="12" y1="12" x2="12" y2="4" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
-              <Line x1="12" y1="12" x2="20" y2="12" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="12" y2="4" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="20" y2="12" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
               <Path 
                 d="M12 8 A4 4 0 0 1 16 12" 
                 fill="none"
-                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
+                stroke={showProtractor ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
             </Svg>
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: simpleAngleMode ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
+          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
         </View>
 
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}

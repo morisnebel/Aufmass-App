@@ -7961,43 +7961,56 @@ export default function DrawSketchScreen() {
           </View>
         </View>
 
-        {/* Einfacher Winkelmesser (NEUER ANSATZ - ohne Lupe) */}
+        {/* Winkelmesser mit Lupe */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
-            style={[styles.toolButtonInner, simpleAngleMode && styles.toolButtonActive]}
+            style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
             onPress={() => {
-              if (simpleAngleMode) {
-                // Ausschalten: Punkte zurücksetzen
+              if (!showProtractor) {
+                // Canvas-Snapshot erstellen BEVOR das Protractor-Overlay angezeigt wird
+                if (canvasRef.current) {
+                  captureRef(canvasRef.current, {
+                    format: 'png',
+                    quality: 0.8,
+                    result: 'data-uri',
+                  }).then((uri: string) => {
+                    protractorCanvasSnapshot.current = uri;
+                    console.log('Protractor canvas snapshot captured');
+                  }).catch((err: Error) => {
+                    console.log('Canvas snapshot error:', err);
+                    protractorCanvasSnapshot.current = null;
+                  });
+                }
+                // Neuen Winkelmesser öffnen → Position zurücksetzen
+                setProtractorCenter({ x: 0, y: 0 });
+                setProtractorRefEnd({ x: 0, y: 0 });
+                setProtractorAngleEnd({ x: 0, y: 0 });
+                // Einfachen Winkelmesser deaktivieren falls aktiv
                 setSimpleAngleMode(false);
                 setSimpleAnglePoints([]);
                 setSimpleAngleResult(null);
-              } else {
-                // Einschalten: Alten Winkelmesser deaktivieren
-                setShowProtractor(false);
-                setSimpleAngleMode(true);
-                setSimpleAnglePoints([]);
-                setSimpleAngleResult(null);
               }
+              setShowProtractor(!showProtractor);
             }}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24">
               <Path 
                 d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" 
                 fill="none"
-                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
+                stroke={showProtractor ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
-              <Line x1="12" y1="12" x2="12" y2="4" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
-              <Line x1="12" y1="12" x2="20" y2="12" stroke={simpleAngleMode ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="12" y2="4" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
+              <Line x1="12" y1="12" x2="20" y2="12" stroke={showProtractor ? '#fff' : '#FF5722'} strokeWidth={2} />
               <Path 
                 d="M12 8 A4 4 0 0 1 16 12" 
                 fill="none"
-                stroke={simpleAngleMode ? '#fff' : '#FF5722'}
+                stroke={showProtractor ? '#fff' : '#FF5722'}
                 strokeWidth={1.5}
               />
             </Svg>
           </TouchableOpacity>
-          <Text style={[styles.toolButtonLabel, { color: simpleAngleMode ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
+          <Text style={[styles.toolButtonLabel, { color: showProtractor ? '#FF5722' : '#333' }]}>{t('sketches.angleSnap')}</Text>
         </View>
 
         {/* ========== TEXT & MEMO (ohne Editieren-Button) ========== */}

@@ -10513,7 +10513,7 @@ export default function DrawSketchScreen() {
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
-                      // Android-Handy: Offset ABZIEHEN um Bild nach OBEN zu verschieben
+                      // Android-Handy mit Hintergrundbild: Offset ABZIEHEN um Bild nach OBEN zu verschieben
                       // iOS/Tablet: Offset-Korrektur: 0.4 (40%) der Differenz zwischen layout.y und canvasOverhead
                       left: -targetX * 3 + halfSize,
                       top: Platform.OS === 'android' && isPhoneDevice 
@@ -10528,13 +10528,12 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
+                      // Canvas-Snapshot: KEIN spezieller Android-Offset nötig, da Snapshot direkt vom Canvas ist
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
                       left: -targetX * 3 + halfSize,
-                      top: Platform.OS === 'android' && isPhoneDevice 
-                        ? -(targetY - canvasOverhead * 0.4) * 3 + halfSize
-                        : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
+                      top: -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}
                     resizeMode="stretch"
                   />

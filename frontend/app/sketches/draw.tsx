@@ -10528,12 +10528,12 @@ export default function DrawSketchScreen() {
                   <RNImage
                     source={{ uri: magnifierSnapshot }}
                     style={{
-                      // Canvas-Snapshot: Android-Handy braucht KEINEN Offset, andere Geräte nutzen Standard-Formel
+                      // Canvas-Snapshot: Android (Handy UND Tablet) braucht KEINEN Offset, iOS nutzt Standard-Formel
                       width: screenWidth * 3,
                       height: canvasHeight * 3,
                       position: 'absolute',
                       left: -targetX * 3 + halfSize,
-                      top: Platform.OS === 'android' && isPhoneDevice 
+                      top: Platform.OS === 'android'
                         ? -targetY * 3 + halfSize
                         : -(targetY - ((canvasLayout?.y || canvasOverhead) - canvasOverhead) * 0.4) * 3 + halfSize,
                     }}

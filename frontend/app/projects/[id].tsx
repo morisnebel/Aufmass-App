@@ -2978,15 +2978,25 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               box-sizing: border-box !important;
             }
+            /* ANDROID-HANDY: Skizzen klein halten damit sie auf eine Seite passen */
             .sketch-item {
-              max-height: 600px !important;
+              max-height: 400px !important;
               overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 550px !important;
+              max-height: 380px !important;
               height: auto !important;
               object-fit: contain !important;
+            }
+            /* ANDROID-HANDY: Fotos und Skizzen-Section sollen fließen */
+            .photos-section,
+            .sketches-section {
+              page-break-before: auto !important;
+              break-before: auto !important;
+              page-break-inside: auto !important;
+              break-inside: auto !important;
+              margin-top: 5px !important;
             }
             .photo-item {
               page-break-inside: avoid !important;

@@ -2980,14 +2980,21 @@ export default function ProjectDetailScreen() {
             }
             /* ANDROID-HANDY: Skizzen klein halten damit sie auf eine Seite passen */
             .sketch-item {
-              max-height: 400px !important;
+              max-height: 320px !important;
               overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 380px !important;
+              max-height: 300px !important;
               height: auto !important;
               object-fit: contain !important;
+            }
+            /* Große Skizzen auf Handy kleiner machen */
+            .sketch-large {
+              max-height: 350px !important;
+            }
+            .sketch-large img {
+              max-height: 320px !important;
             }
             /* ANDROID-HANDY: Fotos und Skizzen-Section sollen fließen */
             .photos-section,
@@ -2998,17 +3005,25 @@ export default function ProjectDetailScreen() {
               break-inside: auto !important;
               margin-top: 5px !important;
             }
+            /* ANDROID-HANDY: Foto-Items klein halten */
             .photo-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              max-height: 450px !important;
+              max-height: 280px !important;
               overflow: hidden !important;
             }
             .photo-item img {
               max-width: 100% !important;
-              max-height: 380px !important;
+              max-height: 250px !important;
               height: auto !important;
               object-fit: contain !important;
+            }
+            /* Mittlere und große Fotos auf Handy kleiner machen */
+            .photo-medium, .photo-large {
+              max-height: 300px !important;
+            }
+            .photo-medium img, .photo-large img {
+              max-height: 270px !important;
             }
             svg {
               max-width: 100% !important;

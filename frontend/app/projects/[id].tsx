@@ -1887,18 +1887,18 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // 100% Skizzen: Volle Breite - ZWEI pro Seite (untereinander)
+        // 100% Skizzen: Volle Breite - klein genug für 2 pro Seite
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:320px!important;object-fit:contain!important;"')
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:280px!important;object-fit:contain!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid;">
-                <div style="width:100%;border:1px solid #ddd;padding:6px;box-sizing:border-box;overflow:hidden;max-height:350px;">
+              <div style="display:block;width:100%;padding:3px;box-sizing:border-box;margin-bottom:5px;">
+                <div style="width:100%;border:1px solid #ddd;padding:4px;box-sizing:border-box;overflow:hidden;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -2978,29 +2978,16 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               box-sizing: border-box !important;
             }
-            /* ANDROID-HANDY: Skizzen klein halten damit sie auf eine Seite passen */
+            /* ANDROID-HANDY: Skizzen einfach und klein - KEINE page-break Regeln */
             .sketch-item {
-              max-height: 250px !important;
+              max-height: 300px !important;
               overflow: hidden !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 230px !important;
+              max-height: 280px !important;
               height: auto !important;
               object-fit: contain !important;
-            }
-            /* Große Skizzen auf Handy: Neue Seite starten */
-            .sketch-large {
-              max-height: 500px !important;
-              page-break-before: always !important;
-              break-before: always !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-            .sketch-large img {
-              max-height: 450px !important;
             }
             /* ANDROID-HANDY: Fotos und Skizzen-Section sollen fließen */
             .photos-section,

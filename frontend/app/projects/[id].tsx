@@ -1871,13 +1871,13 @@ export default function ProjectDetailScreen() {
             let modifiedHtml = html
               // Entferne alle style-Attribute von img
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              // Setze neue styles für img - volle Breite erzwingen, max-height für 2 pro Seite
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:350px!important;object-fit:contain!important;"')
+              // Setze neue styles für img - volle Breite erzwingen, max-height begrenzt
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:300px!important;object-fit:contain!important;"')
               // Auch das sketch-item div anpassen
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:inline-block;width:48%;vertical-align:top;padding:4px;box-sizing:border-box;font-size:12px;page-break-inside:avoid!important;break-inside:avoid!important;">
+              <div style="display:inline-block;width:48%;vertical-align:top;padding:4px;box-sizing:border-box;font-size:12px;">
                 <div style="width:100%;border:1px solid #ddd;padding:5px;box-sizing:border-box;overflow:hidden;">
                   ${modifiedHtml}
                 </div>
@@ -1887,18 +1887,18 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // 100% Skizzen: Volle Breite, größer
+        // 100% Skizzen: Volle Breite, größer - OHNE page-break-inside um leere Seiten zu vermeiden
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:700px!important;object-fit:contain!important;"')
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:600px!important;object-fit:contain!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:10px;page-break-inside:avoid!important;break-inside:avoid!important;">
-                <div style="width:100%;border:1px solid #ddd;padding:8px;box-sizing:border-box;overflow:hidden;page-break-inside:avoid!important;break-inside:avoid!important;">
+              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:10px;">
+                <div style="width:100%;border:1px solid #ddd;padding:8px;box-sizing:border-box;overflow:hidden;">
                   ${modifiedHtml}
                 </div>
               </div>

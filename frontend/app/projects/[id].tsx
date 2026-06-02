@@ -2967,34 +2967,24 @@ export default function ProjectDetailScreen() {
               page-break-before: auto !important;
               break-before: auto !important;
             }
-            /* Verhindere dass nach der Projektübersicht ein Seitenumbruch kommt */
-            .info-grid {
-              page-break-after: avoid !important;
-              break-after: avoid !important;
-              margin-bottom: 5px !important;
-            }
             /* Info-Grid muss Grid-Layout beibehalten und volle Breite haben */
             .info-grid {
               display: grid !important;
               grid-template-columns: 1fr 1fr !important;
               width: 100% !important;
               max-width: 100% !important;
-              page-break-inside: auto !important;
-              break-inside: auto !important;
             }
             .info-box {
               width: 100% !important;
               box-sizing: border-box !important;
             }
             .sketch-item {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              max-height: 850px !important;
+              max-height: 600px !important;
               overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 780px !important;
+              max-height: 550px !important;
               height: auto !important;
               object-fit: contain !important;
             }

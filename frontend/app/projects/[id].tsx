@@ -1887,18 +1887,18 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // 100% Skizzen: Volle Breite, größer - OHNE page-break-inside um leere Seiten zu vermeiden
+        // 100% Skizzen: Volle Breite - MIT page-break-before für neue Seite
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:600px!important;object-fit:contain!important;"')
-              .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item" style="width:100%!important;"');
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:450px!important;object-fit:contain!important;"')
+              .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:10px;">
-                <div style="width:100%;border:1px solid #ddd;padding:8px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:10px;page-break-before:always;break-before:always;page-break-inside:avoid;break-inside:avoid;">
+                <div style="width:100%;border:1px solid #ddd;padding:8px;box-sizing:border-box;overflow:hidden;max-height:500px;">
                   ${modifiedHtml}
                 </div>
               </div>

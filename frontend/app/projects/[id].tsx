@@ -1887,18 +1887,18 @@ export default function ProjectDetailScreen() {
           sketchListHtml += `</div>`;
         }
         
-        // 100% Skizzen: Volle Breite - klein genug für 2 pro Seite
+        // 100% Skizzen: Volle Breite - EINE pro Seite
         if (sketchesBySize.large.length > 0) {
           sketchesBySize.large.forEach((html, idx) => {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:280px!important;object-fit:contain!important;"')
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:550px!important;object-fit:contain!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:3px;box-sizing:border-box;margin-bottom:5px;">
-                <div style="width:100%;border:1px solid #ddd;padding:4px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:block;width:100%;padding:5px;box-sizing:border-box;margin-bottom:10px;page-break-before:always;">
+                <div style="width:100%;border:1px solid #ddd;padding:8px;box-sizing:border-box;overflow:hidden;">
                   ${modifiedHtml}
                 </div>
               </div>

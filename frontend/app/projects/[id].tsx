@@ -2982,6 +2982,8 @@ export default function ProjectDetailScreen() {
             .sketch-item {
               max-height: 250px !important;
               overflow: hidden !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketch-item img {
               max-width: 100% !important;
@@ -2989,12 +2991,16 @@ export default function ProjectDetailScreen() {
               height: auto !important;
               object-fit: contain !important;
             }
-            /* Große Skizzen auf Handy kleiner machen */
+            /* Große Skizzen auf Handy: Neue Seite starten */
             .sketch-large {
-              max-height: 280px !important;
+              max-height: 500px !important;
+              page-break-before: always !important;
+              break-before: always !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .sketch-large img {
-              max-height: 260px !important;
+              max-height: 450px !important;
             }
             /* ANDROID-HANDY: Fotos und Skizzen-Section sollen fließen */
             .photos-section,

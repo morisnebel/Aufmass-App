@@ -2980,21 +2980,21 @@ export default function ProjectDetailScreen() {
             }
             /* ANDROID-HANDY: Skizzen klein halten damit sie auf eine Seite passen */
             .sketch-item {
-              max-height: 320px !important;
+              max-height: 250px !important;
               overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
-              max-height: 300px !important;
+              max-height: 230px !important;
               height: auto !important;
               object-fit: contain !important;
             }
             /* Große Skizzen auf Handy kleiner machen */
             .sketch-large {
-              max-height: 350px !important;
+              max-height: 280px !important;
             }
             .sketch-large img {
-              max-height: 320px !important;
+              max-height: 260px !important;
             }
             /* ANDROID-HANDY: Fotos und Skizzen-Section sollen fließen */
             .photos-section,

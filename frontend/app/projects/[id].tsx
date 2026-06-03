@@ -2674,12 +2674,34 @@ export default function ProjectDetailScreen() {
               margin: 0 !important;
               padding: 0 !important;
               width: 100% !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
             body {
               background: #fff !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color-adjust: exact !important;
+              /* Besseres Font-Rendering */
+              -webkit-font-smoothing: antialiased !important;
+              -moz-osx-font-smoothing: grayscale !important;
+              text-rendering: optimizeLegibility !important;
+            }
+            /* Hohe Bildqualität beim Drucken */
+            img {
+              image-rendering: -webkit-optimize-contrast !important;
+              image-rendering: crisp-edges !important;
+              -ms-interpolation-mode: bicubic !important;
+              print-color-adjust: exact !important;
+              -webkit-print-color-adjust: exact !important;
+            }
+            /* SVG-Qualität verbessern */
+            svg {
+              shape-rendering: geometricPrecision !important;
+              text-rendering: geometricPrecision !important;
+              print-color-adjust: exact !important;
+              -webkit-print-color-adjust: exact !important;
             }
             .page {
               width: 100% !important;

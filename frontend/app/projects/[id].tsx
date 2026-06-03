@@ -2532,7 +2532,7 @@ export default function ProjectDetailScreen() {
         });
         
         return `
-          <div class="new-page" style="page-break-before: always; padding: 0mm 5mm 0mm 10mm !important;">
+          <div class="new-page" style="page-break-before: always;">
             <h2 style="color: #1976d2; font-size: 12px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 2px solid #1976d2;">
               Details: ${calc.name || `Berechnung ${calcIndex + 1}`}
             </h2>
@@ -2637,7 +2637,7 @@ export default function ProjectDetailScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           @page {
-            margin: 0mm;
+            margin: 5mm 5mm 5mm 10mm;
             size: A4;
           }
           @media screen {
@@ -2670,18 +2670,23 @@ export default function ProjectDetailScreen() {
             }
           }
           @media print {
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+            }
             body {
               background: #fff !important;
-              padding: 0 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
             .page {
-              width: auto;
+              width: 100% !important;
               min-height: auto;
-              padding: 0mm 5mm 0mm 10mm;
+              padding: 0 !important;
               margin: 0;
+              box-sizing: border-box !important;
               box-shadow: none;
               border-radius: 0;
             }
@@ -2714,10 +2719,11 @@ export default function ProjectDetailScreen() {
               background: ${headerBgColor} !important;
             }
             .new-page, .remarks-and-footer-page {
-              width: auto;
+              width: 100% !important;
               min-height: auto;
-              padding: 0mm 5mm 0mm 10mm;
+              padding: 0 !important;
               margin: 0;
+              box-sizing: border-box !important;
               box-shadow: none;
               border-radius: 0;
               page-break-before: always;
@@ -4221,7 +4227,7 @@ export default function ProjectDetailScreen() {
         </style>
       </head>
       <body>
-        <div class="page" style="padding: 0mm 5mm 0mm 10mm !important;">
+        <div class="page">
         <div class="header">
           <div class="header-top">
             <div class="company-header">
@@ -4424,7 +4430,7 @@ export default function ProjectDetailScreen() {
         </div><!-- end .page -->
         
         ${areaCalculations.length > 0 ? `
-          <div class="new-page" style="padding: 0mm 5mm 0mm 10mm !important;">
+          <div class="new-page">
             <div class="area-calcs-section">
               <h2>Flächenberechnungen</h2>
               ${generateCombinedAreaCalcs()}

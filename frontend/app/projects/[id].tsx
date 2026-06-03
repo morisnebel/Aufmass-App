@@ -2637,7 +2637,7 @@ export default function ProjectDetailScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           @page {
-            margin: 5mm 5mm 5mm 10mm;
+            margin: 0;
             size: A4;
           }
           @media screen {

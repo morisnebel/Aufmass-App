@@ -2836,7 +2836,7 @@ export default function ProjectDetailScreen() {
               display: block !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-bottom: 15px !important;
+              margin-bottom: 0 !important;
               width: 100% !important;
             }
             .sketch-item img {
@@ -2844,7 +2844,7 @@ export default function ProjectDetailScreen() {
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
-              max-height: 500px !important;
+              max-height: 475px !important;
               object-fit: contain !important;
             }
             .photos-section h2 {
@@ -3002,7 +3002,8 @@ export default function ProjectDetailScreen() {
               break-before: auto !important;
               page-break-inside: auto !important;
               break-inside: auto !important;
-              margin-top: 5px !important;
+              margin-top: 0 !important;
+              margin-bottom: 0 !important;
             }
             /* ANDROID-HANDY: Foto-Items klein halten */
             .photo-item {
@@ -3035,7 +3036,7 @@ export default function ProjectDetailScreen() {
             .sketches-container, .photos-container {
               display: flex !important;
               flex-wrap: wrap !important;
-              gap: 10px !important;
+              gap: 0 !important;
             }
             /* iPhone: inline-block für nebeneinander + saubere Seitenumbrüche */
             .sketches-container-iphone {

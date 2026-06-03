@@ -1897,8 +1897,8 @@ export default function ProjectDetailScreen() {
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:2px;">
-                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;">
+                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -4044,7 +4044,7 @@ export default function ProjectDetailScreen() {
           .sketch-large {
             flex: 0 0 100%;
             max-width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 0;
           }
           .sketch-full {
             flex: 0 0 100%;

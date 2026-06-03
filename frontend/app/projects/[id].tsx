@@ -2680,7 +2680,7 @@ export default function ProjectDetailScreen() {
             .page {
               width: auto;
               min-height: auto;
-              padding: 0mm 5mm;
+              padding: 0mm 5mm 0mm 10mm;
               margin: 0;
               box-shadow: none;
               border-radius: 0;
@@ -2716,7 +2716,7 @@ export default function ProjectDetailScreen() {
             .new-page, .remarks-and-footer-page {
               width: auto;
               min-height: auto;
-              padding: 0mm 5mm;
+              padding: 0mm 5mm 0mm 10mm;
               margin: 0;
               box-shadow: none;
               border-radius: 0;

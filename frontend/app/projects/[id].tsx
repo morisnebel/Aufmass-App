@@ -1893,12 +1893,12 @@ export default function ProjectDetailScreen() {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:500px!important;object-fit:contain!important;"')
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:450px!important;object-fit:contain!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:2px;box-sizing:border-box;margin-bottom:4px;">
-                <div style="width:100%;border:1px solid #ddd;padding:4px;box-sizing:border-box;overflow:hidden;">
+              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:2px;">
+                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -4052,7 +4052,7 @@ export default function ProjectDetailScreen() {
             margin-bottom: 15px;
           }
           .sketch-item img {
-            max-height: 520px;
+            max-height: 460px;
             object-fit: contain;
           }
           .photo-item, .sketch-item {
@@ -4063,7 +4063,7 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             display: block;
-            max-height: 530px;
+            max-height: 470px;
           }
           /* Photo/Sketch im Grid nicht umbrechen */
           .photo-iphone, .sketch-iphone {

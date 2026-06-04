@@ -1893,12 +1893,12 @@ export default function ProjectDetailScreen() {
             // Alle style-Attribute komplett entfernen und neu setzen
             let modifiedHtml = html
               .replace(/<img([^>]*)\s+style="[^"]*"([^>]*)>/gi, '<img$1$2>')
-              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:470px!important;object-fit:contain!important;"')
+              .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:440px!important;object-fit:contain!important;image-rendering:crisp-edges!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             sketchListHtml += `
-              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;">
-                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;">
+              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
+                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
                   ${modifiedHtml}
                 </div>
               </div>
@@ -2692,9 +2692,12 @@ export default function ProjectDetailScreen() {
             img {
               image-rendering: -webkit-optimize-contrast !important;
               image-rendering: crisp-edges !important;
+              image-rendering: high-quality !important;
               -ms-interpolation-mode: bicubic !important;
               print-color-adjust: exact !important;
               -webkit-print-color-adjust: exact !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             /* SVG-Qualität verbessern */
             svg {
@@ -2702,6 +2705,14 @@ export default function ProjectDetailScreen() {
               text-rendering: geometricPrecision !important;
               print-color-adjust: exact !important;
               -webkit-print-color-adjust: exact !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            /* Sketch und Photo Items nicht aufteilen */
+            .sketch-item, .photo-item {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              -webkit-column-break-inside: avoid !important;
             }
             .page {
               width: 100% !important;
@@ -4075,8 +4086,10 @@ export default function ProjectDetailScreen() {
             margin-bottom: 15px;
           }
           .sketch-item img {
-            max-height: 470px;
+            max-height: 440px;
             object-fit: contain;
+            image-rendering: crisp-edges;
+            image-rendering: high-quality;
           }
           .photo-item, .sketch-item {
             border: 1px solid #e0e0e0;
@@ -4086,7 +4099,7 @@ export default function ProjectDetailScreen() {
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             display: block;
-            max-height: 480px;
+            max-height: 450px;
           }
           /* Photo/Sketch im Grid nicht umbrechen */
           .photo-iphone, .sketch-iphone {

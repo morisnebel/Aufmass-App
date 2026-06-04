@@ -1173,12 +1173,24 @@ export default function DrawSketchScreen() {
     
     // Screen-Bewegung zu Canvas-Bewegung umrechnen
     const currentScale = scaleRef.current || 1;
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     
     // Endpunkte: reduzierte Empfindlichkeit für Präzision
     const sensitivity = handle === 'body' ? 1.0 : 0.5;
-    // WICHTIG: dx/dy durch Scale teilen, weil wir in Canvas-Koordinaten arbeiten
-    const dx = ((pageX - protractorDragRef.current.startX) * sensitivity) / currentScale;
-    const dy = ((pageY - protractorDragRef.current.startY) * sensitivity) / currentScale;
+    
+    let dx: number;
+    let dy: number;
+    
+    // Android mit ViewBox: Bewegung muss in ViewBox-Koordinaten umgerechnet werden
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      // Screen-Pixel zu ViewBox-Einheiten umrechnen
+      dx = ((pageX - protractorDragRef.current.startX) * sensitivity) * (androidViewBox.w / screenWidth);
+      dy = ((pageY - protractorDragRef.current.startY) * sensitivity) * (androidViewBox.h / canvasHeight);
+    } else {
+      // Standard: durch Scale teilen
+      dx = ((pageX - protractorDragRef.current.startX) * sensitivity) / currentScale;
+      dy = ((pageY - protractorDragRef.current.startY) * sensitivity) / currentScale;
+    }
     
     if (handle === 'body') {
       // Alles verschieben (in Canvas-Koordinaten)
@@ -2264,17 +2276,22 @@ export default function DrawSketchScreen() {
     // Die Protractor-Koordinaten sind bereits in Canvas-Koordinaten!
     // Sie werden beim Drag bereits durch currentScale geteilt (siehe handleProtractorDrag)
     const currentScale = scaleRef.current || 1;
+    const layout = canvasLayoutRef.current;
     
     // Direkt die Canvas-Koordinaten verwenden
     const centerX = protractorCenter.x;
     const centerY = protractorCenter.y;
     
-    console.log('addProtractorToSketch - Protractor already in canvas coords:', { 
-      centerX: Math.round(centerX), 
-      centerY: Math.round(centerY),
-      refEnd: { x: Math.round(protractorRefEnd.x), y: Math.round(protractorRefEnd.y) },
-      angleEnd: { x: Math.round(protractorAngleEnd.x), y: Math.round(protractorAngleEnd.y) }
-    });
+    // Debug: Vergleiche mit Screen-Koordinaten
+    const screenCoords = canvasToScreenCoords(centerX, centerY);
+    console.log('=== addProtractorToSketch DEBUG ===');
+    console.log('protractorCenter (canvas):', { x: Math.round(centerX), y: Math.round(centerY) });
+    console.log('Converted to screen:', { x: Math.round(screenCoords.x), y: Math.round(screenCoords.y) });
+    console.log('Layout:', layout ? { x: Math.round(layout.x), y: Math.round(layout.y) } : 'null');
+    console.log('Scale:', currentScale);
+    console.log('protractorRefEnd:', { x: Math.round(protractorRefEnd.x), y: Math.round(protractorRefEnd.y) });
+    console.log('protractorAngleEnd:', { x: Math.round(protractorAngleEnd.x), y: Math.round(protractorAngleEnd.y) });
+    console.log('=================================');
     
     // Winkel-Anzeige (immer positiv)
     let displayAngle = Math.abs(protractorAngle);

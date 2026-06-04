@@ -470,19 +470,21 @@ const getItems = getItemsSafe;
 
 // Batch-read multiple keys in ONE native call (much faster than individual reads)
 // SAFE VERSION: Für Lesevorgänge - gibt leeres Array bei Fehlern zurück
-const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => {
+const getMultipleItems = async (keys: string[]): Promise<Map<string, any>> => {
   try {
     const startTime = Date.now();
     const pairs = await AsyncStorage.multiGet(keys);
-    const result = new Map<string, any[]>();
+    const result = new Map<string, any>();
     for (const [key, value] of pairs) {
       try {
         if (!value) {
-          result.set(key, []);
+          result.set(key, key === KEYS.SETTINGS ? null : []);
         } else {
           const parsed = JSON.parse(value);
-          // Validiere dass es ein Array ist
-          if (!Array.isArray(parsed)) {
+          // Settings ist ein Objekt, alles andere sind Arrays
+          if (key === KEYS.SETTINGS) {
+            result.set(key, parsed);
+          } else if (!Array.isArray(parsed)) {
             console.warn(`[multiGet] ${key} ist kein Array, gebe leeres Array zurück`);
             result.set(key, []);
           } else {
@@ -492,7 +494,7 @@ const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => 
       } catch (parseError) {
         // Bei Lesevorgängen: Leeres Array für diesen Key, damit App weiter funktioniert
         console.error(`[multiGet] JSON parse für ${key} fehlgeschlagen, überspringe:`, parseError);
-        result.set(key, []);
+        result.set(key, key === KEYS.SETTINGS ? null : []);
       }
     }
     console.log('[multiGet] Read', keys.length, 'keys in', Date.now() - startTime, 'ms');
@@ -501,9 +503,18 @@ const getMultipleItems = async (keys: string[]): Promise<Map<string, any[]>> => 
     console.error('[multiGet] Fehler:', error);
     
     // Fallback to individual reads
-    const result = new Map<string, any[]>();
+    const result = new Map<string, any>();
     for (const key of keys) {
-      result.set(key, await getItemsSafe(key));
+      if (key === KEYS.SETTINGS) {
+        try {
+          const data = await storage.getItem(key);
+          result.set(key, data ? JSON.parse(data) : null);
+        } catch (e) {
+          result.set(key, null);
+        }
+      } else {
+        result.set(key, await getItemsSafe(key));
+      }
     }
     return result;
   }
@@ -648,8 +659,7 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
   const areaCalculations = (allData.get(KEYS.AREA_CALCULATIONS) || []).filter((a: any) => a.project_id === projectId);
   
   // Settings is an object, not an array
-  const settingsArr = allData.get(KEYS.SETTINGS);
-  const settings = Array.isArray(settingsArr) && settingsArr.length > 0 ? settingsArr[0] : settingsArr;
+  const settings = allData.get(KEYS.SETTINGS) || null;
   
   const allImPhotos = allData.get('aufmassprofi_imagemeter_photos') || [];
   const imagemeterPhotos = allImPhotos.filter((p: any) => p.projectId === projectId);

@@ -2474,20 +2474,17 @@ export default function DrawSketchScreen() {
     const currentScale = scaleRef.current || 1;
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     
-    // Die 3 Punkte sind bereits in Canvas-Koordinaten!
-    const vertex = { x: angleVertex.x, y: angleVertex.y };
-    const point1 = { x: anglePoint1.x, y: anglePoint1.y };
-    const point2 = { x: anglePoint2.x, y: anglePoint2.y };
+    // Die Anzeige verwendet angleScreenCoords - wir müssen diese zurück in Canvas-Koordinaten umrechnen!
+    // Das stellt sicher, dass das gespeicherte Element an der gleichen Position erscheint wie die Vorschau.
+    const vertex = screenToCanvasForMagnifier(angleScreenCoords.vertex.x, angleScreenCoords.vertex.y);
+    const point1 = screenToCanvasForMagnifier(angleScreenCoords.point1.x, angleScreenCoords.point1.y);
+    const point2 = screenToCanvasForMagnifier(angleScreenCoords.point2.x, angleScreenCoords.point2.y);
     
     // DEBUG: Zeige Screen-Position des Overlays vs. Canvas-Koordinaten
-    const vertexScreen = canvasToScreenCoords(vertex.x, vertex.y);
     console.log('=== addProtractorToSketch DEBUG ===');
     console.log('Canvas Layout:', layout);
-    console.log('Canvas Overhead:', canvasOverhead);
-    console.log('Vertex (canvas):', { x: Math.round(vertex.x), y: Math.round(vertex.y) });
-    console.log('Vertex (screen, calculated):', { x: Math.round(vertexScreen.x), y: Math.round(vertexScreen.y) });
-    console.log('Point1 (canvas):', { x: Math.round(point1.x), y: Math.round(point1.y) });
-    console.log('Point2 (canvas):', { x: Math.round(point2.x), y: Math.round(point2.y) });
+    console.log('angleScreenCoords.vertex:', angleScreenCoords.vertex);
+    console.log('Vertex (converted back to canvas):', { x: Math.round(vertex.x), y: Math.round(vertex.y) });
     console.log('Calculated angle:', calculatedAngle);
     console.log('===================================');
     
@@ -2523,7 +2520,7 @@ export default function DrawSketchScreen() {
     setActiveDragPoint(null);
     
     showAlert(t('sketches.angleSnap'), t('sketches.angleAdded', { angle: calculatedAngle }));
-  }, [elements, angleVertex, anglePoint1, anglePoint2, calculatedAngle, addToHistory]);
+  }, [elements, angleScreenCoords, calculatedAngle, addToHistory, screenToCanvasForMagnifier]);
 
   // ============= WINKEL-GRUPPEN-FUNKTIONEN =============
   // Winkel-Elemente haben IDs im Format: {baseId}-ref-line, {baseId}-angle-line, {baseId}-arc, {baseId}-text

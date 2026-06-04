@@ -172,7 +172,7 @@ const perpendicularDistance = (
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline' | 'memo';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline' | 'memo' | 'angle';
   data: any;
   color: string;
   strokeWidth: number;
@@ -185,6 +185,11 @@ interface DrawElement {
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   fontFamily?: string;
+  // Für Winkel-Element
+  vertex?: { x: number; y: number };
+  point1?: { x: number; y: number };
+  point2?: { x: number; y: number };
+  angle?: number;
 }
 
 // Verfügbare Schriftarten - Platform-spezifisch für React Native SVG
@@ -2465,93 +2470,36 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // NEUES 3-PUNKTE-SYSTEM: Direkt die Canvas-Koordinaten verwenden
+    // NEUES 3-PUNKTE-SYSTEM: Winkel als einzelnes Element speichern
     const currentScale = scaleRef.current || 1;
     
     // Die 3 Punkte sind bereits in Canvas-Koordinaten!
-    const centerX = angleVertex.x;
-    const centerY = angleVertex.y;
-    const point1X = anglePoint1.x;
-    const point1Y = anglePoint1.y;
-    const point2X = anglePoint2.x;
-    const point2Y = anglePoint2.y;
+    const vertex = { x: angleVertex.x, y: angleVertex.y };
+    const point1 = { x: anglePoint1.x, y: anglePoint1.y };
+    const point2 = { x: anglePoint2.x, y: anglePoint2.y };
     
     console.log('=== addProtractorToSketch (3-Punkt-System) ===');
-    console.log('Vertex (canvas):', { x: Math.round(centerX), y: Math.round(centerY) });
-    console.log('Point1 (canvas):', { x: Math.round(point1X), y: Math.round(point1Y) });
-    console.log('Point2 (canvas):', { x: Math.round(point2X), y: Math.round(point2Y) });
+    console.log('Vertex (canvas):', { x: Math.round(vertex.x), y: Math.round(vertex.y) });
+    console.log('Point1 (canvas):', { x: Math.round(point1.x), y: Math.round(point1.y) });
+    console.log('Point2 (canvas):', { x: Math.round(point2.x), y: Math.round(point2.y) });
     console.log('Calculated angle:', calculatedAngle);
     console.log('=======================================');
     
-    // Berechne Winkel-Richtungen aus den Punkten
-    const refAngle = Math.atan2(point1Y - centerY, point1X - centerX);
-    const angleEndAngle = Math.atan2(point2Y - centerY, point2X - centerX);
-    
-    // Linienlängen aus den tatsächlichen Punkten
-    const line1Length = Math.sqrt(Math.pow(point1X - centerX, 2) + Math.pow(point1Y - centerY, 2));
-    const line2Length = Math.sqrt(Math.pow(point2X - centerX, 2) + Math.pow(point2Y - centerY, 2));
-    const arcRadius = Math.min(line1Length, line2Length) * 0.3;
-    
-    // Generiere eindeutige IDs
-    const baseId = Date.now().toString(36);
+    // Generiere eindeutige ID
+    const angleId = `angle-${Date.now().toString(36)}`;
     const newElements: DrawElement[] = [...elements];
     
-    // 1. Referenzlinie (Vertex -> Point1)
+    // Winkel als EINZELNES Element speichern (mit allen 3 Punkten)
     newElements.push({
-      id: `${baseId}-ref-line`,
-      type: 'line',
-      data: { x1: centerX, y1: centerY, x2: point1X, y2: point1Y },
-      color: '#2196f3',
-      strokeWidth: Math.max(1, 3 / currentScale),
-    });
-    
-    // 2. Winkellinie (Vertex -> Point2)
-    newElements.push({
-      id: `${baseId}-angle-line`,
-      type: 'line',
-      data: { x1: centerX, y1: centerY, x2: point2X, y2: point2Y },
+      id: angleId,
+      type: 'angle',
+      data: { angleValue: calculatedAngle },
       color: '#FF5722',
       strokeWidth: Math.max(1, 3 / currentScale),
-    });
-    
-    // 3. Winkelbogen
-    if (calculatedAngle > 0) {
-      const arcX1 = centerX + arcRadius * Math.cos(refAngle);
-      const arcY1 = centerY + arcRadius * Math.sin(refAngle);
-      const arcX2 = centerX + arcRadius * Math.cos(angleEndAngle);
-      const arcY2 = centerY + arcRadius * Math.sin(angleEndAngle);
-      
-      // Sweep-Richtung basierend auf Winkelrichtung
-      let angleDiff = angleEndAngle - refAngle;
-      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-      const sweep = angleDiff > 0 ? 1 : 0;
-      const largeArc = calculatedAngle > 180 ? 1 : 0;
-      
-      const arcPath = `M ${arcX1} ${arcY1} A ${arcRadius} ${arcRadius} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`;
-      newElements.push({
-        id: `${baseId}-arc`,
-        type: 'path',
-        data: arcPath,
-        color: '#4caf50',
-        strokeWidth: Math.max(1, 3 / currentScale),
-      });
-    }
-    
-    // 4. Winkeltext
-    const midAngle = (refAngle + angleEndAngle) / 2;
-    const textX = centerX + (arcRadius + 20) * Math.cos(midAngle);
-    const textY = centerY + (arcRadius + 20) * Math.sin(midAngle);
-    newElements.push({
-      id: `${baseId}-text`,
-      type: 'text',
-      data: { text: `${calculatedAngle}°` },
-      color: '#FF5722',
-      strokeWidth: 1,
-      x: textX,
-      y: textY,
-      fontSize: 16,
-      fontWeight: 'bold',
+      vertex: vertex,
+      point1: point1,
+      point2: point2,
+      angle: calculatedAngle,
     });
     
     addToHistory(newElements);
@@ -6024,6 +5972,92 @@ export default function DrawSketchScreen() {
           </G>
         );
       
+      case 'angle':
+        // Winkel-Element mit 3 Punkten (Vertex, Point1, Point2)
+        if (!element.vertex || !element.point1 || !element.point2) return null;
+        
+        const v = element.vertex;
+        const p1 = element.point1;
+        const p2 = element.point2;
+        const angleValue = element.angle || 0;
+        
+        // Berechne Linien-Längen und Bogen
+        const len1 = Math.sqrt(Math.pow(p1.x - v.x, 2) + Math.pow(p1.y - v.y, 2));
+        const len2 = Math.sqrt(Math.pow(p2.x - v.x, 2) + Math.pow(p2.y - v.y, 2));
+        const arcR = Math.min(len1, len2) * 0.3;
+        
+        // Winkel-Richtungen
+        const ang1 = Math.atan2(p1.y - v.y, p1.x - v.x);
+        const ang2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+        
+        // Bogen-Punkte
+        const arcX1 = v.x + arcR * Math.cos(ang1);
+        const arcY1 = v.y + arcR * Math.sin(ang1);
+        const arcX2 = v.x + arcR * Math.cos(ang2);
+        const arcY2 = v.y + arcR * Math.sin(ang2);
+        
+        // Sweep-Richtung
+        let angDiff = ang2 - ang1;
+        while (angDiff < -Math.PI) angDiff += 2 * Math.PI;
+        while (angDiff > Math.PI) angDiff -= 2 * Math.PI;
+        const sweepFlag = angDiff > 0 ? 1 : 0;
+        const largeArcFlag = angleValue > 180 ? 1 : 0;
+        
+        // Text-Position (Mitte des Bogens)
+        const midAng = (ang1 + ang2) / 2;
+        const textX = v.x + (arcR + 20) * Math.cos(midAng);
+        const textY = v.y + (arcR + 20) * Math.sin(midAng);
+        
+        return (
+          <G key={element.id}>
+            {/* Referenzlinie (blau) */}
+            <Line
+              x1={v.x} y1={v.y}
+              x2={p1.x} y2={p1.y}
+              stroke="#2196f3"
+              strokeWidth={element.strokeWidth}
+            />
+            {/* Winkellinie (orange) */}
+            <Line
+              x1={v.x} y1={v.y}
+              x2={p2.x} y2={p2.y}
+              stroke="#FF5722"
+              strokeWidth={element.strokeWidth}
+            />
+            {/* Winkelbogen (grün) */}
+            {angleValue > 0 && (
+              <Path
+                d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}`}
+                stroke="#4caf50"
+                strokeWidth={element.strokeWidth}
+                fill="none"
+              />
+            )}
+            {/* Winkeltext */}
+            <SvgText
+              x={textX}
+              y={textY}
+              fill="#FF5722"
+              fontSize={16}
+              fontWeight="bold"
+              textAnchor="middle"
+            >
+              {angleValue}°
+            </SvgText>
+            {/* Auswahlrahmen */}
+            {isSelected && (
+              <>
+                {/* Vertex-Handle */}
+                <Circle cx={v.x} cy={v.y} r={10} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+                {/* Point1-Handle */}
+                <Circle cx={p1.x} cy={p1.y} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />
+                {/* Point2-Handle */}
+                <Circle cx={p2.x} cy={p2.y} r={8} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+              </>
+            )}
+          </G>
+        );
+      
       case 'line':
         const lineCenterX = (element.data.x1 + element.data.x2) / 2;
         const lineCenterY = (element.data.y1 + element.data.y2) / 2;
@@ -7007,6 +7041,15 @@ export default function DrawSketchScreen() {
           maxX = Math.max(maxX, el.data.x1 + (el.data.text.length * fontSize * 0.6));
         }
         hasValidBounds = true;
+      } else if (el.type === 'angle') {
+        // Winkel-Element: Bounds aus allen 3 Punkten
+        if (el.vertex && el.point1 && el.point2) {
+          minX = Math.min(minX, el.vertex.x, el.point1.x, el.point2.x);
+          maxX = Math.max(maxX, el.vertex.x, el.point1.x, el.point2.x);
+          minY = Math.min(minY, el.vertex.y, el.point1.y, el.point2.y);
+          maxY = Math.max(maxY, el.vertex.y, el.point1.y, el.point2.y);
+          hasValidBounds = true;
+        }
       } else if (el.type === 'circle') {
         minX = Math.min(minX, el.data.cx - el.data.r);
         maxX = Math.max(maxX, el.data.cx + el.data.r);

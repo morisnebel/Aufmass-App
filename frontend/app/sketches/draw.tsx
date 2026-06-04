@@ -5569,6 +5569,63 @@ export default function DrawSketchScreen() {
           // Neue Schriftgröße berechnen mit Mindest- und Maximalgröße
           const newFontSize = Math.max(8, Math.min(200, origFontSize * scaleFactor));
           newEl.fontSize = Math.round(newFontSize);
+        } else if (el.type === 'angle') {
+          // Winkel-Resize: Einzelne Punkte verschieben
+          if (originalElement.vertex && originalElement.point1 && originalElement.point2) {
+            if (resizeHandle === 'vertex') {
+              // Scheitelpunkt verschieben - alle Punkte mitbewegen
+              newEl.vertex = { x: locationX, y: locationY };
+              newEl.point1 = {
+                x: originalElement.point1.x + (locationX - originalElement.vertex.x),
+                y: originalElement.point1.y + (locationY - originalElement.vertex.y),
+              };
+              newEl.point2 = {
+                x: originalElement.point2.x + (locationX - originalElement.vertex.x),
+                y: originalElement.point2.y + (locationY - originalElement.vertex.y),
+              };
+            } else if (resizeHandle === 'point1') {
+              // Punkt 1 verschieben (ändert Länge der Referenzlinie)
+              newEl.point1 = { x: locationX, y: locationY };
+              // Winkel neu berechnen
+              const v = originalElement.vertex;
+              const p2 = originalElement.point2;
+              const v1x = locationX - v.x;
+              const v1y = locationY - v.y;
+              const v2x = p2.x - v.x;
+              const v2y = p2.y - v.y;
+              const angle1 = Math.atan2(v1y, v1x);
+              const angle2 = Math.atan2(v2y, v2x);
+              let angleDiff = (angle2 - angle1) * (180 / Math.PI);
+              while (angleDiff < 0) angleDiff += 360;
+              while (angleDiff > 360) angleDiff -= 360;
+              if (angleDiff > 180) angleDiff = 360 - angleDiff;
+              newEl.angle = Math.round(angleDiff * 10) / 10;
+              newEl.data = { angleValue: newEl.angle };
+            } else if (resizeHandle === 'point2') {
+              // Punkt 2 verschieben (ändert Länge der Winkellinie)
+              newEl.point2 = { x: locationX, y: locationY };
+              // Winkel neu berechnen
+              const v = originalElement.vertex;
+              const p1 = originalElement.point1;
+              const v1x = p1.x - v.x;
+              const v1y = p1.y - v.y;
+              const v2x = locationX - v.x;
+              const v2y = locationY - v.y;
+              const angle1 = Math.atan2(v1y, v1x);
+              const angle2 = Math.atan2(v2y, v2x);
+              let angleDiff = (angle2 - angle1) * (180 / Math.PI);
+              while (angleDiff < 0) angleDiff += 360;
+              while (angleDiff > 360) angleDiff -= 360;
+              if (angleDiff > 180) angleDiff = 360 - angleDiff;
+              newEl.angle = Math.round(angleDiff * 10) / 10;
+              newEl.data = { angleValue: newEl.angle };
+            }
+            // Lupe aktualisieren
+            if (showMagnifier) {
+              setMagnifierTargetPosition({ x: locationX, y: locationY });
+              setMagnifierPosition({ x: locationX + (canvasLayout?.x || 0), y: locationY + (canvasLayout?.y || 0) });
+            }
+          }
         }
       }
 
@@ -5950,6 +6007,26 @@ export default function DrawSketchScreen() {
       for (const h of handles) {
         if (Math.sqrt(Math.pow(x - h.x, 2) + Math.pow(y - h.y, 2)) < handleRadius) {
           return { type: h.handle === 'rotate' ? 'rotate' : 'resize', handle: h.handle };
+        }
+      }
+    } else if (element.type === 'angle') {
+      // Winkel-Element: Handles für Vertex, Point1, Point2
+      if (element.vertex && element.point1 && element.point2) {
+        const v = element.vertex;
+        const p1 = element.point1;
+        const p2 = element.point2;
+        
+        // Vertex-Handle (größer)
+        if (Math.sqrt(Math.pow(x - v.x, 2) + Math.pow(y - v.y, 2)) < handleRadius + 5) {
+          return { type: 'resize', handle: 'vertex' };
+        }
+        // Point1-Handle
+        if (Math.sqrt(Math.pow(x - p1.x, 2) + Math.pow(y - p1.y, 2)) < handleRadius) {
+          return { type: 'resize', handle: 'point1' };
+        }
+        // Point2-Handle
+        if (Math.sqrt(Math.pow(x - p2.x, 2) + Math.pow(y - p2.y, 2)) < handleRadius) {
+          return { type: 'resize', handle: 'point2' };
         }
       }
     }

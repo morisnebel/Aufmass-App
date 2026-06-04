@@ -6129,25 +6129,25 @@ export default function DrawSketchScreen() {
         
         return (
           <G key={element.id}>
-            {/* Referenzlinie (blau) */}
+            {/* Referenzlinie */}
             <Line
               x1={v.x} y1={v.y}
               x2={p1.x} y2={p1.y}
-              stroke="#2196f3"
+              stroke={element.color}
               strokeWidth={element.strokeWidth}
             />
-            {/* Winkellinie (orange) */}
+            {/* Winkellinie */}
             <Line
               x1={v.x} y1={v.y}
               x2={p2.x} y2={p2.y}
-              stroke="#FF5722"
+              stroke={element.color}
               strokeWidth={element.strokeWidth}
             />
-            {/* Winkelbogen (grün) */}
+            {/* Winkelbogen */}
             {angleValue > 0 && (
               <Path
                 d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}`}
-                stroke="#4caf50"
+                stroke={element.color}
                 strokeWidth={element.strokeWidth}
                 fill="none"
               />
@@ -6156,7 +6156,7 @@ export default function DrawSketchScreen() {
             <SvgText
               x={textX}
               y={textY}
-              fill="#FF5722"
+              fill={element.color}
               fontSize={16}
               fontWeight="bold"
               textAnchor="middle"
@@ -6167,11 +6167,11 @@ export default function DrawSketchScreen() {
             {isSelected && (
               <>
                 {/* Vertex-Handle */}
-                <Circle cx={v.x} cy={v.y} r={10} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+                <Circle cx={v.x} cy={v.y} r={10} fill={element.color} stroke="#fff" strokeWidth={2} />
                 {/* Point1-Handle */}
-                <Circle cx={p1.x} cy={p1.y} r={8} fill="#2196f3" stroke="#fff" strokeWidth={2} />
+                <Circle cx={p1.x} cy={p1.y} r={8} fill={element.color} stroke="#fff" strokeWidth={2} />
                 {/* Point2-Handle */}
-                <Circle cx={p2.x} cy={p2.y} r={8} fill="#FF5722" stroke="#fff" strokeWidth={2} />
+                <Circle cx={p2.x} cy={p2.y} r={8} fill={element.color} stroke="#fff" strokeWidth={2} />
               </>
             )}
           </G>

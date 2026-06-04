@@ -5918,10 +5918,11 @@ export default function ProjectDetailScreen() {
                         const p1 = el.point1;
                         const p2 = el.point2;
                         const angleValue = el.angle || 0;
+                        const angleColor = color || '#FF5722';
                         
-                        // Linien
-                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p1.x}" y2="${p1.y}" stroke="#2196f3" stroke-width="${strokeWidth}"/>`;
-                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p2.x}" y2="${p2.y}" stroke="#FF5722" stroke-width="${strokeWidth}"/>`;
+                        // Linien (beide in element.color)
+                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p1.x}" y2="${p1.y}" stroke="${angleColor}" stroke-width="${strokeWidth}"/>`;
+                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p2.x}" y2="${p2.y}" stroke="${angleColor}" stroke-width="${strokeWidth}"/>`;
                         
                         // Bogen
                         if (angleValue > 0) {
@@ -5943,14 +5944,14 @@ export default function ProjectDetailScreen() {
                           const sweepFlag = angDiff > 0 ? 1 : 0;
                           const largeArcFlag = angleValue > 180 ? 1 : 0;
                           
-                          svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="#4caf50" stroke-width="${strokeWidth}" fill="none"/>`;
+                          svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
                           
                           // Text-Position
                           const midAng = (ang1 + ang2) / 2;
                           const textX = v.x + (arcR + 20) * Math.cos(midAng);
                           const textY = v.y + (arcR + 20) * Math.sin(midAng);
                           
-                          svgElements += `<text x="${textX}" y="${textY}" fill="#FF5722" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+                          svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
                         }
                       }
                     }

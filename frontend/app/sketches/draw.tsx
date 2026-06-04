@@ -5584,41 +5584,59 @@ export default function DrawSketchScreen() {
                 y: originalElement.point2.y + (locationY - originalElement.vertex.y),
               };
             } else if (resizeHandle === 'point1') {
-              // Punkt 1 verschieben (ändert Länge der Referenzlinie)
-              newEl.point1 = { x: locationX, y: locationY };
-              // Winkel neu berechnen
-              const v = originalElement.vertex;
-              const p2 = originalElement.point2;
-              const v1x = locationX - v.x;
-              const v1y = locationY - v.y;
-              const v2x = p2.x - v.x;
-              const v2y = p2.y - v.y;
-              const angle1 = Math.atan2(v1y, v1x);
-              const angle2 = Math.atan2(v2y, v2x);
-              let angleDiff = (angle2 - angle1) * (180 / Math.PI);
-              while (angleDiff < 0) angleDiff += 360;
-              while (angleDiff > 360) angleDiff -= 360;
-              if (angleDiff > 180) angleDiff = 360 - angleDiff;
-              newEl.angle = Math.round(angleDiff * 10) / 10;
-              newEl.data = { angleValue: newEl.angle };
-            } else if (resizeHandle === 'point2') {
-              // Punkt 2 verschieben (ändert Länge der Winkellinie)
-              newEl.point2 = { x: locationX, y: locationY };
-              // Winkel neu berechnen
+              // Punkt 1 verschieben - NUR Länge ändern, Winkel bleibt fest!
               const v = originalElement.vertex;
               const p1 = originalElement.point1;
-              const v1x = p1.x - v.x;
-              const v1y = p1.y - v.y;
-              const v2x = locationX - v.x;
-              const v2y = locationY - v.y;
-              const angle1 = Math.atan2(v1y, v1x);
-              const angle2 = Math.atan2(v2y, v2x);
-              let angleDiff = (angle2 - angle1) * (180 / Math.PI);
-              while (angleDiff < 0) angleDiff += 360;
-              while (angleDiff > 360) angleDiff -= 360;
-              if (angleDiff > 180) angleDiff = 360 - angleDiff;
-              newEl.angle = Math.round(angleDiff * 10) / 10;
-              newEl.data = { angleValue: newEl.angle };
+              
+              // Aktuelle Richtung der Linie berechnen
+              const dirX = p1.x - v.x;
+              const dirY = p1.y - v.y;
+              const currentLength = Math.sqrt(dirX * dirX + dirY * dirY);
+              
+              if (currentLength > 0) {
+                // Einheitsvektor in Richtung der Linie
+                const unitX = dirX / currentLength;
+                const unitY = dirY / currentLength;
+                
+                // Neue Länge basierend auf Projektion des Mauszeigers auf die Linie
+                const mouseVecX = locationX - v.x;
+                const mouseVecY = locationY - v.y;
+                const newLength = Math.max(30, mouseVecX * unitX + mouseVecY * unitY); // Mindestlänge 30
+                
+                // Neuer Punkt auf der gleichen Linie, nur andere Länge
+                newEl.point1 = {
+                  x: v.x + unitX * newLength,
+                  y: v.y + unitY * newLength,
+                };
+              }
+              // Winkel bleibt unverändert!
+            } else if (resizeHandle === 'point2') {
+              // Punkt 2 verschieben - NUR Länge ändern, Winkel bleibt fest!
+              const v = originalElement.vertex;
+              const p2 = originalElement.point2;
+              
+              // Aktuelle Richtung der Linie berechnen
+              const dirX = p2.x - v.x;
+              const dirY = p2.y - v.y;
+              const currentLength = Math.sqrt(dirX * dirX + dirY * dirY);
+              
+              if (currentLength > 0) {
+                // Einheitsvektor in Richtung der Linie
+                const unitX = dirX / currentLength;
+                const unitY = dirY / currentLength;
+                
+                // Neue Länge basierend auf Projektion des Mauszeigers auf die Linie
+                const mouseVecX = locationX - v.x;
+                const mouseVecY = locationY - v.y;
+                const newLength = Math.max(30, mouseVecX * unitX + mouseVecY * unitY); // Mindestlänge 30
+                
+                // Neuer Punkt auf der gleichen Linie, nur andere Länge
+                newEl.point2 = {
+                  x: v.x + unitX * newLength,
+                  y: v.y + unitY * newLength,
+                };
+              }
+              // Winkel bleibt unverändert!
             }
             // Lupe aktualisieren
             if (showMagnifier) {

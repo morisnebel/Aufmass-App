@@ -11232,24 +11232,24 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Touch-Handler - direkt mit berechneter Screen-Position */}
+      {/* Winkelmesser Touch-Handler - OHNE zusätzlichen Offset */}
       {showProtractor && (
         <View 
           style={{ 
             position: 'absolute', 
-            top: 0, 
+            top: canvasLayout?.y || canvasOverhead,
             left: 0, 
-            right: 0,
-            bottom: 0,
+            width: screenWidth,
+            height: canvasHeight,
           }} 
           pointerEvents="box-none"
         >
-          {/* Touch-Handler für Scheitelpunkt (orange, größer) */}
+          {/* Touch-Handler für Scheitelpunkt (orange, größer) - Canvas-Koordinaten direkt! */}
           <View
             style={{
               position: 'absolute',
               left: angleVertex.x - 25,
-              top: (canvasLayout?.y || canvasOverhead) + angleVertex.y - 25,
+              top: angleVertex.y - 25,
               width: 50,
               height: 50,
               borderRadius: 25,
@@ -11269,12 +11269,12 @@ export default function DrawSketchScreen() {
             <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⊙</Text>
           </View>
           
-          {/* Touch-Handler für Punkt 1 (blau) */}
+          {/* Touch-Handler für Punkt 1 (blau) - Canvas-Koordinaten direkt! */}
           <View
             style={{
               position: 'absolute',
               left: anglePoint1.x - 20,
-              top: (canvasLayout?.y || canvasOverhead) + anglePoint1.y - 20,
+              top: anglePoint1.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -11294,12 +11294,12 @@ export default function DrawSketchScreen() {
             <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>1</Text>
           </View>
           
-          {/* Touch-Handler für Punkt 2 (orange) */}
+          {/* Touch-Handler für Punkt 2 (orange) - Canvas-Koordinaten direkt! */}
           <View
             style={{
               position: 'absolute',
               left: anglePoint2.x - 20,
-              top: (canvasLayout?.y || canvasOverhead) + anglePoint2.y - 20,
+              top: anglePoint2.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,

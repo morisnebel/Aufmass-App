@@ -2261,55 +2261,20 @@ export default function DrawSketchScreen() {
 
   // Funktion um Winkelmesser-Messung zum Sketch hinzuzufügen
   const addProtractorToSketch = useCallback(() => {
-    // Umrechnung auf Canvas-Koordinaten (berücksichtigt Zoom und Scroll!)
+    // Die Protractor-Koordinaten sind bereits in Canvas-Koordinaten!
+    // Sie werden beim Drag bereits durch currentScale geteilt (siehe handleProtractorDrag)
     const currentScale = scaleRef.current || 1;
-    const layout = canvasLayoutRef.current || canvasLayout;
     
-    let centerX: number;
-    let centerY: number;
+    // Direkt die Canvas-Koordinaten verwenden
+    const centerX = protractorCenter.x;
+    const centerY = protractorCenter.y;
     
-    // Hilfsfunktion: Screen-Koordinaten → Canvas-Koordinaten
-    const screenToCanvas = (screenX: number, screenY: number) => {
-      if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-        // Android: viewBox-basierte Konvertierung
-        const lx = layout ? layout.x : 0;
-        const ly = layout ? layout.y : 0;
-        return {
-          x: androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w,
-          y: androidViewBox.y + ((screenY - ly) / canvasHeight) * androidViewBox.h,
-        };
-      } else if (layout && currentScale !== 1) {
-        // iOS: Gezoomte Ansicht
-        // canvasLayout (via measureInWindow) enthält bereits die Scroll-Position!
-        // Daher KEIN scrollOffset addieren - nur durch Scale teilen
-        return {
-          x: (screenX - layout.x) / currentScale,
-          y: (screenY - layout.y) / currentScale,
-        };
-      } else if (layout) {
-        // Keine Zoom-Skalierung
-        return {
-          x: screenX - layout.x,
-          y: screenY - layout.y,
-        };
-      } else {
-        // Fallback ohne Layout-Info
-        const headerHeight = Platform.OS === 'ios' ? 62 : 24;
-        const toolbarHeight = 70;
-        const topOffset = headerHeight + toolbarHeight;
-        return { x: screenX, y: screenY - topOffset };
-      }
-    };
-    
-    const center = screenToCanvas(protractorCenter.x, protractorCenter.y);
-    centerX = center.x;
-    centerY = center.y;
-    
-    // Auch RefEnd und AngleEnd in Canvas-Koordinaten umrechnen
-    const refEndCanvas = screenToCanvas(protractorRefEnd.x, protractorRefEnd.y);
-    const angleEndCanvas = screenToCanvas(protractorAngleEnd.x, protractorAngleEnd.y);
-    
-    console.log('addProtractorToSketch - scale:', currentScale, 'layout:', layout ? { x: Math.round(layout.x), y: Math.round(layout.y) } : null, 'screenCenter:', { x: Math.round(protractorCenter.x), y: Math.round(protractorCenter.y) }, 'canvasCenter:', { x: Math.round(centerX), y: Math.round(centerY) });
+    console.log('addProtractorToSketch - Protractor already in canvas coords:', { 
+      centerX: Math.round(centerX), 
+      centerY: Math.round(centerY),
+      refEnd: { x: Math.round(protractorRefEnd.x), y: Math.round(protractorRefEnd.y) },
+      angleEnd: { x: Math.round(protractorAngleEnd.x), y: Math.round(protractorAngleEnd.y) }
+    });
     
     // Winkel-Anzeige (immer positiv)
     let displayAngle = Math.abs(protractorAngle);
@@ -2317,13 +2282,13 @@ export default function DrawSketchScreen() {
       displayAngle = 180 - displayAngle;
     }
     
-    // Berechne Referenzlinien-Richtung und Winkellinie aus den Canvas-Endpunkten
-    const refDx = refEndCanvas.x - centerX;
-    const refDy = refEndCanvas.y - centerY;
+    // Berechne Referenzlinien-Richtung und Winkellinie aus den Canvas-Koordinaten
+    const refDx = protractorRefEnd.x - centerX;
+    const refDy = protractorRefEnd.y - centerY;
     const refAngle = Math.atan2(refDy, refDx);
     
-    const angleDx = angleEndCanvas.x - centerX;
-    const angleDy = angleEndCanvas.y - centerY;
+    const angleDx = protractorAngleEnd.x - centerX;
+    const angleDy = protractorAngleEnd.y - centerY;
     const angleEndAngle = Math.atan2(angleDy, angleDx);
     
     // Zeichengröße: Bei Zoom skalieren, damit der Winkel proportional zum sichtbaren Bereich bleibt

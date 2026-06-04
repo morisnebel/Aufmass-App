@@ -5743,6 +5743,15 @@ export default function ProjectDetailScreen() {
                       minY = Math.min(minY, y - (el.type === 'text' ? (el.fontSize || 20) : 0));
                       maxY = Math.max(maxY, y + h);
                       hasValidBounds = true;
+                    } else if (el.type === 'angle') {
+                      // Winkel-Element: Bounds aus allen 3 Punkten
+                      if (el.vertex && el.point1 && el.point2) {
+                        minX = Math.min(minX, el.vertex.x, el.point1.x, el.point2.x);
+                        maxX = Math.max(maxX, el.vertex.x, el.point1.x, el.point2.x);
+                        minY = Math.min(minY, el.vertex.y, el.point1.y, el.point2.y);
+                        maxY = Math.max(maxY, el.vertex.y, el.point1.y, el.point2.y);
+                        hasValidBounds = true;
+                      }
                     }
                   });
 
@@ -5901,6 +5910,48 @@ export default function ProjectDetailScreen() {
                         const textHeight = fontSize + 8;
                         svgElements += `<rect x="${textX - 5}" y="${textY - fontSize}" width="${textWidth}" height="${textHeight}" fill="white" fill-opacity="0.85" rx="4" ry="4" stroke="${color}" stroke-width="1"/>`;
                         svgElements += `<text x="${textX}" y="${textY}" font-size="${fontSize}" fill="${color}" font-weight="bold">${text}</text>`;
+                      }
+                    } else if (el.type === 'angle') {
+                      // Winkel-Element mit 3 Punkten
+                      if (el.vertex && el.point1 && el.point2) {
+                        const v = el.vertex;
+                        const p1 = el.point1;
+                        const p2 = el.point2;
+                        const angleValue = el.angle || 0;
+                        
+                        // Linien
+                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p1.x}" y2="${p1.y}" stroke="#2196f3" stroke-width="${strokeWidth}"/>`;
+                        svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p2.x}" y2="${p2.y}" stroke="#FF5722" stroke-width="${strokeWidth}"/>`;
+                        
+                        // Bogen
+                        if (angleValue > 0) {
+                          const len1 = Math.sqrt(Math.pow(p1.x - v.x, 2) + Math.pow(p1.y - v.y, 2));
+                          const len2 = Math.sqrt(Math.pow(p2.x - v.x, 2) + Math.pow(p2.y - v.y, 2));
+                          const arcR = Math.min(len1, len2) * 0.3;
+                          
+                          const ang1 = Math.atan2(p1.y - v.y, p1.x - v.x);
+                          const ang2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+                          
+                          const arcX1 = v.x + arcR * Math.cos(ang1);
+                          const arcY1 = v.y + arcR * Math.sin(ang1);
+                          const arcX2 = v.x + arcR * Math.cos(ang2);
+                          const arcY2 = v.y + arcR * Math.sin(ang2);
+                          
+                          let angDiff = ang2 - ang1;
+                          while (angDiff < -Math.PI) angDiff += 2 * Math.PI;
+                          while (angDiff > Math.PI) angDiff -= 2 * Math.PI;
+                          const sweepFlag = angDiff > 0 ? 1 : 0;
+                          const largeArcFlag = angleValue > 180 ? 1 : 0;
+                          
+                          svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="#4caf50" stroke-width="${strokeWidth}" fill="none"/>`;
+                          
+                          // Text-Position
+                          const midAng = (ang1 + ang2) / 2;
+                          const textX = v.x + (arcR + 20) * Math.cos(midAng);
+                          const textY = v.y + (arcR + 20) * Math.sin(midAng);
+                          
+                          svgElements += `<text x="${textX}" y="${textY}" fill="#FF5722" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+                        }
                       }
                     }
                   });

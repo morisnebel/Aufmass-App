@@ -2474,20 +2474,15 @@ export default function DrawSketchScreen() {
     const currentScale = scaleRef.current || 1;
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     
-    // WICHTIG: Die Touch-Handler und SVG-Handles im canvasRef sind bei angleVertex.y
-    // Aber das SVG-Rendering scheint einen Offset zu haben.
-    // Versuche: Subtrahiere layout.y um den Sprung auszugleichen
-    const offsetY = layout.y || canvasOverhead;
-    
-    const vertex = { x: angleVertex.x, y: angleVertex.y - offsetY };
-    const point1 = { x: anglePoint1.x, y: anglePoint1.y - offsetY };
-    const point2 = { x: anglePoint2.x, y: anglePoint2.y - offsetY };
+    // Speichere die Canvas-Koordinaten direkt (KEIN Offset!)
+    const vertex = { x: angleVertex.x, y: angleVertex.y };
+    const point1 = { x: anglePoint1.x, y: anglePoint1.y };
+    const point2 = { x: anglePoint2.x, y: anglePoint2.y };
     
     // DEBUG
     console.log('=== addProtractorToSketch DEBUG ===');
     console.log('angleVertex (original):', angleVertex);
     console.log('layout.y:', layout.y);
-    console.log('offsetY applied:', offsetY);
     console.log('Saved vertex:', vertex);
     console.log('===================================');
     

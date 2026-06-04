@@ -36,13 +36,13 @@ type FontFamily = 'System' | 'Handschrift' | 'Monospace' | 'Serif';
 const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: string }[] = Platform.select({
   ios: [
     { id: 'System', label: 'Standard', style: 'System', svgFont: 'Helvetica' },
-    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Snell Roundhand' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'cursive', svgFont: 'Snell Roundhand, cursive' },
     { id: 'Monospace', label: 'Monospace', style: 'Courier', svgFont: 'Courier' },
     { id: 'Serif', label: 'Serif', style: 'Georgia', svgFont: 'Times New Roman' },
   ],
   android: [
-    { id: 'System', label: 'Standard', style: 'normal', svgFont: 'Roboto' },
-    { id: 'Handschrift', label: 'Handschrift', style: 'normal', svgFont: 'sans-serif-light' },
+    { id: 'System', label: 'Standard', style: 'normal', svgFont: 'Roboto, sans-serif' },
+    { id: 'Handschrift', label: 'Handschrift', style: 'normal', svgFont: 'cursive' },
     { id: 'Monospace', label: 'Monospace', style: 'monospace', svgFont: 'monospace' },
     { id: 'Serif', label: 'Serif', style: 'normal', svgFont: 'serif' },
   ],

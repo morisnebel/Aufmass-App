@@ -1107,34 +1107,25 @@ export default function DrawSketchScreen() {
   const angleDragRef = useRef({ 
     isDragging: false,
     activePoint: null as 'vertex' | 'point1' | 'point2' | null,
-    startTouchX: 0,
-    startTouchY: 0,
+    startCanvasPos: { x: 0, y: 0 }, // Start-Position in CANVAS-Koordinaten
     initialVertex: { x: 0, y: 0 },
     initialPoint1: { x: 0, y: 0 },
     initialPoint2: { x: 0, y: 0 },
   });
-
-  // Hilfsfunktion: Touch zu Canvas-Koordinaten (EINFACH!)
-  const touchToCanvasCoords = useCallback((pageX: number, pageY: number) => {
-    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
-    // Einfach: Screen-Position minus Layout-Offset = Canvas-Position
-    return {
-      x: pageX - layout.x,
-      y: pageY - layout.y,
-    };
-  }, [canvasOverhead]);
 
   // Neuer Drag Start für 3-Punkte-System
   const handleAngleDragStart = useCallback((e: any, point: 'vertex' | 'point1' | 'point2') => {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    // Speichere Start-Touch und ALLE ursprünglichen Punkt-Positionen
+    // Konvertiere Touch zu CANVAS-Koordinaten (wie bei allen anderen Zeichentools!)
+    const canvasPos = screenToCanvasForMagnifier(pageX, pageY);
+    
+    // Speichere Start-Canvas-Position und alle ursprünglichen Punkt-Positionen
     angleDragRef.current = {
       isDragging: true,
       activePoint: point,
-      startTouchX: pageX,
-      startTouchY: pageY,
+      startCanvasPos: canvasPos,
       initialVertex: { ...angleVertex },
       initialPoint1: { ...anglePoint1 },
       initialPoint2: { ...anglePoint2 },
@@ -1166,24 +1157,27 @@ export default function DrawSketchScreen() {
       setShowMagnifier(true);
     }
     
-    console.log('[Angle Drag Start]', point, 'touch:', pageX, pageY, 'initial point:', currentPoint);
-  }, [angleVertex, anglePoint1, anglePoint2]);
+    console.log('[Angle Drag Start]', point, 'startCanvas:', canvasPos, 'currentPoint:', currentPoint);
+  }, [angleVertex, anglePoint1, anglePoint2, screenToCanvasForMagnifier]);
 
-  // Neuer Drag Move für 3-Punkte-System - DELTA-BASIERT!
+  // Neuer Drag Move für 3-Punkte-System - CANVAS-DELTA-BASIERT!
   const handleAngleDragMove = useCallback((e: any) => {
     if (!angleDragRef.current.isDragging || !angleDragRef.current.activePoint) return;
     
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    // Berechne Screen-Delta (Bewegung seit Start)
-    const deltaX = pageX - angleDragRef.current.startTouchX;
-    const deltaY = pageY - angleDragRef.current.startTouchY;
+    // Konvertiere aktuelle Touch-Position zu CANVAS-Koordinaten
+    const currentCanvasPos = screenToCanvasForMagnifier(pageX, pageY);
+    
+    // Berechne CANVAS-Delta (nicht Screen-Delta!)
+    const deltaX = currentCanvasPos.x - angleDragRef.current.startCanvasPos.x;
+    const deltaY = currentCanvasPos.y - angleDragRef.current.startCanvasPos.y;
     
     const point = angleDragRef.current.activePoint;
     
     if (point === 'vertex') {
-      // Bei Vertex: Alle Punkte um das gleiche Delta verschieben
+      // Bei Vertex: Alle Punkte um das gleiche Canvas-Delta verschieben
       const newVertex = {
         x: angleDragRef.current.initialVertex.x + deltaX,
         y: angleDragRef.current.initialVertex.y + deltaY,
@@ -1220,7 +1214,7 @@ export default function DrawSketchScreen() {
     
     // Lupe-Position aktualisieren (Screen-Koordinaten)
     setMagnifierPosition({ x: pageX, y: pageY });
-  }, []);
+  }, [screenToCanvasForMagnifier]);
 
   // Neuer Drag End für 3-Punkte-System
   const handleAngleDragEnd = useCallback(() => {

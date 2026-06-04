@@ -11353,92 +11353,15 @@ export default function DrawSketchScreen() {
               </View>
             )}
             
-            {/* Winkelsteuerung - kompakt auf iPhone */}
-            <View style={[styles.protractorControlRow, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8, gap: 4 }]}>
-              <TouchableOpacity 
-                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
-                onPress={() => adjustProtractorAngle(-10)}
+            {/* Winkel-Anzeige - nur Badge */}
+            <View style={[styles.protractorControlRow, { justifyContent: 'center' }, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8 }]}>
+              <View 
+                style={[styles.protractorAngleBadge, isPhoneDevice && { paddingHorizontal: 16, paddingVertical: 6, minWidth: 80 }]}
               >
-                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>-10°</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
-                onPress={() => adjustProtractorAngle(-1)}
-              >
-                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>-1°</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.protractorAngleBadge, isPhoneDevice && { paddingHorizontal: 10, paddingVertical: 4, minWidth: 56 }]}
-                onPress={() => {
-                  setProtractorAngleInput(Math.abs(protractorAngle).toString());
-                  setShowProtractorAngleInput(true);
-                }}
-              >
-                <Text style={[styles.protractorAngleBadgeText, isPhoneDevice && { fontSize: 16 }]}>
-                  {protractorUseComplementary && Math.abs(protractorAngle) !== 0 && Math.abs(protractorAngle) !== 180
-                    ? `${180 - Math.abs(protractorAngle)}°`
-                    : `${Math.abs(protractorAngle)}°`}
+                <Text style={[styles.protractorAngleBadgeText, isPhoneDevice && { fontSize: 20 }]}>
+                  {`${calculatedAngle}°`}
                 </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
-                onPress={() => adjustProtractorAngle(1)}
-              >
-                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>+1°</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.protractorControlBtn, isPhoneDevice && { width: 34, height: 34, borderRadius: 17 }]}
-                onPress={() => adjustProtractorAngle(10)}
-              >
-                <Text style={[styles.protractorControlBtnText, isPhoneDevice && { fontSize: 11 }]}>+10°</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Innen/Außen + Größe + Reset - kompakte Zeile */}
-            <View style={[styles.protractorControlRow, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8, gap: 4 }]}>
-              <TouchableOpacity 
-                style={[styles.protractorToggleBtn, protractorUseComplementary && styles.protractorToggleBtnActive, isPhoneDevice && { paddingHorizontal: 8, paddingVertical: 3 }]}
-                onPress={() => setProtractorUseComplementary(prev => !prev)}
-              >
-                <Ionicons name="swap-horizontal" size={isPhoneDevice ? 14 : 16} color={protractorUseComplementary ? '#fff' : '#333'} />
-                <Text style={[styles.protractorToggleBtnText, protractorUseComplementary && styles.protractorToggleBtnTextActive, isPhoneDevice && { fontSize: 10 }]}>
-                  {protractorUseComplementary ? 'Außen' : 'Innen'}
-                </Text>
-              </TouchableOpacity>
-              
-              <View style={styles.protractorSizeControl}>
-                <TouchableOpacity 
-                  style={[styles.protractorControlBtnSmall, isPhoneDevice && { width: 26, height: 26, borderRadius: 13 }]}
-                  onPress={() => setProtractorDrawSize(prev => Math.max(30, prev - 10))}
-                >
-                  <Ionicons name="remove" size={isPhoneDevice ? 12 : 16} color="#333" />
-                </TouchableOpacity>
-                <Text style={[styles.protractorSizeLabel, isPhoneDevice && { fontSize: 9 }]}>{protractorDrawSize}px</Text>
-                <TouchableOpacity 
-                  style={[styles.protractorControlBtnSmall, isPhoneDevice && { width: 26, height: 26, borderRadius: 13 }]}
-                  onPress={() => setProtractorDrawSize(prev => Math.min(120, prev + 10))}
-                >
-                  <Ionicons name="add" size={isPhoneDevice ? 12 : 16} color="#333" />
-                </TouchableOpacity>
               </View>
-              
-              <TouchableOpacity 
-                style={[styles.protractorResetBtn, isPhoneDevice && { paddingHorizontal: 8, paddingVertical: 3 }]}
-                onPress={() => {
-                  const cx = screenWidth / 2;
-                  const cy = Math.max(200, canvasHeight / 2 + 60);
-                  const defaultLen = Math.min(screenWidth * 0.3, 150);
-                  setProtractorCenter({ x: cx, y: cy });
-                  setProtractorRefEnd({ x: cx + defaultLen, y: cy });
-                  setProtractorAngleEnd({ x: cx + defaultLen * Math.cos(-Math.PI/4), y: cy + defaultLen * Math.sin(-Math.PI/4) });
-                  setProtractorUseComplementary(false);
-                  setProtractorDrawSize(60);
-                }}
-              >
-                <Text style={[styles.protractorResetBtnText, isPhoneDevice && { fontSize: 10 }]}>Reset</Text>
-              </TouchableOpacity>
             </View>
             
             {/* Aktions-Buttons - kompakt auf iPhone */}
@@ -11467,39 +11390,6 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             </View>
           </Animated.View>
-          
-          {/* Winkel-Eingabe Modal */}
-          {showProtractorAngleInput && (
-            <View style={styles.protractorInputModal}>
-              <Text style={styles.protractorInputLabel}>{t('sketches.enterAngle')}</Text>
-              <TextInput
-                style={styles.protractorInput}
-                value={protractorAngleInput}
-                onChangeText={setProtractorAngleInput}
-                keyboardType="numeric"
-                autoFocus
-                selectTextOnFocus
-              />
-              <View style={styles.protractorInputButtons}>
-                <TouchableOpacity 
-                  style={styles.protractorInputCancelButton}
-                  onPress={() => setShowProtractorAngleInput(false)}
-                >
-                  <Text style={styles.protractorInputCancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.protractorInputOkButton}
-                  onPress={() => {
-                    const angle = parseInt(protractorAngleInput) || 0;
-                    setProtractorAngleTo(angle % 360);
-                    setShowProtractorAngleInput(false);
-                  }}
-                >
-                  <Text style={styles.protractorInputOkText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
           
           {/* Hinweis-Overlay beim Öffnen */}
           {showProtractorHint && (

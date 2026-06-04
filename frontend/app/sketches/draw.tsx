@@ -8926,6 +8926,95 @@ export default function DrawSketchScreen() {
           )}
         </Svg>
 
+        {/* Touch-Handler für aktiven Winkel - DIREKT IM CANVAS-CONTAINER! */}
+        {showProtractor && (
+          <View 
+            style={{ 
+              position: 'absolute', 
+              top: 0,
+              left: 0, 
+              width: screenWidth,
+              height: canvasHeight,
+            }} 
+            pointerEvents="box-none"
+          >
+            {/* Touch-Handler für Scheitelpunkt (orange, größer) */}
+            <View
+              style={{
+                position: 'absolute',
+                left: angleVertex.x - 25,
+                top: angleVertex.y - 25,
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                backgroundColor: activeDragPoint === 'vertex' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
+                borderWidth: 3,
+                borderColor: '#fff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 100,
+              }}
+              onTouchStart={(e) => handleAngleDragStart(e, 'vertex')}
+              onTouchMove={handleAngleDragMove}
+              onTouchEnd={handleAngleDragEnd}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+            >
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⊙</Text>
+            </View>
+            
+            {/* Touch-Handler für Punkt 1 (blau) */}
+            <View
+              style={{
+                position: 'absolute',
+                left: anglePoint1.x - 20,
+                top: anglePoint1.y - 20,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: activeDragPoint === 'point1' ? '#2196f3' : 'rgba(33, 150, 243, 0.8)',
+                borderWidth: 3,
+                borderColor: '#fff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 100,
+              }}
+              onTouchStart={(e) => handleAngleDragStart(e, 'point1')}
+              onTouchMove={handleAngleDragMove}
+              onTouchEnd={handleAngleDragEnd}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+            >
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>1</Text>
+            </View>
+            
+            {/* Touch-Handler für Punkt 2 (orange) */}
+            <View
+              style={{
+                position: 'absolute',
+                left: anglePoint2.x - 20,
+                top: anglePoint2.y - 20,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: activeDragPoint === 'point2' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
+                borderWidth: 3,
+                borderColor: '#fff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 100,
+              }}
+              onTouchStart={(e) => handleAngleDragStart(e, 'point2')}
+              onTouchMove={handleAngleDragMove}
+              onTouchEnd={handleAngleDragEnd}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+            >
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>2</Text>
+            </View>
+          </View>
+        )}
+
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
         <View 
           style={styles.infoOverlay}
@@ -11232,93 +11321,18 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Touch-Handler - OHNE zusätzlichen Offset */}
+      {/* Winkelmesser Steuerelemente (ohne Touch-Handler - die sind jetzt im Canvas) */}
       {showProtractor && (
         <View 
           style={{ 
             position: 'absolute', 
-            top: canvasLayout?.y || canvasOverhead,
+            top: 0,
             left: 0, 
-            width: screenWidth,
-            height: canvasHeight,
+            right: 0,
+            bottom: 0,
           }} 
           pointerEvents="box-none"
         >
-          {/* Touch-Handler für Scheitelpunkt (orange, größer) - Canvas-Koordinaten direkt! */}
-          <View
-            style={{
-              position: 'absolute',
-              left: angleVertex.x - 25,
-              top: angleVertex.y - 25,
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: activeDragPoint === 'vertex' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 10,
-            }}
-            onTouchStart={(e) => handleAngleDragStart(e, 'vertex')}
-            onTouchMove={handleAngleDragMove}
-            onTouchEnd={handleAngleDragEnd}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⊙</Text>
-          </View>
-          
-          {/* Touch-Handler für Punkt 1 (blau) - Canvas-Koordinaten direkt! */}
-          <View
-            style={{
-              position: 'absolute',
-              left: anglePoint1.x - 20,
-              top: anglePoint1.y - 20,
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: activeDragPoint === 'point1' ? '#2196f3' : 'rgba(33, 150, 243, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 10,
-            }}
-            onTouchStart={(e) => handleAngleDragStart(e, 'point1')}
-            onTouchMove={handleAngleDragMove}
-            onTouchEnd={handleAngleDragEnd}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>1</Text>
-          </View>
-          
-          {/* Touch-Handler für Punkt 2 (orange) - Canvas-Koordinaten direkt! */}
-          <View
-            style={{
-              position: 'absolute',
-              left: anglePoint2.x - 20,
-              top: anglePoint2.y - 20,
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: activeDragPoint === 'point2' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 10,
-            }}
-            onTouchStart={(e) => handleAngleDragStart(e, 'point2')}
-            onTouchMove={handleAngleDragMove}
-            onTouchEnd={handleAngleDragEnd}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>2</Text>
-          </View>
-          
           {/* Kompakte Steuerelemente - verschiebbar */}
           <Animated.View 
             style={[

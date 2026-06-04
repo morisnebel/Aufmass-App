@@ -8848,23 +8848,17 @@ export default function DrawSketchScreen() {
                   />
                 );
               })()}
-              {/* Winkelwert */}
+              {/* Winkelwert - nur im SVG, Handles sind jetzt außerhalb */}
               <SvgText
                 x={angleVertex.x}
-                y={angleVertex.y - 25}
+                y={angleVertex.y - 35}
                 fill="#FF5722"
-                fontSize={22}
+                fontSize={18}
                 fontWeight="bold"
                 textAnchor="middle"
               >
                 {calculatedAngle.toFixed(1)}°
               </SvgText>
-              {/* Vertex-Handle */}
-              <Circle cx={angleVertex.x} cy={angleVertex.y} r={15} fill="#FF5722" stroke="#fff" strokeWidth={3} />
-              {/* Point1-Handle */}
-              <Circle cx={anglePoint1.x} cy={anglePoint1.y} r={12} fill="#2196f3" stroke="#fff" strokeWidth={3} />
-              {/* Point2-Handle */}
-              <Circle cx={anglePoint2.x} cy={anglePoint2.y} r={12} fill="#FF5722" stroke="#fff" strokeWidth={3} />
             </G>
           )}
 
@@ -11238,18 +11232,24 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Touch-Handler - SCREEN-KOORDINATEN basiert */}
+      {/* Winkelmesser Touch-Handler - positioniert über dem Canvas */}
       {showProtractor && (
         <View 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
+          style={{ 
+            position: 'absolute', 
+            top: canvasLayout?.y || canvasOverhead, 
+            left: 0, 
+            width: screenWidth,
+            height: canvasHeight,
+          }} 
           pointerEvents="box-none"
         >
           {/* Touch-Handler für Scheitelpunkt (orange, größer) */}
           <View
             style={{
               position: 'absolute',
-              left: angleScreenCoords.vertex.x - 25,
-              top: angleScreenCoords.vertex.y - 25,
+              left: angleVertex.x - 25,
+              top: angleVertex.y - 25,
               width: 50,
               height: 50,
               borderRadius: 25,
@@ -11273,8 +11273,8 @@ export default function DrawSketchScreen() {
           <View
             style={{
               position: 'absolute',
-              left: angleScreenCoords.point1.x - 20,
-              top: angleScreenCoords.point1.y - 20,
+              left: anglePoint1.x - 20,
+              top: anglePoint1.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -11298,8 +11298,8 @@ export default function DrawSketchScreen() {
           <View
             style={{
               position: 'absolute',
-              left: angleScreenCoords.point2.x - 20,
-              top: angleScreenCoords.point2.y - 20,
+              left: anglePoint2.x - 20,
+              top: anglePoint2.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,

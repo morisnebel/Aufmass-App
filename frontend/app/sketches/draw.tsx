@@ -11353,12 +11353,19 @@ export default function DrawSketchScreen() {
               </View>
             )}
             
-            {/* Winkel-Anzeige - nur Badge */}
-            <View style={[styles.protractorControlRow, { justifyContent: 'center' }, isPhoneDevice && { paddingVertical: 4, paddingHorizontal: 8 }]}>
+            {/* Winkel-Anzeige - kompaktes Badge */}
+            <View style={{ alignItems: 'center', marginBottom: isPhoneDevice ? 6 : 10 }}>
               <View 
-                style={[styles.protractorAngleBadge, isPhoneDevice && { paddingHorizontal: 16, paddingVertical: 6, minWidth: 80 }]}
+                style={{
+                  backgroundColor: '#FF5722',
+                  paddingHorizontal: isPhoneDevice ? 12 : 16,
+                  paddingVertical: isPhoneDevice ? 4 : 6,
+                  borderRadius: 12,
+                  minWidth: isPhoneDevice ? 50 : 60,
+                  alignItems: 'center',
+                }}
               >
-                <Text style={[styles.protractorAngleBadgeText, isPhoneDevice && { fontSize: 20 }]}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: isPhoneDevice ? 14 : 16 }}>
                   {`${calculatedAngle}°`}
                 </Text>
               </View>

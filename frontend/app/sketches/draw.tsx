@@ -5404,6 +5404,22 @@ export default function DrawSketchScreen() {
             newPath += ' Z';
           }
           newEl.data = newPath;
+        } else if (el.type === 'angle') {
+          // Move angle by shifting all 3 points
+          if (originalElement.vertex && originalElement.point1 && originalElement.point2) {
+            newEl.vertex = {
+              x: originalElement.vertex.x + dx,
+              y: originalElement.vertex.y + dy,
+            };
+            newEl.point1 = {
+              x: originalElement.point1.x + dx,
+              y: originalElement.point1.y + dy,
+            };
+            newEl.point2 = {
+              x: originalElement.point2.x + dx,
+              y: originalElement.point2.y + dy,
+            };
+          }
         }
       } else if (dragMode === 'rotate' && resizeHandle === 'rotate') {
         // Rotate element
@@ -5714,6 +5730,32 @@ export default function DrawSketchScreen() {
             const dist = distanceToLineSegment(x, y, polygonPoints[j].x, polygonPoints[j].y, polygonPoints[j+1].x, polygonPoints[j+1].y);
             if (dist < 20) return el;
           }
+        }
+      } else if (el.type === 'angle') {
+        // Winkel-Element: Prüfe Nähe zu den Linien und dem Vertex
+        if (el.vertex && el.point1 && el.point2) {
+          const v = el.vertex;
+          const p1 = el.point1;
+          const p2 = el.point2;
+          
+          // Prüfe Nähe zum Vertex (Scheitelpunkt)
+          const distToVertex = Math.sqrt(Math.pow(x - v.x, 2) + Math.pow(y - v.y, 2));
+          if (distToVertex <= 20) return el;
+          
+          // Prüfe Nähe zu Linie 1 (Vertex -> Point1)
+          const distToLine1 = distanceToLineSegment(x, y, v.x, v.y, p1.x, p1.y);
+          if (distToLine1 < 15) return el;
+          
+          // Prüfe Nähe zu Linie 2 (Vertex -> Point2)
+          const distToLine2 = distanceToLineSegment(x, y, v.x, v.y, p2.x, p2.y);
+          if (distToLine2 < 15) return el;
+          
+          // Prüfe Nähe zu Point1 und Point2 Handles
+          const distToP1 = Math.sqrt(Math.pow(x - p1.x, 2) + Math.pow(y - p1.y, 2));
+          if (distToP1 <= 15) return el;
+          
+          const distToP2 = Math.sqrt(Math.pow(x - p2.x, 2) + Math.pow(y - p2.y, 2));
+          if (distToP2 <= 15) return el;
         }
       } else if (el.type === 'memo') {
         // Memo: Prüfe Ankerpunkt, Linie und Textbox

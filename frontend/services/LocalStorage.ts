@@ -2337,6 +2337,9 @@ export const AreaCalculationService = {
   },
 };
 
+// Export storage object for direct use
+export { storage };
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,

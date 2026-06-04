@@ -11234,72 +11234,92 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Touch-Handler (nur für Drag-Interaktion) */}
+      {/* Winkelmesser Touch-Handler (sichtbar und interaktiv) */}
       {showProtractor && (
         <View 
           style={{ 
             position: 'absolute', 
-            top: canvasLayout?.y || canvasOverhead,
+            top: 0,
             left: 0, 
             width: screenWidth,
-            height: canvasHeight,
+            height: screenHeight,
           }} 
           pointerEvents="box-none"
         >
-          {/* Touch-Handler - verwendet angleVertex direkt (Canvas-Koordinaten) */}
+          {/* Touch-Handler für Vertex - bei Screen-Koordinaten */}
           <View
             style={{
               position: 'absolute',
-              left: angleVertex.x - 25,
-              top: angleVertex.y - 25,
+              left: angleScreenCoords.vertex.x - 25,
+              top: angleScreenCoords.vertex.y - 25,
               width: 50,
               height: 50,
               borderRadius: 25,
-              backgroundColor: 'transparent',
-              zIndex: 10,
+              backgroundColor: activeDragPoint === 'vertex' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
+              borderWidth: 3,
+              borderColor: '#fff',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 100,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'vertex')}
             onTouchMove={handleAngleDragMove}
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          />
+          >
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⊙</Text>
+          </View>
           
+          {/* Touch-Handler für Point1 */}
           <View
             style={{
               position: 'absolute',
-              left: anglePoint1.x - 20,
-              top: anglePoint1.y - 20,
+              left: angleScreenCoords.point1.x - 20,
+              top: angleScreenCoords.point1.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: 'transparent',
-              zIndex: 10,
+              backgroundColor: activeDragPoint === 'point1' ? '#2196f3' : 'rgba(33, 150, 243, 0.8)',
+              borderWidth: 3,
+              borderColor: '#fff',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 100,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'point1')}
             onTouchMove={handleAngleDragMove}
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          />
+          >
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>1</Text>
+          </View>
           
+          {/* Touch-Handler für Point2 */}
           <View
             style={{
               position: 'absolute',
-              left: anglePoint2.x - 20,
-              top: anglePoint2.y - 20,
+              left: angleScreenCoords.point2.x - 20,
+              top: angleScreenCoords.point2.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: 'transparent',
-              zIndex: 10,
+              backgroundColor: activeDragPoint === 'point2' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
+              borderWidth: 3,
+              borderColor: '#fff',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 100,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'point2')}
             onTouchMove={handleAngleDragMove}
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          />
+          >
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>2</Text>
+          </View>
           
           {/* Kompakte Steuerelemente - verschiebbar */}
           <Animated.View 

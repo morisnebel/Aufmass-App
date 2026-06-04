@@ -2305,6 +2305,10 @@ export default function DrawSketchScreen() {
     centerX = center.x;
     centerY = center.y;
     
+    // Auch RefEnd und AngleEnd in Canvas-Koordinaten umrechnen
+    const refEndCanvas = screenToCanvas(protractorRefEnd.x, protractorRefEnd.y);
+    const angleEndCanvas = screenToCanvas(protractorAngleEnd.x, protractorAngleEnd.y);
+    
     console.log('addProtractorToSketch - scale:', currentScale, 'layout:', layout ? { x: Math.round(layout.x), y: Math.round(layout.y) } : null, 'screenCenter:', { x: Math.round(protractorCenter.x), y: Math.round(protractorCenter.y) }, 'canvasCenter:', { x: Math.round(centerX), y: Math.round(centerY) });
     
     // Winkel-Anzeige (immer positiv)
@@ -2313,13 +2317,13 @@ export default function DrawSketchScreen() {
       displayAngle = 180 - displayAngle;
     }
     
-    // Berechne Referenzlinien-Richtung und Winkellinie aus den Endpunkten
-    const refDx = protractorRefEnd.x - protractorCenter.x;
-    const refDy = protractorRefEnd.y - protractorCenter.y;
+    // Berechne Referenzlinien-Richtung und Winkellinie aus den Canvas-Endpunkten
+    const refDx = refEndCanvas.x - centerX;
+    const refDy = refEndCanvas.y - centerY;
     const refAngle = Math.atan2(refDy, refDx);
     
-    const angleDx = protractorAngleEnd.x - protractorCenter.x;
-    const angleDy = protractorAngleEnd.y - protractorCenter.y;
+    const angleDx = angleEndCanvas.x - centerX;
+    const angleDy = angleEndCanvas.y - centerY;
     const angleEndAngle = Math.atan2(angleDy, angleDx);
     
     // Zeichengröße: Bei Zoom skalieren, damit der Winkel proportional zum sichtbaren Bereich bleibt

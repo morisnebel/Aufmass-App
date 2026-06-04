@@ -2474,18 +2474,29 @@ export default function DrawSketchScreen() {
     const currentScale = scaleRef.current || 1;
     const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     
-    // Die Anzeige verwendet angleScreenCoords - wir müssen diese zurück in Canvas-Koordinaten umrechnen!
-    // Das stellt sicher, dass das gespeicherte Element an der gleichen Position erscheint wie die Vorschau.
-    const vertex = screenToCanvasForMagnifier(angleScreenCoords.vertex.x, angleScreenCoords.vertex.y);
-    const point1 = screenToCanvasForMagnifier(angleScreenCoords.point1.x, angleScreenCoords.point1.y);
-    const point2 = screenToCanvasForMagnifier(angleScreenCoords.point2.x, angleScreenCoords.point2.y);
+    // EINFACHE UMRECHNUNG: Screen-Koordinaten minus Canvas-Offset = Canvas-Koordinaten
+    // Das Overlay verwendet angleScreenCoords (Screen-Koordinaten mit viewBox 0 0 screenWidth screenHeight)
+    // Das Haupt-SVG verwendet Canvas-Koordinaten (viewBox 0 0 screenWidth canvasHeight), beginnt bei layout.y
+    const canvasOffsetY = layout.y || canvasOverhead;
     
-    // DEBUG: Zeige Screen-Position des Overlays vs. Canvas-Koordinaten
+    const vertex = {
+      x: angleScreenCoords.vertex.x,
+      y: angleScreenCoords.vertex.y - canvasOffsetY,
+    };
+    const point1 = {
+      x: angleScreenCoords.point1.x,
+      y: angleScreenCoords.point1.y - canvasOffsetY,
+    };
+    const point2 = {
+      x: angleScreenCoords.point2.x,
+      y: angleScreenCoords.point2.y - canvasOffsetY,
+    };
+    
+    // DEBUG
     console.log('=== addProtractorToSketch DEBUG ===');
-    console.log('Canvas Layout:', layout);
+    console.log('Canvas Offset Y:', canvasOffsetY);
     console.log('angleScreenCoords.vertex:', angleScreenCoords.vertex);
-    console.log('Vertex (converted back to canvas):', { x: Math.round(vertex.x), y: Math.round(vertex.y) });
-    console.log('Calculated angle:', calculatedAngle);
+    console.log('Saved vertex (canvas):', vertex);
     console.log('===================================');
     
     // Generiere eindeutige ID

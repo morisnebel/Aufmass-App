@@ -11232,15 +11232,15 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Touch-Handler - positioniert über dem Canvas */}
+      {/* Winkelmesser Touch-Handler - direkt mit berechneter Screen-Position */}
       {showProtractor && (
         <View 
           style={{ 
             position: 'absolute', 
-            top: canvasLayout?.y || canvasOverhead, 
+            top: 0, 
             left: 0, 
-            width: screenWidth,
-            height: canvasHeight,
+            right: 0,
+            bottom: 0,
           }} 
           pointerEvents="box-none"
         >
@@ -11249,7 +11249,7 @@ export default function DrawSketchScreen() {
             style={{
               position: 'absolute',
               left: angleVertex.x - 25,
-              top: angleVertex.y - 25,
+              top: (canvasLayout?.y || canvasOverhead) + angleVertex.y - 25,
               width: 50,
               height: 50,
               borderRadius: 25,
@@ -11274,7 +11274,7 @@ export default function DrawSketchScreen() {
             style={{
               position: 'absolute',
               left: anglePoint1.x - 20,
-              top: anglePoint1.y - 20,
+              top: (canvasLayout?.y || canvasOverhead) + anglePoint1.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -11299,7 +11299,7 @@ export default function DrawSketchScreen() {
             style={{
               position: 'absolute',
               left: anglePoint2.x - 20,
-              top: anglePoint2.y - 20,
+              top: (canvasLayout?.y || canvasOverhead) + anglePoint2.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,

@@ -1107,6 +1107,11 @@ export default function DrawSketchScreen() {
   const angleDragRef = useRef({ 
     isDragging: false,
     activePoint: null as 'vertex' | 'point1' | 'point2' | null,
+    startTouchX: 0,
+    startTouchY: 0,
+    initialVertex: { x: 0, y: 0 },
+    initialPoint1: { x: 0, y: 0 },
+    initialPoint2: { x: 0, y: 0 },
   });
 
   // Hilfsfunktion: Touch zu Canvas-Koordinaten (EINFACH!)
@@ -1124,15 +1129,25 @@ export default function DrawSketchScreen() {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    angleDragRef.current.isDragging = true;
-    angleDragRef.current.activePoint = point;
+    // Speichere Start-Touch und ALLE ursprünglichen Punkt-Positionen
+    angleDragRef.current = {
+      isDragging: true,
+      activePoint: point,
+      startTouchX: pageX,
+      startTouchY: pageY,
+      initialVertex: { ...angleVertex },
+      initialPoint1: { ...anglePoint1 },
+      initialPoint2: { ...anglePoint2 },
+    };
     setActiveDragPoint(point);
     
-    // Canvas-Position für Lupe berechnen
-    const canvasPos = touchToCanvasCoords(pageX, pageY);
+    // Canvas-Position des aktuellen Punkts für Lupe
+    let currentPoint = angleVertex;
+    if (point === 'point1') currentPoint = anglePoint1;
+    if (point === 'point2') currentPoint = anglePoint2;
     
     // Lupe aktivieren
-    setMagnifierTargetPosition({ x: canvasPos.x, y: canvasPos.y });
+    setMagnifierTargetPosition({ x: currentPoint.x, y: currentPoint.y });
     setMagnifierPosition({ x: pageX, y: pageY });
     
     // Canvas-Snapshot für Lupe
@@ -1151,55 +1166,76 @@ export default function DrawSketchScreen() {
       setShowMagnifier(true);
     }
     
-    console.log('[Angle Drag Start]', point, 'at canvas:', canvasPos.x.toFixed(0), canvasPos.y.toFixed(0));
-  }, [touchToCanvasCoords]);
+    console.log('[Angle Drag Start]', point, 'touch:', pageX, pageY, 'initial point:', currentPoint);
+  }, [angleVertex, anglePoint1, anglePoint2]);
 
-  // Neuer Drag Move für 3-Punkte-System
+  // Neuer Drag Move für 3-Punkte-System - DELTA-BASIERT!
   const handleAngleDragMove = useCallback((e: any) => {
     if (!angleDragRef.current.isDragging || !angleDragRef.current.activePoint) return;
     
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    // Direkt Touch-Position zu Canvas-Position konvertieren
-    const canvasPos = touchToCanvasCoords(pageX, pageY);
+    // Berechne Screen-Delta (Bewegung seit Start)
+    const deltaX = pageX - angleDragRef.current.startTouchX;
+    const deltaY = pageY - angleDragRef.current.startTouchY;
     
-    // Punkt direkt auf Canvas-Position setzen
     const point = angleDragRef.current.activePoint;
+    
     if (point === 'vertex') {
-      // Bei Vertex: Alle Punkte relativ verschieben
-      const dx = canvasPos.x - angleVertex.x;
-      const dy = canvasPos.y - angleVertex.y;
-      setAngleVertex(canvasPos);
-      setAnglePoint1({ x: anglePoint1.x + dx, y: anglePoint1.y + dy });
-      setAnglePoint2({ x: anglePoint2.x + dx, y: anglePoint2.y + dy });
-      // Legacy sync
-      setProtractorCenter(canvasPos);
-      setProtractorRefEnd({ x: protractorRefEnd.x + dx, y: protractorRefEnd.y + dy });
-      setProtractorAngleEnd({ x: protractorAngleEnd.x + dx, y: protractorAngleEnd.y + dy });
+      // Bei Vertex: Alle Punkte um das gleiche Delta verschieben
+      const newVertex = {
+        x: angleDragRef.current.initialVertex.x + deltaX,
+        y: angleDragRef.current.initialVertex.y + deltaY,
+      };
+      const newPoint1 = {
+        x: angleDragRef.current.initialPoint1.x + deltaX,
+        y: angleDragRef.current.initialPoint1.y + deltaY,
+      };
+      const newPoint2 = {
+        x: angleDragRef.current.initialPoint2.x + deltaX,
+        y: angleDragRef.current.initialPoint2.y + deltaY,
+      };
+      setAngleVertex(newVertex);
+      setAnglePoint1(newPoint1);
+      setAnglePoint2(newPoint2);
+      
+      // Lupe auf neuer Vertex-Position
+      setMagnifierTargetPosition({ x: newVertex.x, y: newVertex.y });
     } else if (point === 'point1') {
-      setAnglePoint1(canvasPos);
-      setProtractorRefEnd(canvasPos);
+      const newPoint1 = {
+        x: angleDragRef.current.initialPoint1.x + deltaX,
+        y: angleDragRef.current.initialPoint1.y + deltaY,
+      };
+      setAnglePoint1(newPoint1);
+      setMagnifierTargetPosition({ x: newPoint1.x, y: newPoint1.y });
     } else if (point === 'point2') {
-      setAnglePoint2(canvasPos);
-      setProtractorAngleEnd(canvasPos);
+      const newPoint2 = {
+        x: angleDragRef.current.initialPoint2.x + deltaX,
+        y: angleDragRef.current.initialPoint2.y + deltaY,
+      };
+      setAnglePoint2(newPoint2);
+      setMagnifierTargetPosition({ x: newPoint2.x, y: newPoint2.y });
     }
     
-    // Lupe aktualisieren
-    setMagnifierTargetPosition({ x: canvasPos.x, y: canvasPos.y });
+    // Lupe-Position aktualisieren (Screen-Koordinaten)
     setMagnifierPosition({ x: pageX, y: pageY });
-  }, [touchToCanvasCoords, angleVertex, anglePoint1, anglePoint2, protractorRefEnd, protractorAngleEnd]);
+  }, []);
 
   // Neuer Drag End für 3-Punkte-System
   const handleAngleDragEnd = useCallback(() => {
+    console.log('[Angle Drag End] Final positions:', {
+      vertex: angleVertex,
+      point1: anglePoint1,
+      point2: anglePoint2,
+    });
     angleDragRef.current.isDragging = false;
     angleDragRef.current.activePoint = null;
     setActiveDragPoint(null);
     setShowMagnifier(false);
     setMagnifierPosition(null);
     setMagnifierSnapshot(null);
-    console.log('[Angle Drag End]');
-  }, []);
+  }, [angleVertex, anglePoint1, anglePoint2]);
 
   // Protractor Drag Ref
   const protractorDragRef = useRef({ 

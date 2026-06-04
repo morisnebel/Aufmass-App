@@ -1163,7 +1163,7 @@ export default function DrawSketchScreen() {
     console.log('[Angle Drag Start]', point, 'pointPos:', currentPoint);
   }, [angleVertex, anglePoint1, anglePoint2]);
 
-  // Neuer Drag Move für 3-Punkte-System - DIREKT CANVAS-KOORDINATEN!
+  // Neuer Drag Move für 3-Punkte-System - verwendet screenToCanvasForMagnifier
   const handleAngleDragMove = useCallback((e: any) => {
     if (!angleDragRef.current.isDragging || !angleDragRef.current.activePoint) return;
     
@@ -1171,14 +1171,11 @@ export default function DrawSketchScreen() {
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
     // Konvertiere Touch-Position zu Canvas-Koordinaten
-    // Das Overlay beginnt bei canvasOverhead, also subtrahieren wir das
-    const overlayTop = canvasLayout?.y || canvasOverhead;
-    const currentCanvasX = pageX;
-    const currentCanvasY = pageY - overlayTop;
+    const currentCanvasPos = screenToCanvasForMagnifier(pageX, pageY);
     
     // Berechne Delta von der Start-Position
-    const deltaX = currentCanvasX - angleDragRef.current.startCanvasPos.x;
-    const deltaY = currentCanvasY - angleDragRef.current.startCanvasPos.y;
+    const deltaX = currentCanvasPos.x - angleDragRef.current.startCanvasPos.x;
+    const deltaY = currentCanvasPos.y - angleDragRef.current.startCanvasPos.y;
     
     const point = angleDragRef.current.activePoint;
     
@@ -1222,7 +1219,7 @@ export default function DrawSketchScreen() {
     
     // Lupe-Position aktualisieren (Screen-Koordinaten)
     setMagnifierPosition({ x: pageX, y: pageY });
-  }, [canvasLayout, canvasOverhead]);
+  }, [screenToCanvasForMagnifier]);
 
   // Neuer Drag End für 3-Punkte-System
   const handleAngleDragEnd = useCallback(() => {
@@ -8815,6 +8812,62 @@ export default function DrawSketchScreen() {
           {/* Render temporary element */}
           {tempElement && renderElement(tempElement)}
 
+          {/* AKTIVER WINKEL - direkt im Canvas SVG gerendert! */}
+          {showProtractor && (
+            <G>
+              {/* Referenzlinie (blau): Scheitelpunkt -> Punkt 1 */}
+              <Line 
+                x1={angleVertex.x} y1={angleVertex.y}
+                x2={anglePoint1.x} y2={anglePoint1.y}
+                stroke="#2196f3" strokeWidth={3}
+              />
+              {/* Winkellinie (orange): Scheitelpunkt -> Punkt 2 */}
+              <Line 
+                x1={angleVertex.x} y1={angleVertex.y}
+                x2={anglePoint2.x} y2={anglePoint2.y}
+                stroke="#FF5722" strokeWidth={3}
+              />
+              {/* Winkelbogen (grün) */}
+              {calculatedAngle > 0 && (() => {
+                const refAng = Math.atan2(anglePoint1.y - angleVertex.y, anglePoint1.x - angleVertex.x);
+                const angAng = Math.atan2(anglePoint2.y - angleVertex.y, anglePoint2.x - angleVertex.x);
+                const arcR = 40;
+                const arcX1 = angleVertex.x + arcR * Math.cos(refAng);
+                const arcY1 = angleVertex.y + arcR * Math.sin(refAng);
+                const arcX2 = angleVertex.x + arcR * Math.cos(angAng);
+                const arcY2 = angleVertex.y + arcR * Math.sin(angAng);
+                let angleDiff = angAng - refAng;
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                const sweep = angleDiff > 0 ? 1 : 0;
+                const largeArc = calculatedAngle > 180 ? 1 : 0;
+                return (
+                  <Path 
+                    d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
+                    fill="none" stroke="#4caf50" strokeWidth={3}
+                  />
+                );
+              })()}
+              {/* Winkelwert */}
+              <SvgText
+                x={angleVertex.x}
+                y={angleVertex.y - 25}
+                fill="#FF5722"
+                fontSize={22}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {calculatedAngle.toFixed(1)}°
+              </SvgText>
+              {/* Vertex-Handle */}
+              <Circle cx={angleVertex.x} cy={angleVertex.y} r={15} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+              {/* Point1-Handle */}
+              <Circle cx={anglePoint1.x} cy={anglePoint1.y} r={12} fill="#2196f3" stroke="#fff" strokeWidth={3} />
+              {/* Point2-Handle */}
+              <Circle cx={anglePoint2.x} cy={anglePoint2.y} r={12} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+            </G>
+          )}
+
           {/* Render current path */}
           {currentPath && currentPath.length > 0 && (
             <Path
@@ -11185,81 +11238,18 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Overlay - DIREKT IN CANVAS-KOORDINATEN */}
+      {/* Winkelmesser Touch-Handler - SCREEN-KOORDINATEN basiert */}
       {showProtractor && (
         <View 
-          style={[styles.protractorOverlay, { top: canvasLayout?.y || canvasOverhead }]} 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
           pointerEvents="box-none"
         >
-          {/* NEUES 3-PUNKTE-SYSTEM: Einfache Touch-Handler für jeden Punkt */}
-          
-          {/* SVG für Linien und Bogen - GLEICHE ViewBox wie Haupt-Canvas! */}
-          <Svg 
-            width={screenWidth} 
-            height={canvasHeight} 
-            viewBox={`0 0 ${screenWidth} ${canvasHeight}`}
-            style={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}
-            pointerEvents="none"
-          >
-            {/* Referenzlinie (blau): Scheitelpunkt -> Punkt 1 - DIREKT Canvas-Koordinaten! */}
-            <Line 
-              x1={angleVertex.x} y1={angleVertex.y}
-              x2={anglePoint1.x} y2={anglePoint1.y}
-              stroke="#2196f3" strokeWidth={3}
-            />
-            
-            {/* Winkellinie (orange): Scheitelpunkt -> Punkt 2 */}
-            <Line 
-              x1={angleVertex.x} y1={angleVertex.y}
-              x2={anglePoint2.x} y2={anglePoint2.y}
-              stroke="#FF5722" strokeWidth={3}
-            />
-            
-            {/* Winkelbogen (grün) */}
-            {calculatedAngle > 0 && (() => {
-              const vertex = angleVertex;
-              const point1 = anglePoint1;
-              const point2 = anglePoint2;
-              const refAng = Math.atan2(point1.y - vertex.y, point1.x - vertex.x);
-              const angAng = Math.atan2(point2.y - vertex.y, point2.x - vertex.x);
-              const arcR = 40;
-              const arcX1 = vertex.x + arcR * Math.cos(refAng);
-              const arcY1 = vertex.y + arcR * Math.sin(refAng);
-              const arcX2 = vertex.x + arcR * Math.cos(angAng);
-              const arcY2 = vertex.y + arcR * Math.sin(angAng);
-              // Sweep-Richtung basierend auf Winkelrichtung
-              let angleDiff = angAng - refAng;
-              while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-              while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-              const sweep = angleDiff > 0 ? 1 : 0;
-              const largeArc = calculatedAngle > 180 ? 1 : 0;
-              return (
-                <Path 
-                  d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
-                  fill="none" stroke="#4caf50" strokeWidth={3}
-                />
-              );
-            })()}
-            
-            {/* Winkelwert am Scheitelpunkt */}
-            <SvgText
-              x={angleVertex.x}
-              y={angleVertex.y - 25}
-              fill="#FF5722"
-              fontSize={22}
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              {calculatedAngle.toFixed(1)}°
-            </SvgText>
-          </Svg>
-          
-          {/* Touch-Handler für Scheitelpunkt (orange, größer) - SCREEN-Koordinaten für Touch */}
+          {/* Touch-Handler für Scheitelpunkt (orange, größer) */}
           <View
             style={{
               position: 'absolute',
-              left: angleVertex.x - 25,
-              top: angleVertex.y - 25,
+              left: angleScreenCoords.vertex.x - 25,
+              top: angleScreenCoords.vertex.y - 25,
               width: 50,
               height: 50,
               borderRadius: 25,
@@ -11283,8 +11273,8 @@ export default function DrawSketchScreen() {
           <View
             style={{
               position: 'absolute',
-              left: anglePoint1.x - 20,
-              top: anglePoint1.y - 20,
+              left: angleScreenCoords.point1.x - 20,
+              top: angleScreenCoords.point1.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,
@@ -11308,8 +11298,8 @@ export default function DrawSketchScreen() {
           <View
             style={{
               position: 'absolute',
-              left: anglePoint2.x - 20,
-              top: anglePoint2.y - 20,
+              left: angleScreenCoords.point2.x - 20,
+              top: angleScreenCoords.point2.y - 20,
               width: 40,
               height: 40,
               borderRadius: 20,

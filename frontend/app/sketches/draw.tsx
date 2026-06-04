@@ -1123,24 +1123,22 @@ export default function DrawSketchScreen() {
     const pageX = e.nativeEvent?.pageX || e.pageX || 0;
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     
-    // Konvertiere Touch zu CANVAS-Koordinaten (wie bei allen anderen Zeichentools!)
-    const canvasPos = screenToCanvasForMagnifier(pageX, pageY);
+    // Bestimme den aktuellen Punkt, der gezogen wird
+    let currentPoint = angleVertex;
+    if (point === 'point1') currentPoint = anglePoint1;
+    if (point === 'point2') currentPoint = anglePoint2;
     
-    // Speichere Start-Canvas-Position und alle ursprünglichen Punkt-Positionen
+    // WICHTIG: Verwende die Position des Punkts als Startposition, NICHT die Touch-Position!
+    // Das verhindert Offset-Sprünge wenn der Benutzer nicht genau auf die Mitte des Handles tippt
     angleDragRef.current = {
       isDragging: true,
       activePoint: point,
-      startCanvasPos: canvasPos,
+      startCanvasPos: { x: currentPoint.x, y: currentPoint.y }, // Punkt-Position, nicht Touch-Position!
       initialVertex: { ...angleVertex },
       initialPoint1: { ...anglePoint1 },
       initialPoint2: { ...anglePoint2 },
     };
     setActiveDragPoint(point);
-    
-    // Canvas-Position des aktuellen Punkts für Lupe
-    let currentPoint = angleVertex;
-    if (point === 'point1') currentPoint = anglePoint1;
-    if (point === 'point2') currentPoint = anglePoint2;
     
     // Lupe aktivieren
     setMagnifierTargetPosition({ x: currentPoint.x, y: currentPoint.y });
@@ -1162,8 +1160,8 @@ export default function DrawSketchScreen() {
       setShowMagnifier(true);
     }
     
-    console.log('[Angle Drag Start]', point, 'startCanvas:', canvasPos, 'currentPoint:', currentPoint);
-  }, [angleVertex, anglePoint1, anglePoint2, screenToCanvasForMagnifier]);
+    console.log('[Angle Drag Start]', point, 'pointPos:', currentPoint);
+  }, [angleVertex, anglePoint1, anglePoint2]);
 
   // Neuer Drag Move für 3-Punkte-System - CANVAS-DELTA-BASIERT!
   const handleAngleDragMove = useCallback((e: any) => {
@@ -2474,18 +2472,24 @@ export default function DrawSketchScreen() {
   const addProtractorToSketch = useCallback(() => {
     // NEUES 3-PUNKTE-SYSTEM: Winkel als einzelnes Element speichern
     const currentScale = scaleRef.current || 1;
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
     
     // Die 3 Punkte sind bereits in Canvas-Koordinaten!
     const vertex = { x: angleVertex.x, y: angleVertex.y };
     const point1 = { x: anglePoint1.x, y: anglePoint1.y };
     const point2 = { x: anglePoint2.x, y: anglePoint2.y };
     
-    console.log('=== addProtractorToSketch (3-Punkt-System) ===');
+    // DEBUG: Zeige Screen-Position des Overlays vs. Canvas-Koordinaten
+    const vertexScreen = canvasToScreenCoords(vertex.x, vertex.y);
+    console.log('=== addProtractorToSketch DEBUG ===');
+    console.log('Canvas Layout:', layout);
+    console.log('Canvas Overhead:', canvasOverhead);
     console.log('Vertex (canvas):', { x: Math.round(vertex.x), y: Math.round(vertex.y) });
+    console.log('Vertex (screen, calculated):', { x: Math.round(vertexScreen.x), y: Math.round(vertexScreen.y) });
     console.log('Point1 (canvas):', { x: Math.round(point1.x), y: Math.round(point1.y) });
     console.log('Point2 (canvas):', { x: Math.round(point2.x), y: Math.round(point2.y) });
     console.log('Calculated angle:', calculatedAngle);
-    console.log('=======================================');
+    console.log('===================================');
     
     // Generiere eindeutige ID
     const angleId = `angle-${Date.now().toString(36)}`;

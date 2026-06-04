@@ -890,6 +890,26 @@ export default function DrawSketchScreen() {
     return { x: screenX, y: screenY };
   }, [canvasOverhead, androidViewBox, screenWidth, canvasHeight]);
   
+  // Screen-Koordinaten zu Canvas-Koordinaten (inverse von canvasToScreenCoords)
+  const screenToCanvasCoords = useCallback((screenX: number, screenY: number) => {
+    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
+    const currentScale = scaleRef.current || 1;
+    
+    // Android mit ViewBox-Transformation
+    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+      const lx = layout.x;
+      const ly = layout.y;
+      const canvasX = androidViewBox.x + ((screenX - lx) / screenWidth) * androidViewBox.w;
+      const canvasY = androidViewBox.y + ((screenY - ly) / canvasHeight) * androidViewBox.h;
+      return { x: canvasX, y: canvasY };
+    }
+    
+    // Standard: Layout abziehen und durch Scale teilen
+    const canvasX = (screenX - layout.x) / currentScale;
+    const canvasY = (screenY - layout.y) / currentScale;
+    return { x: canvasX, y: canvasY };
+  }, [canvasOverhead, androidViewBox, screenWidth, canvasHeight]);
+  
   // Verschiebbare Position des Protractor-Panels
   const protractorPanelPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const protractorPanelPanResponder = useRef(
@@ -1171,26 +1191,20 @@ export default function DrawSketchScreen() {
     const pageY = e.nativeEvent?.pageY || e.pageY || 0;
     const handle = protractorDragRef.current.dragHandle;
     
-    // Screen-Bewegung zu Canvas-Bewegung umrechnen
-    const currentScale = scaleRef.current || 1;
-    const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead };
-    
     // Endpunkte: reduzierte Empfindlichkeit für Präzision
     const sensitivity = handle === 'body' ? 1.0 : 0.5;
     
-    let dx: number;
-    let dy: number;
+    // Berechne die Screen-Bewegung
+    const screenDx = (pageX - protractorDragRef.current.startX) * sensitivity;
+    const screenDy = (pageY - protractorDragRef.current.startY) * sensitivity;
     
-    // Android mit ViewBox: Bewegung muss in ViewBox-Koordinaten umgerechnet werden
-    if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
-      // Screen-Pixel zu ViewBox-Einheiten umrechnen
-      dx = ((pageX - protractorDragRef.current.startX) * sensitivity) * (androidViewBox.w / screenWidth);
-      dy = ((pageY - protractorDragRef.current.startY) * sensitivity) * (androidViewBox.h / canvasHeight);
-    } else {
-      // Standard: durch Scale teilen
-      dx = ((pageX - protractorDragRef.current.startX) * sensitivity) / currentScale;
-      dy = ((pageY - protractorDragRef.current.startY) * sensitivity) / currentScale;
-    }
+    // Konvertiere Start- und End-Positionen zu Canvas-Koordinaten
+    const startCanvas = screenToCanvasCoords(protractorDragRef.current.startX, protractorDragRef.current.startY);
+    const endCanvas = screenToCanvasCoords(protractorDragRef.current.startX + screenDx, protractorDragRef.current.startY + screenDy);
+    
+    // Canvas-Bewegung berechnen
+    const dx = endCanvas.x - startCanvas.x;
+    const dy = endCanvas.y - startCanvas.y;
     
     if (handle === 'body') {
       // Alles verschieben (in Canvas-Koordinaten)
@@ -1232,7 +1246,7 @@ export default function DrawSketchScreen() {
       const screenPos = canvasToScreenCoords(newPos.x, newPos.y);
       setMagnifierPosition({ x: screenPos.x, y: screenPos.y });
     }
-  }, [canvasToScreenCoords]);
+  }, [canvasToScreenCoords, screenToCanvasCoords]);
   
   // Drag End
   const handleProtractorDragEnd = useCallback(() => {

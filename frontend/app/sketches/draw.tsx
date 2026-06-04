@@ -937,11 +937,11 @@ export default function DrawSketchScreen() {
   const protractorInitializedRef = useRef(false);
   useEffect(() => {
     if (showProtractor && !protractorInitializedRef.current) {
-      // Berechne die Mitte des Canvas in CANVAS-Koordinaten (nicht Screen!)
-      const layout = canvasLayoutRef.current || { x: 0, y: canvasOverhead, width: screenWidth, height: canvasHeight };
-      const canvasCenterX = (layout.width || screenWidth) / 2;
-      const canvasCenterY = (layout.height || canvasHeight) / 2;
-      const defaultLen = Math.min((layout.width || screenWidth) * 0.2, 120);
+      // Berechne die Mitte des Canvas in echten CANVAS-Koordinaten
+      // Canvas-Koordinaten starten bei (0,0), unabhängig vom Layout-Offset
+      const canvasCenterX = screenWidth / 2;
+      const canvasCenterY = canvasHeight / 2;
+      const defaultLen = Math.min(screenWidth * 0.2, 120);
       
       // Nur initialisieren wenn Center bei (0,0) ist (= komplett neuer Winkelmesser)
       if (protractorCenter.x === 0 && protractorCenter.y === 0) {

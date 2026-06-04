@@ -8368,7 +8368,7 @@ export default function DrawSketchScreen() {
               y={0}
               width={screenWidth}
               height={canvasHeight}
-              preserveAspectRatio="xMidYMid meet"
+              preserveAspectRatio="xMinYMin meet"
               opacity={1}
             />
           )}

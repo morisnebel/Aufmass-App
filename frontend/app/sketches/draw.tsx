@@ -1202,67 +1202,21 @@ export default function DrawSketchScreen() {
       // Lupe auf neuer Vertex-Position
       setMagnifierTargetPosition({ x: newVertex.x, y: newVertex.y });
     } else if (point === 'point1') {
-      // NUR Länge ändern, Winkel bleibt fest!
-      const v = angleDragRef.current.initialVertex;
-      const p1 = angleDragRef.current.initialPoint1;
-      
-      // Aktuelle Richtung der Linie berechnen
-      const dirX = p1.x - v.x;
-      const dirY = p1.y - v.y;
-      const currentLength = Math.sqrt(dirX * dirX + dirY * dirY);
-      
-      if (currentLength > 0) {
-        // Einheitsvektor in Richtung der Linie
-        const unitX = dirX / currentLength;
-        const unitY = dirY / currentLength;
-        
-        // Neue Position basierend auf Delta
-        const newPosX = p1.x + deltaX;
-        const newPosY = p1.y + deltaY;
-        
-        // Projektion auf die Linie (von Vertex aus)
-        const mouseVecX = newPosX - v.x;
-        const mouseVecY = newPosY - v.y;
-        const newLength = Math.max(30, mouseVecX * unitX + mouseVecY * unitY);
-        
-        const newPoint1 = {
-          x: v.x + unitX * newLength,
-          y: v.y + unitY * newLength,
-        };
-        setAnglePoint1(newPoint1);
-        setMagnifierTargetPosition({ x: newPoint1.x, y: newPoint1.y });
-      }
+      // Während der Erstellung: Freie Bewegung (Winkel UND Länge änderbar)
+      const newPoint1 = {
+        x: angleDragRef.current.initialPoint1.x + deltaX,
+        y: angleDragRef.current.initialPoint1.y + deltaY,
+      };
+      setAnglePoint1(newPoint1);
+      setMagnifierTargetPosition({ x: newPoint1.x, y: newPoint1.y });
     } else if (point === 'point2') {
-      // NUR Länge ändern, Winkel bleibt fest!
-      const v = angleDragRef.current.initialVertex;
-      const p2 = angleDragRef.current.initialPoint2;
-      
-      // Aktuelle Richtung der Linie berechnen
-      const dirX = p2.x - v.x;
-      const dirY = p2.y - v.y;
-      const currentLength = Math.sqrt(dirX * dirX + dirY * dirY);
-      
-      if (currentLength > 0) {
-        // Einheitsvektor in Richtung der Linie
-        const unitX = dirX / currentLength;
-        const unitY = dirY / currentLength;
-        
-        // Neue Position basierend auf Delta
-        const newPosX = p2.x + deltaX;
-        const newPosY = p2.y + deltaY;
-        
-        // Projektion auf die Linie (von Vertex aus)
-        const mouseVecX = newPosX - v.x;
-        const mouseVecY = newPosY - v.y;
-        const newLength = Math.max(30, mouseVecX * unitX + mouseVecY * unitY);
-        
-        const newPoint2 = {
-          x: v.x + unitX * newLength,
-          y: v.y + unitY * newLength,
-        };
-        setAnglePoint2(newPoint2);
-        setMagnifierTargetPosition({ x: newPoint2.x, y: newPoint2.y });
-      }
+      // Während der Erstellung: Freie Bewegung (Winkel UND Länge änderbar)
+      const newPoint2 = {
+        x: angleDragRef.current.initialPoint2.x + deltaX,
+        y: angleDragRef.current.initialPoint2.y + deltaY,
+      };
+      setAnglePoint2(newPoint2);
+      setMagnifierTargetPosition({ x: newPoint2.x, y: newPoint2.y });
     }
     
     // Lupe-Position aktualisieren (Screen-Koordinaten)

@@ -8870,6 +8870,62 @@ export default function DrawSketchScreen() {
               })()}
             </>
           )}
+          
+          {/* AKTIVER WINKEL - direkt im Haupt-SVG mit Canvas-Koordinaten */}
+          {showProtractor && (
+            <G>
+              {/* Referenzlinie (blau): Scheitelpunkt -> Punkt 1 */}
+              <Line 
+                x1={angleVertex.x} y1={angleVertex.y}
+                x2={anglePoint1.x} y2={anglePoint1.y}
+                stroke="#2196f3" strokeWidth={3}
+              />
+              {/* Winkellinie (orange): Scheitelpunkt -> Punkt 2 */}
+              <Line 
+                x1={angleVertex.x} y1={angleVertex.y}
+                x2={anglePoint2.x} y2={anglePoint2.y}
+                stroke="#FF5722" strokeWidth={3}
+              />
+              {/* Winkelbogen (grün) */}
+              {calculatedAngle > 0 && (() => {
+                const refAng = Math.atan2(anglePoint1.y - angleVertex.y, anglePoint1.x - angleVertex.x);
+                const angAng = Math.atan2(anglePoint2.y - angleVertex.y, anglePoint2.x - angleVertex.x);
+                const arcR = 40;
+                const arcX1 = angleVertex.x + arcR * Math.cos(refAng);
+                const arcY1 = angleVertex.y + arcR * Math.sin(refAng);
+                const arcX2 = angleVertex.x + arcR * Math.cos(angAng);
+                const arcY2 = angleVertex.y + arcR * Math.sin(angAng);
+                let angleDiff = angAng - refAng;
+                while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                const sweep = angleDiff > 0 ? 1 : 0;
+                const largeArc = calculatedAngle > 180 ? 1 : 0;
+                return (
+                  <Path 
+                    d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
+                    fill="none" stroke="#4caf50" strokeWidth={3}
+                  />
+                );
+              })()}
+              {/* Winkelwert */}
+              <SvgText
+                x={angleVertex.x}
+                y={angleVertex.y - 35}
+                fill="#FF5722"
+                fontSize={18}
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {calculatedAngle.toFixed(1)}°
+              </SvgText>
+              {/* Vertex-Handle */}
+              <Circle cx={angleVertex.x} cy={angleVertex.y} r={18} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+              {/* Point1-Handle */}
+              <Circle cx={anglePoint1.x} cy={anglePoint1.y} r={15} fill="#2196f3" stroke="#fff" strokeWidth={3} />
+              {/* Point2-Handle */}
+              <Circle cx={anglePoint2.x} cy={anglePoint2.y} r={15} fill="#FF5722" stroke="#fff" strokeWidth={3} />
+            </G>
+          )}
         </Svg>
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
@@ -11178,7 +11234,7 @@ export default function DrawSketchScreen() {
         </View>
       )}
 
-      {/* Winkelmesser Overlay - verwendet CANVAS-KOORDINATEN (wie das Haupt-SVG) */}
+      {/* Winkelmesser Touch-Handler (nur für Drag-Interaktion) */}
       {showProtractor && (
         <View 
           style={{ 
@@ -11190,60 +11246,6 @@ export default function DrawSketchScreen() {
           }} 
           pointerEvents="box-none"
         >
-          {/* SVG für Linien - verwendet angleVertex direkt (Canvas-Koordinaten) */}
-          <Svg 
-            width={screenWidth} 
-            height={canvasHeight} 
-            viewBox={`0 0 ${screenWidth} ${canvasHeight}`}
-            style={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}
-            pointerEvents="none"
-          >
-            {/* Referenzlinie (blau): Scheitelpunkt -> Punkt 1 */}
-            <Line 
-              x1={angleVertex.x} y1={angleVertex.y}
-              x2={anglePoint1.x} y2={anglePoint1.y}
-              stroke="#2196f3" strokeWidth={3}
-            />
-            {/* Winkellinie (orange): Scheitelpunkt -> Punkt 2 */}
-            <Line 
-              x1={angleVertex.x} y1={angleVertex.y}
-              x2={anglePoint2.x} y2={anglePoint2.y}
-              stroke="#FF5722" strokeWidth={3}
-            />
-            {/* Winkelbogen (grün) */}
-            {calculatedAngle > 0 && (() => {
-              const refAng = Math.atan2(anglePoint1.y - angleVertex.y, anglePoint1.x - angleVertex.x);
-              const angAng = Math.atan2(anglePoint2.y - angleVertex.y, anglePoint2.x - angleVertex.x);
-              const arcR = 40;
-              const arcX1 = angleVertex.x + arcR * Math.cos(refAng);
-              const arcY1 = angleVertex.y + arcR * Math.sin(refAng);
-              const arcX2 = angleVertex.x + arcR * Math.cos(angAng);
-              const arcY2 = angleVertex.y + arcR * Math.sin(angAng);
-              let angleDiff = angAng - refAng;
-              while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-              while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-              const sweep = angleDiff > 0 ? 1 : 0;
-              const largeArc = calculatedAngle > 180 ? 1 : 0;
-              return (
-                <Path 
-                  d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
-                  fill="none" stroke="#4caf50" strokeWidth={3}
-                />
-              );
-            })()}
-            {/* Winkelwert */}
-            <SvgText
-              x={angleVertex.x}
-              y={angleVertex.y - 35}
-              fill="#FF5722"
-              fontSize={18}
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              {calculatedAngle.toFixed(1)}°
-            </SvgText>
-          </Svg>
-          
           {/* Touch-Handler - verwendet angleVertex direkt (Canvas-Koordinaten) */}
           <View
             style={{
@@ -11253,11 +11255,7 @@ export default function DrawSketchScreen() {
               width: 50,
               height: 50,
               borderRadius: 25,
-              backgroundColor: activeDragPoint === 'vertex' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
+              backgroundColor: 'transparent',
               zIndex: 10,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'vertex')}
@@ -11265,9 +11263,7 @@ export default function DrawSketchScreen() {
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⊙</Text>
-          </View>
+          />
           
           <View
             style={{
@@ -11277,11 +11273,7 @@ export default function DrawSketchScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: activeDragPoint === 'point1' ? '#2196f3' : 'rgba(33, 150, 243, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
+              backgroundColor: 'transparent',
               zIndex: 10,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'point1')}
@@ -11289,9 +11281,7 @@ export default function DrawSketchScreen() {
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>1</Text>
-          </View>
+          />
           
           <View
             style={{
@@ -11301,11 +11291,7 @@ export default function DrawSketchScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: activeDragPoint === 'point2' ? '#FF5722' : 'rgba(255, 87, 34, 0.8)',
-              borderWidth: 3,
-              borderColor: '#fff',
-              justifyContent: 'center',
-              alignItems: 'center',
+              backgroundColor: 'transparent',
               zIndex: 10,
             }}
             onTouchStart={(e) => handleAngleDragStart(e, 'point2')}
@@ -11313,9 +11299,7 @@ export default function DrawSketchScreen() {
             onTouchEnd={handleAngleDragEnd}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
-          >
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>2</Text>
-          </View>
+          />
           
           {/* Kompakte Steuerelemente - verschiebbar */}
           <Animated.View 

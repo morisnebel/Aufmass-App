@@ -7537,6 +7537,49 @@ export default function DrawSketchScreen() {
           // Label text
           svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         }
+      } else if (el.type === 'angle') {
+        // Winkel-Element mit 3 Punkten
+        if (el.vertex && el.point1 && el.point2) {
+          const v = el.vertex;
+          const p1 = el.point1;
+          const p2 = el.point2;
+          const angleValue = el.angle || 0;
+          const angleColor = el.color || '#FF5722';
+          
+          // Linien
+          svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p1.x}" y2="${p1.y}" stroke="${angleColor}" stroke-width="${strokeWidth}"/>`;
+          svgElements += `<line x1="${v.x}" y1="${v.y}" x2="${p2.x}" y2="${p2.y}" stroke="${angleColor}" stroke-width="${strokeWidth}"/>`;
+          
+          // Bogen
+          if (angleValue > 0) {
+            const len1 = Math.sqrt(Math.pow(p1.x - v.x, 2) + Math.pow(p1.y - v.y, 2));
+            const len2 = Math.sqrt(Math.pow(p2.x - v.x, 2) + Math.pow(p2.y - v.y, 2));
+            const arcR = Math.min(len1, len2) * 0.3;
+            
+            const ang1 = Math.atan2(p1.y - v.y, p1.x - v.x);
+            const ang2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+            
+            const arcX1 = v.x + arcR * Math.cos(ang1);
+            const arcY1 = v.y + arcR * Math.sin(ang1);
+            const arcX2 = v.x + arcR * Math.cos(ang2);
+            const arcY2 = v.y + arcR * Math.sin(ang2);
+            
+            let angDiff = ang2 - ang1;
+            while (angDiff < -Math.PI) angDiff += 2 * Math.PI;
+            while (angDiff > Math.PI) angDiff -= 2 * Math.PI;
+            const sweepFlag = angDiff > 0 ? 1 : 0;
+            const largeArcFlag = angleValue > 180 ? 1 : 0;
+            
+            svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
+            
+            // Text-Position
+            const midAng = (ang1 + ang2) / 2;
+            const textX = v.x + (arcR + 20) * Math.cos(midAng);
+            const textY = v.y + (arcR + 20) * Math.sin(midAng);
+            
+            svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+          }
+        }
       } else if (el.type === 'polygon' && typeof el.data === 'string') {
         svgElements += `<path d="${el.data}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="${el.color}" fill-opacity="0.3" stroke-linecap="round" stroke-linejoin="round"/>`;
       }

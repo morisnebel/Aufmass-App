@@ -1861,10 +1861,19 @@ export default function ProjectDetailScreen() {
           else sketchesBySize.large.push(cleanHtml);
         });
         
-        let sketchListHtml = headingHtml;
+        // Überschrift wird mit der ersten Skizze zusammen in einen Container gepackt
+        // um Seitenumbrüche zwischen Überschrift und erster Skizze zu verhindern
+        let sketchListHtml = '';
+        let isFirstSketchRendered = false;
         
         // 66% Skizzen: 2 nebeneinander, je ca. 48% Breite (mit Abstand = 100%)
         if (sketchesBySize.medium.length > 0) {
+          // Wenn medium-Skizzen zuerst kommen, Überschrift + erste Skizzen zusammen wrappen
+          if (!isFirstSketchRendered) {
+            sketchListHtml += `<div style="page-break-inside:avoid!important;break-inside:avoid!important;">`;
+            sketchListHtml += headingHtml;
+            isFirstSketchRendered = true;
+          }
           sketchListHtml += `<div style="margin-bottom: 10px; font-size: 0;">`;
           sketchesBySize.medium.forEach((html, idx) => {
             // Alle style-Attribute komplett entfernen und neu setzen
@@ -1885,6 +1894,8 @@ export default function ProjectDetailScreen() {
             `;
           });
           sketchListHtml += `</div>`;
+          // Schließe den page-break-avoid Container nach den medium Skizzen
+          sketchListHtml += `</div>`;
         }
         
         // 100% Skizzen: Volle Breite - ZWEI übereinander pro Seite
@@ -1896,13 +1907,29 @@ export default function ProjectDetailScreen() {
               .replace(/<img/gi, '<img style="width:100%!important;height:auto!important;display:block!important;max-width:none!important;min-width:100%!important;max-height:440px!important;object-fit:contain!important;image-rendering:crisp-edges!important;"')
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
-            sketchListHtml += `
-              <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
-                <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
-                  ${modifiedHtml}
+            // Wenn dies die erste Skizze überhaupt ist (keine medium Skizzen vorhanden)
+            // dann Überschrift + erste große Skizze zusammen wrappen
+            if (!isFirstSketchRendered && idx === 0) {
+              sketchListHtml += `
+                <div style="page-break-inside:avoid!important;break-inside:avoid!important;">
+                  ${headingHtml}
+                  <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;">
+                    <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;">
+                      ${modifiedHtml}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            `;
+              `;
+              isFirstSketchRendered = true;
+            } else {
+              sketchListHtml += `
+                <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
+                  <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;page-break-inside:avoid!important;break-inside:avoid!important;">
+                    ${modifiedHtml}
+                  </div>
+                </div>
+              `;
+            }
           });
         }
         

@@ -1861,16 +1861,18 @@ export default function ProjectDetailScreen() {
           else sketchesBySize.large.push(cleanHtml);
         });
         
-        // Überschrift wird mit der ersten Skizze zusammen in einen Container gepackt
-        // um Seitenumbrüche zwischen Überschrift und erster Skizze zu verhindern
+        // LÖSUNG: Überschrift + erste Skizze starten auf neuer Seite
+        // Android Print Spooler ignoriert oft page-break-inside:avoid bei großen Inhalten
+        // Daher: page-break-before:always für den Skizzen-Container
         let sketchListHtml = '';
         let isFirstSketchRendered = false;
         
         // 66% Skizzen: 2 nebeneinander, je ca. 48% Breite (mit Abstand = 100%)
         if (sketchesBySize.medium.length > 0) {
           // Wenn medium-Skizzen zuerst kommen, Überschrift + erste Skizzen zusammen wrappen
+          // page-break-before: always erzwingt neue Seite VOR dem Container
           if (!isFirstSketchRendered) {
-            sketchListHtml += `<div style="page-break-inside:avoid!important;break-inside:avoid!important;">`;
+            sketchListHtml += `<div style="page-break-before:always!important;page-break-inside:avoid!important;break-inside:avoid!important;">`;
             sketchListHtml += headingHtml;
             isFirstSketchRendered = true;
           }
@@ -1908,10 +1910,10 @@ export default function ProjectDetailScreen() {
               .replace(/class="sketch-item[^"]*"/gi, 'class="sketch-item sketch-large" style="width:100%!important;"');
             
             // Wenn dies die erste Skizze überhaupt ist (keine medium Skizzen vorhanden)
-            // dann Überschrift + erste große Skizze zusammen wrappen
+            // dann Überschrift + erste große Skizze auf neuer Seite starten
             if (!isFirstSketchRendered && idx === 0) {
               sketchListHtml += `
-                <div style="page-break-inside:avoid!important;break-inside:avoid!important;">
+                <div style="page-break-before:always!important;page-break-inside:avoid!important;break-inside:avoid!important;">
                   ${headingHtml}
                   <div style="display:block;width:100%;padding:0;box-sizing:border-box;margin-bottom:0;">
                     <div style="width:100%;border:1px solid #ddd;padding:2px;box-sizing:border-box;overflow:hidden;margin-bottom:0;">

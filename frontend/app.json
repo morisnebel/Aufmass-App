@@ -34,7 +34,7 @@
       "usesIcloudStorage": true
     },
     "android": {
-      "package": "com.aufmassprofi.dach",
+      "package": "com.aufmassprofi.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"

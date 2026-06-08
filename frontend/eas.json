@@ -24,7 +24,8 @@
       "android": {
         "env": {
           "EXPO_NO_CLOUDKIT": "true"
-        }
+        },
+        "credentialsSource": "local"
       },
       "ios": {
         "simulator": false

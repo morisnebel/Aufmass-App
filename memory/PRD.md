@@ -159,3 +159,7 @@ German (Deutsch)
 
 ### "Aus Projektfotos wählen" bei neuer Messung (Feb 2026)
 - /app/frontend/app/imagemeter/new.tsx: Dritter Button "Aus Projektfotos wählen" (testID project-photos-btn, blau) unter Kamera/Galerie – analog zu Skizzen. Lädt PhotoService.getByProjectId(projectId), Grid-Modal (3 Spalten), Auswahl setzt imageUri (photo.image_data || photo.uri). Ohne projectId → Hinweis-Alert.
+
+### Bugfix: Datum-Picker sprang auf heute zurück (Feb 2026)
+- [id].tsx direkter Datum-Picker (Übersicht): value war nicht an tempSelectedDate gebunden → iOS-Spinner wurde bei jedem Re-Render auf heute/gespeichertes Datum zurückgesetzt (erste Auswahl unmöglich).
+- Fix: value={tempSelectedDate || gespeichertes Datum || heute}; beim Öffnen wird tempSelectedDate auf null zurückgesetzt. Edit-Modal-Picker war bereits korrekt (editProjectTypeDate-gebunden).

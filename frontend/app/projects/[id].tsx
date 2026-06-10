@@ -4953,7 +4953,7 @@ export default function ProjectDetailScreen() {
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                   }}
-                  onPress={() => setShowDirectProjectTypeDatePicker(true)}
+                  onPress={() => { setTempSelectedDate(null); setShowDirectProjectTypeDatePicker(true); }}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>Datum</Text>
@@ -7562,7 +7562,7 @@ export default function ProjectDetailScreen() {
             <Text style={styles.salutationModalTitle}>Datum auswählen</Text>
             <View style={{ marginTop: 10, alignItems: 'center', backgroundColor: '#fff' }}>
               <DateTimePicker
-                value={project?.project_type_date ? new Date(project.project_type_date) : new Date()}
+                value={tempSelectedDate || (project?.project_type_date ? new Date(project.project_type_date) : new Date())}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={async (event, selectedDate) => {

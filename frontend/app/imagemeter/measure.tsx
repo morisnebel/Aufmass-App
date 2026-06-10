@@ -39,7 +39,7 @@ interface Measurement {
 
 interface AreaMeasurement {
   id: string; points: Point[]; pixelArea: number; realArea?: number;
-  label?: string; color: string; isRect?: boolean;
+  label?: string; color: string; isRect?: boolean; isSubtract?: boolean;
 }
 
 interface AngleMeasurement {
@@ -82,6 +82,14 @@ interface DragHandle {
 
 // ============ HELPERS ============
 const calcDist = (a: Point, b: Point) => Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+const pointInPoly = (pt: Point, poly: Point[]): boolean => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    if ((poly[i].y > pt.y) !== (poly[j].y > pt.y) &&
+        pt.x < ((poly[j].x - poly[i].x) * (pt.y - poly[i].y)) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
+  }
+  return inside;
+};
 const calcPolyArea = (pts: Point[]) => {
   let a = 0;
   for (let i = 0; i < pts.length; i++) { const j = (i + 1) % pts.length; a += pts[i].x * pts[j].y - pts[j].x * pts[i].y; }
@@ -191,7 +199,7 @@ export default function ImageMeterMeasureScreen() {
     finally { setLoading(false); }
   };
 
-  const buildSave = () => ({ measurements, referenceScale, areaMeasurements, areaUnit, angleMeasurements, buildingComponents, updatedAt: new Date().toISOString() });
+  const buildSave = () => ({ measurements, referenceScale, areaMeasurements: areaMeasurements.map(a => ({ ...a, label: areaLabelFor(a) })), areaUnit, angleMeasurements, buildingComponents, updatedAt: new Date().toISOString() });
 
   const autoSave = async () => {
     if (!photo) return;
@@ -225,7 +233,7 @@ export default function ImageMeterMeasureScreen() {
     if (areaMeasurements.length > 0) {
       lines.push('--- Flächen ---');
       areaMeasurements.forEach((a, i) => {
-        lines.push(`  ${i + 1}. ${formatArea(a.realArea, a.pixelArea)}`);
+        lines.push(`  ${i + 1}. ${areaLabelFor(a)}`);
         if (showEdgeLengths) {
           a.points.forEach((pt, j) => {
             const next = a.points[(j + 1) % a.points.length];
@@ -395,6 +403,31 @@ export default function ImageMeterMeasureScreen() {
 
   // ---- Format area (respects user-selected unit) ----
   const formatArea = (realA?: number, pixA?: number): string => formatAreaWith(areaUnit, realA, pixA);
+  // Net area label: subtraction areas show "−", normal areas show net value (own area minus contained subtraction areas)
+  const areaLabelFor = (a: AreaMeasurement): string => {
+    if (a.isSubtract) return `− ${formatArea(a.realArea, a.pixelArea)}`;
+    let subPix = 0;
+    for (const s of areaMeasurements) {
+      if (!s.isSubtract || s.id === a.id) continue;
+      const scx = s.points.reduce((t, p) => t + p.x, 0) / s.points.length;
+      const scy = s.points.reduce((t, p) => t + p.y, 0) / s.points.length;
+      if (pointInPoly({ x: scx, y: scy }, a.points)) subPix += s.pixelArea;
+    }
+    if (subPix <= 0) return formatArea(a.realArea, a.pixelArea);
+    const netPix = Math.max(0, a.pixelArea - subPix);
+    if (referenceScale) return formatArea(netPix / (referenceScale * referenceScale));
+    return `${Math.round(netPix)} px²`;
+  };
+  const toggleSubtract = () => {
+    if (!selectedMeasurement) return;
+    const cur = areaMeasurements.find(a => a.id === selectedMeasurement);
+    if (!cur) return;
+    if (!cur.isSubtract) {
+      Alert.alert('Abzugsfläche', 'Diese Fläche wird von der Fläche abgezogen, in der sie liegt (z.B. Fenster von Wand).');
+    }
+    setAreaMeasurements(prev => prev.map(a => a.id === selectedMeasurement ? { ...a, isSubtract: !a.isSubtract } : a));
+    setHasChanges(true);
+  };
   const cycleAreaUnit = () => {
     const next: AreaUnitType = areaUnit === 'auto' ? 'm2' : areaUnit === 'm2' ? 'cm2' : 'auto';
     setAreaUnit(next);
@@ -753,8 +786,8 @@ export default function ImageMeterMeasureScreen() {
     const cx = dp.reduce((s, p) => s + p.x, 0) / dp.length;
     const cy = dp.reduce((s, p) => s + p.y, 0) / dp.length;
     const isSel = selectedMeasurement === a.id;
-    const color = isSel ? '#FF9800' : a.color;
-    const areaLbl = formatArea(a.realArea, a.pixelArea);
+    const color = isSel ? '#FF9800' : (a.isSubtract ? '#f44336' : a.color);
+    const areaLbl = areaLabelFor(a);
     // Dynamic scaling based on displayed shape size
     const xs = dp.map(p => p.x), ys = dp.map(p => p.y);
     const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
@@ -767,7 +800,7 @@ export default function ImageMeterMeasureScreen() {
     const offsetEdges = minDim < 140; // push edge labels outside small shapes
     return (
       <G key={a.id}>
-        <Polygon points={ptsStr} fill={`${color}25`} stroke={color} strokeWidth={isSel ? 3 : 2} />
+        <Polygon points={ptsStr} fill={`${color}25`} stroke={color} strokeWidth={isSel ? 3 : 2} strokeDasharray={a.isSubtract ? '7,4' : undefined} />
         {/* Vertex points (bigger when selected for dragging) */}
         {dp.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={isSel ? 10 : Math.max(3, 5 * sc)} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />)}
         {/* Edge lengths */}
@@ -843,6 +876,7 @@ export default function ImageMeterMeasureScreen() {
   };
 
   const totalItems = measurements.length + areaMeasurements.length + angleMeasurements.length + buildingComponents.length;
+  const selArea = areaMeasurements.find(a => a.id === selectedMeasurement);
 
   if (loading || !photo) {
     return <SafeAreaView style={styles.container}><View style={styles.centerContainer}><Text style={{ color: '#fff' }}>Lade...</Text></View></SafeAreaView>;
@@ -893,6 +927,13 @@ export default function ImageMeterMeasureScreen() {
             onPress={cycleAreaUnit}>
             <Ionicons name="swap-horizontal" size={18} color="#673AB7" />
             <Text style={[styles.toolBtnText, { color: '#673AB7', fontSize: 11 }]}>{areaUnit === 'auto' ? 'Auto' : areaUnit === 'm2' ? 'm²' : 'cm²'}</Text>
+          </TouchableOpacity>
+        )}
+
+        {selArea && (
+          <TouchableOpacity testID="area-subtract-toggle-btn" style={[styles.toolBtn, selArea.isSubtract && { backgroundColor: '#ffebee', borderColor: '#f44336' }]} onPress={toggleSubtract}>
+            <Ionicons name="remove-circle-outline" size={18} color="#f44336" />
+            <Text style={[styles.toolBtnText, { color: '#f44336', fontSize: 11 }]}>Abzug</Text>
           </TouchableOpacity>
         )}
 
@@ -1072,8 +1113,8 @@ export default function ImageMeterMeasureScreen() {
             {areaMeasurements.map(a => (
               <TouchableOpacity key={a.id} style={[styles.chip, { borderColor: '#2196F3' }, selectedMeasurement === a.id && styles.chipSel]}
                 onPress={() => setSelectedMeasurement(a.id === selectedMeasurement ? null : a.id)}>
-                <Ionicons name={a.isRect ? 'square-outline' : 'shapes'} size={14} color={a.isRect ? '#00897B' : '#2196F3'} />
-                <Text style={styles.chipText}>{formatArea(a.realArea, a.pixelArea)}</Text>
+                <Ionicons name={a.isSubtract ? 'remove-circle-outline' : a.isRect ? 'square-outline' : 'shapes'} size={14} color={a.isSubtract ? '#f44336' : a.isRect ? '#00897B' : '#2196F3'} />
+                <Text style={styles.chipText}>{areaLabelFor(a)}</Text>
               </TouchableOpacity>
             ))}
             {angleMeasurements.map(ang => (

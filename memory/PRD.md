@@ -133,3 +133,8 @@ German (Deutsch)
 ### Dynamische Label-Skalierung (Feb 2026)
 - renderLine: Label-Schrift/Box skaliert mit Linienlänge (Faktor 0.55–1.0, Bezug 140px Display). Bei Linien <60px wird das Label senkrecht neben die Linie versetzt.
 - renderArea: Skalierung anhand Bounding-Box minDim (Faktor 0.5–1.0, Bezug 150px). Kantenlabels werden IMMER angezeigt; bei minDim <140px nach außen versetzt, mit Extra-Push bei minDim <80px (Formel: elh/2+8+max(0,(80-minDim)*0.25)). Eckpunkt-Radien skalieren mit.
+
+### Abzugsflächen (Feb 2026)
+- AreaMeasurement.isSubtract: Fläche auswählen → Toolbar-Button "Abzug" (rot, testID area-subtract-toggle-btn) toggelt.
+- Abzugsflächen: rot, gestrichelt, Label mit "−"-Präfix. Logik: areaLabelFor() prüft per pointInPoly (Ray-Casting, Modul-Level), ob der Schwerpunkt der Abzugsfläche in einer anderen Fläche liegt → deren Netto = pixelArea − Summe Abzüge.
+- buildSave speichert berechnete Netto-Labels, damit PDF ([id].tsx liest a.label) korrekt ist.

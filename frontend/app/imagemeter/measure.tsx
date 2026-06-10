@@ -763,7 +763,7 @@ export default function ImageMeterMeasureScreen() {
     const fs = 12 * sc;
     const lw = Math.max(70 * sc, areaLbl.length * 7 * sc + 16 * sc);
     const lh = 24 * sc;
-    const showEdges = showEdgeLengths && minDim >= 56; // hide edge labels on tiny shapes
+    const showEdges = showEdgeLengths; // always show edge labels (pushed outward on small shapes)
     const offsetEdges = minDim < 140; // push edge labels outside small shapes
     return (
       <G key={a.id}>
@@ -784,7 +784,9 @@ export default function ImageMeterMeasureScreen() {
           if (offsetEdges) {
             const dx = emx - cx, dy = emy - cy;
             const dl = Math.sqrt(dx * dx + dy * dy) || 1;
-            emx += (dx / dl) * (elh / 2 + 8); emy += (dy / dl) * (elh / 2 + 8);
+            // Extra push for very small shapes so labels clear the area label completely
+            const push = elh / 2 + 8 + Math.max(0, (80 - minDim) * 0.25);
+            emx += (dx / dl) * push; emy += (dy / dl) * push;
           }
           return (
             <G key={`edge-${a.id}-${i}`}>

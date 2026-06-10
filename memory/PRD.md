@@ -132,4 +132,4 @@ German (Deutsch)
 
 ### Dynamische Label-Skalierung (Feb 2026)
 - renderLine: Label-Schrift/Box skaliert mit Linienlänge (Faktor 0.55–1.0, Bezug 140px Display). Bei Linien <60px wird das Label senkrecht neben die Linie versetzt.
-- renderArea: Skalierung anhand Bounding-Box minDim (Faktor 0.5–1.0, Bezug 150px). Kantenlabels werden bei minDim <56px ausgeblendet, bei minDim <140px nach außen (weg vom Zentrum) versetzt. Eckpunkt-Radien skalieren mit.
+- renderArea: Skalierung anhand Bounding-Box minDim (Faktor 0.5–1.0, Bezug 150px). Kantenlabels werden IMMER angezeigt; bei minDim <140px nach außen versetzt, mit Extra-Push bei minDim <80px (Formel: elh/2+8+max(0,(80-minDim)*0.25)). Eckpunkt-Radien skalieren mit.

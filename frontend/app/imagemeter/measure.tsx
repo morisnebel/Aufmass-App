@@ -39,7 +39,7 @@ interface Measurement {
 
 interface AreaMeasurement {
   id: string; points: Point[]; pixelArea: number; realArea?: number;
-  label?: string; color: string; isRect?: boolean; isSubtract?: boolean;
+  label?: string; color: string; isRect?: boolean; isSubtract?: boolean; name?: string;
 }
 
 interface AngleMeasurement {
@@ -101,6 +101,7 @@ const calcAngle = (p1: Point, v: Point, p2: Point) => {
 };
 const fmtNum = (n: number) => n.toFixed(2).replace('.', ',');
 type AreaUnitType = 'auto' | 'm2' | 'cm2';
+const AREA_NAME_PRESETS = ['Fassadenfläche', 'Dachfläche', 'Wandfläche', 'Giebelfläche', 'Gaubenfläche', 'Fensterfläche', 'Türfläche', 'Schornstein'];
 const formatAreaWith = (unit: AreaUnitType, realA?: number, pixA?: number): string => {
   if (realA === undefined) return `${Math.round(pixA || 0)} px²`;
   if (unit === 'm2') return `${fmtNum(realA / 10000)} m²`;
@@ -121,6 +122,8 @@ export default function ImageMeterMeasureScreen() {
   const [referenceScale, setReferenceScale] = useState<number | null>(null);
   const [areaMeasurements, setAreaMeasurements] = useState<AreaMeasurement[]>([]);
   const [areaUnit, setAreaUnit] = useState<AreaUnitType>('auto');
+  const [showAreaNameModal, setShowAreaNameModal] = useState(false);
+  const [areaNameInput, setAreaNameInput] = useState('');
   const [angleMeasurements, setAngleMeasurements] = useState<AngleMeasurement[]>([]);
   const [buildingComponents, setBuildingComponents] = useState<BuildingComponent[]>([]);
   const [customComponents, setCustomComponents] = useState<CustomComponentDef[]>([]);
@@ -244,7 +247,7 @@ export default function ImageMeterMeasureScreen() {
     if (areaMeasurements.length > 0) {
       lines.push('--- Flächen ---');
       areaMeasurements.forEach((a, i) => {
-        lines.push(`  ${i + 1}. ${areaLabelFor(a)}`);
+        lines.push(`  F${i + 1}${a.name ? ' – ' + a.name : ''}: ${areaLabelFor(a)}`);
         if (showEdgeLengths) {
           a.points.forEach((pt, j) => {
             const next = a.points[(j + 1) % a.points.length];
@@ -442,6 +445,13 @@ export default function ImageMeterMeasureScreen() {
     }
     setAreaMeasurements(prev => prev.map(a => a.id === selectedMeasurement ? { ...a, isSubtract: !a.isSubtract } : a));
     setHasChanges(true);
+  };
+  const saveAreaName = () => {
+    if (!selectedMeasurement) return;
+    const nm = areaNameInput.trim();
+    setAreaMeasurements(prev => prev.map(a => a.id === selectedMeasurement ? { ...a, name: nm || undefined } : a));
+    setHasChanges(true);
+    setShowAreaNameModal(false);
   };
   const cycleAreaUnit = () => {
     const next: AreaUnitType = areaUnit === 'auto' ? 'm2' : areaUnit === 'm2' ? 'cm2' : 'auto';
@@ -946,6 +956,14 @@ export default function ImageMeterMeasureScreen() {
         )}
 
         {selArea && (
+          <TouchableOpacity testID="area-name-btn" style={[styles.toolBtn, !!selArea.name && { backgroundColor: '#e3f2fd', borderColor: '#1976d2' }]}
+            onPress={() => { setAreaNameInput(selArea.name || ''); setShowAreaNameModal(true); }}>
+            <Ionicons name="pricetag-outline" size={18} color="#1976d2" />
+            <Text style={[styles.toolBtnText, { color: '#1976d2', fontSize: 11 }]}>Name</Text>
+          </TouchableOpacity>
+        )}
+
+        {selArea && (
           <TouchableOpacity testID="area-subtract-toggle-btn" style={[styles.toolBtn, selArea.isSubtract && { backgroundColor: '#ffebee', borderColor: '#f44336' }]} onPress={toggleSubtract}>
             <Ionicons name="remove-circle-outline" size={18} color="#f44336" />
             <Text style={[styles.toolBtnText, { color: '#f44336', fontSize: 11 }]}>Abzug</Text>
@@ -1125,11 +1143,11 @@ export default function ImageMeterMeasureScreen() {
                 <Text style={styles.chipText}>{m.label || formatLength(m)}</Text>
               </TouchableOpacity>
             ))}
-            {areaMeasurements.map(a => (
+            {areaMeasurements.map((a, ci) => (
               <TouchableOpacity key={a.id} style={[styles.chip, { borderColor: '#2196F3' }, selectedMeasurement === a.id && styles.chipSel]}
                 onPress={() => setSelectedMeasurement(a.id === selectedMeasurement ? null : a.id)}>
                 <Ionicons name={a.isSubtract ? 'remove-circle-outline' : a.isRect ? 'square-outline' : 'shapes'} size={14} color={a.isSubtract ? '#f44336' : a.isRect ? '#00897B' : '#2196F3'} />
-                <Text style={styles.chipText}>{areaLabelFor(a)}</Text>
+                <Text style={styles.chipText}>{`F${ci + 1}: ${areaLabelFor(a)}`}</Text>
               </TouchableOpacity>
             ))}
             {angleMeasurements.map(ang => (
@@ -1270,6 +1288,34 @@ export default function ImageMeterMeasureScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: '#4CAF50' }]} onPress={createCustomComponent}>
                 <Text style={styles.confirmBtnText}>Erstellen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ===== AREA NAME MODAL ===== */}
+      <Modal visible={showAreaNameModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Fläche benennen</Text>
+            <Text style={styles.inputLabel}>Schnellauswahl</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {AREA_NAME_PRESETS.map(n => (
+                <TouchableOpacity key={n} onPress={() => setAreaNameInput(n)}
+                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1.5, borderColor: areaNameInput === n ? '#1976d2' : '#ddd', backgroundColor: areaNameInput === n ? '#e3f2fd' : '#fff' }}>
+                  <Text style={{ fontSize: 13, color: areaNameInput === n ? '#1976d2' : '#555', fontWeight: '600' }}>{n}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.inputLabel}>Eigener Name</Text>
+            <TextInput testID="area-name-input" style={styles.modalInput} value={areaNameInput} onChangeText={setAreaNameInput} placeholder="z.B. Fassadenfläche Süd..." placeholderTextColor="#999" />
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAreaNameModal(false)}>
+                <Text style={styles.cancelBtnText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="area-name-save-btn" style={styles.confirmBtn} onPress={saveAreaName}>
+                <Text style={styles.confirmBtnText}>Speichern</Text>
               </TouchableOpacity>
             </View>
           </View>

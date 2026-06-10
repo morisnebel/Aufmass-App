@@ -148,3 +148,8 @@ German (Deutsch)
 ### Bugfix: Veralteter PDF-Snapshot (Feb 2026)
 - Problem: imagemeter_pdf_${id} Snapshot wurde nur einmalig beim "Im PDF"-Toggle erstellt → spätere Messungen fehlten im PDF-Foto (Tabelle war korrekt).
 - Fix: refreshPdfSnapshot() Helper in measure.tsx; wird bei autoSave (Screen verlassen), saveChanges (Haken-Button) und saveAsProjektfoto (Capture-Wiederverwendung) aufgerufen, sofern showInPdf aktiv.
+
+### Flächen-Benennung (Feb 2026)
+- AreaMeasurement.name (optional). Zeichnung zeigt Kurz-Tag "F1: 6,74 m²" (Index in areaMeasurements +1), Chips ebenso.
+- Fläche auswählen → Toolbar-Button "Name" (pricetag, testID area-name-btn) → Modal mit Schnellauswahl-Presets (AREA_NAME_PRESETS: Fassadenfläche, Dachfläche, Wandfläche, Giebelfläche, Gaubenfläche, Fensterfläche, Türfläche, Schornstein) + freie Eingabe (testID area-name-input, Speichern: area-name-save-btn).
+- PDF [id].tsx: Zeilen heißen jetzt "F1 – Fassadenfläche (netto)" etc. (rowName mit a.name). Export-Text ebenso.

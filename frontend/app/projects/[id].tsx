@@ -1850,8 +1850,9 @@ export default function ProjectDetailScreen() {
           summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">📊 Flächen</td></tr>`;
           const subAreas = areas.filter((a: any) => a.isSubtract);
           areas.forEach((a: any, idx: number) => {
+            const rowName = `F${idx + 1}${a.name ? ' – ' + a.name : ''}`;
             if (a.isSubtract) {
-              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #c62828;">Fläche ${idx + 1} (Abzug)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right; color: #c62828;">− ${fmtArea(a.pixelArea)}</td></tr>`;
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #c62828;">${rowName} (Abzug)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right; color: #c62828;">− ${fmtArea(a.pixelArea)}</td></tr>`;
               return;
             }
             const contained = subAreas.filter((s: any) => {
@@ -1863,9 +1864,9 @@ export default function ProjectDetailScreen() {
               const subPix = contained.reduce((t: number, s: any) => t + s.pixelArea, 0);
               const netPix = Math.max(0, a.pixelArea - subPix);
               const breakdown = `${fmtArea(a.pixelArea)} − ${contained.map((s: any) => fmtArea(s.pixelArea)).join(' − ')} = <span style="color: #1565C0;">${fmtArea(netPix)}</span>`;
-              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1} (netto)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${breakdown}</td></tr>`;
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">${rowName} (netto)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${breakdown}</td></tr>`;
             } else {
-              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${fmtArea(a.pixelArea)}</td></tr>`;
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">${rowName}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${fmtArea(a.pixelArea)}</td></tr>`;
             }
           });
           // Total sum of all net areas

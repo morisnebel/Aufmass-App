@@ -153,3 +153,6 @@ German (Deutsch)
 - AreaMeasurement.name (optional). Zeichnung zeigt Kurz-Tag "F1: 6,74 m²" (Index in areaMeasurements +1), Chips ebenso.
 - Fläche auswählen → Toolbar-Button "Name" (pricetag, testID area-name-btn) → Modal mit Schnellauswahl-Presets (AREA_NAME_PRESETS: Fassadenfläche, Dachfläche, Wandfläche, Giebelfläche, Gaubenfläche, Fensterfläche, Türfläche, Schornstein) + freie Eingabe (testID area-name-input, Speichern: area-name-save-btn).
 - PDF [id].tsx: Zeilen heißen jetzt "F1 – Fassadenfläche (netto)" etc. (rowName mit a.name). Export-Text ebenso.
+
+### Messen aus Foto-Bearbeitung entfernt (Feb 2026)
+- /app/frontend/app/photos/annotate.tsx: "Messen"-Toggle-Button und Tool-Picker-Modal (Maßlinie/Referenz/Fläche/Winkel/Bauteil) entfernt. Messen jetzt exklusiv im Fotomessung-Modul (imagemeter). Render-Code für alte Messungen auf Bestandsfotos bleibt erhalten (Anzeige). Zeichnen + Text in Fotos unverändert.

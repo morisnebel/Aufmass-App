@@ -876,16 +876,6 @@ export default function AnnotatePhotoScreen() {
             <Ionicons name={drawingEnabled && drawMode === 'text' ? "text" : "text-outline"} size={18} color={drawingEnabled && drawMode === 'text' ? '#fff' : '#9C27B0'} />
             <Text style={[styles.textToggleText, drawingEnabled && drawMode === 'text' && styles.textToggleTextActive]}>Text</Text>
           </TouchableOpacity>
-          
-          {/* MEASUREMENT TOOLS toggle */}
-          <TouchableOpacity style={[styles.measureToggleButton, drawingEnabled && isMeasureMode && styles.measureToggleButtonActive]}
-            onPress={() => {
-              if (drawingEnabled && isMeasureMode) { setDrawingEnabled(false); setCurrentMeasurePoints([]); setShowMagnifier(false); }
-              else { setShowToolPicker(true); }
-            }}>
-            <Ionicons name={drawingEnabled && isMeasureMode ? "resize" : "resize-outline"} size={18} color={drawingEnabled && isMeasureMode ? '#fff' : '#FF6D00'} />
-            <Text style={[styles.measureToggleText, drawingEnabled && isMeasureMode && styles.measureToggleTextActive]}>Messen</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -1288,72 +1278,6 @@ export default function AnnotatePhotoScreen() {
         </View>
         </Animated.View>
       </ScrollView>
-
-      {/* ===== TOOL PICKER MODAL ===== */}
-      <Modal visible={showToolPicker} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowToolPicker(false)}>
-          <View style={styles.toolPickerContent}>
-            <Text style={styles.toolPickerTitle}>Messwerkzeug wählen</Text>
-            
-            <TouchableOpacity style={styles.toolPickerItem} onPress={() => { setDrawingEnabled(true); setDrawMode('measure'); setCurrentMeasurePoints([]); setShowToolPicker(false); setShowMagnifier(false); }}>
-              <View style={[styles.toolPickerIcon, { backgroundColor: '#FFF3E0' }]}>
-                <Ionicons name="resize" size={24} color="#FF6D00" />
-              </View>
-              <View style={styles.toolPickerInfo}>
-                <Text style={styles.toolPickerItemTitle}>📏 Maßlinie</Text>
-                <Text style={styles.toolPickerItemDesc}>2 Punkte → Länge messen</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.toolPickerItem} onPress={() => {
-              setDrawingEnabled(true); setDrawMode('measure'); setCurrentMeasurePoints([]);
-              setShowToolPicker(false); setShowMagnifier(false);
-              Alert.alert('📐 Referenzmaß', 'Tippe auf die 2 Endpunkte einer bekannten Strecke (z.B. Fensterbreite = 1,20 m).\n\nDanach werden alle weiteren Maße automatisch berechnet!');
-              setReferenceScale(null);
-              // After 2 points placed, show reference input
-              setTimeout(() => setShowReferenceModal(true), 100);
-            }}>
-              <View style={[styles.toolPickerIcon, { backgroundColor: '#E8F5E9' }]}>
-                <Ionicons name="git-compare" size={24} color="#4CAF50" />
-              </View>
-              <View style={styles.toolPickerInfo}>
-                <Text style={styles.toolPickerItemTitle}>📐 Referenzmaß</Text>
-                <Text style={styles.toolPickerItemDesc}>Bekannte Strecke kalibrieren</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.toolPickerItem} onPress={() => { setDrawingEnabled(true); setDrawMode('area'); setCurrentMeasurePoints([]); setShowToolPicker(false); setShowMagnifier(false); }}>
-              <View style={[styles.toolPickerIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Ionicons name="shapes" size={24} color="#1976D2" />
-              </View>
-              <View style={styles.toolPickerInfo}>
-                <Text style={styles.toolPickerItemTitle}>📊 Flächenmessung</Text>
-                <Text style={styles.toolPickerItemDesc}>Polygon → m² berechnen</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.toolPickerItem} onPress={() => { setDrawingEnabled(true); setDrawMode('angle'); setCurrentMeasurePoints([]); setShowToolPicker(false); setShowMagnifier(false); }}>
-              <View style={[styles.toolPickerIcon, { backgroundColor: '#FCE4EC' }]}>
-                <Ionicons name="analytics" size={24} color="#E91E63" />
-              </View>
-              <View style={styles.toolPickerInfo}>
-                <Text style={styles.toolPickerItemTitle}>🔄 Winkelmessung</Text>
-                <Text style={styles.toolPickerItemDesc}>3 Punkte → Winkel messen</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.toolPickerItem} onPress={() => { setDrawingEnabled(true); setDrawMode('component'); setCurrentMeasurePoints([]); setShowToolPicker(false); setShowMagnifier(false); }}>
-              <View style={[styles.toolPickerIcon, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="location" size={24} color="#9C27B0" />
-              </View>
-              <View style={styles.toolPickerInfo}>
-                <Text style={styles.toolPickerItemTitle}>🏷️ Bauteil-Markierung</Text>
-                <Text style={styles.toolPickerItemDesc}>Fenster, Türen, Heizung etc.</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* ===== MEASURE INPUT MODAL ===== */}
       <Modal visible={showMeasureInputModal} transparent animationType="slide">

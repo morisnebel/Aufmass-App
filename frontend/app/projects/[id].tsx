@@ -1868,6 +1868,19 @@ export default function ProjectDetailScreen() {
               summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${fmtArea(a.pixelArea)}</td></tr>`;
             }
           });
+          // Total sum of all net areas
+          const totalNetPix = areas.reduce((total: number, a: any) => {
+            if (a.isSubtract) return total;
+            const subPix = subAreas.reduce((t: number, s: any) => {
+              const scx = s.points.reduce((u: number, p: any) => u + p.x, 0) / s.points.length;
+              const scy = s.points.reduce((u: number, p: any) => u + p.y, 0) / s.points.length;
+              return pip({ x: scx, y: scy }, a.points) ? t + s.pixelArea : t;
+            }, 0);
+            return total + Math.max(0, a.pixelArea - subPix);
+          }, 0);
+          if (areas.some((a: any) => !a.isSubtract)) {
+            summaryRows += `<tr><td style="padding: 5px 10px; font-size: 10px; font-weight: bold; color: #333; border-top: 1.5px solid #1565C0;">Σ Netto-Flächen</td><td style="padding: 5px 10px; font-size: 11px; font-weight: bold; text-align: right; color: #1565C0; border-top: 1.5px solid #1565C0;">${fmtArea(totalNetPix)}</td></tr>`;
+          }
         }
         
         // Angle measurements

@@ -141,3 +141,6 @@ German (Deutsch)
 
 ### PDF-Aufschlüsselung Abzugsflächen (Feb 2026)
 - [id].tsx generatePdfHtml Fotomessungen-Tabelle: fmtArea respektiert jetzt imPhoto.areaUnit (auto/m2/cm2). Abzugsflächen erscheinen als eigene rote Zeile "Fläche N (Abzug): − X". Flächen mit enthaltenen Abzügen zeigen Breakdown "Brutto − Abzug1 − ... = Netto" (Zeile "Fläche N (netto)", pip-Helper Ray-Casting lokal in der Funktion).
+
+### PDF Σ Netto-Flächen Gesamtsumme (Feb 2026)
+- [id].tsx Flächen-Abschnitt: Nach den Flächen-Zeilen wird eine Summenzeile "Σ Netto-Flächen" (blau, Trennlinie oben) ausgegeben = Summe aller Nicht-Abzugsflächen abzüglich enthaltener Abzugsflächen.

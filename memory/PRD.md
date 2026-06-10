@@ -156,3 +156,6 @@ German (Deutsch)
 
 ### Messen aus Foto-Bearbeitung entfernt (Feb 2026)
 - /app/frontend/app/photos/annotate.tsx: "Messen"-Toggle-Button und Tool-Picker-Modal (Maßlinie/Referenz/Fläche/Winkel/Bauteil) entfernt. Messen jetzt exklusiv im Fotomessung-Modul (imagemeter). Render-Code für alte Messungen auf Bestandsfotos bleibt erhalten (Anzeige). Zeichnen + Text in Fotos unverändert.
+
+### "Aus Projektfotos wählen" bei neuer Messung (Feb 2026)
+- /app/frontend/app/imagemeter/new.tsx: Dritter Button "Aus Projektfotos wählen" (testID project-photos-btn, blau) unter Kamera/Galerie – analog zu Skizzen. Lädt PhotoService.getByProjectId(projectId), Grid-Modal (3 Spalten), Auswahl setzt imageUri (photo.image_data || photo.uri). Ohne projectId → Hinweis-Alert.

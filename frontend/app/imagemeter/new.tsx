@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import { PhotoService } from '../../services/LocalStorage';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 
@@ -30,6 +32,29 @@ export default function ImageMeterNewScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showProjectPhotosModal, setShowProjectPhotosModal] = useState(false);
+  const [projectPhotos, setProjectPhotos] = useState<any[]>([]);
+
+  // Projektfotos laden und Modal öffnen
+  const openProjectPhotos = async () => {
+    if (!projectId) {
+      Alert.alert(t('common.note'), 'Dieses Foto ist keinem Projekt zugeordnet.');
+      return;
+    }
+    const photos = await PhotoService.getByProjectId(projectId);
+    setProjectPhotos(photos);
+    setShowProjectPhotosModal(true);
+  };
+
+  const selectProjectPhoto = (photo: any) => {
+    const uri = photo.image_data || photo.uri;
+    if (!uri) {
+      Alert.alert(t('common.error'), 'Bild konnte nicht geladen werden');
+      return;
+    }
+    setImageUri(uri);
+    setShowProjectPhotosModal(false);
+  };
 
   // Kamera-Berechtigung anfordern
   useEffect(() => {
@@ -175,6 +200,11 @@ export default function ImageMeterNewScreen() {
                 <Ionicons name="images" size={24} color="#666" />
                 <Text style={styles.galleryButtonText}>Aus Galerie wählen</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity testID="project-photos-btn" style={[styles.galleryButton, { marginTop: 12, backgroundColor: '#e3f2fd' }]} onPress={openProjectPhotos}>
+                <Ionicons name="folder-open" size={24} color="#1976d2" />
+                <Text style={[styles.galleryButtonText, { color: '#1976d2' }]}>Aus Projektfotos wählen</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -224,6 +254,50 @@ export default function ImageMeterNewScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Projektfotos Modal */}
+      <Modal visible={showProjectPhotosModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.modalTitle}>Projektfoto wählen</Text>
+              <TouchableOpacity onPress={() => setShowProjectPhotosModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {projectPhotos.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Ionicons name="images-outline" size={48} color="#ccc" />
+                <Text style={{ marginTop: 16, color: '#666', textAlign: 'center' }}>Keine Projektfotos vorhanden</Text>
+                <Text style={{ marginTop: 8, color: '#999', fontSize: 12, textAlign: 'center' }}>Fügen Sie zuerst Fotos im Projekt hinzu.</Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 400 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {projectPhotos.map((photo, index) => (
+                    <TouchableOpacity
+                      key={photo.id || index}
+                      style={styles.photoThumb}
+                      onPress={() => selectProjectPhoto(photo)}
+                    >
+                      {(photo.image_data || photo.uri) ? (
+                        <Image source={{ uri: photo.image_data || photo.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="image-outline" size={32} color="#ccc" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowProjectPhotosModal(false)}>
+              <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -403,5 +477,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '92%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  photoThumb: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  modalCancelBtn: {
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
   },
 });

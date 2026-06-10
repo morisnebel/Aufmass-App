@@ -124,3 +124,8 @@ German (Deutsch)
 - User-Verifikation: ImageMeter-Snapshot ("Als Projektfoto speichern" / "Im PDF") mit SVG-Linien.
 - (P1) Pro-Version Features (Code PROFI2024, Logo, Template-Limits).
 - (P2) Refactoring draw.tsx / [id].tsx Monolithen.
+
+### Rechteck-Werkzeug (Feb 2026)
+- Neues Werkzeug "⬜ Rechteck" im Tool-Picker (Mehr-Button) in measure.tsx: Tippen platziert ein Rechteck (22% der Bildgröße, teal #00897B, isRect: true auf AreaMeasurement).
+- Interaktion: Ecken ziehen = Größe ändern (achsenparallel, gegenüberliegende Ecke fix), Mitte ziehen = ganzes Rechteck verschieben (pointIndex -1 im DragHandle). Live-Preview als gestricheltes Polygon während Drag.
+- Fläche + Kantenlängen (Breite/Höhe) werden automatisch angezeigt, Einheiten-Toggle gilt auch hier. Ideal für Fenster/Türen.

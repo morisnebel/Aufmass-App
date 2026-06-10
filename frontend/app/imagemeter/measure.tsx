@@ -28,7 +28,7 @@ const CUSTOM_COMPONENTS_KEY = 'aufmassprofi_custom_components';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type MeasurementType = 'line' | 'reference';
-type DrawModeType = 'none' | 'line' | 'reference' | 'area' | 'angle' | 'component';
+type DrawModeType = 'none' | 'line' | 'reference' | 'area' | 'angle' | 'component' | 'rect';
 
 interface Point { x: number; y: number; }
 
@@ -39,7 +39,7 @@ interface Measurement {
 
 interface AreaMeasurement {
   id: string; points: Point[]; pixelArea: number; realArea?: number;
-  label?: string; color: string;
+  label?: string; color: string; isRect?: boolean;
 }
 
 interface AngleMeasurement {
@@ -417,6 +417,13 @@ export default function ImageMeterMeasureScreen() {
       for (let i = 0; i < area.points.length; i++) {
         if (calcDist(imgPt, area.points[i]) < radius) return { measureId: area.id, measureType: 'area', pointIndex: i };
       }
+      // Rectangle: drag inside to move the whole shape
+      if (area.isRect) {
+        const xs = area.points.map(p => p.x), ys = area.points.map(p => p.y);
+        if (imgPt.x > Math.min(...xs) && imgPt.x < Math.max(...xs) && imgPt.y > Math.min(...ys) && imgPt.y < Math.max(...ys)) {
+          return { measureId: area.id, measureType: 'area', pointIndex: -1 };
+        }
+      }
     }
     // Angle
     const ang = angleMeasurements.find(a => a.id === selectedMeasurement);
@@ -446,7 +453,21 @@ export default function ImageMeterMeasureScreen() {
     } else if (handle.measureType === 'area') {
       setAreaMeasurements(prev => prev.map(a => {
         if (a.id !== handle.measureId) return a;
-        const pts = [...a.points]; pts[handle.pointIndex] = newImgPt;
+        let pts: Point[];
+        if (handle.pointIndex === -1) {
+          // Move whole rectangle by drag delta
+          const start = dragStartRef.current || newImgPt;
+          const dx = newImgPt.x - start.x, dy = newImgPt.y - start.y;
+          pts = a.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        } else if (a.isRect) {
+          // Resize: opposite corner stays fixed, rectangle stays axis-aligned
+          const opp = a.points[(handle.pointIndex + 2) % 4];
+          const x1 = Math.min(opp.x, newImgPt.x), x2 = Math.max(opp.x, newImgPt.x);
+          const y1 = Math.min(opp.y, newImgPt.y), y2 = Math.max(opp.y, newImgPt.y);
+          pts = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
+        } else {
+          pts = [...a.points]; pts[handle.pointIndex] = newImgPt;
+        }
         const pixArea = calcPolyArea(pts);
         let realArea: number | undefined, label: string;
         if (referenceScale) { realArea = pixArea / (referenceScale * referenceScale); label = formatArea(realArea); }
@@ -503,7 +524,7 @@ export default function ImageMeterMeasureScreen() {
       }
     }
 
-    if (drawMode === 'none' || drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
+    if (drawMode === 'none' || drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') return;
     setCurrentLine({ start: imgPt, end: imgPt }); setDragPos(imgPt);
   };
 
@@ -524,7 +545,7 @@ export default function ImageMeterMeasureScreen() {
     }
 
     if (drawMode === 'none' || !currentLine) return;
-    if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
+    if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') return;
     setCurrentLine(prev => prev ? { ...prev, end: imgPt } : null);
     setDragPos(imgPt);
   };
@@ -543,7 +564,7 @@ export default function ImageMeterMeasureScreen() {
 
     setDragPos(null);
     if (drawMode === 'none' || !currentLine) return;
-    if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') return;
+    if (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') return;
 
     const pixLen = calcDist(currentLine.start, currentLine.end);
     if (pixLen < 20) { setCurrentLine(null); return; }
@@ -581,6 +602,20 @@ export default function ImageMeterMeasureScreen() {
       }
     }
     else if (drawMode === 'component') { setPendingComponentPos(imgPt); setShowComponentPicker(true); }
+    else if (drawMode === 'rect') {
+      // Place a default rectangle centered at tap point
+      const w = (imageDimensions.width || 1000) * 0.22;
+      const h = (imageDimensions.height || 1000) * 0.22;
+      const x1 = imgPt.x - w / 2, y1 = imgPt.y - h / 2, x2 = imgPt.x + w / 2, y2 = imgPt.y + h / 2;
+      const pts: Point[] = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
+      const pixA = calcPolyArea(pts);
+      let realA: number | undefined, label: string;
+      if (referenceScale) { realA = pixA / (referenceScale * referenceScale); label = formatArea(realA); }
+      else { label = `${Math.round(pixA)} px²`; }
+      const id = `area_${Date.now()}`;
+      setAreaMeasurements(prev => [...prev, { id, points: pts, pixelArea: pixA, realArea: realA, label, color: '#00897B', isRect: true }]);
+      setSelectedMeasurement(id); setDrawMode('none'); setHasChanges(true);
+    }
   };
 
   // ---- Area close ----
@@ -807,10 +842,10 @@ export default function ImageMeterMeasureScreen() {
           <Text style={[styles.toolBtnText, drawMode === 'line' && { color: '#fff' }]}>Messen</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.toolBtn, (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') && styles.toolBtnActiveOrange]}
+        <TouchableOpacity style={[styles.toolBtn, (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') && styles.toolBtnActiveOrange]}
           onPress={() => setShowToolPicker(true)}>
-          <Ionicons name="construct" size={20} color={(drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') ? '#fff' : '#FF6D00'} />
-          <Text style={[styles.toolBtnText, (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') && { color: '#fff' }, { color: (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component') ? '#fff' : '#FF6D00' }]}>Mehr</Text>
+          <Ionicons name="construct" size={20} color={(drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') ? '#fff' : '#FF6D00'} />
+          <Text style={[styles.toolBtnText, { color: (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect') ? '#fff' : '#FF6D00' }]}>Mehr</Text>
         </TouchableOpacity>
 
         {/* Edge length toggle */}
@@ -841,10 +876,10 @@ export default function ImageMeterMeasureScreen() {
 
       {/* Status Bar */}
       {drawMode !== 'none' && (
-        <View style={[styles.statusBar, { backgroundColor: drawMode === 'reference' ? '#e8f5e9' : drawMode === 'area' ? '#e3f2fd' : drawMode === 'angle' ? '#fce4ec' : drawMode === 'component' ? '#f3e5f5' : '#e3f2fd' }]}>
-          <Ionicons name="finger-print" size={18} color={drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : drawMode === 'component' ? '#9C27B0' : '#1976d2'} />
-          <Text style={[styles.statusText, { color: drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#1565C0' : drawMode === 'angle' ? '#C2185B' : drawMode === 'component' ? '#7B1FA2' : '#1976d2' }]}>
-            {drawMode === 'reference' ? 'Linie ziehen für Referenzmaß' : drawMode === 'line' ? 'Linie ziehen zum Messen' : drawMode === 'area' ? `Fläche: Punkte tippen (${tapPoints.length})` : drawMode === 'angle' ? `Winkel: 3 Punkte (${tapPoints.length}/3)` : 'Bauteil: Tippe auf Position'}
+        <View style={[styles.statusBar, { backgroundColor: drawMode === 'reference' ? '#e8f5e9' : drawMode === 'area' ? '#e3f2fd' : drawMode === 'angle' ? '#fce4ec' : drawMode === 'component' ? '#f3e5f5' : drawMode === 'rect' ? '#E0F2F1' : '#e3f2fd' }]}>
+          <Ionicons name="finger-print" size={18} color={drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#2196F3' : drawMode === 'angle' ? '#E91E63' : drawMode === 'component' ? '#9C27B0' : drawMode === 'rect' ? '#00897B' : '#1976d2'} />
+          <Text style={[styles.statusText, { color: drawMode === 'reference' ? '#4CAF50' : drawMode === 'area' ? '#1565C0' : drawMode === 'angle' ? '#C2185B' : drawMode === 'component' ? '#7B1FA2' : drawMode === 'rect' ? '#00695C' : '#1976d2' }]}>
+            {drawMode === 'reference' ? 'Linie ziehen für Referenzmaß' : drawMode === 'line' ? 'Linie ziehen zum Messen' : drawMode === 'area' ? `Fläche: Punkte tippen (${tapPoints.length})` : drawMode === 'angle' ? `Winkel: 3 Punkte (${tapPoints.length}/3)` : drawMode === 'rect' ? 'Rechteck: Tippe auf Position (Fenster/Tür)' : 'Bauteil: Tippe auf Position'}
           </Text>
           {drawMode === 'area' && tapPoints.length >= 3 && (
             <TouchableOpacity style={styles.closeAreaBtn} onPress={closeAreaPolygon}><Ionicons name="checkmark-done" size={16} color="#fff" /><Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Schließen</Text></TouchableOpacity>
@@ -859,7 +894,7 @@ export default function ImageMeterMeasureScreen() {
       {selectedMeasurement && drawMode === 'none' && (
         <View style={styles.editHint}>
           <Ionicons name="move" size={16} color="#FF9800" />
-          <Text style={styles.editHintText}>Punkte ziehen zum Verschieben</Text>
+          <Text style={styles.editHintText}>{areaMeasurements.find(a => a.id === selectedMeasurement)?.isRect ? 'Ecken = Größe ändern · Mitte = Verschieben' : 'Punkte ziehen zum Verschieben'}</Text>
         </View>
       )}
 
@@ -872,7 +907,7 @@ export default function ImageMeterMeasureScreen() {
           onResponderGrant={handleTouchStart}
           onResponderMove={handleTouchMove}
           onResponderRelease={handleTouchEnd}
-          onTouchEnd={(e) => { if (!isDraggingRef.current && !justDraggedRef.current && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'none')) handleCanvasTap(e); }}
+          onTouchEnd={(e) => { if (!isDraggingRef.current && !justDraggedRef.current && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect' || drawMode === 'none')) handleCanvasTap(e); }}
         >
           <Svg style={StyleSheet.absoluteFill}>
             {measurements.map(renderLine)}
@@ -913,6 +948,25 @@ export default function ImageMeterMeasureScreen() {
                   <Circle cx={dp.x} cy={dp.y} r={3} fill={mc} />
                 </G>
               );
+            })()}
+            {/* Live rectangle preview while dragging (move/resize) */}
+            {isDraggingRef.current && dragPos && dragHandleRef.current?.measureType === 'area' && (() => {
+              const h = dragHandleRef.current!;
+              const a = areaMeasurements.find(x => x.id === h.measureId);
+              if (!a?.isRect) return null;
+              let pts: Point[];
+              if (h.pointIndex === -1) {
+                const start = dragStartRef.current || dragPos;
+                const dx = dragPos.x - start.x, dy = dragPos.y - start.y;
+                pts = a.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+              } else {
+                const opp = a.points[(h.pointIndex + 2) % 4];
+                const x1 = Math.min(opp.x, dragPos.x), x2 = Math.max(opp.x, dragPos.x);
+                const y1 = Math.min(opp.y, dragPos.y), y2 = Math.max(opp.y, dragPos.y);
+                pts = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
+              }
+              const ptsStr = pts.map(p => { const d = toDisp(p); return `${d.x},${d.y}`; }).join(' ');
+              return <Polygon points={ptsStr} fill="rgba(0,137,123,0.12)" stroke="#00897B" strokeWidth={2} strokeDasharray="6,4" />;
             })()}
             {/* Drag preview crosshair */}
             {isDraggingRef.current && dragPos && (() => {
@@ -988,7 +1042,7 @@ export default function ImageMeterMeasureScreen() {
             {areaMeasurements.map(a => (
               <TouchableOpacity key={a.id} style={[styles.chip, { borderColor: '#2196F3' }, selectedMeasurement === a.id && styles.chipSel]}
                 onPress={() => setSelectedMeasurement(a.id === selectedMeasurement ? null : a.id)}>
-                <Ionicons name="shapes" size={14} color="#2196F3" />
+                <Ionicons name={a.isRect ? 'square-outline' : 'shapes'} size={14} color={a.isRect ? '#00897B' : '#2196F3'} />
                 <Text style={styles.chipText}>{formatArea(a.realArea, a.pixelArea)}</Text>
               </TouchableOpacity>
             ))}
@@ -1045,6 +1099,7 @@ export default function ImageMeterMeasureScreen() {
           <View style={styles.pickerContent}>
             <Text style={styles.pickerTitle}>Messwerkzeug wählen</Text>
             {[
+              { mode: 'rect' as DrawModeType, icon: 'square-outline', color: '#00897B', bg: '#E0F2F1', title: '⬜ Rechteck', desc: 'Verschiebbar – ideal für Fenster & Türen' },
               { mode: 'area' as DrawModeType, icon: 'shapes', color: '#1976D2', bg: '#E3F2FD', title: '📊 Flächenmessung', desc: 'Punkte tippen → m² berechnen' },
               { mode: 'angle' as DrawModeType, icon: 'git-network', color: '#E91E63', bg: '#FCE4EC', title: '📐 Winkelmessung', desc: '3 Punkte → Winkel in Grad' },
               { mode: 'component' as DrawModeType, icon: 'location', color: '#9C27B0', bg: '#F3E5F5', title: '🏷️ Bauteil-Markierung', desc: 'Fenster, Türen, Heizung etc.' },

@@ -1816,7 +1816,20 @@ export default function ProjectDetailScreen() {
         const fmtArea = (pixArea: number) => {
           if (!refScale) return `${Math.round(pixArea)} px²`;
           const cmSq = pixArea / (refScale * refScale);
+          const unit = (imPhoto as any).areaUnit || 'auto';
+          if (unit === 'm2') return `${(cmSq / 10000).toFixed(2).replace('.', ',')} m²`;
+          if (unit === 'cm2') return `${cmSq.toFixed(2).replace('.', ',')} cm²`;
           return cmSq >= 10000 ? `${(cmSq / 10000).toFixed(2).replace('.', ',')} m²` : `${cmSq.toFixed(2).replace('.', ',')} cm²`;
+        };
+        
+        // Point-in-polygon (ray casting) for subtraction area assignment
+        const pip = (pt: { x: number; y: number }, poly: any[]) => {
+          let inside = false;
+          for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            if ((poly[i].y > pt.y) !== (poly[j].y > pt.y) &&
+                pt.x < ((poly[j].x - poly[i].x) * (pt.y - poly[i].y)) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
+          }
+          return inside;
         };
         
         let summaryRows = '';
@@ -1832,11 +1845,28 @@ export default function ProjectDetailScreen() {
           });
         }
         
-        // Area measurements
+        // Area measurements (with subtraction breakdown, e.g. "7,80 m² − 0,53 m² = 7,27 m²")
         if (areas.length > 0) {
           summaryRows += `<tr><td colspan="2" style="font-weight: bold; background: #f0f4f8; padding: 6px 10px; font-size: 11px; color: #333;">📊 Flächen</td></tr>`;
+          const subAreas = areas.filter((a: any) => a.isSubtract);
           areas.forEach((a: any, idx: number) => {
-            summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${a.label || fmtArea(a.pixelArea)}</td></tr>`;
+            if (a.isSubtract) {
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #c62828;">Fläche ${idx + 1} (Abzug)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right; color: #c62828;">− ${fmtArea(a.pixelArea)}</td></tr>`;
+              return;
+            }
+            const contained = subAreas.filter((s: any) => {
+              const scx = s.points.reduce((t: number, p: any) => t + p.x, 0) / s.points.length;
+              const scy = s.points.reduce((t: number, p: any) => t + p.y, 0) / s.points.length;
+              return pip({ x: scx, y: scy }, a.points);
+            });
+            if (contained.length > 0) {
+              const subPix = contained.reduce((t: number, s: any) => t + s.pixelArea, 0);
+              const netPix = Math.max(0, a.pixelArea - subPix);
+              const breakdown = `${fmtArea(a.pixelArea)} − ${contained.map((s: any) => fmtArea(s.pixelArea)).join(' − ')} = <span style="color: #1565C0;">${fmtArea(netPix)}</span>`;
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1} (netto)</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${breakdown}</td></tr>`;
+            } else {
+              summaryRows += `<tr><td style="padding: 4px 10px; font-size: 10px; color: #666;">Fläche ${idx + 1}</td><td style="padding: 4px 10px; font-size: 10px; font-weight: bold; text-align: right;">${fmtArea(a.pixelArea)}</td></tr>`;
+            }
           });
         }
         

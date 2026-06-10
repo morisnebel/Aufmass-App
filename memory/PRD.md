@@ -138,3 +138,6 @@ German (Deutsch)
 - AreaMeasurement.isSubtract: Fläche auswählen → Toolbar-Button "Abzug" (rot, testID area-subtract-toggle-btn) toggelt.
 - Abzugsflächen: rot, gestrichelt, Label mit "−"-Präfix. Logik: areaLabelFor() prüft per pointInPoly (Ray-Casting, Modul-Level), ob der Schwerpunkt der Abzugsfläche in einer anderen Fläche liegt → deren Netto = pixelArea − Summe Abzüge.
 - buildSave speichert berechnete Netto-Labels, damit PDF ([id].tsx liest a.label) korrekt ist.
+
+### PDF-Aufschlüsselung Abzugsflächen (Feb 2026)
+- [id].tsx generatePdfHtml Fotomessungen-Tabelle: fmtArea respektiert jetzt imPhoto.areaUnit (auto/m2/cm2). Abzugsflächen erscheinen als eigene rote Zeile "Fläche N (Abzug): − X". Flächen mit enthaltenen Abzügen zeigen Breakdown "Brutto − Abzug1 − ... = Netto" (Zeile "Fläche N (netto)", pip-Helper Ray-Casting lokal in der Funktion).

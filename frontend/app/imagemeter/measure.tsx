@@ -92,6 +92,13 @@ const calcAngle = (p1: Point, v: Point, p2: Point) => {
   return Math.round(Math.atan2(Math.abs(v1.x * v2.y - v1.y * v2.x), v1.x * v2.x + v1.y * v2.y) * (180 / Math.PI) * 10) / 10;
 };
 const fmtNum = (n: number) => n.toFixed(2).replace('.', ',');
+type AreaUnitType = 'auto' | 'm2' | 'cm2';
+const formatAreaWith = (unit: AreaUnitType, realA?: number, pixA?: number): string => {
+  if (realA === undefined) return `${Math.round(pixA || 0)} px²`;
+  if (unit === 'm2') return `${fmtNum(realA / 10000)} m²`;
+  if (unit === 'cm2') return `${fmtNum(realA)} cm²`;
+  return realA >= 10000 ? `${fmtNum(realA / 10000)} m²` : `${fmtNum(realA)} cm²`;
+};
 
 export default function ImageMeterMeasureScreen() {
   const { t } = useTranslation();
@@ -105,6 +112,7 @@ export default function ImageMeterMeasureScreen() {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [referenceScale, setReferenceScale] = useState<number | null>(null);
   const [areaMeasurements, setAreaMeasurements] = useState<AreaMeasurement[]>([]);
+  const [areaUnit, setAreaUnit] = useState<AreaUnitType>('auto');
   const [angleMeasurements, setAngleMeasurements] = useState<AngleMeasurement[]>([]);
   const [buildingComponents, setBuildingComponents] = useState<BuildingComponent[]>([]);
   const [customComponents, setCustomComponents] = useState<CustomComponentDef[]>([]);
@@ -148,7 +156,7 @@ export default function ImageMeterMeasureScreen() {
 
   // Load
   useEffect(() => { loadPhoto(); loadCustomComponents(); }, [photoId]);
-  useFocusEffect(useCallback(() => { return () => { if (hasChanges) autoSave(); }; }, [hasChanges, measurements, areaMeasurements, angleMeasurements, buildingComponents, referenceScale]));
+  useFocusEffect(useCallback(() => { return () => { if (hasChanges) autoSave(); }; }, [hasChanges, measurements, areaMeasurements, areaUnit, angleMeasurements, buildingComponents, referenceScale]));
 
   const loadCustomComponents = async () => {
     try {
@@ -173,6 +181,7 @@ export default function ImageMeterMeasureScreen() {
           setPhoto(found); setMeasurements(found.measurements || []);
           setReferenceScale(found.referenceScale || null);
           setAreaMeasurements(found.areaMeasurements || []);
+          setAreaUnit((found as any).areaUnit || 'auto');
           setAngleMeasurements(found.angleMeasurements || []);
           setBuildingComponents(found.buildingComponents || []);
           Image.getSize(found.imageUri, (w, h) => setImageDimensions({ width: w, height: h }), (e) => console.error(e));
@@ -182,7 +191,7 @@ export default function ImageMeterMeasureScreen() {
     finally { setLoading(false); }
   };
 
-  const buildSave = () => ({ measurements, referenceScale, areaMeasurements, angleMeasurements, buildingComponents, updatedAt: new Date().toISOString() });
+  const buildSave = () => ({ measurements, referenceScale, areaMeasurements, areaUnit, angleMeasurements, buildingComponents, updatedAt: new Date().toISOString() });
 
   const autoSave = async () => {
     if (!photo) return;
@@ -216,7 +225,7 @@ export default function ImageMeterMeasureScreen() {
     if (areaMeasurements.length > 0) {
       lines.push('--- Flächen ---');
       areaMeasurements.forEach((a, i) => {
-        lines.push(`  ${i + 1}. ${a.label}`);
+        lines.push(`  ${i + 1}. ${formatArea(a.realArea, a.pixelArea)}`);
         if (showEdgeLengths) {
           a.points.forEach((pt, j) => {
             const next = a.points[(j + 1) % a.points.length];
@@ -384,6 +393,15 @@ export default function ImageMeterMeasureScreen() {
     return cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${cm.toFixed(1)} cm`;
   };
 
+  // ---- Format area (respects user-selected unit) ----
+  const formatArea = (realA?: number, pixA?: number): string => formatAreaWith(areaUnit, realA, pixA);
+  const cycleAreaUnit = () => {
+    const next: AreaUnitType = areaUnit === 'auto' ? 'm2' : areaUnit === 'm2' ? 'cm2' : 'auto';
+    setAreaUnit(next);
+    setAreaMeasurements(prev => prev.map(a => ({ ...a, label: formatAreaWith(next, a.realArea, a.pixelArea) })));
+    setHasChanges(true);
+  };
+
   // ---- Find handle near point ----
   const findHandle = (imgPt: Point, radius: number = 40): DragHandle | null => {
     if (!selectedMeasurement) return null;
@@ -431,7 +449,7 @@ export default function ImageMeterMeasureScreen() {
         const pts = [...a.points]; pts[handle.pointIndex] = newImgPt;
         const pixArea = calcPolyArea(pts);
         let realArea: number | undefined, label: string;
-        if (referenceScale) { realArea = pixArea / (referenceScale * referenceScale); label = realArea >= 10000 ? `${fmtNum(realArea / 10000)} m²` : `${fmtNum(realArea)} cm²`; }
+        if (referenceScale) { realArea = pixArea / (referenceScale * referenceScale); label = formatArea(realArea); }
         else { label = `${Math.round(pixArea)} px²`; }
         return { ...a, points: pts, pixelArea: pixArea, realArea, label };
       }));
@@ -570,7 +588,7 @@ export default function ImageMeterMeasureScreen() {
     if (tapPoints.length < 3) { Alert.alert('Hinweis', 'Mindestens 3 Punkte.'); return; }
     const pixA = calcPolyArea(tapPoints);
     let realA: number | undefined, label: string;
-    if (referenceScale) { realA = pixA / (referenceScale * referenceScale); label = realA >= 10000 ? `${fmtNum(realA / 10000)} m²` : `${fmtNum(realA)} cm²`; }
+    if (referenceScale) { realA = pixA / (referenceScale * referenceScale); label = formatArea(realA); }
     else { label = `${Math.round(pixA)} px²`; }
     setAreaMeasurements(prev => [...prev, { id: `area_${Date.now()}`, points: [...tapPoints], pixelArea: pixA, realArea: realA, label, color: '#2196F3' }]);
     setTapPoints([]); setHasChanges(true);
@@ -586,7 +604,7 @@ export default function ImageMeterMeasureScreen() {
     if (pendingMeasurement.type === 'reference') {
       const ns = pixLen / realCm; setReferenceScale(ns);
       setMeasurements(prev => prev.map(m => ({ ...m, realLength: m.pixelLength / ns })));
-      setAreaMeasurements(prev => prev.map(a => { const ra = a.pixelArea / (ns * ns); return { ...a, realArea: ra, label: ra >= 10000 ? `${fmtNum(ra / 10000)} m²` : `${fmtNum(ra)} cm²` }; }));
+      setAreaMeasurements(prev => prev.map(a => { const ra = a.pixelArea / (ns * ns); return { ...a, realArea: ra, label: formatArea(ra) }; }));
     }
     setMeasurements(prev => [...prev, { id: `m_${Date.now()}`, type: pendingMeasurement.type, startPoint: pendingMeasurement.start, endPoint: pendingMeasurement.end, pixelLength: pixLen, realLength: realCm, unit: unitInput, label: labelInput.trim() || undefined }]);
     setHasChanges(true); setShowLengthModal(false); setPendingMeasurement(null); setLengthInput(''); setLabelInput(''); setDrawMode('none');
@@ -690,7 +708,8 @@ export default function ImageMeterMeasureScreen() {
     const cy = dp.reduce((s, p) => s + p.y, 0) / dp.length;
     const isSel = selectedMeasurement === a.id;
     const color = isSel ? '#FF9800' : a.color;
-    const lw = Math.max(70, (a.label || '').length * 7 + 16);
+    const areaLbl = formatArea(a.realArea, a.pixelArea);
+    const lw = Math.max(70, areaLbl.length * 7 + 16);
     return (
       <G key={a.id}>
         <Polygon points={ptsStr} fill={`${color}25`} stroke={color} strokeWidth={isSel ? 3 : 2} />
@@ -713,7 +732,7 @@ export default function ImageMeterMeasureScreen() {
         })}
         {/* Area label */}
         <Rect x={cx - lw / 2} y={cy - 12} width={lw} height={24} rx={4} fill="rgba(255,255,255,0.95)" stroke={color} strokeWidth={1} />
-        <SvgText x={cx} y={cy + 5} fill={color} fontSize={12} fontWeight="bold" textAnchor="middle">{a.label}</SvgText>
+        <SvgText x={cx} y={cy + 5} fill={color} fontSize={12} fontWeight="bold" textAnchor="middle">{areaLbl}</SvgText>
       </G>
     );
   };
@@ -800,6 +819,15 @@ export default function ImageMeterMeasureScreen() {
             onPress={() => setShowEdgeLengths(!showEdgeLengths)}>
             <Ionicons name={showEdgeLengths ? 'eye' : 'eye-off'} size={18} color="#2196F3" />
             <Text style={[styles.toolBtnText, { color: '#2196F3', fontSize: 11 }]}>Kanten</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Area unit toggle */}
+        {areaMeasurements.length > 0 && (
+          <TouchableOpacity testID="area-unit-toggle-btn" style={[styles.toolBtn, areaUnit !== 'auto' && { backgroundColor: '#ede7f6', borderColor: '#673AB7' }]}
+            onPress={cycleAreaUnit}>
+            <Ionicons name="swap-horizontal" size={18} color="#673AB7" />
+            <Text style={[styles.toolBtnText, { color: '#673AB7', fontSize: 11 }]}>{areaUnit === 'auto' ? 'Auto' : areaUnit === 'm2' ? 'm²' : 'cm²'}</Text>
           </TouchableOpacity>
         )}
 
@@ -961,7 +989,7 @@ export default function ImageMeterMeasureScreen() {
               <TouchableOpacity key={a.id} style={[styles.chip, { borderColor: '#2196F3' }, selectedMeasurement === a.id && styles.chipSel]}
                 onPress={() => setSelectedMeasurement(a.id === selectedMeasurement ? null : a.id)}>
                 <Ionicons name="shapes" size={14} color="#2196F3" />
-                <Text style={styles.chipText}>{a.label}</Text>
+                <Text style={styles.chipText}>{formatArea(a.realArea, a.pixelArea)}</Text>
               </TouchableOpacity>
             ))}
             {angleMeasurements.map(ang => (

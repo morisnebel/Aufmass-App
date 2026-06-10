@@ -110,3 +110,17 @@ React Native/Expo App für Projektmanagement mit Checklisten, Sketch-Editor, Fl�
 
 ## User Language
 German (Deutsch)
+
+---
+
+## Changelog (Feb 2026 Fork)
+
+### ImageMeter (Fotomessung) - /app/frontend/app/imagemeter/measure.tsx
+- Flächeneinheit umschaltbar: Toolbar-Button (Auto / m² / cm²) cycelt die Einheit aller Flächen-Labels (Canvas, Chips, Export-Text, gespeicherte Labels für PDF). State `areaUnit` wird in AsyncStorage persistiert (buildSave/loadPhoto).
+- Helper: `formatAreaWith(unit, realA, pixA)` (Modul-Level) + `formatArea` (Komponente). testID: `area-unit-toggle-btn`.
+- WICHTIG (Physik, kein Bug): Flächenwert ist rechnerisch konsistent mit Kantenlängen (Shoelace). Abweichung zur Realität entsteht durch Perspektive – Referenzlinie muss in derselben Ebene wie die gemessene Fläche liegen. Mögliches Future-Feature: Perspektivkorrektur (Homographie über bekanntes Rechteck, 4 Punkte + reale Maße).
+
+### Offene Punkte
+- User-Verifikation: ImageMeter-Snapshot ("Als Projektfoto speichern" / "Im PDF") mit SVG-Linien.
+- (P1) Pro-Version Features (Code PROFI2024, Logo, Template-Limits).
+- (P2) Refactoring draw.tsx / [id].tsx Monolithen.

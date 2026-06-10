@@ -144,3 +144,7 @@ German (Deutsch)
 
 ### PDF Σ Netto-Flächen Gesamtsumme (Feb 2026)
 - [id].tsx Flächen-Abschnitt: Nach den Flächen-Zeilen wird eine Summenzeile "Σ Netto-Flächen" (blau, Trennlinie oben) ausgegeben = Summe aller Nicht-Abzugsflächen abzüglich enthaltener Abzugsflächen.
+
+### Bugfix: Veralteter PDF-Snapshot (Feb 2026)
+- Problem: imagemeter_pdf_${id} Snapshot wurde nur einmalig beim "Im PDF"-Toggle erstellt → spätere Messungen fehlten im PDF-Foto (Tabelle war korrekt).
+- Fix: refreshPdfSnapshot() Helper in measure.tsx; wird bei autoSave (Screen verlassen), saveChanges (Haken-Button) und saveAsProjektfoto (Capture-Wiederverwendung) aufgerufen, sofern showInPdf aktiv.

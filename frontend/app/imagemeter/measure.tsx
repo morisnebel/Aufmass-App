@@ -201,11 +201,22 @@ export default function ImageMeterMeasureScreen() {
 
   const buildSave = () => ({ measurements, referenceScale, areaMeasurements: areaMeasurements.map(a => ({ ...a, label: areaLabelFor(a) })), areaUnit, angleMeasurements, buildingComponents, updatedAt: new Date().toISOString() });
 
+  // ---- Refresh the stored PDF snapshot (so PDF always shows current drawings) ----
+  const refreshPdfSnapshot = async () => {
+    if (!photo?.showInPdf || !canvasCaptureRef.current) return;
+    try {
+      const base64Data = await captureRef(canvasCaptureRef, { format: 'jpg', quality: 0.85, result: 'base64' });
+      await AsyncStorage.setItem(`imagemeter_pdf_${photoId}`, `data:image/jpeg;base64,${base64Data}`);
+      console.log('[refreshPdfSnapshot] PDF snapshot updated');
+    } catch (e) { console.warn('[refreshPdfSnapshot] failed:', e); }
+  };
+
   const autoSave = async () => {
     if (!photo) return;
     try {
       const data = await AsyncStorage.getItem(IMAGEMETER_STORAGE_KEY);
       if (data) { const ps: ImageMeterPhoto[] = JSON.parse(data); const i = ps.findIndex(p => p.id === photoId); if (i !== -1) { ps[i] = { ...ps[i], ...buildSave() }; await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps)); } }
+      await refreshPdfSnapshot();
     } catch (e) { console.error(e); }
   };
 
@@ -213,7 +224,7 @@ export default function ImageMeterMeasureScreen() {
     if (!photo) return;
     try {
       const data = await AsyncStorage.getItem(IMAGEMETER_STORAGE_KEY);
-      if (data) { const ps: ImageMeterPhoto[] = JSON.parse(data); const i = ps.findIndex(p => p.id === photoId); if (i !== -1) { ps[i] = { ...ps[i], ...buildSave() }; await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps)); setHasChanges(false); Alert.alert(t('common.success'), 'Messungen wurden gespeichert'); } }
+      if (data) { const ps: ImageMeterPhoto[] = JSON.parse(data); const i = ps.findIndex(p => p.id === photoId); if (i !== -1) { ps[i] = { ...ps[i], ...buildSave() }; await AsyncStorage.setItem(IMAGEMETER_STORAGE_KEY, JSON.stringify(ps)); await refreshPdfSnapshot(); setHasChanges(false); Alert.alert(t('common.success'), 'Messungen wurden gespeichert'); } }
     } catch (e) { console.error(e); Alert.alert(t('common.error'), 'Speichern fehlgeschlagen'); }
   };
 
@@ -284,6 +295,10 @@ export default function ImageMeterMeasureScreen() {
           });
           base64WithPrefix = `data:image/jpeg;base64,${base64Data}`;
           console.log('[saveAsProjectPhoto] captureRef success, size:', base64Data.length);
+          // Keep PDF snapshot in sync with the latest drawing
+          if (photo.showInPdf) {
+            try { await AsyncStorage.setItem(`imagemeter_pdf_${photoId}`, base64WithPrefix); } catch (_) {}
+          }
         } catch (captureError) {
           console.warn('[saveAsProjectPhoto] captureRef failed, using fallback:', captureError);
         }

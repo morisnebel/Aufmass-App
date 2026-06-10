@@ -723,15 +723,26 @@ export default function ImageMeterMeasureScreen() {
     const mid = { x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 };
     const color = isRef ? '#4CAF50' : (isSel ? '#FF9800' : '#f44336');
     const label = m.label || formatLength(m);
-    const lw = Math.max(70, label.length * 7 + 16);
+    // Dynamic scaling: shrink label for short lines
+    const dispLen = Math.sqrt((e.x - s.x) ** 2 + (e.y - s.y) ** 2);
+    const sc = Math.min(1, Math.max(0.55, dispLen / 140));
+    const fs = 12 * sc;
+    const lw = Math.max(70 * sc, label.length * 7 * sc + 16 * sc);
+    const lh = 24 * sc;
+    // Very short line: move label off the line (perpendicular offset)
+    let lx = mid.x, ly = mid.y;
+    if (dispLen > 0 && dispLen < 60) {
+      const px = -(e.y - s.y) / dispLen, py = (e.x - s.x) / dispLen;
+      lx = mid.x + px * (lh / 2 + 12); ly = mid.y + py * (lh / 2 + 12);
+    }
     return (
       <G key={m.id}>
         <Line x1={s.x} y1={s.y} x2={e.x} y2={e.y} stroke={color} strokeWidth={isSel ? 4 : 3} strokeLinecap="round" />
-        <Circle cx={s.x} cy={s.y} r={isSel ? 10 : 6} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />
-        <Circle cx={e.x} cy={e.y} r={isSel ? 10 : 6} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />
-        <Rect x={mid.x - lw / 2} y={mid.y - 12} width={lw} height={24} rx={4} fill="rgba(255,255,255,0.95)" stroke={color} strokeWidth={1} />
-        <SvgText x={mid.x} y={mid.y + 5} fill={color} fontSize={12} fontWeight="bold" textAnchor="middle">{label}</SvgText>
-        {isRef && <Circle cx={mid.x + lw / 2 - 8} cy={mid.y - 6} r={6} fill="#4CAF50" />}
+        <Circle cx={s.x} cy={s.y} r={isSel ? 10 : Math.max(3.5, 6 * sc)} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />
+        <Circle cx={e.x} cy={e.y} r={isSel ? 10 : Math.max(3.5, 6 * sc)} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />
+        <Rect x={lx - lw / 2} y={ly - lh / 2} width={lw} height={lh} rx={4 * sc} fill="rgba(255,255,255,0.95)" stroke={color} strokeWidth={1} />
+        <SvgText x={lx} y={ly + fs * 0.36} fill={color} fontSize={fs} fontWeight="bold" textAnchor="middle">{label}</SvgText>
+        {isRef && <Circle cx={lx + lw / 2 - 8 * sc} cy={ly - lh / 4} r={6 * sc} fill="#4CAF50" />}
       </G>
     );
   };
@@ -744,30 +755,47 @@ export default function ImageMeterMeasureScreen() {
     const isSel = selectedMeasurement === a.id;
     const color = isSel ? '#FF9800' : a.color;
     const areaLbl = formatArea(a.realArea, a.pixelArea);
-    const lw = Math.max(70, areaLbl.length * 7 + 16);
+    // Dynamic scaling based on displayed shape size
+    const xs = dp.map(p => p.x), ys = dp.map(p => p.y);
+    const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+    const minDim = Math.min(bw, bh);
+    const sc = Math.min(1, Math.max(0.5, minDim / 150));
+    const fs = 12 * sc;
+    const lw = Math.max(70 * sc, areaLbl.length * 7 * sc + 16 * sc);
+    const lh = 24 * sc;
+    const showEdges = showEdgeLengths && minDim >= 56; // hide edge labels on tiny shapes
+    const offsetEdges = minDim < 140; // push edge labels outside small shapes
     return (
       <G key={a.id}>
         <Polygon points={ptsStr} fill={`${color}25`} stroke={color} strokeWidth={isSel ? 3 : 2} />
         {/* Vertex points (bigger when selected for dragging) */}
-        {dp.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={isSel ? 10 : 5} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />)}
+        {dp.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={isSel ? 10 : Math.max(3, 5 * sc)} fill={color} stroke={isSel ? '#fff' : 'none'} strokeWidth={isSel ? 2 : 0} />)}
         {/* Edge lengths */}
-        {showEdgeLengths && a.points.map((pt, i) => {
+        {showEdges && a.points.map((pt, i) => {
           const j = (i + 1) % a.points.length;
           const pixLen = calcDist(a.points[i], a.points[j]);
           const edgeLabel = formatPixelLen(pixLen);
           const dpi = dp[i], dpj = dp[j];
-          const emx = (dpi.x + dpj.x) / 2, emy = (dpi.y + dpj.y) / 2;
-          const elw = Math.max(50, edgeLabel.length * 6.5 + 10);
+          let emx = (dpi.x + dpj.x) / 2, emy = (dpi.y + dpj.y) / 2;
+          const efs = 10 * sc;
+          const elw = Math.max(50 * sc, edgeLabel.length * 6.5 * sc + 10 * sc);
+          const elh = 18 * sc;
+          // Push label outward (away from centroid) on small shapes to avoid overlap
+          if (offsetEdges) {
+            const dx = emx - cx, dy = emy - cy;
+            const dl = Math.sqrt(dx * dx + dy * dy) || 1;
+            emx += (dx / dl) * (elh / 2 + 8); emy += (dy / dl) * (elh / 2 + 8);
+          }
           return (
             <G key={`edge-${a.id}-${i}`}>
-              <Rect x={emx - elw / 2} y={emy - 9} width={elw} height={18} rx={3} fill="rgba(255,255,255,0.9)" stroke={color} strokeWidth={0.8} />
-              <SvgText x={emx} y={emy + 4} fill={color} fontSize={10} fontWeight="bold" textAnchor="middle">{edgeLabel}</SvgText>
+              <Rect x={emx - elw / 2} y={emy - elh / 2} width={elw} height={elh} rx={3 * sc} fill="rgba(255,255,255,0.9)" stroke={color} strokeWidth={0.8} />
+              <SvgText x={emx} y={emy + efs * 0.36} fill={color} fontSize={efs} fontWeight="bold" textAnchor="middle">{edgeLabel}</SvgText>
             </G>
           );
         })}
         {/* Area label */}
-        <Rect x={cx - lw / 2} y={cy - 12} width={lw} height={24} rx={4} fill="rgba(255,255,255,0.95)" stroke={color} strokeWidth={1} />
-        <SvgText x={cx} y={cy + 5} fill={color} fontSize={12} fontWeight="bold" textAnchor="middle">{areaLbl}</SvgText>
+        <Rect x={cx - lw / 2} y={cy - lh / 2} width={lw} height={lh} rx={4 * sc} fill="rgba(255,255,255,0.95)" stroke={color} strokeWidth={1} />
+        <SvgText x={cx} y={cy + fs * 0.36} fill={color} fontSize={fs} fontWeight="bold" textAnchor="middle">{areaLbl}</SvgText>
       </G>
     );
   };

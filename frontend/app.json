@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
-      "buildNumber": "39",
+      "buildNumber": "40",
       "infoPlist": {
         "NSCameraUsageDescription": "Fotos für Aufmaße und Skizzen aufnehmen",
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",

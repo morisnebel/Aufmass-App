@@ -11877,15 +11877,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-: '#1976d2',
-  },
-  elementStyleStrokeDot: {
-    borderRadius: 50,
-    marginBottom: 2,
-  },
-  elementStyleStrokeLabel: {
-    fontSize: 10,
-    color: '#666',
-    fontWeight: '500',
-  },
-});

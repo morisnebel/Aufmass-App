@@ -1781,11 +1781,19 @@ export default function ProjectDetailScreen() {
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
       
-      // Notizen nur anzeigen wenn vorhanden - kompakt inline
-      const notesHtml = sketchNotes.trim() 
-        ? `<div class="sketch-notes sketch-notes-filled">
-            <span class="sketch-notes-label">Notizen: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>
-          </div>`
+      // Notizen gruppiert anzeigen: Hauptnotiz + Memo-Pfeil-Texte + Notiz-Texte (alle zusammen)
+      const noteParts: string[] = [];
+      if (sketchNotes.trim()) {
+        noteParts.push(`<span class="sketch-notes-label">Notizen: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>`);
+      }
+      if (pointerTexts.length > 0) {
+        noteParts.push(`<span class="sketch-notes-label">${sketchLbl.pointerName}: </span><span class="sketch-notes-text">${pointerTexts.join(' | ')}</span>`);
+      }
+      if (memoTexts.length > 0) {
+        noteParts.push(`<span class="sketch-notes-label">${sketchLbl.memoName}: </span><span class="sketch-notes-text">${memoTexts.join(' | ')}</span>`);
+      }
+      const notesHtml = noteParts.length > 0
+        ? `<div class="sketch-notes sketch-notes-filled">${noteParts.join('<br>')}</div>`
         : '';
       
       return `

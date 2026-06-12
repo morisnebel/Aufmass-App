@@ -174,3 +174,7 @@ German (Deutsch)
 - draw.tsx: Button-Labels nutzen Kürzel (toolLabels.pointerCode/memoCode), Modal-Titel nutzen Namen. State toolLabels via getSketchLabels() beim Mount.
 - PDF ([id].tsx generatePdfHtml): pointer-/memo-Texte werden IMMER separat extrahiert (vorher nur Fallback wenn keine Hauptnotiz → Bug behoben). Anzeige gruppiert: "Notizen: ..." + "<pointerName>: ..." + "<memoName>: ..." je eigene Zeile.
 - In-App Skizzen-Vorschau ([id].tsx): States sketchElementNotes + sketchLabelCfg, useEffect lädt sketch_meta_${id} bei sketches-Änderung; Anzeige gruppiert unter der Skizze (Hauptnotiz + Memo + Notiz, fett gelabelt).
+
+### Nachtrag (Feb 2026): Verlorene Edits nach Datei-Korruption wiederhergestellt
+- Bei einem Speicherfehler gingen 3 Edits verloren: draw.tsx toolLabels-State, settings/index.tsx Import, [id].tsx notesHtml-Gruppierung. Alle wiederhergestellt und verifiziert (grep + tsc + Bundle 200).
+- PDF-Vorschau & PDF-Druck nutzen beide generatePdfHtml → gruppierte Notizen (Notizen/pointerName/memoName) jetzt aktiv.

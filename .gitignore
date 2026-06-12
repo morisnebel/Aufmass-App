@@ -281,3 +281,8 @@ agenthub/agents/youtube/db
 # Environment files
 *.env
 *.env.*
+.env
+.env.*
+credentials.json
+*.key
+.credentials

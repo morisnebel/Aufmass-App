@@ -4798,6 +4798,22 @@ export default function DrawSketchScreen() {
       } else if (el.type === 'line' || el.type === 'arrow' || el.type === 'pointer') {
         const dist = distanceToLineSegment(x, y, el.data.x1, el.data.y1, el.data.x2, el.data.y2);
         if (dist < 15) return el;
+        // Pointer (Notiz-Pfeil): Text-Label ebenfalls antippbar machen (wie bei Memo)
+        if (el.type === 'pointer' && el.data.text) {
+          const fs = el.data.fontSize || 16;
+          const sf = fs / 16;
+          const padX = 5 * sf;
+          const padY = 8 * sf;
+          const ang = Math.atan2(el.data.y2 - el.data.y1, el.data.x2 - el.data.x1);
+          const tx = el.data.x1 + 15 * Math.cos(ang - Math.PI / 2);
+          const ty = el.data.y1 + 15 * Math.sin(ang - Math.PI / 2);
+          const w = el.data.text.length * fs * 0.6 + 2 * padX;
+          const h = fs + padY;
+          if (x >= tx - padX - 10 && x <= tx - padX + w + 10 &&
+              y >= ty - fs - 10 && y <= ty - fs + h + 10) {
+            return el;
+          }
+        }
       } else if (el.type === 'text') {
         const elX = el.x || 0;
         const elY = el.y || 0;

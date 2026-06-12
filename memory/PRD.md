@@ -163,3 +163,7 @@ German (Deutsch)
 ### Bugfix: Datum-Picker sprang auf heute zurück (Feb 2026)
 - [id].tsx direkter Datum-Picker (Übersicht): value war nicht an tempSelectedDate gebunden → iOS-Spinner wurde bei jedem Re-Render auf heute/gespeichertes Datum zurückgesetzt (erste Auswahl unmöglich).
 - Fix: value={tempSelectedDate || gespeichertes Datum || heute}; beim Öffnen wird tempSelectedDate auf null zurückgesetzt. Edit-Modal-Picker war bereits korrekt (editProjectTypeDate-gebunden).
+
+### Bugfix: Notiz-Pfeil Text nicht antippbar (Feb 2026)
+- draw.tsx findElementAtPoint: pointer-Typ prüfte nur die Linie (dist<15). Text-Label am Startpunkt war nicht im Hit-Test → Doppeltipp auf Text öffnete nichts ("nur Pfeil bearbeitbar").
+- Fix: Text-Label-Hitbox ergänzt (gleiche Geometrie wie Render: textOffset = Startpunkt + 15px senkrecht, Box = len*fs*0.6 + Padding, sf=fs/16). Doppeltipp auf Text öffnet jetzt das Memo-Pfeil-Bearbeiten-Modal (Text + Linienstärke + Schriftgröße + Farbe).

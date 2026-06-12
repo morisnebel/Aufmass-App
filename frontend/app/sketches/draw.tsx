@@ -1519,6 +1519,9 @@ export default function DrawSketchScreen() {
   const [showEditTextModal, setShowEditTextModal] = useState(false);
   const [showEditPointerModal, setShowEditPointerModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  // Individuelle Werkzeug-Beschriftungen (aus App-Einstellungen)
+  const [toolLabels, setToolLabels] = useState<SketchLabelSettings>({ ...DEFAULT_SKETCH_LABELS });
+  useEffect(() => { getSketchLabels().then(setToolLabels); }, []);
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');

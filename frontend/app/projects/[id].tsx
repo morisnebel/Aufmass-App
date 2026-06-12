@@ -2964,8 +2964,6 @@ export default function ProjectDetailScreen() {
             .sketch-item {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              max-height: 850px !important;
-              overflow: hidden !important;
             }
             .sketch-item img {
               max-width: 100% !important;
@@ -3011,8 +3009,6 @@ export default function ProjectDetailScreen() {
               break-inside: avoid !important;
               margin-bottom: 10px !important;
               margin-right: 1% !important;
-              max-height: 500px !important;
-              overflow: hidden !important;
             }
             .sketches-container-iphone .sketch-small {
               width: 32% !important;
@@ -3135,8 +3131,10 @@ export default function ProjectDetailScreen() {
           }
           /* Globale Überlauf-Kontrolle für alle Container */
           .sketch-item, .photo-item {
-            overflow: hidden;
             max-width: 100%;
+          }
+          .photo-item {
+            overflow: hidden;
           }
           img {
             max-width: 100%;
@@ -3797,8 +3795,6 @@ export default function ProjectDetailScreen() {
             font-size: 14px !important;
             margin-bottom: 10px !important;
             margin-right: 1% !important;
-            max-height: 500px !important;
-            overflow: hidden !important;
           }
           .sketches-container-iphone .sketch-small {
             width: 32% !important;
@@ -3931,11 +3927,13 @@ export default function ProjectDetailScreen() {
           .photo-item, .sketch-item {
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            overflow: hidden;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
             display: block;
+          }
+          .photo-item {
+            overflow: hidden;
             max-height: 350px;
           }
           /* Photo/Sketch im Grid nicht umbrechen */

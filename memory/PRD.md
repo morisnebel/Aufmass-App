@@ -178,3 +178,7 @@ German (Deutsch)
 ### Nachtrag (Feb 2026): Verlorene Edits nach Datei-Korruption wiederhergestellt
 - Bei einem Speicherfehler gingen 3 Edits verloren: draw.tsx toolLabels-State, settings/index.tsx Import, [id].tsx notesHtml-Gruppierung. Alle wiederhergestellt und verifiziert (grep + tsc + Bundle 200).
 - PDF-Vorschau & PDF-Druck nutzen beide generatePdfHtml → gruppierte Notizen (Notizen/pointerName/memoName) jetzt aktiv.
+
+### Bugfix: Skizzen-Notizen im PDF abgeschnitten (Feb 2026)
+- Ursache: Mehrere CSS-Regeln klippten .sketch-item: print max-height:850px + overflow:hidden, iphone-print max-height:500px+hidden, screen iphone max-height:500px+hidden, Basis-CSS .photo-item,.sketch-item max-height:350px+overflow:hidden, globale overflow:hidden-Regel.
+- Fix: Alle max-height/overflow-Clippings für .sketch-item entfernt (img-Clamps 780/500/420px bleiben). .photo-item behält overflow:hidden+max-height:350px (eigene Regel gesplittet). Notizen stehen jetzt vollständig direkt unter jeder Skizze, page-break-inside:avoid bleibt.

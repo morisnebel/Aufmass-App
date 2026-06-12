@@ -154,6 +154,35 @@ export default function ProjectDetailScreen() {
   const [roofs, setRoofs] = useState<Roof[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [sketches, setSketches] = useState<Sketch[]>([]);
+  // Memo-/Notiz-Texte der Skizzen (für gruppierte Anzeige unter der Vorschau)
+  const [sketchElementNotes, setSketchElementNotes] = useState<Record<string, { pointer: string[]; memo: string[] }>>({});
+  const [sketchLabelCfg, setSketchLabelCfg] = useState<{ pointerName: string; memoName: string }>({ pointerName: 'Memo', memoName: 'Notiz' });
+  useEffect(() => {
+    const loadSketchElementNotes = async () => {
+      try {
+        const lblRaw = await AsyncStorage.getItem('sketch_label_settings');
+        if (lblRaw) {
+          const p = JSON.parse(lblRaw);
+          setSketchLabelCfg({ pointerName: p.pointerName?.trim() || 'Memo', memoName: p.memoName?.trim() || 'Notiz' });
+        }
+        const result: Record<string, { pointer: string[]; memo: string[] }> = {};
+        for (const sk of sketches) {
+          const metaRaw = await AsyncStorage.getItem(`sketch_meta_${sk.id}`);
+          if (!metaRaw) continue;
+          const meta = JSON.parse(metaRaw);
+          if (meta.elements && Array.isArray(meta.elements)) {
+            const pointer = meta.elements.filter((el: any) => el.type === 'pointer' && el.data?.text).map((el: any) => el.data.text.trim()).filter((t: string) => t.length > 0);
+            const memo = meta.elements.filter((el: any) => el.type === 'memo' && el.data?.text).map((el: any) => el.data.text.trim()).filter((t: string) => t.length > 0);
+            if (pointer.length || memo.length) result[sk.id] = { pointer, memo };
+          }
+        }
+        setSketchElementNotes(result);
+      } catch (e) {
+        console.log('Error loading sketch element notes:', e);
+      }
+    };
+    if (sketches.length > 0) loadSketchElementNotes(); else setSketchElementNotes({});
+  }, [sketches]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
@@ -1688,10 +1717,25 @@ export default function ProjectDetailScreen() {
     // iPhone: kleinere Skizzen (2 pro Seite) für bessere Kompatibilität
     // iPad: normale Größe
     
+    // Individuelle Werkzeug-Beschriftungen laden (für Memo-/Notiz-Gruppierung)
+    let sketchLbl = { pointerName: 'Memo', memoName: 'Notiz' };
+    try {
+      const sketchLblRaw = await AsyncStorage.getItem('sketch_label_settings');
+      if (sketchLblRaw) {
+        const parsed = JSON.parse(sketchLblRaw);
+        sketchLbl = {
+          pointerName: parsed.pointerName?.trim() || 'Memo',
+          memoName: parsed.memoName?.trim() || 'Notiz',
+        };
+      }
+    } catch (_) {}
+
     const sketchItems = await Promise.all(sketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
       let sketchNotes = sketch.notes || '';
+      let pointerTexts: string[] = [];
+      let memoTexts: string[] = [];
       
       // Metadata aus separatem Storage laden (zuverlässiger als sketch.metadata)
       try {
@@ -1712,15 +1756,16 @@ export default function ProjectDetailScreen() {
         if (!sketchNotes && metadata.notes) {
           sketchNotes = metadata.notes;
         }
-        // Memo-Elemente UND Pointer-Elemente: Text extrahieren (visuelle Notizen auf der Zeichenfläche)
-        if (!sketchNotes && metadata.elements && Array.isArray(metadata.elements)) {
-          const noteTexts = metadata.elements
-            .filter((el: any) => (el.type === 'memo' || el.type === 'pointer') && el.data?.text)
+        // Memo- und Pointer-Texte IMMER separat extrahieren (werden ZUSÄTZLICH zur Hauptnotiz angezeigt)
+        if (metadata.elements && Array.isArray(metadata.elements)) {
+          pointerTexts = metadata.elements
+            .filter((el: any) => el.type === 'pointer' && el.data?.text)
             .map((el: any) => el.data.text.trim())
             .filter((t: string) => t.length > 0);
-          if (noteTexts.length > 0) {
-            sketchNotes = noteTexts.join(' | ');
-          }
+          memoTexts = metadata.elements
+            .filter((el: any) => el.type === 'memo' && el.data?.text)
+            .map((el: any) => el.data.text.trim())
+            .filter((t: string) => t.length > 0);
         }
       } catch (e) {
         console.log('Error parsing sketch metadata:', e);
@@ -5817,11 +5862,25 @@ export default function ProjectDetailScreen() {
                       </View>
                     )}
                     
-                    {/* Notizen anzeigen */}
-                    {sketch.notes ? (
-                      <Text style={{ fontSize: 12, color: '#666', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
-                        Notizen: {sketch.notes}
-                      </Text>
+                    {/* Notizen gruppiert anzeigen: Hauptnotiz + Memo + Notiz */}
+                    {(sketch.notes || sketchElementNotes[sketch.id]?.pointer?.length || sketchElementNotes[sketch.id]?.memo?.length) ? (
+                      <View style={{ paddingHorizontal: 8, paddingBottom: 6 }}>
+                        {sketch.notes ? (
+                          <Text style={{ fontSize: 12, color: '#666' }} numberOfLines={2}>
+                            <Text style={{ fontWeight: '700' }}>Notizen: </Text>{sketch.notes}
+                          </Text>
+                        ) : null}
+                        {sketchElementNotes[sketch.id]?.pointer?.length ? (
+                          <Text style={{ fontSize: 12, color: '#666' }} numberOfLines={2}>
+                            <Text style={{ fontWeight: '700' }}>{sketchLabelCfg.pointerName}: </Text>{sketchElementNotes[sketch.id].pointer.join(' | ')}
+                          </Text>
+                        ) : null}
+                        {sketchElementNotes[sketch.id]?.memo?.length ? (
+                          <Text style={{ fontSize: 12, color: '#666' }} numberOfLines={2}>
+                            <Text style={{ fontWeight: '700' }}>{sketchLabelCfg.memoName}: </Text>{sketchElementNotes[sketch.id].memo.join(' | ')}
+                          </Text>
+                        ) : null}
+                      </View>
                     ) : null}
                     
                   </TouchableOpacity>

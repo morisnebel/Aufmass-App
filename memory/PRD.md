@@ -167,3 +167,10 @@ German (Deutsch)
 ### Bugfix: Notiz-Pfeil Text nicht antippbar (Feb 2026)
 - draw.tsx findElementAtPoint: pointer-Typ prüfte nur die Linie (dist<15). Text-Label am Startpunkt war nicht im Hit-Test → Doppeltipp auf Text öffnete nichts ("nur Pfeil bearbeitbar").
 - Fix: Text-Label-Hitbox ergänzt (gleiche Geometrie wie Render: textOffset = Startpunkt + 15px senkrecht, Box = len*fs*0.6 + Padding, sf=fs/16). Doppeltipp auf Text öffnet jetzt das Memo-Pfeil-Bearbeiten-Modal (Text + Linienstärke + Schriftgröße + Farbe).
+
+### Skizzen-Werkzeuge individuell benennen + gruppierte Notizen (Feb 2026)
+- Neuer Service /app/frontend/services/SketchLabels.ts: Key 'sketch_label_settings' = { pointerName, pointerCode, memoName, memoCode }, Defaults Memo/Memo/Notiz/Notiz. getSketchLabels() mit Trim+Fallback.
+- Einstellungen (settings/index.tsx): Sektion "Skizzen-Werkzeuge benennen" (nach Sprache) – Name+Kürzel für Memo-Pfeil (pointer) und Notiz (memo), speichert sofort. testIDs: sketch-label-pointer-name/-code, sketch-label-memo-name/-code.
+- draw.tsx: Button-Labels nutzen Kürzel (toolLabels.pointerCode/memoCode), Modal-Titel nutzen Namen. State toolLabels via getSketchLabels() beim Mount.
+- PDF ([id].tsx generatePdfHtml): pointer-/memo-Texte werden IMMER separat extrahiert (vorher nur Fallback wenn keine Hauptnotiz → Bug behoben). Anzeige gruppiert: "Notizen: ..." + "<pointerName>: ..." + "<memoName>: ..." je eigene Zeile.
+- In-App Skizzen-Vorschau ([id].tsx): States sketchElementNotes + sketchLabelCfg, useEffect lädt sketch_meta_${id} bei sketches-Änderung; Anzeige gruppiert unter der Skizze (Hauptnotiz + Memo + Notiz, fett gelabelt).

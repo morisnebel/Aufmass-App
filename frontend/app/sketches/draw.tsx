@@ -29,6 +29,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
 import PdfThumbnail from '../../utils/PdfThumbnailShim';
 import { SketchService, PhotoService } from '../../services/LocalStorage';
+import { getSketchLabels, DEFAULT_SKETCH_LABELS, SketchLabelSettings } from '../../services/SketchLabels';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
@@ -7355,9 +7356,9 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.memo')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]} numberOfLines={1}>{toolLabels.pointerCode}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.text')}</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.note')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]} numberOfLines={1}>{toolLabels.memoCode}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.notes')}</Text>
           </View>
         </View>
@@ -8926,7 +8927,7 @@ export default function DrawSketchScreen() {
       <Modal visible={showPointerModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Memo-Pfeil</Text>
+            <Text style={styles.modalTitle}>{toolLabels.pointerName}-Pfeil</Text>
             <Text style={styles.modalSubtitle}>Optional: Notiz hinzufügen</Text>
             <TextInput
               ref={pointerInputRef}
@@ -8992,7 +8993,7 @@ export default function DrawSketchScreen() {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Memo-Pfeil bearbeiten</Text>
+              <Text style={styles.modalTitle}>{toolLabels.pointerName}-Pfeil bearbeiten</Text>
               <TextInput
                 ref={pointerInputRef}
                 style={styles.modalInput}
@@ -9113,7 +9114,7 @@ export default function DrawSketchScreen() {
           <View style={styles.modalContent}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View>
-                <Text style={styles.modalTitle}>Notiz hinzufügen</Text>
+                <Text style={styles.modalTitle}>{toolLabels.memoName} hinzufügen</Text>
                 <Text style={styles.modalSubtitle}>Text für die Notiz eingeben</Text>
               </View>
               <TouchableOpacity
@@ -9172,7 +9173,7 @@ export default function DrawSketchScreen() {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.modalTitle}>Notiz bearbeiten</Text>
+              <Text style={styles.modalTitle}>{toolLabels.memoName} bearbeiten</Text>
               <TouchableOpacity
                 style={{
                   backgroundColor: showModalNumpad ? '#1976d2' : '#f0f0f0',
@@ -11865,6 +11866,18 @@ const styles = StyleSheet.create({
   },
   elementStyleStrokeButtonActive: {
     backgroundColor: '#1976d2',
+  },
+  elementStyleStrokeDot: {
+    borderRadius: 50,
+    marginBottom: 2,
+  },
+  elementStyleStrokeLabel: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '500',
+  },
+});
+: '#1976d2',
   },
   elementStyleStrokeDot: {
     borderRadius: 50,

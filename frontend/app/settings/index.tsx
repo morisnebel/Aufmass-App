@@ -22,6 +22,7 @@ import { isPro, getAppName, getProStatus, setProStatus, loadProStatus, updateFea
 import { useTranslation } from 'react-i18next';
 import { saveLanguage, getCurrentLanguage } from '../../i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSketchLabels, saveSketchLabels, DEFAULT_SKETCH_LABELS, SketchLabelSettings } from '../../services/SketchLabels';
 
 interface CompanySettings {
   company_name: string;
@@ -154,7 +155,17 @@ export default function SettingsScreen() {
     });
     // Gespeicherten Expert-Code laden
     loadExpertCode();
+    // Skizzen-Werkzeug-Beschriftungen laden
+    getSketchLabels().then(setSketchLabels);
   }, []);
+
+  // Skizzen-Werkzeuge benennen (Memo-Pfeil & Notiz)
+  const [sketchLabels, setSketchLabels] = useState<SketchLabelSettings>({ ...DEFAULT_SKETCH_LABELS });
+  const updateSketchLabel = (field: keyof SketchLabelSettings, value: string) => {
+    const next = { ...sketchLabels, [field]: value };
+    setSketchLabels(next);
+    saveSketchLabels(next);
+  };
   
   // Expert-Code aus AsyncStorage laden
   const loadExpertCode = async () => {
@@ -458,6 +469,64 @@ export default function SettingsScreen() {
                   🇬🇧  {t('settings.english')}
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Skizzen-Werkzeuge benennen */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Skizzen-Werkzeuge benennen</Text>
+            <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>
+              Der Name erscheint in der Vorschau und im PDF (z.B. „Vermerk"), das Kürzel auf dem Button in der Skizze (z.B. „VM").
+            </Text>
+
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#e91e63', marginBottom: 8 }}>➤ Memo-Pfeil</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={[styles.inputGroup, { flex: 2 }]}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  testID="sketch-label-pointer-name"
+                  style={styles.input}
+                  value={sketchLabels.pointerName}
+                  onChangeText={(v) => updateSketchLabel('pointerName', v)}
+                  placeholder="z.B. Vermerk"
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Kürzel</Text>
+                <TextInput
+                  testID="sketch-label-pointer-code"
+                  style={styles.input}
+                  value={sketchLabels.pointerCode}
+                  onChangeText={(v) => updateSketchLabel('pointerCode', v)}
+                  placeholder="z.B. VM"
+                  maxLength={8}
+                />
+              </View>
+            </View>
+
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#E74C3C', marginTop: 8, marginBottom: 8 }}>💬 Notiz</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={[styles.inputGroup, { flex: 2 }]}>
+                <Text style={styles.label}>Name</Text>
+                <TextInput
+                  testID="sketch-label-memo-name"
+                  style={styles.input}
+                  value={sketchLabels.memoName}
+                  onChangeText={(v) => updateSketchLabel('memoName', v)}
+                  placeholder="z.B. Zusatzleistung"
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Kürzel</Text>
+                <TextInput
+                  testID="sketch-label-memo-code"
+                  style={styles.input}
+                  value={sketchLabels.memoCode}
+                  onChangeText={(v) => updateSketchLabel('memoCode', v)}
+                  placeholder="z.B. ZL"
+                  maxLength={8}
+                />
+              </View>
             </View>
           </View>
 

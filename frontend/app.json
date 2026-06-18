@@ -35,7 +35,7 @@
     },
     "android": {
       "package": "com.aufmassprofi.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"

@@ -40,16 +40,49 @@ const weatherIcons: Record<string, string> = {
 
 /**
  * Erzeugt einen SVG für eine Unterschrift (aus Pfad-String "M..L..|M..L..").
+ * Berechnet automatisch die Bounding-Box der Punkte, damit die Unterschrift
+ * unabhängig von der Bildschirmgröße sauber im PDF-Bereich angezeigt wird.
  */
 const renderSignatureSvg = (paths: string | undefined, width = 280, height = 90): string => {
   if (!paths) {
     return `<div style="width:${width}px;height:${height}px;border-bottom:1px solid #999;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
   }
   const splitPaths = paths.split('|').filter(Boolean);
+
+  // Bounding-Box aller Punkte berechnen
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const coordRegex = /[ML]?\s*([\d.]+)\s*,\s*([\d.]+)/g;
+  splitPaths.forEach((d) => {
+    let m: RegExpExecArray | null;
+    coordRegex.lastIndex = 0;
+    while ((m = coordRegex.exec(d)) !== null) {
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      if (!isNaN(x) && !isNaN(y)) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  });
+
+  // Falls keine Punkte: leere Linie
+  if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) {
+    return `<div style="width:${width}px;height:${height}px;border-bottom:1px solid #999;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
+  }
+
+  // Mindestbreite/Höhe absichern
+  const padding = 8;
+  const vbX = minX - padding;
+  const vbY = minY - padding;
+  const vbW = Math.max(20, (maxX - minX) + padding * 2);
+  const vbH = Math.max(20, (maxY - minY) + padding * 2);
+
   const svgPaths = splitPaths
-    .map((d) => `<path d="${d}" stroke="#1a237e" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`)
+    .map((d) => `<path d="${d}" stroke="#0f172a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`)
     .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet" style="border-bottom:1px solid #999;">${svgPaths}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" style="border-bottom:1px solid #999;display:block;">${svgPaths}</svg>`;
 };
 
 /**

@@ -3,11 +3,10 @@
  * Generiert das HTML für einen Rapport-PDF und stellt einen Generator bereit,
  * der auch in das Gesamt-Projekt-PDF eingebunden werden kann.
  */
-import { Report, Project, Customer } from './LocalStorage';
+import { Report, Project, Customer, SettingsService } from './LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getAppName } from './FeatureFlags';
-import { SettingsService } from './LocalStorage';
 
 const escapeHtml = (text: string | undefined | null): string => {
   if (!text) return '';
@@ -324,6 +323,7 @@ export const generateReportSectionHtml = (
           </div>
         </div>
       </div>
+      ${(options as any).includeFooterText ? `<div class="doc-footer">${(options as any).includeFooterText}</div>` : ''}
     </div>
   `;
 };
@@ -332,9 +332,7 @@ export const REPORT_CSS = `
   .report-page {
     background: #fff;
     padding: 8px 0 16px 0;
-    page-break-after: always;
   }
-  .report-page:last-child { page-break-after: auto; }
   .report-header {
     display: flex;
     justify-content: space-between;
@@ -429,15 +427,22 @@ export const REPORT_CSS = `
   }
   .info-mini-label { font-size: 10px; color: #888; }
   .info-mini-value { font-size: 12px; font-weight: 600; color: #333; }
-  .photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .photo-grid { display: flex; flex-wrap: wrap; gap: 6px; page-break-inside: avoid; }
   .photo-item {
-    width: 30%;
+    width: 48%;
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
+    background: #1f2937;
+    page-break-inside: avoid;
   }
-  .photo-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
-  .photo-caption { font-size: 9px; padding: 3px; background: #f5f5f5; }
+  .photo-item img {
+    width: 100%; height: 180px;
+    object-fit: contain;
+    display: block;
+    background: #1f2937;
+  }
+  .photo-caption { font-size: 9px; padding: 3px; background: #f5f5f5; color: #333; }
   .signatures {
     display: flex;
     justify-content: space-between;
@@ -477,14 +482,14 @@ export const generateReportHtml = async (
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 20px; color: #333; }
+        @page { margin: 14mm; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; color: #333; }
         ${REPORT_CSS}
-        .doc-footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid #e0e0e0; font-size: 10px; color: #999; text-align: center; }
+        .doc-footer { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 9px; color: #999; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
       </style>
     </head>
     <body>
-      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, reportTitle } as any)}
-      <div class="doc-footer">Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}</div>
+      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, reportTitle, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
     </body>
     </html>
   `;

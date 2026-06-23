@@ -4361,21 +4361,23 @@ export default function ProjectDetailScreen() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { generateReportSectionHtml, REPORT_CSS } = require('../../services/ReportPdfService');
-      const reportsHtml = `
-        <div style="page-break-before: always;">
-          <h1 style="color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:6px;">📝 Rapporte (${reportsList.length})</h1>
-          ${reportsList.map((r: Report) => generateReportSectionHtml(r, project, customer)).join('')}
+      // Jeden Rapport in einen eigenen .page-Container packen, damit er die volle Seitenbreite
+      // (210mm) bekommt - sonst sind Rapporte im iPhone-PDF-Preview zu schmal.
+      const rapportePages = reportsList.map((r: Report, idx: number) => `
+        <div class="page" style="page-break-before: always;">
+          ${idx === 0 ? `<h1 style="color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:6px;margin-top:0;">📝 Rapporte (${reportsList.length})</h1>` : ''}
+          ${generateReportSectionHtml(r, project, customer)}
         </div>
-      `;
+      `).join('');
       // inject extra css + reports before </body>
       let result = html;
       if (result.includes('</head>')) {
         result = result.replace('</head>', `<style>${REPORT_CSS}</style></head>`);
       }
       if (result.includes('</body>')) {
-        result = result.replace('</body>', `${reportsHtml}</body>`);
+        result = result.replace('</body>', `${rapportePages}</body>`);
       } else {
-        result = result + reportsHtml;
+        result = result + rapportePages;
       }
       return result;
     } catch (e) {

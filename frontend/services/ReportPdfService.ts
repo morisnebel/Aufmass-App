@@ -399,7 +399,7 @@ export const REPORT_CSS = `
   }
   .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 12px; }
   .info-row { font-size: 11px; margin: 2px 0; }
-  .section { margin-bottom: 12px; page-break-inside: avoid; }
+  .section { margin-bottom: 12px; }
   .section-title {
     font-size: 13px;
     font-weight: bold;
@@ -410,6 +410,7 @@ export const REPORT_CSS = `
     margin-bottom: 6px;
     page-break-after: avoid;
     break-after: avoid-page;
+    page-break-inside: avoid;
   }
   .employees-list { margin: 4px 0 0 18px; font-size: 12px; }
   .employees-list li { margin: 2px 0; }
@@ -424,25 +425,40 @@ export const REPORT_CSS = `
   .work-items {
     list-style: none;
     padding-left: 0;
-    margin: 4px 0;
+    margin: 4px 0 0 0;
     font-size: 11px;
-    /* 2 Spalten auf normalem Layout, 3 Spalten falls genug Platz vorhanden */
-    column-count: 2;
-    column-gap: 18px;
-    column-fill: balance;
+    /* font-size:0 verhindert Whitespace zwischen inline-block Items */
+    font-size: 0;
     page-break-inside: avoid;
   }
-  /* Bei mehr als 12 Items zeigen wir 3 Spalten für noch kompakteres Layout */
-  .work-items.dense { column-count: 3; column-gap: 14px; font-size: 10px; }
   .work-items li {
+    /* 2 Spalten Standard: 2 Items pro Reihe (jeweils ~50%) */
+    display: inline-block;
+    vertical-align: top;
+    width: 49%;
+    margin-right: 1%;
     padding: 2px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 5px;
+    font-size: 11px;
     page-break-inside: avoid;
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
     line-height: 1.35;
+    box-sizing: border-box;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  /* Bei mehr als 12 Items: 3 Spalten (jeweils ~33%) */
+  .work-items.dense li {
+    width: 32%;
+    font-size: 10px;
+  }
+  .work-items li .check-box {
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .work-items li > span {
+    vertical-align: middle;
   }
   .work-items .check-box { font-size: 14px; color: #16a34a; }
   .work-items li.unchecked .check-box { color: #94a3b8; }

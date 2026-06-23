@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, Project, Customer } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
@@ -72,10 +72,11 @@ export default function HomeScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
-  // Pro-Banner: Ausgeliehene Maschinen & Inspektionen
+  // Pro-Banner: Ausgeliehene Maschinen, Inspektionen & niedriger Lagerbestand
   const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
   const [inspectionMachines, setInspectionMachines] = useState<MachineMaster[]>([]);
-  const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | null>(null);
+  const [lowStockMaterials, setLowStockMaterials] = useState<MaterialMaster[]>([]);
+  const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | 'lowstock' | null>(null);
   const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
@@ -113,6 +114,16 @@ export default function HomeScreen() {
             return da - db;
           });
           setInspectionMachines(inspect);
+          // Lager-Warnung: Materialien deren Bestand <= low_stock_threshold ist
+          try {
+            const allMaterials = await MaterialMasterService.getAll();
+            const lowStock = allMaterials.filter(m => {
+              if (m.stock_quantity == null) return false;
+              const threshold = m.low_stock_threshold ?? 5;
+              return m.stock_quantity <= threshold;
+            }).sort((a, b) => (a.stock_quantity || 0) - (b.stock_quantity || 0));
+            setLowStockMaterials(lowStock);
+          } catch { /* silent */ }
         } catch { /* silent */ }
       }
     } catch (error) {
@@ -703,10 +714,10 @@ export default function HomeScreen() {
       </View>
       )}
 
-      {/* Pro: Hinweise auf ausgeliehene Maschinen & Inspektionen (in einer Zeile) */}
-      {isProUser && (loanedMachines.length > 0 || inspectionMachines.length > 0) && (
+      {/* Pro: Hinweise auf ausgeliehene Maschinen, Inspektionen & niedrigen Lagerbestand */}
+      {isProUser && (loanedMachines.length > 0 || inspectionMachines.length > 0 || lowStockMaterials.length > 0) && (
         <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}>
-          <View style={styles.bannerRow}>
+          <View style={[styles.bannerRow, { flexWrap: 'wrap' }]}>
             {loanedMachines.length > 0 && (
               <TouchableOpacity
                 style={[styles.bannerCard, { backgroundColor: '#7c3aed' }]}
@@ -748,6 +759,29 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <Ionicons name={expandedBanner === 'inspection' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+                </TouchableOpacity>
+              );
+            })()}
+            {lowStockMaterials.length > 0 && (() => {
+              const empty = lowStockMaterials.filter(m => (m.stock_quantity || 0) <= 0).length;
+              return (
+                <TouchableOpacity
+                  style={[styles.bannerCard, { backgroundColor: empty > 0 ? '#dc2626' : '#0891b2' }]}
+                  onPress={() => setExpandedBanner(expandedBanner === 'lowstock' ? null : 'lowstock')}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.bannerCardIcon}>
+                    <Ionicons name={empty > 0 ? 'alert-circle' : 'cube-outline'} size={18} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bannerCardTitle}>
+                      {lowStockMaterials.length} {lowStockMaterials.length === 1 ? 'Material' : 'Materialien'}
+                    </Text>
+                    <Text style={styles.bannerCardSub}>
+                      {empty > 0 ? `Bestand leer (${empty})` : 'Lagerbestand niedrig'}
+                    </Text>
+                  </View>
+                  <Ionicons name={expandedBanner === 'lowstock' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
                 </TouchableOpacity>
               );
             })()}
@@ -816,6 +850,29 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           )}
+          {expandedBanner === 'lowstock' && lowStockMaterials.length > 0 && (
+            <View style={[styles.bannerDetail, { backgroundColor: '#ecfeff', borderColor: '#0891b2' }]}>
+              {lowStockMaterials.map(m => {
+                const empty = (m.stock_quantity || 0) <= 0;
+                const threshold = m.low_stock_threshold ?? 5;
+                return (
+                  <View key={m.id} style={styles.bannerDetailItem}>
+                    <Ionicons name={empty ? 'alert-circle' : 'cube'} size={14} color={empty ? '#dc2626' : '#0891b2'} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bannerDetailName}>{m.name}</Text>
+                      <Text style={[styles.bannerDetailMeta, { color: empty ? '#dc2626' : '#0891b2', fontWeight: empty ? '700' : '600' }]}>
+                        Bestand: {m.stock_quantity ?? 0} {m.unit || 'Stk'} {empty ? '(leer!)' : `(Schwelle: ${threshold})`}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity style={[styles.bannerOpenBtn, { backgroundColor: '#0891b2' }]} onPress={() => router.push('/materials')}>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+                <Text style={styles.bannerOpenBtnText}>Materialien öffnen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -836,6 +893,14 @@ export default function HomeScreen() {
             <Ionicons name="close-circle" size={20} color="#999" />
           </TouchableOpacity>
         )}
+        {/* Globale Suche Button */}
+        <TouchableOpacity
+          style={styles.globalSearchBtn}
+          onPress={() => router.push('/search')}
+          accessibilityLabel="Globale Suche"
+        >
+          <Ionicons name="search-circle" size={26} color="#1976d2" />
+        </TouchableOpacity>
       </View>
 
       {/* Status-Filter Tabs */}
@@ -1688,4 +1753,8 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingVertical: 8, marginTop: 4,
   },
   bannerOpenBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  globalSearchBtn: {
+    marginLeft: 6,
+    padding: 2,
+  },
 });

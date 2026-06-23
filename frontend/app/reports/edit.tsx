@@ -62,6 +62,7 @@ export default function ReportEditScreen() {
   const [companyLogo, setCompanyLogo] = useState<string>('');
   const [companyName, setCompanyName] = useState<string>('');
   const [reportTitle, setReportTitle] = useState<string>('Rapport');
+  const [existingReport, setExistingReport] = useState<Report | null>(null);
   const [showTitleEdit, setShowTitleEdit] = useState(false);
   const [titleEditInput, setTitleEditInput] = useState('');
 
@@ -156,6 +157,7 @@ export default function ReportEditScreen() {
       if (reportId) {
         const r = await ReportService.getById(reportId);
         if (r) {
+          setExistingReport(r);
           setReportNumber(r.report_number || '');
           setDate(r.date || new Date().toISOString().split('T')[0]);
           setContactPerson(r.contact_person || '');
@@ -239,6 +241,35 @@ export default function ReportEditScreen() {
         hours: e.hours != null ? e.hours : calcEmpHours(e.time_from, e.time_to, e.pause_minutes),
       }));
 
+      // Material-Lager: Delta-Berechnung gegen vorherigen Abzug
+      // Alte deducted_quantities (falls vorhanden, sonst leer)
+      const oldDeducted: Record<string, number> = (existingReport?.deducted_quantities) || {};
+      const newDeducted: Record<string, number> = {};
+      // Sammle alle aktuellen Material-Mengen pro master_id
+      materials.forEach(m => {
+        const mAny = m as any;
+        if (mAny.master_id) {
+          newDeducted[mAny.master_id] = (newDeducted[mAny.master_id] || 0) + (m.quantity || 0);
+        }
+      });
+      // Berechne Delta pro Material und passe Master-Bestand an
+      const allMasterIds = new Set([...Object.keys(oldDeducted), ...Object.keys(newDeducted)]);
+      const stockUpdates: { id: string; delta: number; name: string; newStock: number }[] = [];
+      for (const mid of allMasterIds) {
+        const oldQ = oldDeducted[mid] || 0;
+        const newQ = newDeducted[mid] || 0;
+        const delta = newQ - oldQ; // wenn positiv: mehr verbraucht als zuvor
+        if (delta === 0) continue;
+        try {
+          const master = await MaterialMasterService.getById(mid);
+          if (master && master.stock_quantity != null) {
+            const newStock = (master.stock_quantity || 0) - delta;
+            await MaterialMasterService.update(mid, { stock_quantity: Math.max(0, newStock) });
+            stockUpdates.push({ id: mid, delta, name: master.name, newStock: Math.max(0, newStock) });
+          }
+        } catch (err) { console.warn('[stock-update] failed for', mid, err); }
+      }
+
       const dataToSave: Omit<Report, 'id' | 'created_at' | 'updated_at'> = {
         project_id: projectId,
         report_number: reportNumber || undefined,
@@ -261,6 +292,7 @@ export default function ReportEditScreen() {
         signature_worker_name: signatureWorkerName || undefined,
         signed_at: (signatureCustomer || signatureWorker) ? new Date().toISOString() : undefined,
         photos,
+        deducted_quantities: newDeducted,
       };
       let saved: Report | null;
       if (reportId) {
@@ -268,10 +300,22 @@ export default function ReportEditScreen() {
       } else {
         saved = await ReportService.create(dataToSave);
       }
-      // Spinner sofort zurücksetzen — vor Navigation/Alert
+      // Spinner sofort zurücksetzen
       setSaving(false);
+      // Kurzes Feedback bei Lager-Updates (nur wenn relevant)
+      if (stockUpdates.length > 0 && !alsoExport) {
+        const lowStock = stockUpdates.filter(u => u.newStock <= 5);
+        if (lowStock.length > 0) {
+          // Asynchron, nicht-blockierend
+          setTimeout(() => {
+            Alert.alert(
+              'Lagerbestand niedrig',
+              lowStock.map(u => `• ${u.name}: nur noch ${u.newStock}`).join('\n'),
+            );
+          }, 300);
+        }
+      }
       if (alsoExport && saved) {
-        // PDF-Export läuft separat (kann auf iOS lange dauern), Spinner ist bereits zurückgesetzt
         try {
           await exportReportAsPdf(saved, project, customer);
         } catch (pdfErr) {
@@ -279,7 +323,6 @@ export default function ReportEditScreen() {
           Alert.alert('PDF-Fehler', 'PDF konnte nicht erstellt werden, der Rapport wurde aber gespeichert.');
         }
       } else {
-        // Sofort zurück navigieren — der Toast ersetzt das blockierende Alert
         router.back();
       }
       return saved;

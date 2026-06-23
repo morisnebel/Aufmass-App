@@ -1966,6 +1966,9 @@ export interface Report {
   signed_at?: string;
   // Fotos
   photos: ReportPhoto[];
+  // Material-Lagerabzug Tracking - Map: master_id -> bereits abgezogene Menge.
+  // So können wir bei Bearbeitung das Delta korrekt berechnen (kein Doppel-Abzug).
+  deducted_quantities?: Record<string, number>;
   created_at: string;
   updated_at: string;
 }

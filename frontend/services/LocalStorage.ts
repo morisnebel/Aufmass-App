@@ -1477,6 +1477,8 @@ export interface Settings {
   pdf_header_size?: 'small' | 'medium' | 'large';
   pdf_project_type_size?: 'small' | 'medium' | 'large';
   pdf_tools_size?: 'small' | 'medium' | 'large';
+  // Rapport-Einstellungen
+  report_title?: string; // z.B. "Tagesbericht", "Arbeitsrapport", default "Rapport"
 }
 
 export const SettingsService = {
@@ -1888,7 +1890,9 @@ export const AreaCalculationService = {
 export interface ReportEmployee {
   id: string;
   name: string;
-  hours?: number; // Stunden für diesen Mitarbeiter (auto-berechnet aus from/to/pause)
+  role?: string; // Funktion / Rolle (z.B. "Dachdecker", "Geselle", "Azubi")
+  entry_date?: string; // Datum dieses Eintrags (YYYY-MM-DD), default = report.date
+  hours?: number; // Stunden für diesen Eintrag (auto-berechnet aus from/to/pause)
   time_from?: string; // HH:MM
   time_to?: string; // HH:MM
   pause_minutes?: number; // Pause in Minuten

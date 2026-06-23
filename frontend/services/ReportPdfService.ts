@@ -7,6 +7,7 @@ import { Report, Project, Customer } from './LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getAppName } from './FeatureFlags';
+import { SettingsService } from './LocalStorage';
 
 const escapeHtml = (text: string | undefined | null): string => {
   if (!text) return '';
@@ -76,11 +77,19 @@ export const generateReportSectionHtml = (
   options: { standalone?: boolean } = {}
 ): string => {
   const totalHours = report.total_hours ?? calcHoursFromTimes(report.time_from, report.time_to);
-  // Mitarbeiter-Tabelle mit Beginn/Ende/Pause/Stunden
+  // Mitarbeiter-Tabelle mit Datum, Funktion, Beginn/Ende/Pause/Stunden
   const employeesTable = report.employees && report.employees.length > 0
     ? `<table class="emp-table">
         <thead>
-          <tr><th>Mitarbeiter</th><th>Beginn</th><th>Ende</th><th>Pause</th><th style="text-align:right;">Stunden</th></tr>
+          <tr>
+            <th>Datum</th>
+            <th>Mitarbeiter</th>
+            <th>Funktion</th>
+            <th>Beginn</th>
+            <th>Ende</th>
+            <th>Pause</th>
+            <th style="text-align:right;">Stunden</th>
+          </tr>
         </thead>
         <tbody>
           ${report.employees.map(e => {
@@ -95,8 +104,11 @@ export const generateReportSectionHtml = (
               mins -= empAny.pause_minutes || 0;
               return Math.max(0, Math.round((mins / 60) * 100) / 100);
             })();
+            const empDate = empAny.entry_date || report.date;
             return `<tr>
-              <td>${escapeHtml(e.name)}</td>
+              <td style="font-size:10px;">${formatDate(empDate)}</td>
+              <td style="font-weight:600;">${escapeHtml(e.name)}</td>
+              <td style="color:#64748b;font-size:10px;">${escapeHtml(empAny.role || '')}</td>
               <td style="text-align:center;">${escapeHtml(empAny.time_from || '–')}</td>
               <td style="text-align:center;">${escapeHtml(empAny.time_to || '–')}</td>
               <td style="text-align:center;">${empAny.pause_minutes ? `${empAny.pause_minutes} min` : '–'}</td>
@@ -104,12 +116,54 @@ export const generateReportSectionHtml = (
             </tr>`;
           }).join('')}
           <tr class="emp-total-row">
-            <td colspan="4" style="text-align:right;font-weight:700;">Gesamtstunden:</td>
-            <td style="text-align:right;font-weight:800;color:#1976d2;">${(report.total_hours ?? report.employees.reduce((s, e) => s + (e.hours || 0), 0)).toFixed(2)} h</td>
+            <td colspan="6" style="text-align:right;font-weight:700;">Gesamtstunden:</td>
+            <td style="text-align:right;font-weight:800;color:#1976d2;">${(report.total_hours ?? report.employees.reduce((s, e) => {
+              const ea = e as any;
+              if (e.hours != null) return s + e.hours;
+              if (!ea.time_from || !ea.time_to) return s;
+              const [fh, fm] = ea.time_from.split(':').map(Number);
+              const [th, tm] = ea.time_to.split(':').map(Number);
+              let mins = (th * 60 + tm) - (fh * 60 + fm);
+              if (mins < 0) mins += 24 * 60;
+              mins -= ea.pause_minutes || 0;
+              return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
+            }, 0)).toFixed(2)} h</td>
           </tr>
         </tbody>
       </table>`
     : '<p style="color:#999;font-style:italic;font-size:11px;">Keine Mitarbeiter angegeben</p>';
+
+  // Stunden pro Funktion gruppieren
+  const roleMap: Record<string, { hours: number; count: number }> = {};
+  (report.employees || []).forEach(e => {
+    const empAny = e as any;
+    const role = (empAny.role || '').trim();
+    if (!role) return;
+    const calc = (() => {
+      if (e.hours != null) return e.hours;
+      if (!empAny.time_from || !empAny.time_to) return 0;
+      const [fh, fm] = empAny.time_from.split(':').map(Number);
+      const [th, tm] = empAny.time_to.split(':').map(Number);
+      let mins = (th * 60 + tm) - (fh * 60 + fm);
+      if (mins < 0) mins += 24 * 60;
+      mins -= empAny.pause_minutes || 0;
+      return Math.max(0, Math.round((mins / 60) * 100) / 100);
+    })();
+    if (!roleMap[role]) roleMap[role] = { hours: 0, count: 0 };
+    roleMap[role].hours += calc;
+    roleMap[role].count += 1;
+  });
+  const roleSummaryHtml = Object.keys(roleMap).length > 0
+    ? `<div class="role-summary">
+        <div class="role-summary-title">Stunden pro Funktion</div>
+        ${Object.keys(roleMap).map(role => `
+          <div class="role-row">
+            <span class="role-tag">${escapeHtml(role)} <span class="role-count">${roleMap[role].count}×</span></span>
+            <span class="role-hours">${roleMap[role].hours.toFixed(2)} h</span>
+          </div>
+        `).join('')}
+      </div>`
+    : '';
 
   // Work Items (Checkbox-Liste)
   const workItemsAny = (report as any).work_items as { id: string; text: string; checked: boolean }[] | undefined;
@@ -160,13 +214,16 @@ export const generateReportSectionHtml = (
   return `
     <div class="report-page">
       <div class="report-header">
-        <div>
-          <div class="report-title">📝 RAPPORT / TAGESBERICHT</div>
-          ${report.report_number ? `<div class="report-number">${escapeHtml(report.report_number)}</div>` : ''}
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-width:120px;object-fit:contain;" />` : ''}
+          <div>
+            <div class="report-title">📝 ${escapeHtml((options as any).reportTitle || 'RAPPORT')}</div>
+            ${(options as any).companyName ? `<div style="font-size:11px;color:#475569;margin-top:2px;font-weight:600;">${escapeHtml((options as any).companyName)}</div>` : ''}
+            ${report.report_number ? `<div class="report-number">${escapeHtml(report.report_number)}</div>` : ''}
+          </div>
         </div>
         <div class="report-meta">
           <div><b>Datum:</b> ${formatDate(report.date)}</div>
-          ${report.time_from || report.time_to ? `<div><b>Zeit:</b> ${escapeHtml(report.time_from || '')} – ${escapeHtml(report.time_to || '')}</div>` : ''}
           ${totalHours > 0 ? `<div><b>Stunden:</b> ${totalHours}</div>` : ''}
         </div>
       </div>
@@ -185,6 +242,7 @@ export const generateReportSectionHtml = (
       <div class="section">
         <div class="section-title">👷 Mitarbeiter & Arbeitszeiten</div>
         ${employeesTable}
+        ${roleSummaryHtml}
       </div>
 
       <div class="section">
@@ -325,6 +383,24 @@ export const REPORT_CSS = `
     background: #ede9fe; color: #5b21b6;
     padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
   }
+  .role-summary {
+    background: #f8fafc; border-radius: 6px; padding: 8px 10px; margin-top: 8px;
+    border-left: 3px solid #1976d2;
+  }
+  .role-summary-title {
+    font-size: 10px; font-weight: 700; color: #475569;
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .role-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 0;
+  }
+  .role-tag {
+    background: #dbeafe; color: #1d4ed8;
+    padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  }
+  .role-count { color: #64748b; font-weight: 400; font-size: 10px; margin-left: 4px; }
+  .role-hours { font-size: 12px; font-weight: 800; color: #0f172a; }
   .work-desc {
     font-size: 12px;
     line-height: 1.5;
@@ -377,11 +453,24 @@ export const REPORT_CSS = `
 /**
  * Generiert das vollständige HTML eines Standalone-Rapport-PDFs.
  */
-export const generateReportHtml = (
+export const generateReportHtml = async (
   report: Report,
   project: Project | null,
   customer: Customer | null
-): string => {
+): Promise<string> => {
+  // Lade Settings (Logo, Titel, Firmenname)
+  let logoData = '';
+  let companyName = '';
+  let reportTitle = 'Rapport';
+  try {
+    const s = await SettingsService.get();
+    const sAny = s as any;
+    logoData = sAny.logo_data || sAny.company_logo || '';
+    companyName = s.company_name || '';
+    reportTitle = s.report_title || 'Rapport';
+  } catch (e) {
+    console.warn('[generateReportHtml] settings load error:', e);
+  }
   return `
     <!DOCTYPE html>
     <html>
@@ -394,7 +483,7 @@ export const generateReportHtml = (
       </style>
     </head>
     <body>
-      ${generateReportSectionHtml(report, project, customer, { standalone: true })}
+      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, reportTitle } as any)}
       <div class="doc-footer">Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}</div>
     </body>
     </html>
@@ -409,7 +498,7 @@ export const exportReportAsPdf = async (
   project: Project | null,
   customer: Customer | null
 ): Promise<void> => {
-  const html = generateReportHtml(report, project, customer);
+  const html = await generateReportHtml(report, project, customer);
   const { uri } = await Print.printToFileAsync({
     html,
     base64: false,

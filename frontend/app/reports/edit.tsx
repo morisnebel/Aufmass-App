@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ReportService, ProjectService, CustomerService,
   EmployeeMasterService, MaterialMasterService, MachineMasterService, ChecklistService,
+  SettingsService,
   Report, ReportEmployee, ReportMaterial, ReportPhoto, ReportMachine, ReportWorkItem,
   Project, Customer, EmployeeMaster, MaterialMaster, MachineMaster, Checklist,
 } from '../../services/LocalStorage';
@@ -57,6 +58,13 @@ export default function ReportEditScreen() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
 
+  // Company logo + report title (aus globalen Einstellungen)
+  const [companyLogo, setCompanyLogo] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>('');
+  const [reportTitle, setReportTitle] = useState<string>('Rapport');
+  const [showTitleEdit, setShowTitleEdit] = useState(false);
+  const [titleEditInput, setTitleEditInput] = useState('');
+
   // Stammdaten
   const [empMaster, setEmpMaster] = useState<EmployeeMaster[]>([]);
   const [matMaster, setMatMaster] = useState<MaterialMaster[]>([]);
@@ -93,6 +101,10 @@ export default function ReportEditScreen() {
   const [timePickerFor, setTimePickerFor] = useState<{ empId: string; field: 'time_from' | 'time_to' } | null>(null);
   const [pauseModal, setPauseModal] = useState<{ empId: string } | null>(null);
   const [pauseInput, setPauseInput] = useState('');
+  // Datum-Picker pro Mitarbeiter-Eintrag
+  const [empDatePicker, setEmpDatePicker] = useState<{ empId: string } | null>(null);
+  // Material → "Als Stammdaten speichern"
+  const [savedMatIds, setSavedMatIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     navigation.setOptions({
@@ -115,18 +127,24 @@ export default function ReportEditScreen() {
     }
     try {
       setLoading(true);
-      const [proj, emps, mats, machs, checklists] = await Promise.all([
+      const [proj, emps, mats, machs, checklists, settingsData] = await Promise.all([
         ProjectService.getById(projectId),
         EmployeeMasterService.getActive(),
         MaterialMasterService.getActive(),
         MachineMasterService.getActive(),
         ChecklistService.getByProjectId(projectId),
+        SettingsService.get(),
       ]);
       setProject(proj);
       setEmpMaster(emps);
       setMatMaster(mats);
       setMachMaster(machs);
       setProjChecklists(checklists);
+      // Logo + Firmenname + Rapport-Titel aus Settings
+      const sAny = settingsData as any;
+      setCompanyLogo(sAny.logo_data || sAny.company_logo || '');
+      setCompanyName(settingsData.company_name || '');
+      setReportTitle(settingsData.report_title || 'Rapport');
       if (proj?.customer_id) {
         const cust = await CustomerService.getById(proj.customer_id);
         setCustomer(cust);
@@ -264,16 +282,78 @@ export default function ReportEditScreen() {
 
   const handleExportPdf = async () => { await handleSave(true); };
 
+  // ---- Rapport-Titel speichern ----
+  const handleSaveTitle = async () => {
+    const newTitle = (titleEditInput || '').trim() || 'Rapport';
+    try {
+      await SettingsService.update({ report_title: newTitle } as any);
+      setReportTitle(newTitle);
+      setShowTitleEdit(false);
+    } catch (e) {
+      Alert.alert('Fehler', 'Titel konnte nicht gespeichert werden.');
+    }
+  };
+
+  // ---- Material als Stammdaten speichern ----
+  const handleSaveMaterialToMaster = async (m: ReportMaterial) => {
+    if (!m.name || !m.name.trim()) {
+      Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
+      return;
+    }
+    try {
+      // Prüfe ob schon vorhanden
+      const existing = matMaster.find(mm => mm.name.toLowerCase() === m.name.toLowerCase() && mm.unit === m.unit);
+      if (existing) {
+        Alert.alert('Hinweis', `${m.name} ist bereits in den Stammdaten vorhanden.`);
+        setSavedMatIds(s => new Set([...s, m.id]));
+        return;
+      }
+      await MaterialMasterService.create({
+        name: m.name,
+        unit: m.unit || 'Stk',
+        default_quantity: m.quantity || 1,
+        active: true,
+      } as any);
+      // Aktualisiere Stammdaten-Liste
+      const newList = await MaterialMasterService.getActive();
+      setMatMaster(newList);
+      setSavedMatIds(s => new Set([...s, m.id]));
+      Alert.alert('Gespeichert', `${m.name} wurde in den Material-Stammdaten gespeichert.`);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Fehler', 'Speichern fehlgeschlagen.');
+    }
+  };
+
+  // ---- Stunden pro Funktion gruppieren ----
+  const hoursByRole: { role: string; hours: number; count: number }[] = (() => {
+    const map: Record<string, { hours: number; count: number }> = {};
+    employees.forEach(e => {
+      const h = e.hours ?? calcEmpHours(e.time_from, e.time_to, e.pause_minutes);
+      const role = (e.role || '').trim();
+      if (!role) return;
+      if (!map[role]) map[role] = { hours: 0, count: 0 };
+      map[role].hours += h;
+      map[role].count += 1;
+    });
+    return Object.keys(map).map(role => ({ role, hours: map[role].hours, count: map[role].count }));
+  })();
+
   // ---- Mitarbeiter Zeile ----
   const addEmployeeManual = () => {
     setEmployees(prev => [...prev, {
-      id: localId(), name: '', time_from: '07:00', time_to: '16:00', pause_minutes: 30,
+      id: localId(), name: '',
+      entry_date: date,
+      time_from: '07:00', time_to: '16:00', pause_minutes: 30,
       color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
     }]);
   };
   const addEmployeeFromMaster = (emp: EmployeeMaster) => {
     setEmployees(prev => [...prev, {
-      id: localId(), name: emp.name, time_from: '07:00', time_to: '16:00', pause_minutes: 30,
+      id: localId(), name: emp.name,
+      role: emp.role || undefined,
+      entry_date: date,
+      time_from: '07:00', time_to: '16:00', pause_minutes: 30,
       color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
     }]);
     setShowEmpPicker(false);
@@ -391,6 +471,31 @@ export default function ReportEditScreen() {
           keyboardShouldPersistTaps="handled"
           scrollEnabled={scrollEnabled}
         >
+          {/* ===== 0. Logo + Titel Header ===== */}
+          <View style={styles.brandHeader}>
+            {companyLogo ? (
+              <Image source={{ uri: companyLogo }} style={styles.brandLogo} resizeMode="contain" />
+            ) : (
+              <View style={styles.brandLogoPlaceholder}>
+                <Ionicons name="business-outline" size={22} color="#94a3b8" />
+              </View>
+            )}
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              {companyName ? <Text style={styles.brandCompany} numberOfLines={1}>{companyName}</Text> : null}
+              <TouchableOpacity
+                onPress={() => { setTitleEditInput(reportTitle); setShowTitleEdit(true); }}
+                style={styles.brandTitleRow}
+              >
+                <Text style={styles.brandTitle}>{reportTitle}</Text>
+                <Ionicons name="pencil" size={13} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.brandRapNo}>
+              <Text style={styles.brandRapNoLabel}>Nr.</Text>
+              <Text style={styles.brandRapNoValue}>{reportNumber || '—'}</Text>
+            </View>
+          </View>
+
           {/* ===== 1. Projekt-Block (oben) ===== */}
           <View style={styles.topCard}>
             <View style={styles.topGrid}>
@@ -540,55 +645,76 @@ export default function ReportEditScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                {/* Tabellenkopf */}
-                <View style={styles.empTableHeader}>
-                  <Text style={[styles.empCol, { flex: 2 }]}>Mitarbeiter</Text>
-                  <Text style={[styles.empCol, { width: 56, textAlign: 'center' }]}>Beginn</Text>
-                  <Text style={[styles.empCol, { width: 56, textAlign: 'center' }]}>Ende</Text>
-                  <Text style={[styles.empCol, { width: 50, textAlign: 'center' }]}>Pause</Text>
-                  <Text style={[styles.empCol, { width: 50, textAlign: 'right' }]}>Std.</Text>
-                  <View style={{ width: 24 }} />
-                </View>
                 {employees.map((emp) => {
                   const hours = emp.hours ?? calcEmpHours(emp.time_from, emp.time_to, emp.pause_minutes);
+                  const empDate = emp.entry_date || date;
+                  const isOtherDay = empDate !== date;
                   return (
-                    <View key={emp.id} style={styles.empRow}>
-                      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View key={emp.id} style={styles.empRowCard}>
+                      {/* Top: Avatar + Name + Funktion + Delete */}
+                      <View style={styles.empCardTop}>
                         <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2' }]}>
                           <Text style={styles.empAvatarText}>{(emp.name || '?').charAt(0).toUpperCase()}</Text>
                         </View>
-                        <TextInput
-                          style={styles.empNameInput}
-                          value={emp.name}
-                          onChangeText={(v) => updateEmployee(emp.id, { name: v })}
-                          placeholder="Name"
-                        />
+                        <View style={{ flex: 1 }}>
+                          <TextInput
+                            style={styles.empNameInputLg}
+                            value={emp.name}
+                            onChangeText={(v) => updateEmployee(emp.id, { name: v })}
+                            placeholder="Name"
+                          />
+                          <TextInput
+                            style={styles.empRoleInput}
+                            value={emp.role || ''}
+                            onChangeText={(v) => updateEmployee(emp.id, { role: v })}
+                            placeholder="Funktion (z.B. Dachdecker)"
+                          />
+                        </View>
+                        <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.itemRemoveBtn}>
+                          <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity
-                        style={styles.timeCell}
-                        onPress={() => setTimePickerFor({ empId: emp.id, field: 'time_from' })}
-                      >
-                        <Text style={styles.timeCellText}>{emp.time_from || '--:--'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.timeCell}
-                        onPress={() => setTimePickerFor({ empId: emp.id, field: 'time_to' })}
-                      >
-                        <Text style={styles.timeCellText}>{emp.time_to || '--:--'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.timeCellSmall}
-                        onPress={() => {
-                          setPauseInput(emp.pause_minutes ? String(emp.pause_minutes) : '');
-                          setPauseModal({ empId: emp.id });
-                        }}
-                      >
-                        <Text style={styles.timeCellText}>{emp.pause_minutes != null ? `${emp.pause_minutes}` : '0'}</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.hoursCell}>{hours.toFixed(2)}</Text>
-                      <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.itemRemoveBtn}>
-                        <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                      </TouchableOpacity>
+
+                      {/* Zeile 2: Datum + Beginn + Ende + Pause + Stunden */}
+                      <View style={styles.empCardBottom}>
+                        <TouchableOpacity
+                          style={[styles.dateCell, isOtherDay && styles.dateCellAlt]}
+                          onPress={() => setEmpDatePicker({ empId: emp.id })}
+                        >
+                          <Ionicons name="calendar-outline" size={11} color={isOtherDay ? '#dc2626' : '#64748b'} />
+                          <Text style={[styles.dateCellText, isOtherDay && { color: '#dc2626' }]}>
+                            {new Date(empDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.timeCell}
+                          onPress={() => setTimePickerFor({ empId: emp.id, field: 'time_from' })}
+                        >
+                          <Text style={styles.timeCellMini}>VON</Text>
+                          <Text style={styles.timeCellText}>{emp.time_from || '--:--'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.timeCell}
+                          onPress={() => setTimePickerFor({ empId: emp.id, field: 'time_to' })}
+                        >
+                          <Text style={styles.timeCellMini}>BIS</Text>
+                          <Text style={styles.timeCellText}>{emp.time_to || '--:--'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.timeCellSmall}
+                          onPress={() => {
+                            setPauseInput(emp.pause_minutes ? String(emp.pause_minutes) : '');
+                            setPauseModal({ empId: emp.id });
+                          }}
+                        >
+                          <Text style={styles.timeCellMini}>PAUSE</Text>
+                          <Text style={styles.timeCellText}>{emp.pause_minutes != null ? `${emp.pause_minutes}` : '0'}</Text>
+                        </TouchableOpacity>
+                        <View style={styles.hoursCellBox}>
+                          <Text style={styles.timeCellMini}>STD.</Text>
+                          <Text style={styles.hoursCellLg}>{hours.toFixed(2)}</Text>
+                        </View>
+                      </View>
                     </View>
                   );
                 })}
@@ -597,9 +723,26 @@ export default function ReportEditScreen() {
                   <Text style={styles.empSumLabel}>Gesamtstunden aller Mitarbeiter</Text>
                   <Text style={styles.empSumValue}>{totalAllHours.toFixed(2)} h</Text>
                 </View>
+                {/* Stunden pro Funktion */}
+                {hoursByRole.length > 0 && (
+                  <View style={styles.roleGroup}>
+                    <Text style={styles.roleGroupTitle}>Stunden pro Funktion:</Text>
+                    {hoursByRole.map(r => (
+                      <View key={r.role} style={styles.roleGroupRow}>
+                        <View style={styles.roleBadge}>
+                          <Text style={styles.roleBadgeText}>{r.role}</Text>
+                          <Text style={styles.roleBadgeCount}>{r.count}×</Text>
+                        </View>
+                        <Text style={styles.roleHoursText}>{r.hours.toFixed(2)} h</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </>
             )}
           </Section>
+
+          {/* ===== Hilfs-Header für Mitarbeiter wurde durch Karten ersetzt ===== */}
 
           {/* ===== 3. Ausgeführte Arbeiten (Checkbox-Liste + Beschreibung) ===== */}
           <Section
@@ -688,32 +831,46 @@ export default function ReportEditScreen() {
                   <Text style={[styles.empCol, { width: 50, textAlign: 'center' }]}>Einh.</Text>
                   <View style={{ width: 24 }} />
                 </View>
-                {materials.map(m => (
-                  <View key={m.id} style={styles.matRow}>
-                    <TextInput
-                      style={[styles.itemInput, { flex: 2 }]}
-                      value={m.name}
-                      onChangeText={(v) => updateMaterial(m.id, 'name', v)}
-                      placeholder="Material"
-                    />
-                    <TextInput
-                      style={[styles.itemInput, { width: 60, textAlign: 'right' }]}
-                      value={m.quantity ? String(m.quantity) : ''}
-                      onChangeText={(v) => updateMaterial(m.id, 'quantity', v)}
-                      placeholder="0"
-                      keyboardType="decimal-pad"
-                    />
-                    <TextInput
-                      style={[styles.itemInput, { width: 50, textAlign: 'center' }]}
-                      value={m.unit}
-                      onChangeText={(v) => updateMaterial(m.id, 'unit', v)}
-                      placeholder="Stk"
-                    />
-                    <TouchableOpacity onPress={() => removeMaterial(m.id)} style={styles.itemRemoveBtn}>
-                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                {materials.map(m => {
+                  const isSaved = savedMatIds.has(m.id) || matMaster.some(mm => mm.name.toLowerCase() === (m.name || '').toLowerCase() && mm.unit === m.unit);
+                  return (
+                    <View key={m.id} style={styles.matRow}>
+                      <TextInput
+                        style={[styles.itemInput, { flex: 2 }]}
+                        value={m.name}
+                        onChangeText={(v) => updateMaterial(m.id, 'name', v)}
+                        placeholder="Material"
+                      />
+                      <TextInput
+                        style={[styles.itemInput, { width: 60, textAlign: 'right' }]}
+                        value={m.quantity ? String(m.quantity) : ''}
+                        onChangeText={(v) => updateMaterial(m.id, 'quantity', v)}
+                        placeholder="0"
+                        keyboardType="decimal-pad"
+                      />
+                      <TextInput
+                        style={[styles.itemInput, { width: 50, textAlign: 'center' }]}
+                        value={m.unit}
+                        onChangeText={(v) => updateMaterial(m.id, 'unit', v)}
+                        placeholder="Stk"
+                      />
+                      <TouchableOpacity
+                        onPress={() => handleSaveMaterialToMaster(m)}
+                        style={styles.saveToMasterBtn}
+                        disabled={isSaved}
+                      >
+                        <Ionicons
+                          name={isSaved ? "bookmark" : "bookmark-outline"}
+                          size={16}
+                          color={isSaved ? "#16a34a" : "#1976d2"}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => removeMaterial(m.id)} style={styles.itemRemoveBtn}>
+                        <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </>
             )}
           </Section>
@@ -801,7 +958,7 @@ export default function ReportEditScreen() {
               <View style={styles.photoGrid}>
                 {photos.map(p => (
                   <View key={p.id} style={styles.photoCard}>
-                    <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
+                    <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="contain" />
                     <TouchableOpacity style={styles.photoDelete} onPress={() => removePhoto(p.id)}>
                       <Ionicons name="close-circle" size={22} color="#fff" />
                     </TouchableOpacity>
@@ -1124,6 +1281,59 @@ export default function ReportEditScreen() {
             </View>
           </View>
         </Modal>
+        {/* Title-Edit Modal */}
+        <Modal visible={showTitleEdit} transparent animationType="fade" onRequestClose={() => setShowTitleEdit(false)}>
+          <View style={styles.modalOverlayCenter}>
+            <View style={styles.modalSmall}>
+              <Text style={styles.modalTitle}>Rapport-Überschrift anpassen</Text>
+              <Text style={[styles.hintText, { marginTop: 4 }]}>
+                Wird in allen Rapporten und PDFs als Titel verwendet (z.B. Tagesbericht, Arbeitsrapport).
+              </Text>
+              <TextInput
+                style={[styles.input, { fontSize: 16, marginTop: 10 }]}
+                value={titleEditInput}
+                onChangeText={setTitleEditInput}
+                placeholder="z.B. Tagesbericht"
+                autoFocus
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setShowTitleEdit(false)}>
+                  <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalBtn, styles.saveBtn]} onPress={handleSaveTitle}>
+                  <Ionicons name="checkmark" size={18} color="#fff" />
+                  <Text style={styles.saveBtnText}>Speichern</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Date Picker pro Mitarbeiter-Eintrag */}
+        {empDatePicker && (
+          <>
+            <DateTimePicker
+              value={(() => {
+                const emp = employees.find(e => e.id === empDatePicker.empId);
+                const v = emp?.entry_date || date;
+                return v ? new Date(v) : new Date();
+              })()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_, selected) => {
+                if (Platform.OS !== 'ios') setEmpDatePicker(null);
+                if (selected && empDatePicker) {
+                  updateEmployee(empDatePicker.empId, { entry_date: selected.toISOString().split('T')[0] });
+                }
+              }}
+            />
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setEmpDatePicker(null)} style={styles.iosPickerDone}>
+                <Text style={styles.iosPickerDoneText}>Fertig</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -1159,10 +1369,103 @@ const styles = StyleSheet.create({
   topCard: {
     backgroundColor: '#fff',
     margin: 10,
+    marginTop: 0,
     padding: 12,
     borderRadius: 12,
     borderTopWidth: 3,
     borderTopColor: '#0f172a',
+  },
+
+  // --- Brand Header (Logo + Titel) ---
+  brandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    margin: 10,
+    marginBottom: 6,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  brandLogo: {
+    width: 56, height: 56, borderRadius: 8,
+    backgroundColor: '#f8fafc',
+  },
+  brandLogoPlaceholder: {
+    width: 56, height: 56, borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  brandCompany: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  brandTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  brandTitle: { fontSize: 19, fontWeight: '800', color: '#0f172a', letterSpacing: 0.3 },
+  brandRapNo: {
+    alignItems: 'center', backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+  },
+  brandRapNoLabel: { fontSize: 9, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5 },
+  brandRapNoValue: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
+
+  // --- Employee Card Row ---
+  empRowCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 8,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  empCardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  empCardBottom: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginTop: 8,
+  },
+  empNameInputLg: {
+    fontSize: 14, fontWeight: '700', color: '#0f172a',
+    paddingVertical: 2, paddingHorizontal: 0,
+    borderBottomWidth: 1, borderBottomColor: '#e2e8f0',
+  },
+  empRoleInput: {
+    fontSize: 12, color: '#64748b',
+    paddingVertical: 2, paddingHorizontal: 0, marginTop: 2,
+    fontStyle: 'italic',
+  },
+  dateCell: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    paddingHorizontal: 6, paddingVertical: 4,
+    backgroundColor: '#fff', borderRadius: 6,
+    borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  dateCellAlt: {
+    backgroundColor: '#fef2f2', borderColor: '#fecaca',
+  },
+  dateCellText: { fontSize: 11, fontWeight: '700', color: '#475569' },
+  timeCellMini: { fontSize: 8, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5 },
+  hoursCellBox: {
+    backgroundColor: '#dbeafe', borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  hoursCellLg: { fontSize: 14, fontWeight: '800', color: '#1d4ed8' },
+
+  // --- Role group ---
+  roleGroup: {
+    marginTop: 8, padding: 10,
+    backgroundColor: '#f8fafc', borderRadius: 8,
+    borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  roleGroupTitle: { fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  roleGroupRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  roleBadgeText: { fontSize: 12, fontWeight: '600', color: '#1976d2', backgroundColor: '#dbeafe', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  roleBadgeCount: { fontSize: 11, color: '#94a3b8' },
+  roleHoursText: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
+
+  // --- Save to Master Btn ---
+  saveToMasterBtn: {
+    padding: 6, borderRadius: 6, backgroundColor: '#eff6ff',
   },
   topGrid: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   topField: {},
@@ -1314,11 +1617,11 @@ const styles = StyleSheet.create({
   // --- Photos ---
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   photoCard: {
-    width: '48%', backgroundColor: '#fff', borderRadius: 10,
+    width: '48%', backgroundColor: '#1f2937', borderRadius: 10,
     borderWidth: 1, borderColor: '#e2e8f0', overflow: 'hidden',
     position: 'relative',
   },
-  photoImg: { width: '100%', height: 180 },
+  photoImg: { width: '100%', height: 180, backgroundColor: '#1f2937' },
   photoDelete: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12 },
   photoCaption: { fontSize: 12, padding: 6, borderTopWidth: 1, borderTopColor: '#eee' },
 

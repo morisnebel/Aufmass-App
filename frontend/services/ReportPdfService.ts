@@ -205,10 +205,10 @@ export const generateReportSectionHtml = (
       </div>`
     : '';
 
-  // Work Items (Checkbox-Liste)
+  // Work Items (Checkbox-Liste) - automatisch 2 oder 3 Spalten je nach Anzahl
   const workItemsAny = (report as any).work_items as { id: string; text: string; checked: boolean }[] | undefined;
   const workItemsHtml = workItemsAny && workItemsAny.length > 0
-    ? `<ul class="work-items">${workItemsAny.map(w => `
+    ? `<ul class="work-items${workItemsAny.length > 12 ? ' dense' : ''}">${workItemsAny.map(w => `
         <li class="${w.checked ? 'checked' : 'unchecked'}">
           <span class="check-box">${w.checked ? '☑' : '☐'}</span>
           <span class="${w.checked ? '' : 'strike'}">${escapeHtml(w.text)}</span>
@@ -421,8 +421,29 @@ export const REPORT_CSS = `
   .emp-table td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
   .emp-table tr { page-break-inside: avoid; }
   .emp-total-row td { background: #e0f2fe; padding: 6px 8px; font-size: 12px; border-top: 2px solid #1976d2; }
-  .work-items { list-style: none; padding-left: 0; margin: 4px 0; font-size: 11px; page-break-inside: avoid; }
-  .work-items li { padding: 3px 0; display: flex; align-items: center; gap: 6px; page-break-inside: avoid; }
+  .work-items {
+    list-style: none;
+    padding-left: 0;
+    margin: 4px 0;
+    font-size: 11px;
+    /* 2 Spalten auf normalem Layout, 3 Spalten falls genug Platz vorhanden */
+    column-count: 2;
+    column-gap: 18px;
+    column-fill: balance;
+    page-break-inside: avoid;
+  }
+  /* Bei mehr als 12 Items zeigen wir 3 Spalten für noch kompakteres Layout */
+  .work-items.dense { column-count: 3; column-gap: 14px; font-size: 10px; }
+  .work-items li {
+    padding: 2px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    line-height: 1.35;
+  }
   .work-items .check-box { font-size: 14px; color: #16a34a; }
   .work-items li.unchecked .check-box { color: #94a3b8; }
   .work-items .strike { text-decoration: line-through; color: #94a3b8; }

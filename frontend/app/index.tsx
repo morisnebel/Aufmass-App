@@ -23,7 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Features, AppName, getProStatus } from '../services/FeatureFlags';
+import { Features, AppName, getProStatus, loadProStatus } from '../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -72,10 +72,11 @@ export default function HomeScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
-  // Ausgeliehene Maschinen (nur Pro)
+  // Pro-Banner: Ausgeliehene Maschinen & Inspektionen
   const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
-  const [loanedExpanded, setLoanedExpanded] = useState(false);
-  const isProUser = getProStatus();
+  const [inspectionMachines, setInspectionMachines] = useState<MachineMaster[]>([]);
+  const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | null>(null);
+  const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
     try {
@@ -92,11 +93,26 @@ export default function HomeScreen() {
       });
       setCustomers(customerMap);
 
-      // Ausgeliehene Maschinen laden (nur Pro)
-      if (getProStatus()) {
+      // Ausgeliehene & Inspektion-fällige Maschinen laden (nur Pro)
+      const proStatus = await loadProStatus();
+      setIsProUser(proStatus);
+      if (proStatus) {
         try {
           const allMachines = await MachineMasterService.getAll();
           setLoanedMachines(allMachines.filter(m => m.status === 'ausgeliehen'));
+          // Inspektion fällig: nächste_inspektion innerhalb 30 Tagen oder überfällig
+          const now = Date.now();
+          const warnMs = 30 * 24 * 60 * 60 * 1000;
+          const inspect = allMachines.filter(m => {
+            if (!m.next_inspection_date) return false;
+            const due = new Date(m.next_inspection_date).getTime();
+            return !isNaN(due) && (due - now) <= warnMs;
+          }).sort((a, b) => {
+            const da = new Date(a.next_inspection_date!).getTime();
+            const db = new Date(b.next_inspection_date!).getTime();
+            return da - db;
+          });
+          setInspectionMachines(inspect);
         } catch { /* silent */ }
       }
     } catch (error) {
@@ -687,43 +703,71 @@ export default function HomeScreen() {
       </View>
       )}
 
-      {/* Pro: Hinweis auf ausgeliehene Maschinen */}
-      {isProUser && loanedMachines.length > 0 && (
-        <TouchableOpacity
-          style={styles.loanBanner}
-          onPress={() => setLoanedExpanded(!loanedExpanded)}
-          activeOpacity={0.9}
-        >
-          <View style={styles.loanBannerHeader}>
-            <View style={styles.loanBannerIcon}>
-              <Ionicons name="swap-horizontal" size={20} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.loanBannerTitle}>
-                {loanedMachines.length === 1
-                  ? '1 Gerät ausgeliehen'
-                  : `${loanedMachines.length} Geräte ausgeliehen`}
-              </Text>
-              <Text style={styles.loanBannerSub} numberOfLines={1}>
-                {loanedMachines.slice(0, 2).map(m => m.name).join(', ')}
-                {loanedMachines.length > 2 ? `, +${loanedMachines.length - 2} weitere` : ''}
-              </Text>
-            </View>
-            <Ionicons name={loanedExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#fff" />
+      {/* Pro: Hinweise auf ausgeliehene Maschinen & Inspektionen (in einer Zeile) */}
+      {isProUser && (loanedMachines.length > 0 || inspectionMachines.length > 0) && (
+        <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}>
+          <View style={styles.bannerRow}>
+            {loanedMachines.length > 0 && (
+              <TouchableOpacity
+                style={[styles.bannerCard, { backgroundColor: '#7c3aed' }]}
+                onPress={() => setExpandedBanner(expandedBanner === 'loaned' ? null : 'loaned')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.bannerCardIcon}>
+                  <Ionicons name="swap-horizontal" size={18} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.bannerCardTitle}>
+                    {loanedMachines.length} {loanedMachines.length === 1 ? 'Gerät' : 'Geräte'}
+                  </Text>
+                  <Text style={styles.bannerCardSub}>Ausgeliehen</Text>
+                </View>
+                <Ionicons name={expandedBanner === 'loaned' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {inspectionMachines.length > 0 && (() => {
+              const overdue = inspectionMachines.filter(m => {
+                const due = new Date(m.next_inspection_date!).getTime();
+                return !isNaN(due) && due < Date.now();
+              }).length;
+              return (
+                <TouchableOpacity
+                  style={[styles.bannerCard, { backgroundColor: overdue > 0 ? '#dc2626' : '#ea580c' }]}
+                  onPress={() => setExpandedBanner(expandedBanner === 'inspection' ? null : 'inspection')}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.bannerCardIcon}>
+                    <Ionicons name={overdue > 0 ? 'warning' : 'shield-checkmark'} size={18} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bannerCardTitle}>
+                      {inspectionMachines.length} {inspectionMachines.length === 1 ? 'Gerät' : 'Geräte'}
+                    </Text>
+                    <Text style={styles.bannerCardSub}>
+                      {overdue > 0 ? `Inspektion überfällig (${overdue})` : 'Inspektion fällig'}
+                    </Text>
+                  </View>
+                  <Ionicons name={expandedBanner === 'inspection' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+                </TouchableOpacity>
+              );
+            })()}
           </View>
-          {loanedExpanded && (
-            <View style={styles.loanBannerList}>
+
+          {/* Detail-Panel für die jeweils aufgeklappte Karte */}
+          {expandedBanner === 'loaned' && loanedMachines.length > 0 && (
+            <View style={[styles.bannerDetail, { backgroundColor: '#f5f3ff', borderColor: '#7c3aed' }]}>
               {loanedMachines.map(m => {
-                const overdue = m.loan_until_date ? new Date(m.loan_until_date).getTime() < Date.now() : false;
-                const dueStr = m.loan_until_date
-                  ? new Date(m.loan_until_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                const due = m.loan_until_date ? new Date(m.loan_until_date) : null;
+                const overdue = due ? due.getTime() < Date.now() : false;
+                const dueStr = due && !isNaN(due.getTime())
+                  ? due.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
                   : null;
                 return (
-                  <View key={m.id} style={styles.loanBannerItem}>
-                    <Ionicons name="construct" size={14} color="#fff" />
+                  <View key={m.id} style={styles.bannerDetailItem}>
+                    <Ionicons name="construct" size={14} color="#7c3aed" />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.loanBannerItemName}>{m.name}</Text>
-                      <Text style={styles.loanBannerItemMeta} numberOfLines={1}>
+                      <Text style={styles.bannerDetailName}>{m.name}</Text>
+                      <Text style={[styles.bannerDetailMeta, overdue && { color: '#dc2626', fontWeight: '700' }]} numberOfLines={1}>
                         {m.loan_to ? `↗ ${m.loan_to}` : '↗ ausgeliehen'}
                         {dueStr ? `  ·  ${overdue ? '⚠ überfällig seit ' : 'bis '}${dueStr}` : ''}
                       </Text>
@@ -731,13 +775,48 @@ export default function HomeScreen() {
                   </View>
                 );
               })}
-              <TouchableOpacity style={styles.loanBannerOpenBtn} onPress={() => router.push('/machines')}>
-                <Ionicons name="arrow-forward" size={14} color="#7c3aed" />
-                <Text style={styles.loanBannerOpenText}>Maschinen-Übersicht öffnen</Text>
+              <TouchableOpacity style={[styles.bannerOpenBtn, { backgroundColor: '#7c3aed' }]} onPress={() => router.push('/machines')}>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+                <Text style={styles.bannerOpenBtnText}>Maschinen öffnen</Text>
               </TouchableOpacity>
             </View>
           )}
-        </TouchableOpacity>
+          {expandedBanner === 'inspection' && inspectionMachines.length > 0 && (
+            <View style={[styles.bannerDetail, { backgroundColor: '#fff7ed', borderColor: '#ea580c' }]}>
+              {inspectionMachines.map(m => {
+                const due = new Date(m.next_inspection_date!);
+                const overdue = !isNaN(due.getTime()) && due.getTime() < Date.now();
+                const days = !isNaN(due.getTime())
+                  ? Math.round((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  : null;
+                const dueStr = !isNaN(due.getTime())
+                  ? due.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  : '';
+                return (
+                  <View key={m.id} style={styles.bannerDetailItem}>
+                    <Ionicons
+                      name={overdue ? 'warning' : 'time'}
+                      size={14}
+                      color={overdue ? '#dc2626' : '#ea580c'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bannerDetailName}>{m.name}</Text>
+                      <Text style={[styles.bannerDetailMeta, { color: overdue ? '#dc2626' : '#ea580c', fontWeight: overdue ? '700' : '600' }]} numberOfLines={1}>
+                        {overdue
+                          ? `⚠ Überfällig seit ${dueStr}${days != null ? ` (${Math.abs(days)} Tage)` : ''}`
+                          : `Fällig am ${dueStr}${days != null && days >= 0 ? ` (in ${days} Tagen)` : ''}`}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity style={[styles.bannerOpenBtn, { backgroundColor: '#ea580c' }]} onPress={() => router.push('/machines')}>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+                <Text style={styles.bannerOpenBtnText}>Maschinen öffnen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       )}
 
       {/* Suchleiste */}
@@ -1566,47 +1645,47 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
-  // Loan banner (Pro - ausgeliehene Maschinen)
-  loanBanner: {
-    backgroundColor: '#7c3aed',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  loanBannerHeader: {
+  // Banner row (Pro-Hinweise: ausgeliehen / Inspektion)
+  bannerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-  },
-  loanBannerIcon: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  loanBannerTitle: {
-    color: '#fff', fontWeight: '800', fontSize: 14,
-  },
-  loanBannerSub: {
-    color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2,
-  },
-  loanBannerList: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
     gap: 8,
   },
-  loanBannerItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+  bannerCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  bannerCardIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bannerCardTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  bannerCardSub: { color: 'rgba(255,255,255,0.9)', fontSize: 11, marginTop: 1 },
+  // Detail panel (expanded)
+  bannerDetail: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  bannerDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingVertical: 4,
   },
-  loanBannerItemName: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  loanBannerItemMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 1 },
-  loanBannerOpenBtn: {
+  bannerDetailName: { color: '#0f172a', fontWeight: '700', fontSize: 13 },
+  bannerDetailMeta: { color: '#475569', fontSize: 11, marginTop: 1 },
+  bannerOpenBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#fff', borderRadius: 8, paddingVertical: 8, marginTop: 4,
+    borderRadius: 8, paddingVertical: 8, marginTop: 4,
   },
-  loanBannerOpenText: { color: '#7c3aed', fontWeight: '700', fontSize: 13 },
+  bannerOpenBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

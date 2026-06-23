@@ -11,6 +11,16 @@ import { MaterialMasterService, MaterialMaster } from '../../services/LocalStora
 
 const UNIT_OPTIONS = ['Stk', 'm', 'm²', 'm³', 'kg', 'L', 'Pck', 'Pal', 'h', 't', 'Rolle', 'Paar'];
 
+// Hilfsfunktionen für deutsche Zahlen-Eingabe (Komma statt Punkt)
+const parseGermanNumber = (v: string): number => {
+  if (!v) return 0;
+  return parseFloat(v.replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+};
+const formatGermanNumber = (n: number | undefined | null): string => {
+  if (n == null || isNaN(n as any)) return '';
+  return String(n).replace('.', ',');
+};
+
 type TabKey = 'materials' | 'categories' | 'locations' | 'suppliers';
 
 const EMPTY: Partial<MaterialMaster> = {
@@ -412,32 +422,100 @@ export default function MaterialsIndex() {
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Bestand</Text>
-                    <TextInput style={styles.input} value={form.stock_quantity != null ? String(form.stock_quantity) : ''} onChangeText={(v) => setForm({ ...form, stock_quantity: v ? parseFloat(v) : 0 })} placeholder="0" keyboardType="decimal-pad" />
+                    <TextInput
+                      style={styles.input}
+                      value={formatGermanNumber(form.stock_quantity)}
+                      onChangeText={(v) => setForm({ ...form, stock_quantity: parseGermanNumber(v) })}
+                      placeholder="0"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Mindest-Bestand</Text>
-                    <TextInput style={styles.input} value={form.low_stock_threshold != null ? String(form.low_stock_threshold) : ''} onChangeText={(v) => setForm({ ...form, low_stock_threshold: v ? parseFloat(v) : 0 })} placeholder="0 = aus" keyboardType="decimal-pad" />
+                    <TextInput
+                      style={styles.input}
+                      value={formatGermanNumber(form.low_stock_threshold)}
+                      onChangeText={(v) => setForm({ ...form, low_stock_threshold: parseGermanNumber(v) })}
+                      placeholder="0 = aus"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                 </View>
 
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Standard-Menge</Text>
-                    <TextInput style={styles.input} value={form.default_quantity != null ? String(form.default_quantity) : ''} onChangeText={(v) => setForm({ ...form, default_quantity: v ? parseFloat(v) : undefined })} placeholder="1" keyboardType="decimal-pad" />
+                    <TextInput
+                      style={styles.input}
+                      value={formatGermanNumber(form.default_quantity)}
+                      onChangeText={(v) => setForm({ ...form, default_quantity: v ? parseGermanNumber(v) : undefined })}
+                      placeholder="1"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Preis (€/Einh.)</Text>
-                    <TextInput style={styles.input} value={form.price_per_unit != null ? String(form.price_per_unit) : ''} onChangeText={(v) => setForm({ ...form, price_per_unit: v ? parseFloat(v) : undefined })} placeholder="0.00" keyboardType="decimal-pad" />
+                    <TextInput
+                      style={styles.input}
+                      value={formatGermanNumber(form.price_per_unit)}
+                      onChangeText={(v) => setForm({ ...form, price_per_unit: v ? parseGermanNumber(v) : undefined })}
+                      placeholder="0,00"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                 </View>
 
                 <Text style={styles.label}>Kategorie</Text>
-                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder="z.B. Dachziegel, Holz" />
+                {metrics.categories.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                    {metrics.categories.map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[styles.suggestChip, form.category === c && styles.suggestChipActive]}
+                        onPress={() => setForm({ ...form, category: form.category === c ? '' : c })}
+                      >
+                        <Text style={[styles.suggestChipText, form.category === c && styles.suggestChipTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder={metrics.categories.length > 0 ? 'oder neue Kategorie eingeben' : 'z.B. Dachziegel, Holz'} />
 
                 <Text style={styles.label}>Lagerort</Text>
-                <TextInput style={styles.input} value={form.storage_location || ''} onChangeText={(v) => setForm({ ...form, storage_location: v })} placeholder="z.B. Regal 01-02, Werkstatt" />
+                {metrics.locations.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                    {metrics.locations.map(c => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[styles.suggestChip, form.storage_location === c && styles.suggestChipActive]}
+                        onPress={() => setForm({ ...form, storage_location: form.storage_location === c ? '' : c })}
+                      >
+                        <Text style={[styles.suggestChipText, form.storage_location === c && styles.suggestChipTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                <TextInput style={styles.input} value={form.storage_location || ''} onChangeText={(v) => setForm({ ...form, storage_location: v })} placeholder={metrics.locations.length > 0 ? 'oder neuen Lagerort eingeben' : 'z.B. Regal 01-02, Werkstatt'} />
 
                 <Text style={styles.label}>Lieferant</Text>
+                {(() => {
+                  const supSet = new Set<string>();
+                  materials.forEach(mm => { if (mm.supplier) supSet.add(mm.supplier); });
+                  const supList = Array.from(supSet).sort();
+                  return supList.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                      {supList.map(s => (
+                        <TouchableOpacity
+                          key={s}
+                          style={[styles.suggestChip, form.supplier === s && styles.suggestChipActive]}
+                          onPress={() => setForm({ ...form, supplier: form.supplier === s ? '' : s })}
+                        >
+                          <Text style={[styles.suggestChipText, form.supplier === s && styles.suggestChipTextActive]}>{s}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : null;
+                })()}
                 <TextInput style={styles.input} value={form.supplier || ''} onChangeText={(v) => setForm({ ...form, supplier: v })} placeholder="Lieferantenname" />
 
                 <Text style={styles.label}>Artikel-Nr.</Text>
@@ -552,6 +630,13 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: '#1976d2' },
   chipText: { fontSize: 12, color: '#374151', fontWeight: '600' },
   chipTextActive: { color: '#fff' },
+  // Suggest Chips (Auto-Vorschlag aus bestehenden Werten)
+  suggestRow: { marginBottom: 6, maxHeight: 36 },
+  suggestRowContent: { gap: 6, paddingVertical: 2 },
+  suggestChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' },
+  suggestChipActive: { backgroundColor: '#1976d2', borderColor: '#1976d2' },
+  suggestChipText: { fontSize: 12, color: '#1976d2', fontWeight: '600' },
+  suggestChipTextActive: { color: '#fff' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   modalBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 6 },

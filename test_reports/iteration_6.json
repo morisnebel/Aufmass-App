@@ -1,0 +1,24 @@
+{
+  "summary": "Verified both bug fixes in /app/frontend/app/materials/index.tsx. Bug 1 (Komma-Eingabe in Zahlenfeldern): PASS — all 4 number fields use keyboardType='numbers-and-punctuation' (0 occurrences of 'decimal-pad' remaining), parseGermanNumber/formatGermanNumber helpers defined and used consistently, Preis placeholder '0,00'. Unit tests for both helpers: 10/10 passed (Komma input, Punkt fallback, empty string, NaN, undefined, null). Bug 2 (Auto-Vorschläge): PASS — horizontal ScrollView with suggest chips rendered above Kategorie (uses metrics.categories), Lagerort (uses metrics.locations), and Lieferant (computed supList from materials.forEach -> supSet). Each tap toggles form field (clears if active). Active chip styled via suggestChipActive (blue). All 6 new styles (suggestRow, suggestRowContent, suggestChip, suggestChipActive, suggestChipText, suggestChipTextActive) defined. Free TextInput retained below chips with 'oder neue/neuen ... eingeben' placeholder. ESLint: 0 issues. Existing UI intact (4 metric cards, 4 tabs, search, filter chips, edit modal photo picker, +/- stock controls). Metro bundler running OK.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/tmp/test_german_numbers.js"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: in handleSave, when default_quantity or price_per_unit fields are emptied, onChangeText passes undefined — good. But parseGermanNumber('0') returns 0 which is truthy-ish for the ternary check `v ? parseGermanNumber(v) : undefined`. Edge case: typing literal '0' works (string '0' is truthy), so OK. No fix needed.",
+    "Minor: parseGermanNumber strips all non-digit/dot/dash chars; user typing '1,5 kg' would yield 1.5 (acceptable). Locale-correct.",
+    "Lieferant suggest list is computed inline via IIFE inside JSX — works but could be moved into useMemo like metrics for consistency (nitpick, not required)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Material-Verwaltung Bug 1 (Komma) and Bug 2 (Schnellauswahl-Chips) verified at code+unit-test level. No E2E run (per request). Helpers tested via /tmp/test_german_numbers.js (10/10 pass). All 4 number TextInputs use numbers-and-punctuation keyboard. Suggest chips wired for Kategorie/Lagerort/Lieferant. ESLint clean.",
+  "rca_of_issue": "Original bugs were caused by (1) keyboardType='decimal-pad' which on German iOS shows period only, no comma; fixed by switching to 'numbers-and-punctuation' and adding German number parsing helpers. (2) No reuse of existing values; fixed by adding horizontal ScrollView with tappable suggestion chips derived from existing materials data."
+}

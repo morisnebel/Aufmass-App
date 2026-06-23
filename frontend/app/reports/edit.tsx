@@ -359,7 +359,7 @@ export default function ReportEditScreen() {
   }
 
   const bauherrFull = project
-    ? [project.bauherr_salutation, project.bauherr_first_name, project.bauherr_last_name].filter(Boolean).join(' ') || project.bauherr_name || ''
+    ? [project.bauherr_salutation, (project as any).bauherr_first_name || (project as any).bauherr_firstName, (project as any).bauherr_last_name || (project as any).bauherr_lastName].filter(Boolean).join(' ') || project.bauherr_name || ''
     : '';
 
   return (

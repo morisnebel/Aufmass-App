@@ -106,8 +106,9 @@ export const generateReportSectionHtml = (
   const weatherText = report.weather && weatherIcons[report.weather] ? weatherIcons[report.weather] : '';
   const tempText = report.temperature != null ? `${report.temperature}°C` : '';
 
-  const bauherrName = project ? [project.bauherr_salutation, project.bauherr_first_name, project.bauherr_last_name].filter(Boolean).join(' ').trim() || project.bauherr_name || '' : '';
-  const bauherrAddr = project ? [project.bauherr_street, [project.bauherr_plz, project.bauherr_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '';
+  const p = project as any;
+  const bauherrName = project ? [project.bauherr_salutation, p?.bauherr_first_name || p?.bauherr_firstName, p?.bauherr_last_name || p?.bauherr_lastName].filter(Boolean).join(' ').trim() || project.bauherr_name || '' : '';
+  const bauherrAddr = project ? [project.bauherr_street, [(p?.bauherr_plz || p?.bauherr_zip), project.bauherr_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '';
   const objektAddr = project ? [project.objekt_street, [project.objekt_plz, project.objekt_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '';
 
   return `

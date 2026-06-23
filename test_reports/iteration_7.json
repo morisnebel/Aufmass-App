@@ -1,0 +1,64 @@
+{
+  "summary": "Code-structure verification of FINAL comma-input fix in /app/frontend/app/materials/index.tsx — PASS. The 4 number TextInputs (Bestand, Mindest-Bestand, Standard-Menge, Preis) now use `value={numStr.X ?? ''}` (raw typed string) instead of `value={formatGermanNumber(form.X)}`. The controlled-component round-trip bug that stripped trailing commas is eliminated. Node simulation reproduces typing '1' → '1,' → '1,5' → '1,50' with the displayed value preserving the comma at every step while parsed `form.stock_quantity` correctly resolves to a number. openCreate resets numStr; openEdit pre-fills it via formatGermanNumber. All other features (4 metric cards, 4 tabs, suggest chips, photo picker, save/delete, +/- stock buttons) are intact. Metro bundles cleanly (1412 modules, no errors). Backend-only review request honoured — no E2E run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/test_comma_input_sim.js"
+  ],
+  "verification_checks": {
+    "test_1_code_structure": {
+      "numStr_state_declared": "PASS — line 45: const [numStr, setNumStr] = useState<{ stock?: string; threshold?: string; defaultQty?: string; price?: string }>({});",
+      "stock_input_uses_raw_value": "PASS — line 444: value={numStr.stock ?? ''}",
+      "threshold_input_uses_raw_value": "PASS — line 457: value={numStr.threshold ?? ''}",
+      "defaultQty_input_uses_raw_value": "PASS — line 473: value={numStr.defaultQty ?? ''}",
+      "price_input_uses_raw_value": "PASS — line 486: value={numStr.price ?? ''}",
+      "no_formatGermanNumber_in_value_props": "PASS — grep shows formatGermanNumber only used in openEdit prefill (lines 138-141), never inside the TextInput value props",
+      "onChangeText_calls_both_setters": "PASS — all 4 handlers call setNumStr(prev => ({...prev, X: v})) AND setForm({...form, X: parseGermanNumber(v)|undefined}) (lines 445-448, 458-461, 474-477, 487-490)",
+      "openCreate_resets_numStr": "PASS — line 131: setNumStr({});",
+      "openEdit_prefills_numStr": "PASS — lines 137-142 populate numStr from material using formatGermanNumber",
+      "keyboardType_set": "PASS — keyboardType=\"numbers-and-punctuation\" on all 4 fields (lines 450, 463, 479, 492)"
+    },
+    "test_2_simulation": {
+      "result": "PASS",
+      "details": "Node script /app/test_reports/test_comma_input_sim.js simulated the typing flow. Step 1 type '1' → displayed='1', parsed=1. Step 2 type '1,' → displayed='1,', parsed=1 (comma RETAINED in display). Step 3 type '1,5' → displayed='1,5', parsed=1.5. Step 4 type '1,50' → displayed='1,50', parsed=1.5. Price field 'typing' to '12,99' → displayed='12,99', parsed=12.99. Confirmed old-bug demo: formatGermanNumber(parseGermanNumber('1,')) = '1' (would have stripped comma — that pathway is no longer used for the displayed value). openEdit prefill: stock_quantity=1.5 → numStr.stock='1,5', price_per_unit=12.99 → numStr.price='12,99'."
+    },
+    "test_3_compile_lint": {
+      "metro_bundle": "PASS — /var/log/supervisor/expo.out.log shows 'iOS Bundled 1164ms node_modules/expo-router/entry.js (1412 modules)' with no compile errors related to materials/index.tsx",
+      "eslint": "SKIPPED — project-level eslint.config.js has a pre-existing broken require('eslint/config') (unrelated to this fix; ESLint 9 flat-config issue). Not blocking.",
+      "typescript_check": "PASS for materials/index.tsx — `tsc --noEmit` on this file produced 0 errors in materials/index.tsx (the 2 TS errors observed are in services/LocalStorage.ts, pre-existing, unrelated)."
+    },
+    "test_4_regression": {
+      "metric_cards": "PASS — 4 MetricCards rendered (Gesamt, Kategorien, Lagerorte, Niedrig) lines 206-209",
+      "tabs": "PASS — 4 tabs (materials/categories/locations/suppliers) lines 214-228",
+      "suggest_chips_category": "PASS — horizontal ScrollView with suggestChip for Kategorie lines 498-510, placed ABOVE the text input",
+      "suggest_chips_location": "PASS — lines 514-527 ABOVE the location text input",
+      "suggest_chips_supplier": "PASS — lines 530-547 ABOVE the supplier text input",
+      "photo_picker": "PASS — handlePickPhoto (camera + library) lines 146-162, photoRow UI lines 401-424",
+      "save_delete_material": "PASS — handleSave lines 164-185, handleDelete lines 187-192",
+      "stock_plus_minus": "PASS — adjustStock lines 195-199, +/- buttons lines 295-302"
+    }
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: `parseGermanNumber` returns 0 for empty/invalid input. Current code stores 0 in form.stock_quantity / form.low_stock_threshold while default_quantity/price_per_unit use the `v ? ... : undefined` guard. Behavior is consistent with intent (stock 0 = no stock), but worth noting in case future logic needs to distinguish 'not set' from 0 for these two fields.",
+    "Minor: `parseGermanNumber` strips '-' inside via regex /[^\\d.-]/g but allows leading '-'. For a stock/price field where negatives are invalid, consider Math.max(0, ...). Not a regression — same behavior as before."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (no backend testing requested)",
+    "frontend": "100% (code-structure + simulation, no E2E)"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Comma-input fix is verified at code-structure + behaviour-simulation level. If an E2E re-verification is requested, navigate to Material-Verwaltung → '+ Material hinzufügen' → tap into Bestand or Preis field → use mobile keyboard to type '1,5' or '12,99' → confirm the comma is visible in the input as typed. Then tap Speichern → reopen the material → confirm displayed value still has the comma. The fix is in /app/frontend/app/materials/index.tsx (numStr local state).",
+  "rca_of_issue": "RCA: The previous fix used `value={formatGermanNumber(form.stock_quantity)}` on a controlled React Native TextInput. On every keystroke, the chain `typed string -> parseGermanNumber -> form.stock_quantity (number) -> formatGermanNumber -> displayed value` ran. When the user typed '1,' → parseGermanNumber('1,') → 1.0 → formatGermanNumber(1.0) → '1', so the trailing comma was instantly removed from the input before the user could type the decimal digit. FIX: Separate the displayed string (raw user input in `numStr` state) from the parsed number (`form.X`). The TextInput now reads `numStr.X` (raw, unmangled) while form.X stays numeric for saving. openEdit pre-populates numStr from existing values using formatGermanNumber; openCreate resets numStr to {}. Simulation in /app/test_reports/test_comma_input_sim.js reproduces the typing flow and confirms the comma is preserved at every step."
+}

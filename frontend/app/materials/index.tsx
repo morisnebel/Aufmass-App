@@ -41,6 +41,8 @@ export default function MaterialsIndex() {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterLocation, setFilterLocation] = useState<string>('');
   const [showFilterMenu, setShowFilterMenu] = useState<null | 'cat' | 'loc'>(null);
+  // Roh-Eingabe-Strings für Zahlenfelder (damit Komma beim Tippen erhalten bleibt)
+  const [numStr, setNumStr] = useState<{ stock?: string; threshold?: string; defaultQty?: string; price?: string }>({});
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -123,8 +125,23 @@ export default function MaterialsIndex() {
     });
   }, [materials, search, filterCategory, filterLocation]);
 
-  const openCreate = () => { setEditing(null); setForm({ ...EMPTY }); setModalVisible(true); };
-  const openEdit = (m: MaterialMaster) => { setEditing(m); setForm({ ...m }); setModalVisible(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...EMPTY });
+    setNumStr({});
+    setModalVisible(true);
+  };
+  const openEdit = (m: MaterialMaster) => {
+    setEditing(m);
+    setForm({ ...m });
+    setNumStr({
+      stock: m.stock_quantity != null ? formatGermanNumber(m.stock_quantity) : '',
+      threshold: m.low_stock_threshold != null ? formatGermanNumber(m.low_stock_threshold) : '',
+      defaultQty: m.default_quantity != null ? formatGermanNumber(m.default_quantity) : '',
+      price: m.price_per_unit != null ? formatGermanNumber(m.price_per_unit) : '',
+    });
+    setModalVisible(true);
+  };
 
   const handlePickPhoto = async (source: 'camera' | 'library') => {
     try {
@@ -424,8 +441,11 @@ export default function MaterialsIndex() {
                     <Text style={styles.label}>Bestand</Text>
                     <TextInput
                       style={styles.input}
-                      value={formatGermanNumber(form.stock_quantity)}
-                      onChangeText={(v) => setForm({ ...form, stock_quantity: parseGermanNumber(v) })}
+                      value={numStr.stock ?? ''}
+                      onChangeText={(v) => {
+                        setNumStr(prev => ({ ...prev, stock: v }));
+                        setForm({ ...form, stock_quantity: parseGermanNumber(v) });
+                      }}
                       placeholder="0"
                       keyboardType="numbers-and-punctuation"
                     />
@@ -434,8 +454,11 @@ export default function MaterialsIndex() {
                     <Text style={styles.label}>Mindest-Bestand</Text>
                     <TextInput
                       style={styles.input}
-                      value={formatGermanNumber(form.low_stock_threshold)}
-                      onChangeText={(v) => setForm({ ...form, low_stock_threshold: parseGermanNumber(v) })}
+                      value={numStr.threshold ?? ''}
+                      onChangeText={(v) => {
+                        setNumStr(prev => ({ ...prev, threshold: v }));
+                        setForm({ ...form, low_stock_threshold: parseGermanNumber(v) });
+                      }}
                       placeholder="0 = aus"
                       keyboardType="numbers-and-punctuation"
                     />
@@ -447,8 +470,11 @@ export default function MaterialsIndex() {
                     <Text style={styles.label}>Standard-Menge</Text>
                     <TextInput
                       style={styles.input}
-                      value={formatGermanNumber(form.default_quantity)}
-                      onChangeText={(v) => setForm({ ...form, default_quantity: v ? parseGermanNumber(v) : undefined })}
+                      value={numStr.defaultQty ?? ''}
+                      onChangeText={(v) => {
+                        setNumStr(prev => ({ ...prev, defaultQty: v }));
+                        setForm({ ...form, default_quantity: v ? parseGermanNumber(v) : undefined });
+                      }}
                       placeholder="1"
                       keyboardType="numbers-and-punctuation"
                     />
@@ -457,8 +483,11 @@ export default function MaterialsIndex() {
                     <Text style={styles.label}>Preis (€/Einh.)</Text>
                     <TextInput
                       style={styles.input}
-                      value={formatGermanNumber(form.price_per_unit)}
-                      onChangeText={(v) => setForm({ ...form, price_per_unit: v ? parseGermanNumber(v) : undefined })}
+                      value={numStr.price ?? ''}
+                      onChangeText={(v) => {
+                        setNumStr(prev => ({ ...prev, price: v }));
+                        setForm({ ...form, price_per_unit: v ? parseGermanNumber(v) : undefined });
+                      }}
                       placeholder="0,00"
                       keyboardType="numbers-and-punctuation"
                     />

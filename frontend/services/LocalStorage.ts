@@ -1916,6 +1916,8 @@ export interface ReportPhoto {
 export interface ReportMachine {
   id: string;
   name: string;
+  master_id?: string; // Verknüpfung zur Stammdaten-Maschine
+  hours?: number; // Einsatzdauer in Stunden
   note?: string;
 }
 
@@ -2062,8 +2064,30 @@ export const ReportService = {
 export interface MachineMaster {
   id: string;
   name: string;
-  category?: string; // z.B. "Hebezeug", "Werkzeug"
-  serial_number?: string;
+  // Erweiterte Betriebsmittel-Felder
+  equipment_category?: 'fahrzeug' | 'maschine' | 'werkzeug' | 'geruest' | 'anhaenger' | 'container' | 'sicherheit' | 'sonstiges';
+  manufacturer?: string;
+  model?: string;
+  year?: number;
+  license_plate?: string;
+  serial_number?: string; // FIN / Seriennummer
+  storage_location?: string; // z.B. „Hauptlager München"
+  responsible_employee?: string;
+  // Zustand
+  condition?: 'gut' | 'mittel' | 'schlecht';
+  // Status: Verfügbar, Im Einsatz, In Wartung, Ausgeliehen, Nicht verfügbar
+  status?: 'verfuegbar' | 'einsatz' | 'wartung' | 'ausgeliehen' | 'nicht_verfuegbar';
+  // Ausleihe-Daten (wenn Status = ausgeliehen)
+  loan_to?: string; // an wen verliehen (Name/Firma)
+  loan_from_date?: string; // ISO YYYY-MM-DD
+  loan_until_date?: string; // ISO geplante Rückgabe
+  loan_note?: string;
+  // Prüfungen
+  last_inspection_date?: string; // ISO
+  next_inspection_date?: string; // ISO
+  // Fotos
+  photos?: string[]; // base64 Strings
+  category?: string; // (legacy / freie Kategorie-Beschreibung)
   note?: string;
   active: boolean;
   created_at: string;

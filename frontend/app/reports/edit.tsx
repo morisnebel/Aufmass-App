@@ -381,13 +381,19 @@ export default function ReportEditScreen() {
   // ---- Maschinen ----
   const addMachineManual = () => setMachines(prev => [...prev, { id: localId(), name: '' }]);
   const addMachineFromMaster = (m: MachineMaster) => {
-    setMachines(prev => [...prev, { id: localId(), name: m.name }]);
+    setMachines(prev => [...prev, { id: localId(), name: m.name, master_id: m.id }]);
     setShowMachPicker(false);
   };
-  const updateMachine = (id: string, field: keyof ReportMachine, value: string) => {
+  const updateMachine = (id: string, field: keyof ReportMachine, value: string | number) => {
     setMachines(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
   };
   const removeMachine = (id: string) => setMachines(prev => prev.filter(m => m.id !== id));
+  // Lookup-Map zur Stammdaten-Maschine (Status & Foto in der Anzeige)
+  const machMasterById = React.useMemo(() => {
+    const m: Record<string, MachineMaster> = {};
+    machMaster.forEach(x => { m[x.id] = x; });
+    return m;
+  }, [machMaster]);
 
   // ---- Work Items / Checklisten ----
   const toggleWorkItem = (id: string) => {
@@ -901,21 +907,65 @@ export default function ReportEditScreen() {
                 <Text style={styles.emptyAddText}>Maschine / Gerät hinzufügen</Text>
               </TouchableOpacity>
             ) : (
-              <View style={styles.chipGrid}>
-                {machines.map(m => (
-                  <View key={m.id} style={styles.machineChip}>
-                    <Ionicons name="construct" size={14} color="#7c3aed" />
-                    <TextInput
-                      style={styles.machineChipInput}
-                      value={m.name}
-                      onChangeText={(v) => updateMachine(m.id, 'name', v)}
-                      placeholder="Bezeichnung"
-                    />
-                    <TouchableOpacity onPress={() => removeMachine(m.id)}>
-                      <Ionicons name="close-circle" size={18} color="#94a3b8" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+              <View style={{ gap: 6 }}>
+                {machines.map(m => {
+                  const master = m.master_id ? machMasterById[m.master_id] : undefined;
+                  const statusColor = master?.status === 'ausgeliehen' ? '#7c3aed'
+                    : master?.status === 'einsatz' ? '#2563eb'
+                    : master?.status === 'wartung' ? '#d97706'
+                    : master?.status === 'nicht_verfuegbar' ? '#ef4444'
+                    : '#16a34a';
+                  const statusLabel = master?.status === 'ausgeliehen' ? 'Ausgeliehen'
+                    : master?.status === 'einsatz' ? 'Im Einsatz'
+                    : master?.status === 'wartung' ? 'Wartung'
+                    : master?.status === 'nicht_verfuegbar' ? 'Nicht verfügbar'
+                    : master ? 'Verfügbar' : '';
+                  const firstPhoto = master?.photos && master.photos.length > 0 ? master.photos[0] : null;
+                  return (
+                    <View key={m.id} style={styles.machineRow}>
+                      {firstPhoto ? (
+                        <Image source={{ uri: firstPhoto }} style={styles.machineRowPhoto} />
+                      ) : (
+                        <View style={styles.machineRowIcon}>
+                          <Ionicons name="construct" size={18} color="#7c3aed" />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <TextInput
+                          style={styles.machineRowName}
+                          value={m.name}
+                          onChangeText={(v) => updateMachine(m.id, 'name', v)}
+                          placeholder="Bezeichnung"
+                        />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          {statusLabel ? (
+                            <View style={[styles.machineStatusBadge, { backgroundColor: `${statusColor}20` }]}>
+                              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                              <Text style={[styles.machineStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                            </View>
+                          ) : null}
+                          <View style={styles.hoursInputWrap}>
+                            <Ionicons name="time-outline" size={12} color="#64748b" />
+                            <TextInput
+                              style={styles.hoursInput}
+                              value={m.hours != null ? String(m.hours).replace('.', ',') : ''}
+                              onChangeText={(v) => {
+                                const num = v ? parseFloat(v.replace(',', '.').replace(/[^\d.-]/g, '')) || 0 : undefined;
+                                updateMachine(m.id, 'hours', num as any);
+                              }}
+                              placeholder="0"
+                              keyboardType="numbers-and-punctuation"
+                            />
+                            <Text style={styles.hoursUnit}>h</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => removeMachine(m.id)} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle" size={20} color="#94a3b8" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </Section>
@@ -1224,18 +1274,42 @@ export default function ReportEditScreen() {
               <ScrollView style={{ maxHeight: 400 }}>
                 {machMaster.length === 0 ? (
                   <Text style={styles.modalEmpty}>Keine Maschinen angelegt.</Text>
-                ) : machMaster.map(m => (
-                  <TouchableOpacity key={m.id} style={styles.pickerRow} onPress={() => addMachineFromMaster(m)}>
-                    <View style={[styles.empAvatar, { backgroundColor: '#ede9fe' }]}>
-                      <Ionicons name="construct" size={18} color="#7c3aed" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.pickerName}>{m.name}</Text>
-                      {m.category ? <Text style={styles.pickerSub}>{m.category}</Text> : null}
-                    </View>
-                    <Ionicons name="add-circle" size={24} color="#1976d2" />
-                  </TouchableOpacity>
-                ))}
+                ) : machMaster.map(m => {
+                  const statusColor = m.status === 'ausgeliehen' ? '#7c3aed'
+                    : m.status === 'einsatz' ? '#2563eb'
+                    : m.status === 'wartung' ? '#d97706'
+                    : m.status === 'nicht_verfuegbar' ? '#ef4444'
+                    : '#16a34a';
+                  const statusLabel = m.status === 'ausgeliehen' ? 'Ausgeliehen'
+                    : m.status === 'einsatz' ? 'Im Einsatz'
+                    : m.status === 'wartung' ? 'Wartung'
+                    : m.status === 'nicht_verfuegbar' ? 'Nicht verfügbar'
+                    : 'Verfügbar';
+                  const firstPhoto = m.photos && m.photos.length > 0 ? m.photos[0] : null;
+                  return (
+                    <TouchableOpacity key={m.id} style={styles.pickerRow} onPress={() => addMachineFromMaster(m)}>
+                      {firstPhoto ? (
+                        <Image source={{ uri: firstPhoto }} style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#f1f5f9' }} />
+                      ) : (
+                        <View style={[styles.empAvatar, { backgroundColor: '#ede9fe' }]}>
+                          <Ionicons name="construct" size={18} color="#7c3aed" />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pickerName}>{m.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                          <View style={[styles.machineStatusBadge, { backgroundColor: `${statusColor}20` }]}>
+                            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                            <Text style={[styles.machineStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                          </View>
+                          {m.category ? <Text style={styles.pickerSub}>{m.category}</Text> : null}
+                          {m.manufacturer ? <Text style={styles.pickerSub}>{m.manufacturer}</Text> : null}
+                        </View>
+                      </View>
+                      <Ionicons name="add-circle" size={24} color="#1976d2" />
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
               <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowMachPicker(false)}>
                 <Text style={styles.modalCloseText}>Fertig</Text>
@@ -1584,6 +1658,25 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#ddd6fe',
   },
   machineChipInput: { minWidth: 60, maxWidth: 140, fontSize: 13, color: '#0f172a', fontWeight: '600' },
+  // --- Machine rows (with status & hours) ---
+  machineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#faf5ff', borderRadius: 12, padding: 8,
+    borderWidth: 1, borderColor: '#e9d5ff',
+  },
+  machineRowPhoto: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#f1f5f9' },
+  machineRowIcon: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#ede9fe', alignItems: 'center', justifyContent: 'center' },
+  machineRowName: { fontSize: 14, color: '#0f172a', fontWeight: '700', paddingVertical: 2 },
+  machineStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  machineStatusText: { fontSize: 10, fontWeight: '700' },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  hoursInputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  hoursInput: { minWidth: 28, maxWidth: 50, fontSize: 12, color: '#0f172a', fontWeight: '600', paddingVertical: 2 },
+  hoursUnit: { fontSize: 10, color: '#64748b' },
 
   // --- Inputs ---
   input: {

@@ -216,10 +216,14 @@ export const generateReportSectionHtml = (
     : '';
 
   // Maschinen / Geräte
-  const machinesAny = (report as any).machines as { id: string; name: string; note?: string }[] | undefined;
+  const machinesAny = (report as any).machines as { id: string; name: string; note?: string; hours?: number }[] | undefined;
   const machinesHtml = machinesAny && machinesAny.length > 0
     ? `<div class="machines-list">
-        ${machinesAny.map(m => `<span class="machine-tag">🔧 ${escapeHtml(m.name)}</span>`).join('')}
+        ${machinesAny.map(m => {
+          const h = (m.hours != null && !isNaN(m.hours) && m.hours > 0)
+            ? ` <strong>· ${String(m.hours).replace('.', ',')} h</strong>` : '';
+          return `<span class="machine-tag">🔧 ${escapeHtml(m.name)}${h}</span>`;
+        }).join('')}
        </div>`
     : '';
 

@@ -725,15 +725,15 @@ export default function HomeScreen() {
                 activeOpacity={0.85}
               >
                 <View style={styles.bannerCardIcon}>
-                  <Ionicons name="swap-horizontal" size={18} color="#fff" />
+                  <Ionicons name="swap-horizontal" size={16} color="#fff" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.bannerCardTitle}>
+                <View style={styles.bannerCardTextWrap}>
+                  <Text style={styles.bannerCardTitle} numberOfLines={1} adjustsFontSizeToFit>
                     {loanedMachines.length} {loanedMachines.length === 1 ? 'Gerät' : 'Geräte'}
                   </Text>
-                  <Text style={styles.bannerCardSub}>Ausgeliehen</Text>
+                  <Text style={styles.bannerCardSub} numberOfLines={1} adjustsFontSizeToFit>Ausgeliehen</Text>
                 </View>
-                <Ionicons name={expandedBanner === 'loaned' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+                <Ionicons name={expandedBanner === 'loaned' ? 'chevron-up' : 'chevron-down'} size={14} color="#fff" />
               </TouchableOpacity>
             )}
             {inspectionMachines.length > 0 && (() => {
@@ -748,17 +748,17 @@ export default function HomeScreen() {
                   activeOpacity={0.85}
                 >
                   <View style={styles.bannerCardIcon}>
-                    <Ionicons name={overdue > 0 ? 'warning' : 'shield-checkmark'} size={18} color="#fff" />
+                    <Ionicons name={overdue > 0 ? 'warning' : 'shield-checkmark'} size={16} color="#fff" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.bannerCardTitle}>
+                  <View style={styles.bannerCardTextWrap}>
+                    <Text style={styles.bannerCardTitle} numberOfLines={1} adjustsFontSizeToFit>
                       {inspectionMachines.length} {inspectionMachines.length === 1 ? 'Gerät' : 'Geräte'}
                     </Text>
-                    <Text style={styles.bannerCardSub}>
-                      {overdue > 0 ? `Inspektion überfällig (${overdue})` : 'Inspektion fällig'}
+                    <Text style={styles.bannerCardSub} numberOfLines={1} adjustsFontSizeToFit>
+                      {overdue > 0 ? `Insp. überf. (${overdue})` : 'Inspektion fällig'}
                     </Text>
                   </View>
-                  <Ionicons name={expandedBanner === 'inspection' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+                  <Ionicons name={expandedBanner === 'inspection' ? 'chevron-up' : 'chevron-down'} size={14} color="#fff" />
                 </TouchableOpacity>
               );
             })()}
@@ -771,17 +771,17 @@ export default function HomeScreen() {
                   activeOpacity={0.85}
                 >
                   <View style={styles.bannerCardIcon}>
-                    <Ionicons name={empty > 0 ? 'alert-circle' : 'cube-outline'} size={18} color="#fff" />
+                    <Ionicons name={empty > 0 ? 'alert-circle' : 'cube-outline'} size={16} color="#fff" />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.bannerCardTitle}>
+                  <View style={styles.bannerCardTextWrap}>
+                    <Text style={styles.bannerCardTitle} numberOfLines={1} adjustsFontSizeToFit>
                       {lowStockMaterials.length} {lowStockMaterials.length === 1 ? 'Material' : 'Materialien'}
                     </Text>
-                    <Text style={styles.bannerCardSub}>
-                      {empty > 0 ? `Bestand leer (${empty})` : 'Lagerbestand niedrig'}
+                    <Text style={styles.bannerCardSub} numberOfLines={1} adjustsFontSizeToFit>
+                      {empty > 0 ? `Bestand leer (${empty})` : 'Bestand niedrig'}
                     </Text>
                   </View>
-                  <Ionicons name={expandedBanner === 'lowstock' ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
+                  <Ionicons name={expandedBanner === 'lowstock' ? 'chevron-up' : 'chevron-down'} size={14} color="#fff" />
                 </TouchableOpacity>
               );
             })()}
@@ -1713,24 +1713,30 @@ const styles = StyleSheet.create({
   // Banner row (Pro-Hinweise: ausgeliehen / Inspektion)
   bannerRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   bannerCard: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
   bannerCardIcon: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 28, height: 28, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
-  bannerCardTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  bannerCardSub: { color: 'rgba(255,255,255,0.9)', fontSize: 11, marginTop: 1 },
+  bannerCardTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  bannerCardTitle: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  bannerCardSub: { color: 'rgba(255,255,255,0.9)', fontSize: 10, marginTop: 1 },
   // Detail panel (expanded)
   bannerDetail: {
     marginTop: 8,

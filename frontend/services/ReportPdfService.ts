@@ -395,10 +395,11 @@ export const REPORT_CSS = `
     padding: 8px 12px;
     margin-bottom: 12px;
     border-radius: 4px;
+    page-break-inside: avoid;
   }
   .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 12px; }
   .info-row { font-size: 11px; margin: 2px 0; }
-  .section { margin-bottom: 12px; }
+  .section { margin-bottom: 12px; page-break-inside: avoid; }
   .section-title {
     font-size: 13px;
     font-weight: bold;
@@ -407,17 +408,21 @@ export const REPORT_CSS = `
     padding: 5px 10px;
     border-radius: 4px;
     margin-bottom: 6px;
+    page-break-after: avoid;
+    break-after: avoid-page;
   }
   .employees-list { margin: 4px 0 0 18px; font-size: 12px; }
   .employees-list li { margin: 2px 0; }
   .emp-table {
     width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px;
+    page-break-inside: avoid;
   }
   .emp-table th { background: #1976d2; color: #fff; padding: 5px 8px; text-align: left; font-size: 10px; }
   .emp-table td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+  .emp-table tr { page-break-inside: avoid; }
   .emp-total-row td { background: #e0f2fe; padding: 6px 8px; font-size: 12px; border-top: 2px solid #1976d2; }
-  .work-items { list-style: none; padding-left: 0; margin: 4px 0; font-size: 11px; }
-  .work-items li { padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+  .work-items { list-style: none; padding-left: 0; margin: 4px 0; font-size: 11px; page-break-inside: avoid; }
+  .work-items li { padding: 3px 0; display: flex; align-items: center; gap: 6px; page-break-inside: avoid; }
   .work-items .check-box { font-size: 14px; color: #16a34a; }
   .work-items li.unchecked .check-box { color: #94a3b8; }
   .work-items .strike { text-decoration: line-through; color: #94a3b8; }
@@ -429,6 +434,7 @@ export const REPORT_CSS = `
   .role-summary {
     background: #f8fafc; border-radius: 6px; padding: 8px 10px; margin-top: 8px;
     border-left: 3px solid #1976d2;
+    page-break-inside: avoid;
   }
   .role-summary-title {
     font-size: 10px; font-weight: 700; color: #475569;
@@ -452,15 +458,18 @@ export const REPORT_CSS = `
     border-radius: 4px;
     white-space: pre-wrap;
     border: 1px solid #e0e0e0;
+    page-break-inside: avoid;
   }
   .material-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
     margin-top: 4px;
+    page-break-inside: avoid;
   }
   .material-table th { background: #1976d2; color: #fff; padding: 5px 8px; text-align: left; }
   .material-table td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; }
+  .material-table tr { page-break-inside: avoid; }
   .info-grid { display: flex; gap: 12px; flex-wrap: wrap; }
   .info-mini {
     flex: 1;
@@ -491,22 +500,22 @@ export const REPORT_CSS = `
   .signatures {
     display: flex;
     justify-content: space-between;
-    gap: 24px;
-    margin-top: 24px;
+    gap: 16px;
+    margin-top: 18px;
     page-break-inside: avoid;
   }
   .signature-block { flex: 1; text-align: center; }
   .signature-area {
     background: #fff;
     border-radius: 4px;
-    min-height: 110px;
-    height: 110px;
+    min-height: 70px;
+    height: 70px;
     overflow: hidden;
     position: relative;
   }
   .signature-area > svg { width: 100% !important; height: 100% !important; }
   .signature-area > div { width: 100% !important; height: 100% !important; }
-  .signature-label { font-size: 11px; margin-top: 6px; color: #333; font-weight: 600; }
+  .signature-label { font-size: 10px; margin-top: 4px; color: #333; font-weight: 600; border-top: 1px solid #94a3b8; padding-top: 3px; }
 `;
 
 /**

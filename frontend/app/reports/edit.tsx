@@ -75,6 +75,9 @@ export default function ReportEditScreen() {
   const [showMatPicker, setShowMatPicker] = useState(false);
   const [showMachPicker, setShowMachPicker] = useState(false);
   const [showChecklistPicker, setShowChecklistPicker] = useState(false);
+  // Auswahl-Modus für Checklisten-Items
+  const [activeChecklist, setActiveChecklist] = useState<Checklist | null>(null);
+  const [selectedClItems, setSelectedClItems] = useState<Set<string>>(new Set());
 
   // Form
   const [reportNumber, setReportNumber] = useState('');
@@ -227,6 +230,7 @@ export default function ReportEditScreen() {
   // ---- Save ----
   const handleSave = async (alsoExport = false): Promise<Report | null> => {
     if (!projectId) return null;
+    if (saving) return null; // Schutz gegen Doppelklick
     setSaving(true);
     try {
       // Stunden für jeden Mitarbeiter neu berechnen
@@ -264,19 +268,26 @@ export default function ReportEditScreen() {
       } else {
         saved = await ReportService.create(dataToSave);
       }
+      // Spinner sofort zurücksetzen — vor Navigation/Alert
+      setSaving(false);
       if (alsoExport && saved) {
-        await exportReportAsPdf(saved, project, customer);
+        // PDF-Export läuft separat (kann auf iOS lange dauern), Spinner ist bereits zurückgesetzt
+        try {
+          await exportReportAsPdf(saved, project, customer);
+        } catch (pdfErr) {
+          console.error('PDF export error:', pdfErr);
+          Alert.alert('PDF-Fehler', 'PDF konnte nicht erstellt werden, der Rapport wurde aber gespeichert.');
+        }
       } else {
-        Alert.alert('Gespeichert', 'Rapport wurde gespeichert.');
+        // Sofort zurück navigieren — der Toast ersetzt das blockierende Alert
         router.back();
       }
       return saved;
     } catch (e) {
       console.error('Save error:', e);
+      setSaving(false);
       Alert.alert('Fehler', 'Rapport konnte nicht gespeichert werden.');
       return null;
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -407,7 +418,7 @@ export default function ReportEditScreen() {
     setWorkItems(prev => prev.map(w => w.id === id ? { ...w, text } : w));
   };
   const importChecklistItems = (cl: Checklist) => {
-    // Flatten alle Items (inkl. subItems)
+    // Flatten alle Items (inkl. subItems) – Vollimport (Legacy, nicht mehr verwendet)
     const flatten = (items: any[], prefix = ''): { text: string; checked: boolean }[] => {
       const out: { text: string; checked: boolean }[] = [];
       for (const it of items) {
@@ -426,6 +437,72 @@ export default function ReportEditScreen() {
     }));
     setWorkItems(prev => [...prev, ...newItems]);
     setShowChecklistPicker(false);
+  };
+
+  // Hilfs-Liste: alle Punkte einer Checkliste flach mit Pfaden / Tiefe
+  const flattenChecklistItems = (cl: Checklist): { id: string; text: string; checked: boolean; depth: number; hasChildren: boolean }[] => {
+    const out: { id: string; text: string; checked: boolean; depth: number; hasChildren: boolean }[] = [];
+    const walk = (items: any[], depth: number) => {
+      for (const it of items) {
+        if (!it.text) continue;
+        const hasChildren = !!(it.subItems && it.subItems.length > 0);
+        out.push({ id: it.id, text: it.text, checked: !!it.checked, depth, hasChildren });
+        if (hasChildren) walk(it.subItems, depth + 1);
+      }
+    };
+    walk(cl.items || [], 0);
+    return out;
+  };
+
+  // Item-Auswahl umschalten
+  const toggleClItemSelection = (_cl: Checklist, itemId: string) => {
+    setSelectedClItems(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllCl = (cl: Checklist) => {
+    const flat = flattenChecklistItems(cl);
+    setSelectedClItems(prev => {
+      const allSelected = flat.every(i => prev.has(i.id));
+      if (allSelected) return new Set();
+      return new Set(flat.map(i => i.id));
+    });
+  };
+
+  // Übernahme: nur ausgewählte Items in Workitems umwandeln (mit Einrückung)
+  const importSelectedClItems = () => {
+    if (!activeChecklist) return;
+    const flat = flattenChecklistItems(activeChecklist);
+    const newItems = flat
+      .filter(i => selectedClItems.has(i.id))
+      .map(i => ({
+        id: localId(),
+        text: '  '.repeat(i.depth) + (i.depth > 0 ? '↳ ' : '') + i.text,
+        checked: i.checked,
+        source: 'checklist' as const,
+      }));
+    if (newItems.length === 0) {
+      Alert.alert('Hinweis', 'Bitte mindestens einen Punkt auswählen.');
+      return;
+    }
+    setWorkItems(prev => [...prev, ...newItems]);
+    setActiveChecklist(null);
+    setSelectedClItems(new Set());
+    setShowChecklistPicker(false);
+  };
+
+  const openChecklistDetail = (cl: Checklist) => {
+    setActiveChecklist(cl);
+    // Initial: alle Items vorausgewählt
+    const flat = flattenChecklistItems(cl);
+    setSelectedClItems(new Set(flat.map(i => i.id)));
   };
 
   // ---- Fotos ----
@@ -1318,40 +1395,128 @@ export default function ReportEditScreen() {
           </View>
         </Modal>
 
-        {/* Checklist-Picker */}
-        <Modal visible={showChecklistPicker} transparent animationType="slide" onRequestClose={() => setShowChecklistPicker(false)}>
+        {/* Checklist-Picker - 2-Stufen-Auswahl */}
+        <Modal visible={showChecklistPicker} transparent animationType="slide" onRequestClose={() => { setShowChecklistPicker(false); setActiveChecklist(null); setSelectedClItems(new Set()); }}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalSheet}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Aus Checkliste importieren</Text>
-                <TouchableOpacity onPress={() => setShowChecklistPicker(false)}><Ionicons name="close" size={26} color="#666" /></TouchableOpacity>
-              </View>
-              <Text style={[styles.hintText, { marginBottom: 10 }]}>
-                Wähle eine Checkliste – alle Punkte werden mit aktuellem Status übernommen.
-              </Text>
-              <ScrollView style={{ maxHeight: 400 }}>
-                {projChecklists.length === 0 ? (
-                  <Text style={styles.modalEmpty}>Keine Checklisten in diesem Projekt.</Text>
-                ) : projChecklists.map(cl => {
-                  const total = (cl.items || []).length;
-                  const checked = (cl.items || []).filter((i: any) => i.checked).length;
-                  return (
-                    <TouchableOpacity key={cl.id} style={styles.pickerRow} onPress={() => importChecklistItems(cl)}>
-                      <View style={[styles.empAvatar, { backgroundColor: '#dcfce7' }]}>
-                        <Ionicons name="checkbox" size={18} color="#16a34a" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.pickerName}>{cl.template_name}</Text>
-                        <Text style={styles.pickerSub}>{checked} / {total} erledigt</Text>
-                      </View>
-                      <Ionicons name="download" size={22} color="#1976d2" />
+              {/* Stufe 1: Liste der Checklisten wählen */}
+              {!activeChecklist ? (
+                <>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Aus Checkliste importieren</Text>
+                    <TouchableOpacity onPress={() => setShowChecklistPicker(false)}>
+                      <Ionicons name="close" size={26} color="#666" />
                     </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowChecklistPicker(false)}>
-                <Text style={styles.modalCloseText}>Schließen</Text>
-              </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.hintText, { marginBottom: 10 }]}>
+                    Wähle eine Checkliste – im nächsten Schritt kannst du einzelne Punkte auswählen.
+                  </Text>
+                  <ScrollView style={{ maxHeight: 400 }}>
+                    {projChecklists.length === 0 ? (
+                      <Text style={styles.modalEmpty}>Keine Checklisten in diesem Projekt.</Text>
+                    ) : projChecklists.map(cl => {
+                      const total = (cl.items || []).length;
+                      const checked = (cl.items || []).filter((i: any) => i.checked).length;
+                      return (
+                        <TouchableOpacity key={cl.id} style={styles.pickerRow} onPress={() => openChecklistDetail(cl)}>
+                          <View style={[styles.empAvatar, { backgroundColor: '#dcfce7' }]}>
+                            <Ionicons name="checkbox" size={18} color="#16a34a" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.pickerName}>{cl.template_name}</Text>
+                            <Text style={styles.pickerSub}>{checked} / {total} erledigt</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={22} color="#1976d2" />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                  <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowChecklistPicker(false)}>
+                    <Text style={styles.modalCloseText}>Schließen</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                /* Stufe 2: Item-Auswahl */
+                <>
+                  <View style={styles.modalHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+                      <TouchableOpacity onPress={() => { setActiveChecklist(null); setSelectedClItems(new Set()); }} style={{ padding: 4 }}>
+                        <Ionicons name="chevron-back" size={22} color="#1976d2" />
+                      </TouchableOpacity>
+                      <Text style={styles.modalTitle} numberOfLines={1}>{activeChecklist.template_name}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { setShowChecklistPicker(false); setActiveChecklist(null); setSelectedClItems(new Set()); }}>
+                      <Ionicons name="close" size={26} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={[styles.hintText, { flex: 1 }]}>
+                      {selectedClItems.size} / {flattenChecklistItems(activeChecklist).length} Punkte ausgewählt
+                    </Text>
+                    <TouchableOpacity onPress={() => toggleSelectAllCl(activeChecklist)} style={styles.smallChip}>
+                      <Ionicons
+                        name={flattenChecklistItems(activeChecklist).every(i => selectedClItems.has(i.id)) ? 'checkbox' : 'square-outline'}
+                        size={14}
+                        color="#1976d2"
+                      />
+                      <Text style={styles.smallChipText}>Alle</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView style={{ maxHeight: 400 }}>
+                    {flattenChecklistItems(activeChecklist).map(item => {
+                      const isSelected = selectedClItems.has(item.id);
+                      return (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={[
+                            styles.clItemRow,
+                            { paddingLeft: 12 + item.depth * 20 },
+                            isSelected && styles.clItemRowSelected,
+                          ]}
+                          onPress={() => toggleClItemSelection(activeChecklist, item.id)}
+                        >
+                          <Ionicons
+                            name={isSelected ? 'checkbox' : 'square-outline'}
+                            size={22}
+                            color={isSelected ? '#16a34a' : '#94a3b8'}
+                          />
+                          {item.depth > 0 && <Text style={{ color: '#94a3b8', fontSize: 14 }}>↳</Text>}
+                          <Text
+                            style={[
+                              styles.clItemText,
+                              !item.checked && { textDecorationLine: 'line-through', color: '#94a3b8' },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {item.text}
+                          </Text>
+                          {item.checked && (
+                            <View style={styles.clItemDoneBadge}>
+                              <Ionicons name="checkmark" size={11} color="#16a34a" />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <TouchableOpacity
+                      style={[styles.modalCloseBtn, { flex: 1, backgroundColor: '#eceff1' }]}
+                      onPress={() => { setActiveChecklist(null); setSelectedClItems(new Set()); }}
+                    >
+                      <Text style={[styles.modalCloseText, { color: '#475569' }]}>Zurück</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalCloseBtn, { flex: 1.4, backgroundColor: '#16a34a' }]}
+                      onPress={importSelectedClItems}
+                    >
+                      <Text style={[styles.modalCloseText, { color: '#fff' }]}>
+                        Übernehmen ({selectedClItems.size})
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </Modal>
@@ -1775,6 +1940,25 @@ const styles = StyleSheet.create({
   pickerSub: { fontSize: 12, color: '#64748b', marginTop: 1 },
   modalCloseBtn: { backgroundColor: '#1976d2', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 10 },
   modalCloseText: { color: '#fff', fontWeight: '700' },
+  // Checklist Item-Auswahl
+  clItemRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingRight: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  clItemRowSelected: { backgroundColor: '#f0fdf4' },
+  clItemText: { flex: 1, fontSize: 14, color: '#0f172a' },
+  clItemDoneBadge: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: '#dcfce7',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  smallChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 12, backgroundColor: '#eff6ff',
+    borderWidth: 1, borderColor: '#bfdbfe',
+  },
+  smallChipText: { fontSize: 11, color: '#1976d2', fontWeight: '700' },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   modalBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 6 },
   cancelBtn: { backgroundColor: '#eceff1' },

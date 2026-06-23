@@ -501,21 +501,21 @@ export const REPORT_CSS = `
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    margin-top: 18px;
+    margin-top: 14px;
     page-break-inside: avoid;
   }
   .signature-block { flex: 1; text-align: center; }
   .signature-area {
     background: #fff;
     border-radius: 4px;
-    min-height: 70px;
-    height: 70px;
+    min-height: 50px;
+    height: 50px;
     overflow: hidden;
     position: relative;
   }
   .signature-area > svg { width: 100% !important; height: 100% !important; }
   .signature-area > div { width: 100% !important; height: 100% !important; }
-  .signature-label { font-size: 10px; margin-top: 4px; color: #333; font-weight: 600; border-top: 1px solid #94a3b8; padding-top: 3px; }
+  .signature-label { font-size: 9px; margin-top: 2px; color: #333; font-weight: 600; border-top: 1px solid #94a3b8; padding-top: 2px; line-height: 1.3; }
 `;
 
 /**

@@ -440,17 +440,19 @@ export default function ReportEditScreen() {
   };
 
   // Hilfs-Liste: alle Punkte einer Checkliste flach mit Pfaden / Tiefe
+  // Wichtig: ChecklistItem hat keine eigene id - wir generieren Pfad-basierten Schlüssel (z.B. "0.1.2")
   const flattenChecklistItems = (cl: Checklist): { id: string; text: string; checked: boolean; depth: number; hasChildren: boolean }[] => {
     const out: { id: string; text: string; checked: boolean; depth: number; hasChildren: boolean }[] = [];
-    const walk = (items: any[], depth: number) => {
-      for (const it of items) {
-        if (!it.text) continue;
+    const walk = (items: any[], depth: number, pathPrefix: string) => {
+      items.forEach((it, idx) => {
+        if (!it.text) return;
+        const path = pathPrefix ? `${pathPrefix}.${idx}` : `${idx}`;
         const hasChildren = !!(it.subItems && it.subItems.length > 0);
-        out.push({ id: it.id, text: it.text, checked: !!it.checked, depth, hasChildren });
-        if (hasChildren) walk(it.subItems, depth + 1);
-      }
+        out.push({ id: path, text: it.text, checked: !!it.checked, depth, hasChildren });
+        if (hasChildren) walk(it.subItems, depth + 1, path);
+      });
     };
-    walk(cl.items || [], 0);
+    walk(cl.items || [], 0, '');
     return out;
   };
 

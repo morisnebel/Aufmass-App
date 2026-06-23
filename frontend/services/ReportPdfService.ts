@@ -40,12 +40,13 @@ const weatherIcons: Record<string, string> = {
 
 /**
  * Erzeugt einen SVG für eine Unterschrift (aus Pfad-String "M..L..|M..L..").
- * Berechnet automatisch die Bounding-Box der Punkte, damit die Unterschrift
- * unabhängig von der Bildschirmgröße sauber im PDF-Bereich angezeigt wird.
+ * Berechnet automatisch die Bounding-Box der Punkte und nutzt
+ * vector-effect="non-scaling-stroke" damit die Striche unabhängig von der
+ * Skalierung immer gut sichtbar bleiben.
  */
-const renderSignatureSvg = (paths: string | undefined, width = 280, height = 90): string => {
+const renderSignatureSvg = (paths: string | undefined, width = 280, height = 100): string => {
   if (!paths) {
-    return `<div style="width:${width}px;height:${height}px;border-bottom:1px solid #999;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
+    return `<div style="width:100%;height:${height}px;border-bottom:1.5px solid #333;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
   }
   const splitPaths = paths.split('|').filter(Boolean);
 
@@ -67,22 +68,29 @@ const renderSignatureSvg = (paths: string | undefined, width = 280, height = 90)
     }
   });
 
-  // Falls keine Punkte: leere Linie
   if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) {
-    return `<div style="width:${width}px;height:${height}px;border-bottom:1px solid #999;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
+    return `<div style="width:100%;height:${height}px;border-bottom:1.5px solid #333;display:flex;align-items:flex-end;justify-content:center;color:#bbb;font-size:11px;padding-bottom:4px;">(keine Unterschrift)</div>`;
   }
 
-  // Mindestbreite/Höhe absichern
-  const padding = 8;
+  // Minimale Bounding-Box ein bisschen größer machen für saubere Darstellung
+  const padding = 6;
+  const sigWidth = Math.max(40, (maxX - minX) + padding * 2);
+  const sigHeight = Math.max(40, (maxY - minY) + padding * 2);
   const vbX = minX - padding;
   const vbY = minY - padding;
-  const vbW = Math.max(20, (maxX - minX) + padding * 2);
-  const vbH = Math.max(20, (maxY - minY) + padding * 2);
+
+  // Aspect ratio: signature breit vs hoch
+  const sigRatio = sigWidth / sigHeight;
+  // Anzeige-Container: 100% width, fixed height
+  // Wenn signature sehr breit ist (z.B. 4:1), wird sie skaliert dass sie passt
+  // Wenn signature kompakter ist, sollte sie schön zentriert sein
 
   const svgPaths = splitPaths
-    .map((d) => `<path d="${d}" stroke="#0f172a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`)
+    .map((d) => `<path d="${d}" stroke="#0f172a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`)
     .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" style="border-bottom:1px solid #999;display:block;">${svgPaths}</svg>`;
+
+  // preserveAspectRatio xMidYMax: zentriert horizontal, unten ausgerichtet (Unterschrift sitzt auf Linie)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="${height}" viewBox="${vbX} ${vbY} ${sigWidth} ${sigHeight}" preserveAspectRatio="xMidYMax meet" style="display:block;border-bottom:1.5px solid #333;" data-ratio="${sigRatio.toFixed(2)}">${svgPaths}</svg>`;
 };
 
 /**
@@ -479,13 +487,22 @@ export const REPORT_CSS = `
   .signatures {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    margin-top: 18px;
+    gap: 24px;
+    margin-top: 24px;
     page-break-inside: avoid;
   }
   .signature-block { flex: 1; text-align: center; }
-  .signature-area { background: #fafafa; border-radius: 4px; min-height: 90px; display: flex; align-items: center; justify-content: center; }
-  .signature-label { font-size: 11px; margin-top: 4px; color: #333; }
+  .signature-area {
+    background: #fff;
+    border-radius: 4px;
+    min-height: 110px;
+    height: 110px;
+    overflow: hidden;
+    position: relative;
+  }
+  .signature-area > svg { width: 100% !important; height: 100% !important; }
+  .signature-area > div { width: 100% !important; height: 100% !important; }
+  .signature-label { font-size: 11px; margin-top: 6px; color: #333; font-weight: 600; }
 `;
 
 /**

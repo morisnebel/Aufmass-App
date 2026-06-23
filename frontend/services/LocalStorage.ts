@@ -2189,6 +2189,11 @@ export interface MaterialMaster {
   supplier?: string;
   article_number?: string;
   note?: string;
+  // Erweiterte Material-Verwaltung
+  photo?: string; // base64 Foto
+  stock_quantity?: number; // aktueller Lagerbestand
+  low_stock_threshold?: number; // Schwelle für „Niedriger Bestand"
+  storage_location?: string; // z.B. „Regal 01-02", „Schrank 3", „Werkstatt"
   active: boolean;
   created_at: string;
   updated_at: string;

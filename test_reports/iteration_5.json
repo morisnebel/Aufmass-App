@@ -1,0 +1,66 @@
+{
+  "summary": "Verified the signature PDF fix and the new Material-Verwaltung screen via static code review + unit test of renderSignatureSvg + TypeScript compile + Metro bundle log check. All structural requirements met, unit tests pass, no new TS errors. ESLint blocked by a pre-existing config issue (unrelated to this change).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/test_signature_svg.js"
+  ],
+  "verification_results": {
+    "signature_svg": {
+      "width_100_percent": "PASS - svg uses width=\"100%\"",
+      "vector_effect_non_scaling_stroke": "PASS - present on every <path>",
+      "preserveAspectRatio_xMidYMax_meet": "PASS - confirmed (no xMidYMid remnants)",
+      "default_height_100": "PASS",
+      "stroke_width_2_2": "PASS",
+      "bounding_box_logic": "PASS - viewBox encompasses all path coordinates (test input M250.5,30.1 L320,50 -> viewBox 244.5 24.1 81.5 40, padding=6 honoured)",
+      "multi_stroke_support": "PASS - 2 strokes produce 2 <path> elements",
+      "empty_path_placeholder": "PASS - returns '(keine Unterschrift)' div"
+    },
+    "signature_area_css": {
+      "min_height_110": "PASS - .signature-area { min-height: 110px; height: 110px } (was 90)",
+      "svg_fills_container": "PASS - .signature-area > svg { width: 100% !important; height: 100% !important; }",
+      "div_placeholder_fills_container": "PASS - .signature-area > div has same 100% rule"
+    },
+    "materials_screen": {
+      "four_tabs": "PASS - TabKey = 'materials' | 'categories' | 'locations' | 'suppliers' (line 14, rendered lines 188-191)",
+      "metric_cards": "PASS - 4 MetricCards: Gesamt, Kategorien, Lagerorte, Niedrig (lines 178-183)",
+      "filter_modal": "PASS - showFilterMenu state + category/location filter menu (lines 353+)",
+      "edit_modal_with_photo_picker": "PASS - handlePickPhoto('camera'|'library') wired to two TouchableOpacity buttons (lines 388-392)",
+      "stock_adjustment": "PASS - adjustStock(m, +1|-1) function and +/- buttons (lines 168, 269-272)",
+      "low_stock_badge": "PASS - isLow flag derived from low_stock_threshold vs stock_quantity (line 239)"
+    },
+    "material_master_interface": {
+      "photo_field": "PASS - photo?: string (LocalStorage.ts line 2193)",
+      "stock_quantity": "PASS - stock_quantity?: number (line 2194)",
+      "low_stock_threshold": "PASS - low_stock_threshold?: number (line 2195)",
+      "storage_location": "PASS - storage_location?: string (line 2196)"
+    },
+    "compile_checks": {
+      "typescript_noEmit": "PASS - no TS errors for app/materials/index.tsx or services/ReportPdfService.ts",
+      "metro_bundle": "PASS - 'iOS Bundled' lines present in expo.out.log, no compile errors after the change",
+      "eslint": "SKIPPED - eslint config has pre-existing issue ('Cannot find module eslint/config'), unrelated to this change. Should be reported separately."
+    }
+  },
+  "action_items": [
+    "(non-blocking) eslint.config.js requires 'eslint/config' which is not resolvable with ESLint 9.39.4 in the current install — fix the eslint config (use defineConfig from eslint or remove the legacy import) so future lint runs work. This is a pre-existing issue, not introduced by this iteration."
+  ],
+  "critical_code_review_comments": [
+    "renderSignatureSvg still keeps the unused 'width' parameter (default 280) — minor; not harmful but can be removed since SVG width is hard-coded to 100%.",
+    "ReportPdfService.ts is 569 lines and contains both HTML generation and CSS template constants — close to the 700-line soft cap. Consider splitting REPORT_CSS into a separate module in a future refactor."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (backend-only request, but no backend changes/tests required)", "frontend": "100% (structural + unit verification all passed)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Signature SVG rendering verified at the function level. For visual confirmation, a future agent could trigger a real PDF export from the app (Reports screen -> 'Als PDF teilen') and open the resulting file to confirm the signature now fills the box vertically and sits on the baseline. The CSS rule '.signature-area > svg { width:100% !important; height:100% !important }' guarantees the SVG fills its container. ESLint is broken globally — main agent should fix eslint.config.js if lint is needed later.",
+  "rca_of_issue": "Original bug: SVG was rendered with fixed width=280px inside a flex container that vertically centered it (align-items:center) with default preserveAspectRatio=xMidYMid meet. On A4 paper the signature column is wider than 280px, so the SVG kept its natural size and looked tiny, plus stroke-width scaled with the SVG. Fix correctly: (1) width=100% to fill the cell, (2) container CSS forces svg to 100%x100%, (3) xMidYMax meet anchors the signature to the bottom (signature 'sits on the line'), (4) vector-effect=non-scaling-stroke keeps stroke width constant regardless of viewBox scaling. Unit test confirms all four properties are present in output."
+}

@@ -1,6 +1,9 @@
 /**
  * SignaturePad - SVG-basierte Unterschriften-Komponente
- * Keine externe Library nötig. Speichert das Pfad-String (SVG "d"-Attribute).
+ * - Keine externe Library
+ * - Verwendet ref um setState im Render-Cycle zu vermeiden
+ * - Signalisiert Eltern via onDrawingChange, ob gerade gezeichnet wird
+ *   (damit die Eltern-ScrollView deaktiviert werden kann)
  */
 import React, { useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, GestureResponderEvent } from 'react-native';
@@ -13,6 +16,10 @@ interface SignaturePadProps {
   height?: number;
   label?: string;
   placeholder?: string;
+  /** Wird aufgerufen wenn der Nutzer beginnt zu zeichnen (true) / aufhört (false).
+   *  Eltern können damit z.B. eine ScrollView deaktivieren.
+   */
+  onDrawingChange?: (isDrawing: boolean) => void;
 }
 
 export const SignaturePad: React.FC<SignaturePadProps> = ({
@@ -21,57 +28,68 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   height = 180,
   label,
   placeholder = 'Hier unterschreiben',
+  onDrawingChange,
 }) => {
-  const [paths, setPaths] = useState<string[]>(value ? value.split('|').filter(Boolean) : []);
-  const currentPathRef = useRef<string>('');
-  const containerLayoutRef = useRef<{ x: number; y: number; width: number; height: number }>({
-    x: 0, y: 0, width: 0, height: 0
-  });
+  // paths leben primär im ref um Render-Zyklen-Konflikte zu vermeiden.
+  const pathsRef = useRef<string[]>(value ? value.split('|').filter(Boolean) : []);
+  const [, forceRender] = useState(0);
+  const rerender = useCallback(() => forceRender((v) => v + 1), []);
 
-  const updateExternal = useCallback((newPaths: string[]) => {
-    onChange(newPaths.join('|'));
+  // Aktuell laufender Pfad index
+  const isDrawingRef = useRef(false);
+
+  const commitChange = useCallback(() => {
+    onChange(pathsRef.current.join('|'));
   }, [onChange]);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (e: GestureResponderEvent) => {
         const { locationX, locationY } = e.nativeEvent;
-        currentPathRef.current = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
-        setPaths((prev) => [...prev, currentPathRef.current]);
+        const newPath = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        pathsRef.current = [...pathsRef.current, newPath];
+        isDrawingRef.current = true;
+        onDrawingChange?.(true);
+        rerender();
       },
       onPanResponderMove: (e: GestureResponderEvent) => {
         const { locationX, locationY } = e.nativeEvent;
-        currentPathRef.current += ` L${locationX.toFixed(1)},${locationY.toFixed(1)}`;
-        setPaths((prev) => {
-          const next = [...prev];
-          next[next.length - 1] = currentPathRef.current;
-          return next;
-        });
+        const last = pathsRef.current[pathsRef.current.length - 1];
+        if (!last) return;
+        pathsRef.current[pathsRef.current.length - 1] = `${last} L${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        rerender();
       },
       onPanResponderRelease: () => {
-        setPaths((prev) => {
-          updateExternal(prev);
-          return prev;
-        });
+        isDrawingRef.current = false;
+        onDrawingChange?.(false);
+        commitChange();
+      },
+      onPanResponderTerminate: () => {
+        isDrawingRef.current = false;
+        onDrawingChange?.(false);
+        commitChange();
       },
     })
   ).current;
 
   const handleClear = () => {
-    setPaths([]);
-    onChange('');
+    pathsRef.current = [];
+    rerender();
+    commitChange();
   };
 
   const handleUndo = () => {
-    setPaths((prev) => {
-      const next = prev.slice(0, -1);
-      updateExternal(next);
-      return next;
-    });
+    pathsRef.current = pathsRef.current.slice(0, -1);
+    rerender();
+    commitChange();
   };
 
+  const paths = pathsRef.current;
   const isEmpty = paths.length === 0;
 
   return (
@@ -80,9 +98,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       <View
         style={[styles.canvas, { height }]}
         {...panResponder.panHandlers}
-        onLayout={(e) => {
-          containerLayoutRef.current = e.nativeEvent.layout;
-        }}
       >
         <Svg width="100%" height="100%">
           {paths.map((d, i) => (
@@ -97,6 +112,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         )}
         <View style={styles.baselineContainer} pointerEvents="none">
           <View style={styles.baseline} />
+          <Text style={styles.xMark}>✕</Text>
         </View>
       </View>
       <View style={styles.buttonRow}>
@@ -147,10 +163,19 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 24,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   baseline: {
+    flex: 1,
     height: 1,
     backgroundColor: '#cfd8dc',
+  },
+  xMark: {
+    fontSize: 10,
+    color: '#cfd8dc',
+    marginLeft: -10,
+    marginBottom: -4,
   },
   buttonRow: {
     flexDirection: 'row',

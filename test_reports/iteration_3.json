@@ -1,0 +1,49 @@
+{
+  "summary": "Backend/integration verification of new 'Rapport' Pro feature for Aufmassprofi. Confirmed all required structures (services, routes, home-screen buttons) are in place. Metro bundler compiles successfully (iOS: 1452 modules, Web: 1018 modules, no errors). Found 2 NEW TypeScript errors in the new feature files due to mismatched property names on the Project interface (snake_case used instead of camelCase). These will not block the bundle but will cause Bauherr name/address to render as empty/undefined in the report edit screen and the PDF. No UI E2E test was performed per the request — user tests on iPhone.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Rapport edit screen: Bauherr Vor-/Nachname display",
+        "issue": "app/reports/edit.tsx:362 references project.bauherr_first_name and project.bauherr_last_name, but Project interface defines bauherr_firstName and bauherr_lastName (camelCase). Result: bauherrFull silently falls back to project.bauherr_name (or empty). TS errors: TS2551.",
+        "affected_testIDs": []
+      },
+      {
+        "flow": "Rapport PDF generation: Bauherr full name + address",
+        "issue": "services/ReportPdfService.ts:109-110 references project.bauherr_first_name, project.bauherr_last_name, project.bauherr_plz. The Project interface defines bauherr_firstName, bauherr_lastName and bauherr_zip. Result: PDF bauherrName falls back to bauherr_name, and bauherrAddr will not contain a PLZ. TS errors: TS2551.",
+        "affected_testIDs": []
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix app/reports/edit.tsx line 362: change project.bauherr_first_name -> project.bauherr_firstName and project.bauherr_last_name -> project.bauherr_lastName.",
+    "Fix services/ReportPdfService.ts line 109: same rename (bauherr_first_name -> bauherr_firstName, bauherr_last_name -> bauherr_lastName).",
+    "Fix services/ReportPdfService.ts line 110: change project.bauherr_plz -> project.bauherr_zip (matches Project interface).",
+    "Optional: re-run `npx tsc --noEmit | grep -E 'reports/edit|ReportPdfService'` after fix — expected to be clean.",
+    "Note: ESLint cannot be run (pre-existing config bug: eslint.config.js requires 'eslint/config' which is not installed). Not caused by the new feature; flag for future cleanup if desired."
+  ],
+  "critical_code_review_comments": [
+    "LocalStorage.ts is 2169 lines — exceeds 700-line guideline. Consider splitting per-domain (Reports/Employees/Materials into their own modules) when convenient.",
+    "ReportService.duplicate uses `as any` cast (LocalStorage.ts:2020) — works but loses type safety; could be typed as Omit<Report, 'id'|'created_at'|'updated_at'> explicitly.",
+    "Both Mitarbeiter and Material buttons are gated correctly with Features.showReportTab in app/index.tsx (lines 763, 776) — placement is AFTER Checklists as required.",
+    "Route registrations for reports/edit, employees/index, materials/index are present in app/_layout.tsx (lines 141-152) with German titles.",
+    "All three new services (ReportService, EmployeeMasterService, MaterialMasterService) expose the required methods: getAll, getByProjectId/getActive, getById, create, update, delete, plus ReportService.getNextReportNumber and ReportService.duplicate."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (no backend changes — local-only AsyncStorage-based feature)",
+    "frontend": "Bundle: PASS. TypeScript: 5 errors found in feature files, 2 distinct issues (3 instances of bauherr_*_name + 1 bauherr_plz). Pre-existing TS errors elsewhere ignored as per request."
+  },
+  "seed_data_creation": "None.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature is Pro-gated by Features.showReportTab. To activate: open Settings, enter unlock code PROFI2024. After the 3 property-name fixes above are applied, re-run `cd /app/frontend && npx tsc --noEmit 2>&1 | grep -E 'reports/edit|ReportPdfService'` — it should print nothing. The bundle already builds successfully. iCloud/CloudKit is currently disabled (Storage uses AsyncStorage only).",
+  "rca_of_issue": "Naming mismatch: the Project TypeScript interface in services/LocalStorage.ts uses camelCase for the Bauherr name parts (bauherr_firstName, bauherr_lastName) and 'zip' instead of 'plz' for the postal code (bauherr_zip vs objekt_plz which IS snake_case). The new files app/reports/edit.tsx and services/ReportPdfService.ts incorrectly use snake_case (bauherr_first_name, bauherr_last_name) and 'plz' (bauherr_plz). At runtime TypeScript-erased JS reads undefined for these fields — code silently falls back to project.bauherr_name (combined full name) so user may not notice immediately, but the address will be missing PLZ in PDF. Reproduction: create a project where Bauherr is entered via the structured fields (Vorname/Nachname/PLZ only, no legacy bauherr_name/bauherr_address) and create/preview a Rapport — Bauherr line will be empty or missing PLZ. Mitigation: rename to bauherr_firstName / bauherr_lastName / bauherr_zip (3 sites)."
+}

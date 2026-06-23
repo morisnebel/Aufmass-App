@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,12 +22,16 @@ import {
   ReportService,
   ProjectService,
   CustomerService,
+  EmployeeMasterService,
+  MaterialMasterService,
   Report,
   ReportEmployee,
   ReportMaterial,
   ReportPhoto,
   Project,
   Customer,
+  EmployeeMaster,
+  MaterialMaster,
 } from '../../services/LocalStorage';
 import { SignaturePad } from '../../src/components/SignaturePad';
 import { exportReportAsPdf, calcHoursFromTimes } from '../../services/ReportPdfService';
@@ -41,7 +45,7 @@ const WEATHER_OPTIONS: { value: Report['weather']; label: string; icon: string }
   { value: 'fog', label: 'Nebel', icon: '🌫️' },
 ];
 
-const generateLocalId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+const localId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
 export default function ReportEditScreen() {
   const router = useRouter();
@@ -54,6 +58,13 @@ export default function ReportEditScreen() {
   const [saving, setSaving] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  // Stammdaten
+  const [empMaster, setEmpMaster] = useState<EmployeeMaster[]>([]);
+  const [matMaster, setMatMaster] = useState<MaterialMaster[]>([]);
+  const [showEmpPicker, setShowEmpPicker] = useState(false);
+  const [showMatPicker, setShowMatPicker] = useState(false);
 
   // Form Felder
   const [reportNumber, setReportNumber] = useState('');
@@ -76,7 +87,7 @@ export default function ReportEditScreen() {
   const [signatureWorkerName, setSignatureWorkerName] = useState('');
   const [photos, setPhotos] = useState<ReportPhoto[]>([]);
 
-  // Time picker state
+  // Time picker
   const [showTimePicker, setShowTimePicker] = useState<null | 'from' | 'to'>(null);
 
   useEffect(() => {
@@ -89,6 +100,7 @@ export default function ReportEditScreen() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, reportId]);
 
   const loadData = async () => {
@@ -99,8 +111,14 @@ export default function ReportEditScreen() {
     }
     try {
       setLoading(true);
-      const proj = await ProjectService.getById(projectId);
+      const [proj, emps, mats] = await Promise.all([
+        ProjectService.getById(projectId),
+        EmployeeMasterService.getActive(),
+        MaterialMasterService.getActive(),
+      ]);
       setProject(proj);
+      setEmpMaster(emps);
+      setMatMaster(mats);
       if (proj?.customer_id) {
         const cust = await CustomerService.getById(proj.customer_id);
         setCustomer(cust);
@@ -129,7 +147,6 @@ export default function ReportEditScreen() {
           setPhotos(r.photos || []);
         }
       } else {
-        // Neue Nummer für neuen Rapport
         const nextNum = await ReportService.getNextReportNumber(projectId);
         setReportNumber(nextNum);
       }
@@ -141,10 +158,9 @@ export default function ReportEditScreen() {
     }
   };
 
-  // Auto-Berechnung der Stunden
   const computedHours = calcHoursFromTimes(timeFrom, timeTo);
 
-  // Save / Speichern
+  // ---- Save ----
   const handleSave = async (alsoExport = false): Promise<Report | null> => {
     if (!projectId) return null;
     setSaving(true);
@@ -171,7 +187,6 @@ export default function ReportEditScreen() {
         signed_at: (signatureCustomer || signatureWorker) ? new Date().toISOString() : undefined,
         photos,
       };
-
       let saved: Report | null;
       if (reportId) {
         saved = await ReportService.update(reportId, dataToSave);
@@ -194,16 +209,71 @@ export default function ReportEditScreen() {
     }
   };
 
-  const handleExportPdf = async () => {
-    const saved = await handleSave(true);
-    if (saved) {
-      // Erfolgreiches PDF wurde geteilt
+  const handleExportPdf = async () => { await handleSave(true); };
+
+  // ---- Time Picker with auto-advance ----
+  const handleTimeChange = (_: any, selected?: Date) => {
+    const isIos = Platform.OS === 'ios';
+    if (!selected) {
+      if (!isIos) setShowTimePicker(null);
+      return;
+    }
+    const hh = String(selected.getHours()).padStart(2, '0');
+    const mm = String(selected.getMinutes()).padStart(2, '0');
+    const val = `${hh}:${mm}`;
+    if (showTimePicker === 'from') {
+      setTimeFrom(val);
+      if (!isIos) {
+        // Android: schließe diesen Picker und öffne sofort den Bis-Picker
+        setShowTimePicker(null);
+        setTimeout(() => setShowTimePicker('to'), 50);
+      }
+    } else if (showTimePicker === 'to') {
+      setTimeTo(val);
+      if (!isIos) setShowTimePicker(null);
     }
   };
 
+  // iOS: "Weiter zu Bis" Button bei 'from'
+  const handleIosTimeNextOrDone = () => {
+    if (showTimePicker === 'from') {
+      // Falls noch keine Zeit gesetzt, jetzige Stunde nehmen
+      if (!timeFrom) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        setTimeFrom(`${hh}:${mm}`);
+      }
+      setShowTimePicker('to');
+    } else {
+      if (!timeTo) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        setTimeTo(`${hh}:${mm}`);
+      }
+      setShowTimePicker(null);
+    }
+  };
+
+  const getTimePickerValue = (): Date => {
+    const v = showTimePicker === 'from' ? timeFrom : timeTo;
+    if (v) {
+      const [h, m] = v.split(':').map(Number);
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
+    return new Date();
+  };
+
   // ---- Mitarbeiter ----
-  const addEmployee = () => {
-    setEmployees((prev) => [...prev, { id: generateLocalId(), name: '', hours: undefined }]);
+  const addEmployeeManual = () => {
+    setEmployees((prev) => [...prev, { id: localId(), name: '', hours: undefined }]);
+  };
+  const addEmployeeFromMaster = (emp: EmployeeMaster) => {
+    setEmployees((prev) => [...prev, { id: localId(), name: emp.name, hours: undefined }]);
+    setShowEmpPicker(false);
   };
   const updateEmployee = (id: string, field: 'name' | 'hours', value: string) => {
     setEmployees((prev) =>
@@ -219,8 +289,17 @@ export default function ReportEditScreen() {
   };
 
   // ---- Material ----
-  const addMaterial = () => {
-    setMaterials((prev) => [...prev, { id: generateLocalId(), name: '', quantity: 1, unit: 'Stk' }]);
+  const addMaterialManual = () => {
+    setMaterials((prev) => [...prev, { id: localId(), name: '', quantity: 1, unit: 'Stk' }]);
+  };
+  const addMaterialFromMaster = (mat: MaterialMaster) => {
+    setMaterials((prev) => [...prev, {
+      id: localId(),
+      name: mat.name,
+      quantity: mat.default_quantity ?? 1,
+      unit: mat.unit,
+    }]);
+    setShowMatPicker(false);
   };
   const updateMaterial = (id: string, field: keyof ReportMaterial, value: string) => {
     setMaterials((prev) =>
@@ -245,20 +324,11 @@ export default function ReportEditScreen() {
         permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       }
       if (!permResult.granted) {
-        if (!permResult.canAskAgain) {
-          Alert.alert(
-            'Berechtigung erforderlich',
-            source === 'camera' ? 'Bitte Kamera-Zugriff in den Einstellungen erlauben.' : 'Bitte Galerie-Zugriff in den Einstellungen erlauben.'
-          );
-        }
+        Alert.alert('Berechtigung', source === 'camera' ? 'Kamera-Zugriff erforderlich.' : 'Galerie-Zugriff erforderlich.');
         return;
       }
       const result = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({
-            allowsEditing: false,
-            quality: 0.6,
-            base64: true,
-          })
+        ? await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.6, base64: true })
         : await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'] as any,
             allowsMultipleSelection: true,
@@ -269,23 +339,16 @@ export default function ReportEditScreen() {
       const assets = (result as any).assets || [];
       const newPhotos: ReportPhoto[] = assets
         .filter((a: any) => a.base64)
-        .map((a: any) => ({
-          id: generateLocalId(),
-          uri: `data:image/jpeg;base64,${a.base64}`,
-          caption: '',
-        }));
+        .map((a: any) => ({ id: localId(), uri: `data:image/jpeg;base64,${a.base64}`, caption: '' }));
       setPhotos((prev) => [...prev, ...newPhotos]);
     } catch (e) {
       console.error('Photo add error:', e);
       Alert.alert('Fehler', 'Foto konnte nicht hinzugefügt werden.');
     }
   };
-  const removePhoto = (id: string) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
-  };
-  const updatePhotoCaption = (id: string, caption: string) => {
+  const removePhoto = (id: string) => setPhotos((prev) => prev.filter((p) => p.id !== id));
+  const updatePhotoCaption = (id: string, caption: string) =>
     setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)));
-  };
 
   if (loading) {
     return (
@@ -295,94 +358,100 @@ export default function ReportEditScreen() {
     );
   }
 
+  const bauherrFull = project
+    ? [project.bauherr_salutation, project.bauherr_first_name, project.bauherr_last_name].filter(Boolean).join(' ') || project.bauherr_name || ''
+    : '';
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
-          {/* Projektinformationen */}
-          {project && (
-            <View style={styles.projectInfoCard}>
-              <View style={styles.projectInfoHeader}>
-                <Ionicons name="folder-open" size={18} color="#1976d2" />
-                <Text style={styles.projectInfoTitle}>Projekt</Text>
-              </View>
-              <Text style={styles.projectInfoLine}>
-                {project.name}{project.project_number ? ` · ${project.project_number}` : ''}
-              </Text>
-              {(project.bauherr_first_name || project.bauherr_last_name || project.bauherr_name) && (
-                <Text style={styles.projectInfoSubLine}>
-                  Bauherr: {[project.bauherr_salutation, project.bauherr_first_name, project.bauherr_last_name].filter(Boolean).join(' ') || project.bauherr_name}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
+        >
+          {/* ===== Großer Header mit Datum + Projekt ===== */}
+          <View style={styles.headerCard}>
+            <View style={styles.headerTop}>
+              <View style={styles.dateBadge}>
+                <Text style={styles.dateBadgeDay}>
+                  {new Date(date).toLocaleDateString('de-DE', { day: '2-digit' })}
                 </Text>
-              )}
-              {project.objekt_street && (
-                <Text style={styles.projectInfoSubLine}>
-                  Objekt: {project.objekt_street}, {project.objekt_plz} {project.objekt_city}
+                <Text style={styles.dateBadgeMonth}>
+                  {new Date(date).toLocaleDateString('de-DE', { month: 'short' })}
                 </Text>
-              )}
-            </View>
-          )}
-
-          {/* Rapport-Nr. + Datum */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📋 Rapport-Daten</Text>
-            <View style={styles.row}>
-              <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Rapport-Nr.</Text>
-                <TextInput
-                  style={styles.input}
-                  value={reportNumber}
-                  onChangeText={setReportNumber}
-                  placeholder="RAP-0001"
-                />
               </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Datum *</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-                  <Text style={{ color: '#333' }}>{date ? new Date(date).toLocaleDateString('de-DE') : 'Datum wählen'}</Text>
-                </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.headerLabel}>RAPPORT</Text>
+                <Text style={styles.headerNumber}>{reportNumber || '—'}</Text>
+                <Text style={styles.headerProject} numberOfLines={1}>
+                  {project?.name || 'Projekt'}{project?.project_number ? ` · ${project.project_number}` : ''}
+                </Text>
               </View>
-            </View>
-            {showDatePicker && (
-              <DateTimePicker
-                value={date ? new Date(date) : new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(_, selected) => {
-                  if (Platform.OS !== 'ios') setShowDatePicker(false);
-                  if (selected) setDate(selected.toISOString().split('T')[0]);
-                }}
-              />
-            )}
-            {Platform.OS === 'ios' && showDatePicker && (
-              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.iosDateClose}>
-                <Text style={styles.iosDateCloseText}>Fertig</Text>
+              <TouchableOpacity style={styles.editDateBtn} onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar" size={20} color="#1976d2" />
               </TouchableOpacity>
-            )}
+            </View>
+            {bauherrFull ? (
+              <View style={styles.headerInfoRow}>
+                <Ionicons name="person" size={13} color="#64748b" />
+                <Text style={styles.headerInfoText}>{bauherrFull}</Text>
+              </View>
+            ) : null}
+            {project?.objekt_street ? (
+              <View style={styles.headerInfoRow}>
+                <Ionicons name="location" size={13} color="#64748b" />
+                <Text style={styles.headerInfoText}>
+                  {project.objekt_street}, {project.objekt_plz} {project.objekt_city}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
-          {/* Zeit von/bis */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⏱️ Arbeitszeit</Text>
-            <View style={styles.row}>
-              <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Von</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker('from')}>
-                  <Text style={{ color: timeFrom ? '#333' : '#999' }}>{timeFrom || '–:– Uhr'}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Bis</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker('to')}>
-                  <Text style={{ color: timeTo ? '#333' : '#999' }}>{timeTo || '–:– Uhr'}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Stunden</Text>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date ? new Date(date) : new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_, selected) => {
+                if (Platform.OS !== 'ios') setShowDatePicker(false);
+                if (selected) setDate(selected.toISOString().split('T')[0]);
+              }}
+            />
+          )}
+          {Platform.OS === 'ios' && showDatePicker && (
+            <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.iosPickerDone}>
+              <Text style={styles.iosPickerDoneText}>Fertig</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* ===== Arbeitszeit ===== */}
+          <Section icon="time" title="Arbeitszeit" color="#0ea5e9">
+            <View style={styles.timeRow}>
+              <TouchableOpacity
+                style={[styles.timeBox, timeFrom && styles.timeBoxFilled]}
+                onPress={() => setShowTimePicker('from')}
+              >
+                <Text style={styles.timeBoxLabel}>VON</Text>
+                <Text style={[styles.timeBoxValue, !timeFrom && { color: '#94a3b8' }]}>
+                  {timeFrom || '--:--'}
+                </Text>
+              </TouchableOpacity>
+              <Ionicons name="arrow-forward" size={20} color="#94a3b8" />
+              <TouchableOpacity
+                style={[styles.timeBox, timeTo && styles.timeBoxFilled]}
+                onPress={() => setShowTimePicker('to')}
+              >
+                <Text style={styles.timeBoxLabel}>BIS</Text>
+                <Text style={[styles.timeBoxValue, !timeTo && { color: '#94a3b8' }]}>
+                  {timeTo || '--:--'}
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.hoursBox}>
+                <Text style={styles.timeBoxLabel}>STD</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.hoursInput}
                   value={totalHours || (computedHours > 0 ? String(computedHours) : '')}
                   onChangeText={setTotalHours}
                   placeholder={computedHours > 0 ? String(computedHours) : '0'}
@@ -390,141 +459,171 @@ export default function ReportEditScreen() {
                 />
               </View>
             </View>
-            {showTimePicker && (
-              <DateTimePicker
-                value={(() => {
-                  const v = showTimePicker === 'from' ? timeFrom : timeTo;
-                  if (v) {
-                    const [h, m] = v.split(':').map(Number);
-                    const d = new Date();
-                    d.setHours(h, m, 0, 0);
-                    return d;
-                  }
-                  return new Date();
-                })()}
-                mode="time"
-                is24Hour
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(_, selected) => {
-                  const isIos = Platform.OS === 'ios';
-                  if (!isIos) setShowTimePicker(null);
-                  if (selected) {
-                    const hh = String(selected.getHours()).padStart(2, '0');
-                    const mm = String(selected.getMinutes()).padStart(2, '0');
-                    const val = `${hh}:${mm}`;
-                    if (showTimePicker === 'from') setTimeFrom(val);
-                    else setTimeTo(val);
-                  }
-                }}
-              />
-            )}
-            {Platform.OS === 'ios' && showTimePicker && (
-              <TouchableOpacity onPress={() => setShowTimePicker(null)} style={styles.iosDateClose}>
-                <Text style={styles.iosDateCloseText}>Fertig</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          </Section>
 
-          {/* Mitarbeiter */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>👷 Mitarbeiter</Text>
-              <TouchableOpacity onPress={addEmployee} style={styles.smallAddBtn}>
-                <Ionicons name="add-circle" size={22} color="#1976d2" />
+          {showTimePicker && (
+            <DateTimePicker
+              value={getTimePickerValue()}
+              mode="time"
+              is24Hour
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleTimeChange}
+            />
+          )}
+          {Platform.OS === 'ios' && showTimePicker && (
+            <View style={styles.iosTimeActions}>
+              <TouchableOpacity onPress={() => setShowTimePicker(null)} style={styles.iosTimeCancel}>
+                <Text style={styles.iosTimeCancelText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleIosTimeNextOrDone} style={styles.iosTimeDone}>
+                <Text style={styles.iosTimeDoneText}>
+                  {showTimePicker === 'from' ? 'Weiter zu Bis →' : 'Fertig'}
+                </Text>
               </TouchableOpacity>
             </View>
-            {employees.length === 0 && (
-              <Text style={styles.emptyHint}>Noch keine Mitarbeiter hinzugefügt.</Text>
-            )}
-            {employees.map((emp) => (
-              <View key={emp.id} style={styles.empRow}>
-                <TextInput
-                  style={[styles.input, { flex: 2, marginRight: 8 }]}
-                  value={emp.name}
-                  onChangeText={(v) => updateEmployee(emp.id, 'name', v)}
-                  placeholder="Name"
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                  value={emp.hours != null ? String(emp.hours) : ''}
-                  onChangeText={(v) => updateEmployee(emp.id, 'hours', v)}
-                  placeholder="Std."
-                  keyboardType="decimal-pad"
-                />
-                <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.removeBtn}>
-                  <Ionicons name="close-circle" size={24} color="#d32f2f" />
+          )}
+
+          {/* ===== Mitarbeiter ===== */}
+          <Section
+            icon="people"
+            title="Mitarbeiter"
+            color="#1d4ed8"
+            right={
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {empMaster.length > 0 && (
+                  <TouchableOpacity onPress={() => setShowEmpPicker(true)} style={styles.sectionBtn}>
+                    <Ionicons name="list" size={16} color="#1976d2" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={addEmployeeManual} style={styles.sectionBtn}>
+                  <Ionicons name="add" size={18} color="#1976d2" />
                 </TouchableOpacity>
               </View>
-            ))}
-          </View>
+            }
+          >
+            {employees.length === 0 ? (
+              <TouchableOpacity
+                onPress={empMaster.length > 0 ? () => setShowEmpPicker(true) : addEmployeeManual}
+                style={styles.emptyAddRow}
+              >
+                <Ionicons name="person-add-outline" size={18} color="#1976d2" />
+                <Text style={styles.emptyAddText}>
+                  {empMaster.length > 0 ? 'Mitarbeiter auswählen oder neu eingeben' : 'Mitarbeiter hinzufügen'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              employees.map((emp) => (
+                <View key={emp.id} style={styles.itemRow}>
+                  <View style={styles.empBubble}>
+                    <Text style={styles.empBubbleText}>{(emp.name || '?').charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.itemInput, { flex: 2 }]}
+                    value={emp.name}
+                    onChangeText={(v) => updateEmployee(emp.id, 'name', v)}
+                    placeholder="Name"
+                  />
+                  <TextInput
+                    style={[styles.itemInput, { width: 72 }]}
+                    value={emp.hours != null ? String(emp.hours) : ''}
+                    onChangeText={(v) => updateEmployee(emp.id, 'hours', v)}
+                    placeholder="Std."
+                    keyboardType="decimal-pad"
+                  />
+                  <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.itemRemoveBtn}>
+                    <Ionicons name="close" size={20} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </Section>
 
-          {/* Ausgeführte Arbeiten */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🛠️ Ausgeführte Arbeiten</Text>
+          {/* ===== Ausgeführte Arbeiten ===== */}
+          <Section icon="hammer" title="Ausgeführte Arbeiten" color="#0d9488">
             <TextInput
               style={[styles.input, styles.multiline]}
               value={workDescription}
               onChangeText={setWorkDescription}
-              placeholder="Beschreibung der ausgeführten Arbeiten..."
+              placeholder="Was wurde heute gemacht? z.B. Dachsteine verlegt, Dachrinne montiert..."
               multiline
               numberOfLines={4}
               textAlignVertical="top"
             />
-          </View>
+          </Section>
 
-          {/* Material */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🧱 Verwendetes Material</Text>
-              <TouchableOpacity onPress={addMaterial} style={styles.smallAddBtn}>
-                <Ionicons name="add-circle" size={22} color="#1976d2" />
-              </TouchableOpacity>
-            </View>
-            {materials.length === 0 && (
-              <Text style={styles.emptyHint}>Noch kein Material erfasst.</Text>
-            )}
-            {materials.map((m) => (
-              <View key={m.id} style={styles.materialCard}>
-                <View style={styles.row}>
-                  <TextInput
-                    style={[styles.input, { flex: 2, marginRight: 6 }]}
-                    value={m.name}
-                    onChangeText={(v) => updateMaterial(m.id, 'name', v)}
-                    placeholder="Material"
-                  />
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginRight: 6 }]}
-                    value={m.quantity ? String(m.quantity) : ''}
-                    onChangeText={(v) => updateMaterial(m.id, 'quantity', v)}
-                    placeholder="Menge"
-                    keyboardType="decimal-pad"
-                  />
-                  <TextInput
-                    style={[styles.input, { flex: 1, marginRight: 6 }]}
-                    value={m.unit}
-                    onChangeText={(v) => updateMaterial(m.id, 'unit', v)}
-                    placeholder="Einheit"
-                  />
-                  <TouchableOpacity onPress={() => removeMaterial(m.id)} style={styles.removeBtn}>
-                    <Ionicons name="close-circle" size={24} color="#d32f2f" />
+          {/* ===== Material ===== */}
+          <Section
+            icon="cube"
+            title="Material"
+            color="#d97706"
+            right={
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {matMaster.length > 0 && (
+                  <TouchableOpacity onPress={() => setShowMatPicker(true)} style={styles.sectionBtn}>
+                    <Ionicons name="list" size={16} color="#1976d2" />
                   </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={[styles.input, { marginTop: 4 }]}
-                  value={m.note || ''}
-                  onChangeText={(v) => updateMaterial(m.id, 'note', v)}
-                  placeholder="Bemerkung (optional)"
-                />
+                )}
+                <TouchableOpacity onPress={addMaterialManual} style={styles.sectionBtn}>
+                  <Ionicons name="add" size={18} color="#1976d2" />
+                </TouchableOpacity>
               </View>
-            ))}
-          </View>
+            }
+          >
+            {materials.length === 0 ? (
+              <TouchableOpacity
+                onPress={matMaster.length > 0 ? () => setShowMatPicker(true) : addMaterialManual}
+                style={styles.emptyAddRow}
+              >
+                <Ionicons name="cube-outline" size={18} color="#1976d2" />
+                <Text style={styles.emptyAddText}>
+                  {matMaster.length > 0 ? 'Material auswählen oder neu eingeben' : 'Material hinzufügen'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              materials.map((m) => (
+                <View key={m.id} style={styles.materialCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <TextInput
+                      style={[styles.itemInput, { flex: 2 }]}
+                      value={m.name}
+                      onChangeText={(v) => updateMaterial(m.id, 'name', v)}
+                      placeholder="Material"
+                    />
+                    <TextInput
+                      style={[styles.itemInput, { width: 64 }]}
+                      value={m.quantity ? String(m.quantity) : ''}
+                      onChangeText={(v) => updateMaterial(m.id, 'quantity', v)}
+                      placeholder="Menge"
+                      keyboardType="decimal-pad"
+                    />
+                    <TextInput
+                      style={[styles.itemInput, { width: 60 }]}
+                      value={m.unit}
+                      onChangeText={(v) => updateMaterial(m.id, 'unit', v)}
+                      placeholder="Einh."
+                    />
+                    <TouchableOpacity onPress={() => removeMaterial(m.id)} style={styles.itemRemoveBtn}>
+                      <Ionicons name="close" size={20} color="#94a3b8" />
+                    </TouchableOpacity>
+                  </View>
+                  {(m.note || m.note === '') && (
+                    <TextInput
+                      style={[styles.itemInput, { marginTop: 4 }]}
+                      value={m.note || ''}
+                      onChangeText={(v) => updateMaterial(m.id, 'note', v)}
+                      placeholder="Bemerkung (optional)"
+                    />
+                  )}
+                </View>
+              ))
+            )}
+          </Section>
 
-          {/* Anfahrt + Wetter */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🚗 Anfahrt & 🌦️ Wetter</Text>
-            <View style={styles.row}>
-              <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Kilometer</Text>
+          {/* ===== Anfahrt & Wetter ===== */}
+          <Section icon="car" title="Anfahrt & Wetter" color="#6b21a8">
+            <View style={styles.threeColRow}>
+              <View style={styles.threeCol}>
+                <Text style={styles.miniLabel}>Kilometer</Text>
                 <TextInput
                   style={styles.input}
                   value={travelKm}
@@ -533,8 +632,8 @@ export default function ReportEditScreen() {
                   keyboardType="decimal-pad"
                 />
               </View>
-              <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Fahrzeit (Min.)</Text>
+              <View style={styles.threeCol}>
+                <Text style={styles.miniLabel}>Fahrzeit (Min.)</Text>
                 <TextInput
                   style={styles.input}
                   value={travelTime}
@@ -543,8 +642,8 @@ export default function ReportEditScreen() {
                   keyboardType="decimal-pad"
                 />
               </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Temperatur (°C)</Text>
+              <View style={styles.threeCol}>
+                <Text style={styles.miniLabel}>Temperatur</Text>
                 <TextInput
                   style={styles.input}
                   value={temperature}
@@ -554,7 +653,7 @@ export default function ReportEditScreen() {
                 />
               </View>
             </View>
-            <Text style={[styles.label, { marginTop: 8 }]}>Wetter</Text>
+            <Text style={[styles.miniLabel, { marginTop: 10 }]}>Wetter</Text>
             <View style={styles.weatherRow}>
               {WEATHER_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -569,114 +668,113 @@ export default function ReportEditScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </Section>
 
-          {/* Bemerkungen */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📝 Bemerkungen / Besonderheiten</Text>
+          {/* ===== Bemerkungen ===== */}
+          <Section icon="document-text" title="Bemerkungen" color="#ec4899">
             <TextInput
               style={[styles.input, styles.multiline]}
               value={remarks}
               onChangeText={setRemarks}
-              placeholder="Besondere Vorkommnisse, Hindernisse, weitere Bemerkungen..."
+              placeholder="Besondere Vorkommnisse, Hindernisse..."
               multiline
               numberOfLines={3}
               textAlignVertical="top"
             />
-          </View>
+          </Section>
 
-          {/* Fotos */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>📷 Fotos</Text>
+          {/* ===== Fotos ===== */}
+          <Section
+            icon="camera"
+            title="Fotos"
+            color="#0891b2"
+            right={
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <TouchableOpacity onPress={() => handleAddPhoto('camera')} style={styles.iconBtn}>
-                  <Ionicons name="camera" size={20} color="#fff" />
+                <TouchableOpacity onPress={() => handleAddPhoto('camera')} style={styles.sectionBtnPrimary}>
+                  <Ionicons name="camera" size={16} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleAddPhoto('library')} style={styles.iconBtn}>
-                  <Ionicons name="images" size={20} color="#fff" />
+                <TouchableOpacity onPress={() => handleAddPhoto('library')} style={styles.sectionBtnPrimary}>
+                  <Ionicons name="images" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
-            </View>
-            {photos.length === 0 && (
-              <Text style={styles.emptyHint}>Noch keine Fotos angehängt.</Text>
+            }
+          >
+            {photos.length === 0 ? (
+              <TouchableOpacity onPress={() => handleAddPhoto('library')} style={styles.emptyAddRow}>
+                <Ionicons name="image-outline" size={18} color="#1976d2" />
+                <Text style={styles.emptyAddText}>Foto hinzufügen</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.photoList}>
+                {photos.map((p) => (
+                  <View key={p.id} style={styles.photoCard}>
+                    <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
+                    <TouchableOpacity style={styles.photoDelete} onPress={() => removePhoto(p.id)}>
+                      <Ionicons name="close-circle" size={26} color="#fff" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.photoCaption}
+                      value={p.caption || ''}
+                      onChangeText={(v) => updatePhotoCaption(p.id, v)}
+                      placeholder="Beschriftung"
+                    />
+                  </View>
+                ))}
+              </View>
             )}
-            <View style={styles.photoGrid}>
-              {photos.map((p) => (
-                <View key={p.id} style={styles.photoCard}>
-                  <Image source={{ uri: p.uri }} style={styles.photoImg} />
-                  <TouchableOpacity style={styles.photoDelete} onPress={() => removePhoto(p.id)}>
-                    <Ionicons name="close-circle" size={22} color="#fff" />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.photoCaption}
-                    value={p.caption || ''}
-                    onChangeText={(v) => updatePhotoCaption(p.id, v)}
-                    placeholder="Beschriftung"
-                  />
-                </View>
-              ))}
-            </View>
-          </View>
+          </Section>
 
-          {/* Unterschriften */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>✍️ Unterschriften</Text>
-
-            <View style={{ marginBottom: 14 }}>
+          {/* ===== Unterschriften ===== */}
+          <Section icon="create" title="Unterschriften" color="#1a237e">
+            <View style={styles.sigBlock}>
               <SignaturePad
                 label="Kunde / Auftraggeber"
                 value={signatureCustomer}
                 onChange={setSignatureCustomer}
+                onDrawingChange={setScrollEnabled}
                 placeholder="Hier unterschreiben (Kunde)"
+                height={160}
               />
               <TextInput
-                style={[styles.input, { marginTop: 4 }]}
+                style={[styles.input, { marginTop: 6 }]}
                 value={signatureCustomerName}
                 onChangeText={setSignatureCustomerName}
                 placeholder="Name in Druckbuchstaben (optional)"
               />
             </View>
 
-            <View>
+            <View style={styles.sigBlock}>
               <SignaturePad
                 label="Handwerker / Auftragnehmer"
                 value={signatureWorker}
                 onChange={setSignatureWorker}
+                onDrawingChange={setScrollEnabled}
                 placeholder="Hier unterschreiben (Handwerker)"
+                height={160}
               />
               <TextInput
-                style={[styles.input, { marginTop: 4 }]}
+                style={[styles.input, { marginTop: 6 }]}
                 value={signatureWorkerName}
                 onChangeText={setSignatureWorkerName}
                 placeholder="Name in Druckbuchstaben (optional)"
               />
             </View>
-          </View>
+            <Text style={styles.scrollHint}>
+              💡 Tipp: Beim Unterschreiben ist das Scrollen pausiert, das Blatt bleibt stabil.
+            </Text>
+          </Section>
         </ScrollView>
 
-        {/* Action Bar */}
-        <View style={styles.actionBar}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.cancelBtn]}
-            onPress={() => router.back()}
-            disabled={saving}
-          >
+        {/* ===== Action Bar ===== */}
+        <View style={[styles.actionBar, !scrollEnabled && { opacity: 0.4 }]} pointerEvents={scrollEnabled ? 'auto' : 'none'}>
+          <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={() => router.back()} disabled={saving}>
             <Text style={styles.cancelBtnText}>Abbrechen</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.pdfBtn]}
-            onPress={handleExportPdf}
-            disabled={saving}
-          >
+          <TouchableOpacity style={[styles.actionBtn, styles.pdfBtn]} onPress={handleExportPdf} disabled={saving}>
             <Ionicons name="document-text" size={18} color="#fff" />
-            <Text style={styles.pdfBtnText}>PDF teilen</Text>
+            <Text style={styles.pdfBtnText}>PDF</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.saveBtn]}
-            onPress={() => handleSave(false)}
-            disabled={saving}
-          >
+          <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]} onPress={() => handleSave(false)} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : (
               <>
                 <Ionicons name="checkmark" size={18} color="#fff" />
@@ -685,141 +783,338 @@ export default function ReportEditScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        {/* ===== Mitarbeiter-Auswahl Modal ===== */}
+        <Modal visible={showEmpPicker} transparent animationType="slide" onRequestClose={() => setShowEmpPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Mitarbeiter wählen</Text>
+                <TouchableOpacity onPress={() => setShowEmpPicker(false)}>
+                  <Ionicons name="close" size={26} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ maxHeight: 400 }}>
+                {empMaster.length === 0 ? (
+                  <Text style={styles.modalEmpty}>Keine Mitarbeiter angelegt. Legen Sie welche unter Mitarbeiter auf der Startseite an.</Text>
+                ) : (
+                  empMaster.map((emp) => (
+                    <TouchableOpacity key={emp.id} style={styles.pickerRow} onPress={() => addEmployeeFromMaster(emp)}>
+                      <View style={styles.empBubble}>
+                        <Text style={styles.empBubbleText}>{emp.name.charAt(0).toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pickerName}>{emp.name}</Text>
+                        {emp.role ? <Text style={styles.pickerSub}>{emp.role}</Text> : null}
+                      </View>
+                      <Ionicons name="add-circle" size={24} color="#1976d2" />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowEmpPicker(false)}>
+                <Text style={styles.modalCloseText}>Fertig</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ===== Material-Auswahl Modal ===== */}
+        <Modal visible={showMatPicker} transparent animationType="slide" onRequestClose={() => setShowMatPicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Material wählen</Text>
+                <TouchableOpacity onPress={() => setShowMatPicker(false)}>
+                  <Ionicons name="close" size={26} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ maxHeight: 400 }}>
+                {matMaster.length === 0 ? (
+                  <Text style={styles.modalEmpty}>Kein Material angelegt. Legen Sie welches unter Material auf der Startseite an.</Text>
+                ) : (
+                  matMaster.map((m) => (
+                    <TouchableOpacity key={m.id} style={styles.pickerRow} onPress={() => addMaterialFromMaster(m)}>
+                      <View style={[styles.empBubble, { backgroundColor: '#fef3c7' }]}>
+                        <Ionicons name="cube" size={18} color="#f59e0b" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pickerName}>{m.name}</Text>
+                        <Text style={styles.pickerSub}>
+                          {m.unit}{m.category ? ` · ${m.category}` : ''}{m.price_per_unit ? ` · ${m.price_per_unit.toFixed(2)} €` : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="add-circle" size={24} color="#1976d2" />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowMatPicker(false)}>
+                <Text style={styles.modalCloseText}>Fertig</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+// Section-Komponente für saubere Trennung
+const Section: React.FC<{
+  icon: any;
+  title: string;
+  color: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ icon, title, color, right, children }) => (
+  <View style={styles.section}>
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitleRow}>
+        <View style={[styles.sectionIcon, { backgroundColor: color + '20' }]}>
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
+        <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
+      </View>
+      {right}
+    </View>
+    {children}
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1, backgroundColor: '#f1f5f9' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollView: { flex: 1 },
-  projectInfoCard: {
-    backgroundColor: '#e3f2fd',
-    padding: 12,
-    margin: 12,
-    borderRadius: 10,
+
+  // ----- Header -----
+  headerCard: {
+    backgroundColor: '#fff',
+    margin: 10,
+    padding: 14,
+    borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#1976d2',
+    borderLeftColor: '#0d9488',
   },
-  projectInfoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  projectInfoTitle: { fontWeight: '700', color: '#1976d2', fontSize: 14 },
-  projectInfoLine: { color: '#333', fontSize: 14, fontWeight: '600' },
-  projectInfoSubLine: { color: '#555', fontSize: 12, marginTop: 2 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dateBadge: {
+    backgroundColor: '#0d9488',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 56,
+  },
+  dateBadgeDay: { fontSize: 22, fontWeight: '800', color: '#fff', lineHeight: 24 },
+  dateBadgeMonth: { fontSize: 10, fontWeight: '700', color: '#ccfbf1', textTransform: 'uppercase' },
+  headerLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', letterSpacing: 1 },
+  headerNumber: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
+  headerProject: { fontSize: 12, color: '#475569', marginTop: 2 },
+  editDateBtn: { padding: 6, borderRadius: 6, backgroundColor: '#e0f2fe' },
+  headerInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  headerInfoText: { color: '#475569', fontSize: 12, flex: 1 },
+
+  // ----- Sections -----
   section: {
     backgroundColor: '#fff',
-    margin: 12,
-    marginBottom: 0,
+    marginHorizontal: 10,
+    marginBottom: 8,
+    borderRadius: 12,
     padding: 12,
-    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e0e6ed',
+    borderColor: '#e2e8f0',
   },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1976d2', marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'flex-end' },
-  field: {},
-  label: { fontSize: 12, color: '#555', marginBottom: 4, fontWeight: '500' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionIcon: {
+    width: 26, height: 26, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionTitle: { fontSize: 14, fontWeight: '700' },
+  sectionBtn: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionBtnPrimary: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: '#1976d2',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // ----- Time picker -----
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeBox: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  timeBoxFilled: { backgroundColor: '#e0f2fe', borderColor: '#0ea5e9' },
+  timeBoxLabel: { fontSize: 9, fontWeight: '700', color: '#64748b', letterSpacing: 1 },
+  timeBoxValue: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginTop: 2 },
+  hoursBox: {
+    width: 70,
+    backgroundColor: '#fef3c7',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  hoursInput: {
+    fontSize: 17, fontWeight: '800', color: '#92400e',
+    minWidth: 50, textAlign: 'center', padding: 0,
+  },
+
+  iosPickerDone: { alignSelf: 'flex-end', padding: 8, marginRight: 10 },
+  iosPickerDoneText: { color: '#1976d2', fontWeight: '700' },
+  iosTimeActions: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingBottom: 6,
+  },
+  iosTimeCancel: { padding: 8 },
+  iosTimeCancelText: { color: '#94a3b8', fontWeight: '600' },
+  iosTimeDone: {
+    backgroundColor: '#1976d2',
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+  },
+  iosTimeDoneText: { color: '#fff', fontWeight: '700' },
+
+  // ----- Item rows -----
+  emptyAddRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 12, paddingHorizontal: 10,
+    backgroundColor: '#f8fafc', borderRadius: 8,
+    borderWidth: 1, borderColor: '#e2e8f0', borderStyle: 'dashed',
+  },
+  emptyAddText: { color: '#1976d2', fontWeight: '600', fontSize: 13 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 3 },
+  itemInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#0f172a',
+    minHeight: 38,
+  },
+  itemRemoveBtn: { padding: 4 },
+  empBubble: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  empBubbleText: { color: '#1d4ed8', fontWeight: '700' },
+
+  materialCard: {
+    backgroundColor: '#fffbf0',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    marginVertical: 3,
+  },
+
+  // ----- Inputs -----
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#cfd8dc',
+    borderColor: '#cbd5e1',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333',
-    minHeight: 42,
-    justifyContent: 'center',
+    color: '#0f172a',
   },
-  multiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    paddingTop: 10,
-  },
-  smallAddBtn: { padding: 4 },
-  emptyHint: { color: '#888', fontStyle: 'italic', fontSize: 12, marginTop: 4 },
-  empRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  materialCard: {
-    marginTop: 6,
-    padding: 8,
-    backgroundColor: '#fafbfc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eceff1',
-  },
-  removeBtn: { padding: 4 },
-  weatherRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  multiline: { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 },
+  miniLabel: { fontSize: 11, color: '#64748b', fontWeight: '600', marginBottom: 4 },
+  threeColRow: { flexDirection: 'row', gap: 6 },
+  threeCol: { flex: 1 },
+
+  // ----- Weather -----
+  weatherRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   weatherChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#cfd8dc',
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 18, borderWidth: 1, borderColor: '#cbd5e1',
     backgroundColor: '#fff',
   },
-  weatherChipActive: {
-    backgroundColor: '#1976d2',
-    borderColor: '#1976d2',
-  },
+  weatherChipActive: { backgroundColor: '#1976d2', borderColor: '#1976d2' },
   weatherIcon: { fontSize: 14 },
   weatherLabel: { fontSize: 12, color: '#333', fontWeight: '500' },
   weatherLabelActive: { color: '#fff' },
-  iconBtn: {
-    backgroundColor: '#1976d2',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+
+  // ----- Photos -----
+  photoList: { gap: 10 },
   photoCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    overflow: 'hidden',
+    backgroundColor: '#fff', borderRadius: 10,
+    borderWidth: 1, borderColor: '#e0e0e0', overflow: 'hidden',
+    position: 'relative',
   },
-  photoImg: { width: '100%', height: 120 },
+  photoImg: { width: '100%', height: 220 },
   photoDelete: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 12,
+    position: 'absolute', top: 6, right: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 14,
   },
   photoCaption: {
-    fontSize: 12,
-    padding: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    fontSize: 13, padding: 8,
+    borderTopWidth: 1, borderTopColor: '#eee',
   },
-  iosDateClose: { alignSelf: 'flex-end', padding: 8 },
-  iosDateCloseText: { color: '#1976d2', fontWeight: '600' },
+
+  // ----- Signature -----
+  sigBlock: { marginBottom: 14 },
+  scrollHint: {
+    fontSize: 11, color: '#64748b', fontStyle: 'italic',
+    backgroundColor: '#f1f5f9', padding: 8, borderRadius: 6, marginTop: 6,
+  },
+
+  // ----- Action Bar -----
   actionBar: {
-    flexDirection: 'row',
-    gap: 8,
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e6ed',
+    flexDirection: 'row', gap: 8, padding: 10,
+    borderTopWidth: 1, borderTopColor: '#e2e8f0',
     backgroundColor: '#fff',
   },
   actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 12, borderRadius: 8,
   },
   cancelBtn: { backgroundColor: '#eceff1' },
   cancelBtnText: { color: '#555', fontWeight: '600' },
-  pdfBtn: { backgroundColor: '#ff9800' },
+  pdfBtn: { backgroundColor: '#ff9800', flex: 0.7 },
   pdfBtnText: { color: '#fff', fontWeight: '700' },
-  saveBtn: { backgroundColor: '#4caf50' },
+  saveBtn: { backgroundColor: '#4caf50', flex: 1.3 },
   saveBtnText: { color: '#fff', fontWeight: '700' },
+
+  // ----- Modal -----
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18, borderTopRightRadius: 18,
+    padding: 16,
+    maxHeight: '80%',
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  modalEmpty: { color: '#94a3b8', fontStyle: 'italic', padding: 20, textAlign: 'center' },
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  pickerName: { fontWeight: '600', color: '#0f172a', fontSize: 14 },
+  pickerSub: { fontSize: 12, color: '#64748b', marginTop: 1 },
+  modalCloseBtn: {
+    backgroundColor: '#1976d2', paddingVertical: 12,
+    borderRadius: 10, alignItems: 'center', marginTop: 10,
+  },
+  modalCloseText: { color: '#fff', fontWeight: '700' },
 });

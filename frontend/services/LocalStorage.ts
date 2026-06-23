@@ -21,6 +21,8 @@ const KEYS = {
   LINE_CATEGORIES: 'aufmassprofi_line_categories',
   TEXT_SHORTCUTS: 'aufmassprofi_text_shortcuts',
   REPORTS: 'aufmassprofi_reports',
+  EMPLOYEES: 'aufmassprofi_employees_master',
+  MATERIALS: 'aufmassprofi_materials_master',
 };
 
 // Helper to generate unique IDs
@@ -2019,6 +2021,130 @@ export const ReportService = {
   },
 };
 
+// ============ EMPLOYEES (Stammdaten Mitarbeiter) - Pro Feature ============
+
+export interface EmployeeMaster {
+  id: string;
+  name: string;
+  role?: string; // z.B. "Dachdecker", "Geselle", "Azubi"
+  hourly_rate?: number; // €/Stunde
+  phone?: string;
+  email?: string;
+  color?: string; // Optionale Farbe für Schnellauswahl
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const EmployeeMasterService = {
+  getAll: async (): Promise<EmployeeMaster[]> => {
+    const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+
+  getActive: async (): Promise<EmployeeMaster[]> => {
+    const all = await EmployeeMasterService.getAll();
+    return all.filter((e) => e.active !== false);
+  },
+
+  getById: async (id: string): Promise<EmployeeMaster | null> => {
+    const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+    return all.find((e) => e.id === id) || null;
+  },
+
+  create: async (data: Omit<EmployeeMaster, 'id' | 'created_at' | 'updated_at'>): Promise<EmployeeMaster> => {
+    const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+    const newEmp: EmployeeMaster = {
+      ...data,
+      id: generateId(),
+      active: data.active !== false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    all.push(newEmp);
+    await setItems(KEYS.EMPLOYEES, all);
+    return newEmp;
+  },
+
+  update: async (id: string, data: Partial<EmployeeMaster>): Promise<EmployeeMaster | null> => {
+    const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+    const idx = all.findIndex((e) => e.id === id);
+    if (idx === -1) return null;
+    all[idx] = { ...all[idx], ...data, updated_at: new Date().toISOString() };
+    await setItems(KEYS.EMPLOYEES, all);
+    return all[idx];
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+    const filtered = all.filter((e) => e.id !== id);
+    await setItems(KEYS.EMPLOYEES, filtered);
+  },
+};
+
+// ============ MATERIALS (Stammdaten Material) - Pro Feature ============
+
+export interface MaterialMaster {
+  id: string;
+  name: string;
+  unit: string; // z.B. "Stk", "m", "m²", "kg", "L"
+  default_quantity?: number;
+  category?: string; // z.B. "Dachziegel", "Holz", "Verbindungsmittel"
+  price_per_unit?: number; // €
+  supplier?: string;
+  article_number?: string;
+  note?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const MaterialMasterService = {
+  getAll: async (): Promise<MaterialMaster[]> => {
+    const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+
+  getActive: async (): Promise<MaterialMaster[]> => {
+    const all = await MaterialMasterService.getAll();
+    return all.filter((m) => m.active !== false);
+  },
+
+  getById: async (id: string): Promise<MaterialMaster | null> => {
+    const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+    return all.find((m) => m.id === id) || null;
+  },
+
+  create: async (data: Omit<MaterialMaster, 'id' | 'created_at' | 'updated_at'>): Promise<MaterialMaster> => {
+    const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+    const newMat: MaterialMaster = {
+      ...data,
+      id: generateId(),
+      active: data.active !== false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    all.push(newMat);
+    await setItems(KEYS.MATERIALS, all);
+    return newMat;
+  },
+
+  update: async (id: string, data: Partial<MaterialMaster>): Promise<MaterialMaster | null> => {
+    const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+    const idx = all.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+    all[idx] = { ...all[idx], ...data, updated_at: new Date().toISOString() };
+    await setItems(KEYS.MATERIALS, all);
+    return all[idx];
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+    const filtered = all.filter((m) => m.id !== id);
+    await setItems(KEYS.MATERIALS, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -2035,6 +2161,8 @@ export const LocalStorage = {
   LineCategories: LineCategoryService,
   TextShortcuts: TextShortcutService,
   Reports: ReportService,
+  Employees: EmployeeMasterService,
+  Materials: MaterialMasterService,
 };
 
 export default LocalStorage;

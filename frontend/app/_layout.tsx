@@ -142,6 +142,14 @@ export default function RootLayout() {
           name="reports/edit" 
           options={{ title: 'Rapport' }} 
         />
+        <Stack.Screen 
+          name="employees/index" 
+          options={{ title: 'Mitarbeiter' }} 
+        />
+        <Stack.Screen 
+          name="materials/index" 
+          options={{ title: 'Material' }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

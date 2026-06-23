@@ -759,6 +759,32 @@ export default function HomeScreen() {
             <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>{t('home.checklists')}</Text>
           </TouchableOpacity>
 
+          {/* Mitarbeiter - nur in Pro Version */}
+          {Features.showReportTab && (
+          <TouchableOpacity
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
+            onPress={() => router.push('/employees/')}
+          >
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="people-circle-outline" size={isPhoneDevice ? 18 : 20} color="#1d4ed8" />
+            </View>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>Mitarbeiter</Text>
+          </TouchableOpacity>
+          )}
+
+          {/* Material - nur in Pro Version */}
+          {Features.showReportTab && (
+          <TouchableOpacity
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
+            onPress={() => router.push('/materials/')}
+          >
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#fef3c7' }]}>
+              <Ionicons name="cube-outline" size={isPhoneDevice ? 18 : 20} color="#d97706" />
+            </View>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>Material</Text>
+          </TouchableOpacity>
+          )}
+
           {/* Referenzen - nur in Pro Version */}
           {Features.showReferenzButton && (
           <TouchableOpacity

@@ -76,12 +76,58 @@ export const generateReportSectionHtml = (
   options: { standalone?: boolean } = {}
 ): string => {
   const totalHours = report.total_hours ?? calcHoursFromTimes(report.time_from, report.time_to);
-  const employeesList = report.employees && report.employees.length > 0
-    ? report.employees.map(e => {
-        const h = e.hours ? ` <span style="color:#666;">(${e.hours} Std.)</span>` : '';
-        return `<li>${escapeHtml(e.name)}${h}</li>`;
-      }).join('')
-    : '<li style="color:#999;font-style:italic;">Keine Mitarbeiter angegeben</li>';
+  // Mitarbeiter-Tabelle mit Beginn/Ende/Pause/Stunden
+  const employeesTable = report.employees && report.employees.length > 0
+    ? `<table class="emp-table">
+        <thead>
+          <tr><th>Mitarbeiter</th><th>Beginn</th><th>Ende</th><th>Pause</th><th style="text-align:right;">Stunden</th></tr>
+        </thead>
+        <tbody>
+          ${report.employees.map(e => {
+            const empAny = e as any;
+            const calc = (() => {
+              if (e.hours != null) return e.hours;
+              if (!empAny.time_from || !empAny.time_to) return 0;
+              const [fh, fm] = empAny.time_from.split(':').map(Number);
+              const [th, tm] = empAny.time_to.split(':').map(Number);
+              let mins = (th * 60 + tm) - (fh * 60 + fm);
+              if (mins < 0) mins += 24 * 60;
+              mins -= empAny.pause_minutes || 0;
+              return Math.max(0, Math.round((mins / 60) * 100) / 100);
+            })();
+            return `<tr>
+              <td>${escapeHtml(e.name)}</td>
+              <td style="text-align:center;">${escapeHtml(empAny.time_from || '–')}</td>
+              <td style="text-align:center;">${escapeHtml(empAny.time_to || '–')}</td>
+              <td style="text-align:center;">${empAny.pause_minutes ? `${empAny.pause_minutes} min` : '–'}</td>
+              <td style="text-align:right;font-weight:600;">${calc.toFixed(2)} h</td>
+            </tr>`;
+          }).join('')}
+          <tr class="emp-total-row">
+            <td colspan="4" style="text-align:right;font-weight:700;">Gesamtstunden:</td>
+            <td style="text-align:right;font-weight:800;color:#1976d2;">${(report.total_hours ?? report.employees.reduce((s, e) => s + (e.hours || 0), 0)).toFixed(2)} h</td>
+          </tr>
+        </tbody>
+      </table>`
+    : '<p style="color:#999;font-style:italic;font-size:11px;">Keine Mitarbeiter angegeben</p>';
+
+  // Work Items (Checkbox-Liste)
+  const workItemsAny = (report as any).work_items as { id: string; text: string; checked: boolean }[] | undefined;
+  const workItemsHtml = workItemsAny && workItemsAny.length > 0
+    ? `<ul class="work-items">${workItemsAny.map(w => `
+        <li class="${w.checked ? 'checked' : 'unchecked'}">
+          <span class="check-box">${w.checked ? '☑' : '☐'}</span>
+          <span class="${w.checked ? '' : 'strike'}">${escapeHtml(w.text)}</span>
+        </li>`).join('')}</ul>`
+    : '';
+
+  // Maschinen / Geräte
+  const machinesAny = (report as any).machines as { id: string; name: string; note?: string }[] | undefined;
+  const machinesHtml = machinesAny && machinesAny.length > 0
+    ? `<div class="machines-list">
+        ${machinesAny.map(m => `<span class="machine-tag">🔧 ${escapeHtml(m.name)}</span>`).join('')}
+       </div>`
+    : '';
 
   const materialsRows = report.materials && report.materials.length > 0
     ? report.materials.map(m =>
@@ -137,14 +183,23 @@ export const generateReportSectionHtml = (
       ` : ''}
 
       <div class="section">
-        <div class="section-title">👷 Mitarbeiter vor Ort</div>
-        <ul class="employees-list">${employeesList}</ul>
+        <div class="section-title">👷 Mitarbeiter & Arbeitszeiten</div>
+        ${employeesTable}
       </div>
 
       <div class="section">
         <div class="section-title">🛠️ Ausgeführte Arbeiten</div>
-        <div class="work-desc">${escapeHtml(report.work_description) || '<span style="color:#999;font-style:italic;">Keine Angaben</span>'}</div>
+        ${workItemsHtml}
+        ${report.work_description ? `<div class="work-desc">${escapeHtml(report.work_description)}</div>` : ''}
+        ${!workItemsHtml && !report.work_description ? '<span style="color:#999;font-style:italic;">Keine Angaben</span>' : ''}
       </div>
+
+      ${machinesHtml ? `
+        <div class="section">
+          <div class="section-title">🚜 Maschinen / Geräte</div>
+          ${machinesHtml}
+        </div>
+      ` : ''}
 
       ${materialsRows ? `
         <div class="section">
@@ -174,6 +229,13 @@ export const generateReportSectionHtml = (
           </div>
         ` : ''}
       </div>
+
+      ${(report as any).obstacles ? `
+        <div class="section">
+          <div class="section-title" style="background:#fee2e2;color:#991b1b;">⚠️ Besonderheiten / Behinderungen</div>
+          <div class="work-desc" style="border-left:3px solid #dc2626;">${escapeHtml((report as any).obstacles)}</div>
+        </div>
+      ` : ''}
 
       ${report.remarks ? `
         <div class="section">
@@ -247,6 +309,22 @@ export const REPORT_CSS = `
   }
   .employees-list { margin: 4px 0 0 18px; font-size: 12px; }
   .employees-list li { margin: 2px 0; }
+  .emp-table {
+    width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px;
+  }
+  .emp-table th { background: #1976d2; color: #fff; padding: 5px 8px; text-align: left; font-size: 10px; }
+  .emp-table td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+  .emp-total-row td { background: #e0f2fe; padding: 6px 8px; font-size: 12px; border-top: 2px solid #1976d2; }
+  .work-items { list-style: none; padding-left: 0; margin: 4px 0; font-size: 11px; }
+  .work-items li { padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+  .work-items .check-box { font-size: 14px; color: #16a34a; }
+  .work-items li.unchecked .check-box { color: #94a3b8; }
+  .work-items .strike { text-decoration: line-through; color: #94a3b8; }
+  .machines-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .machine-tag {
+    background: #ede9fe; color: #5b21b6;
+    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+  }
   .work-desc {
     font-size: 12px;
     line-height: 1.5;

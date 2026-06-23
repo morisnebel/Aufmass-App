@@ -785,6 +785,19 @@ export default function HomeScreen() {
           </TouchableOpacity>
           )}
 
+          {/* Maschinen / Geräte - nur in Pro Version */}
+          {Features.showReportTab && (
+          <TouchableOpacity
+            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
+            onPress={() => router.push('/machines/')}
+          >
+            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#ede9fe' }]}>
+              <Ionicons name="construct-outline" size={isPhoneDevice ? 18 : 20} color="#7c3aed" />
+            </View>
+            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>Maschinen</Text>
+          </TouchableOpacity>
+          )}
+
           {/* Referenzen - nur in Pro Version */}
           {Features.showReferenzButton && (
           <TouchableOpacity

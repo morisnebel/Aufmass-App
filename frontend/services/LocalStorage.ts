@@ -23,6 +23,7 @@ const KEYS = {
   REPORTS: 'aufmassprofi_reports',
   EMPLOYEES: 'aufmassprofi_employees_master',
   MATERIALS: 'aufmassprofi_materials_master',
+  MACHINES: 'aufmassprofi_machines_master',
 };
 
 // Helper to generate unique IDs
@@ -1887,7 +1888,11 @@ export const AreaCalculationService = {
 export interface ReportEmployee {
   id: string;
   name: string;
-  hours?: number; // Stunden für diesen Mitarbeiter
+  hours?: number; // Stunden für diesen Mitarbeiter (auto-berechnet aus from/to/pause)
+  time_from?: string; // HH:MM
+  time_to?: string; // HH:MM
+  pause_minutes?: number; // Pause in Minuten
+  color?: string; // Avatar-Farbe
 }
 
 export interface ReportMaterial {
@@ -1904,35 +1909,55 @@ export interface ReportPhoto {
   caption?: string;
 }
 
+export interface ReportMachine {
+  id: string;
+  name: string;
+  note?: string;
+}
+
+export interface ReportWorkItem {
+  id: string;
+  text: string;
+  checked: boolean;
+  source?: 'checklist' | 'manual'; // Herkunft
+}
+
 export interface Report {
   id: string;
   project_id: string;
-  report_number?: string; // z.B. "RAP-0001"
+  report_number?: string;
   // Datum & Zeit
-  date: string; // ISO YYYY-MM-DD
-  time_from?: string; // HH:MM
-  time_to?: string; // HH:MM
-  total_hours?: number; // Gesamtstunden (manuell überschreibbar)
+  date: string;
+  time_from?: string;
+  time_to?: string;
+  total_hours?: number;
+  // Kontaktperson auf der Baustelle (optional, sonst aus Projekt)
+  contact_person?: string;
   // Mitarbeiter
   employees: ReportEmployee[];
-  // Ausgeführte Arbeiten
+  // Ausgeführte Arbeiten (Checkbox-Liste + Freitext)
+  work_items?: ReportWorkItem[];
   work_description: string;
   // Material
   materials: ReportMaterial[];
+  // Maschinen & Geräte
+  machines?: ReportMachine[];
   // Anfahrt
   travel_km?: number;
-  travel_time?: number; // Minuten
-  // Wetter (für Außenarbeiten)
+  travel_time?: number;
+  // Wetter
   weather?: 'sunny' | 'cloudy' | 'rain' | 'snow' | 'wind' | 'fog' | '';
-  temperature?: number; // Grad Celsius
-  // Bemerkungen
+  temperature?: number;
+  // Besonderheiten / Behinderungen (eigenes Feld neben Bemerkungen)
+  obstacles?: string;
+  // Notizen / Bemerkungen
   remarks?: string;
-  // Unterschriften (SVG Path String)
-  signature_customer?: string; // SVG path data
+  // Unterschriften
+  signature_customer?: string;
   signature_customer_name?: string;
-  signature_worker?: string; // SVG path data
+  signature_worker?: string;
   signature_worker_name?: string;
-  signed_at?: string; // ISO timestamp wenn unterschrieben
+  signed_at?: string;
   // Fotos
   photos: ReportPhoto[];
   created_at: string;
@@ -2018,6 +2043,72 @@ export const ReportService = {
       signature_worker: '',
       signed_at: undefined,
     } as any);
+  },
+
+  // Holt den zuletzt erstellten Rapport eines Projekts (für „Vortag übernehmen")
+  getLatestForProject: async (projectId: string, excludeId?: string): Promise<Report | null> => {
+    const list = await ReportService.getByProjectId(projectId);
+    const filtered = excludeId ? list.filter((r) => r.id !== excludeId) : list;
+    return filtered.length > 0 ? filtered[0] : null;
+  },
+};
+
+// ============ MACHINES / GERÄTE (Stammdaten) - Pro Feature ============
+
+export interface MachineMaster {
+  id: string;
+  name: string;
+  category?: string; // z.B. "Hebezeug", "Werkzeug"
+  serial_number?: string;
+  note?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const MachineMasterService = {
+  getAll: async (): Promise<MachineMaster[]> => {
+    const all = await getItems<MachineMaster>(KEYS.MACHINES);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+
+  getActive: async (): Promise<MachineMaster[]> => {
+    const all = await MachineMasterService.getAll();
+    return all.filter((m) => m.active !== false);
+  },
+
+  getById: async (id: string): Promise<MachineMaster | null> => {
+    const all = await getItems<MachineMaster>(KEYS.MACHINES);
+    return all.find((m) => m.id === id) || null;
+  },
+
+  create: async (data: Omit<MachineMaster, 'id' | 'created_at' | 'updated_at'>): Promise<MachineMaster> => {
+    const all = await getItems<MachineMaster>(KEYS.MACHINES);
+    const newM: MachineMaster = {
+      ...data,
+      id: generateId(),
+      active: data.active !== false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    all.push(newM);
+    await setItems(KEYS.MACHINES, all);
+    return newM;
+  },
+
+  update: async (id: string, data: Partial<MachineMaster>): Promise<MachineMaster | null> => {
+    const all = await getItems<MachineMaster>(KEYS.MACHINES);
+    const idx = all.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+    all[idx] = { ...all[idx], ...data, updated_at: new Date().toISOString() };
+    await setItems(KEYS.MACHINES, all);
+    return all[idx];
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const all = await getItems<MachineMaster>(KEYS.MACHINES);
+    const filtered = all.filter((m) => m.id !== id);
+    await setItems(KEYS.MACHINES, filtered);
   },
 };
 
@@ -2163,6 +2254,7 @@ export const LocalStorage = {
   Reports: ReportService,
   Employees: EmployeeMasterService,
   Materials: MaterialMasterService,
+  Machines: MachineMasterService,
 };
 
 export default LocalStorage;

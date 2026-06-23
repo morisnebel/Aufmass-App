@@ -66,13 +66,19 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       },
       onPanResponderRelease: () => {
         isDrawingRef.current = false;
-        onDrawingChange?.(false);
         commitChange();
+        // Use setTimeout to avoid React render-cycle race conditions
+        // and ensure the parent's scrollEnabled state gets reliably re-enabled
+        setTimeout(() => {
+          if (!isDrawingRef.current) onDrawingChange?.(false);
+        }, 50);
       },
       onPanResponderTerminate: () => {
         isDrawingRef.current = false;
-        onDrawingChange?.(false);
         commitChange();
+        setTimeout(() => {
+          if (!isDrawingRef.current) onDrawingChange?.(false);
+        }, 50);
       },
     })
   ).current;

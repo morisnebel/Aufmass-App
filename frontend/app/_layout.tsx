@@ -150,6 +150,10 @@ export default function RootLayout() {
           name="materials/index" 
           options={{ title: 'Material' }} 
         />
+        <Stack.Screen 
+          name="machines/index" 
+          options={{ title: 'Maschinen' }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

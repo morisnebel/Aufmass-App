@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ReportService, ProjectService, CustomerService,
   EmployeeMasterService, MaterialMasterService, MachineMasterService, ChecklistService,
-  SettingsService,
+  SettingsService, PhotoService,
   Report, ReportEmployee, ReportMaterial, ReportPhoto, ReportMachine, ReportWorkItem,
   Project, Customer, EmployeeMaster, MaterialMaster, MachineMaster, Checklist,
 } from '../../services/LocalStorage';
@@ -100,6 +100,10 @@ export default function ReportEditScreen() {
   const [signatureWorker, setSignatureWorker] = useState('');
   const [signatureWorkerName, setSignatureWorkerName] = useState('');
   const [photos, setPhotos] = useState<ReportPhoto[]>([]);
+  // Projektfoto-Picker
+  const [showProjectPhotoPicker, setShowProjectPhotoPicker] = useState(false);
+  const [projectPhotos, setProjectPhotos] = useState<any[]>([]);
+  const [selectedProjPhotos, setSelectedProjPhotos] = useState<Set<string>>(new Set());
 
   // Time-Picker State (für Mitarbeiter-Tabelle)
   const [timePickerFor, setTimePickerFor] = useState<{ empId: string; field: 'time_from' | 'time_to' } | null>(null);
@@ -576,6 +580,55 @@ export default function ReportEditScreen() {
   const removePhoto = (id: string) => setPhotos(prev => prev.filter(p => p.id !== id));
   const updatePhotoCaption = (id: string, caption: string) =>
     setPhotos(prev => prev.map(p => (p.id === id ? { ...p, caption } : p)));
+
+  // ---- Projektfoto-Picker ----
+  const openProjectPhotoPicker = async () => {
+    if (!projectId) return;
+    try {
+      const all = await PhotoService.getByProjectId(projectId);
+      setProjectPhotos(all);
+      setSelectedProjPhotos(new Set());
+      setShowProjectPhotoPicker(true);
+    } catch (e) {
+      console.error('[ProjectPhotos] load failed:', e);
+      Alert.alert('Fehler', 'Projekt-Fotos konnten nicht geladen werden.');
+    }
+  };
+
+  const toggleProjPhoto = (id: string) => {
+    setSelectedProjPhotos(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const importSelectedProjPhotos = () => {
+    const newPhotos: ReportPhoto[] = [];
+    projectPhotos.forEach(pp => {
+      if (selectedProjPhotos.has(pp.id)) {
+        // image_data ist meistens base64, uri ist Original-URI; bevorzuge image_data falls vorhanden
+        const uri = pp.image_data
+          ? (pp.image_data.startsWith('data:') ? pp.image_data : `data:image/jpeg;base64,${pp.image_data}`)
+          : pp.uri;
+        if (uri) {
+          newPhotos.push({
+            id: localId(),
+            uri,
+            caption: pp.description || '',
+          });
+        }
+      }
+    });
+    if (newPhotos.length === 0) {
+      Alert.alert('Hinweis', 'Bitte mindestens ein Foto auswählen.');
+      return;
+    }
+    setPhotos(prev => [...prev, ...newPhotos]);
+    setShowProjectPhotoPicker(false);
+    setSelectedProjPhotos(new Set());
+  };
 
   if (loading) {
     return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#1976d2" /></View>;
@@ -1118,6 +1171,9 @@ export default function ReportEditScreen() {
                 <TouchableOpacity onPress={() => handleAddPhoto('library')} style={styles.sectionBtnPrimary}>
                   <Ionicons name="images" size={14} color="#fff" />
                 </TouchableOpacity>
+                <TouchableOpacity onPress={openProjectPhotoPicker} style={[styles.sectionBtnPrimary, { backgroundColor: '#16a34a' }]}>
+                  <Ionicons name="folder" size={14} color="#fff" />
+                </TouchableOpacity>
               </View>
             }
           >
@@ -1618,6 +1674,87 @@ export default function ReportEditScreen() {
             )}
           </>
         )}
+
+        {/* Projektfoto-Picker */}
+        <Modal visible={showProjectPhotoPicker} transparent animationType="slide" onRequestClose={() => { setShowProjectPhotoPicker(false); setSelectedProjPhotos(new Set()); }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { maxHeight: '85%' }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Aus Projektfotos</Text>
+                <TouchableOpacity onPress={() => { setShowProjectPhotoPicker(false); setSelectedProjPhotos(new Set()); }}>
+                  <Ionicons name="close" size={26} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={[styles.hintText, { flex: 1 }]}>
+                  {selectedProjPhotos.size} / {projectPhotos.length} Foto{projectPhotos.length === 1 ? '' : 's'} ausgewählt
+                </Text>
+                {projectPhotos.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const all = projectPhotos.every(p => selectedProjPhotos.has(p.id));
+                      setSelectedProjPhotos(all ? new Set() : new Set(projectPhotos.map(p => p.id)));
+                    }}
+                    style={styles.smallChip}
+                  >
+                    <Ionicons
+                      name={projectPhotos.every(p => selectedProjPhotos.has(p.id)) ? 'checkbox' : 'square-outline'}
+                      size={14}
+                      color="#1976d2"
+                    />
+                    <Text style={styles.smallChipText}>Alle</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <ScrollView style={{ maxHeight: 460 }}>
+                {projectPhotos.length === 0 ? (
+                  <Text style={styles.modalEmpty}>Keine Projekt-Fotos vorhanden.</Text>
+                ) : (
+                  <View style={styles.projPhotoGrid}>
+                    {projectPhotos.map(p => {
+                      const sel = selectedProjPhotos.has(p.id);
+                      const uri = p.image_data
+                        ? (p.image_data.startsWith('data:') ? p.image_data : `data:image/jpeg;base64,${p.image_data}`)
+                        : (p.thumbnail || p.uri);
+                      return (
+                        <TouchableOpacity
+                          key={p.id}
+                          style={[styles.projPhotoCard, sel && styles.projPhotoCardSelected]}
+                          onPress={() => toggleProjPhoto(p.id)}
+                          activeOpacity={0.85}
+                        >
+                          <Image source={{ uri }} style={styles.projPhotoImg} resizeMode="cover" />
+                          <View style={[styles.projPhotoCheck, sel && { backgroundColor: '#16a34a' }]}>
+                            <Ionicons name={sel ? 'checkmark' : 'add'} size={14} color="#fff" />
+                          </View>
+                          {p.description ? (
+                            <Text style={styles.projPhotoCaption} numberOfLines={1}>{p.description}</Text>
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.modalCloseBtn, { flex: 1, backgroundColor: '#eceff1' }]}
+                  onPress={() => { setShowProjectPhotoPicker(false); setSelectedProjPhotos(new Set()); }}
+                >
+                  <Text style={[styles.modalCloseText, { color: '#475569' }]}>Abbrechen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCloseBtn, { flex: 1.4, backgroundColor: '#16a34a' }]}
+                  onPress={importSelectedProjPhotos}
+                >
+                  <Text style={[styles.modalCloseText, { color: '#fff' }]}>
+                    Übernehmen ({selectedProjPhotos.size})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -2004,6 +2141,26 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#bfdbfe',
   },
   smallChipText: { fontSize: 11, color: '#1976d2', fontWeight: '700' },
+  // Projektfoto-Picker Grid
+  projPhotoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  projPhotoCard: {
+    width: '31%', aspectRatio: 1, borderRadius: 10, overflow: 'hidden',
+    backgroundColor: '#f1f5f9', borderWidth: 2, borderColor: 'transparent',
+    position: 'relative',
+  },
+  projPhotoCardSelected: { borderColor: '#16a34a' },
+  projPhotoImg: { width: '100%', height: '100%' },
+  projPhotoCheck: {
+    position: 'absolute', top: 4, right: 4,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  projPhotoCaption: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff',
+    fontSize: 9, paddingHorizontal: 4, paddingVertical: 2,
+  },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   modalBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 6 },
   cancelBtn: { backgroundColor: '#eceff1' },

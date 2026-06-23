@@ -18,12 +18,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, Project, Customer } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, Project, Customer } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Features, AppName } from '../services/FeatureFlags';
+import { Features, AppName, getProStatus } from '../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -72,6 +72,10 @@ export default function HomeScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  // Ausgeliehene Maschinen (nur Pro)
+  const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
+  const [loanedExpanded, setLoanedExpanded] = useState(false);
+  const isProUser = getProStatus();
 
   const loadData = async () => {
     try {
@@ -87,6 +91,14 @@ export default function HomeScreen() {
         customerMap[customer.id] = customer;
       });
       setCustomers(customerMap);
+
+      // Ausgeliehene Maschinen laden (nur Pro)
+      if (getProStatus()) {
+        try {
+          const allMachines = await MachineMasterService.getAll();
+          setLoanedMachines(allMachines.filter(m => m.status === 'ausgeliehen'));
+        } catch { /* silent */ }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       Alert.alert(t('common.error'), t('home.dataLoadError'));
@@ -673,6 +685,59 @@ export default function HomeScreen() {
         />
         <Text style={styles.versionCode}>{AppName}</Text>
       </View>
+      )}
+
+      {/* Pro: Hinweis auf ausgeliehene Maschinen */}
+      {isProUser && loanedMachines.length > 0 && (
+        <TouchableOpacity
+          style={styles.loanBanner}
+          onPress={() => setLoanedExpanded(!loanedExpanded)}
+          activeOpacity={0.9}
+        >
+          <View style={styles.loanBannerHeader}>
+            <View style={styles.loanBannerIcon}>
+              <Ionicons name="swap-horizontal" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.loanBannerTitle}>
+                {loanedMachines.length === 1
+                  ? '1 Gerät ausgeliehen'
+                  : `${loanedMachines.length} Geräte ausgeliehen`}
+              </Text>
+              <Text style={styles.loanBannerSub} numberOfLines={1}>
+                {loanedMachines.slice(0, 2).map(m => m.name).join(', ')}
+                {loanedMachines.length > 2 ? `, +${loanedMachines.length - 2} weitere` : ''}
+              </Text>
+            </View>
+            <Ionicons name={loanedExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#fff" />
+          </View>
+          {loanedExpanded && (
+            <View style={styles.loanBannerList}>
+              {loanedMachines.map(m => {
+                const overdue = m.loan_until_date ? new Date(m.loan_until_date).getTime() < Date.now() : false;
+                const dueStr = m.loan_until_date
+                  ? new Date(m.loan_until_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  : null;
+                return (
+                  <View key={m.id} style={styles.loanBannerItem}>
+                    <Ionicons name="construct" size={14} color="#fff" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.loanBannerItemName}>{m.name}</Text>
+                      <Text style={styles.loanBannerItemMeta} numberOfLines={1}>
+                        {m.loan_to ? `↗ ${m.loan_to}` : '↗ ausgeliehen'}
+                        {dueStr ? `  ·  ${overdue ? '⚠ überfällig seit ' : 'bis '}${dueStr}` : ''}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity style={styles.loanBannerOpenBtn} onPress={() => router.push('/machines')}>
+                <Ionicons name="arrow-forward" size={14} color="#7c3aed" />
+                <Text style={styles.loanBannerOpenText}>Maschinen-Übersicht öffnen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </TouchableOpacity>
       )}
 
       {/* Suchleiste */}
@@ -1501,4 +1566,47 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
+  // Loan banner (Pro - ausgeliehene Maschinen)
+  loanBanner: {
+    backgroundColor: '#7c3aed',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  loanBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+  },
+  loanBannerIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  loanBannerTitle: {
+    color: '#fff', fontWeight: '800', fontSize: 14,
+  },
+  loanBannerSub: {
+    color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2,
+  },
+  loanBannerList: {
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  loanBannerItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 4,
+  },
+  loanBannerItemName: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  loanBannerItemMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 1 },
+  loanBannerOpenBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#fff', borderRadius: 8, paddingVertical: 8, marginTop: 4,
+  },
+  loanBannerOpenText: { color: '#7c3aed', fontWeight: '700', fontSize: 13 },
 });

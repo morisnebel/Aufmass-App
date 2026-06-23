@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { MachineMasterService, MachineMaster } from '../../services/LocalStorage';
+import { DatePickerField } from '../../src/components/DatePickerField';
 
 // =================== STATUS / CATEGORY OPTIONS ===================
 const STATUS_OPTIONS: { value: NonNullable<MachineMaster['status']>; label: string; color: string; bg: string; icon: any }[] = [
@@ -563,11 +564,22 @@ export default function MachinesIndex() {
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.label}>Ausleihdatum</Text>
-                        <TextInput style={styles.input} value={form.loan_from_date || ''} onChangeText={(v) => setForm({ ...form, loan_from_date: v })} placeholder="YYYY-MM-DD" />
+                        <DatePickerField
+                          value={form.loan_from_date}
+                          onChange={(v) => setForm({ ...form, loan_from_date: v })}
+                          placeholder="Datum wählen"
+                          accent="#7c3aed"
+                        />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.label}>Rückgabe geplant</Text>
-                        <TextInput style={styles.input} value={form.loan_until_date || ''} onChangeText={(v) => setForm({ ...form, loan_until_date: v })} placeholder="YYYY-MM-DD" />
+                        <DatePickerField
+                          value={form.loan_until_date}
+                          onChange={(v) => setForm({ ...form, loan_until_date: v })}
+                          placeholder="Datum wählen"
+                          accent="#7c3aed"
+                          minimumDate={form.loan_from_date ? new Date(form.loan_from_date) : undefined}
+                        />
                       </View>
                     </View>
                     <Text style={styles.label}>Notiz zur Ausleihe</Text>
@@ -696,11 +708,22 @@ export default function MachinesIndex() {
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Letzte Inspektion</Text>
-                    <TextInput style={styles.input} value={form.last_inspection_date || ''} onChangeText={(v) => setForm({ ...form, last_inspection_date: v })} placeholder="YYYY-MM-DD" />
+                    <DatePickerField
+                      value={form.last_inspection_date}
+                      onChange={(v) => setForm({ ...form, last_inspection_date: v })}
+                      placeholder="Datum wählen"
+                      accent="#16a34a"
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>Nächste Inspektion</Text>
-                    <TextInput style={styles.input} value={form.next_inspection_date || ''} onChangeText={(v) => setForm({ ...form, next_inspection_date: v })} placeholder="YYYY-MM-DD" />
+                    <DatePickerField
+                      value={form.next_inspection_date}
+                      onChange={(v) => setForm({ ...form, next_inspection_date: v })}
+                      placeholder="Datum wählen"
+                      accent="#ea580c"
+                      minimumDate={form.last_inspection_date ? new Date(form.last_inspection_date) : undefined}
+                    />
                   </View>
                 </View>
 

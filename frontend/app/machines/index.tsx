@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { MachineMasterService, MachineMaster } from '../../services/LocalStorage';
 import { DatePickerField } from '../../src/components/DatePickerField';
@@ -78,6 +78,7 @@ const EMPTY: Partial<MachineMaster> = {
 
 export default function MachinesIndex() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<MachineMaster[]>([]);
   const [tab, setTab] = useState<TabKey>('machines');
   const [modalVisible, setModalVisible] = useState(false);
@@ -501,8 +502,12 @@ export default function MachinesIndex() {
 
       {/* ===== Edit Modal ===== */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <View style={[styles.modalOverlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={insets.top + 8}
+            style={{ width: '100%', maxWidth: 500, flexShrink: 1 }}
+          >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{editing ? 'Maschine bearbeiten' : 'Neue Maschine / Gerät'}</Text>

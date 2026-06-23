@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmployeeMasterService, EmployeeMaster } from '../../services/LocalStorage';
 
 const EMPTY: Partial<EmployeeMaster> = {
@@ -28,6 +28,7 @@ const EMPTY: Partial<EmployeeMaster> = {
 
 export default function EmployeesIndex() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [employees, setEmployees] = useState<EmployeeMaster[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<EmployeeMaster | null>(null);
@@ -144,8 +145,12 @@ export default function EmployeesIndex() {
 
       {/* Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <View style={[styles.modalOverlay, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={insets.top + 8}
+            style={{ width: '100%', maxWidth: 500, flexShrink: 1 }}
+          >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{editing ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}</Text>

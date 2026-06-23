@@ -138,6 +138,10 @@ export default function RootLayout() {
           name="settings" 
           options={{ title: t('screenTitles.settings'), headerShown: false }} 
         />
+        <Stack.Screen 
+          name="reports/edit" 
+          options={{ title: 'Rapport' }} 
+        />
       </Stack>
       <KeyboardDismissButton />
     </View>

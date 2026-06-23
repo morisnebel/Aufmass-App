@@ -21,7 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
@@ -185,13 +185,14 @@ export default function ProjectDetailScreen() {
   }, [sketches]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
   const [checklistColumns, setChecklistColumns] = useState<number>(2);
   const [loading, setLoading] = useState(true);
   
   // Determine initial tab from URL parameter
-  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter') ? tab : 'overview';
-  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents' | 'calculator' | 'imagemeter'>(initialTab);
+  const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter' || tab === 'reports') ? tab : 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'roofs' | 'photos' | 'sketches' | 'checklists' | 'remarks' | 'documents' | 'calculator' | 'imagemeter' | 'reports'>(initialTab);
   
   // ImageMeter photos state
   const [imagemeterPhotos, setImagemeterPhotos] = useState<any[]>([]);
@@ -493,6 +494,14 @@ export default function ProjectDetailScreen() {
       setDocuments(data.documents);
       setAreaCalculations(data.areaCalculations);
       setImagemeterPhotos(data.imagemeterPhotos);
+
+      // Reports separat laden (Pro Feature)
+      try {
+        const projReports = await ReportService.getByProjectId(Array.isArray(id) ? id[0] : (id as string));
+        setReports(projReports);
+      } catch (e) {
+        console.warn('[loadProjectData] Reports load error:', e);
+      }
       
       console.log('[TIMING] loadProjectData total:', Date.now() - startTime, 'ms');
     } catch (error) {
@@ -4346,10 +4355,65 @@ export default function ProjectDetailScreen() {
     return html;
   };
 
+  // Wrapper: appends Rapport-Sections to the existing project PDF HTML
+  const appendReportsToHtml = (html: string, reportsList: Report[]): string => {
+    if (!reportsList || reportsList.length === 0) return html;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { generateReportSectionHtml, REPORT_CSS } = require('../../services/ReportPdfService');
+      const reportsHtml = `
+        <div style="page-break-before: always;">
+          <h1 style="color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:6px;">📝 Rapporte (${reportsList.length})</h1>
+          ${reportsList.map((r: Report) => generateReportSectionHtml(r, project, customer)).join('')}
+        </div>
+      `;
+      // inject extra css + reports before </body>
+      let result = html;
+      if (result.includes('</head>')) {
+        result = result.replace('</head>', `<style>${REPORT_CSS}</style></head>`);
+      }
+      if (result.includes('</body>')) {
+        result = result.replace('</body>', `${reportsHtml}</body>`);
+      } else {
+        result = result + reportsHtml;
+      }
+      return result;
+    } catch (e) {
+      console.error('appendReportsToHtml error:', e);
+      return html;
+    }
+  };
+
+  // Erzeugt Projekt-PDF-HTML, optional inklusive aller Rapporte
+  const generateProjectPdfHtmlWithOptions = async (opts: { includeReports?: boolean } = {}): Promise<string> => {
+    const html = await generatePdfHtml();
+    if (opts.includeReports && reports.length > 0) {
+      return appendReportsToHtml(html, reports);
+    }
+    return html;
+  };
+
   // Show PDF options dialog
   const exportToPDF = async () => {
+    // Wenn Rapporte vorhanden sind: erst fragen ob inkludieren
+    if (Features.showReportTab && reports.length > 0) {
+      Alert.alert(
+        '📝 Rapporte einschließen?',
+        `Es ${reports.length === 1 ? 'ist 1 Rapport' : `sind ${reports.length} Rapporte`} in diesem Projekt vorhanden. Sollen sie im PDF mit ausgegeben werden?`,
+        [
+          { text: 'Ohne Rapporte', onPress: () => showPdfExportOptions(false) },
+          { text: 'Mit Rapporten', onPress: () => showPdfExportOptions(true) },
+          { text: t('common.cancel'), style: 'cancel' },
+        ]
+      );
+    } else {
+      showPdfExportOptions(false);
+    }
+  };
+
+  const showPdfExportOptions = (includeReports: boolean) => {
     Alert.alert(
-      'PDF Export',
+      includeReports ? 'PDF Export (mit Rapporten)' : 'PDF Export',
       t('projects.whatToDo'),
       [
         {
@@ -4357,7 +4421,7 @@ export default function ProjectDetailScreen() {
           onPress: async () => {
             try {
               setIsGeneratingPdf(true);
-              const html = await generatePdfHtml();
+              const html = await generateProjectPdfHtmlWithOptions({ includeReports });
               setPdfHtmlContent(html);
               setShowPdfPreviewModal(true);
             } catch (error) {
@@ -4370,11 +4434,11 @@ export default function ProjectDetailScreen() {
         },
         {
           text: 'PDF teilen',
-          onPress: () => generateAndSharePdf(),
+          onPress: () => generateAndSharePdf(includeReports),
         },
         {
           text: t('projects.saveToFiles'),
-          onPress: () => generateAndSavePdf(),
+          onPress: () => generateAndSavePdf(includeReports),
         },
         { text: t('common.cancel'), style: 'cancel' },
       ]
@@ -4382,11 +4446,11 @@ export default function ProjectDetailScreen() {
   };
 
   // Generate and share PDF
-  const generateAndSharePdf = async () => {
+  const generateAndSharePdf = async (includeReports = false) => {
     try {
       setIsGeneratingPdf(true);
       
-      const html = await generatePdfHtml();
+      const html = await generateProjectPdfHtmlWithOptions({ includeReports });
       const { uri } = await Print.printToFileAsync({
         html,
         base64: false,
@@ -4414,11 +4478,11 @@ export default function ProjectDetailScreen() {
   };
 
   // Generate and save PDF to Files app
-  const generateAndSavePdf = async () => {
+  const generateAndSavePdf = async (includeReports = false) => {
     try {
       setIsGeneratingPdf(true);
       
-      const html = await generatePdfHtml();
+      const html = await generateProjectPdfHtmlWithOptions({ includeReports });
       const { uri } = await Print.printToFileAsync({
         html,
         base64: false,
@@ -4899,6 +4963,30 @@ export default function ProjectDetailScreen() {
               <View style={[styles.tabBadge, { backgroundColor: '#e0e7ff' }]}>
                 <Text style={[styles.tabBadgeText, { color: '#6366f1' }]}>
                   {documents.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          )}
+
+          {/* 9. Rapport - Teal - nur in Pro */}
+          {Features.showReportTab && (
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'reports' && styles.tabPillActive]}
+            onPress={() => handleTabChange('reports' as any)}
+          >
+            <Ionicons 
+              name={activeTab === 'reports' ? "clipboard" : "clipboard-outline"}
+              size={20} 
+              color="#0d9488"
+            />
+            <Text style={[styles.tabPillText, activeTab === 'reports' && styles.tabPillTextActive]}>
+              Rapport
+            </Text>
+            {reports.length > 0 && (
+              <View style={[styles.tabBadge, { backgroundColor: '#ccfbf1' }]}>
+                <Text style={[styles.tabBadgeText, { color: '#0d9488' }]}>
+                  {reports.length}
                 </Text>
               </View>
             )}
@@ -6664,6 +6752,126 @@ export default function ProjectDetailScreen() {
                     </TouchableOpacity>
                   </TouchableOpacity>
                 ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'reports' && (
+          <View style={styles.documentsSection}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push({
+                pathname: '/reports/edit',
+                params: { projectId: Array.isArray(id) ? id[0] : id },
+              })}
+            >
+              <Ionicons name="add-circle" size={24} color="#fff" />
+              <Text style={styles.addButtonText}>Neuer Rapport</Text>
+            </TouchableOpacity>
+
+            {reports.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="clipboard-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>Keine Rapporte vorhanden</Text>
+                <Text style={styles.emptySubtext}>
+                  Erstellen Sie Arbeitsrapporte mit Datum, Mitarbeitern, Material und Unterschriften – direkt aus den Projektdaten.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ marginTop: 8 }}>
+                {reports.map((rep) => {
+                  const dateStr = rep.date ? new Date(rep.date).toLocaleDateString('de-DE') : '-';
+                  const empCount = (rep.employees || []).length;
+                  const hoursVal = rep.total_hours ?? (() => {
+                    if (!rep.time_from || !rep.time_to) return 0;
+                    const [fh, fm] = rep.time_from.split(':').map(Number);
+                    const [th, tm] = rep.time_to.split(':').map(Number);
+                    let mins = (th * 60 + tm) - (fh * 60 + fm);
+                    if (mins < 0) mins += 24 * 60;
+                    return Math.round((mins / 60) * 100) / 100;
+                  })();
+                  const signed = !!(rep.signature_customer || rep.signature_worker);
+                  return (
+                    <TouchableOpacity
+                      key={rep.id}
+                      style={styles.reportCard}
+                      onPress={() => router.push({
+                        pathname: '/reports/edit',
+                        params: { projectId: Array.isArray(id) ? id[0] : id, reportId: rep.id },
+                      })}
+                    >
+                      <View style={styles.reportCardLeft}>
+                        <View style={styles.reportIconBox}>
+                          <Ionicons name="clipboard" size={26} color="#0d9488" />
+                        </View>
+                      </View>
+                      <View style={styles.reportCardBody}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={styles.reportCardTitle}>
+                            {rep.report_number || 'Rapport'}
+                          </Text>
+                          {signed && (
+                            <View style={styles.signedBadge}>
+                              <Ionicons name="checkmark-circle" size={12} color="#0d9488" />
+                              <Text style={styles.signedBadgeText}>unterschrieben</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.reportCardDate}>{dateStr}</Text>
+                        <View style={styles.reportCardStats}>
+                          <View style={styles.reportStat}>
+                            <Ionicons name="people-outline" size={13} color="#666" />
+                            <Text style={styles.reportStatText}>{empCount} MA</Text>
+                          </View>
+                          {hoursVal > 0 && (
+                            <View style={styles.reportStat}>
+                              <Ionicons name="time-outline" size={13} color="#666" />
+                              <Text style={styles.reportStatText}>{hoursVal} Std.</Text>
+                            </View>
+                          )}
+                          {(rep.photos || []).length > 0 && (
+                            <View style={styles.reportStat}>
+                              <Ionicons name="camera-outline" size={13} color="#666" />
+                              <Text style={styles.reportStatText}>{(rep.photos || []).length}</Text>
+                            </View>
+                          )}
+                        </View>
+                        {rep.work_description ? (
+                          <Text style={styles.reportCardDesc} numberOfLines={1}>{rep.work_description}</Text>
+                        ) : null}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.reportCardDelete}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          Alert.alert(
+                            'Rapport löschen',
+                            `${rep.report_number || 'Rapport'} wirklich löschen?`,
+                            [
+                              { text: t('common.cancel'), style: 'cancel' },
+                              {
+                                text: t('common.delete'),
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await ReportService.delete(rep.id);
+                                    await loadProjectData();
+                                  } catch (err) {
+                                    console.error('Delete report error:', err);
+                                    Alert.alert(t('common.error'), 'Rapport konnte nicht gelöscht werden.');
+                                  }
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#f44336" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -9431,6 +9639,83 @@ const styles = StyleSheet.create({
   // Documents Section Styles
   documentsSection: {
     padding: 16,
+  },
+  reportCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0d9488',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  reportCardLeft: {
+    marginRight: 12,
+  },
+  reportIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ccfbf1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportCardBody: {
+    flex: 1,
+  },
+  reportCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  reportCardDate: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 2,
+  },
+  reportCardStats: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  reportStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  reportStatText: {
+    fontSize: 11,
+    color: '#666',
+  },
+  reportCardDesc: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  reportCardDelete: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  signedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ccfbf1',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  signedBadgeText: {
+    fontSize: 10,
+    color: '#0d9488',
+    fontWeight: '600',
   },
   documentsGrid: {
     flexDirection: 'row',

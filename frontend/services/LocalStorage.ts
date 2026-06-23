@@ -20,6 +20,7 @@ const KEYS = {
   AREA_CALCULATIONS: 'aufmassprofi_area_calculations',
   LINE_CATEGORIES: 'aufmassprofi_line_categories',
   TEXT_SHORTCUTS: 'aufmassprofi_text_shortcuts',
+  REPORTS: 'aufmassprofi_reports',
 };
 
 // Helper to generate unique IDs
@@ -1879,6 +1880,145 @@ export const AreaCalculationService = {
   },
 };
 
+// ============ REPORTS (Rapport / Tagesbericht) - Pro Feature ============
+
+export interface ReportEmployee {
+  id: string;
+  name: string;
+  hours?: number; // Stunden für diesen Mitarbeiter
+}
+
+export interface ReportMaterial {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string; // z.B. "Stk", "m", "m²", "kg", "L"
+  note?: string;
+}
+
+export interface ReportPhoto {
+  id: string;
+  uri: string; // base64 data URL
+  caption?: string;
+}
+
+export interface Report {
+  id: string;
+  project_id: string;
+  report_number?: string; // z.B. "RAP-0001"
+  // Datum & Zeit
+  date: string; // ISO YYYY-MM-DD
+  time_from?: string; // HH:MM
+  time_to?: string; // HH:MM
+  total_hours?: number; // Gesamtstunden (manuell überschreibbar)
+  // Mitarbeiter
+  employees: ReportEmployee[];
+  // Ausgeführte Arbeiten
+  work_description: string;
+  // Material
+  materials: ReportMaterial[];
+  // Anfahrt
+  travel_km?: number;
+  travel_time?: number; // Minuten
+  // Wetter (für Außenarbeiten)
+  weather?: 'sunny' | 'cloudy' | 'rain' | 'snow' | 'wind' | 'fog' | '';
+  temperature?: number; // Grad Celsius
+  // Bemerkungen
+  remarks?: string;
+  // Unterschriften (SVG Path String)
+  signature_customer?: string; // SVG path data
+  signature_customer_name?: string;
+  signature_worker?: string; // SVG path data
+  signature_worker_name?: string;
+  signed_at?: string; // ISO timestamp wenn unterschrieben
+  // Fotos
+  photos: ReportPhoto[];
+  created_at: string;
+  updated_at: string;
+}
+
+export const ReportService = {
+  getAll: async (): Promise<Report[]> => {
+    return getItems<Report>(KEYS.REPORTS);
+  },
+
+  getByProjectId: async (projectId: string): Promise<Report[]> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    return reports
+      .filter((r) => r.project_id === projectId)
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  },
+
+  getById: async (id: string): Promise<Report | null> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    return reports.find((r) => r.id === id) || null;
+  },
+
+  // Nächste Rapport-Nummer ermitteln (pro Projekt)
+  getNextReportNumber: async (projectId: string): Promise<string> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    const projectReports = reports.filter((r) => r.project_id === projectId);
+    const maxNum = projectReports.reduce((max, r) => {
+      const m = (r.report_number || '').match(/RAP-(\d+)/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        return n > max ? n : max;
+      }
+      return max;
+    }, 0);
+    return `RAP-${String(maxNum + 1).padStart(4, '0')}`;
+  },
+
+  create: async (data: Omit<Report, 'id' | 'created_at' | 'updated_at'>): Promise<Report> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    const newReport: Report = {
+      ...data,
+      id: generateId(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    reports.push(newReport);
+    await setItems(KEYS.REPORTS, reports);
+    return newReport;
+  },
+
+  update: async (id: string, data: Partial<Report>): Promise<Report | null> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    const idx = reports.findIndex((r) => r.id === id);
+    if (idx === -1) return null;
+    reports[idx] = {
+      ...reports[idx],
+      ...data,
+      updated_at: new Date().toISOString(),
+    };
+    await setItems(KEYS.REPORTS, reports);
+    return reports[idx];
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    const filtered = reports.filter((r) => r.id !== id);
+    await setItems(KEYS.REPORTS, filtered);
+  },
+
+  // Rapport duplizieren (gleiche Daten, neues Datum = heute, neue ID & Nummer)
+  duplicate: async (id: string): Promise<Report | null> => {
+    const original = await ReportService.getById(id);
+    if (!original) return null;
+    const nextNum = await ReportService.getNextReportNumber(original.project_id);
+    const today = new Date().toISOString().split('T')[0];
+    const { id: _omitId, created_at: _c, updated_at: _u, ...rest } = original;
+    return ReportService.create({
+      ...rest,
+      report_number: nextNum,
+      date: today,
+      signature_customer: '',
+      signature_worker: '',
+      signed_at: undefined,
+    } as any);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -1894,6 +2034,7 @@ export const LocalStorage = {
   AreaCalculations: AreaCalculationService,
   LineCategories: LineCategoryService,
   TextShortcuts: TextShortcutService,
+  Reports: ReportService,
 };
 
 export default LocalStorage;

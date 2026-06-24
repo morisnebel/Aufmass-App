@@ -519,25 +519,26 @@ export const REPORT_CSS = `
   .info-mini-label { font-size: 10px; color: #888; }
   .info-mini-value { font-size: 12px; font-weight: 600; color: #333; }
   .photo-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    font-size: 0;
     page-break-inside: auto;
-    align-content: flex-start;
-    justify-content: flex-start;
   }
   .photo-item {
-    width: calc(50% - 4px);
+    display: inline-block;
+    vertical-align: top;
+    width: calc(50% - 6px);
+    margin-right: 8px;
+    margin-bottom: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
     background: #1f2937;
     page-break-inside: avoid;
     break-inside: avoid;
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 4px;
+    -webkit-column-break-inside: avoid;
+    box-sizing: border-box;
+    font-size: 11px;
   }
+  .photo-item:nth-child(2n) { margin-right: 0; }
   .photo-item img {
     width: 100%;
     height: 240px;

@@ -518,22 +518,34 @@ export const REPORT_CSS = `
   }
   .info-mini-label { font-size: 10px; color: #888; }
   .info-mini-value { font-size: 12px; font-weight: 600; color: #333; }
-  .photo-grid { display: flex; flex-wrap: wrap; gap: 6px; page-break-inside: avoid; }
+  .photo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    page-break-inside: auto;
+    align-content: flex-start;
+    justify-content: flex-start;
+  }
   .photo-item {
-    width: 48%;
+    width: calc(50% - 4px);
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
     background: #1f2937;
     page-break-inside: avoid;
+    break-inside: avoid;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 4px;
   }
   .photo-item img {
-    width: 100%; height: 180px;
-    object-fit: contain;
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
     display: block;
     background: #1f2937;
   }
-  .photo-caption { font-size: 9px; padding: 3px; background: #f5f5f5; color: #333; }
+  .photo-caption { font-size: 9px; padding: 3px 5px; background: #f5f5f5; color: #333; }
   .signatures {
     display: flex;
     justify-content: space-between;

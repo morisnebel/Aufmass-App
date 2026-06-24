@@ -345,14 +345,14 @@ export const generateReportSectionHtml = (
       </div>
 
       ${(report as any).obstacles ? `
-        <div class="section">
+        <div class="section keep-together">
           <div class="section-title" style="background:#fee2e2;color:#991b1b;">⚠️ Besonderheiten / Behinderungen</div>
           <div class="work-desc" style="border-left:3px solid #dc2626;">${escapeHtml((report as any).obstacles)}</div>
         </div>
       ` : ''}
 
       ${report.remarks ? `
-        <div class="section">
+        <div class="section keep-together">
           <div class="section-title">📝 Bemerkungen</div>
           <div class="work-desc">${escapeHtml(report.remarks)}</div>
         </div>
@@ -412,6 +412,13 @@ export const REPORT_CSS = `
   .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 12px; }
   .info-row { font-size: 11px; margin: 2px 0; }
   .section { margin-bottom: 12px; orphans: 3; widows: 3; }
+  /* Atomare Sektionen (Überschrift + kurzer Inhalt) — niemals zwischen Seiten zerreißen */
+  .keep-together {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+    display: block;
+  }
   .section-title {
     font-size: 13px;
     font-weight: bold;

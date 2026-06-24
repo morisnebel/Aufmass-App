@@ -411,7 +411,7 @@ export const REPORT_CSS = `
   }
   .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 12px; }
   .info-row { font-size: 11px; margin: 2px 0; }
-  .section { margin-bottom: 12px; }
+  .section { margin-bottom: 12px; orphans: 3; widows: 3; }
   .section-title {
     font-size: 13px;
     font-weight: bold;
@@ -420,8 +420,33 @@ export const REPORT_CSS = `
     padding: 5px 10px;
     border-radius: 4px;
     margin-bottom: 6px;
-    page-break-after: avoid;
-    break-after: avoid-page;
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+    page-break-inside: avoid;
+  }
+  /* Erste Inhalts-Elemente direkt nach .section-title sollen niemals
+     auf einer neuen Seite alleine erscheinen — sie kleben an ihrer Überschrift. */
+  .section-title + .info-box,
+  .section-title + .work-desc,
+  .section-title + .material-table,
+  .section-title + .emp-table,
+  .section-title + .work-items,
+  .section-title + .machines-list,
+  .section-title + .role-summary,
+  .section-title + .single-line,
+  .section-title + table,
+  .section-title + ul,
+  .section-title + p {
+    page-break-before: avoid !important;
+    break-before: avoid-page !important;
+  }
+  /* Generisches "single-line" Element für kurze 1-Zeilen-Inhalte (z.B. "10 km" Anfahrt, "Zu warm" Besonderheiten) */
+  .single-line {
+    font-size: 12px;
+    padding: 6px 10px;
+    background: #fafafa;
+    border-radius: 4px;
+    border-left: 3px solid #f59e0b;
     page-break-inside: avoid;
   }
   .employees-list { margin: 4px 0 0 18px; font-size: 12px; }

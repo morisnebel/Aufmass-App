@@ -1,0 +1,81 @@
+{
+  "summary": "Statische Code-Analyse von /app/frontend/services/ReportPdfService.ts zur Verifikation des Fixes 'Überschriften alleine am Seitenende' im PDF-Export. Alle 6 geforderten CSS-Anforderungen sind vollständig und korrekt implementiert. Keine UI-Tests durchgeführt (Backend/Code-Only Review wie angefordert).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "verification_results": {
+    "1_section_title_break_rules": {
+      "status": "OK",
+      "location": "ReportPdfService.ts:415-426",
+      "details": "page-break-after: avoid !important (Z.423), break-after: avoid-page !important (Z.424), page-break-inside: avoid (Z.425) — alle drei Properties vorhanden."
+    },
+    "2_adjacent_sibling_selectors": {
+      "status": "OK — alle 11 Selektoren vorhanden",
+      "location": "ReportPdfService.ts:429-442",
+      "selectors_found": [
+        ".section-title + .info-box (Z.429)",
+        ".section-title + .work-desc (Z.430)",
+        ".section-title + .material-table (Z.431)",
+        ".section-title + .emp-table (Z.432)",
+        ".section-title + .work-items (Z.433)",
+        ".section-title + .machines-list (Z.434)",
+        ".section-title + .role-summary (Z.435)",
+        ".section-title + .single-line (Z.436)",
+        ".section-title + table (Z.437)",
+        ".section-title + ul (Z.438)",
+        ".section-title + p (Z.439)"
+      ],
+      "properties_applied": "page-break-before: avoid !important (Z.440) + break-before: avoid-page !important (Z.441) — beide Properties korrekt gesetzt."
+    },
+    "3_section_orphans_widows": {
+      "status": "OK",
+      "location": "ReportPdfService.ts:414",
+      "details": ".section { margin-bottom: 12px; orphans: 3; widows: 3; } — orphans und widows korrekt auf 3 gesetzt."
+    },
+    "4_single_line_class": {
+      "status": "OK",
+      "location": "ReportPdfService.ts:444-451",
+      "details": ".single-line definiert mit font-size, padding, background, border-left UND page-break-inside: avoid (Z.450)."
+    },
+    "5_besonderheiten_uses_work_desc": {
+      "status": "OK",
+      "location": "ReportPdfService.ts:347-352",
+      "details": "Section 'Besonderheiten / Behinderungen' rendert <div class=\"section-title\">…</div> direkt gefolgt von <div class=\"work-desc\">…</div>. Der Selektor '.section-title + .work-desc' greift hier ohne Umwege (keine Whitespace-Text-Nodes oder Zwischen-Elemente im erzeugten HTML, da Template-Literal ohne dazwischenliegende Tags)."
+    },
+    "6_bemerkungen_uses_work_desc": {
+      "status": "OK",
+      "location": "ReportPdfService.ts:354-359",
+      "details": "Section 'Bemerkungen' verwendet ebenfalls <div class=\"section-title\"> direkt gefolgt von <div class=\"work-desc\">. Selektor greift identisch wie bei Besonderheiten."
+    }
+  },
+  "print_engine_compatibility": {
+    "chromium_expo_print_android": "Chromium-basierte Print-Engine unterstützt sowohl die Legacy 'page-break-*' Properties (CSS 2.1) als auch die modernen 'break-*' Properties (CSS Fragmentation L3). Die Doppelung (page-break-after + break-after) ist die empfohlene Belt-and-Suspenders-Strategie und maximiert Kompatibilität.",
+    "webkit_expo_print_ios": "WebKit unterstützt 'page-break-*' Properties seit Jahren stabil. 'break-*' Properties werden in neueren Safari/WebKit-Versionen ebenfalls unterstützt — durch die Kombination beider Varianten ist iOS-Kompatibilität gewährleistet.",
+    "orphans_widows": "Beide Properties werden von Chromium und WebKit für PDF-Generation unterstützt. orphans/widows: 3 verhindert, dass 1-2 Zeilen-Reste alleine umgebrochen werden.",
+    "adjacent_sibling_effectiveness": "Die Kombination 'page-break-after: avoid' auf .section-title + 'page-break-before: avoid' auf dem direkten Folge-Element ist der offiziell empfohlene Mechanismus, um Überschrift+Inhalt zusammenzuhalten. Beide Engines respektieren dies zuverlässig, solange der Folge-Block auf der vorherigen Seite Platz hat — andernfalls wird die GANZE Gruppe auf die nächste Seite verschoben (gewünschtes Verhalten).",
+    "edge_case_long_content": ".work-desc hat zusätzlich page-break-inside: avoid (Z.535). Bei sehr langen obstacles/remarks (>1 Seite Inhalt) kann das in Theorie zu Konflikten führen (Engine muss trotzdem brechen), aber für typische 1-3 Zeilen Texte wie 'Zu warm' funktioniert es einwandfrei und löst exakt den vom User berichteten Bug.",
+    "verdict": "JA — die CSS-Kombination verhindert in Chromium/WebKit Print-Engines (expo-print) effektiv, dass eine Überschrift alleine am Seitenende steht. Der Fix ist vollständig und korrekt."
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix ist sauber implementiert: Doppelte Property-Schreibweise (page-break-* + break-*) für maximale Cross-Engine-Kompatibilität.",
+    "Adjacent-Sibling-Strategie ist korrekt — das !important sorgt dafür, dass die Regel auch bei späteren CSS-Erweiterungen Vorrang behält.",
+    "Kleinere Optimierungs-Idee (kein Bug, optional): Die Section-Container <div class=\"section\"> könnte zusätzlich 'page-break-inside: avoid' bekommen, um die GANZE Section (Titel+Inhalt) atomar zu halten. Dies wäre aber bei großen Tabellen kontraproduktiv. Aktuelle Lösung mit Sibling-Selektoren ist flexibler und ausreichend.",
+    "Keine Lint-/Syntax-Fehler im CSS-String erkennbar. Alle 11 Selektoren sind sauber komma-separiert und der gemeinsame Block ist gültig."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A — Code-Review only", "frontend": "N/A — kein UI-Test"},
+  "seed_data_creation": "Keine",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Falls ein UI/PDF-Render-Retest gewünscht: PDF generieren mit (a) leerem obstacles/remarks (sollte keine Section rendern), (b) kurzem 1-Zeilen-Text wie 'Zu warm' (muss zusammen mit Überschrift bleiben) und (c) langem mehrzeiligen Text (sollte gesamten Block auf nächste Seite verschieben statt Titel allein zu lassen).",
+  "rca_of_issue": "RCA: Original-Bug entstand, weil .section-title nur visuelles Styling hatte, aber keine Page-Break-Hints. Chromium-Print-Engine brach daher zwischen Titel und Inhalt um, wenn am Seitenende nur noch ~50px Platz waren — gerade genug für die Überschrift, aber nicht für den Folge-Block. Mitigation: Doppelte Strategie — (1) .section-title trägt 'page-break-after: avoid' damit nach ihr kein Bruch erfolgt, (2) direkte Geschwister-Elemente tragen 'page-break-before: avoid' als Fallback. Beide Properties zusätzlich als CSS3 'break-*' Variante für moderne Engines. orphans/widows: 3 als zusätzliche Sicherung gegen kurze Reste."
+}

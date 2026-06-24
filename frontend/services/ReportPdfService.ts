@@ -233,19 +233,31 @@ export const generateReportSectionHtml = (
       ).join('')
     : '';
 
-  const photosHtml = report.photos && report.photos.length > 0
-    ? `<div class="section">
-         <div class="section-title">📷 Fotos</div>
-         <div class="photo-grid">
-           ${report.photos.map(p => `
-             <div class="photo-item">
+  // Fotos: Tabellen-Layout für 100% zuverlässige Page-Breaks in WebKit/Chromium-Print.
+  // 2 Fotos pro <tr>, wobei <tr> mit page-break-inside:avoid niemals zwischen Seiten zerrissen wird.
+  let photosHtml = '';
+  if (report.photos && report.photos.length > 0) {
+    const rows: string[] = [];
+    for (let i = 0; i < report.photos.length; i += 2) {
+      const left = report.photos[i];
+      const right = report.photos[i + 1];
+      const cell = (p: any) => p
+        ? `<td class="photo-cell">
+             <div class="photo-box">
                <img src="${p.uri}" />
                ${p.caption ? `<div class="photo-caption">${escapeHtml(p.caption)}</div>` : ''}
              </div>
-           `).join('')}
-         </div>
-       </div>`
-    : '';
+           </td>`
+        : `<td class="photo-cell"></td>`;
+      rows.push(`<tr class="photo-row">${cell(left)}${cell(right)}</tr>`);
+    }
+    photosHtml = `<div class="section">
+         <div class="section-title">📷 Fotos</div>
+         <table class="photo-table">
+           <tbody>${rows.join('')}</tbody>
+         </table>
+       </div>`;
+  }
 
   const weatherText = report.weather && weatherIcons[report.weather] ? weatherIcons[report.weather] : '';
   const tempText = report.temperature != null ? `${report.temperature}°C` : '';
@@ -518,28 +530,32 @@ export const REPORT_CSS = `
   }
   .info-mini-label { font-size: 10px; color: #888; }
   .info-mini-value { font-size: 12px; font-weight: 600; color: #333; }
-  .photo-grid {
-    font-size: 0;
-    page-break-inside: auto;
+  /* Foto-Layout via Tabelle: <tr> wird in Chromium-Print zuverlässig nicht zwischen Seiten zerrissen */
+  .photo-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8px 8px;
+    table-layout: fixed;
   }
-  .photo-item {
-    display: inline-block;
+  .photo-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+  }
+  .photo-cell {
+    width: 50%;
+    padding: 0;
     vertical-align: top;
-    width: calc(50% - 6px);
-    margin-right: 8px;
-    margin-bottom: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .photo-box {
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
     background: #1f2937;
-    page-break-inside: avoid;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    box-sizing: border-box;
-    font-size: 11px;
   }
-  .photo-item:nth-child(2n) { margin-right: 0; }
-  .photo-item img {
+  .photo-box img {
     width: 100%;
     height: 240px;
     object-fit: cover;

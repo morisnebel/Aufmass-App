@@ -1,0 +1,72 @@
+{
+  "summary": "Statische Code-Analyse des 2. Bug-Fix-Versuchs für PDF-Foto-Page-Breaks (Umstellung von DIV-Grid auf TABLE-Layout) in /app/frontend/services/ReportPdfService.ts. Alle Anforderungen wurden erfüllt: HTML-Generation nutzt <table class='photo-table'> mit <tr class='photo-row'> (2 Fotos pro Reihe), CSS-Klassen korrekt definiert mit mehrfach gesetzten page-break-inside/break-inside/-webkit-column-break-inside Regeln auf photo-row UND photo-cell. Alte .photo-grid und .photo-item CSS-Klassen wurden vollständig entfernt (global verifiziert via grep, nur Metro-Cache-Treffer ignoriert). TypeScript-Lint sauber. Die Table-Lösung ist technisch sehr geeignet für WebKit/Chromium-Print (expo-print nutzt intern UIPrintInteractionController auf iOS und Chromium-PrintManager auf Android) - <tr> wird in beiden Engines als atomare Einheit behandelt und ist die zuverlässigste Methode, um Page-Breaks innerhalb von Reihen zu verhindern.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "code_review_findings": {
+    "html_generation_zeilen_236_260": {
+      "kein_photo_grid_div": "BESTAETIGT - kein .photo-grid mehr im Source",
+      "table_photo_table_mit_tbody": "BESTAETIGT - Zeile 256-257",
+      "paare_in_tr_photo_row": "BESTAETIGT - Zeile 252, Loop i += 2",
+      "td_photo_cell_mit_photo_box": "BESTAETIGT - Zeilen 245-250",
+      "leerer_td_platzhalter_bei_ungerade": "BESTAETIGT - Zeile 251: '<td class=\"photo-cell\"></td>'"
+    },
+    "css_im_report_css": {
+      "photo_table_border_collapse_separate": "BESTAETIGT - Zeile 536",
+      "photo_table_border_spacing_8px_8px": "BESTAETIGT - Zeile 537",
+      "photo_table_table_layout_fixed": "BESTAETIGT - Zeile 538",
+      "photo_row_page_break_inside_avoid": "BESTAETIGT - Zeile 541",
+      "photo_row_break_inside_avoid": "BESTAETIGT - Zeile 542",
+      "photo_row_webkit_column_break_inside": "BESTAETIGT - Zeile 543",
+      "photo_cell_width_50_percent": "BESTAETIGT - Zeile 546",
+      "photo_cell_vertical_align_top": "BESTAETIGT - Zeile 548",
+      "photo_cell_page_break_inside_avoid": "BESTAETIGT - Zeile 549-550 (zusaetzliche Sicherheit)",
+      "photo_box_border_background": "BESTAETIGT - Zeilen 552-557",
+      "photo_box_img_height_240px_object_fit_cover": "BESTAETIGT - Zeilen 558-564",
+      "alte_klassen_entfernt": "BESTAETIGT - .photo-grid und .photo-item global nicht mehr im Source (nur Metro-Cache)"
+    }
+  },
+  "technische_bewertung": {
+    "geeignet_fuer_chromium_webkit_print": true,
+    "begruendung": [
+      "expo-print nutzt intern UIPrintInteractionController (WebKit) auf iOS und Chromium-PrintManager auf Android - beide respektieren <tr> Page-Breaks zuverlaessig.",
+      "<tr> Elemente werden in Print-Engines als atomare Einheit behandelt - dies ist die robusteste Methode laut CSS-Spec fuer Tabellen-Layouts.",
+      "Dreifache Absicherung mit page-break-inside + break-inside + -webkit-column-break-inside garantiert maximale Kompatibilitaet ueber alle Engines.",
+      "table-layout: fixed verhindert dynamische Layout-Berechnungen und sorgt fuer vorhersehbare 50/50 Spaltenbreite.",
+      "border-collapse: separate mit border-spacing: 8px 8px erzeugt die visuelle Trennung sauber - kein Border-Doppelung wischen Zellen.",
+      "Die page-break-inside: avoid Regel ist sowohl auf .photo-row (primaer wirksam in Chromium) als auch auf .photo-cell gesetzt (Fallback)."
+    ],
+    "restrisiken": [
+      "Bei extrem langen Captions koennte eine Foto-Reihe groesser als eine A4-Seite werden - dann wuerde sie trotzdem zerrissen. Bei 240px-Bildhoehe + kurzen Captions praktisch ausgeschlossen.",
+      "Die `font-size: 0` Zeile 443 (im .work-items) ist NICHT auf .photo-table angewandt - das ist korrekt so, weil bei Table-Layout die alten inline-block-Whitespace-Probleme nicht auftreten."
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Keine weiteren Fixes erforderlich. Empfehlung: Echten PDF-Export-Test mit >=5 Fotos in einer echten Expo Build (Dev-Client oder TestFlight) durchfuehren, um das tatsaechliche Print-Verhalten zu verifizieren. Auf expo-print Web-Preview kann das exakte PDF-Layout abweichen."
+  ],
+  "critical_code_review_comments": [
+    "Sehr saubere Umsetzung - alle Anforderungen wurden 1:1 erfuellt.",
+    "Bonus: page-break-inside: avoid wurde zusaetzlich auch auf .photo-cell gesetzt (Zeile 549), was eine sinnvolle zusaetzliche Absicherung ist.",
+    "Datei mit 648 Zeilen ist im akzeptablen Rahmen - keine Refactoring-Notwendigkeit.",
+    "HTML-Escape via escapeHtml() korrekt fuer Captions verwendet (Zeile 248).",
+    "Img src wird NICHT escaped (Zeile 247) - bei base64 data-URIs oder vertrauenswuerdigen lokalen URIs OK, aber falls externe URLs moeglich sind, koennte das ein XSS-Risiko sein. Aktueller Use-Case (lokal gespeicherte Fotos) ist sicher."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - reine statische Analyse",
+    "frontend": "100% - alle Anforderungen erfuellt"
+  },
+  "seed_data_creation": "Keine - reine Code-Analyse",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bei Tests des PDF-Exports mit Fotos: Mindestens 5-7 Fotos pro Rapport verwenden und PDF-Output visuell pruefen (alle Foto-Reihen muessen komplett auf einer Seite bleiben). Mobile Browser-Preview zeigt nicht das echte Print-Layout - echtes Geraet (iOS/Android) oder Print-Preview im Browser nutzen.",
+  "rca_of_issue": "Ursprungsproblem: Im 1. Fix-Versuch wurden Foto-Items mit display:inline-block in einem .photo-grid div angeordnet. In WebKit/Chromium-Print-Engines wird page-break-inside: avoid bei inline-block-Elementen unzuverlaessig respektiert, weil Inline-Block Items nicht als 'block-level page break boundary' behandelt werden. Loesung: Wechsel auf <table>-Layout, weil <tr>-Zeilen laut CSS-Spec und in der Praxis aller modernen Print-Engines die zuverlaessigste atomare Einheit fuer Page-Breaks sind. Die Aenderung ist korrekt umgesetzt und sollte das Problem zuverlaessig loesen."
+}

@@ -1186,9 +1186,9 @@ export default function ReportEditScreen() {
               <View style={styles.photoGrid}>
                 {photos.map(p => (
                   <View key={p.id} style={styles.photoCard}>
-                    <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="contain" />
+                    <Image source={{ uri: p.uri }} style={styles.photoImg} resizeMode="cover" />
                     <TouchableOpacity style={styles.photoDelete} onPress={() => removePhoto(p.id)}>
-                      <Ionicons name="close-circle" size={22} color="#fff" />
+                      <Ionicons name="close-circle" size={22} color="#475569" />
                     </TouchableOpacity>
                     <TextInput
                       style={styles.photoCaption}

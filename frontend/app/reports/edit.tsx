@@ -2057,13 +2057,21 @@ const styles = StyleSheet.create({
   // --- Photos ---
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   photoCard: {
-    width: '48%', backgroundColor: '#1f2937', borderRadius: 10,
+    width: '48%', backgroundColor: '#f8fafc', borderRadius: 10,
     borderWidth: 1, borderColor: '#e2e8f0', overflow: 'hidden',
     position: 'relative',
   },
-  photoImg: { width: '100%', height: 180, backgroundColor: '#1f2937' },
-  photoDelete: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12 },
-  photoCaption: { fontSize: 12, padding: 6, borderTopWidth: 1, borderTopColor: '#eee' },
+  photoImg: { width: '100%', height: 180, backgroundColor: '#f1f5f9', resizeMode: 'cover' },
+  photoDelete: {
+    position: 'absolute', top: 4, right: 4,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 12, padding: 1,
+  },
+  photoCaption: {
+    fontSize: 12, paddingHorizontal: 8, paddingVertical: 6,
+    borderTopWidth: 1, borderTopColor: '#e2e8f0',
+    backgroundColor: '#ffffff', color: '#0f172a',
+  },
 
   // --- Signatures ---
   sigBlock: { marginBottom: 12 },

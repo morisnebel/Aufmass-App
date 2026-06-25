@@ -35,7 +35,7 @@
     },
     "android": {
       "package": "com.aufmassprofi.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"
@@ -68,6 +68,12 @@
         }
       }],
       ["expo-image-picker", {
+        "blockedPermissions": [
+          "android.permission.READ_MEDIA_IMAGES",
+          "android.permission.READ_MEDIA_VIDEO"
+        ]
+      }],
+      ["expo-media-library", {
         "blockedPermissions": [
           "android.permission.READ_MEDIA_IMAGES",
           "android.permission.READ_MEDIA_VIDEO"

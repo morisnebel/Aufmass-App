@@ -35,7 +35,7 @@
     },
     "android": {
       "package": "com.aufmassprofi.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"
@@ -44,6 +44,12 @@
         "CAMERA",
         "INTERNET",
         "ACCESS_NETWORK_STATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
       "softwareKeyboardLayoutMode": "pan",
       "userInterfaceStyle": "automatic"

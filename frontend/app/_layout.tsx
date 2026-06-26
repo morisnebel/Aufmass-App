@@ -6,6 +6,7 @@ import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService } from '../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
+import { DisclaimerGate } from '../src/components/DisclaimerGate';
 import '../i18n'; // i18n initialisieren
 
 // Ignore canvas render warnings from pdf.js in WebView
@@ -31,6 +32,7 @@ export default function RootLayout() {
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="auto" />
+      <DisclaimerGate>
       <Stack
         screenOptions={{
           headerStyle: headerBgColor ? {
@@ -155,6 +157,7 @@ export default function RootLayout() {
           options={{ title: 'Maschinen' }} 
         />
       </Stack>
+      </DisclaimerGate>
       <KeyboardDismissButton />
     </View>
   );

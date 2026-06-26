@@ -1486,6 +1486,9 @@ export interface Settings {
   report_header_fields_default?: string[];
   // Rapport-Fahrzeiten: Standardmäßig zur Gesamtarbeitszeit hinzuzählen?
   report_travel_in_total_hours?: boolean;
+  // Haftungsausschluss akzeptiert (ISO-Datum, leer = noch nicht akzeptiert)
+  disclaimer_accepted_at?: string;
+  disclaimer_version?: string;
 }
 
 export const SettingsService = {

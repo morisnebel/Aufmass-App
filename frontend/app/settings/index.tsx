@@ -1094,6 +1094,39 @@ export default function SettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={legalStyles.navRow}
+              onPress={async () => {
+                Alert.alert(
+                  'Haftungsausschluss erneut anzeigen?',
+                  'Beim nächsten App-Start wird der Haftungsausschluss-Dialog erneut angezeigt, damit du ihn überprüfen und neu bestätigen kannst.',
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Ja, erneut anzeigen',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await SettingsService.update({ disclaimer_accepted_at: undefined, disclaimer_version: undefined } as any);
+                          Alert.alert('Erledigt', 'Bitte starte die App neu, um den Haftungsausschluss zu sehen.');
+                        } catch { /* silent */ }
+                      },
+                    },
+                  ]
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#fee2e2' }]}>
+                <Ionicons name="refresh" size={18} color="#dc2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Haftungsausschluss zurücksetzen</Text>
+                <Text style={legalStyles.navSub}>Dialog beim nächsten App-Start erneut anzeigen</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

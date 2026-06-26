@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { MachineMasterService, MachineMaster } from '../../services/LocalStorage';
+import { MachineMasterService, MachineMaster, SettingsService } from '../../services/LocalStorage';
 import { DatePickerField } from '../../src/components/DatePickerField';
 
 // =================== STATUS / CATEGORY OPTIONS ===================
@@ -66,12 +66,12 @@ const isInspectionOverdue = (iso?: string): boolean => {
 };
 
 // Wiederverwendete Logik für TÜV/Hauptuntersuchung
-const isTuvDue = (iso?: string): boolean => {
+const isTuvDue = (iso?: string, warnDays: number = 30): boolean => {
   if (!iso) return false;
   try {
     const due = new Date(iso).getTime();
     const now = Date.now();
-    const warnMs = 30 * 24 * 60 * 60 * 1000;
+    const warnMs = warnDays * 24 * 60 * 60 * 1000;
     return !isNaN(due) && (due - now) <= warnMs;
   } catch { return false; }
 };
@@ -108,14 +108,40 @@ export default function MachinesIndex() {
   const [showFilterMenu, setShowFilterMenu] = useState<null | 'cat' | 'loc' | 'status'>(null);
   // Roh-Eingabe-Strings für Jahr (Komma-Bug-Prevention)
   const [yearStr, setYearStr] = useState<string>('');
+  // Erinnerungs-Einstellungen (Tage Vorlauf für Warnungen)
+  const [reminderDaysInspection, setReminderDaysInspection] = useState<number>(30);
+  const [reminderDaysTuv, setReminderDaysTuv] = useState<number>(30);
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
+  const [reminderInspectionStr, setReminderInspectionStr] = useState<string>('30');
+  const [reminderTuvStr, setReminderTuvStr] = useState<string>('30');
+
+  // Settings laden
+  React.useEffect(() => {
+    SettingsService.get().then(s => {
+      if (s.reminder_days_inspection != null) setReminderDaysInspection(s.reminder_days_inspection);
+      if (s.reminder_days_tuv != null) setReminderDaysTuv(s.reminder_days_tuv);
+    }).catch(() => { /* silent */ });
+  }, []);
 
   React.useEffect(() => {
     navigation.setOptions({
       title: 'Maschinen & Geräte',
       headerStyle: { backgroundColor: '#1976d2' },
       headerTintColor: '#fff',
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => {
+            setReminderInspectionStr(String(reminderDaysInspection));
+            setReminderTuvStr(String(reminderDaysTuv));
+            setReminderModalVisible(true);
+          }}
+          style={{ paddingHorizontal: 12, paddingVertical: 4 }}
+        >
+          <Ionicons name="notifications-outline" size={22} color="#fff" />
+        </TouchableOpacity>
+      ),
     });
-  }, [navigation]);
+  }, [navigation, reminderDaysInspection, reminderDaysTuv]);
 
   const load = useCallback(async () => {
     const all = await MachineMasterService.getAll();
@@ -138,9 +164,9 @@ export default function MachinesIndex() {
       if (m.storage_location) locs.add(m.storage_location);
       if (m.status === 'ausgeliehen') loaned += 1;
       if (isInspectionOverdue(m.next_inspection_date)) inspectionOverdue += 1;
-      else if (isInspectionDue(m.next_inspection_date)) inspectionDue += 1;
+      else if (isInspectionDue(m.next_inspection_date, reminderDaysInspection)) inspectionDue += 1;
       if (isTuvOverdue(m.next_tuv_date)) tuvOverdue += 1;
-      else if (isTuvDue(m.next_tuv_date)) tuvDue += 1;
+      else if (isTuvDue(m.next_tuv_date, reminderDaysTuv)) tuvDue += 1;
     });
     return {
       totalCount: items.length,
@@ -154,7 +180,7 @@ export default function MachinesIndex() {
       categories: Array.from(cats).sort(),
       locations: Array.from(locs).sort(),
     };
-  }, [items]);
+  }, [items, reminderDaysInspection, reminderDaysTuv]);
 
   // Aggregierte Listen für Tabs
   const categoriesAgg = useMemo(() => {
@@ -373,9 +399,9 @@ export default function MachinesIndex() {
               filtered.map(m => {
                 const st = STATUS_OPTIONS.find(s => s.value === (m.status || 'verfuegbar'))!;
                 const overdue = isInspectionOverdue(m.next_inspection_date);
-                const dueSoon = !overdue && isInspectionDue(m.next_inspection_date);
+                const dueSoon = !overdue && isInspectionDue(m.next_inspection_date, reminderDaysInspection);
                 const tuvOverdue = isTuvOverdue(m.next_tuv_date);
-                const tuvDueSoon = !tuvOverdue && isTuvDue(m.next_tuv_date);
+                const tuvDueSoon = !tuvOverdue && isTuvDue(m.next_tuv_date, reminderDaysTuv);
                 const cat = EQUIP_CATEGORIES.find(c => c.value === m.equipment_category);
                 const firstPhoto = m.photos && m.photos.length > 0 ? m.photos[0] : null;
                 return (
@@ -808,6 +834,106 @@ export default function MachinesIndex() {
               </View>
             </View>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* ===== Reminder-Einstellungen Modal ===== */}
+      <Modal visible={reminderModalVisible} animationType="slide" transparent onRequestClose={() => setReminderModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 16), maxHeight: '70%' }]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="notifications" size={20} color="#1976d2" />
+              <Text style={styles.modalTitle}>Erinnerungen</Text>
+              <TouchableOpacity onPress={() => setReminderModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+              <Text style={{ fontSize: 13, color: '#475569', lineHeight: 18 }}>
+                Wie viele Tage <Text style={{ fontWeight: '700' }}>vor</Text> dem nächsten Termin sollst du gewarnt werden?
+                Das Banner erscheint dann automatisch auf der Startseite.
+              </Text>
+
+              {/* Inspektion */}
+              <View style={{ backgroundColor: '#fff7ed', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#fed7aa' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="shield-checkmark" size={18} color="#ea580c" />
+                  <Text style={{ fontWeight: '700', color: '#9a3412', fontSize: 14 }}>Inspektion / UVV</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: '#9a3412' }]}
+                    value={reminderInspectionStr}
+                    onChangeText={(v) => setReminderInspectionStr(v.replace(/[^\d]/g, ''))}
+                    keyboardType="number-pad"
+                    placeholder="30"
+                    maxLength={3}
+                  />
+                  <Text style={{ fontSize: 14, color: '#475569', fontWeight: '600' }}>Tage vorher</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {[7, 14, 30, 60, 90].map(d => (
+                    <TouchableOpacity key={d} onPress={() => setReminderInspectionStr(String(d))} style={[styles.chip, reminderInspectionStr === String(d) && { backgroundColor: '#ea580c' }]}>
+                      <Text style={[styles.chipText, reminderInspectionStr === String(d) && styles.chipTextActive]}>{d} Tage</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* TÜV */}
+              <View style={{ backgroundColor: '#fef2f2', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#fecaca' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="car-sport" size={18} color="#dc2626" />
+                  <Text style={{ fontWeight: '700', color: '#991b1b', fontSize: 14 }}>TÜV / Hauptuntersuchung</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: '#991b1b' }]}
+                    value={reminderTuvStr}
+                    onChangeText={(v) => setReminderTuvStr(v.replace(/[^\d]/g, ''))}
+                    keyboardType="number-pad"
+                    placeholder="30"
+                    maxLength={3}
+                  />
+                  <Text style={{ fontSize: 14, color: '#475569', fontWeight: '600' }}>Tage vorher</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {[7, 14, 30, 60, 90].map(d => (
+                    <TouchableOpacity key={d} onPress={() => setReminderTuvStr(String(d))} style={[styles.chip, reminderTuvStr === String(d) && { backgroundColor: '#dc2626' }]}>
+                      <Text style={[styles.chipText, reminderTuvStr === String(d) && styles.chipTextActive]}>{d} Tage</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>
+                Standard: 30 Tage. Maximal 365 Tage.
+              </Text>
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setReminderModalVisible(false)}>
+                <Text style={styles.cancelBtnText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.saveBtn]}
+                onPress={async () => {
+                  let insp = parseInt(reminderInspectionStr, 10);
+                  let tuv = parseInt(reminderTuvStr, 10);
+                  if (!Number.isFinite(insp) || insp < 1) insp = 30;
+                  if (!Number.isFinite(tuv) || tuv < 1) tuv = 30;
+                  if (insp > 365) insp = 365;
+                  if (tuv > 365) tuv = 365;
+                  await SettingsService.update({ reminder_days_inspection: insp, reminder_days_tuv: tuv });
+                  setReminderDaysInspection(insp);
+                  setReminderDaysTuv(tuv);
+                  setReminderModalVisible(false);
+                }}
+              >
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>

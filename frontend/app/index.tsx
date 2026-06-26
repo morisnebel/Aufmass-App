@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
@@ -100,26 +100,32 @@ export default function HomeScreen() {
       setIsProUser(proStatus);
       if (proStatus) {
         try {
-          const allMachines = await MachineMasterService.getAll();
+          const [allMachines, settings] = await Promise.all([
+            MachineMasterService.getAll(),
+            SettingsService.get().catch(() => ({} as any)),
+          ]);
+          const warnDaysInspection = (settings as any).reminder_days_inspection ?? 30;
+          const warnDaysTuv = (settings as any).reminder_days_tuv ?? 30;
           setLoanedMachines(allMachines.filter(m => m.status === 'ausgeliehen'));
-          // Inspektion fällig: nächste_inspektion innerhalb 30 Tagen oder überfällig
+          // Inspektion fällig: nächste_inspektion innerhalb der konfigurierten Tage oder überfällig
           const now = Date.now();
-          const warnMs = 30 * 24 * 60 * 60 * 1000;
+          const warnMsInsp = warnDaysInspection * 24 * 60 * 60 * 1000;
+          const warnMsTuv = warnDaysTuv * 24 * 60 * 60 * 1000;
           const inspect = allMachines.filter(m => {
             if (!m.next_inspection_date) return false;
             const due = new Date(m.next_inspection_date).getTime();
-            return !isNaN(due) && (due - now) <= warnMs;
+            return !isNaN(due) && (due - now) <= warnMsInsp;
           }).sort((a, b) => {
             const da = new Date(a.next_inspection_date!).getTime();
             const db = new Date(b.next_inspection_date!).getTime();
             return da - db;
           });
           setInspectionMachines(inspect);
-          // TÜV fällig: nächster TÜV innerhalb 30 Tagen oder überfällig
+          // TÜV fällig: nächster TÜV innerhalb der konfigurierten Tage oder überfällig
           const tuv = allMachines.filter(m => {
             if (!m.next_tuv_date) return false;
             const due = new Date(m.next_tuv_date).getTime();
-            return !isNaN(due) && (due - now) <= warnMs;
+            return !isNaN(due) && (due - now) <= warnMsTuv;
           }).sort((a, b) => {
             const da = new Date(a.next_tuv_date!).getTime();
             const db = new Date(b.next_tuv_date!).getTime();

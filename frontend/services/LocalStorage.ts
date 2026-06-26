@@ -1479,6 +1479,9 @@ export interface Settings {
   pdf_tools_size?: 'small' | 'medium' | 'large';
   // Rapport-Einstellungen
   report_title?: string; // z.B. "Tagesbericht", "Arbeitsrapport", default "Rapport"
+  // Erinnerungen (Tage Vorlauf, default 30)
+  reminder_days_inspection?: number; // Tage vor nächster Inspektion
+  reminder_days_tuv?: number; // Tage vor nächstem TÜV
 }
 
 export const SettingsService = {

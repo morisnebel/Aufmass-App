@@ -14,6 +14,7 @@ import {
   SettingsService, PhotoService,
   Report, ReportEmployee, ReportMaterial, ReportPhoto, ReportMachine, ReportWorkItem,
   Project, Customer, EmployeeMaster, MaterialMaster, MachineMaster, Checklist,
+  REPORT_HEADER_FIELDS, DEFAULT_REPORT_HEADER_FIELDS,
 } from '../../services/LocalStorage';
 import { SignaturePad } from '../../src/components/SignaturePad';
 import { exportReportAsPdf } from '../../services/ReportPdfService';
@@ -91,6 +92,17 @@ export default function ReportEditScreen() {
   const [materials, setMaterials] = useState<ReportMaterial[]>([]);
   const [machines, setMachines] = useState<ReportMachine[]>([]);
   const [travelKm, setTravelKm] = useState<string>('');
+  // Erweiterte Fahrzeiten (Team)
+  const [travelToHours, setTravelToHours] = useState<string>('');
+  const [travelBackHours, setTravelBackHours] = useState<string>('');
+  const [travelToKm, setTravelToKm] = useState<string>('');
+  const [travelBackKm, setTravelBackKm] = useState<string>('');
+  const [travelCosts, setTravelCosts] = useState<string>('');
+  const [travelNote, setTravelNote] = useState<string>('');
+  const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
+  const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
+  // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
+  const [headerFields, setHeaderFields] = useState<Set<string>>(new Set(DEFAULT_REPORT_HEADER_FIELDS));
   const [weather, setWeather] = useState<Report['weather']>('');
   const [temperature, setTemperature] = useState<string>('');
   const [obstacles, setObstacles] = useState('');
@@ -153,6 +165,9 @@ export default function ReportEditScreen() {
       setCompanyLogo(sAny.logo_data || sAny.company_logo || '');
       setCompanyName(settingsData.company_name || '');
       setReportTitle(settingsData.report_title || 'Rapport');
+      // Default-Briefkopf-Felder + Fahrzeit-In-Stunden-Flag aus Settings
+      const defaultHeaderFields = (settingsData as any).report_header_fields_default;
+      const defaultTravelInTotal = !!(settingsData as any).report_travel_in_total_hours;
       if (proj?.customer_id) {
         const cust = await CustomerService.getById(proj.customer_id);
         setCustomer(cust);
@@ -171,6 +186,20 @@ export default function ReportEditScreen() {
           setMaterials(r.materials || []);
           setMachines(r.machines || []);
           setTravelKm(r.travel_km != null ? String(r.travel_km) : '');
+          setTravelToHours(r.travel_to_hours != null ? String(r.travel_to_hours) : '');
+          setTravelBackHours(r.travel_back_hours != null ? String(r.travel_back_hours) : '');
+          setTravelToKm(r.travel_to_km != null ? String(r.travel_to_km) : '');
+          setTravelBackKm(r.travel_back_km != null ? String(r.travel_back_km) : '');
+          setTravelCosts(r.travel_costs != null ? String(r.travel_costs) : '');
+          setTravelNote(r.travel_note || '');
+          setTravelPerEmployee(!!r.travel_per_employee_enabled);
+          setTravelInTotalHours(r.travel_in_total_hours != null ? !!r.travel_in_total_hours : defaultTravelInTotal);
+          // Briefkopf-Felder: per-report wenn vorhanden, sonst Default aus Settings, sonst eingebauter Default
+          if (r.header_fields && r.header_fields.length > 0) {
+            setHeaderFields(new Set(r.header_fields));
+          } else if (defaultHeaderFields && defaultHeaderFields.length > 0) {
+            setHeaderFields(new Set(defaultHeaderFields));
+          }
           setWeather(r.weather || '');
           setTemperature(r.temperature != null ? String(r.temperature) : '');
           setObstacles(r.obstacles || '');
@@ -184,6 +213,11 @@ export default function ReportEditScreen() {
       } else {
         const nextNum = await ReportService.getNextReportNumber(projectId);
         setReportNumber(nextNum);
+        // Bei neuem Rapport: Defaults aus Settings übernehmen
+        if (defaultHeaderFields && defaultHeaderFields.length > 0) {
+          setHeaderFields(new Set(defaultHeaderFields));
+        }
+        setTravelInTotalHours(defaultTravelInTotal);
       }
     } catch (e) {
       console.error('Error loading report:', e);
@@ -223,6 +257,15 @@ export default function ReportEditScreen() {
             setMaterials((prev.materials || []).map(m => ({ ...m, id: localId() })));
             setMachines((prev.machines || []).map(m => ({ ...m, id: localId() })));
             setTravelKm(prev.travel_km != null ? String(prev.travel_km) : '');
+            setTravelToHours(prev.travel_to_hours != null ? String(prev.travel_to_hours) : '');
+            setTravelBackHours(prev.travel_back_hours != null ? String(prev.travel_back_hours) : '');
+            setTravelToKm(prev.travel_to_km != null ? String(prev.travel_to_km) : '');
+            setTravelBackKm(prev.travel_back_km != null ? String(prev.travel_back_km) : '');
+            setTravelCosts(prev.travel_costs != null ? String(prev.travel_costs) : '');
+            setTravelNote(prev.travel_note || '');
+            setTravelPerEmployee(!!prev.travel_per_employee_enabled);
+            if (prev.travel_in_total_hours != null) setTravelInTotalHours(!!prev.travel_in_total_hours);
+            if (prev.header_fields && prev.header_fields.length > 0) setHeaderFields(new Set(prev.header_fields));
             setWeather(prev.weather || '');
             setTemperature(prev.temperature != null ? String(prev.temperature) : '');
             setObstacles('');
@@ -285,7 +328,16 @@ export default function ReportEditScreen() {
         work_description: workDescription,
         materials,
         machines,
-        travel_km: travelKm ? parseFloat(travelKm) : undefined,
+        travel_km: travelKm ? parseFloat(travelKm.replace(',', '.')) : undefined,
+        travel_to_hours: travelToHours ? parseFloat(travelToHours.replace(',', '.')) : undefined,
+        travel_back_hours: travelBackHours ? parseFloat(travelBackHours.replace(',', '.')) : undefined,
+        travel_to_km: travelToKm ? parseFloat(travelToKm.replace(',', '.')) : undefined,
+        travel_back_km: travelBackKm ? parseFloat(travelBackKm.replace(',', '.')) : undefined,
+        travel_costs: travelCosts ? parseFloat(travelCosts.replace(',', '.')) : undefined,
+        travel_note: travelNote || undefined,
+        travel_per_employee_enabled: travelPerEmployee || undefined,
+        travel_in_total_hours: travelInTotalHours || undefined,
+        header_fields: Array.from(headerFields),
         weather: weather || undefined,
         temperature: temperature ? parseFloat(temperature) : undefined,
         obstacles: obstacles || undefined,
@@ -1202,9 +1254,203 @@ export default function ReportEditScreen() {
             )}
           </Section>
 
-          {/* ===== 8. Sonstige Notizen + Anfahrt ===== */}
-          <Section icon="document-text-outline" title="Notizen & Anfahrt" color="#ec4899">
-            <Text style={styles.miniLabel}>Anfahrt (km)</Text>
+          {/* ===== Briefkopf-Felder ===== */}
+          <Section icon="document-attach-outline" title="Briefkopf-Felder" subtitle="Welche Projektdaten erscheinen im PDF?" color="#0ea5e9">
+            <Text style={[styles.miniLabel, { marginTop: 0 }]}>👤 Kunde</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              {REPORT_HEADER_FIELDS.filter(f => f.group === 'customer').map(f => {
+                const active = headerFields.has(f.id);
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => {
+                      const next = new Set(headerFields);
+                      if (active) next.delete(f.id); else next.add(f.id);
+                      setHeaderFields(next);
+                    }}
+                    style={[styles.hfChip, active && styles.hfChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
+                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[styles.miniLabel, { marginTop: 8 }]}>🏗️ Projekt</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {REPORT_HEADER_FIELDS.filter(f => f.group === 'project').map(f => {
+                const active = headerFields.has(f.id);
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => {
+                      const next = new Set(headerFields);
+                      if (active) next.delete(f.id); else next.add(f.id);
+                      setHeaderFields(next);
+                    }}
+                    style={[styles.hfChip, active && styles.hfChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
+                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={styles.saveDefaultBtn}
+              onPress={async () => {
+                try {
+                  await SettingsService.update({ report_header_fields_default: Array.from(headerFields) } as any);
+                  Alert.alert('Gespeichert', 'Diese Auswahl ist jetzt der Standard für neue Rapporte.');
+                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
+              }}
+            >
+              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
+              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
+            </TouchableOpacity>
+          </Section>
+
+          {/* ===== Fahrzeiten ===== */}
+          <Section
+            icon="car-sport-outline"
+            title="Fahrzeiten / Anfahrt"
+            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : 'Für ganzes Team'}
+            color="#0891b2"
+            right={
+              <TouchableOpacity onPress={() => setTravelPerEmployee(!travelPerEmployee)} style={styles.travelToggle}>
+                <Ionicons name={travelPerEmployee ? 'people' : 'people-outline'} size={14} color={travelPerEmployee ? '#fff' : '#0891b2'} />
+                <Text style={[styles.travelToggleText, travelPerEmployee && { color: '#fff' }]}>
+                  {travelPerEmployee ? 'Pro MA' : 'Team'}
+                </Text>
+              </TouchableOpacity>
+            }
+          >
+            {!travelPerEmployee ? (
+              <View>
+                {/* Team-Fahrzeit */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h)</Text>
+                    <TextInput style={styles.input} value={travelToHours} onChangeText={setTravelToHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h)</Text>
+                    <TextInput style={styles.input} value={travelBackHours} onChangeText={setTravelBackHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>📏 km Hin</Text>
+                    <TextInput style={styles.input} value={travelToKm} onChangeText={setTravelToKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>📏 km Rück</Text>
+                    <TextInput style={styles.input} value={travelBackKm} onChangeText={setTravelBackKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
+                    <TextInput style={styles.input} value={travelCosts} onChangeText={setTravelCosts} placeholder="z.B. 12,50" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <Text style={[styles.miniLabel, { marginTop: 8 }]}>Bemerkung zur Fahrt</Text>
+                <TextInput style={styles.input} value={travelNote} onChangeText={setTravelNote} placeholder="z.B. Stau auf A8" />
+              </View>
+            ) : (
+              <View>
+                {employees.length === 0 ? (
+                  <Text style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', paddingVertical: 10 }}>
+                    Bitte zuerst Mitarbeiter hinzufügen.
+                  </Text>
+                ) : (
+                  employees.map((emp) => {
+                    const updateEmp = (patch: Partial<ReportEmployee>) => {
+                      setEmployees(employees.map(e => e.id === emp.id ? { ...e, ...patch } : e));
+                    };
+                    return (
+                      <View key={emp.id} style={styles.travelEmpRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 22, height: 22, borderRadius: 11 }]}>
+                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                              {(emp.name || '?').slice(0, 1).toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={emp.travel_to_hours != null ? String(emp.travel_to_hours) : ''}
+                            onChangeText={(v) => updateEmp({ travel_to_hours: v ? parseFloat(v.replace(',', '.')) : undefined })}
+                            placeholder="h Hin"
+                            keyboardType="decimal-pad"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={emp.travel_back_hours != null ? String(emp.travel_back_hours) : ''}
+                            onChangeText={(v) => updateEmp({ travel_back_hours: v ? parseFloat(v.replace(',', '.')) : undefined })}
+                            placeholder="h Rück"
+                            keyboardType="decimal-pad"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''}
+                            onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })}
+                            placeholder="km Hin"
+                            keyboardType="decimal-pad"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''}
+                            onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })}
+                            placeholder="km Rück"
+                            keyboardType="decimal-pad"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={emp.travel_costs != null ? String(emp.travel_costs) : ''}
+                            onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })}
+                            placeholder="€"
+                            keyboardType="decimal-pad"
+                          />
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            )}
+            {/* Fahrzeit zu Gesamtstunden hinzu */}
+            <TouchableOpacity
+              style={[styles.travelTotalToggle, travelInTotalHours && styles.travelTotalToggleActive]}
+              onPress={() => setTravelInTotalHours(!travelInTotalHours)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={travelInTotalHours ? 'checkbox' : 'square-outline'} size={18} color={travelInTotalHours ? '#16a34a' : '#94a3b8'} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: travelInTotalHours ? '#15803d' : '#475569', flex: 1 }}>
+                Fahrzeit zur Gesamtarbeitszeit hinzurechnen
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveDefaultBtn}
+              onPress={async () => {
+                try {
+                  await SettingsService.update({ report_travel_in_total_hours: travelInTotalHours } as any);
+                  Alert.alert('Gespeichert', 'Diese Einstellung ist jetzt der Standard.');
+                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
+              }}
+            >
+              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
+              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
+            </TouchableOpacity>
+          </Section>
+
+          {/* ===== 8. Sonstige Notizen ===== */}
+          <Section icon="document-text-outline" title="Notizen" color="#ec4899">
+            <Text style={styles.miniLabel}>Anfahrt (einfache km-Angabe, optional)</Text>
             <TextInput
               style={styles.input}
               value={travelKm}
@@ -2038,6 +2284,38 @@ const styles = StyleSheet.create({
   },
   itemRemoveBtn: { padding: 4 },
   multiline: { minHeight: 70, textAlignVertical: 'top', paddingTop: 8 },
+  // Briefkopf-Felder Chips
+  hfChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0',
+    paddingHorizontal: 8, paddingVertical: 6, borderRadius: 7,
+  },
+  hfChipActive: { backgroundColor: '#e0f2fe', borderColor: '#0ea5e9' },
+  hfChipText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
+  hfChipTextActive: { color: '#0369a1' },
+  saveDefaultBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+    marginTop: 8, paddingHorizontal: 10, paddingVertical: 6,
+    backgroundColor: '#f0f9ff', borderRadius: 7, borderWidth: 1, borderColor: '#bae6fd',
+  },
+  saveDefaultBtnText: { fontSize: 11, color: '#0369a1', fontWeight: '700' },
+  // Fahrzeiten
+  travelToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16,
+    backgroundColor: '#ecfeff', borderWidth: 1, borderColor: '#0891b2',
+  },
+  travelToggleText: { fontSize: 11, fontWeight: '700', color: '#0891b2' },
+  travelEmpRow: {
+    backgroundColor: '#f8fafc', borderRadius: 8, padding: 8, marginBottom: 6,
+    borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  travelTotalToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 10, paddingHorizontal: 10, paddingVertical: 8,
+    backgroundColor: '#f8fafc', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  travelTotalToggleActive: { backgroundColor: '#dcfce7', borderColor: '#16a34a' },
 
   // --- Weather ---
   weatherRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, alignItems: 'center' },

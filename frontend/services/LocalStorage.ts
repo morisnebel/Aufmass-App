@@ -1482,6 +1482,10 @@ export interface Settings {
   // Erinnerungen (Tage Vorlauf, default 30)
   reminder_days_inspection?: number; // Tage vor nächster Inspektion
   reminder_days_tuv?: number; // Tage vor nächstem TÜV
+  // Rapport-Briefkopf: Welche Felder standardmäßig anzeigen
+  report_header_fields_default?: string[];
+  // Rapport-Fahrzeiten: Standardmäßig zur Gesamtarbeitszeit hinzuzählen?
+  report_travel_in_total_hours?: boolean;
 }
 
 export const SettingsService = {
@@ -1890,6 +1894,30 @@ export const AreaCalculationService = {
 
 // ============ REPORTS (Rapport / Tagesbericht) - Pro Feature ============
 
+// ============ REPORT HEADER FIELDS - Konfigurierbare Briefkopf-Felder ============
+export interface ReportHeaderFieldDef {
+  id: string;
+  label: string;
+  group: 'customer' | 'project';
+}
+export const REPORT_HEADER_FIELDS: ReportHeaderFieldDef[] = [
+  // Kunde
+  { id: 'customer_name', label: 'Kundenname', group: 'customer' },
+  { id: 'customer_address', label: 'Kundenadresse', group: 'customer' },
+  { id: 'customer_phone', label: 'Telefon Kunde', group: 'customer' },
+  { id: 'customer_email', label: 'E-Mail Kunde', group: 'customer' },
+  // Projekt
+  { id: 'project_name', label: 'Projektname', group: 'project' },
+  { id: 'project_address', label: 'Projektadresse / Baustelle', group: 'project' },
+  { id: 'project_number', label: 'Projekt-/Objektnummer', group: 'project' },
+  { id: 'project_type', label: 'Projektart', group: 'project' },
+  { id: 'project_contact', label: 'Ansprechpartner vor Ort', group: 'project' },
+];
+
+export const DEFAULT_REPORT_HEADER_FIELDS: string[] = [
+  'customer_name', 'customer_address', 'project_name', 'project_address', 'project_number', 'project_type',
+];
+
 export interface ReportEmployee {
   id: string;
   name: string;
@@ -1900,6 +1928,12 @@ export interface ReportEmployee {
   time_to?: string; // HH:MM
   pause_minutes?: number; // Pause in Minuten
   color?: string; // Avatar-Farbe
+  // Fahrzeiten pro Mitarbeiter (optional, falls Pro-Mitarbeiter-Modus aktiv)
+  travel_to_hours?: number; // Hinweg in Stunden (z.B. 0.75)
+  travel_back_hours?: number; // Rückweg in Stunden
+  travel_to_km?: number; // Kilometer Hinweg
+  travel_back_km?: number; // Kilometer Rückweg
+  travel_costs?: number; // Spesen / Fahrtkosten EUR
 }
 
 export interface ReportMaterial {
@@ -1951,9 +1985,20 @@ export interface Report {
   materials: ReportMaterial[];
   // Maschinen & Geräte
   machines?: ReportMachine[];
-  // Anfahrt
+  // Anfahrt (Legacy einfache Felder)
   travel_km?: number;
   travel_time?: number;
+  // Erweiterte Fahrzeiten (Team-Gesamt - alle teilen sich diese Fahrt)
+  travel_to_hours?: number; // Hinweg in Stunden
+  travel_back_hours?: number; // Rückweg in Stunden
+  travel_to_km?: number;
+  travel_back_km?: number;
+  travel_costs?: number; // Spesen / Fahrtkosten EUR (Team)
+  travel_note?: string;
+  travel_per_employee_enabled?: boolean; // Pro-Mitarbeiter-Modus aktiv?
+  travel_in_total_hours?: boolean; // Fahrzeit zur Gesamtarbeitszeit hinzuzählen?
+  // Briefkopf-Felder (Per-Report Override; sonst Settings-Default)
+  header_fields?: string[];
   // Wetter
   weather?: 'sunny' | 'cloudy' | 'rain' | 'snow' | 'wind' | 'fog' | '';
   temperature?: number;

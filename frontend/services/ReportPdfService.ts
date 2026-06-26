@@ -169,6 +169,38 @@ export const generateReportSectionHtml = (
               return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
             }, 0)).toFixed(2)} h</td>
           </tr>
+          ${((report as any).travel_in_total_hours) ? (() => {
+            // Fahrzeit aggregieren
+            let travelSum = 0;
+            if ((report as any).travel_per_employee_enabled) {
+              (report.employees || []).forEach((e: any) => {
+                travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0);
+              });
+            } else {
+              travelSum = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
+            }
+            const baseHours = (report.total_hours ?? report.employees.reduce((s, e) => {
+              const ea = e as any;
+              if (e.hours != null) return s + e.hours;
+              if (!ea.time_from || !ea.time_to) return s;
+              const [fh, fm] = ea.time_from.split(':').map(Number);
+              const [th, tm] = ea.time_to.split(':').map(Number);
+              let mins = (th * 60 + tm) - (fh * 60 + fm);
+              if (mins < 0) mins += 24 * 60;
+              mins -= ea.pause_minutes || 0;
+              return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
+            }, 0));
+            if (travelSum <= 0) return '';
+            return `
+              <tr>
+                <td colspan="6" style="text-align:right;font-size:10px;color:#0891b2;">+ Fahrzeit:</td>
+                <td style="text-align:right;font-weight:600;color:#0891b2;font-size:10px;">${travelSum.toFixed(2)} h</td>
+              </tr>
+              <tr style="background:#ecfeff;">
+                <td colspan="6" style="text-align:right;font-weight:800;color:#0e7490;">Gesamt inkl. Fahrzeit:</td>
+                <td style="text-align:right;font-weight:800;color:#0e7490;">${(baseHours + travelSum).toFixed(2)} h</td>
+              </tr>`;
+          })() : ''}
         </tbody>
       </table>`
     : '<p style="color:#999;font-style:italic;font-size:11px;">Keine Mitarbeiter angegeben</p>';
@@ -267,6 +299,87 @@ export const generateReportSectionHtml = (
   const bauherrAddr = project ? [project.bauherr_street, [(p?.bauherr_plz || p?.bauherr_zip), project.bauherr_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '';
   const objektAddr = project ? [project.objekt_street, [project.objekt_plz, project.objekt_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '';
 
+  // ===== Konfigurierbare Briefkopf-Felder =====
+  // Default: alle wichtigen Felder anzeigen wenn nichts konfiguriert ist (Abwärtskompatibilität)
+  const DEFAULT_HEADER = ['customer_name','customer_address','project_name','project_address','project_number','project_type'];
+  const enabledHeaderFields = (report as any).header_fields && (report as any).header_fields.length > 0
+    ? (report as any).header_fields as string[]
+    : DEFAULT_HEADER;
+  const hfSet = new Set(enabledHeaderFields);
+
+  // Werte aus Project/Customer ziehen
+  const customerName = customer ? (customer.name || [customer.salutation, customer.firstName, customer.lastName].filter(Boolean).join(' ')) : bauherrName;
+  const customerAddress = customer ? (customer.address || [customer.street, [customer.zip, customer.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')) : bauherrAddr;
+  const customerPhone = customer ? (customer.phone || customer.mobile || '') : (project?.bauherr_phone || project?.bauherr_mobile || '');
+  const customerEmail = customer ? (customer.email || '') : (project?.bauherr_email || '');
+  const projectName = project ? (project.name || '') : '';
+  const projectAddress = objektAddr;
+  const projectNumber = project ? (project.project_number || '') : '';
+  const projectType = project ? (project.project_type || '') : '';
+  const projectContact = report.contact_person || project?.objekt_contact_person || '';
+
+  const headerRows: string[] = [];
+  if (hfSet.has('customer_name') && customerName) headerRows.push(`<div class="info-row"><b>Kunde:</b> ${escapeHtml(customerName)}</div>`);
+  if (hfSet.has('customer_address') && customerAddress) headerRows.push(`<div class="info-row"><b>Adresse:</b> ${escapeHtml(customerAddress)}</div>`);
+  if (hfSet.has('customer_phone') && customerPhone) headerRows.push(`<div class="info-row"><b>Telefon:</b> ${escapeHtml(customerPhone)}</div>`);
+  if (hfSet.has('customer_email') && customerEmail) headerRows.push(`<div class="info-row"><b>E-Mail:</b> ${escapeHtml(customerEmail)}</div>`);
+  if (hfSet.has('project_name') && projectName) {
+    const num = (hfSet.has('project_number') && projectNumber) ? ` (${escapeHtml(projectNumber)})` : '';
+    headerRows.push(`<div class="info-row"><b>Projekt:</b> ${escapeHtml(projectName)}${num}</div>`);
+  } else if (hfSet.has('project_number') && projectNumber) {
+    headerRows.push(`<div class="info-row"><b>Projekt-Nr.:</b> ${escapeHtml(projectNumber)}</div>`);
+  }
+  if (hfSet.has('project_type') && projectType) headerRows.push(`<div class="info-row"><b>Projektart:</b> ${escapeHtml(projectType)}</div>`);
+  if (hfSet.has('project_address') && projectAddress) headerRows.push(`<div class="info-row"><b>Baustelle:</b> ${escapeHtml(projectAddress)}</div>`);
+  if (hfSet.has('project_contact') && projectContact) headerRows.push(`<div class="info-row"><b>Ansprechpartner:</b> ${escapeHtml(projectContact)}</div>`);
+
+  // ===== Fahrzeiten HTML =====
+  const r = report as any;
+  const teamTravelHas = (r.travel_to_hours != null || r.travel_back_hours != null || r.travel_to_km != null || r.travel_back_km != null || r.travel_costs != null || r.travel_note);
+  const perEmpTravelHas = r.travel_per_employee_enabled && (report.employees || []).some((e: any) => e.travel_to_hours != null || e.travel_back_hours != null || e.travel_to_km != null || e.travel_back_km != null || e.travel_costs != null);
+  let travelHtml = '';
+  if (perEmpTravelHas) {
+    const rows = (report.employees || []).map((e: any) => {
+      const hasAny = e.travel_to_hours != null || e.travel_back_hours != null || e.travel_to_km != null || e.travel_back_km != null || e.travel_costs != null;
+      if (!hasAny) return '';
+      const fmt = (v: any, suffix = '') => (v != null ? `${v}${suffix}` : '–');
+      return `<tr>
+        <td>${escapeHtml(e.name || '')}</td>
+        <td style="text-align:right;">${fmt(e.travel_to_hours, ' h')}</td>
+        <td style="text-align:right;">${fmt(e.travel_back_hours, ' h')}</td>
+        <td style="text-align:right;">${fmt(e.travel_to_km, ' km')}</td>
+        <td style="text-align:right;">${fmt(e.travel_back_km, ' km')}</td>
+        <td style="text-align:right;">${e.travel_costs != null ? `${e.travel_costs.toFixed ? e.travel_costs.toFixed(2) : e.travel_costs} €` : '–'}</td>
+      </tr>`;
+    }).join('');
+    if (rows) {
+      travelHtml = `
+        <div class="section keep-together">
+          <div class="section-title">🚗 Fahrzeiten (pro Mitarbeiter)</div>
+          <table class="emp-table">
+            <thead><tr><th>Mitarbeiter</th><th>Hin (h)</th><th>Rück (h)</th><th>Hin (km)</th><th>Rück (km)</th><th>Spesen</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+  } else if (teamTravelHas) {
+    const items: string[] = [];
+    if (r.travel_to_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">🛣️ Hin</div><div class="info-mini-value">${r.travel_to_hours} h${r.travel_to_km != null ? ' · ' + r.travel_to_km + ' km' : ''}</div></div>`);
+    if (r.travel_back_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">↩️ Rück</div><div class="info-mini-value">${r.travel_back_hours} h${r.travel_back_km != null ? ' · ' + r.travel_back_km + ' km' : ''}</div></div>`);
+    if ((r.travel_to_hours == null && r.travel_to_km != null) || (r.travel_back_hours == null && r.travel_back_km != null)) {
+      if (r.travel_to_km != null && r.travel_to_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Hin</div><div class="info-mini-value">${r.travel_to_km} km</div></div>`);
+      if (r.travel_back_km != null && r.travel_back_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Rück</div><div class="info-mini-value">${r.travel_back_km} km</div></div>`);
+    }
+    if (r.travel_costs != null) items.push(`<div class="info-mini"><div class="info-mini-label">💶 Spesen</div><div class="info-mini-value">${(r.travel_costs.toFixed ? r.travel_costs.toFixed(2) : r.travel_costs)} €</div></div>`);
+    travelHtml = `
+      <div class="section keep-together">
+        <div class="section-title">🚗 Fahrzeiten (Team)</div>
+        <div class="info-grid">${items.join('')}</div>
+        ${r.travel_note ? `<div class="work-desc" style="margin-top:6px;">${escapeHtml(r.travel_note)}</div>` : ''}
+      </div>`;
+  }
+
+
   return `
     <div class="report-page">
       <div class="report-header">
@@ -284,14 +397,10 @@ export const generateReportSectionHtml = (
         </div>
       </div>
 
-      ${project ? `
+      ${headerRows.length > 0 ? `
         <div class="info-box">
-          <div class="info-box-title">Projekt</div>
-          <div class="info-row"><b>Projekt:</b> ${escapeHtml(project.name)}${project.project_number ? ' (' + escapeHtml(project.project_number) + ')' : ''}</div>
-          ${project.project_type ? `<div class="info-row"><b>Projektart:</b> ${escapeHtml(project.project_type)}</div>` : ''}
-          ${bauherrName ? `<div class="info-row"><b>Bauherr:</b> ${escapeHtml(bauherrName)}</div>` : ''}
-          ${bauherrAddr ? `<div class="info-row"><b>Adresse:</b> ${escapeHtml(bauherrAddr)}</div>` : ''}
-          ${objektAddr ? `<div class="info-row"><b>Objekt:</b> ${escapeHtml(objektAddr)}</div>` : ''}
+          <div class="info-box-title">Projekt &amp; Kunde</div>
+          ${headerRows.join('')}
         </div>
       ` : ''}
 
@@ -325,21 +434,19 @@ export const generateReportSectionHtml = (
         </div>
       ` : ''}
 
+      ${travelHtml}
+
       <div class="section info-grid">
-        ${(report.travel_km != null || report.travel_time != null) ? `
-          <div class="info-mini">
-            <div class="info-mini-label">🚗 Anfahrt</div>
-            <div class="info-mini-value">
-              ${report.travel_km != null ? `${report.travel_km} km` : ''}
-              ${report.travel_km != null && report.travel_time != null ? ' · ' : ''}
-              ${report.travel_time != null ? `${report.travel_time} Min.` : ''}
-            </div>
-          </div>
-        ` : ''}
         ${(weatherText || tempText) ? `
           <div class="info-mini">
             <div class="info-mini-label">🌦️ Wetter</div>
             <div class="info-mini-value">${weatherText}${weatherText && tempText ? ' · ' : ''}${tempText}</div>
+          </div>
+        ` : ''}
+        ${(report.travel_km != null && !teamTravelHas && !perEmpTravelHas) ? `
+          <div class="info-mini">
+            <div class="info-mini-label">🚗 Anfahrt</div>
+            <div class="info-mini-value">${report.travel_km} km</div>
           </div>
         ` : ''}
       </div>

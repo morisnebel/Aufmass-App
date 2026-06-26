@@ -72,11 +72,12 @@ export default function HomeScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
-  // Pro-Banner: Ausgeliehene Maschinen, Inspektionen & niedriger Lagerbestand
+  // Pro-Banner: Ausgeliehene Maschinen, Inspektionen, TÜV & niedriger Lagerbestand
   const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
   const [inspectionMachines, setInspectionMachines] = useState<MachineMaster[]>([]);
+  const [tuvMachines, setTuvMachines] = useState<MachineMaster[]>([]);
   const [lowStockMaterials, setLowStockMaterials] = useState<MaterialMaster[]>([]);
-  const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | 'lowstock' | null>(null);
+  const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | 'tuv' | 'lowstock' | null>(null);
   const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
@@ -114,6 +115,17 @@ export default function HomeScreen() {
             return da - db;
           });
           setInspectionMachines(inspect);
+          // TÜV fällig: nächster TÜV innerhalb 30 Tagen oder überfällig
+          const tuv = allMachines.filter(m => {
+            if (!m.next_tuv_date) return false;
+            const due = new Date(m.next_tuv_date).getTime();
+            return !isNaN(due) && (due - now) <= warnMs;
+          }).sort((a, b) => {
+            const da = new Date(a.next_tuv_date!).getTime();
+            const db = new Date(b.next_tuv_date!).getTime();
+            return da - db;
+          });
+          setTuvMachines(tuv);
           // Lager-Warnung: Materialien deren Bestand <= low_stock_threshold ist
           try {
             const allMaterials = await MaterialMasterService.getAll();
@@ -714,8 +726,8 @@ export default function HomeScreen() {
       </View>
       )}
 
-      {/* Pro: Hinweise auf ausgeliehene Maschinen, Inspektionen & niedrigen Lagerbestand */}
-      {isProUser && (loanedMachines.length > 0 || inspectionMachines.length > 0 || lowStockMaterials.length > 0) && (
+      {/* Pro: Hinweise auf ausgeliehene Maschinen, Inspektionen, TÜV & niedrigen Lagerbestand */}
+      {isProUser && (loanedMachines.length > 0 || inspectionMachines.length > 0 || tuvMachines.length > 0 || lowStockMaterials.length > 0) && (
         <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4 }}>
           <View style={[styles.bannerRow, { flexWrap: 'wrap' }]}>
             {loanedMachines.length > 0 && (
@@ -759,6 +771,32 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <Ionicons name={expandedBanner === 'inspection' ? 'chevron-up' : 'chevron-down'} size={14} color="#fff" />
+                </TouchableOpacity>
+              );
+            })()}
+            {tuvMachines.length > 0 && (() => {
+              const overdue = tuvMachines.filter(m => {
+                const due = new Date(m.next_tuv_date!).getTime();
+                return !isNaN(due) && due < Date.now();
+              }).length;
+              return (
+                <TouchableOpacity
+                  style={[styles.bannerCard, { backgroundColor: overdue > 0 ? '#991b1b' : '#dc2626' }]}
+                  onPress={() => setExpandedBanner(expandedBanner === 'tuv' ? null : 'tuv')}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.bannerCardIcon}>
+                    <Ionicons name={overdue > 0 ? 'warning' : 'car-sport'} size={16} color="#fff" />
+                  </View>
+                  <View style={styles.bannerCardTextWrap}>
+                    <Text style={styles.bannerCardTitle} numberOfLines={1} adjustsFontSizeToFit>
+                      {tuvMachines.length} {tuvMachines.length === 1 ? 'TÜV' : 'TÜV'}
+                    </Text>
+                    <Text style={styles.bannerCardSub} numberOfLines={1} adjustsFontSizeToFit>
+                      {overdue > 0 ? `überfällig (${overdue})` : 'TÜV fällig'}
+                    </Text>
+                  </View>
+                  <Ionicons name={expandedBanner === 'tuv' ? 'chevron-up' : 'chevron-down'} size={14} color="#fff" />
                 </TouchableOpacity>
               );
             })()}
@@ -845,6 +883,43 @@ export default function HomeScreen() {
                 );
               })}
               <TouchableOpacity style={[styles.bannerOpenBtn, { backgroundColor: '#ea580c' }]} onPress={() => router.push('/machines')}>
+                <Ionicons name="arrow-forward" size={14} color="#fff" />
+                <Text style={styles.bannerOpenBtnText}>Maschinen öffnen</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {expandedBanner === 'tuv' && tuvMachines.length > 0 && (
+            <View style={[styles.bannerDetail, { backgroundColor: '#fef2f2', borderColor: '#dc2626' }]}>
+              {tuvMachines.map(m => {
+                const due = new Date(m.next_tuv_date!);
+                const overdue = !isNaN(due.getTime()) && due.getTime() < Date.now();
+                const days = !isNaN(due.getTime())
+                  ? Math.round((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  : null;
+                const dueStr = !isNaN(due.getTime())
+                  ? due.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  : '';
+                return (
+                  <View key={m.id} style={styles.bannerDetailItem}>
+                    <Ionicons
+                      name={overdue ? 'warning' : 'car-sport'}
+                      size={14}
+                      color={overdue ? '#991b1b' : '#dc2626'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bannerDetailName}>
+                        {m.name}{m.license_plate ? `  ·  ${m.license_plate}` : ''}
+                      </Text>
+                      <Text style={[styles.bannerDetailMeta, { color: overdue ? '#991b1b' : '#dc2626', fontWeight: overdue ? '700' : '600' }]} numberOfLines={1}>
+                        {overdue
+                          ? `⚠ TÜV überfällig seit ${dueStr}${days != null ? ` (${Math.abs(days)} Tage)` : ''}`
+                          : `TÜV fällig am ${dueStr}${days != null && days >= 0 ? ` (in ${days} Tagen)` : ''}`}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity style={[styles.bannerOpenBtn, { backgroundColor: '#dc2626' }]} onPress={() => router.push('/machines')}>
                 <Ionicons name="arrow-forward" size={14} color="#fff" />
                 <Text style={styles.bannerOpenBtnText}>Maschinen öffnen</Text>
               </TouchableOpacity>

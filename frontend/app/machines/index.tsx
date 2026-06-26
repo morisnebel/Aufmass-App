@@ -65,6 +65,22 @@ const isInspectionOverdue = (iso?: string): boolean => {
   try { return new Date(iso).getTime() < Date.now(); } catch { return false; }
 };
 
+// Wiederverwendete Logik für TÜV/Hauptuntersuchung
+const isTuvDue = (iso?: string): boolean => {
+  if (!iso) return false;
+  try {
+    const due = new Date(iso).getTime();
+    const now = Date.now();
+    const warnMs = 30 * 24 * 60 * 60 * 1000;
+    return !isNaN(due) && (due - now) <= warnMs;
+  } catch { return false; }
+};
+
+const isTuvOverdue = (iso?: string): boolean => {
+  if (!iso) return false;
+  try { return new Date(iso).getTime() < Date.now(); } catch { return false; }
+};
+
 type TabKey = 'machines' | 'categories' | 'locations' | 'status';
 
 const EMPTY: Partial<MachineMaster> = {
@@ -73,6 +89,7 @@ const EMPTY: Partial<MachineMaster> = {
   responsible_employee: '', condition: 'gut', status: 'verfuegbar',
   loan_to: '', loan_from_date: '', loan_until_date: '', loan_note: '',
   last_inspection_date: '', next_inspection_date: '',
+  last_tuv_date: '', next_tuv_date: '',
   photos: [], category: '', note: '', active: true,
 };
 
@@ -114,12 +131,16 @@ export default function MachinesIndex() {
     let loaned = 0;
     let inspectionDue = 0;
     let inspectionOverdue = 0;
+    let tuvDue = 0;
+    let tuvOverdue = 0;
     items.forEach(m => {
       if (m.category) cats.add(m.category);
       if (m.storage_location) locs.add(m.storage_location);
       if (m.status === 'ausgeliehen') loaned += 1;
       if (isInspectionOverdue(m.next_inspection_date)) inspectionOverdue += 1;
       else if (isInspectionDue(m.next_inspection_date)) inspectionDue += 1;
+      if (isTuvOverdue(m.next_tuv_date)) tuvOverdue += 1;
+      else if (isTuvDue(m.next_tuv_date)) tuvDue += 1;
     });
     return {
       totalCount: items.length,
@@ -128,6 +149,8 @@ export default function MachinesIndex() {
       loanedCount: loaned,
       inspectionDueCount: inspectionDue + inspectionOverdue,
       inspectionOverdueCount: inspectionOverdue,
+      tuvDueCount: tuvDue + tuvOverdue,
+      tuvOverdueCount: tuvOverdue,
       categories: Array.from(cats).sort(),
       locations: Array.from(locs).sort(),
     };
@@ -278,12 +301,13 @@ export default function MachinesIndex() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 80 }}>
         {/* ===== Metrics ===== */}
-        <View style={styles.metricsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.metricsRow}>
           <MetricCard icon="construct" color="#1976d2" bg="#dbeafe" label="Gesamt" value={metrics.totalCount} sub="Geräte" />
           <MetricCard icon="swap-horizontal" color="#7c3aed" bg="#ede9fe" label="Ausgeliehen" value={metrics.loanedCount} sub="" highlight={metrics.loanedCount > 0} highlightColor="#7c3aed" />
           <MetricCard icon="alert-circle" color="#ea580c" bg="#fed7aa" label="Inspektion" value={metrics.inspectionDueCount} sub={metrics.inspectionOverdueCount > 0 ? `${metrics.inspectionOverdueCount} überfällig` : 'fällig'} highlight={metrics.inspectionOverdueCount > 0} highlightColor="#ef4444" />
+          <MetricCard icon="car-sport" color="#dc2626" bg="#fee2e2" label="TÜV" value={metrics.tuvDueCount} sub={metrics.tuvOverdueCount > 0 ? `${metrics.tuvOverdueCount} überfällig` : 'fällig'} highlight={metrics.tuvOverdueCount > 0} highlightColor="#dc2626" />
           <MetricCard icon="location" color="#16a34a" bg="#dcfce7" label="Standorte" value={metrics.locationCount} sub="" />
-        </View>
+        </ScrollView>
 
         {/* ===== Tabs ===== */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRow}>
@@ -350,6 +374,8 @@ export default function MachinesIndex() {
                 const st = STATUS_OPTIONS.find(s => s.value === (m.status || 'verfuegbar'))!;
                 const overdue = isInspectionOverdue(m.next_inspection_date);
                 const dueSoon = !overdue && isInspectionDue(m.next_inspection_date);
+                const tuvOverdue = isTuvOverdue(m.next_tuv_date);
+                const tuvDueSoon = !tuvOverdue && isTuvDue(m.next_tuv_date);
                 const cat = EQUIP_CATEGORIES.find(c => c.value === m.equipment_category);
                 const firstPhoto = m.photos && m.photos.length > 0 ? m.photos[0] : null;
                 return (
@@ -386,6 +412,14 @@ export default function MachinesIndex() {
                           <Ionicons name={overdue ? 'warning' : dueSoon ? 'time' : 'shield-checkmark'} size={11} color={overdue ? '#ef4444' : dueSoon ? '#ea580c' : '#16a34a'} />
                           <Text style={[styles.matMetaSub, { color: overdue ? '#ef4444' : dueSoon ? '#ea580c' : '#475569', fontWeight: overdue ? '700' : '500' }]}>
                             {overdue ? 'Insp. überfällig' : 'Insp.'} {formatDate(m.next_inspection_date)}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {m.next_tuv_date ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                          <Ionicons name={tuvOverdue ? 'warning' : tuvDueSoon ? 'time' : 'car-sport'} size={11} color={tuvOverdue ? '#dc2626' : tuvDueSoon ? '#ea580c' : '#16a34a'} />
+                          <Text style={[styles.matMetaSub, { color: tuvOverdue ? '#dc2626' : tuvDueSoon ? '#ea580c' : '#475569', fontWeight: tuvOverdue ? '700' : '500' }]}>
+                            {tuvOverdue ? 'TÜV überfällig' : 'TÜV'} {formatDate(m.next_tuv_date)}
                           </Text>
                         </View>
                       ) : null}
@@ -732,6 +766,29 @@ export default function MachinesIndex() {
                   </View>
                 </View>
 
+                {/* TÜV / Hauptuntersuchung */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Letzter TÜV</Text>
+                    <DatePickerField
+                      value={form.last_tuv_date}
+                      onChange={(v) => setForm({ ...form, last_tuv_date: v })}
+                      placeholder="Datum wählen"
+                      accent="#16a34a"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Nächster TÜV</Text>
+                    <DatePickerField
+                      value={form.next_tuv_date}
+                      onChange={(v) => setForm({ ...form, next_tuv_date: v })}
+                      placeholder="Datum wählen"
+                      accent="#dc2626"
+                      minimumDate={form.last_tuv_date ? new Date(form.last_tuv_date) : undefined}
+                    />
+                  </View>
+                </View>
+
                 <Text style={styles.label}>Bemerkung</Text>
                 <TextInput style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]} value={form.note || ''} onChangeText={(v) => setForm({ ...form, note: v })} placeholder="z.B. Wartungshinweise" multiline />
 
@@ -773,7 +830,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   // Metrics
   metricsRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingTop: 10, paddingBottom: 4 },
-  metricCard: { flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 8, alignItems: 'flex-start', borderWidth: 1, borderColor: '#e2e8f0' },
+  metricCard: { width: 90, backgroundColor: '#fff', borderRadius: 10, padding: 8, alignItems: 'flex-start', borderWidth: 1, borderColor: '#e2e8f0' },
   metricIcon: { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   metricLabel: { fontSize: 10, color: '#64748b', fontWeight: '600' },
   metricValue: { fontSize: 20, fontWeight: '800', color: '#0f172a', marginTop: 2 },

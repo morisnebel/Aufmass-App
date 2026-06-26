@@ -2088,6 +2088,9 @@ export interface MachineMaster {
   // Prüfungen
   last_inspection_date?: string; // ISO
   next_inspection_date?: string; // ISO
+  // TÜV / Hauptuntersuchung (vor allem für Fahrzeuge, Anhänger)
+  last_tuv_date?: string; // ISO
+  next_tuv_date?: string; // ISO
   // Fotos
   photos?: string[]; // base64 Strings
   category?: string; // (legacy / freie Kategorie-Beschreibung)

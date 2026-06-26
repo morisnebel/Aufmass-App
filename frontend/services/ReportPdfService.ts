@@ -317,6 +317,8 @@ export const generateReportSectionHtml = (
   const projectNumber = project ? (project.project_number || '') : '';
   const projectType = project ? (project.project_type || '') : '';
   const projectContact = report.contact_person || project?.objekt_contact_person || '';
+  const projectContactPhone = (project as any)?.objekt_phone || '';
+  const projectContactEmail = (project as any)?.objekt_email || '';
 
   const headerRows: string[] = [];
   if (hfSet.has('customer_name') && customerName) headerRows.push(`<div class="info-row"><b>Kunde:</b> ${escapeHtml(customerName)}</div>`);
@@ -332,6 +334,8 @@ export const generateReportSectionHtml = (
   if (hfSet.has('project_type') && projectType) headerRows.push(`<div class="info-row"><b>Projektart:</b> ${escapeHtml(projectType)}</div>`);
   if (hfSet.has('project_address') && projectAddress) headerRows.push(`<div class="info-row"><b>Baustelle:</b> ${escapeHtml(projectAddress)}</div>`);
   if (hfSet.has('project_contact') && projectContact) headerRows.push(`<div class="info-row"><b>Ansprechpartner:</b> ${escapeHtml(projectContact)}</div>`);
+  if (hfSet.has('project_contact_phone') && projectContactPhone) headerRows.push(`<div class="info-row"><b>Tel. Ansprechp.:</b> ${escapeHtml(projectContactPhone)}</div>`);
+  if (hfSet.has('project_contact_email') && projectContactEmail) headerRows.push(`<div class="info-row"><b>E-Mail Ansprechp.:</b> ${escapeHtml(projectContactEmail)}</div>`);
 
   // ===== Fahrzeiten HTML =====
   const r = report as any;

@@ -977,6 +977,110 @@ export default function ReportEditScreen() {
 
           {/* ===== Hilfs-Header für Mitarbeiter wurde durch Karten ersetzt ===== */}
 
+          {/* ===== 2b. Fahrzeiten / Anfahrt (direkt nach Stunden) ===== */}
+          <Section
+            icon="car-sport-outline"
+            title="Fahrzeiten / Anfahrt"
+            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : 'Für ganzes Team'}
+            color="#0891b2"
+            right={
+              <TouchableOpacity onPress={() => setTravelPerEmployee(!travelPerEmployee)} style={styles.travelToggle}>
+                <Ionicons name={travelPerEmployee ? 'people' : 'people-outline'} size={14} color={travelPerEmployee ? '#fff' : '#0891b2'} />
+                <Text style={[styles.travelToggleText, travelPerEmployee && { color: '#fff' }]}>
+                  {travelPerEmployee ? 'Pro MA' : 'Team'}
+                </Text>
+              </TouchableOpacity>
+            }
+          >
+            {!travelPerEmployee ? (
+              <View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h)</Text>
+                    <TextInput style={styles.input} value={travelToHours} onChangeText={setTravelToHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h)</Text>
+                    <TextInput style={styles.input} value={travelBackHours} onChangeText={setTravelBackHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>📏 km Hin</Text>
+                    <TextInput style={styles.input} value={travelToKm} onChangeText={setTravelToKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>📏 km Rück</Text>
+                    <TextInput style={styles.input} value={travelBackKm} onChangeText={setTravelBackKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
+                    <TextInput style={styles.input} value={travelCosts} onChangeText={setTravelCosts} placeholder="z.B. 12,50" keyboardType="decimal-pad" />
+                  </View>
+                </View>
+                <Text style={[styles.miniLabel, { marginTop: 8 }]}>Bemerkung zur Fahrt</Text>
+                <TextInput style={styles.input} value={travelNote} onChangeText={setTravelNote} placeholder="z.B. Stau auf A8" />
+              </View>
+            ) : (
+              <View>
+                {employees.length === 0 ? (
+                  <Text style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', paddingVertical: 10 }}>
+                    Bitte zuerst Mitarbeiter hinzufügen.
+                  </Text>
+                ) : (
+                  employees.map((emp) => {
+                    const updateEmp = (patch: Partial<ReportEmployee>) => {
+                      setEmployees(employees.map(e => e.id === emp.id ? { ...e, ...patch } : e));
+                    };
+                    return (
+                      <View key={emp.id} style={styles.travelEmpRow}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 22, height: 22, borderRadius: 11 }]}>
+                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                              {(emp.name || '?').slice(0, 1).toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_hours != null ? String(emp.travel_to_hours) : ''} onChangeText={(v) => updateEmp({ travel_to_hours: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="h Hin" keyboardType="decimal-pad" />
+                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_hours != null ? String(emp.travel_back_hours) : ''} onChangeText={(v) => updateEmp({ travel_back_hours: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="h Rück" keyboardType="decimal-pad" />
+                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''} onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Hin" keyboardType="decimal-pad" />
+                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''} onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Rück" keyboardType="decimal-pad" />
+                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_costs != null ? String(emp.travel_costs) : ''} onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="€" keyboardType="decimal-pad" />
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.travelTotalToggle, travelInTotalHours && styles.travelTotalToggleActive]}
+              onPress={() => setTravelInTotalHours(!travelInTotalHours)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={travelInTotalHours ? 'checkbox' : 'square-outline'} size={18} color={travelInTotalHours ? '#16a34a' : '#94a3b8'} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: travelInTotalHours ? '#15803d' : '#475569', flex: 1 }}>
+                Fahrzeit zur Gesamtarbeitszeit hinzurechnen
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveDefaultBtn}
+              onPress={async () => {
+                try {
+                  await SettingsService.update({ report_travel_in_total_hours: travelInTotalHours } as any);
+                  Alert.alert('Gespeichert', 'Diese Einstellung ist jetzt der Standard.');
+                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
+              }}
+            >
+              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
+              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
+            </TouchableOpacity>
+          </Section>
+
           {/* ===== 3. Ausgeführte Arbeiten (Checkbox-Liste + Beschreibung) ===== */}
           <Section
             icon="hammer-outline"
@@ -1254,199 +1358,7 @@ export default function ReportEditScreen() {
             )}
           </Section>
 
-          {/* ===== Briefkopf-Felder ===== */}
-          <Section icon="document-attach-outline" title="Briefkopf-Felder" subtitle="Welche Projektdaten erscheinen im PDF?" color="#0ea5e9">
-            <Text style={[styles.miniLabel, { marginTop: 0 }]}>👤 Kunde</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
-              {REPORT_HEADER_FIELDS.filter(f => f.group === 'customer').map(f => {
-                const active = headerFields.has(f.id);
-                return (
-                  <TouchableOpacity
-                    key={f.id}
-                    onPress={() => {
-                      const next = new Set(headerFields);
-                      if (active) next.delete(f.id); else next.add(f.id);
-                      setHeaderFields(next);
-                    }}
-                    style={[styles.hfChip, active && styles.hfChipActive]}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
-                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text style={[styles.miniLabel, { marginTop: 8 }]}>🏗️ Projekt</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {REPORT_HEADER_FIELDS.filter(f => f.group === 'project').map(f => {
-                const active = headerFields.has(f.id);
-                return (
-                  <TouchableOpacity
-                    key={f.id}
-                    onPress={() => {
-                      const next = new Set(headerFields);
-                      if (active) next.delete(f.id); else next.add(f.id);
-                      setHeaderFields(next);
-                    }}
-                    style={[styles.hfChip, active && styles.hfChipActive]}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
-                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity
-              style={styles.saveDefaultBtn}
-              onPress={async () => {
-                try {
-                  await SettingsService.update({ report_header_fields_default: Array.from(headerFields) } as any);
-                  Alert.alert('Gespeichert', 'Diese Auswahl ist jetzt der Standard für neue Rapporte.');
-                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
-              }}
-            >
-              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
-              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
-            </TouchableOpacity>
-          </Section>
-
-          {/* ===== Fahrzeiten ===== */}
-          <Section
-            icon="car-sport-outline"
-            title="Fahrzeiten / Anfahrt"
-            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : 'Für ganzes Team'}
-            color="#0891b2"
-            right={
-              <TouchableOpacity onPress={() => setTravelPerEmployee(!travelPerEmployee)} style={styles.travelToggle}>
-                <Ionicons name={travelPerEmployee ? 'people' : 'people-outline'} size={14} color={travelPerEmployee ? '#fff' : '#0891b2'} />
-                <Text style={[styles.travelToggleText, travelPerEmployee && { color: '#fff' }]}>
-                  {travelPerEmployee ? 'Pro MA' : 'Team'}
-                </Text>
-              </TouchableOpacity>
-            }
-          >
-            {!travelPerEmployee ? (
-              <View>
-                {/* Team-Fahrzeit */}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h)</Text>
-                    <TextInput style={styles.input} value={travelToHours} onChangeText={setTravelToHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h)</Text>
-                    <TextInput style={styles.input} value={travelBackHours} onChangeText={setTravelBackHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
-                  </View>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>📏 km Hin</Text>
-                    <TextInput style={styles.input} value={travelToKm} onChangeText={setTravelToKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>📏 km Rück</Text>
-                    <TextInput style={styles.input} value={travelBackKm} onChangeText={setTravelBackKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
-                  </View>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
-                    <TextInput style={styles.input} value={travelCosts} onChangeText={setTravelCosts} placeholder="z.B. 12,50" keyboardType="decimal-pad" />
-                  </View>
-                </View>
-                <Text style={[styles.miniLabel, { marginTop: 8 }]}>Bemerkung zur Fahrt</Text>
-                <TextInput style={styles.input} value={travelNote} onChangeText={setTravelNote} placeholder="z.B. Stau auf A8" />
-              </View>
-            ) : (
-              <View>
-                {employees.length === 0 ? (
-                  <Text style={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', paddingVertical: 10 }}>
-                    Bitte zuerst Mitarbeiter hinzufügen.
-                  </Text>
-                ) : (
-                  employees.map((emp) => {
-                    const updateEmp = (patch: Partial<ReportEmployee>) => {
-                      setEmployees(employees.map(e => e.id === emp.id ? { ...e, ...patch } : e));
-                    };
-                    return (
-                      <View key={emp.id} style={styles.travelEmpRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 22, height: 22, borderRadius: 11 }]}>
-                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
-                              {(emp.name || '?').slice(0, 1).toUpperCase()}
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', gap: 6 }}>
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={emp.travel_to_hours != null ? String(emp.travel_to_hours) : ''}
-                            onChangeText={(v) => updateEmp({ travel_to_hours: v ? parseFloat(v.replace(',', '.')) : undefined })}
-                            placeholder="h Hin"
-                            keyboardType="decimal-pad"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={emp.travel_back_hours != null ? String(emp.travel_back_hours) : ''}
-                            onChangeText={(v) => updateEmp({ travel_back_hours: v ? parseFloat(v.replace(',', '.')) : undefined })}
-                            placeholder="h Rück"
-                            keyboardType="decimal-pad"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''}
-                            onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })}
-                            placeholder="km Hin"
-                            keyboardType="decimal-pad"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''}
-                            onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })}
-                            placeholder="km Rück"
-                            keyboardType="decimal-pad"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={emp.travel_costs != null ? String(emp.travel_costs) : ''}
-                            onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })}
-                            placeholder="€"
-                            keyboardType="decimal-pad"
-                          />
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-            )}
-            {/* Fahrzeit zu Gesamtstunden hinzu */}
-            <TouchableOpacity
-              style={[styles.travelTotalToggle, travelInTotalHours && styles.travelTotalToggleActive]}
-              onPress={() => setTravelInTotalHours(!travelInTotalHours)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={travelInTotalHours ? 'checkbox' : 'square-outline'} size={18} color={travelInTotalHours ? '#16a34a' : '#94a3b8'} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: travelInTotalHours ? '#15803d' : '#475569', flex: 1 }}>
-                Fahrzeit zur Gesamtarbeitszeit hinzurechnen
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.saveDefaultBtn}
-              onPress={async () => {
-                try {
-                  await SettingsService.update({ report_travel_in_total_hours: travelInTotalHours } as any);
-                  Alert.alert('Gespeichert', 'Diese Einstellung ist jetzt der Standard.');
-                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
-              }}
-            >
-              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
-              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
-            </TouchableOpacity>
-          </Section>
+          {/* === Sections moved: Fahrzeiten after Mitarbeiter, Briefkopf nach Unterschriften === */}
 
           {/* ===== 8. Sonstige Notizen ===== */}
           <Section icon="document-text-outline" title="Notizen" color="#ec4899">
@@ -1504,6 +1416,64 @@ export default function ReportEditScreen() {
                 placeholder="Name in Druckbuchstaben (optional)"
               />
             </View>
+          </Section>
+
+          {/* ===== Briefkopf-Felder (am Ende, vor PDF-Export wählen) ===== */}
+          <Section icon="document-attach-outline" title="Briefkopf für PDF" subtitle="Welche Projektdaten erscheinen im Briefkopf?" color="#0ea5e9">
+            <Text style={[styles.miniLabel, { marginTop: 0 }]}>👤 Kunde</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              {REPORT_HEADER_FIELDS.filter(f => f.group === 'customer').map(f => {
+                const active = headerFields.has(f.id);
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => {
+                      const next = new Set(headerFields);
+                      if (active) next.delete(f.id); else next.add(f.id);
+                      setHeaderFields(next);
+                    }}
+                    style={[styles.hfChip, active && styles.hfChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
+                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[styles.miniLabel, { marginTop: 8 }]}>🏗️ Projekt</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {REPORT_HEADER_FIELDS.filter(f => f.group === 'project').map(f => {
+                const active = headerFields.has(f.id);
+                return (
+                  <TouchableOpacity
+                    key={f.id}
+                    onPress={() => {
+                      const next = new Set(headerFields);
+                      if (active) next.delete(f.id); else next.add(f.id);
+                      setHeaderFields(next);
+                    }}
+                    style={[styles.hfChip, active && styles.hfChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={active ? 'checkbox' : 'square-outline'} size={16} color={active ? '#0ea5e9' : '#94a3b8'} />
+                    <Text style={[styles.hfChipText, active && styles.hfChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={styles.saveDefaultBtn}
+              onPress={async () => {
+                try {
+                  await SettingsService.update({ report_header_fields_default: Array.from(headerFields) } as any);
+                  Alert.alert('Gespeichert', 'Diese Auswahl ist jetzt der Standard für neue Rapporte.');
+                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
+              }}
+            >
+              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
+              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
+            </TouchableOpacity>
           </Section>
         </ScrollView>
 

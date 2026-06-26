@@ -1912,10 +1912,13 @@ export const REPORT_HEADER_FIELDS: ReportHeaderFieldDef[] = [
   { id: 'project_number', label: 'Projekt-/Objektnummer', group: 'project' },
   { id: 'project_type', label: 'Projektart', group: 'project' },
   { id: 'project_contact', label: 'Ansprechpartner vor Ort', group: 'project' },
+  { id: 'project_contact_phone', label: 'Telefon Ansprechpartner', group: 'project' },
+  { id: 'project_contact_email', label: 'E-Mail Ansprechpartner', group: 'project' },
 ];
 
 export const DEFAULT_REPORT_HEADER_FIELDS: string[] = [
   'customer_name', 'customer_address', 'project_name', 'project_address', 'project_number', 'project_type',
+  'project_contact', 'project_contact_phone', 'project_contact_email',
 ];
 
 export interface ReportEmployee {

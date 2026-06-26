@@ -1,0 +1,92 @@
+{
+  "summary": "Frontend-only Smoke- und Funktionstest fuer das neue Legal/Privacy-Modul (DisclaimerGate, /legal Hub, Datenschutz, Impressum, Haftungsausschluss, Settings -> Rechtliches Sektion) sowie Sichtpruefung Machines-Seite. DisclaimerGate-Flow (Modal -> Scroll -> Checkbox -> App starten -> Persistenz) funktioniert vollstaendig. Alle 4 Legal-Routen laden mit korrekten Inhalten. EIN Bug: Build-Nummer wird in Legal Hub als '-' statt '42' angezeigt, da expo-constants auf Web ios.buildNumber nicht populiert. EINSCHRAENKUNG: Reset-Disclaimer via Alert.alert mit destructive-Button laesst sich auf react-native-web nicht durchklicken (weder als custom Modal noch als window.confirm sichtbar) - native iOS/Android sollte funktionieren, der Code-Pfad ist korrekt verdrahtet. Maschinen-/Rapport-Tiefenflows wurden nicht aktiv getestet (siehe action_items).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "LegalHub InfoRow 'Build'",
+        "issue": "Anzeige zeigt '-' statt erwarteter '42'. Code liest Constants.expoConfig?.ios?.buildNumber ODER android?.versionCode. Auf react-native-web sind diese Plattform-Subobjekte in expoConfig nicht verfuegbar, daher faellt es auf '-' zurueck. Reference: /app/frontend/app/legal/index.tsx:14",
+        "testID": "legal-info-build",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Settings -> Haftungsausschluss zuruecksetzen",
+        "issue": "Auf react-native-web rendert Alert.alert mit cancel + destructive Button KEIN sichtbares Modal und triggert auch keine native window.confirm-Dialog. Damit ist der Reset-Pfad auf der Web-Preview NICHT abschliessbar. Auf nativen Plattformen (iOS/Android) sollte es funktionieren - der Code (SettingsService.update({disclaimer_accepted_at: undefined, disclaimer_version: undefined})) ist korrekt und JSON.stringify entfernt undefined-Felder. Reference: /app/frontend/app/settings/index.tsx:1100-1117",
+        "affected_testIDs": ["settings-reset-disclaimer-button"]
+      },
+      {
+        "flow": "Direkter Aufruf /reports/edit ohne projectId",
+        "issue": "Wirft 'Attempted to navigate before mounting the Root Layout component' weil router.back() in useEffect vor dem Mount aufgerufen wird. Vermutlich bestehend, kein Regressionsfehler dieser Iteration. Reference: /app/frontend/app/reports/edit.tsx:145",
+        "affected_testIDs": []
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "shadow*-Styleprops",
+        "issue": "Webpack-Konsole zeigt zahlreiche 'shadow* style props are deprecated. Use boxShadow' Warnungen. Bestehend, kein neues Issue durch diese Iteration."
+      },
+      {
+        "component": "props.pointerEvents",
+        "issue": "Konsole-Warnungen 'props.pointerEvents is deprecated. Use style.pointerEvents'. Bestehend."
+      }
+    ]
+  },
+  "verified_features": {
+    "disclaimer_gate_first_launch": {
+      "status": "PASS",
+      "details": [
+        "Modal erscheint nach localStorage.clear()",
+        "Header zeigt 'Willkommen bei Aufmassprofi' + Untertitel",
+        "Roter alertCard mit verbatim User-Text (Maße, Berechnungen, keine Haftung)",
+        "Gruener '100% lokale Speicherung' Block",
+        "Drei Link-Buttons (Vollstaendigen Haftungsausschluss / Datenschutz / Kontakt)",
+        "'Bitte ganz nach unten scrollen' Hint sichtbar vor Scroll-Ende",
+        "Checkbox ist vor Scroll-Ende disabled (Opazitaet 0.4) - Klick aendert state nicht",
+        "Nach Scroll bis Bottom verschwindet Scroll-Hint und Checkbox wird aktivierbar",
+        "App-starten-Button ist disabled (grau) solange Checkbox unchecked",
+        "Nach Akzeptieren wird disclaimer_accepted_at + disclaimer_version='2026-06' in aufmassprofi_settings persistiert",
+        "Modal verschwindet, Home-Screen ist sichtbar"
+      ]
+    },
+    "legal_hub": {
+      "status": "PASS_WITH_ONE_BUG",
+      "details": [
+        "Route /legal laedt erfolgreich",
+        "Hero mit document-lock-Icon + 'Rechtliches & Datenschutz'",
+        "4 NavCards: Datenschutzerklaerung, Haftungsausschluss, Impressum, Online-Version",
+        "InfoCard 'Ueber die App' mit Name, Version 1.1.0, Plattform, Entwickler, Bundle ID",
+        "Open-Source-Komponenten-Card sichtbar (lila ribbon-icon)",
+        "BUG: Build-Feld zeigt '-' statt '42' (s. ui_bugs)"
+      ]
+    },
+    "datenschutz_page": {"status": "PASS", "details": ["Hero, gruene 100%-lokal Highlight-Box, 9 numerierte Sektionen, Verantwortliche Stelle Nebel-Bedachung sichtbar"]},
+    "impressum_page": {"status": "PASS", "details": ["Nebel-Bedachung-Adresse, 'Wichtig: Maße' rote Warnbox im Haftungs-Block"]},
+    "haftungsausschluss_page": {"status": "PASS", "details": ["Rote Warning-Card mit verbatim User-Text, alle 6 Sub-Sections (Welche Berechnungen, Pflichten des Nutzers, Was die App NICHT ersetzt, Technische Genauigkeit, Gesetzliche Grundlage, Fragen), Accept-Info-Card 'Mit der Nutzung akzeptierst du diesen Haftungsausschluss', Kontakt-Button"]},
+    "settings_rechtliches_section": {"status": "PASS", "details": ["Section sichtbar am Settings-Ende", "5 Eintraege in korrekter Reihenfolge: Datenschutzerklaerung, Haftungsausschluss (orange warn icon), Impressum, Ueber die App, Haftungsausschluss zuruecksetzen (rotes refresh icon)", "Tap auf Reset-Button: Auf Web nicht abschliessend testbar (s. integration_issues)"]},
+    "machines_page_basic": {"status": "PASS_VISUAL", "details": ["Header 'Maschinen & Geraete', Bell-Icon oben rechts vorhanden", "Metric-Cards-Reihe: Gesamt, Ausgeliehen, Inspektion (orange), TUEV (rotes car-sport-Icon)", "Tabs (Geraete/Status/Kategorien/Standorte) sichtbar", "Liste leer da keine Daten - Edit-Modal mit DatePickerFields nicht aktiv getestet"]}
+  },
+  "test_report_links": ["/app/test_reports/iteration_13.json"],
+  "action_items": [
+    "FIX (LegalHub Build): /app/frontend/app/legal/index.tsx:14 - Fallback auf Constants.expoConfig?.extra?.buildNumber bzw. statischer Konstante einbauen, da ios.buildNumber/android.versionCode auf react-native-web nicht verfuegbar. Vorschlag: const buildNumber = (Constants.expoConfig as any)?.ios?.buildNumber || (Constants.expoConfig as any)?.android?.versionCode || (Constants.expoConfig as any)?.extra?.buildNumber || '42';",
+    "OPTIONAL (Reset-Disclaimer auf Web): /app/frontend/app/settings/index.tsx:1100 - Alert.alert mit destructive-Button funktioniert auf react-native-web nicht zuverlaessig. Falls Web-Preview wichtig: Custom Modal-Komponente statt Alert.alert verwenden. Nativ (iOS/Android) sollte es korrekt funktionieren.",
+    "RETEST (nativ erforderlich): Folgende Flows konnten auf Web-Preview nicht aktiv getestet werden und sollten vom User auf dem Geraet/Expo Go verifiziert werden: (a) Reset-Disclaimer-Flow (Alert -> Bestaetigen -> Settings leer -> Neustart -> DisclaimerGate erscheint wieder), (b) Bell-Icon-Tap auf Machines -> Reminder-Modal mit Inspektion/TUEV-Sektion + Quick-Chips 7/14/30/60/90, (c) TUEV-Banner auf Home-Dashboard nach PRO-Unlock + Machine mit next_tuv_date in Reminder-Fenster, (d) Rapport-Editor Section-Reihenfolge (Mitarbeiter -> Fahrzeiten -> ... -> Unterschriften -> Briefkopf-fuer-PDF am Ende), (e) Dynamische Top-Card-Aktualisierung beim Toggeln der headerFields Checkboxes.",
+    "MINOR (bestehend): /app/frontend/app/reports/edit.tsx:145 - useEffect ruft Alert.alert + router.back() ohne Mount-Guard auf, was bei direktem URL-Aufruf eine Exception wirft. Mit useNavigation().isReady() bzw. setTimeout 0 absichern."
+  ],
+  "critical_code_review_comments": [
+    "DisclaimerGate.tsx ist gut strukturiert (240 Zeilen), klare Trennung Scroll-Gate/Checkbox-Gate/Accept-Button, Version-Constant am Anfang.",
+    "Legal-Hub Konstante PRIVACY_URL = 'https://nebel-bedachung.de/Aufmassprofi-Datenschutz-Impressum' korrekt aus User-Input uebernommen.",
+    "SettingsService.update verwendet spread+JSON.stringify - undefined-Felder werden korrekt durch JSON.stringify entfernt (verified), daher ist der Reset-Pfad technisch korrekt; nur die Alert-Bestaetigung auf Web ist die Limitation.",
+    "settings/index.tsx hat mit 1985 Zeilen das 700-Zeilen-Limit massiv ueberschritten - bei naechster Erweiterung Aufsplittung in pro-Sektion-Komponenten empfehlenswert.",
+    "Build-Number-Lookup sollte fallback auf einen konstanten Wert haben statt '-', da der User explizit 'Build 42' erwartet."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "6 von 7 Hauptchecks PASS, 1 Bug (Build-Anzeige) + 1 Web-Limitation (Alert-Reset)"},
+  "seed_data_creation": "Keine - localStorage manuell gesetzt/geleert um Disclaimer-Gate-Lifecycle zu reproduzieren.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bei erneutem Test: (1) Build-Fix in legal/index.tsx pruefen, (2) Falls Alert-Reset auf Web wichtig: Custom-Modal verifizieren, (3) Maschinen-Reminder-Modal, TUEV-Banner und Rapport-Editor-Reihenfolge benoetigen seed-Daten (Projekt + Maschine mit next_tuv_date) und vorzugsweise Expo Go statt Web-Preview. localStorage-Key fuer Disclaimer-Reset: 'aufmassprofi_settings' (JSON mit disclaimer_accepted_at + disclaimer_version).",
+  "rca_of_issue": "Build-'-': Constants.expoConfig.ios und .android werden von expo-constants nur auf den entsprechenden nativen Plattformen befuellt. Auf Web bleiben beide undefined, daher Fallback '-'. Loesung: Zusaetzlich auf expoConfig.extra.buildNumber oder Hardcode '42' fallback. Alert-Reset auf Web: react-native-web rendert Alert.alert mit mehr als 2 Buttons (cancel + destructive) inkonsistent - im aktuellen Build kein sichtbares Modal und keine dialog-event. Workaround: Platform.select fuer Web -> Custom Modal."
+}

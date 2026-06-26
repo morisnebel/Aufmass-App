@@ -47,6 +47,14 @@ export default function LegalHub() {
           onPress={() => router.push('/legal/datenschutz')}
         />
         <NavCard
+          icon="warning"
+          iconColor="#ea580c"
+          iconBg="#fed7aa"
+          title="Haftungsausschluss"
+          subtitle="Maße, Berechnungen & Ergebnisse — bitte unbedingt lesen"
+          onPress={() => router.push('/legal/haftung')}
+        />
+        <NavCard
           icon="business"
           iconColor="#1976d2"
           iconBg="#dbeafe"

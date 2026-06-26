@@ -1052,6 +1052,21 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={legalStyles.navRow}
+              onPress={() => router.push('/legal/haftung')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#fed7aa' }]}>
+                <Ionicons name="warning" size={18} color="#ea580c" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Haftungsausschluss</Text>
+                <Text style={legalStyles.navSub}>Maße, Berechnungen & Ergebnisse</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={legalStyles.navRow}
               onPress={() => router.push('/legal/impressum')}
               activeOpacity={0.7}
             >

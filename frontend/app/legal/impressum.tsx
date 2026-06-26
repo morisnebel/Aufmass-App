@@ -84,6 +84,20 @@ export default function ImpressumScreen() {
           <Text style={styles.text}>
             Für die Korrektheit, Vollständigkeit oder Aktualität der vom Nutzer erfassten Daten übernehmen wir keine Gewähr. Eine Haftung gem. §§ 8 bis 10 TMG für übertragene oder gespeicherte Informationen besteht nicht.
           </Text>
+
+          <View style={styles.warnBox}>
+            <View style={styles.warnHeader}>
+              <Ionicons name="warning" size={18} color="#dc2626" />
+              <Text style={styles.warnTitle}>Wichtig: Maße & Berechnungen</Text>
+            </View>
+            <Text style={styles.warnText}>
+              Die in dieser App ermittelten <Text style={{ fontWeight: '800' }}>Maße, Berechnungen und Ergebnisse</Text> dienen ausschließlich als Unterstützung bei der Planung und Dokumentation. Trotz größter Sorgfalt kann keine Gewähr für die Richtigkeit, Vollständigkeit oder Aktualität der ermittelten Daten übernommen werden.
+            </Text>
+            <Text style={styles.warnText}>
+              Der Nutzer ist verpflichtet, sämtliche Maße, Berechnungen und Ergebnisse vor der Verwendung <Text style={{ fontWeight: '800' }}>eigenständig zu prüfen und zu verifizieren</Text>. Für Schäden, Fehler oder Folgeschäden, die aus der Nutzung oder dem Vertrauen auf die in der App bereitgestellten Daten entstehen, wird – soweit gesetzlich zulässig – keine Haftung übernommen.
+            </Text>
+          </View>
+
           <Text style={styles.text}>
             Bei Bekanntwerden konkreter Rechtsverletzungen werden wir diese unverzüglich entfernen.
           </Text>
@@ -147,4 +161,8 @@ const styles = StyleSheet.create({
   contactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1976d2', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 16, marginTop: 8 },
   contactBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   footerText: { textAlign: 'center', fontSize: 11, color: '#94a3b8', marginTop: 16 },
+  warnBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginVertical: 8, borderWidth: 1.5, borderColor: '#dc2626' },
+  warnHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
+  warnTitle: { fontSize: 13, fontWeight: '800', color: '#991b1b' },
+  warnText: { fontSize: 12.5, color: '#7f1d1d', lineHeight: 18, marginBottom: 6 },
 });

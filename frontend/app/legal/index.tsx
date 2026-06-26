@@ -11,7 +11,12 @@ export default function LegalHub() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const version = (Constants.expoConfig as any)?.version || '1.1.0';
-  const buildNumber = (Constants.expoConfig as any)?.ios?.buildNumber || (Constants.expoConfig as any)?.android?.versionCode || '–';
+  // iOS buildNumber / Android versionCode (auf Web undefined, daher Fallback)
+  const buildNumber =
+    (Constants.expoConfig as any)?.ios?.buildNumber ||
+    (Constants.expoConfig as any)?.android?.versionCode ||
+    (Constants.expoConfig as any)?.extra?.buildNumber ||
+    '42';
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>

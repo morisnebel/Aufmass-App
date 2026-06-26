@@ -1027,6 +1027,59 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* ===== Rechtliches & Datenschutz ===== */}
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Ionicons name="document-lock-outline" size={20} color="#1976d2" />
+              <Text style={styles.sectionTitle}>Rechtliches</Text>
+            </View>
+
+            <TouchableOpacity
+              style={legalStyles.navRow}
+              onPress={() => router.push('/legal/datenschutz')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#dcfce7' }]}>
+                <Ionicons name="shield-checkmark" size={18} color="#16a34a" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Datenschutzerklärung</Text>
+                <Text style={legalStyles.navSub}>Welche Daten verarbeitet die App?</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={legalStyles.navRow}
+              onPress={() => router.push('/legal/impressum')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="business" size={18} color="#1976d2" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Impressum</Text>
+                <Text style={legalStyles.navSub}>Angaben gem. § 5 TMG</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={legalStyles.navRow}
+              onPress={() => router.push('/legal')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#e0f2fe' }]}>
+                <Ionicons name="information-circle" size={18} color="#0369a1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Über die App</Text>
+                <Text style={legalStyles.navSub}>Version, Build & Open-Source-Hinweise</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
       
@@ -1850,5 +1903,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+});
+
+const legalStyles = StyleSheet.create({
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  navIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  navSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 1,
   },
 });

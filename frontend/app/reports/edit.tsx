@@ -179,7 +179,7 @@ export default function ReportEditScreen() {
           setExistingReport(r);
           setReportNumber(r.report_number || '');
           setDate(r.date || new Date().toISOString().split('T')[0]);
-          setContactPerson(r.contact_person || '');
+          setContactPerson(r.contact_person || proj?.objekt_contact_person || '');
           setEmployees(r.employees || []);
           setWorkItems(r.work_items || []);
           setWorkDescription(r.work_description || '');
@@ -218,6 +218,10 @@ export default function ReportEditScreen() {
           setHeaderFields(new Set(defaultHeaderFields));
         }
         setTravelInTotalHours(defaultTravelInTotal);
+        // Ansprechpartner aus Projekt vorbelegen
+        if (proj?.objekt_contact_person) {
+          setContactPerson(proj.objekt_contact_person);
+        }
       }
     } catch (e) {
       console.error('Error loading report:', e);
@@ -694,6 +698,15 @@ export default function ReportEditScreen() {
   const objektStr = project?.objekt_street
     ? `${project.objekt_street}, ${project.objekt_plz || ''} ${project.objekt_city || ''}`.trim()
     : '';
+  // Erweiterte Briefkopf-Daten: Kunden- und Ansprechpartner-Kontakte aus Projekt
+  const bauherrAddrStr = project?.bauherr_street
+    ? `${project.bauherr_street}, ${(p?.bauherr_plz || p?.bauherr_zip) || ''} ${project.bauherr_city || ''}`.trim()
+    : '';
+  const bauherrPhone = (p?.bauherr_phone || p?.bauherr_mobile || '');
+  const bauherrEmail = (p?.bauherr_email || '');
+  const projectContactPhone = (p?.objekt_phone || '');
+  const projectContactEmail = (p?.objekt_email || '');
+  const projectType = project?.project_type || '';
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -729,18 +742,20 @@ export default function ReportEditScreen() {
             </View>
           </View>
 
-          {/* ===== 1. Projekt-Block (oben) ===== */}
+          {/* ===== 1. Projekt-Block (oben) - dynamisch gemäß Briefkopf-Auswahl ===== */}
           <View style={styles.topCard}>
             <View style={styles.topGrid}>
-              <View style={[styles.topField, { flex: 2 }]}>
-                <View style={styles.topFieldHeader}>
-                  <Ionicons name="briefcase-outline" size={14} color="#475569" />
-                  <Text style={styles.topFieldLabel}>Projekt</Text>
+              {headerFields.has('project_name') && (
+                <View style={[styles.topField, { flex: 2 }]}>
+                  <View style={styles.topFieldHeader}>
+                    <Ionicons name="briefcase-outline" size={14} color="#475569" />
+                    <Text style={styles.topFieldLabel}>Projekt</Text>
+                  </View>
+                  <Text style={styles.topFieldValue} numberOfLines={1}>
+                    {project?.name || '—'}{headerFields.has('project_number') && project?.project_number ? ` · ${project.project_number}` : ''}
+                  </Text>
                 </View>
-                <Text style={styles.topFieldValue} numberOfLines={1}>
-                  {project?.name || '—'}{project?.project_number ? ` · ${project.project_number}` : ''}
-                </Text>
-              </View>
+              )}
               <View style={[styles.topField, { flex: 1 }]}>
                 <View style={styles.topFieldHeader}>
                   <Ionicons name="calendar-outline" size={14} color="#475569" />
@@ -752,27 +767,73 @@ export default function ReportEditScreen() {
               </View>
             </View>
 
-            {objektStr ? (
+            {/* Projektart */}
+            {headerFields.has('project_type') && projectType ? (
+              <View style={styles.topField}>
+                <View style={styles.topFieldHeader}>
+                  <Ionicons name="construct-outline" size={14} color="#475569" />
+                  <Text style={styles.topFieldLabel}>Projektart</Text>
+                </View>
+                <Text style={styles.topFieldValue} numberOfLines={1}>{projectType}</Text>
+              </View>
+            ) : null}
+
+            {/* Baustelle */}
+            {headerFields.has('project_address') && objektStr ? (
               <View style={styles.topField}>
                 <View style={styles.topFieldHeader}>
                   <Ionicons name="location-outline" size={14} color="#475569" />
                   <Text style={styles.topFieldLabel}>Baustelle</Text>
                 </View>
-                <Text style={styles.topFieldValue} numberOfLines={1}>{objektStr}</Text>
+                <Text style={styles.topFieldValue} numberOfLines={2}>{objektStr}</Text>
               </View>
             ) : null}
 
-            <View style={styles.topGrid}>
-              <View style={[styles.topField, { flex: 1 }]}>
+            {/* Kunde */}
+            {(headerFields.has('customer_name') && bauherrFull) || (headerFields.has('customer_address') && bauherrAddrStr) ? (
+              <View style={styles.topField}>
                 <View style={styles.topFieldHeader}>
                   <Ionicons name="person-outline" size={14} color="#475569" />
                   <Text style={styles.topFieldLabel}>Kunde</Text>
                 </View>
-                <Text style={styles.topFieldValue} numberOfLines={1}>{bauherrFull || '—'}</Text>
+                {headerFields.has('customer_name') && bauherrFull ? (
+                  <Text style={styles.topFieldValue} numberOfLines={1}>{bauherrFull}</Text>
+                ) : null}
+                {headerFields.has('customer_address') && bauherrAddrStr ? (
+                  <Text style={[styles.topFieldValue, { fontWeight: '500', color: '#475569', fontSize: 12 }]} numberOfLines={2}>{bauherrAddrStr}</Text>
+                ) : null}
               </View>
-              <View style={[styles.topField, { flex: 1 }]}>
+            ) : null}
+
+            {/* Kunde Telefon/Email */}
+            {(headerFields.has('customer_phone') && bauherrPhone) || (headerFields.has('customer_email') && bauherrEmail) ? (
+              <View style={styles.topGrid}>
+                {headerFields.has('customer_phone') && bauherrPhone ? (
+                  <View style={[styles.topField, { flex: 1 }]}>
+                    <View style={styles.topFieldHeader}>
+                      <Ionicons name="call-outline" size={14} color="#475569" />
+                      <Text style={styles.topFieldLabel}>Tel. Kunde</Text>
+                    </View>
+                    <Text style={styles.topFieldValue} numberOfLines={1}>{bauherrPhone}</Text>
+                  </View>
+                ) : null}
+                {headerFields.has('customer_email') && bauherrEmail ? (
+                  <View style={[styles.topField, { flex: 1 }]}>
+                    <View style={styles.topFieldHeader}>
+                      <Ionicons name="mail-outline" size={14} color="#475569" />
+                      <Text style={styles.topFieldLabel}>E-Mail Kunde</Text>
+                    </View>
+                    <Text style={styles.topFieldValue} numberOfLines={1}>{bauherrEmail}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Ansprechpartner (Name als Input, da häufig vor Ort wechselt) */}
+            {headerFields.has('project_contact') ? (
+              <View style={styles.topField}>
                 <View style={styles.topFieldHeader}>
-                  <Ionicons name="call-outline" size={14} color="#475569" />
+                  <Ionicons name="person-circle-outline" size={14} color="#475569" />
                   <Text style={styles.topFieldLabel}>Ansprechpartner</Text>
                 </View>
                 <TextInput
@@ -782,9 +843,33 @@ export default function ReportEditScreen() {
                   placeholder="z.B. Herr Müller"
                 />
               </View>
-            </View>
+            ) : null}
 
-            {/* Rapport-Nr. + Wetter */}
+            {/* Ansprechpartner Telefon/Email */}
+            {(headerFields.has('project_contact_phone') && projectContactPhone) || (headerFields.has('project_contact_email') && projectContactEmail) ? (
+              <View style={styles.topGrid}>
+                {headerFields.has('project_contact_phone') && projectContactPhone ? (
+                  <View style={[styles.topField, { flex: 1 }]}>
+                    <View style={styles.topFieldHeader}>
+                      <Ionicons name="call-outline" size={14} color="#475569" />
+                      <Text style={styles.topFieldLabel}>Tel. Ansprechp.</Text>
+                    </View>
+                    <Text style={styles.topFieldValue} numberOfLines={1}>{projectContactPhone}</Text>
+                  </View>
+                ) : null}
+                {headerFields.has('project_contact_email') && projectContactEmail ? (
+                  <View style={[styles.topField, { flex: 1 }]}>
+                    <View style={styles.topFieldHeader}>
+                      <Ionicons name="mail-outline" size={14} color="#475569" />
+                      <Text style={styles.topFieldLabel}>E-Mail Ansprechp.</Text>
+                    </View>
+                    <Text style={styles.topFieldValue} numberOfLines={1}>{projectContactEmail}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Rapport-Nr. + Wetter (immer sichtbar) */}
             <View style={styles.topGrid}>
               <View style={[styles.topField, { flex: 1 }]}>
                 <View style={styles.topFieldHeader}>

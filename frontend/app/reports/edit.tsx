@@ -1595,7 +1595,7 @@ export default function ReportEditScreen() {
                 label="Kunde / Auftraggeber"
                 value={signatureCustomer}
                 onChange={setSignatureCustomer}
-                onDrawingChange={setScrollEnabled}
+                onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}
                 placeholder="Hier unterschreiben (Kunde)"
                 height={140}
               />
@@ -1612,7 +1612,7 @@ export default function ReportEditScreen() {
                 label="Handwerker / Auftragnehmer"
                 value={signatureWorker}
                 onChange={setSignatureWorker}
-                onDrawingChange={setScrollEnabled}
+                onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}
                 placeholder="Hier unterschreiben (Handwerker)"
                 height={140}
               />

@@ -1,0 +1,27 @@
+{
+  "summary": "RETEST of scroll-lock fix from iteration 15. Verified the corrected `onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}` wiring on both SignaturePad instances (edit.tsx lines 1598 + 1615). Seeded localStorage on https://image-render-test.preview.emergentagent.com with customer cust-test-1, project proj-test-1 (P-001) and a Settings *object* (key=aufmassprofi_settings, NOT array) containing disclaimer_accepted_at + disclaimer_version=2026-06 + is_pro=true to bypass DisclaimerGate. Navigated to /reports/edit?projectId=proj-test-1, scrolled to Unterschriften section. Performed wheel-scroll proof: BEFORE activation, parent ScrollView is scrollable (overflowY=auto, scrollTop=1695). Tapped blue 'Unterschrift' button on Kunde pad → button becomes green 'Fertig', other (Handwerker) pad still shows 'Unterschrift' (u=1,f=1 — isolated state intact). Inspected parent ScrollView: overflowY flipped from 'auto' to 'hidden' (RN-web compiles scrollEnabled=false to overflow:hidden) — hard proof that setScrollEnabled(false) was called. Wheel-scrolled 800px down over the active SVG pad at (640,189): scrollTop remained 1695 → PASS (scroll locked while active). Tapped 'Fertig' → button reverts to 'Unterschrift' (u=2,f=0), overflowY flips back to 'auto'. Wheel-scrolled again at the same point: scrollTop 1695 → 1799 → PASS (scroll restored when inactive). No console errors. The iteration-15 critical FAIL is now resolved.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Carry-over from iter_15, OPTIONAL — not blocking) Add testID props to SignaturePad buttons (signature-start-button, signature-undo, signature-clear) so future regression tests don't have to walk the DOM by text content.",
+    "(Carry-over from iter_15, OPTIONAL) Bump styles.button paddingVertical 6 → 10 in SignaturePad to reach the 44px touch target minimum (current height ~32px).",
+    "(Carry-over from iter_15, OPTIONAL) edit.tsx still 2727 lines — consider extracting SignaturesSection into its own component."
+  ],
+  "critical_code_review_comments": [
+    "Fix at lines 1598 and 1615 of /app/frontend/app/reports/edit.tsx is correct: `onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}` — inverts the boolean as required by the SignaturePad contract.",
+    "The onFocus={() => setScrollEnabled(true)} on the name TextInputs (lines 1606, 1623) is semantically correct: when the user moves focus to the name field, the signature pad is no longer the active interaction target so re-enabling scroll is right. No conflict with the new wiring."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "2/2 PASS — scroll-lock contract fully working"},
+  "seed_data_creation": "localStorage on https://image-render-test.preview.emergentagent.com: aufmassprofi_customers=[{id:cust-test-1,...}], aufmassprofi_projects=[{id:proj-test-1, project_number:P-001, customer_id:cust-test-1,...}], aufmassprofi_settings={disclaimer_accepted_at:'2026-01-01T00:00:00Z', disclaimer_version:'2026-06', is_pro:true, company_name:'Test GmbH'}. IMPORTANT: settings must be a single OBJECT (not array) — SettingsService.get() does JSON.parse() directly without array-unwrap. Iter_15 seed used an array which left DisclaimerGate up. Note for future testing agents: store aufmassprofi_settings as an object.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Scroll-lock bug is fully fixed and verified. For future SignaturePad regression: (1) seed aufmassprofi_settings as plain object not array; (2) the parent ScrollView's overflowY style is a reliable proxy for scrollEnabled — 'auto' = enabled, 'hidden' = disabled; (3) wheel-scroll over the SVG (react-native-svg renders the signature canvas as SVG, not <canvas>) is the most reliable check; (4) the active pad's SVG keeps a width >200px and height ~138px, useful selector.",
+  "rca_of_issue": "PREVIOUS BUG (iter_15) RCA: edit.tsx passed `onDrawingChange={setScrollEnabled}` directly. SignaturePad fires onDrawingChange(true) on activate (meaning 'lock scroll'), so setScrollEnabled(true) kept scrolling enabled — exactly inverted. FIX (iter_16, verified): change to `onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}` on both <SignaturePad …/> usages (lines 1598 + 1615). PROOF: parent's overflowY style now flips auto→hidden on activate and hidden→auto on deactivate, and wheel events over the active pad no longer change scrollTop."
+}

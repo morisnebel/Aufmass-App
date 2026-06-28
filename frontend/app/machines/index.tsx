@@ -684,38 +684,41 @@ export default function MachinesIndex() {
                   </View>
                 )}
 
-                {/* Kategorie (Equipment-Typ) */}
-                <Text style={styles.label}>Art des Gerätes</Text>
+                {/* Kategorie (Equipment-Typ + eigene Kategorien zusammengeführt) */}
+                <Text style={styles.label}>Kategorie</Text>
                 <View style={styles.chipRow}>
-                  {EQUIP_CATEGORIES.map(c => (
-                    <TouchableOpacity
-                      key={c.value}
-                      style={[styles.chip, form.equipment_category === c.value && { backgroundColor: c.color }]}
-                      onPress={() => setForm({ ...form, equipment_category: c.value })}
-                    >
-                      <Ionicons name={c.icon} size={12} color={form.equipment_category === c.value ? '#fff' : '#475569'} />
-                      <Text style={[styles.chipText, form.equipment_category === c.value && styles.chipTextActive, { marginLeft: 4 }]}>{c.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {EQUIP_CATEGORIES.map(c => {
+                    const isActive = form.equipment_category === c.value && (form.category || '').toLowerCase() === c.label.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={c.value}
+                        style={[styles.chip, isActive && { backgroundColor: c.color }]}
+                        onPress={() => setForm({ ...form, equipment_category: c.value, category: c.label })}
+                      >
+                        <Ionicons name={c.icon} size={12} color={isActive ? '#fff' : '#475569'} />
+                        <Text style={[styles.chipText, isActive && styles.chipTextActive, { marginLeft: 4 }]}>{c.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
-                {/* Frei wählbare Kategorie mit Vorschlägen */}
-                <Text style={styles.label}>Kategorie (eigene Bezeichnung)</Text>
+                {/* Eigene gespeicherte Kategorien (löschbar) */}
                 {(() => {
-                  // Gespeicherte + aus Maschinen abgeleitete Kategorien zusammenführen (unique, case-insensitiv)
+                  // Eigene Kategorien: gespeicherte + aus Maschinen abgeleitete, ohne die 8 Standard-Kategorien
+                  const builtinNames = new Set(EQUIP_CATEGORIES.map(c => c.label.toLowerCase()));
                   const seen = new Map<string, string>();
-                  savedCategories.forEach(c => { seen.set(c.name.toLowerCase(), c.name); });
-                  metrics.categories.forEach(c => { if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c); });
-                  const allCats = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
-                  if (allCats.length === 0) return null;
+                  savedCategories.forEach(c => { if (!builtinNames.has(c.name.toLowerCase())) seen.set(c.name.toLowerCase(), c.name); });
+                  metrics.categories.forEach(c => { if (!builtinNames.has(c.toLowerCase()) && !seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c); });
+                  const customCats = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
+                  if (customCats.length === 0) return null;
                   return (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
-                      {allCats.map(c => {
+                      {customCats.map(c => {
                         const isActive = (form.category || '').toLowerCase() === c.toLowerCase();
                         return (
                           <View key={c} style={[styles.suggestChip, isActive && styles.suggestChipActive, { flexDirection: 'row', alignItems: 'center', paddingRight: 4 }]}>
                             <TouchableOpacity
-                              onPress={() => setForm({ ...form, category: c })}
+                              onPress={() => setForm({ ...form, category: c, equipment_category: form.equipment_category || 'sonstiges' })}
                               style={{ paddingVertical: 2 }}
                             >
                               <Text style={[styles.suggestChipText, isActive && styles.suggestChipTextActive]}>{c}</Text>
@@ -733,7 +736,9 @@ export default function MachinesIndex() {
                     </ScrollView>
                   );
                 })()}
-                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder="z.B. Hebezeug, Akku-Werkzeug" />
+
+                {/* Eingabefeld für freie Kategorie + Speichern-Button */}
+                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder="Eigene Kategorie eingeben (optional)" />
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -4, marginBottom: 8 }}>
                   <TouchableOpacity
                     onPress={async () => {
@@ -742,15 +747,21 @@ export default function MachinesIndex() {
                         Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
                         return;
                       }
+                      // Nicht erlauben, eine der 8 Standard-Kategorien als „eigene" zu speichern
+                      const builtin = EQUIP_CATEGORIES.find(c => c.label.toLowerCase() === v.toLowerCase());
+                      if (builtin) {
+                        Alert.alert('Hinweis', `"${v}" ist bereits eine Standard-Kategorie und muss nicht zusätzlich gespeichert werden.`);
+                        return;
+                      }
                       await MachineCategoryService.add(v);
                       const cats = await MachineCategoryService.getAll();
                       setSavedCategories(cats);
-                      Alert.alert('Gespeichert', `Kategorie "${v}" wurde der Vorschlagsliste hinzugefügt.`);
+                      Alert.alert('Gespeichert', `Kategorie "${v}" wurde hinzugefügt.`);
                     }}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#dbeafe', borderRadius: 8 }}
                   >
                     <Ionicons name="bookmark-outline" size={14} color="#1976d2" />
-                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als Kategorie speichern</Text>
+                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als eigene Kategorie speichern</Text>
                   </TouchableOpacity>
                 </View>
 

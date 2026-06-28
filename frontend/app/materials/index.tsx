@@ -538,16 +538,14 @@ export default function MaterialsIndex() {
                       </View>
                     )}
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.matName, !m.active && { color: '#9ca3af' }]} numberOfLines={1}>{m.name}</Text>
+                      <Text style={[styles.matName, !m.active && { color: '#9ca3af' }]} numberOfLines={2}>{m.name}</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2, alignItems: 'center' }}>
                         {isLow && (
                           <View style={styles.lowBadge}>
                             <Ionicons name="warning" size={10} color="#fff" />
                             <Text style={styles.lowBadgeText}>NIEDRIG</Text>
                           </View>
                         )}
-                      </View>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
                         {m.article_number ? <Text style={styles.matMetaSub}>Art.-Nr. {m.article_number}</Text> : null}
                         {m.category ? <Text style={styles.matMetaTag}>{m.category}</Text> : null}
                         {m.storage_location ? <Text style={styles.matMetaTag}>📍 {m.storage_location}</Text> : null}

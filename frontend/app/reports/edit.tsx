@@ -33,6 +33,32 @@ const AVATAR_COLORS = ['#1976d2', '#16a34a', '#ea580c', '#7c3aed', '#db2777', '#
 
 const localId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
+// === Fahrzeit-Eingabe-Helfer: HH:MM ↔ Dezimalstunden ===
+/** Parst "1:30", "1,5", "1.5", "0:45", "" → Dezimalstunden (z.B. 1.5). Leerstring → undefined */
+const parseTimeHM = (s: string): number | undefined => {
+  if (!s) return undefined;
+  const trimmed = s.trim();
+  if (!trimmed) return undefined;
+  // Format HH:MM
+  if (trimmed.includes(':')) {
+    const [hStr, mStr] = trimmed.split(':');
+    const h = parseInt(hStr, 10) || 0;
+    const m = parseInt(mStr || '0', 10) || 0;
+    return Math.max(0, h + Math.min(59, Math.max(0, m)) / 60);
+  }
+  // Dezimal (Komma oder Punkt)
+  const v = parseFloat(trimmed.replace(',', '.'));
+  return Number.isFinite(v) && v >= 0 ? v : undefined;
+};
+/** Formatiert Dezimalstunden zu "1:30". undefined/0 → "" */
+const formatHM = (hours?: number): string => {
+  if (hours == null || !Number.isFinite(hours) || hours <= 0) return '';
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}:${m.toString().padStart(2, '0')}`;
+};
+
 // Berechnet Stunden aus Beginn, Ende und Pause (Minuten)
 const calcEmpHours = (from?: string, to?: string, pauseMin?: number): number => {
   if (!from || !to) return 0;
@@ -92,15 +118,17 @@ export default function ReportEditScreen() {
   const [materials, setMaterials] = useState<ReportMaterial[]>([]);
   const [machines, setMachines] = useState<ReportMachine[]>([]);
   const [travelKm, setTravelKm] = useState<string>('');
-  // Erweiterte Fahrzeiten (Team)
-  const [travelToHours, setTravelToHours] = useState<string>('');
-  const [travelBackHours, setTravelBackHours] = useState<string>('');
+  // Erweiterte Fahrzeiten (Team) - Roh-Strings damit Eingabe nicht springt
+  const [travelToHoursStr, setTravelToHoursStr] = useState<string>('');
+  const [travelBackHoursStr, setTravelBackHoursStr] = useState<string>('');
   const [travelToKm, setTravelToKm] = useState<string>('');
   const [travelBackKm, setTravelBackKm] = useState<string>('');
   const [travelCosts, setTravelCosts] = useState<string>('');
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
   const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
+  // Roh-Strings für Pro-Mitarbeiter-Fahrzeit-Eingabe (key: empId-field)
+  const [travelEmpDraft, setTravelEmpDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
   const [headerFields, setHeaderFields] = useState<Set<string>>(new Set(DEFAULT_REPORT_HEADER_FIELDS));
   const [weather, setWeather] = useState<Report['weather']>('');
@@ -186,8 +214,8 @@ export default function ReportEditScreen() {
           setMaterials(r.materials || []);
           setMachines(r.machines || []);
           setTravelKm(r.travel_km != null ? String(r.travel_km) : '');
-          setTravelToHours(r.travel_to_hours != null ? String(r.travel_to_hours) : '');
-          setTravelBackHours(r.travel_back_hours != null ? String(r.travel_back_hours) : '');
+          setTravelToHoursStr(formatHM(r.travel_to_hours));
+          setTravelBackHoursStr(formatHM(r.travel_back_hours));
           setTravelToKm(r.travel_to_km != null ? String(r.travel_to_km) : '');
           setTravelBackKm(r.travel_back_km != null ? String(r.travel_back_km) : '');
           setTravelCosts(r.travel_costs != null ? String(r.travel_costs) : '');
@@ -261,8 +289,8 @@ export default function ReportEditScreen() {
             setMaterials((prev.materials || []).map(m => ({ ...m, id: localId() })));
             setMachines((prev.machines || []).map(m => ({ ...m, id: localId() })));
             setTravelKm(prev.travel_km != null ? String(prev.travel_km) : '');
-            setTravelToHours(prev.travel_to_hours != null ? String(prev.travel_to_hours) : '');
-            setTravelBackHours(prev.travel_back_hours != null ? String(prev.travel_back_hours) : '');
+            setTravelToHoursStr(formatHM(prev.travel_to_hours));
+            setTravelBackHoursStr(formatHM(prev.travel_back_hours));
             setTravelToKm(prev.travel_to_km != null ? String(prev.travel_to_km) : '');
             setTravelBackKm(prev.travel_back_km != null ? String(prev.travel_back_km) : '');
             setTravelCosts(prev.travel_costs != null ? String(prev.travel_costs) : '');
@@ -333,8 +361,8 @@ export default function ReportEditScreen() {
         materials,
         machines,
         travel_km: travelKm ? parseFloat(travelKm.replace(',', '.')) : undefined,
-        travel_to_hours: travelToHours ? parseFloat(travelToHours.replace(',', '.')) : undefined,
-        travel_back_hours: travelBackHours ? parseFloat(travelBackHours.replace(',', '.')) : undefined,
+        travel_to_hours: parseTimeHM(travelToHoursStr),
+        travel_back_hours: parseTimeHM(travelBackHoursStr),
         travel_to_km: travelToKm ? parseFloat(travelToKm.replace(',', '.')) : undefined,
         travel_back_km: travelBackKm ? parseFloat(travelBackKm.replace(',', '.')) : undefined,
         travel_costs: travelCosts ? parseFloat(travelCosts.replace(',', '.')) : undefined,
@@ -1081,12 +1109,32 @@ export default function ReportEditScreen() {
               <View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h)</Text>
-                    <TextInput style={styles.input} value={travelToHours} onChangeText={setTravelToHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h:mm)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={travelToHoursStr}
+                      onChangeText={(v) => setTravelToHoursStr(v.replace(/[^0-9:,.]/g, ''))}
+                      onBlur={() => {
+                        const h = parseTimeHM(travelToHoursStr);
+                        if (h != null) setTravelToHoursStr(formatHM(h));
+                      }}
+                      placeholder="0:45"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h)</Text>
-                    <TextInput style={styles.input} value={travelBackHours} onChangeText={setTravelBackHours} placeholder="z.B. 0,75" keyboardType="decimal-pad" />
+                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h:mm)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={travelBackHoursStr}
+                      onChangeText={(v) => setTravelBackHoursStr(v.replace(/[^0-9:,.]/g, ''))}
+                      onBlur={() => {
+                        const h = parseTimeHM(travelBackHoursStr);
+                        if (h != null) setTravelBackHoursStr(formatHM(h));
+                      }}
+                      placeholder="0:45"
+                      keyboardType="numbers-and-punctuation"
+                    />
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
@@ -1130,8 +1178,42 @@ export default function ReportEditScreen() {
                           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 6 }}>
-                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_hours != null ? String(emp.travel_to_hours) : ''} onChangeText={(v) => updateEmp({ travel_to_hours: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="h Hin" keyboardType="decimal-pad" />
-                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_hours != null ? String(emp.travel_back_hours) : ''} onChangeText={(v) => updateEmp({ travel_back_hours: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="h Rück" keyboardType="decimal-pad" />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={travelEmpDraft[`${emp.id}-to`] ?? formatHM(emp.travel_to_hours)}
+                            onChangeText={(v) => {
+                              const clean = v.replace(/[^0-9:,.]/g, '');
+                              setTravelEmpDraft({ ...travelEmpDraft, [`${emp.id}-to`]: clean });
+                              updateEmp({ travel_to_hours: parseTimeHM(clean) });
+                            }}
+                            onBlur={() => {
+                              const parsed = parseTimeHM(travelEmpDraft[`${emp.id}-to`] ?? '');
+                              const nextDraft = { ...travelEmpDraft };
+                              delete nextDraft[`${emp.id}-to`];
+                              setTravelEmpDraft(nextDraft);
+                              if (parsed != null) updateEmp({ travel_to_hours: parsed });
+                            }}
+                            placeholder="Hin h:mm"
+                            keyboardType="numbers-and-punctuation"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={travelEmpDraft[`${emp.id}-back`] ?? formatHM(emp.travel_back_hours)}
+                            onChangeText={(v) => {
+                              const clean = v.replace(/[^0-9:,.]/g, '');
+                              setTravelEmpDraft({ ...travelEmpDraft, [`${emp.id}-back`]: clean });
+                              updateEmp({ travel_back_hours: parseTimeHM(clean) });
+                            }}
+                            onBlur={() => {
+                              const parsed = parseTimeHM(travelEmpDraft[`${emp.id}-back`] ?? '');
+                              const nextDraft = { ...travelEmpDraft };
+                              delete nextDraft[`${emp.id}-back`];
+                              setTravelEmpDraft(nextDraft);
+                              if (parsed != null) updateEmp({ travel_back_hours: parsed });
+                            }}
+                            placeholder="Rück h:mm"
+                            keyboardType="numbers-and-punctuation"
+                          />
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''} onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Hin" keyboardType="decimal-pad" />
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''} onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Rück" keyboardType="decimal-pad" />
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_costs != null ? String(emp.travel_costs) : ''} onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="€" keyboardType="decimal-pad" />

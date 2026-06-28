@@ -339,6 +339,14 @@ export const generateReportSectionHtml = (
 
   // ===== Fahrzeiten HTML =====
   const r = report as any;
+  // Helper: dezimalstunden zu "h:mm" - dasselbe wie im Editor
+  const fmtHM = (hours: any): string => {
+    if (hours == null || !Number.isFinite(hours) || hours <= 0) return '–';
+    const totalMin = Math.round(hours * 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}:${m.toString().padStart(2, '0')} h`;
+  };
   const teamTravelHas = (r.travel_to_hours != null || r.travel_back_hours != null || r.travel_to_km != null || r.travel_back_km != null || r.travel_costs != null || r.travel_note);
   const perEmpTravelHas = r.travel_per_employee_enabled && (report.employees || []).some((e: any) => e.travel_to_hours != null || e.travel_back_hours != null || e.travel_to_km != null || e.travel_back_km != null || e.travel_costs != null);
   let travelHtml = '';
@@ -346,13 +354,12 @@ export const generateReportSectionHtml = (
     const rows = (report.employees || []).map((e: any) => {
       const hasAny = e.travel_to_hours != null || e.travel_back_hours != null || e.travel_to_km != null || e.travel_back_km != null || e.travel_costs != null;
       if (!hasAny) return '';
-      const fmt = (v: any, suffix = '') => (v != null ? `${v}${suffix}` : '–');
       return `<tr>
         <td>${escapeHtml(e.name || '')}</td>
-        <td style="text-align:right;">${fmt(e.travel_to_hours, ' h')}</td>
-        <td style="text-align:right;">${fmt(e.travel_back_hours, ' h')}</td>
-        <td style="text-align:right;">${fmt(e.travel_to_km, ' km')}</td>
-        <td style="text-align:right;">${fmt(e.travel_back_km, ' km')}</td>
+        <td style="text-align:right;">${fmtHM(e.travel_to_hours)}</td>
+        <td style="text-align:right;">${fmtHM(e.travel_back_hours)}</td>
+        <td style="text-align:right;">${e.travel_to_km != null ? e.travel_to_km + ' km' : '–'}</td>
+        <td style="text-align:right;">${e.travel_back_km != null ? e.travel_back_km + ' km' : '–'}</td>
         <td style="text-align:right;">${e.travel_costs != null ? `${e.travel_costs.toFixed ? e.travel_costs.toFixed(2) : e.travel_costs} €` : '–'}</td>
       </tr>`;
     }).join('');
@@ -361,15 +368,15 @@ export const generateReportSectionHtml = (
         <div class="section keep-together">
           <div class="section-title">🚗 Fahrzeiten (pro Mitarbeiter)</div>
           <table class="emp-table">
-            <thead><tr><th>Mitarbeiter</th><th>Hin (h)</th><th>Rück (h)</th><th>Hin (km)</th><th>Rück (km)</th><th>Spesen</th></tr></thead>
+            <thead><tr><th>Mitarbeiter</th><th>Hin (h:mm)</th><th>Rück (h:mm)</th><th>Hin (km)</th><th>Rück (km)</th><th>Spesen</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>`;
     }
   } else if (teamTravelHas) {
     const items: string[] = [];
-    if (r.travel_to_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">🛣️ Hin</div><div class="info-mini-value">${r.travel_to_hours} h${r.travel_to_km != null ? ' · ' + r.travel_to_km + ' km' : ''}</div></div>`);
-    if (r.travel_back_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">↩️ Rück</div><div class="info-mini-value">${r.travel_back_hours} h${r.travel_back_km != null ? ' · ' + r.travel_back_km + ' km' : ''}</div></div>`);
+    if (r.travel_to_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">🛣️ Hin</div><div class="info-mini-value">${fmtHM(r.travel_to_hours)}${r.travel_to_km != null ? ' · ' + r.travel_to_km + ' km' : ''}</div></div>`);
+    if (r.travel_back_hours != null) items.push(`<div class="info-mini"><div class="info-mini-label">↩️ Rück</div><div class="info-mini-value">${fmtHM(r.travel_back_hours)}${r.travel_back_km != null ? ' · ' + r.travel_back_km + ' km' : ''}</div></div>`);
     if ((r.travel_to_hours == null && r.travel_to_km != null) || (r.travel_back_hours == null && r.travel_back_km != null)) {
       if (r.travel_to_km != null && r.travel_to_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Hin</div><div class="info-mini-value">${r.travel_to_km} km</div></div>`);
       if (r.travel_back_km != null && r.travel_back_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Rück</div><div class="info-mini-value">${r.travel_back_km} km</div></div>`);

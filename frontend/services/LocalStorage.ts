@@ -25,6 +25,7 @@ const KEYS = {
   MATERIALS: 'aufmassprofi_materials_master',
   MACHINES: 'aufmassprofi_machines_master',
   MACHINE_CATEGORIES: 'aufmassprofi_machine_categories',
+  MATERIAL_CATEGORIES: 'aufmassprofi_material_categories',
 };
 
 // Helper to generate unique IDs
@@ -2374,6 +2375,50 @@ export const MachineCategoryService = {
   },
 };
 
+// ============ MATERIAL CATEGORY SERVICE ============
+export interface MaterialCategory {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export const MaterialCategoryService = {
+  getAll: async (): Promise<MaterialCategory[]> => {
+    const all = await getItems<MaterialCategory>(KEYS.MATERIAL_CATEGORIES);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+
+  add: async (name: string): Promise<MaterialCategory | null> => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const all = await getItems<MaterialCategory>(KEYS.MATERIAL_CATEGORIES);
+    const existing = all.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const newCat: MaterialCategory = {
+      id: generateId(),
+      name: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    all.push(newCat);
+    await setItems(KEYS.MATERIAL_CATEGORIES, all);
+    return newCat;
+  },
+
+  deleteByName: async (name: string): Promise<void> => {
+    const trimmed = (name || '').trim().toLowerCase();
+    if (!trimmed) return;
+    const all = await getItems<MaterialCategory>(KEYS.MATERIAL_CATEGORIES);
+    const filtered = all.filter(c => c.name.toLowerCase() !== trimmed);
+    await setItems(KEYS.MATERIAL_CATEGORIES, filtered);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const all = await getItems<MaterialCategory>(KEYS.MATERIAL_CATEGORIES);
+    const filtered = all.filter(c => c.id !== id);
+    await setItems(KEYS.MATERIAL_CATEGORIES, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -2394,6 +2439,7 @@ export const LocalStorage = {
   Materials: MaterialMasterService,
   Machines: MachineMasterService,
   MachineCategories: MachineCategoryService,
+  MaterialCategories: MaterialCategoryService,
 };
 
 export default LocalStorage;

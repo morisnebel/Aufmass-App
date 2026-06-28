@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { MaterialMasterService, MaterialMaster } from '../../services/LocalStorage';
+import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory } from '../../services/LocalStorage';
 
 const UNIT_OPTIONS = ['Stk', 'm', 'm²', 'm³', 'kg', 'L', 'Pck', 'Pal', 'h', 't', 'Rolle', 'Paar'];
 
@@ -44,6 +44,8 @@ export default function MaterialsIndex() {
   const [showFilterMenu, setShowFilterMenu] = useState<null | 'cat' | 'loc'>(null);
   // Roh-Eingabe-Strings für Zahlenfelder (damit Komma beim Tippen erhalten bleibt)
   const [numStr, setNumStr] = useState<{ stock?: string; threshold?: string; defaultQty?: string; price?: string }>({});
+  // Gespeicherte Kategorien (eigene Bezeichnungen)
+  const [savedCategories, setSavedCategories] = useState<MaterialCategory[]>([]);
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -56,6 +58,8 @@ export default function MaterialsIndex() {
   const load = useCallback(async () => {
     const all = await MaterialMasterService.getAll();
     setMaterials(all);
+    const cats = await MaterialCategoryService.getAll();
+    setSavedCategories(cats);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -177,12 +181,38 @@ export default function MaterialsIndex() {
       } else {
         await MaterialMasterService.create(form as any);
       }
+      // Kategorie automatisch in Vorschlagsliste übernehmen
+      if (form.category && typeof form.category === 'string' && form.category.trim()) {
+        await MaterialCategoryService.add(form.category.trim());
+      }
       setModalVisible(false);
       await load();
     } catch (e) {
       console.error(e);
       Alert.alert('Fehler', 'Speichern fehlgeschlagen.');
     }
+  };
+
+  const deleteCategory = (name: string) => {
+    const inUse = materials.filter(m => (m.category || '').toLowerCase() === name.toLowerCase()).length;
+    const msg = inUse > 0
+      ? `Kategorie "${name}" wird derzeit von ${inUse} Material(ien) verwendet. Trotzdem löschen?\n\n(Die Materialien bleiben erhalten – nur der Vorschlag verschwindet.)`
+      : `Kategorie "${name}" wirklich löschen?`;
+    Alert.alert('Kategorie löschen?', msg, [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: async () => {
+          await MaterialCategoryService.deleteByName(name);
+          const cats = await MaterialCategoryService.getAll();
+          setSavedCategories(cats);
+          if ((form.category || '').toLowerCase() === name.toLowerCase()) {
+            setForm(f => ({ ...f, category: '' }));
+          }
+        },
+      },
+    ]);
   };
 
   const handleDelete = (m: MaterialMaster) => {
@@ -500,20 +530,58 @@ export default function MaterialsIndex() {
                 </View>
 
                 <Text style={styles.label}>Kategorie</Text>
-                {metrics.categories.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
-                    {metrics.categories.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[styles.suggestChip, form.category === c && styles.suggestChipActive]}
-                        onPress={() => setForm({ ...form, category: form.category === c ? '' : c })}
-                      >
-                        <Text style={[styles.suggestChipText, form.category === c && styles.suggestChipTextActive]}>{c}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder={metrics.categories.length > 0 ? 'oder neue Kategorie eingeben' : 'z.B. Dachziegel, Holz'} />
+                {(() => {
+                  // Gespeicherte + aus Materialien abgeleitete Kategorien zusammenführen
+                  const seen = new Map<string, string>();
+                  savedCategories.forEach(c => { seen.set(c.name.toLowerCase(), c.name); });
+                  metrics.categories.forEach(c => { if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c); });
+                  const allCats = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
+                  if (allCats.length === 0) return null;
+                  return (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                      {allCats.map(c => {
+                        const isActive = (form.category || '').toLowerCase() === c.toLowerCase();
+                        return (
+                          <View key={c} style={[styles.suggestChip, isActive && styles.suggestChipActive, { flexDirection: 'row', alignItems: 'center', paddingRight: 4 }]}>
+                            <TouchableOpacity
+                              onPress={() => setForm({ ...form, category: c })}
+                              style={{ paddingVertical: 2 }}
+                            >
+                              <Text style={[styles.suggestChipText, isActive && styles.suggestChipTextActive]}>{c}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => deleteCategory(c)}
+                              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                              style={{ marginLeft: 6, paddingHorizontal: 4 }}
+                            >
+                              <Ionicons name="close-circle" size={16} color={isActive ? '#fff' : '#94a3b8'} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  );
+                })()}
+                <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder="Eigene Kategorie eingeben (z.B. Dachziegel, Holz)" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -4, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const v = (form.category || '').trim();
+                      if (!v) {
+                        Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
+                        return;
+                      }
+                      await MaterialCategoryService.add(v);
+                      const cats = await MaterialCategoryService.getAll();
+                      setSavedCategories(cats);
+                      Alert.alert('Gespeichert', `Kategorie "${v}" wurde hinzugefügt.`);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#dbeafe', borderRadius: 8 }}
+                  >
+                    <Ionicons name="bookmark-outline" size={14} color="#1976d2" />
+                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als Kategorie speichern</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text style={styles.label}>Lagerort</Text>
                 {metrics.locations.length > 0 && (

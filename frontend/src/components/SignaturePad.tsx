@@ -162,6 +162,21 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           <Ionicons name="trash-outline" size={18} color={isEmpty ? '#bbb' : '#d32f2f'} />
           <Text style={[styles.buttonText, { color: isEmpty ? '#bbb' : '#d32f2f' }]}>Löschen</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            // Explizit beenden: Scroll wieder freigeben
+            isDrawingRef.current = false;
+            moveStartedRef.current = false;
+            startPosRef.current = null;
+            commitChange();
+            onDrawingChange?.(false);
+          }}
+          style={[styles.button, styles.doneButton, isEmpty && { opacity: 0.5 }]}
+          disabled={isEmpty}
+        >
+          <Ionicons name="checkmark-circle" size={18} color={isEmpty ? '#bbb' : '#fff'} />
+          <Text style={[styles.buttonText, { color: isEmpty ? '#bbb' : '#fff', fontWeight: '700' }]}>Fertig</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -232,6 +247,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  doneButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
   },
 });
 

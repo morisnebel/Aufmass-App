@@ -1603,6 +1603,7 @@ export default function ReportEditScreen() {
                 style={[styles.input, { marginTop: 6 }]}
                 value={signatureCustomerName}
                 onChangeText={setSignatureCustomerName}
+                onFocus={() => setScrollEnabled(true)}
                 placeholder="Name in Druckbuchstaben (optional)"
               />
             </View>
@@ -1619,6 +1620,7 @@ export default function ReportEditScreen() {
                 style={[styles.input, { marginTop: 6 }]}
                 value={signatureWorkerName}
                 onChangeText={setSignatureWorkerName}
+                onFocus={() => setScrollEnabled(true)}
                 placeholder="Name in Druckbuchstaben (optional)"
               />
             </View>

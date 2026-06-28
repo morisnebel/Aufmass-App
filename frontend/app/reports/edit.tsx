@@ -749,6 +749,7 @@ export default function ReportEditScreen() {
           style={styles.scrollView}
           contentContainerStyle={{ paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
         >
           {/* ===== 0. Logo + Titel Header ===== */}
           <View style={styles.brandHeader}>

@@ -42,41 +42,71 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     onChange(pathsRef.current.join('|'));
   }, [onChange]);
 
+  // Drawing-Threshold: erst nach 4px Bewegung als "Unterschrift" werten
+  // → schnelles vertikales Wischen scrollt, aber Stift-Bewegung startet die Unterschrift
+  const moveStartedRef = useRef(false);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      // Capture FALSE: damit der Parent-ScrollView das Scrollen erkennen kann
-      // (sonst stiehlt SignaturePad die Geste auch bei vertikalem Scrollen darüber)
+      // Capture FALSE: damit ScrollView vertikales Scrollen darüber zulässt
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: () => false,
-      onPanResponderTerminationRequest: () => true,
+      // Termination FALSE: sobald aktiv gezeichnet wird, NICHT mehr an ScrollView abgeben
+      onPanResponderTerminationRequest: () => !isDrawingRef.current,
       onPanResponderGrant: (e: GestureResponderEvent) => {
         const { locationX, locationY } = e.nativeEvent;
+        // Path-Anfang merken aber NOCH NICHT scrollen sperren
         const newPath = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
         pathsRef.current = [...pathsRef.current, newPath];
-        isDrawingRef.current = true;
-        onDrawingChange?.(true);
+        moveStartedRef.current = false;
+        startPosRef.current = { x: locationX, y: locationY };
         rerender();
       },
       onPanResponderMove: (e: GestureResponderEvent) => {
         const { locationX, locationY } = e.nativeEvent;
+        // Beim ersten echten Move: Drawing aktivieren + Scroll sperren
+        if (!moveStartedRef.current && startPosRef.current) {
+          const dx = Math.abs(locationX - startPosRef.current.x);
+          const dy = Math.abs(locationY - startPosRef.current.y);
+          if (dx > 4 || dy > 4) {
+            moveStartedRef.current = true;
+            isDrawingRef.current = true;
+            onDrawingChange?.(true); // ← Hier wird Scroll gesperrt
+          } else {
+            return; // Noch nicht genug Bewegung — nicht zeichnen
+          }
+        }
         const last = pathsRef.current[pathsRef.current.length - 1];
         if (!last) return;
         pathsRef.current[pathsRef.current.length - 1] = `${last} L${locationX.toFixed(1)},${locationY.toFixed(1)}`;
         rerender();
       },
       onPanResponderRelease: () => {
+        const wasDrawing = isDrawingRef.current;
         isDrawingRef.current = false;
+        moveStartedRef.current = false;
+        startPosRef.current = null;
+        // Falls kein echtes Zeichnen stattfand: leeren Path entfernen
+        if (!wasDrawing) {
+          const lastPath = pathsRef.current[pathsRef.current.length - 1];
+          if (lastPath && !lastPath.includes('L')) {
+            pathsRef.current = pathsRef.current.slice(0, -1);
+            rerender();
+          }
+        }
         commitChange();
-        // Use setTimeout to avoid React render-cycle race conditions
-        // and ensure the parent's scrollEnabled state gets reliably re-enabled
+        // Scroll wieder aktivieren (mit kleinem Delay um Race-Conditions zu vermeiden)
         setTimeout(() => {
           if (!isDrawingRef.current) onDrawingChange?.(false);
         }, 50);
       },
       onPanResponderTerminate: () => {
         isDrawingRef.current = false;
+        moveStartedRef.current = false;
+        startPosRef.current = null;
         commitChange();
         setTimeout(() => {
           if (!isDrawingRef.current) onDrawingChange?.(false);

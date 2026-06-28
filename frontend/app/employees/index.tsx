@@ -56,7 +56,7 @@ export default function EmployeesIndex() {
                 }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                <Text style={{ color: '#0f172a', fontSize: 13, fontWeight: '700' }}>
                   {selectedIds.size === employees.length ? 'Keine' : 'Alle'}
                 </Text>
               </TouchableOpacity>
@@ -64,12 +64,12 @@ export default function EmployeesIndex() {
                 onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
-                <Ionicons name="close" size={22} color="#fff" />
+                <Ionicons name="close" size={22} color="#0f172a" />
               </TouchableOpacity>
             </>
           ) : (
             <TouchableOpacity onPress={openMenu} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-              <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+              <Ionicons name="ellipsis-vertical" size={22} color="#0f172a" />
             </TouchableOpacity>
           )}
         </View>

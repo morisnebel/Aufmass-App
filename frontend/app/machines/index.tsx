@@ -149,7 +149,7 @@ export default function MachinesIndex() {
                 }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                <Text style={{ color: '#0f172a', fontSize: 13, fontWeight: '700' }}>
                   {selectedIds.size === items.length ? 'Keine' : 'Alle'}
                 </Text>
               </TouchableOpacity>
@@ -157,7 +157,7 @@ export default function MachinesIndex() {
                 onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
-                <Ionicons name="close" size={22} color="#fff" />
+                <Ionicons name="close" size={22} color="#0f172a" />
               </TouchableOpacity>
             </>
           ) : (
@@ -170,10 +170,10 @@ export default function MachinesIndex() {
                 }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
-                <Ionicons name="notifications-outline" size={22} color="#fff" />
+                <Ionicons name="notifications-outline" size={22} color="#0f172a" />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-                <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+                <Ionicons name="ellipsis-vertical" size={22} color="#0f172a" />
               </TouchableOpacity>
             </>
           )}

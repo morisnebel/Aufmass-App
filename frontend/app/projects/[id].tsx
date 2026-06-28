@@ -28,7 +28,7 @@ import { isPro, getProStatus } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';

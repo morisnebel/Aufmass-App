@@ -20,7 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus } from '../services/FeatureFlags';

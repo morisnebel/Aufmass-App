@@ -21,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const IMAGEMETER_STORAGE_KEY = 'aufmassprofi_imagemeter_photos';
 const CUSTOM_COMPONENTS_KEY = 'aufmassprofi_custom_components';

@@ -77,6 +77,7 @@ export default function EmployeesIndex() {
     });
   }, [navigation, selectionMode, selectedIds, employees]);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<null | 'export-all' | 'select-mode' | 'import'>(null);
   const openMenu = () => setMenuVisible(true);
 
   const load = useCallback(async () => {
@@ -136,10 +137,8 @@ export default function EmployeesIndex() {
     if (importBusyRef.current) return;
     importBusyRef.current = true;
     try {
-      // Kurze Verzögerung, damit ggf. ein noch sichtbares Menü vollständig schließen kann
-      await new Promise(resolve => setTimeout(resolve, 300));
       const res = await DocumentPicker.getDocumentAsync({
-        type: ['application/json', 'text/plain', '*/*'],
+        type: '*/*',
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -351,18 +350,41 @@ export default function EmployeesIndex() {
       )}
 
       {/* Aktions-Menü */}
-      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+        onDismiss={() => {
+          // Wird auf iOS aufgerufen, NACHDEM das Modal vollständig vom Bildschirm verschwunden ist.
+          // Dies vermeidet Konflikte zwischen Modal & DocumentPicker bzw. anderen iOS-Sheets.
+          const action = pendingAction;
+          setPendingAction(null);
+          if (action === 'export-all') {
+            if (employees.length === 0) {
+              Alert.alert('Hinweis', 'Keine Mitarbeiter zum Exportieren vorhanden.');
+            } else {
+              handleExport();
+            }
+          } else if (action === 'select-mode') {
+            if (employees.length === 0) {
+              Alert.alert('Hinweis', 'Keine Mitarbeiter zum Auswählen vorhanden.');
+            } else {
+              setSelectionMode(true);
+              setSelectedIds(new Set());
+            }
+          } else if (action === 'import') {
+            handleImport();
+          }
+        }}
+      >
         <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
           <View style={[styles.menuCard, { marginTop: insets.top + 50 }]}>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
+                setPendingAction('export-all');
                 setMenuVisible(false);
-                if (employees.length === 0) {
-                  Alert.alert('Hinweis', 'Keine Mitarbeiter zum Exportieren vorhanden.');
-                  return;
-                }
-                handleExport();
               }}
             >
               <Ionicons name="cloud-upload-outline" size={20} color="#0891b2" />
@@ -374,13 +396,8 @@ export default function EmployeesIndex() {
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
+                setPendingAction('select-mode');
                 setMenuVisible(false);
-                if (employees.length === 0) {
-                  Alert.alert('Hinweis', 'Keine Mitarbeiter zum Auswählen vorhanden.');
-                  return;
-                }
-                setSelectionMode(true);
-                setSelectedIds(new Set());
               }}
             >
               <Ionicons name="checkbox-outline" size={20} color="#0891b2" />
@@ -392,7 +409,10 @@ export default function EmployeesIndex() {
             <View style={styles.menuDivider} />
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => { setMenuVisible(false); handleImport(); }}
+              onPress={() => {
+                setPendingAction('import');
+                setMenuVisible(false);
+              }}
             >
               <Ionicons name="cloud-download-outline" size={20} color="#16a34a" />
               <View style={{ flex: 1 }}>

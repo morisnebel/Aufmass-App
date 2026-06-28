@@ -172,12 +172,15 @@ export const generateReportSectionHtml = (
           ${((report as any).travel_in_total_hours) ? (() => {
             // Fahrzeit aggregieren
             let travelSum = 0;
+            const empCount = (report.employees || []).length || 1;
             if ((report as any).travel_per_employee_enabled) {
               (report.employees || []).forEach((e: any) => {
                 travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0);
               });
             } else {
-              travelSum = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
+              // Team-Modus: Fahrzeit gilt für JEDEN Mitarbeiter (× Anzahl)
+              const oneRound = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
+              travelSum = oneRound * empCount;
             }
             const baseHours = (report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
@@ -191,9 +194,13 @@ export const generateReportSectionHtml = (
               return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
             }, 0));
             if (travelSum <= 0) return '';
+            const isTeamMode = !(report as any).travel_per_employee_enabled;
+            const labelExtra = isTeamMode && empCount > 1
+              ? ` (Team × ${empCount} MA)`
+              : '';
             return `
               <tr>
-                <td colspan="6" style="text-align:right;font-size:10px;color:#0891b2;">+ Fahrzeit:</td>
+                <td colspan="6" style="text-align:right;font-size:10px;color:#0891b2;">+ Fahrzeit${labelExtra}:</td>
                 <td style="text-align:right;font-weight:600;color:#0891b2;font-size:10px;">${travelSum.toFixed(2)} h</td>
               </tr>
               <tr style="background:#ecfeff;">

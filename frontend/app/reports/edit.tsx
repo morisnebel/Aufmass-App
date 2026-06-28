@@ -127,6 +127,8 @@ export default function ReportEditScreen() {
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
   const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
+  // Roh-Strings für km-Eingaben pro Mitarbeiter (Komma-Erhaltung)
+  const [travelKmDraft, setTravelKmDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
   const [headerFields, setHeaderFields] = useState<Set<string>>(new Set(DEFAULT_REPORT_HEADER_FIELDS));
   const [weather, setWeather] = useState<Report['weather']>('');
@@ -1098,7 +1100,7 @@ export default function ReportEditScreen() {
           <Section
             icon="car-sport-outline"
             title="Fahrzeiten / Anfahrt"
-            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : 'Für ganzes Team'}
+            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${employees.length > 1 ? ` (× ${employees.length} Mitarbeiter)` : ''}`}
             color="#0891b2"
             right={
               <TouchableOpacity onPress={() => setTravelPerEmployee(!travelPerEmployee)} style={styles.travelToggle}>
@@ -1142,17 +1144,17 @@ export default function ReportEditScreen() {
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.miniLabel}>📏 km Hin</Text>
-                    <TextInput style={styles.input} value={travelToKm} onChangeText={setTravelToKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                    <TextInput style={styles.input} value={travelToKm} onChangeText={(v) => setTravelToKm(v.replace(/[^0-9,.]/g, ''))} placeholder="z.B. 12,5" keyboardType="numbers-and-punctuation" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.miniLabel}>📏 km Rück</Text>
-                    <TextInput style={styles.input} value={travelBackKm} onChangeText={setTravelBackKm} placeholder="z.B. 25" keyboardType="decimal-pad" />
+                    <TextInput style={styles.input} value={travelBackKm} onChangeText={(v) => setTravelBackKm(v.replace(/[^0-9,.]/g, ''))} placeholder="z.B. 12,5" keyboardType="numbers-and-punctuation" />
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
-                    <TextInput style={styles.input} value={travelCosts} onChangeText={setTravelCosts} placeholder="z.B. 12,50" keyboardType="decimal-pad" />
+                    <TextInput style={styles.input} value={travelCosts} onChangeText={(v) => setTravelCosts(v.replace(/[^0-9,.]/g, ''))} placeholder="z.B. 12,50" keyboardType="numbers-and-punctuation" />
                   </View>
                 </View>
                 <Text style={[styles.miniLabel, { marginTop: 8 }]}>Bemerkung zur Fahrt</Text>
@@ -1200,9 +1202,57 @@ export default function ReportEditScreen() {
                               {formatHM(emp.travel_back_hours) || 'Rück'}
                             </Text>
                           </TouchableOpacity>
-                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''} onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Hin" keyboardType="decimal-pad" />
-                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''} onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Rück" keyboardType="decimal-pad" />
-                          <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_costs != null ? String(emp.travel_costs) : ''} onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="€" keyboardType="decimal-pad" />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={travelKmDraft[`${emp.id}-km-to`] ?? (emp.travel_to_km != null ? String(emp.travel_to_km).replace('.', ',') : '')}
+                            onChangeText={(v) => {
+                              const clean = v.replace(/[^0-9,.]/g, '');
+                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-to`]: clean });
+                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                              updateEmp({ travel_to_km: Number.isFinite(num as number) ? num : undefined });
+                            }}
+                            onBlur={() => {
+                              const d = { ...travelKmDraft };
+                              delete d[`${emp.id}-km-to`];
+                              setTravelKmDraft(d);
+                            }}
+                            placeholder="km Hin"
+                            keyboardType="numbers-and-punctuation"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={travelKmDraft[`${emp.id}-km-back`] ?? (emp.travel_back_km != null ? String(emp.travel_back_km).replace('.', ',') : '')}
+                            onChangeText={(v) => {
+                              const clean = v.replace(/[^0-9,.]/g, '');
+                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-back`]: clean });
+                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                              updateEmp({ travel_back_km: Number.isFinite(num as number) ? num : undefined });
+                            }}
+                            onBlur={() => {
+                              const d = { ...travelKmDraft };
+                              delete d[`${emp.id}-km-back`];
+                              setTravelKmDraft(d);
+                            }}
+                            placeholder="km Rück"
+                            keyboardType="numbers-and-punctuation"
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
+                            value={travelKmDraft[`${emp.id}-cost`] ?? (emp.travel_costs != null ? String(emp.travel_costs).replace('.', ',') : '')}
+                            onChangeText={(v) => {
+                              const clean = v.replace(/[^0-9,.]/g, '');
+                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-cost`]: clean });
+                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                              updateEmp({ travel_costs: Number.isFinite(num as number) ? num : undefined });
+                            }}
+                            onBlur={() => {
+                              const d = { ...travelKmDraft };
+                              delete d[`${emp.id}-cost`];
+                              setTravelKmDraft(d);
+                            }}
+                            placeholder="€"
+                            keyboardType="numbers-and-punctuation"
+                          />
                         </View>
                       </View>
                     );
@@ -1515,15 +1565,7 @@ export default function ReportEditScreen() {
 
           {/* ===== 8. Sonstige Notizen ===== */}
           <Section icon="document-text-outline" title="Notizen" color="#ec4899">
-            <Text style={styles.miniLabel}>Anfahrt (einfache km-Angabe, optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={travelKm}
-              onChangeText={setTravelKm}
-              placeholder="z.B. 25"
-              keyboardType="decimal-pad"
-            />
-            <Text style={[styles.miniLabel, { marginTop: 10 }]}>Notizen</Text>
+            <Text style={styles.miniLabel}>Notizen</Text>
             <TextInput
               style={[styles.input, styles.multiline]}
               value={remarks}

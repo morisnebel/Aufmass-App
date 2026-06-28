@@ -127,8 +127,6 @@ export default function ReportEditScreen() {
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
   const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
-  // Roh-Strings für Pro-Mitarbeiter-Fahrzeit-Eingabe (key: empId-field)
-  const [travelEmpDraft, setTravelEmpDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
   const [headerFields, setHeaderFields] = useState<Set<string>>(new Set(DEFAULT_REPORT_HEADER_FIELDS));
   const [weather, setWeather] = useState<Report['weather']>('');
@@ -147,6 +145,12 @@ export default function ReportEditScreen() {
 
   // Time-Picker State (für Mitarbeiter-Tabelle)
   const [timePickerFor, setTimePickerFor] = useState<{ empId: string; field: 'time_from' | 'time_to' } | null>(null);
+  // Travel-Time-Picker: für Team-Hin/Rück oder pro-Mitarbeiter
+  const [travelTimePicker, setTravelTimePicker] = useState<
+    | { kind: 'team-to' | 'team-back' }
+    | { kind: 'emp-to' | 'emp-back'; empId: string }
+    | null
+  >(null);
   const [pauseModal, setPauseModal] = useState<{ empId: string } | null>(null);
   const [pauseInput, setPauseInput] = useState('');
   // Datum-Picker pro Mitarbeiter-Eintrag
@@ -1109,32 +1113,30 @@ export default function ReportEditScreen() {
               <View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin (h:mm)</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={travelToHoursStr}
-                      onChangeText={(v) => setTravelToHoursStr(v.replace(/[^0-9:,.]/g, ''))}
-                      onBlur={() => {
-                        const h = parseTimeHM(travelToHoursStr);
-                        if (h != null) setTravelToHoursStr(formatHM(h));
-                      }}
-                      placeholder="0:45"
-                      keyboardType="numbers-and-punctuation"
-                    />
+                    <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin</Text>
+                    <TouchableOpacity
+                      style={styles.travelTimeBtn}
+                      onPress={() => setTravelTimePicker({ kind: 'team-to' })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="time-outline" size={16} color="#0891b2" />
+                      <Text style={styles.travelTimeBtnText}>
+                        {travelToHoursStr || '0:00'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück (h:mm)</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={travelBackHoursStr}
-                      onChangeText={(v) => setTravelBackHoursStr(v.replace(/[^0-9:,.]/g, ''))}
-                      onBlur={() => {
-                        const h = parseTimeHM(travelBackHoursStr);
-                        if (h != null) setTravelBackHoursStr(formatHM(h));
-                      }}
-                      placeholder="0:45"
-                      keyboardType="numbers-and-punctuation"
-                    />
+                    <Text style={styles.miniLabel}>↩️ Fahrzeit Rück</Text>
+                    <TouchableOpacity
+                      style={styles.travelTimeBtn}
+                      onPress={() => setTravelTimePicker({ kind: 'team-back' })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="time-outline" size={16} color="#0891b2" />
+                      <Text style={styles.travelTimeBtnText}>
+                        {travelBackHoursStr || '0:00'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
@@ -1178,42 +1180,26 @@ export default function ReportEditScreen() {
                           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 6 }}>
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={travelEmpDraft[`${emp.id}-to`] ?? formatHM(emp.travel_to_hours)}
-                            onChangeText={(v) => {
-                              const clean = v.replace(/[^0-9:,.]/g, '');
-                              setTravelEmpDraft({ ...travelEmpDraft, [`${emp.id}-to`]: clean });
-                              updateEmp({ travel_to_hours: parseTimeHM(clean) });
-                            }}
-                            onBlur={() => {
-                              const parsed = parseTimeHM(travelEmpDraft[`${emp.id}-to`] ?? '');
-                              const nextDraft = { ...travelEmpDraft };
-                              delete nextDraft[`${emp.id}-to`];
-                              setTravelEmpDraft(nextDraft);
-                              if (parsed != null) updateEmp({ travel_to_hours: parsed });
-                            }}
-                            placeholder="Hin h:mm"
-                            keyboardType="numbers-and-punctuation"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={travelEmpDraft[`${emp.id}-back`] ?? formatHM(emp.travel_back_hours)}
-                            onChangeText={(v) => {
-                              const clean = v.replace(/[^0-9:,.]/g, '');
-                              setTravelEmpDraft({ ...travelEmpDraft, [`${emp.id}-back`]: clean });
-                              updateEmp({ travel_back_hours: parseTimeHM(clean) });
-                            }}
-                            onBlur={() => {
-                              const parsed = parseTimeHM(travelEmpDraft[`${emp.id}-back`] ?? '');
-                              const nextDraft = { ...travelEmpDraft };
-                              delete nextDraft[`${emp.id}-back`];
-                              setTravelEmpDraft(nextDraft);
-                              if (parsed != null) updateEmp({ travel_back_hours: parsed });
-                            }}
-                            placeholder="Rück h:mm"
-                            keyboardType="numbers-and-punctuation"
-                          />
+                          <TouchableOpacity
+                            style={[styles.travelTimeBtn, { flex: 1, paddingVertical: 8 }]}
+                            onPress={() => setTravelTimePicker({ kind: 'emp-to', empId: emp.id })}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="time-outline" size={14} color="#0891b2" />
+                            <Text style={styles.travelTimeBtnText}>
+                              {formatHM(emp.travel_to_hours) || 'Hin'}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.travelTimeBtn, { flex: 1, paddingVertical: 8 }]}
+                            onPress={() => setTravelTimePicker({ kind: 'emp-back', empId: emp.id })}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="time-outline" size={14} color="#0891b2" />
+                            <Text style={styles.travelTimeBtnText}>
+                              {formatHM(emp.travel_back_hours) || 'Rück'}
+                            </Text>
+                          </TouchableOpacity>
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_to_km != null ? String(emp.travel_to_km) : ''} onChangeText={(v) => updateEmp({ travel_to_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Hin" keyboardType="decimal-pad" />
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_back_km != null ? String(emp.travel_back_km) : ''} onChangeText={(v) => updateEmp({ travel_back_km: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="km Rück" keyboardType="decimal-pad" />
                           <TextInput style={[styles.input, { flex: 1, paddingVertical: 8 }]} value={emp.travel_costs != null ? String(emp.travel_costs) : ''} onChangeText={(v) => updateEmp({ travel_costs: v ? parseFloat(v.replace(',', '.')) : undefined })} placeholder="€" keyboardType="decimal-pad" />
@@ -1727,6 +1713,92 @@ export default function ReportEditScreen() {
             )}
           </>
         )}
+
+        {/* Travel-Time-Picker (Drehrad) für Fahrzeiten */}
+        {travelTimePicker && (() => {
+          // Aktuellen Wert holen
+          let currentHours = 0;
+          if (travelTimePicker.kind === 'team-to') currentHours = parseTimeHM(travelToHoursStr) ?? 0;
+          else if (travelTimePicker.kind === 'team-back') currentHours = parseTimeHM(travelBackHoursStr) ?? 0;
+          else if (travelTimePicker.kind === 'emp-to') {
+            const emp = employees.find(e => e.id === travelTimePicker.empId);
+            currentHours = emp?.travel_to_hours ?? 0;
+          } else if (travelTimePicker.kind === 'emp-back') {
+            const emp = employees.find(e => e.id === travelTimePicker.empId);
+            currentHours = emp?.travel_back_hours ?? 0;
+          }
+          // In Date umwandeln (HH:MM)
+          const totalMin = Math.round(currentHours * 60);
+          const initDate = new Date();
+          initDate.setHours(Math.floor(totalMin / 60), totalMin % 60, 0, 0);
+
+          const applyValue = (hours: number) => {
+            if (travelTimePicker.kind === 'team-to') {
+              setTravelToHoursStr(formatHM(hours));
+            } else if (travelTimePicker.kind === 'team-back') {
+              setTravelBackHoursStr(formatHM(hours));
+            } else if (travelTimePicker.kind === 'emp-to') {
+              setEmployees(prev => prev.map(e => e.id === travelTimePicker.empId ? { ...e, travel_to_hours: hours } : e));
+            } else if (travelTimePicker.kind === 'emp-back') {
+              setEmployees(prev => prev.map(e => e.id === travelTimePicker.empId ? { ...e, travel_back_hours: hours } : e));
+            }
+          };
+
+          const title = travelTimePicker.kind === 'team-to' || travelTimePicker.kind === 'emp-to'
+            ? '🛣️ Fahrzeit Hinweg'
+            : '↩️ Fahrzeit Rückweg';
+
+          return (
+            <Modal visible transparent animationType="fade" onRequestClose={() => setTravelTimePicker(null)}>
+              <View style={styles.modalOverlayCenter}>
+                <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                  <Text style={[styles.modalTitle, { color: '#0891b2' }]}>{title}</Text>
+                  <Text style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 4 }}>
+                    Stunden und Minuten wählen
+                  </Text>
+                  <DateTimePicker
+                    value={initDate}
+                    mode="time"
+                    is24Hour
+                    display="spinner"
+                    minuteInterval={5}
+                    onChange={(_, selected) => {
+                      if (!selected) return;
+                      const h = selected.getHours();
+                      const m = selected.getMinutes();
+                      const decimal = h + m / 60;
+                      // iOS Live-Update, Android nur bei Bestätigung (handled in onPress unten)
+                      if (Platform.OS === 'ios') {
+                        applyValue(decimal);
+                      } else {
+                        applyValue(decimal);
+                        setTravelTimePicker(null);
+                      }
+                    }}
+                  />
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.cancelBtn]}
+                      onPress={() => {
+                        // Reset auf 0 wenn Abbrechen
+                        setTravelTimePicker(null);
+                      }}
+                    >
+                      <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#0891b2' }]}
+                      onPress={() => setTravelTimePicker(null)}
+                    >
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveBtnText}>Übernehmen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          );
+        })()}
 
         {/* Pause Modal */}
         <Modal visible={!!pauseModal} transparent animationType="fade" onRequestClose={() => setPauseModal(null)}>
@@ -2453,6 +2525,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc', borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0',
   },
   travelTotalToggleActive: { backgroundColor: '#dcfce7', borderColor: '#16a34a' },
+  travelTimeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#ecfeff', borderWidth: 1.5, borderColor: '#67e8f9',
+    borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, minHeight: 42,
+  },
+  travelTimeBtnText: { fontSize: 14, color: '#0e7490', fontWeight: '700' },
 
   // --- Weather ---
   weatherRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, alignItems: 'center' },

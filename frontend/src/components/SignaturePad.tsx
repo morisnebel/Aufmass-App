@@ -33,7 +33,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   // paths leben primär im ref um Render-Zyklen-Konflikte zu vermeiden.
   const pathsRef = useRef<string[]>(value ? value.split('|').filter(Boolean) : []);
   const [, forceRender] = useState(0);
-  const [showSavedHint, setShowSavedHint] = useState(false);
+  const [isActive, setIsActive] = useState(false);
   const rerender = useCallback(() => forceRender((v) => v + 1), []);
 
   // Aktuell laufender Pfad index
@@ -135,8 +135,8 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     <View style={styles.wrapper}>
       {label && <Text style={styles.label}>{label}</Text>}
       <View
-        style={[styles.canvas, { height }]}
-        {...panResponder.panHandlers}
+        style={[styles.canvas, { height }, isActive && styles.canvasActive]}
+        {...(isActive ? panResponder.panHandlers : {})}
       >
         <Svg width="100%" height="100%">
           {paths.map((d, i) => (
@@ -145,19 +145,25 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         </Svg>
         {isEmpty && (
           <View pointerEvents="none" style={styles.placeholderContainer}>
-            <Ionicons name="create-outline" size={28} color="#bbb" />
-            <Text style={styles.placeholderText}>{placeholder}</Text>
+            <Ionicons name={isActive ? 'create' : 'create-outline'} size={28} color={isActive ? '#1976d2' : '#bbb'} />
+            <Text style={[styles.placeholderText, isActive && { color: '#1976d2', fontWeight: '600' }]}>
+              {isActive ? 'Jetzt hier unterschreiben' : placeholder}
+            </Text>
           </View>
         )}
         <View style={styles.baselineContainer} pointerEvents="none">
           <View style={styles.baseline} />
           <Text style={styles.xMark}>✕</Text>
         </View>
+        {/* Overlay wenn inaktiv: blockiert keine Touch-Events (pointerEvents=none) und sieht "deaktiviert" aus */}
+        {!isActive && (
+          <View pointerEvents="none" style={styles.inactiveOverlay} />
+        )}
       </View>
       <View style={styles.buttonRow}>
-        <TouchableOpacity onPress={handleUndo} style={styles.button} disabled={isEmpty}>
-          <Ionicons name="arrow-undo" size={18} color={isEmpty ? '#bbb' : '#1976d2'} />
-          <Text style={[styles.buttonText, isEmpty && { color: '#bbb' }]}>Rückgängig</Text>
+        <TouchableOpacity onPress={handleUndo} style={styles.button} disabled={isEmpty || !isActive}>
+          <Ionicons name="arrow-undo" size={18} color={(isEmpty || !isActive) ? '#bbb' : '#1976d2'} />
+          <Text style={[styles.buttonText, (isEmpty || !isActive) && { color: '#bbb' }]}>Rückgängig</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleClear} style={styles.button} disabled={isEmpty}>
           <Ionicons name="trash-outline" size={18} color={isEmpty ? '#bbb' : '#d32f2f'} />
@@ -165,27 +171,32 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => {
-            // Explizit beenden: Scroll wieder freigeben (auch wenn nichts gezeichnet wurde)
-            isDrawingRef.current = false;
-            moveStartedRef.current = false;
-            startPosRef.current = null;
-            commitChange();
-            // Force-Unlock via mehrfache Aufrufe um sicher zu gehen
-            onDrawingChange?.(false);
-            // Kurzes Visual-Feedback
-            setShowSavedHint(true);
-            setTimeout(() => setShowSavedHint(false), 1200);
-            // Sicherheitsnetz: erneutes Unlock nach 100ms
-            setTimeout(() => {
-              if (!isDrawingRef.current) onDrawingChange?.(false);
-            }, 100);
+            if (!isActive) {
+              // === Aktivieren: Eingabemodus starten ===
+              setIsActive(true);
+              onDrawingChange?.(true); // Scroll sperren
+            } else {
+              // === Beenden: Unterschrift speichern, Scroll wieder frei ===
+              isDrawingRef.current = false;
+              moveStartedRef.current = false;
+              startPosRef.current = null;
+              commitChange();
+              setIsActive(false);
+              onDrawingChange?.(false); // Scroll freigeben
+              // Sicherheits-Doppel-Unlock
+              setTimeout(() => onDrawingChange?.(false), 100);
+            }
           }}
-          style={[styles.button, styles.doneButton]}
+          style={[styles.button, isActive ? styles.doneButton : styles.startButton]}
           activeOpacity={0.7}
         >
-          <Ionicons name={showSavedHint ? 'checkmark-done' : 'checkmark-circle'} size={18} color="#fff" />
+          <Ionicons
+            name={isActive ? 'checkmark-circle' : 'pencil'}
+            size={18}
+            color="#fff"
+          />
           <Text style={[styles.buttonText, { color: '#fff', fontWeight: '700' }]}>
-            {showSavedHint ? 'Gespeichert ✓' : 'Fertig'}
+            {isActive ? 'Fertig' : 'Unterschrift'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -263,6 +274,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
     borderRadius: 8,
     paddingHorizontal: 12,
+  },
+  startButton: {
+    backgroundColor: '#1976d2',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+  },
+  canvasActive: {
+    borderColor: '#1976d2',
+    borderWidth: 2,
+    backgroundColor: '#f0f9ff',
+  },
+  inactiveOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(248, 250, 252, 0.4)',
   },
 });
 

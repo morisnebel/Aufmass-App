@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only test of the redesigned SignaturePad activation toggle. Seeded localStorage (customer/project/settings) and navigated to /reports/edit?projectId=proj-test-1. Verified via DOM inspection + screenshots: (1) Initial state shows blue 'Unterschrift' button (#1976d2 = rgb(25,118,210)) with pencil icon and dimmed canvas (rgba(248,250,252,0.4) overlay) — PASS. (2) Tap 'Unterschrift' → button becomes green 'Fertig' (#16a34a = rgb(22,163,74)) with checkmark-circle icon, canvas background turns light blue (#f0f9ff = rgb(240,249,255)), border becomes blue (rgb(25,118,210)), placeholder text changes to 'Jetzt hier unterschreiben' — PASS. (3) Tap 'Fertig' → button reverts to 'Unterschrift', canvas dims again — PASS. (4) Two independent SignaturePads (Kunde + Handwerker) — activating one does NOT activate the other (after Kunde was activated then deactivated, both still show 'Unterschrift', and screenshot confirmed only Kunde canvas was blue-bordered) — PASS. (5) CRITICAL FAILURE: Parent ScrollView does NOT lock when pad is active. Mouse-wheel scroll over the active canvas scrolled the page from scrollTop=1600 to scrollTop=1900 — confirming scrollEnabled is still TRUE while isActive=true. Root cause: integration in /app/frontend/app/reports/edit.tsx is INVERTED — `onDrawingChange={setScrollEnabled}` on lines 1598 and 1615. SignaturePad fires onDrawingChange(true) when activating (meaning 'please block scroll'), but the parent then calls setScrollEnabled(true), which KEEPS scrolling enabled. Must be `onDrawingChange={(d) => setScrollEnabled(!d)}`. This is the central requirement of the redesign and is broken.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "SignaturePad activation → ScrollView lock",
+        "issue": "Parent passes `onDrawingChange={setScrollEnabled}` (edit.tsx lines 1598 + 1615). SignaturePad fires onDrawingChange(true) on activate to request scroll-lock, but this directly sets scrollEnabled=TRUE (scroll stays enabled). Confirmed by wheel-scroll over active canvas: scrollTop 1600 → 1900 while isActive=true. Fix: `onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}` on BOTH SignaturePad instances. Also remove/invert the onFocus={() => setScrollEnabled(true)} on the name TextInputs (lines 1606, 1623) — they currently work only because the bug aligns by coincidence; with the fix, they should remain setScrollEnabled(true) which is still correct semantically (re-enable scroll when focusing name field).",
+        "affected_testIDs": []
+      }
+    ],
+    "design_issues": [
+      {"screen": "SignaturePad (Rapport edit)", "issues": [
+        "Touch target: Unterschrift/Fertig button is ~32px tall (paddingVertical:6 in styles.button) — below the 44px iOS minimum. Same issue noted in iteration_14."
+      ]}
+    ],
+    "react_native_issues": [
+      {"component": "SignaturePad — missing testIDs", "issue": "TouchableOpacity for Rückgängig, Löschen, and the start/done button still have no testID prop. Reference: /app/frontend/src/components/SignaturePad.tsx:164-201"}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "CRITICAL: Fix inverted onDrawingChange wiring in /app/frontend/app/reports/edit.tsx — replace `onDrawingChange={setScrollEnabled}` with `onDrawingChange={(isDrawing) => setScrollEnabled(!isDrawing)}` on both SignaturePad instances (lines 1598 and 1615). Without this, the entire redesign’s scroll-lock contract is broken.",
+    "Add testID props to SignaturePad buttons (e.g. testID=\"signature-start-button\", \"signature-undo\", \"signature-clear\") so future regression tests don’t have to walk the DOM by background color.",
+    "Optional: increase styles.button paddingVertical from 6 → 10 for 44px touch target.",
+    "After fix, retest by activating SignaturePad and confirming mouse-wheel/touch over canvas does NOT scroll the parent ScrollView."
+  ],
+  "critical_code_review_comments": [
+    "edit.tsx still 2727 lines (>700) — recommend splitting into sub-components (SignaturesSection, EmployeesSection, etc.) for maintainability.",
+    "SignaturePad.tsx: the onDrawingChange contract is now overloaded — it fires (true) both when panResponder starts a stroke AND when the Unterschrift button is tapped. The parent must treat (true)=lock-scroll, (false)=unlock-scroll. The current wiring in edit.tsx misuses this contract (passes setScrollEnabled directly), which is the root cause of the reported bug.",
+    "Inactive overlay correctly uses pointerEvents='none' so the underlying ScrollView receives the touch/wheel events — this is correct, but only works once scrollEnabled is properly false when active."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "5/6 sub-requirements PASS, 1 CRITICAL FAIL (scroll-lock)"},
+  "seed_data_creation": "localStorage on https://image-render-test.preview.emergentagent.com seeded with one customer (cust-test-1), one project (proj-test-1, project_number P-001), and a settings object with disclaimer_accepted_at + disclaimer_version=2026-06 + is_pro=true. This bypasses DisclaimerGate so /reports/edit?projectId=proj-test-1 loads directly.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After the fix lands, re-run a wheel-scroll test over the active canvas: scroll the main ScrollView to scrollTop≈1600, click 'Unterschrift', record scrollTop, dispatch page.mouse.wheel(0, 300) while pointer is over the canvas, then assert scrollTop is UNCHANGED. Also: locate the React fiber for the ScrollView (walk DOM looking for __reactProps$* with a 'scrollEnabled' key) — note that in this build the React fiber walk returned no element with scrollEnabled in its props, likely because RN-web compiles scrollEnabled into an overflow style switch. So the wheel-scroll test is the most reliable assertion.",
+  "rca_of_issue": "Root cause: /app/frontend/app/reports/edit.tsx lines 1598 and 1615 pass `onDrawingChange={setScrollEnabled}` to SignaturePad. The SignaturePad’s contract is onDrawingChange(true)=‘I’m active/drawing, please block parent scroll’; onDrawingChange(false)=‘I’m inactive, please re-enable scroll’. The parent state variable is `scrollEnabled` and is consumed by <ScrollView scrollEnabled={scrollEnabled}>. Therefore the boolean must be INVERTED: setScrollEnabled(!isDrawing). The current wiring sends true when scroll should be false (and vice versa). Reproduction: navigate to /reports/edit?projectId=proj-test-1, scroll to Unterschriften section, tap blue 'Unterschrift' button (it correctly turns green 'Fertig' and the canvas highlights), then mouse-wheel over the canvas — the page still scrolls. Expected: the page should NOT scroll while a pad is active. Mitigation (one-line change): `onDrawingChange={(d) => setScrollEnabled(!d)}` on both <SignaturePad …/> usages."
+}

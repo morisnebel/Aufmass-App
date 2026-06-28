@@ -169,16 +169,27 @@ export const generateReportSectionHtml = (
               return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
             }, 0)).toFixed(2)} h</td>
           </tr>
-          ${((report as any).travel_in_total_hours) ? (() => {
+          ${(() => {
+            // Fahrzeit zur Gesamtarbeitszeit addieren:
+            // - Pro-Mitarbeiter-Modus mit Daten: IMMER addieren (User hat explizit pro MA eingetragen)
+            // - Team-Modus: nur wenn Flag "travel_in_total_hours" aktiv
+            const isPerEmp = !!(report as any).travel_per_employee_enabled;
+            const perEmpHasData = isPerEmp && (report.employees || []).some((e: any) =>
+              (e.travel_to_hours || 0) > 0 || (e.travel_back_hours || 0) > 0
+            );
+            const teamHasData = !isPerEmp && (((report as any).travel_to_hours || 0) > 0 || ((report as any).travel_back_hours || 0) > 0);
+            const teamFlag = !!((report as any).travel_in_total_hours);
+            const shouldShow = perEmpHasData || (teamHasData && teamFlag);
+            if (!shouldShow) return '';
+
             // Fahrzeit aggregieren
             let travelSum = 0;
             const empCount = (report.employees || []).length || 1;
-            if ((report as any).travel_per_employee_enabled) {
+            if (isPerEmp) {
               (report.employees || []).forEach((e: any) => {
                 travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0);
               });
             } else {
-              // Team-Modus: Fahrzeit gilt für JEDEN Mitarbeiter (× Anzahl)
               const oneRound = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
               travelSum = oneRound * empCount;
             }
@@ -207,7 +218,7 @@ export const generateReportSectionHtml = (
                 <td colspan="6" style="text-align:right;font-weight:800;color:#0e7490;">Gesamt inkl. Fahrzeit:</td>
                 <td style="text-align:right;font-weight:800;color:#0e7490;">${(baseHours + travelSum).toFixed(2)} h</td>
               </tr>`;
-          })() : ''}
+          })()}
         </tbody>
       </table>`
     : '<p style="color:#999;font-style:italic;font-size:11px;">Keine Mitarbeiter angegeben</p>';

@@ -1260,28 +1260,39 @@ export default function ReportEditScreen() {
                 )}
               </View>
             )}
-            <TouchableOpacity
-              style={[styles.travelTotalToggle, travelInTotalHours && styles.travelTotalToggleActive]}
-              onPress={() => setTravelInTotalHours(!travelInTotalHours)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={travelInTotalHours ? 'checkbox' : 'square-outline'} size={18} color={travelInTotalHours ? '#16a34a' : '#94a3b8'} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: travelInTotalHours ? '#15803d' : '#475569', flex: 1 }}>
-                Fahrzeit zur Gesamtarbeitszeit hinzurechnen
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.saveDefaultBtn}
-              onPress={async () => {
-                try {
-                  await SettingsService.update({ report_travel_in_total_hours: travelInTotalHours } as any);
-                  Alert.alert('Gespeichert', 'Diese Einstellung ist jetzt der Standard.');
-                } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
-              }}
-            >
-              <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
-              <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
-            </TouchableOpacity>
+            {!travelPerEmployee ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.travelTotalToggle, travelInTotalHours && styles.travelTotalToggleActive]}
+                  onPress={() => setTravelInTotalHours(!travelInTotalHours)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={travelInTotalHours ? 'checkbox' : 'square-outline'} size={18} color={travelInTotalHours ? '#16a34a' : '#94a3b8'} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: travelInTotalHours ? '#15803d' : '#475569', flex: 1 }}>
+                    Fahrzeit zur Gesamtarbeitszeit hinzurechnen
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.saveDefaultBtn}
+                  onPress={async () => {
+                    try {
+                      await SettingsService.update({ report_travel_in_total_hours: travelInTotalHours } as any);
+                      Alert.alert('Gespeichert', 'Diese Einstellung ist jetzt der Standard.');
+                    } catch { Alert.alert('Fehler', 'Konnte nicht gespeichert werden.'); }
+                  }}
+                >
+                  <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
+                  <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={[styles.travelTotalToggle, { backgroundColor: '#dcfce7', borderColor: '#16a34a' }]}>
+                <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#15803d', flex: 1 }}>
+                  Pro-Mitarbeiter-Fahrzeiten werden automatisch zu den Stunden addiert
+                </Text>
+              </View>
+            )}
           </Section>
 
           {/* ===== 3. Ausgeführte Arbeiten (Checkbox-Liste + Beschreibung) ===== */}

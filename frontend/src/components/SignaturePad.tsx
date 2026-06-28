@@ -33,6 +33,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
   // paths leben primär im ref um Render-Zyklen-Konflikte zu vermeiden.
   const pathsRef = useRef<string[]>(value ? value.split('|').filter(Boolean) : []);
   const [, forceRender] = useState(0);
+  const [showSavedHint, setShowSavedHint] = useState(false);
   const rerender = useCallback(() => forceRender((v) => v + 1), []);
 
   // Aktuell laufender Pfad index
@@ -164,18 +165,28 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => {
-            // Explizit beenden: Scroll wieder freigeben
+            // Explizit beenden: Scroll wieder freigeben (auch wenn nichts gezeichnet wurde)
             isDrawingRef.current = false;
             moveStartedRef.current = false;
             startPosRef.current = null;
             commitChange();
+            // Force-Unlock via mehrfache Aufrufe um sicher zu gehen
             onDrawingChange?.(false);
+            // Kurzes Visual-Feedback
+            setShowSavedHint(true);
+            setTimeout(() => setShowSavedHint(false), 1200);
+            // Sicherheitsnetz: erneutes Unlock nach 100ms
+            setTimeout(() => {
+              if (!isDrawingRef.current) onDrawingChange?.(false);
+            }, 100);
           }}
-          style={[styles.button, styles.doneButton, isEmpty && { opacity: 0.5 }]}
-          disabled={isEmpty}
+          style={[styles.button, styles.doneButton]}
+          activeOpacity={0.7}
         >
-          <Ionicons name="checkmark-circle" size={18} color={isEmpty ? '#bbb' : '#fff'} />
-          <Text style={[styles.buttonText, { color: isEmpty ? '#bbb' : '#fff', fontWeight: '700' }]}>Fertig</Text>
+          <Ionicons name={showSavedHint ? 'checkmark-done' : 'checkmark-circle'} size={18} color="#fff" />
+          <Text style={[styles.buttonText, { color: '#fff', fontWeight: '700' }]}>
+            {showSavedHint ? 'Gespeichert ✓' : 'Fertig'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

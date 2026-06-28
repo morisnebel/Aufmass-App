@@ -46,9 +46,11 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponderCapture: () => true,
-      onPanResponderTerminationRequest: () => false,
+      // Capture FALSE: damit der Parent-ScrollView das Scrollen erkennen kann
+      // (sonst stiehlt SignaturePad die Geste auch bei vertikalem Scrollen darüber)
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponderCapture: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderGrant: (e: GestureResponderEvent) => {
         const { locationX, locationY } = e.nativeEvent;
         const newPath = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;

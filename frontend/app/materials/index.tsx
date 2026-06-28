@@ -7,6 +7,9 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory, MaterialLocationService, MaterialLocation, MaterialSupplierService, MaterialSupplier } from '../../services/LocalStorage';
 
 const UNIT_OPTIONS = ['Stk', 'm', 'm²', 'm³', 'kg', 'L', 'Pck', 'Pal', 'h', 't', 'Rolle', 'Paar'];
@@ -48,14 +51,48 @@ export default function MaterialsIndex() {
   const [savedCategories, setSavedCategories] = useState<MaterialCategory[]>([]);
   const [savedLocations, setSavedLocations] = useState<MaterialLocation[]>([]);
   const [savedSuppliers, setSavedSuppliers] = useState<MaterialSupplier[]>([]);
+  // ===== Export-Auswahl-Modus =====
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<null | 'export-all' | 'select-mode' | 'import'>(null);
 
   React.useEffect(() => {
     navigation.setOptions({
-      title: 'Material-Verwaltung',
-      headerStyle: { backgroundColor: '#1976d2' },
+      title: selectionMode ? `${selectedIds.size} ausgewählt` : 'Material-Verwaltung',
+      headerStyle: { backgroundColor: selectionMode ? '#0891b2' : '#1976d2' },
       headerTintColor: '#fff',
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: 8, paddingRight: 8 }}>
+          {selectionMode ? (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  if (selectedIds.size === materials.length) setSelectedIds(new Set());
+                  else setSelectedIds(new Set(materials.map(m => m.id)));
+                }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                  {selectedIds.size === materials.length ? 'Keine' : 'Alle'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                <Ionicons name="close" size={22} color="#fff" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+              <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ),
     });
-  }, [navigation]);
+  }, [navigation, selectionMode, selectedIds, materials]);
 
   const load = useCallback(async () => {
     const all = await MaterialMasterService.getAll();
@@ -278,6 +315,132 @@ export default function MaterialsIndex() {
     ]);
   };
 
+  const handleDuplicate = async (m: MaterialMaster) => {
+    try {
+      const { id, created_at, updated_at, ...rest } = m as any;
+      const newName = `${m.name} (Kopie)`;
+      const copy = { ...rest, name: newName };
+      await MaterialMasterService.create(copy);
+      await load();
+      Alert.alert('Kopiert', `"${newName}" wurde erstellt.`);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Fehler', 'Kopieren fehlgeschlagen.');
+    }
+  };
+
+  // ===== Export-Funktion =====
+  const handleExport = async (idsToExport?: string[]) => {
+    try {
+      const toExport = idsToExport
+        ? materials.filter(m => idsToExport.includes(m.id))
+        : materials;
+      if (toExport.length === 0) {
+        Alert.alert('Keine Auswahl', 'Bitte mindestens ein Material auswählen.');
+        return;
+      }
+      const payload = {
+        type: 'aufmassprofi-materials',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        count: toExport.length,
+        materials: toExport,
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = toExport.length === 1
+        ? `Material_${toExport[0].name.replace(/[^a-zA-Z0-9äöüÄÖÜß-]/g, '_')}_${date}.json`
+        : `Material_${toExport.length}_${date}.json`;
+      const fileUri = `${(FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: `${toExport.length} Material(ien) exportieren`,
+          UTI: 'public.json',
+        });
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+      } else {
+        Alert.alert('Hinweis', `Export gespeichert unter:\n${fileUri}`);
+      }
+    } catch (e: any) {
+      console.error('[Export] Failed', e);
+      Alert.alert('Fehler', 'Export fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  };
+
+  // ===== Import-Funktion =====
+  const importBusyRef = React.useRef(false);
+  const handleImport = async () => {
+    if (importBusyRef.current) return;
+    importBusyRef.current = true;
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled || !res.assets || res.assets.length === 0) return;
+      const fileUri = res.assets[0].uri;
+      const content = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' as any });
+      let parsed: any;
+      try { parsed = JSON.parse(content); } catch {
+        Alert.alert('Fehler', 'Die Datei ist kein gültiges JSON.');
+        return;
+      }
+      const incoming: MaterialMaster[] = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.materials)
+        ? parsed.materials
+        : [];
+      if (incoming.length === 0) {
+        Alert.alert('Fehler', 'Keine Materialien in der Datei gefunden.');
+        return;
+      }
+      const existing = await MaterialMasterService.getAll();
+      const existingNames = new Set(existing.map(m => m.name.toLowerCase().trim()));
+      Alert.alert(
+        'Materialien importieren',
+        `${incoming.length} Material(ien) gefunden.\n\nMöchtest du sie hinzufügen? Duplikate (gleicher Name) werden übersprungen.`,
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: `${incoming.length} importieren`,
+            onPress: async () => {
+              let imported = 0;
+              let skipped = 0;
+              for (const mat of incoming) {
+                if (!mat || !mat.name) { skipped++; continue; }
+                if (existingNames.has(mat.name.toLowerCase().trim())) { skipped++; continue; }
+                const { id, created_at, updated_at, ...rest } = mat as any;
+                await MaterialMasterService.create(rest);
+                imported++;
+              }
+              await load();
+              Alert.alert(
+                'Import abgeschlossen',
+                `✓ ${imported} Material(ien) importiert\n${skipped > 0 ? `⚠ ${skipped} übersprungen (Duplikate)` : ''}`
+              );
+            },
+          },
+        ]
+      );
+    } catch (e: any) {
+      console.error('[Import] Failed', e);
+      Alert.alert('Fehler', 'Import fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      importBusyRef.current = false;
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
   // Bestand anpassen (+/-)
   const adjustStock = async (m: MaterialMaster, delta: number) => {
     const newStock = Math.max(0, (m.stock_quantity ?? 0) + delta);
@@ -351,8 +514,22 @@ export default function MaterialsIndex() {
             ) : (
               filtered.map(m => {
                 const isLow = m.low_stock_threshold != null && m.low_stock_threshold > 0 && (m.stock_quantity ?? 0) <= m.low_stock_threshold;
+                const isSelected = selectedIds.has(m.id);
                 return (
-                  <TouchableOpacity key={m.id} style={styles.matCard} onPress={() => openEdit(m)}>
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.matCard, isSelected && { borderColor: '#0891b2', borderWidth: 2, backgroundColor: '#ecfeff' }]}
+                    onPress={() => { if (selectionMode) toggleSelect(m.id); else openEdit(m); }}
+                  >
+                    {selectionMode && (
+                      <View style={{ marginRight: 6 }}>
+                        <Ionicons
+                          name={isSelected ? 'checkbox' : 'square-outline'}
+                          size={24}
+                          color={isSelected ? '#0891b2' : '#94a3b8'}
+                        />
+                      </View>
+                    )}
                     {m.photo ? (
                       <Image source={{ uri: m.photo }} style={styles.matPhoto} />
                     ) : (
@@ -388,9 +565,19 @@ export default function MaterialsIndex() {
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <TouchableOpacity onPress={() => handleDelete(m)} style={styles.delBtn}>
-                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                    </TouchableOpacity>
+                    {!selectionMode && (
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); handleExport([m.id]); }} style={styles.delBtn}>
+                          <Ionicons name="share-outline" size={18} color="#0891b2" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); handleDuplicate(m); }} style={styles.delBtn}>
+                          <Ionicons name="copy-outline" size={18} color="#1976d2" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(m)} style={styles.delBtn}>
+                          <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })
@@ -454,6 +641,76 @@ export default function MaterialsIndex() {
           </View>
         )}
       </ScrollView>
+
+      {/* Floating Action Bar bei Selection-Mode */}
+      {selectionMode && selectedIds.size > 0 && (
+        <View style={[matStyles.fab, { bottom: Math.max(insets.bottom, 12) + 12 }]}>
+          <TouchableOpacity
+            style={matStyles.fabBtn}
+            onPress={() => handleExport(Array.from(selectedIds))}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Text style={matStyles.fabBtnText}>{selectedIds.size} exportieren</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Aktions-Menü (Export/Import) */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+        onDismiss={() => {
+          const action = pendingAction;
+          setPendingAction(null);
+          if (action === 'export-all') {
+            if (materials.length === 0) {
+              Alert.alert('Hinweis', 'Keine Materialien zum Exportieren vorhanden.');
+            } else {
+              handleExport();
+            }
+          } else if (action === 'select-mode') {
+            if (materials.length === 0) {
+              Alert.alert('Hinweis', 'Keine Materialien zum Auswählen vorhanden.');
+            } else {
+              setSelectionMode(true);
+              setSelectedIds(new Set());
+              setTab('materials');
+            }
+          } else if (action === 'import') {
+            handleImport();
+          }
+        }}
+      >
+        <TouchableOpacity style={matStyles.menuOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={[matStyles.menuCard, { marginTop: insets.top + 50 }]}>
+            <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('export-all'); setMenuVisible(false); }}>
+              <Ionicons name="cloud-upload-outline" size={20} color="#0891b2" />
+              <View style={{ flex: 1 }}>
+                <Text style={matStyles.menuItemTitle}>Alle exportieren</Text>
+                <Text style={matStyles.menuItemSub}>{materials.length} Material(ien) als JSON</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('select-mode'); setMenuVisible(false); }}>
+              <Ionicons name="checkbox-outline" size={20} color="#0891b2" />
+              <View style={{ flex: 1 }}>
+                <Text style={matStyles.menuItemTitle}>Auswahl exportieren</Text>
+                <Text style={matStyles.menuItemSub}>Einzelne Materialien auswählen</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={matStyles.menuDivider} />
+            <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('import'); setMenuVisible(false); }}>
+              <Ionicons name="cloud-download-outline" size={20} color="#16a34a" />
+              <View style={{ flex: 1 }}>
+                <Text style={matStyles.menuItemTitle}>Importieren</Text>
+                <Text style={matStyles.menuItemSub}>JSON-Datei auswählen</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ===== Filter Menu Modal ===== */}
       <Modal visible={!!showFilterMenu} transparent animationType="fade" onRequestClose={() => setShowFilterMenu(null)}>
@@ -859,4 +1116,16 @@ const styles = StyleSheet.create({
   photoPlaceholderBig: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e2e8f0', borderStyle: 'dashed' },
   photoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eff6ff', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   photoBtnText: { fontSize: 12, color: '#1976d2', fontWeight: '600' },
+});
+
+const matStyles = StyleSheet.create({
+  fab: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
+  fabBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#0891b2', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fabBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'flex-end', paddingRight: 8 },
+  menuCard: { backgroundColor: '#fff', borderRadius: 12, width: 260, paddingVertical: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  menuItemTitle: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  menuItemSub: { fontSize: 11, color: '#64748b', marginTop: 1 },
+  menuDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 4 },
 });

@@ -7,6 +7,9 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import { MachineMasterService, MachineMaster, SettingsService, MachineCategoryService, MachineCategory } from '../../services/LocalStorage';
 import { DatePickerField } from '../../src/components/DatePickerField';
 
@@ -116,6 +119,11 @@ export default function MachinesIndex() {
   const [reminderTuvStr, setReminderTuvStr] = useState<string>('30');
   // Gespeicherte Kategorien (eigene Bezeichnungen)
   const [savedCategories, setSavedCategories] = useState<MachineCategory[]>([]);
+  // ===== Export-Auswahl-Modus =====
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<null | 'export-all' | 'select-mode' | 'import'>(null);
 
   // Settings laden
   React.useEffect(() => {
@@ -127,23 +135,52 @@ export default function MachinesIndex() {
 
   React.useEffect(() => {
     navigation.setOptions({
-      title: 'Maschinen & Geräte',
-      headerStyle: { backgroundColor: '#1976d2' },
+      title: selectionMode ? `${selectedIds.size} ausgewählt` : 'Maschinen & Geräte',
+      headerStyle: { backgroundColor: selectionMode ? '#0891b2' : '#1976d2' },
       headerTintColor: '#fff',
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => {
-            setReminderInspectionStr(String(reminderDaysInspection));
-            setReminderTuvStr(String(reminderDaysTuv));
-            setReminderModalVisible(true);
-          }}
-          style={{ paddingHorizontal: 12, paddingVertical: 4 }}
-        >
-          <Ionicons name="notifications-outline" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 4, paddingRight: 8, alignItems: 'center' }}>
+          {selectionMode ? (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  if (selectedIds.size === items.length) setSelectedIds(new Set());
+                  else setSelectedIds(new Set(items.map(i => i.id)));
+                }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>
+                  {selectedIds.size === items.length ? 'Keine' : 'Alle'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                <Ionicons name="close" size={22} color="#fff" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  setReminderInspectionStr(String(reminderDaysInspection));
+                  setReminderTuvStr(String(reminderDaysTuv));
+                  setReminderModalVisible(true);
+                }}
+                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       ),
     });
-  }, [navigation, reminderDaysInspection, reminderDaysTuv]);
+  }, [navigation, reminderDaysInspection, reminderDaysTuv, selectionMode, selectedIds, items]);
 
   const load = useCallback(async () => {
     const all = await MachineMasterService.getAll();
@@ -310,6 +347,142 @@ export default function MachinesIndex() {
     ]);
   };
 
+  const handleDuplicate = async (m: MachineMaster) => {
+    try {
+      const { id, created_at, updated_at, ...rest } = m as any;
+      const newName = `${m.name} (Kopie)`;
+      // Bei Kopien: Status auf Verfügbar zurücksetzen, Inventar-/Seriennummer leeren
+      const copy = {
+        ...rest,
+        name: newName,
+        status: 'available',
+        rented_to: '',
+        rented_from_date: '',
+        rented_until_date: '',
+        rental_note: '',
+        serial_number: '',
+      };
+      await MachineMasterService.create(copy);
+      await load();
+      Alert.alert('Kopiert', `"${newName}" wurde erstellt.\nStatus und Seriennummer wurden zurückgesetzt.`);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Fehler', 'Kopieren fehlgeschlagen.');
+    }
+  };
+
+  // ===== Export-Funktion =====
+  const handleExport = async (idsToExport?: string[]) => {
+    try {
+      const toExport = idsToExport
+        ? items.filter(m => idsToExport.includes(m.id))
+        : items;
+      if (toExport.length === 0) {
+        Alert.alert('Keine Auswahl', 'Bitte mindestens eine Maschine auswählen.');
+        return;
+      }
+      const payload = {
+        type: 'aufmassprofi-machines',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        count: toExport.length,
+        machines: toExport,
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = toExport.length === 1
+        ? `Maschine_${toExport[0].name.replace(/[^a-zA-Z0-9äöüÄÖÜß-]/g, '_')}_${date}.json`
+        : `Maschinen_${toExport.length}_${date}.json`;
+      const fileUri = `${(FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: `${toExport.length} Maschine(n) exportieren`,
+          UTI: 'public.json',
+        });
+        setSelectionMode(false);
+        setSelectedIds(new Set());
+      } else {
+        Alert.alert('Hinweis', `Export gespeichert unter:\n${fileUri}`);
+      }
+    } catch (e: any) {
+      console.error('[Export] Failed', e);
+      Alert.alert('Fehler', 'Export fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    }
+  };
+
+  // ===== Import-Funktion =====
+  const importBusyRef = React.useRef(false);
+  const handleImport = async () => {
+    if (importBusyRef.current) return;
+    importBusyRef.current = true;
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled || !res.assets || res.assets.length === 0) return;
+      const fileUri = res.assets[0].uri;
+      const content = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' as any });
+      let parsed: any;
+      try { parsed = JSON.parse(content); } catch {
+        Alert.alert('Fehler', 'Die Datei ist kein gültiges JSON.');
+        return;
+      }
+      const incoming: MachineMaster[] = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.machines)
+        ? parsed.machines
+        : [];
+      if (incoming.length === 0) {
+        Alert.alert('Fehler', 'Keine Maschinen in der Datei gefunden.');
+        return;
+      }
+      const existing = await MachineMasterService.getAll();
+      const existingNames = new Set(existing.map(m => m.name.toLowerCase().trim()));
+      Alert.alert(
+        'Maschinen importieren',
+        `${incoming.length} Maschine(n) gefunden.\n\nMöchtest du sie hinzufügen? Duplikate (gleicher Name) werden übersprungen.`,
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          {
+            text: `${incoming.length} importieren`,
+            onPress: async () => {
+              let imported = 0;
+              let skipped = 0;
+              for (const mac of incoming) {
+                if (!mac || !mac.name) { skipped++; continue; }
+                if (existingNames.has(mac.name.toLowerCase().trim())) { skipped++; continue; }
+                const { id, created_at, updated_at, ...rest } = mac as any;
+                await MachineMasterService.create(rest);
+                imported++;
+              }
+              await load();
+              Alert.alert(
+                'Import abgeschlossen',
+                `✓ ${imported} Maschine(n) importiert\n${skipped > 0 ? `⚠ ${skipped} übersprungen (Duplikate)` : ''}`
+              );
+            },
+          },
+        ]
+      );
+    } catch (e: any) {
+      console.error('[Import] Failed', e);
+      Alert.alert('Fehler', 'Import fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      importBusyRef.current = false;
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
   // ===== Kategorie-Verwaltung =====
   const deleteCategory = (name: string) => {
     const inUse = items.filter(m => (m.category || '').toLowerCase() === name.toLowerCase()).length;
@@ -436,8 +609,18 @@ export default function MachinesIndex() {
                 const tuvDueSoon = !tuvOverdue && isTuvDue(m.next_tuv_date, reminderDaysTuv);
                 const cat = EQUIP_CATEGORIES.find(c => c.value === m.equipment_category);
                 const firstPhoto = m.photos && m.photos.length > 0 ? m.photos[0] : null;
+                const isSelected = selectedIds.has(m.id);
                 return (
-                  <TouchableOpacity key={m.id} style={styles.matCard} onPress={() => openEdit(m)}>
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.matCard, isSelected && { borderColor: '#0891b2', borderWidth: 2, backgroundColor: '#ecfeff' }]}
+                    onPress={() => { if (selectionMode) toggleSelect(m.id); else openEdit(m); }}
+                  >
+                    {selectionMode && (
+                      <View style={{ marginRight: 6 }}>
+                        <Ionicons name={isSelected ? 'checkbox' : 'square-outline'} size={24} color={isSelected ? '#0891b2' : '#94a3b8'} />
+                      </View>
+                    )}
                     {firstPhoto ? (
                       <Image source={{ uri: firstPhoto }} style={styles.matPhoto} />
                     ) : (
@@ -487,9 +670,19 @@ export default function MachinesIndex() {
                         <Ionicons name={st.icon} size={11} color={st.color} />
                         <Text style={[styles.statusBadgeText, { color: st.color }]}>{st.label}</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDelete(m)} style={styles.delBtn}>
-                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                      </TouchableOpacity>
+                      {!selectionMode && (
+                        <View style={{ flexDirection: 'row', gap: 2 }}>
+                          <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); handleExport([m.id]); }} style={styles.delBtn}>
+                            <Ionicons name="share-outline" size={18} color="#0891b2" />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); handleDuplicate(m); }} style={styles.delBtn}>
+                            <Ionicons name="copy-outline" size={18} color="#1976d2" />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => handleDelete(m)} style={styles.delBtn}>
+                            <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -1017,6 +1210,76 @@ export default function MachinesIndex() {
           </View>
         </View>
       </Modal>
+
+      {/* Floating Action Bar bei Selection-Mode */}
+      {selectionMode && selectedIds.size > 0 && (
+        <View style={[macStyles.fab, { bottom: Math.max(insets.bottom, 12) + 12 }]}>
+          <TouchableOpacity
+            style={macStyles.fabBtn}
+            onPress={() => handleExport(Array.from(selectedIds))}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Text style={macStyles.fabBtnText}>{selectedIds.size} exportieren</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Aktions-Menü (Export/Import) */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+        onDismiss={() => {
+          const action = pendingAction;
+          setPendingAction(null);
+          if (action === 'export-all') {
+            if (items.length === 0) {
+              Alert.alert('Hinweis', 'Keine Maschinen zum Exportieren vorhanden.');
+            } else {
+              handleExport();
+            }
+          } else if (action === 'select-mode') {
+            if (items.length === 0) {
+              Alert.alert('Hinweis', 'Keine Maschinen zum Auswählen vorhanden.');
+            } else {
+              setSelectionMode(true);
+              setSelectedIds(new Set());
+              setTab('machines');
+            }
+          } else if (action === 'import') {
+            handleImport();
+          }
+        }}
+      >
+        <TouchableOpacity style={macStyles.menuOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={[macStyles.menuCard, { marginTop: insets.top + 50 }]}>
+            <TouchableOpacity style={macStyles.menuItem} onPress={() => { setPendingAction('export-all'); setMenuVisible(false); }}>
+              <Ionicons name="cloud-upload-outline" size={20} color="#0891b2" />
+              <View style={{ flex: 1 }}>
+                <Text style={macStyles.menuItemTitle}>Alle exportieren</Text>
+                <Text style={macStyles.menuItemSub}>{items.length} Maschine(n) als JSON</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={macStyles.menuItem} onPress={() => { setPendingAction('select-mode'); setMenuVisible(false); }}>
+              <Ionicons name="checkbox-outline" size={20} color="#0891b2" />
+              <View style={{ flex: 1 }}>
+                <Text style={macStyles.menuItemTitle}>Auswahl exportieren</Text>
+                <Text style={macStyles.menuItemSub}>Einzelne Maschinen auswählen</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={macStyles.menuDivider} />
+            <TouchableOpacity style={macStyles.menuItem} onPress={() => { setPendingAction('import'); setMenuVisible(false); }}>
+              <Ionicons name="cloud-download-outline" size={20} color="#16a34a" />
+              <View style={{ flex: 1 }}>
+                <Text style={macStyles.menuItemTitle}>Importieren</Text>
+                <Text style={macStyles.menuItemSub}>JSON-Datei auswählen</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1123,6 +1386,18 @@ const styles = StyleSheet.create({
   photoRemove: { position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 11 },
   photoAddTile: { width: 88, height: 88, borderRadius: 8, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', gap: 4, borderWidth: 1, borderColor: '#bfdbfe', borderStyle: 'dashed' },
   photoAddText: { fontSize: 11, color: '#1976d2', fontWeight: '600' },
+});
+
+const macStyles = StyleSheet.create({
+  fab: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
+  fabBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#0891b2', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 22, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fabBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'flex-end', paddingRight: 8 },
+  menuCard: { backgroundColor: '#fff', borderRadius: 12, width: 260, paddingVertical: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  menuItemTitle: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  menuItemSub: { fontSize: 11, color: '#64748b', marginTop: 1 },
+  menuDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 4 },
 });
 
 // Keep helper accessible

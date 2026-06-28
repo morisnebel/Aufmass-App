@@ -131,8 +131,13 @@ export default function EmployeesIndex() {
   };
 
   // ===== Import-Funktion =====
+  const importBusyRef = React.useRef(false);
   const handleImport = async () => {
+    if (importBusyRef.current) return;
+    importBusyRef.current = true;
     try {
+      // Kurze Verzögerung, damit ggf. ein noch sichtbares Menü vollständig schließen kann
+      await new Promise(resolve => setTimeout(resolve, 300));
       const res = await DocumentPicker.getDocumentAsync({
         type: ['application/json', 'text/plain', '*/*'],
         copyToCacheDirectory: true,
@@ -196,6 +201,8 @@ export default function EmployeesIndex() {
     } catch (e: any) {
       console.error('[Import] Failed', e);
       Alert.alert('Fehler', 'Import fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      importBusyRef.current = false;
     }
   };
 

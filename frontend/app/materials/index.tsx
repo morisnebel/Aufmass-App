@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory } from '../../services/LocalStorage';
+import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory, MaterialLocationService, MaterialLocation, MaterialSupplierService, MaterialSupplier } from '../../services/LocalStorage';
 
 const UNIT_OPTIONS = ['Stk', 'm', 'm²', 'm³', 'kg', 'L', 'Pck', 'Pal', 'h', 't', 'Rolle', 'Paar'];
 
@@ -46,6 +46,8 @@ export default function MaterialsIndex() {
   const [numStr, setNumStr] = useState<{ stock?: string; threshold?: string; defaultQty?: string; price?: string }>({});
   // Gespeicherte Kategorien (eigene Bezeichnungen)
   const [savedCategories, setSavedCategories] = useState<MaterialCategory[]>([]);
+  const [savedLocations, setSavedLocations] = useState<MaterialLocation[]>([]);
+  const [savedSuppliers, setSavedSuppliers] = useState<MaterialSupplier[]>([]);
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -60,6 +62,10 @@ export default function MaterialsIndex() {
     setMaterials(all);
     const cats = await MaterialCategoryService.getAll();
     setSavedCategories(cats);
+    const locs = await MaterialLocationService.getAll();
+    setSavedLocations(locs);
+    const sups = await MaterialSupplierService.getAll();
+    setSavedSuppliers(sups);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -185,6 +191,12 @@ export default function MaterialsIndex() {
       if (form.category && typeof form.category === 'string' && form.category.trim()) {
         await MaterialCategoryService.add(form.category.trim());
       }
+      if (form.storage_location && typeof form.storage_location === 'string' && form.storage_location.trim()) {
+        await MaterialLocationService.add(form.storage_location.trim());
+      }
+      if (form.supplier && typeof form.supplier === 'string' && form.supplier.trim()) {
+        await MaterialSupplierService.add(form.supplier.trim());
+      }
       setModalVisible(false);
       await load();
     } catch (e) {
@@ -209,6 +221,50 @@ export default function MaterialsIndex() {
           setSavedCategories(cats);
           if ((form.category || '').toLowerCase() === name.toLowerCase()) {
             setForm(f => ({ ...f, category: '' }));
+          }
+        },
+      },
+    ]);
+  };
+
+  const deleteLocation = (name: string) => {
+    const inUse = materials.filter(m => (m.storage_location || '').toLowerCase() === name.toLowerCase()).length;
+    const msg = inUse > 0
+      ? `Lagerort "${name}" wird derzeit von ${inUse} Material(ien) verwendet. Trotzdem löschen?\n\n(Die Materialien bleiben erhalten – nur der Vorschlag verschwindet.)`
+      : `Lagerort "${name}" wirklich löschen?`;
+    Alert.alert('Lagerort löschen?', msg, [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: async () => {
+          await MaterialLocationService.deleteByName(name);
+          const locs = await MaterialLocationService.getAll();
+          setSavedLocations(locs);
+          if ((form.storage_location || '').toLowerCase() === name.toLowerCase()) {
+            setForm(f => ({ ...f, storage_location: '' }));
+          }
+        },
+      },
+    ]);
+  };
+
+  const deleteSupplier = (name: string) => {
+    const inUse = materials.filter(m => (m.supplier || '').toLowerCase() === name.toLowerCase()).length;
+    const msg = inUse > 0
+      ? `Lieferant "${name}" wird derzeit von ${inUse} Material(ien) verwendet. Trotzdem löschen?\n\n(Die Materialien bleiben erhalten – nur der Vorschlag verschwindet.)`
+      : `Lieferant "${name}" wirklich löschen?`;
+    Alert.alert('Lieferant löschen?', msg, [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: async () => {
+          await MaterialSupplierService.deleteByName(name);
+          const sups = await MaterialSupplierService.getAll();
+          setSavedSuppliers(sups);
+          if ((form.supplier || '').toLowerCase() === name.toLowerCase()) {
+            setForm(f => ({ ...f, supplier: '' }));
           }
         },
       },
@@ -584,41 +640,90 @@ export default function MaterialsIndex() {
                 </View>
 
                 <Text style={styles.label}>Lagerort</Text>
-                {metrics.locations.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
-                    {metrics.locations.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[styles.suggestChip, form.storage_location === c && styles.suggestChipActive]}
-                        onPress={() => setForm({ ...form, storage_location: form.storage_location === c ? '' : c })}
-                      >
-                        <Text style={[styles.suggestChipText, form.storage_location === c && styles.suggestChipTextActive]}>{c}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-                <TextInput style={styles.input} value={form.storage_location || ''} onChangeText={(v) => setForm({ ...form, storage_location: v })} placeholder={metrics.locations.length > 0 ? 'oder neuen Lagerort eingeben' : 'z.B. Regal 01-02, Werkstatt'} />
+                {(() => {
+                  const seen = new Map<string, string>();
+                  savedLocations.forEach(c => { seen.set(c.name.toLowerCase(), c.name); });
+                  metrics.locations.forEach(c => { if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c); });
+                  const allLocs = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
+                  if (allLocs.length === 0) return null;
+                  return (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                      {allLocs.map(c => {
+                        const isActive = (form.storage_location || '').toLowerCase() === c.toLowerCase();
+                        return (
+                          <View key={c} style={[styles.suggestChip, isActive && styles.suggestChipActive, { flexDirection: 'row', alignItems: 'center', paddingRight: 4 }]}>
+                            <TouchableOpacity onPress={() => setForm({ ...form, storage_location: c })} style={{ paddingVertical: 2 }}>
+                              <Text style={[styles.suggestChipText, isActive && styles.suggestChipTextActive]}>{c}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => deleteLocation(c)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} style={{ marginLeft: 6, paddingHorizontal: 4 }}>
+                              <Ionicons name="close-circle" size={16} color={isActive ? '#fff' : '#94a3b8'} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  );
+                })()}
+                <TextInput style={styles.input} value={form.storage_location || ''} onChangeText={(v) => setForm({ ...form, storage_location: v })} placeholder="Eigenen Lagerort eingeben (z.B. Regal 01-02, Werkstatt)" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -4, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const v = (form.storage_location || '').trim();
+                      if (!v) { Alert.alert('Hinweis', 'Bitte zuerst einen Lagerort eingeben.'); return; }
+                      await MaterialLocationService.add(v);
+                      const locs = await MaterialLocationService.getAll();
+                      setSavedLocations(locs);
+                      Alert.alert('Gespeichert', `Lagerort "${v}" wurde hinzugefügt.`);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#dbeafe', borderRadius: 8 }}
+                  >
+                    <Ionicons name="bookmark-outline" size={14} color="#1976d2" />
+                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als Lagerort speichern</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text style={styles.label}>Lieferant</Text>
                 {(() => {
-                  const supSet = new Set<string>();
-                  materials.forEach(mm => { if (mm.supplier) supSet.add(mm.supplier); });
-                  const supList = Array.from(supSet).sort();
-                  return supList.length > 0 ? (
+                  const seen = new Map<string, string>();
+                  savedSuppliers.forEach(c => { seen.set(c.name.toLowerCase(), c.name); });
+                  materials.forEach(mm => { if (mm.supplier && !seen.has(mm.supplier.toLowerCase())) seen.set(mm.supplier.toLowerCase(), mm.supplier); });
+                  const allSups = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
+                  if (allSups.length === 0) return null;
+                  return (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
-                      {supList.map(s => (
-                        <TouchableOpacity
-                          key={s}
-                          style={[styles.suggestChip, form.supplier === s && styles.suggestChipActive]}
-                          onPress={() => setForm({ ...form, supplier: form.supplier === s ? '' : s })}
-                        >
-                          <Text style={[styles.suggestChipText, form.supplier === s && styles.suggestChipTextActive]}>{s}</Text>
-                        </TouchableOpacity>
-                      ))}
+                      {allSups.map(c => {
+                        const isActive = (form.supplier || '').toLowerCase() === c.toLowerCase();
+                        return (
+                          <View key={c} style={[styles.suggestChip, isActive && styles.suggestChipActive, { flexDirection: 'row', alignItems: 'center', paddingRight: 4 }]}>
+                            <TouchableOpacity onPress={() => setForm({ ...form, supplier: c })} style={{ paddingVertical: 2 }}>
+                              <Text style={[styles.suggestChipText, isActive && styles.suggestChipTextActive]}>{c}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => deleteSupplier(c)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} style={{ marginLeft: 6, paddingHorizontal: 4 }}>
+                              <Ionicons name="close-circle" size={16} color={isActive ? '#fff' : '#94a3b8'} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
                     </ScrollView>
-                  ) : null;
+                  );
                 })()}
                 <TextInput style={styles.input} value={form.supplier || ''} onChangeText={(v) => setForm({ ...form, supplier: v })} placeholder="Lieferantenname" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -4, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const v = (form.supplier || '').trim();
+                      if (!v) { Alert.alert('Hinweis', 'Bitte zuerst einen Lieferanten eingeben.'); return; }
+                      await MaterialSupplierService.add(v);
+                      const sups = await MaterialSupplierService.getAll();
+                      setSavedSuppliers(sups);
+                      Alert.alert('Gespeichert', `Lieferant "${v}" wurde hinzugefügt.`);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#dbeafe', borderRadius: 8 }}
+                  >
+                    <Ionicons name="bookmark-outline" size={14} color="#1976d2" />
+                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als Lieferant speichern</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text style={styles.label}>Artikel-Nr.</Text>
                 <TextInput style={styles.input} value={form.article_number || ''} onChangeText={(v) => setForm({ ...form, article_number: v })} placeholder="Artikel-Nummer" />

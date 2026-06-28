@@ -26,6 +26,8 @@ const KEYS = {
   MACHINES: 'aufmassprofi_machines_master',
   MACHINE_CATEGORIES: 'aufmassprofi_machine_categories',
   MATERIAL_CATEGORIES: 'aufmassprofi_material_categories',
+  MATERIAL_LOCATIONS: 'aufmassprofi_material_locations',
+  MATERIAL_SUPPLIERS: 'aufmassprofi_material_suppliers',
 };
 
 // Helper to generate unique IDs
@@ -2419,6 +2421,70 @@ export const MaterialCategoryService = {
   },
 };
 
+// ============ MATERIAL LOCATION SERVICE ============
+export interface MaterialLocation {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export const MaterialLocationService = {
+  getAll: async (): Promise<MaterialLocation[]> => {
+    const all = await getItems<MaterialLocation>(KEYS.MATERIAL_LOCATIONS);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+  add: async (name: string): Promise<MaterialLocation | null> => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const all = await getItems<MaterialLocation>(KEYS.MATERIAL_LOCATIONS);
+    const existing = all.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const newItem: MaterialLocation = { id: generateId(), name: trimmed, created_at: new Date().toISOString() };
+    all.push(newItem);
+    await setItems(KEYS.MATERIAL_LOCATIONS, all);
+    return newItem;
+  },
+  deleteByName: async (name: string): Promise<void> => {
+    const trimmed = (name || '').trim().toLowerCase();
+    if (!trimmed) return;
+    const all = await getItems<MaterialLocation>(KEYS.MATERIAL_LOCATIONS);
+    const filtered = all.filter(c => c.name.toLowerCase() !== trimmed);
+    await setItems(KEYS.MATERIAL_LOCATIONS, filtered);
+  },
+};
+
+// ============ MATERIAL SUPPLIER SERVICE ============
+export interface MaterialSupplier {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export const MaterialSupplierService = {
+  getAll: async (): Promise<MaterialSupplier[]> => {
+    const all = await getItems<MaterialSupplier>(KEYS.MATERIAL_SUPPLIERS);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+  add: async (name: string): Promise<MaterialSupplier | null> => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const all = await getItems<MaterialSupplier>(KEYS.MATERIAL_SUPPLIERS);
+    const existing = all.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const newItem: MaterialSupplier = { id: generateId(), name: trimmed, created_at: new Date().toISOString() };
+    all.push(newItem);
+    await setItems(KEYS.MATERIAL_SUPPLIERS, all);
+    return newItem;
+  },
+  deleteByName: async (name: string): Promise<void> => {
+    const trimmed = (name || '').trim().toLowerCase();
+    if (!trimmed) return;
+    const all = await getItems<MaterialSupplier>(KEYS.MATERIAL_SUPPLIERS);
+    const filtered = all.filter(c => c.name.toLowerCase() !== trimmed);
+    await setItems(KEYS.MATERIAL_SUPPLIERS, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -2440,6 +2506,8 @@ export const LocalStorage = {
   Machines: MachineMasterService,
   MachineCategories: MachineCategoryService,
   MaterialCategories: MaterialCategoryService,
+  MaterialLocations: MaterialLocationService,
+  MaterialSuppliers: MaterialSupplierService,
 };
 
 export default LocalStorage;

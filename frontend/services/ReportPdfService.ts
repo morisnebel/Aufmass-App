@@ -414,6 +414,8 @@ export const generateReportSectionHtml = (
         ${roleSummaryHtml}
       </div>
 
+      ${travelHtml}
+
       <div class="section">
         <div class="section-title">🛠️ Ausgeführte Arbeiten</div>
         ${workItemsHtml}
@@ -437,8 +439,6 @@ export const generateReportSectionHtml = (
           </table>
         </div>
       ` : ''}
-
-      ${travelHtml}
 
       <div class="section info-grid">
         ${(weatherText || tempText) ? `

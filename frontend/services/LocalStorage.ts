@@ -24,6 +24,7 @@ const KEYS = {
   EMPLOYEES: 'aufmassprofi_employees_master',
   MATERIALS: 'aufmassprofi_materials_master',
   MACHINES: 'aufmassprofi_machines_master',
+  MACHINE_CATEGORIES: 'aufmassprofi_machine_categories',
 };
 
 // Helper to generate unique IDs
@@ -2329,6 +2330,50 @@ export const MaterialMasterService = {
   },
 };
 
+// ============ MACHINE CATEGORY SERVICE ============
+export interface MachineCategory {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export const MachineCategoryService = {
+  getAll: async (): Promise<MachineCategory[]> => {
+    const all = await getItems<MachineCategory>(KEYS.MACHINE_CATEGORIES);
+    return all.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  },
+
+  add: async (name: string): Promise<MachineCategory | null> => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const all = await getItems<MachineCategory>(KEYS.MACHINE_CATEGORIES);
+    const existing = all.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const newCat: MachineCategory = {
+      id: generateId(),
+      name: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    all.push(newCat);
+    await setItems(KEYS.MACHINE_CATEGORIES, all);
+    return newCat;
+  },
+
+  deleteByName: async (name: string): Promise<void> => {
+    const trimmed = (name || '').trim().toLowerCase();
+    if (!trimmed) return;
+    const all = await getItems<MachineCategory>(KEYS.MACHINE_CATEGORIES);
+    const filtered = all.filter(c => c.name.toLowerCase() !== trimmed);
+    await setItems(KEYS.MACHINE_CATEGORIES, filtered);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const all = await getItems<MachineCategory>(KEYS.MACHINE_CATEGORIES);
+    const filtered = all.filter(c => c.id !== id);
+    await setItems(KEYS.MACHINE_CATEGORIES, filtered);
+  },
+};
+
 // Export all services
 export const LocalStorage = {
   Customers: CustomerService,
@@ -2348,6 +2393,7 @@ export const LocalStorage = {
   Employees: EmployeeMasterService,
   Materials: MaterialMasterService,
   Machines: MachineMasterService,
+  MachineCategories: MachineCategoryService,
 };
 
 export default LocalStorage;

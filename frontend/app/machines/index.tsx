@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { MachineMasterService, MachineMaster, SettingsService } from '../../services/LocalStorage';
+import { MachineMasterService, MachineMaster, SettingsService, MachineCategoryService, MachineCategory } from '../../services/LocalStorage';
 import { DatePickerField } from '../../src/components/DatePickerField';
 
 // =================== STATUS / CATEGORY OPTIONS ===================
@@ -114,6 +114,8 @@ export default function MachinesIndex() {
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [reminderInspectionStr, setReminderInspectionStr] = useState<string>('30');
   const [reminderTuvStr, setReminderTuvStr] = useState<string>('30');
+  // Gespeicherte Kategorien (eigene Bezeichnungen)
+  const [savedCategories, setSavedCategories] = useState<MachineCategory[]>([]);
 
   // Settings laden
   React.useEffect(() => {
@@ -146,6 +148,8 @@ export default function MachinesIndex() {
   const load = useCallback(async () => {
     const all = await MachineMasterService.getAll();
     setItems(all);
+    const cats = await MachineCategoryService.getAll();
+    setSavedCategories(cats);
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -287,6 +291,10 @@ export default function MachinesIndex() {
       } else {
         await MachineMasterService.create(dataToSave);
       }
+      // Wenn Kategorie eingegeben wurde, diese auch in der Kategorien-Liste sichern
+      if (dataToSave.category && typeof dataToSave.category === 'string' && dataToSave.category.trim()) {
+        await MachineCategoryService.add(dataToSave.category.trim());
+      }
       setModalVisible(false);
       await load();
     } catch (e) {
@@ -299,6 +307,30 @@ export default function MachinesIndex() {
     Alert.alert('Löschen?', `${m.name} wirklich löschen?`, [
       { text: 'Abbrechen', style: 'cancel' },
       { text: 'Löschen', style: 'destructive', onPress: async () => { await MachineMasterService.delete(m.id); await load(); } },
+    ]);
+  };
+
+  // ===== Kategorie-Verwaltung =====
+  const deleteCategory = (name: string) => {
+    const inUse = items.filter(m => (m.category || '').toLowerCase() === name.toLowerCase()).length;
+    const msg = inUse > 0
+      ? `Kategorie "${name}" wird derzeit von ${inUse} Maschine(n) verwendet. Trotzdem löschen?\n\n(Die Maschinen bleiben erhalten – nur der Vorschlag verschwindet.)`
+      : `Kategorie "${name}" wirklich löschen?`;
+    Alert.alert('Kategorie löschen?', msg, [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: async () => {
+          await MachineCategoryService.deleteByName(name);
+          const cats = await MachineCategoryService.getAll();
+          setSavedCategories(cats);
+          // Wenn die Kategorie im Formular ausgewählt war, ebenfalls leeren
+          if ((form.category || '').toLowerCase() === name.toLowerCase()) {
+            setForm(f => ({ ...f, category: '' }));
+          }
+        },
+      },
     ]);
   };
 
@@ -669,20 +701,58 @@ export default function MachinesIndex() {
 
                 {/* Frei wählbare Kategorie mit Vorschlägen */}
                 <Text style={styles.label}>Kategorie (eigene Bezeichnung)</Text>
-                {metrics.categories.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
-                    {metrics.categories.map(c => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[styles.suggestChip, form.category === c && styles.suggestChipActive]}
-                        onPress={() => setForm({ ...form, category: form.category === c ? '' : c })}
-                      >
-                        <Text style={[styles.suggestChipText, form.category === c && styles.suggestChipTextActive]}>{c}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
+                {(() => {
+                  // Gespeicherte + aus Maschinen abgeleitete Kategorien zusammenführen (unique, case-insensitiv)
+                  const seen = new Map<string, string>();
+                  savedCategories.forEach(c => { seen.set(c.name.toLowerCase(), c.name); });
+                  metrics.categories.forEach(c => { if (!seen.has(c.toLowerCase())) seen.set(c.toLowerCase(), c); });
+                  const allCats = Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'de'));
+                  if (allCats.length === 0) return null;
+                  return (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestRow} contentContainerStyle={styles.suggestRowContent}>
+                      {allCats.map(c => {
+                        const isActive = (form.category || '').toLowerCase() === c.toLowerCase();
+                        return (
+                          <View key={c} style={[styles.suggestChip, isActive && styles.suggestChipActive, { flexDirection: 'row', alignItems: 'center', paddingRight: 4 }]}>
+                            <TouchableOpacity
+                              onPress={() => setForm({ ...form, category: c })}
+                              style={{ paddingVertical: 2 }}
+                            >
+                              <Text style={[styles.suggestChipText, isActive && styles.suggestChipTextActive]}>{c}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => deleteCategory(c)}
+                              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                              style={{ marginLeft: 6, paddingHorizontal: 4 }}
+                            >
+                              <Ionicons name="close-circle" size={16} color={isActive ? '#fff' : '#94a3b8'} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  );
+                })()}
                 <TextInput style={styles.input} value={form.category || ''} onChangeText={(v) => setForm({ ...form, category: v })} placeholder="z.B. Hebezeug, Akku-Werkzeug" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: -4, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const v = (form.category || '').trim();
+                      if (!v) {
+                        Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
+                        return;
+                      }
+                      await MachineCategoryService.add(v);
+                      const cats = await MachineCategoryService.getAll();
+                      setSavedCategories(cats);
+                      Alert.alert('Gespeichert', `Kategorie "${v}" wurde der Vorschlagsliste hinzugefügt.`);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#dbeafe', borderRadius: 8 }}
+                  >
+                    <Ionicons name="bookmark-outline" size={14} color="#1976d2" />
+                    <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600' }}>Als Kategorie speichern</Text>
+                  </TouchableOpacity>
+                </View>
 
                 {/* Hersteller / Modell */}
                 <View style={{ flexDirection: 'row', gap: 10 }}>

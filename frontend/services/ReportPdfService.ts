@@ -301,11 +301,16 @@ export const generateReportSectionHtml = (
         : `<td class="photo-cell"></td>`;
       rows.push(`<tr class="photo-row">${cell(left)}${cell(right)}</tr>`);
     }
+    // Erste Reihe (mit Überschrift) als zusammengehörender Block damit der Title nicht
+    // alleine auf der vorherigen Seite landet. Restliche Reihen als normale Photo-Tabelle.
+    const firstRow = rows[0] || '';
+    const restRows = rows.slice(1);
     photosHtml = `<div class="section">
-         <div class="section-title">📷 Fotos</div>
-         <table class="photo-table">
-           <tbody>${rows.join('')}</tbody>
-         </table>
+         <table class="photo-table"><tbody>
+           <tr class="photo-title-row"><td colspan="2" class="photo-title-cell"><div class="section-title">📷 Fotos</div></td></tr>
+           ${firstRow}
+         </tbody></table>
+         ${restRows.length > 0 ? `<table class="photo-table"><tbody>${restRows.join('')}</tbody></table>` : ''}
        </div>`;
   }
 
@@ -906,6 +911,14 @@ export const REPORT_CSS = `
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
   }
+  .photo-title-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .photo-title-cell { padding: 0 !important; }
   .photo-cell {
     width: 50%;
     padding: 0;

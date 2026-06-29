@@ -450,7 +450,6 @@ export const generateReportSectionHtml = (
           <div class="info-box" style="flex:1;min-width:0;">
             <div class="info-box-title">Firma</div>
             <div style="font-size:12px;color:#0f172a;font-weight:700;">${escapeHtml(cName)}</div>
-            ${cSub ? `<div style="font-size:10px;color:#64748b;margin-top:1px;font-style:italic;">${escapeHtml(cSub)}</div>` : ''}
             ${companyLines.length ? `<div style="font-size:10px;color:#475569;margin-top:4px;line-height:1.45;">${companyLines.join('<br/>')}</div>` : ''}
             ${contactParts.length ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.5;">${contactParts.join('<br/>')}</div>` : ''}
           </div>

@@ -132,6 +132,9 @@ export default function ReportEditScreen() {
   const [showMaterialCosts, setShowMaterialCosts] = useState<boolean>(false);
   const [showMachineCosts, setShowMachineCosts] = useState<boolean>(false);
   const [showTotalSum, setShowTotalSum] = useState<boolean>(false);
+  // Mehrwertsteuer
+  const [showVat, setShowVat] = useState<boolean>(false);
+  const [vatRateStr, setVatRateStr] = useState<string>('19');
   // Roh-Strings für km-Eingaben pro Mitarbeiter (Komma-Erhaltung)
   const [travelKmDraft, setTravelKmDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
@@ -237,6 +240,8 @@ export default function ReportEditScreen() {
           setShowMaterialCosts(!!r.show_material_costs);
           setShowMachineCosts(!!r.show_machine_costs);
           setShowTotalSum(!!r.show_total_sum);
+          setShowVat(!!r.show_vat);
+          setVatRateStr(r.vat_rate != null ? String(r.vat_rate).replace('.', ',') : '19');
           // Briefkopf-Felder: per-report wenn vorhanden, sonst Default aus Settings, sonst eingebauter Default
           if (r.header_fields && r.header_fields.length > 0) {
             setHeaderFields(new Set(r.header_fields));
@@ -388,6 +393,8 @@ export default function ReportEditScreen() {
         show_material_costs: showMaterialCosts || undefined,
         show_machine_costs: showMachineCosts || undefined,
         show_total_sum: showTotalSum || undefined,
+        show_vat: showVat || undefined,
+        vat_rate: showVat ? (parseFloat(vatRateStr.replace(',', '.')) || 19) : undefined,
         header_fields: Array.from(headerFields),
         weather: weather || undefined,
         temperature: temperature ? parseFloat(temperature) : undefined,
@@ -1721,11 +1728,180 @@ export default function ReportEditScreen() {
                   {toggle('Material-Kosten', 'Menge × Einzelpreis pro Material', showMaterialCosts, setShowMaterialCosts, 'cube-outline')}
                   {toggle('Maschinen-Kosten', 'Einsatzstunden × Stundensatz', showMachineCosts, setShowMachineCosts, 'construct-outline')}
                   {toggle('Gesamtsumme', 'Summe aller aktivierten Posten am Ende', showTotalSum, setShowTotalSum, 'calculator-outline')}
+                  {toggle('Mehrwertsteuer anzeigen', 'Netto / MwSt / Brutto auf dem PDF', showVat, setShowVat, 'receipt-outline')}
                 </>
               );
             })()}
+
+            {showVat && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#0f172a', flex: 1 }}>MwSt-Satz</Text>
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, width: 90, textAlign: 'right', fontSize: 14 }}
+                  value={vatRateStr}
+                  onChangeText={setVatRateStr}
+                  keyboardType="decimal-pad"
+                  placeholder="19"
+                />
+                <Text style={{ fontSize: 14, color: '#475569' }}>%</Text>
+              </View>
+            )}
+
+            {/* ===== Live Kosten-Übersicht (editierbar) ===== */}
+            {(showEmployeeCosts || showMaterialCosts || showMachineCosts || showTotalSum) && (() => {
+              const eur = (n: number) => `${n.toFixed(2).replace('.', ',')} €`;
+
+              // Mitarbeiter
+              let empTotal = 0;
+              const empRows = employees.map((e, idx) => {
+                const ea: any = e;
+                const calcH = (() => {
+                  if (e.hours != null) return e.hours;
+                  if (!ea.time_from || !ea.time_to) return 0;
+                  const [fh, fm] = ea.time_from.split(':').map(Number);
+                  const [th, tm] = ea.time_to.split(':').map(Number);
+                  let mins = (th * 60 + tm) - (fh * 60 + fm);
+                  if (mins < 0) mins += 24 * 60;
+                  mins -= ea.pause_minutes || 0;
+                  return Math.max(0, Math.round((mins / 60) * 100) / 100);
+                })();
+                const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
+                const teamTravel = (travelPerEmployee ? 0 : ((parseFloat((travelToHoursStr || '0').replace(',', '.')) || 0) + (parseFloat((travelBackHoursStr || '0').replace(',', '.')) || 0)));
+                const totalHrs = calcH + (travelPerEmployee ? travelExtra : (travelInTotalHours ? teamTravel : 0));
+                const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
+                const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
+                const cost = totalHrs * rate;
+                empTotal += cost;
+                return { idx, name: e.name, hours: totalHrs, rate, cost };
+              });
+
+              // Material
+              let matTotal = 0;
+              const matRows = materials.map((m, idx) => {
+                const ma: any = m;
+                const master = matMaster.find((mm: any) => mm.name?.toLowerCase() === (m.name || '').toLowerCase());
+                const price = ma.price_per_unit != null ? ma.price_per_unit : (master?.price_per_unit || 0);
+                const cost = (m.quantity || 0) * price;
+                matTotal += cost;
+                return { idx, name: m.name, quantity: m.quantity || 0, unit: m.unit, price, cost };
+              });
+
+              // Maschinen
+              let macTotal = 0;
+              const macRows = machines.map((m, idx) => {
+                const ma: any = m;
+                const master = machMaster.find((mm: any) => (m.master_id && mm.id === m.master_id) || mm.name?.toLowerCase() === (m.name || '').toLowerCase());
+                const rate = ma.hourly_rate != null ? ma.hourly_rate : (master?.hourly_rate || 0);
+                const hours = m.hours || 0;
+                const cost = hours * rate;
+                macTotal += cost;
+                return { idx, name: m.name, hours, rate, cost };
+              });
+
+              const netto = empTotal + matTotal + macTotal;
+              const vatRateNum = parseFloat(vatRateStr.replace(',', '.')) || 0;
+              const vatAmount = showVat ? netto * (vatRateNum / 100) : 0;
+              const brutto = netto + vatAmount;
+
+              const updateEmpRate = (i: number, v: string) => {
+                const num = parseFloat(v.replace(',', '.'));
+                setEmployees(prev => prev.map((emp, idx) => idx === i ? ({ ...emp, hourly_rate: isNaN(num) ? undefined : num } as any) : emp));
+              };
+              const updateMatPrice = (i: number, v: string) => {
+                const num = parseFloat(v.replace(',', '.'));
+                setMaterials(prev => prev.map((m, idx) => idx === i ? ({ ...m, price_per_unit: isNaN(num) ? undefined : num } as any) : m));
+              };
+              const updateMacRate = (i: number, v: string) => {
+                const num = parseFloat(v.replace(',', '.'));
+                setMachines(prev => prev.map((m, idx) => idx === i ? ({ ...m, hourly_rate: isNaN(num) ? undefined : num } as any) : m));
+              };
+
+              const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', gap: 6 };
+              const priceInput = (val: number, on: (v: string) => void) => (
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, width: 70, textAlign: 'right', fontSize: 12 }}
+                  value={val > 0 ? String(val).replace('.', ',') : ''}
+                  onChangeText={on}
+                  keyboardType="decimal-pad"
+                  placeholder="0,00"
+                />
+              );
+
+              return (
+                <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 2, borderTopColor: '#dcfce7' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#166534', marginBottom: 8 }}>💰 Live Kosten-Übersicht</Text>
+
+                  {showEmployeeCosts && empRows.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>Mitarbeiter</Text>
+                      {empRows.map(r => (
+                        <View key={r.idx} style={rowStyle}>
+                          <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
+                          {priceInput(r.rate, (v) => updateEmpRate(r.idx, v))}
+                          <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
+                        </View>
+                      ))}
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'right', marginTop: 4 }}>Σ {eur(empTotal)}</Text>
+                    </View>
+                  )}
+
+                  {showMaterialCosts && matRows.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>Material</Text>
+                      {matRows.map(r => (
+                        <View key={r.idx} style={rowStyle}>
+                          <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.quantity} {r.unit} ×</Text>
+                          {priceInput(r.price, (v) => updateMatPrice(r.idx, v))}
+                          <Text style={{ fontSize: 11, color: '#64748b' }}>€</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
+                        </View>
+                      ))}
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'right', marginTop: 4 }}>Σ {eur(matTotal)}</Text>
+                    </View>
+                  )}
+
+                  {showMachineCosts && macRows.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>Maschinen / Geräte</Text>
+                      {macRows.map(r => (
+                        <View key={r.idx} style={rowStyle}>
+                          <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
+                          {priceInput(r.rate, (v) => updateMacRate(r.idx, v))}
+                          <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
+                        </View>
+                      ))}
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'right', marginTop: 4 }}>Σ {eur(macTotal)}</Text>
+                    </View>
+                  )}
+
+                  {/* Totals */}
+                  <View style={{ marginTop: 10, padding: 12, backgroundColor: '#dcfce7', borderRadius: 8 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 13, color: '#166534', fontWeight: '600' }}>Netto:</Text>
+                      <Text style={{ fontSize: 13, color: '#166534', fontWeight: '700' }}>{eur(netto)}</Text>
+                    </View>
+                    {showVat && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+                        <Text style={{ fontSize: 13, color: '#166534' }}>+ MwSt {vatRateNum.toString().replace('.', ',')}%:</Text>
+                        <Text style={{ fontSize: 13, color: '#166534', fontWeight: '700' }}>{eur(vatAmount)}</Text>
+                      </View>
+                    )}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 6, marginTop: 6, borderTopWidth: 1, borderTopColor: '#16a34a' }}>
+                      <Text style={{ fontSize: 15, color: '#166534', fontWeight: '800' }}>{showVat ? 'Brutto' : 'Gesamt'}:</Text>
+                      <Text style={{ fontSize: 18, color: '#16a34a', fontWeight: '900' }}>{eur(brutto)}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
+
             <Text style={{ fontSize: 11, color: '#64748b', marginTop: 10, fontStyle: 'italic' }}>
-              Hinweis: Preise stehen aus den Stammdaten – Mitarbeiter-Stundensatz, Material-Einzelpreis bzw. Maschinen-Stundensatz.
+              Tipp: Preise werden aus den Stammdaten geladen. Du kannst sie hier pro Rapport überschreiben – die Stammdaten bleiben unverändert.
             </Text>
           </Section>
         </ScrollView>

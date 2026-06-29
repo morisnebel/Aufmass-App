@@ -533,7 +533,7 @@ export const generateReportSectionHtml = (
             const teamTravelShare = teamTravelTeam && report.travel_in_total_hours ? teamTravelTeam : 0; // pro MA der Team-Anteil zur Lohnberechnung
             const totalHrs = calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare);
             const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
-            const rate = master?.hourly_rate || 0;
+            const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
             const cost = totalHrs * rate;
             empTotal += cost;
             if (showEmp) {
@@ -554,7 +554,7 @@ export const generateReportSectionHtml = (
         if (showMat || showSum) {
           (report.materials || []).forEach(m => {
             const master = matMaster.find((mm: any) => mm.name?.toLowerCase() === (m.name || '').toLowerCase());
-            const price = master?.price_per_unit || 0;
+            const price = (m as any).price_per_unit != null ? (m as any).price_per_unit : (master?.price_per_unit || 0);
             const cost = (m.quantity || 0) * price;
             matTotal += cost;
             if (showMat) {
@@ -576,7 +576,7 @@ export const generateReportSectionHtml = (
             const master = macMaster.find((mm: any) =>
               (m.master_id && mm.id === m.master_id) || mm.name?.toLowerCase() === (m.name || '').toLowerCase()
             );
-            const rate = master?.hourly_rate || 0;
+            const rate = m.hourly_rate != null ? m.hourly_rate : (master?.hourly_rate || 0);
             const hours = m.hours || 0;
             const cost = hours * rate;
             macTotal += cost;
@@ -629,13 +629,33 @@ export const generateReportSectionHtml = (
                 <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(macTotal)}</td></tr></tfoot>
               </table>
             ` : ''}
-            ${showSum ? `
-              <div style="margin-top:12px;padding:12px 14px;background:#16a34a;color:#fff;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:14px;font-weight:700;">Gesamtsumme</span>
-                <span style="font-size:18px;font-weight:800;">${eurFmt(grandTotal)}</span>
-              </div>
-              <div style="font-size:9px;color:#64748b;margin-top:4px;font-style:italic;">Hinweis: Preise ohne Mehrwertsteuer. Tatsächliche Kosten können abweichen.</div>
-            ` : ''}
+            ${showSum ? (() => {
+              const showVat = !!(report as any).show_vat;
+              const vatRate = (report as any).vat_rate != null ? (report as any).vat_rate : 19;
+              const vatAmount = showVat ? grandTotal * (vatRate / 100) : 0;
+              const brutto = grandTotal + vatAmount;
+              return `
+                <div style="margin-top:12px;padding:12px 14px;background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;">
+                  <table style="width:100%;font-size:12px;">
+                    <tr>
+                      <td style="padding:3px 0;color:#166534;font-weight:600;">Netto:</td>
+                      <td style="text-align:right;padding:3px 0;color:#166534;font-weight:700;">${eurFmt(grandTotal)}</td>
+                    </tr>
+                    ${showVat ? `
+                      <tr>
+                        <td style="padding:3px 0;color:#166534;">+ MwSt ${String(vatRate).replace('.', ',')}%:</td>
+                        <td style="text-align:right;padding:3px 0;color:#166534;font-weight:700;">${eurFmt(vatAmount)}</td>
+                      </tr>
+                    ` : ''}
+                    <tr style="border-top:1px solid #16a34a;">
+                      <td style="padding:6px 0 0;color:#166534;font-weight:800;font-size:14px;">${showVat ? 'Brutto' : 'Gesamtsumme'}:</td>
+                      <td style="text-align:right;padding:6px 0 0;color:#16a34a;font-weight:900;font-size:18px;">${eurFmt(brutto)}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div style="font-size:9px;color:#64748b;margin-top:4px;font-style:italic;">${showVat ? 'Brutto-Endbetrag inkl. gesetzlicher MwSt.' : 'Hinweis: Preise ohne Mehrwertsteuer. Tatsächliche Kosten können abweichen.'}</div>
+              `;
+            })() : ''}
           </div>
         `;
       })()}

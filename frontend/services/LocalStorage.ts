@@ -1944,6 +1944,8 @@ export interface ReportEmployee {
   travel_to_km?: number; // Kilometer Hinweg
   travel_back_km?: number; // Kilometer Rückweg
   travel_costs?: number; // Spesen / Fahrtkosten EUR
+  // Preis-Override für diesen Rapport (sonst aus Stammdaten)
+  hourly_rate?: number; // €/Std
 }
 
 export interface ReportMaterial {
@@ -1952,6 +1954,8 @@ export interface ReportMaterial {
   quantity: number;
   unit: string; // z.B. "Stk", "m", "m²", "kg", "L"
   note?: string;
+  // Preis-Override für diesen Rapport (sonst aus Stammdaten)
+  price_per_unit?: number; // €/Einheit
 }
 
 export interface ReportPhoto {
@@ -1966,6 +1970,8 @@ export interface ReportMachine {
   master_id?: string; // Verknüpfung zur Stammdaten-Maschine
   hours?: number; // Einsatzdauer in Stunden
   note?: string;
+  // Preis-Override für diesen Rapport (sonst aus Stammdaten)
+  hourly_rate?: number; // €/Std
 }
 
 export interface ReportWorkItem {
@@ -2012,6 +2018,9 @@ export interface Report {
   show_material_costs?: boolean;
   show_machine_costs?: boolean;
   show_total_sum?: boolean;
+  // Mehrwertsteuer
+  show_vat?: boolean;
+  vat_rate?: number; // %, z.B. 19
   // Briefkopf-Felder (Per-Report Override; sonst Settings-Default)
   header_fields?: string[];
   // Wetter

@@ -184,7 +184,18 @@ export default function MachinesIndex() {
 
   const load = useCallback(async () => {
     const all = await MachineMasterService.getAll();
-    setItems(all);
+    // Defensive: normalisiere ungültige Status-Werte (z.B. aus alten Builds)
+    const validStatus = new Set(STATUS_OPTIONS.map(s => s.value));
+    const needFix = all.filter(m => m.status && !validStatus.has(m.status as any));
+    if (needFix.length > 0) {
+      for (const m of needFix) {
+        try { await MachineMasterService.update(m.id, { status: 'verfuegbar' } as any); } catch {}
+      }
+      const fixed = await MachineMasterService.getAll();
+      setItems(fixed);
+    } else {
+      setItems(all);
+    }
     const cats = await MachineCategoryService.getAll();
     setSavedCategories(cats);
   }, []);
@@ -355,7 +366,7 @@ export default function MachinesIndex() {
       const copy = {
         ...rest,
         name: newName,
-        status: 'available',
+        status: 'verfuegbar',
         rented_to: '',
         rented_from_date: '',
         rented_until_date: '',
@@ -602,7 +613,7 @@ export default function MachinesIndex() {
               </View>
             ) : (
               filtered.map(m => {
-                const st = STATUS_OPTIONS.find(s => s.value === (m.status || 'verfuegbar'))!;
+                const st = STATUS_OPTIONS.find(s => s.value === (m.status || 'verfuegbar')) || STATUS_OPTIONS[0];
                 const overdue = isInspectionOverdue(m.next_inspection_date);
                 const dueSoon = !overdue && isInspectionDue(m.next_inspection_date, reminderDaysInspection);
                 const tuvOverdue = isTuvOverdue(m.next_tuv_date);

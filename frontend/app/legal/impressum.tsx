@@ -87,7 +87,7 @@ export default function ImpressumScreen() {
 
           <View style={styles.warnBox}>
             <View style={styles.warnHeader}>
-              <Ionicons name="warning" size={18} color="#dc2626" />
+              <Ionicons name="information-circle-outline" size={18} color="#1e293b" />
               <Text style={styles.warnTitle}>Wichtig: Maße & Berechnungen</Text>
             </View>
             <Text style={styles.warnText}>
@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
   contactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1976d2', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 16, marginTop: 8 },
   contactBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   footerText: { textAlign: 'center', fontSize: 11, color: '#94a3b8', marginTop: 16 },
-  warnBox: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginVertical: 8, borderWidth: 1.5, borderColor: '#dc2626' },
-  warnHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
-  warnTitle: { fontSize: 13, fontWeight: '800', color: '#991b1b' },
+  warnBox: { backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginVertical: 8, borderWidth: 1.5, borderColor: '#1e293b' },
+  warnHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  warnTitle: { fontSize: 13, fontWeight: '800', color: '#0f172a' },
   warnText: { fontSize: 12.5, color: '#7f1d1d', lineHeight: 18, marginBottom: 6 },
 });

@@ -38,7 +38,7 @@ export default function HaftungsausschlussScreen() {
         {/* PROMINENT WARNING - User-Original-Text */}
         <View style={styles.alertCard}>
           <View style={styles.alertHeader}>
-            <Ionicons name="alert-circle" size={24} color="#dc2626" />
+            <Ionicons name="information-circle-outline" size={24} color="#1e293b" />
             <Text style={styles.alertHeaderText}>Wichtiger Hinweis</Text>
           </View>
           <Text style={styles.alertText}>
@@ -161,12 +161,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
   subtitle: { fontSize: 14, color: '#475569', marginTop: 4 },
   dateInfo: { fontSize: 11, color: '#94a3b8', marginTop: 8, fontStyle: 'italic' },
-  alertCard: { backgroundColor: '#fef2f2', borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#dc2626' },
-  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
-  alertHeaderText: { fontSize: 17, fontWeight: '800', color: '#991b1b' },
+  alertCard: { backgroundColor: '#f8fafc', borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#1e293b' },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  alertHeaderText: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
   alertText: { fontSize: 13.5, color: '#7f1d1d', lineHeight: 20, marginBottom: 8 },
-  divider: { height: 1, backgroundColor: '#fecaca', marginVertical: 8 },
-  bold: { fontWeight: '800', color: '#991b1b' },
+  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 8 },
+  bold: { fontWeight: '800', color: '#0f172a' },
   section: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', flex: 1 },

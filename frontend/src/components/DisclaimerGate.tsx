@@ -86,7 +86,7 @@ export const DisclaimerGate: React.FC<{ children: React.ReactNode }> = ({ childr
           >
             <View style={styles.alertCard}>
               <View style={styles.alertHeader}>
-                <Ionicons name="alert-circle" size={22} color="#dc2626" />
+                <Ionicons name="information-circle-outline" size={22} color="#1e293b" />
                 <Text style={styles.alertHeaderText}>Wichtiger Hinweis zu Maßen & Berechnungen</Text>
               </View>
               <Text style={styles.alertText}>
@@ -209,12 +209,12 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
-  alertCard: { backgroundColor: '#fef2f2', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 2, borderColor: '#dc2626' },
-  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#fecaca' },
-  alertHeaderText: { fontSize: 14, fontWeight: '800', color: '#991b1b', flex: 1 },
+  alertCard: { backgroundColor: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 2, borderColor: '#1e293b' },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  alertHeaderText: { fontSize: 14, fontWeight: '800', color: '#0f172a', flex: 1 },
   alertText: { fontSize: 13, color: '#7f1d1d', lineHeight: 19, marginBottom: 6 },
-  divider: { height: 1, backgroundColor: '#fecaca', marginVertical: 6 },
-  bold: { fontWeight: '800', color: '#991b1b' },
+  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 6 },
+  bold: { fontWeight: '800', color: '#0f172a' },
   infoCard: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0' },
   infoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   infoTitle: { fontSize: 13, fontWeight: '700', color: '#1976d2' },

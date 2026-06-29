@@ -416,28 +416,6 @@ export const generateReportSectionHtml = (
           ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-width:120px;object-fit:contain;" />` : ''}
           <div style="flex:1;">
             <div class="report-title">📝 ${escapeHtml((options as any).reportTitle || 'RAPPORT')}</div>
-            ${(options as any).companyName ? `<div style="font-size:13px;color:#0f172a;margin-top:2px;font-weight:700;">${escapeHtml((options as any).companyName)}</div>` : ''}
-            ${(options as any).companySubtitle ? `<div style="font-size:10px;color:#64748b;margin-top:1px;font-style:italic;">${escapeHtml((options as any).companySubtitle)}</div>` : ''}
-            ${(() => {
-              const street = (options as any).companyStreet || '';
-              const zip = (options as any).companyZip || '';
-              const city = (options as any).companyCity || '';
-              const phone = (options as any).companyPhone || '';
-              const mobile = (options as any).companyMobile || '';
-              const fax = (options as any).companyFax || '';
-              const email = (options as any).companyEmail || '';
-              const lines: string[] = [];
-              if (street) lines.push(escapeHtml(street));
-              const cityLine = [zip, city].filter(Boolean).join(' ');
-              if (cityLine) lines.push(escapeHtml(cityLine));
-              const contactParts: string[] = [];
-              if (phone) contactParts.push(`📞 ${escapeHtml(phone)}`);
-              if (mobile) contactParts.push(`📱 ${escapeHtml(mobile)}`);
-              if (fax) contactParts.push(`📠 ${escapeHtml(fax)}`);
-              if (email) contactParts.push(`✉ ${escapeHtml(email)}`);
-              if (contactParts.length > 0) lines.push(contactParts.join(' &nbsp;·&nbsp; '));
-              return lines.length > 0 ? `<div style="font-size:9.5px;color:#475569;margin-top:3px;line-height:1.45;">${lines.join('<br/>')}</div>` : '';
-            })()}
             ${report.report_number ? `<div class="report-number" style="margin-top:4px;">${escapeHtml(report.report_number)}</div>` : ''}
           </div>
         </div>
@@ -447,12 +425,47 @@ export const generateReportSectionHtml = (
         </div>
       </div>
 
-      ${headerRows.length > 0 ? `
-        <div class="info-box">
-          <div class="info-box-title">Projekt &amp; Kunde</div>
-          ${headerRows.join('')}
-        </div>
-      ` : ''}
+      ${(() => {
+        // Firmendaten-Box (rechte Spalte neben Projekt & Kunde)
+        const cName = (options as any).companyName || '';
+        const cSub = (options as any).companySubtitle || '';
+        const street = (options as any).companyStreet || '';
+        const zip = (options as any).companyZip || '';
+        const city = (options as any).companyCity || '';
+        const phone = (options as any).companyPhone || '';
+        const mobile = (options as any).companyMobile || '';
+        const fax = (options as any).companyFax || '';
+        const email = (options as any).companyEmail || '';
+        const hasCompany = cName || street || phone || mobile || email;
+        const companyLines: string[] = [];
+        if (street) companyLines.push(escapeHtml(street));
+        const cityLine = [zip, city].filter(Boolean).join(' ');
+        if (cityLine) companyLines.push(escapeHtml(cityLine));
+        const contactParts: string[] = [];
+        if (phone) contactParts.push(`📞 ${escapeHtml(phone)}`);
+        if (mobile) contactParts.push(`📱 ${escapeHtml(mobile)}`);
+        if (fax) contactParts.push(`📠 ${escapeHtml(fax)}`);
+        if (email) contactParts.push(`✉ ${escapeHtml(email)}`);
+        const companyHtml = hasCompany ? `
+          <div class="info-box" style="flex:1;min-width:0;">
+            <div class="info-box-title">Firma</div>
+            <div style="font-size:12px;color:#0f172a;font-weight:700;">${escapeHtml(cName)}</div>
+            ${cSub ? `<div style="font-size:10px;color:#64748b;margin-top:1px;font-style:italic;">${escapeHtml(cSub)}</div>` : ''}
+            ${companyLines.length ? `<div style="font-size:10px;color:#475569;margin-top:4px;line-height:1.45;">${companyLines.join('<br/>')}</div>` : ''}
+            ${contactParts.length ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.5;">${contactParts.join('<br/>')}</div>` : ''}
+          </div>
+        ` : '';
+        const projectHtml = headerRows.length > 0 ? `
+          <div class="info-box" style="flex:1;min-width:0;">
+            <div class="info-box-title">Projekt &amp; Kunde</div>
+            ${headerRows.join('')}
+          </div>
+        ` : '';
+        if (projectHtml && companyHtml) {
+          return `<div style="display:flex;gap:10px;align-items:flex-start;">${projectHtml}${companyHtml}</div>`;
+        }
+        return projectHtml || companyHtml;
+      })()}
 
       <div class="section">
         <div class="section-title">👷 Mitarbeiter & Arbeitszeiten</div>

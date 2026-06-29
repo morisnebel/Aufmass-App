@@ -413,7 +413,7 @@ export const generateReportSectionHtml = (
     <div class="report-page">
       <div class="report-header">
         <div style="display:flex;align-items:flex-start;gap:10px;flex:1;">
-          ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-width:120px;object-fit:contain;" />` : ''}
+          ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-height:50px;width:auto;max-width:120px;object-fit:contain;" />` : ''}
           <div style="flex:1;">
             <div class="report-title">📝 ${escapeHtml((options as any).reportTitle || 'RAPPORT')}</div>
             ${report.report_number ? `<div class="report-number" style="margin-top:4px;">${escapeHtml(report.report_number)}</div>` : ''}
@@ -729,6 +729,7 @@ export const REPORT_CSS = `
     padding-bottom: 8px;
     margin-bottom: 12px;
   }
+  .report-header img { height: 50px !important; max-height: 50px !important; max-width: 120px !important; width: auto !important; object-fit: contain !important; }
   .report-title { font-size: 18px; font-weight: bold; color: #1976d2; }
   .report-number { font-size: 12px; color: #666; margin-top: 2px; }
   .report-meta { font-size: 12px; text-align: right; line-height: 1.5; }

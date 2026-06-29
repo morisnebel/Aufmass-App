@@ -412,12 +412,33 @@ export const generateReportSectionHtml = (
   return `
     <div class="report-page">
       <div class="report-header">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;flex:1;">
           ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-width:120px;object-fit:contain;" />` : ''}
-          <div>
+          <div style="flex:1;">
             <div class="report-title">📝 ${escapeHtml((options as any).reportTitle || 'RAPPORT')}</div>
-            ${(options as any).companyName ? `<div style="font-size:11px;color:#475569;margin-top:2px;font-weight:600;">${escapeHtml((options as any).companyName)}</div>` : ''}
-            ${report.report_number ? `<div class="report-number">${escapeHtml(report.report_number)}</div>` : ''}
+            ${(options as any).companyName ? `<div style="font-size:13px;color:#0f172a;margin-top:2px;font-weight:700;">${escapeHtml((options as any).companyName)}</div>` : ''}
+            ${(options as any).companySubtitle ? `<div style="font-size:10px;color:#64748b;margin-top:1px;font-style:italic;">${escapeHtml((options as any).companySubtitle)}</div>` : ''}
+            ${(() => {
+              const street = (options as any).companyStreet || '';
+              const zip = (options as any).companyZip || '';
+              const city = (options as any).companyCity || '';
+              const phone = (options as any).companyPhone || '';
+              const mobile = (options as any).companyMobile || '';
+              const fax = (options as any).companyFax || '';
+              const email = (options as any).companyEmail || '';
+              const lines: string[] = [];
+              if (street) lines.push(escapeHtml(street));
+              const cityLine = [zip, city].filter(Boolean).join(' ');
+              if (cityLine) lines.push(escapeHtml(cityLine));
+              const contactParts: string[] = [];
+              if (phone) contactParts.push(`📞 ${escapeHtml(phone)}`);
+              if (mobile) contactParts.push(`📱 ${escapeHtml(mobile)}`);
+              if (fax) contactParts.push(`📠 ${escapeHtml(fax)}`);
+              if (email) contactParts.push(`✉ ${escapeHtml(email)}`);
+              if (contactParts.length > 0) lines.push(contactParts.join(' &nbsp;·&nbsp; '));
+              return lines.length > 0 ? `<div style="font-size:9.5px;color:#475569;margin-top:3px;line-height:1.45;">${lines.join('<br/>')}</div>` : '';
+            })()}
+            ${report.report_number ? `<div class="report-number" style="margin-top:4px;">${escapeHtml(report.report_number)}</div>` : ''}
           </div>
         </div>
         <div class="report-meta">
@@ -760,15 +781,31 @@ export const generateReportHtml = async (
   project: Project | null,
   customer: Customer | null
 ): Promise<string> => {
-  // Lade Settings (Logo, Titel, Firmenname)
+  // Lade Settings (Logo, Titel, Firmenname + komplette Firmendaten)
   let logoData = '';
   let companyName = '';
+  let companySubtitle = '';
+  let companyStreet = '';
+  let companyZip = '';
+  let companyCity = '';
+  let companyPhone = '';
+  let companyMobile = '';
+  let companyFax = '';
+  let companyEmail = '';
   let reportTitle = 'Rapport';
   try {
     const s = await SettingsService.get();
     const sAny = s as any;
     logoData = sAny.logo_data || sAny.company_logo || '';
-    companyName = s.company_name || '';
+    companyName = sAny.company_name || '';
+    companySubtitle = sAny.company_subtitle || '';
+    companyStreet = sAny.street || sAny.company_street || sAny.company_address || '';
+    companyZip = sAny.zip_code || sAny.company_zip || '';
+    companyCity = sAny.city || sAny.company_city || '';
+    companyPhone = sAny.phone || sAny.company_phone || '';
+    companyMobile = sAny.mobile_phone || sAny.company_mobile_phone || '';
+    companyFax = sAny.fax || sAny.company_fax || '';
+    companyEmail = sAny.email || sAny.company_email || '';
     reportTitle = s.report_title || 'Rapport';
   } catch (e) {
     console.warn('[generateReportHtml] settings load error:', e);
@@ -786,7 +823,7 @@ export const generateReportHtml = async (
       </style>
     </head>
     <body>
-      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, reportTitle, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
+      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, companySubtitle, companyStreet, companyZip, companyCity, companyPhone, companyMobile, companyFax, companyEmail, reportTitle, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
     </body>
     </html>
   `;

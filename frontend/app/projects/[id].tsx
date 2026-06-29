@@ -4356,17 +4356,33 @@ export default function ProjectDetailScreen() {
   };
 
   // Wrapper: appends Rapport-Sections to the existing project PDF HTML
-  const appendReportsToHtml = (html: string, reportsList: Report[]): string => {
+  const appendReportsToHtml = async (html: string, reportsList: Report[]): Promise<string> => {
     if (!reportsList || reportsList.length === 0) return html;
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { generateReportSectionHtml, REPORT_CSS } = require('../../services/ReportPdfService');
+      // Firmendaten aus Settings für den Rapport-Briefkopf laden
+      const s: any = await SettingsService.get();
+      const companyOpts = {
+        logoData: s.logo_data || s.company_logo || '',
+        companyName: s.company_name || '',
+        companySubtitle: s.company_subtitle || '',
+        companyStreet: s.street || s.company_street || s.company_address || '',
+        companyZip: s.zip_code || s.company_zip || '',
+        companyCity: s.city || s.company_city || '',
+        companyPhone: s.phone || s.company_phone || '',
+        companyMobile: s.mobile_phone || s.company_mobile_phone || '',
+        companyFax: s.fax || s.company_fax || '',
+        companyEmail: s.email || s.company_email || '',
+        reportTitle: s.report_title || 'Rapport',
+        standalone: true,
+      };
       // Jeden Rapport in einen eigenen .page-Container packen, damit er die volle Seitenbreite
       // (210mm) bekommt - sonst sind Rapporte im iPhone-PDF-Preview zu schmal.
       const rapportePages = reportsList.map((r: Report, idx: number) => `
         <div class="page" style="page-break-before: always;">
           ${idx === 0 ? `<h1 style="color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:6px;margin-top:0;">📝 Rapporte (${reportsList.length})</h1>` : ''}
-          ${generateReportSectionHtml(r, project, customer)}
+          ${generateReportSectionHtml(r, project, customer, companyOpts)}
         </div>
       `).join('');
       // inject extra css + reports before </body>
@@ -4390,7 +4406,7 @@ export default function ProjectDetailScreen() {
   const generateProjectPdfHtmlWithOptions = async (opts: { includeReports?: boolean } = {}): Promise<string> => {
     const html = await generatePdfHtml();
     if (opts.includeReports && reports.length > 0) {
-      return appendReportsToHtml(html, reports);
+      return await appendReportsToHtml(html, reports);
     }
     return html;
   };

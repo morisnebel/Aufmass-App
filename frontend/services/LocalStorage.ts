@@ -2007,6 +2007,11 @@ export interface Report {
   travel_note?: string;
   travel_per_employee_enabled?: boolean; // Pro-Mitarbeiter-Modus aktiv?
   travel_in_total_hours?: boolean; // Fahrzeit zur Gesamtarbeitszeit hinzuzählen?
+  // Preis-Anzeige im PDF (optional)
+  show_employee_costs?: boolean;
+  show_material_costs?: boolean;
+  show_machine_costs?: boolean;
+  show_total_sum?: boolean;
   // Briefkopf-Felder (Per-Report Override; sonst Settings-Default)
   header_fields?: string[];
   // Wetter
@@ -2153,6 +2158,8 @@ export interface MachineMaster {
   photos?: string[]; // base64 Strings
   category?: string; // (legacy / freie Kategorie-Beschreibung)
   note?: string;
+  // Preisangabe für Kostenberechnung im Rapport
+  hourly_rate?: number; // €/Stunde Einsatz
   active: boolean;
   created_at: string;
   updated_at: string;

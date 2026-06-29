@@ -21,7 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage } from '../../services/LocalStorage';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
@@ -4361,8 +4361,13 @@ export default function ProjectDetailScreen() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { generateReportSectionHtml, REPORT_CSS } = require('../../services/ReportPdfService');
-      // Firmendaten aus Settings für den Rapport-Briefkopf laden
+      // Firmendaten + Master-Daten für Preisberechnung
       const s: any = await SettingsService.get();
+      const [employeesMaster, materialsMaster, machinesMaster] = await Promise.all([
+        (async () => { try { return await EmployeeMasterService.getAll(); } catch { return []; } })(),
+        (async () => { try { return await MaterialMasterService.getAll(); } catch { return []; } })(),
+        (async () => { try { return await MachineMasterService.getAll(); } catch { return []; } })(),
+      ]);
       const companyOpts = {
         logoData: s.logo_data || s.company_logo || '',
         companyName: s.company_name || '',
@@ -4375,6 +4380,9 @@ export default function ProjectDetailScreen() {
         companyFax: s.fax || s.company_fax || '',
         companyEmail: s.email || s.company_email || '',
         reportTitle: s.report_title || 'Rapport',
+        employeesMaster,
+        materialsMaster,
+        machinesMaster,
         standalone: true,
       };
       // Jeden Rapport in einen eigenen .page-Container packen, damit er die volle Seitenbreite

@@ -127,6 +127,11 @@ export default function ReportEditScreen() {
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
   const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
+  // Preis-Anzeige im PDF
+  const [showEmployeeCosts, setShowEmployeeCosts] = useState<boolean>(false);
+  const [showMaterialCosts, setShowMaterialCosts] = useState<boolean>(false);
+  const [showMachineCosts, setShowMachineCosts] = useState<boolean>(false);
+  const [showTotalSum, setShowTotalSum] = useState<boolean>(false);
   // Roh-Strings für km-Eingaben pro Mitarbeiter (Komma-Erhaltung)
   const [travelKmDraft, setTravelKmDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
@@ -228,6 +233,10 @@ export default function ReportEditScreen() {
           setTravelNote(r.travel_note || '');
           setTravelPerEmployee(!!r.travel_per_employee_enabled);
           setTravelInTotalHours(r.travel_in_total_hours != null ? !!r.travel_in_total_hours : defaultTravelInTotal);
+          setShowEmployeeCosts(!!r.show_employee_costs);
+          setShowMaterialCosts(!!r.show_material_costs);
+          setShowMachineCosts(!!r.show_machine_costs);
+          setShowTotalSum(!!r.show_total_sum);
           // Briefkopf-Felder: per-report wenn vorhanden, sonst Default aus Settings, sonst eingebauter Default
           if (r.header_fields && r.header_fields.length > 0) {
             setHeaderFields(new Set(r.header_fields));
@@ -375,6 +384,10 @@ export default function ReportEditScreen() {
         travel_note: travelNote || undefined,
         travel_per_employee_enabled: travelPerEmployee || undefined,
         travel_in_total_hours: travelInTotalHours || undefined,
+        show_employee_costs: showEmployeeCosts || undefined,
+        show_material_costs: showMaterialCosts || undefined,
+        show_machine_costs: showMachineCosts || undefined,
+        show_total_sum: showTotalSum || undefined,
         header_fields: Array.from(headerFields),
         weather: weather || undefined,
         temperature: temperature ? parseFloat(temperature) : undefined,
@@ -1682,6 +1695,38 @@ export default function ReportEditScreen() {
               <Ionicons name="bookmark-outline" size={14} color="#0ea5e9" />
               <Text style={styles.saveDefaultBtnText}>Als Standard speichern</Text>
             </TouchableOpacity>
+          </Section>
+
+          {/* ===== Preise anzeigen (optional) ===== */}
+          <Section icon="cash-outline" title="Preise im PDF" subtitle="Welche Kostenangaben sollen im PDF erscheinen?" color="#16a34a">
+            {(() => {
+              const toggle = (label: string, sub: string, val: boolean, set: (v: boolean) => void, icon: any) => (
+                <TouchableOpacity
+                  key={label}
+                  onPress={() => set(!val)}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={icon} size={20} color={val ? '#16a34a' : '#94a3b8'} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#0f172a' }}>{label}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{sub}</Text>
+                  </View>
+                  <Ionicons name={val ? 'toggle' : 'toggle-outline'} size={32} color={val ? '#16a34a' : '#cbd5e1'} />
+                </TouchableOpacity>
+              );
+              return (
+                <>
+                  {toggle('Mitarbeiter-Lohnkosten', 'Stunden × Stundensatz pro Mitarbeiter', showEmployeeCosts, setShowEmployeeCosts, 'people-outline')}
+                  {toggle('Material-Kosten', 'Menge × Einzelpreis pro Material', showMaterialCosts, setShowMaterialCosts, 'cube-outline')}
+                  {toggle('Maschinen-Kosten', 'Einsatzstunden × Stundensatz', showMachineCosts, setShowMachineCosts, 'construct-outline')}
+                  {toggle('Gesamtsumme', 'Summe aller aktivierten Posten am Ende', showTotalSum, setShowTotalSum, 'calculator-outline')}
+                </>
+              );
+            })()}
+            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 10, fontStyle: 'italic' }}>
+              Hinweis: Preise stehen aus den Stammdaten – Mitarbeiter-Stundensatz, Material-Einzelpreis bzw. Maschinen-Stundensatz.
+            </Text>
           </Section>
         </ScrollView>
 

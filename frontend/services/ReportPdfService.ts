@@ -3,7 +3,7 @@
  * Generiert das HTML für einen Rapport-PDF und stellt einen Generator bereit,
  * der auch in das Gesamt-Projekt-PDF eingebunden werden kann.
  */
-import { Report, Project, Customer, SettingsService } from './LocalStorage';
+import { Report, Project, Customer, SettingsService, EmployeeMasterService, MaterialMasterService, MachineMasterService } from './LocalStorage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getAppName } from './FeatureFlags';
@@ -428,7 +428,6 @@ export const generateReportSectionHtml = (
       ${(() => {
         // Firmendaten-Box (rechte Spalte neben Projekt & Kunde)
         const cName = (options as any).companyName || '';
-        const cSub = (options as any).companySubtitle || '';
         const street = (options as any).companyStreet || '';
         const zip = (options as any).companyZip || '';
         const city = (options as any).companyCity || '';
@@ -497,6 +496,149 @@ export const generateReportSectionHtml = (
           </table>
         </div>
       ` : ''}
+
+      ${(() => {
+        // ====== Kosten-Übersicht (optional) ======
+        const showEmp = !!(report as any).show_employee_costs;
+        const showMat = !!(report as any).show_material_costs;
+        const showMac = !!(report as any).show_machine_costs;
+        const showSum = !!(report as any).show_total_sum;
+        if (!showEmp && !showMat && !showMac && !showSum) return '';
+
+        const empMaster: any[] = (options as any).employeesMaster || [];
+        const matMaster: any[] = (options as any).materialsMaster || [];
+        const macMaster: any[] = (options as any).machinesMaster || [];
+
+        const eurFmt = (n: number) => `${n.toFixed(2).replace('.', ',')} €`;
+        const escape = (s: string) => escapeHtml(s || '');
+
+        // === Mitarbeiter-Kosten ===
+        let empTotal = 0;
+        let empRowsHtml = '';
+        if (showEmp || showSum) {
+          (report.employees || []).forEach(e => {
+            const ea: any = e;
+            const calcHours = (() => {
+              if (e.hours != null) return e.hours;
+              if (!ea.time_from || !ea.time_to) return 0;
+              const [fh, fm] = ea.time_from.split(':').map(Number);
+              const [th, tm] = ea.time_to.split(':').map(Number);
+              let mins = (th * 60 + tm) - (fh * 60 + fm);
+              if (mins < 0) mins += 24 * 60;
+              mins -= ea.pause_minutes || 0;
+              return Math.max(0, Math.round((mins / 60) * 100) / 100);
+            })();
+            const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
+            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)));
+            const teamTravelShare = teamTravelTeam && report.travel_in_total_hours ? teamTravelTeam : 0; // pro MA der Team-Anteil zur Lohnberechnung
+            const totalHrs = calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare);
+            const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
+            const rate = master?.hourly_rate || 0;
+            const cost = totalHrs * rate;
+            empTotal += cost;
+            if (showEmp) {
+              empRowsHtml += `<tr>
+                <td>${escape(e.name)}</td>
+                <td style="color:#64748b;font-size:10px;">${escape(ea.role || '')}</td>
+                <td style="text-align:right;">${totalHrs.toFixed(2)} h</td>
+                <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
+                <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
+              </tr>`;
+            }
+          });
+        }
+
+        // === Material-Kosten ===
+        let matTotal = 0;
+        let matRowsHtml = '';
+        if (showMat || showSum) {
+          (report.materials || []).forEach(m => {
+            const master = matMaster.find((mm: any) => mm.name?.toLowerCase() === (m.name || '').toLowerCase());
+            const price = master?.price_per_unit || 0;
+            const cost = (m.quantity || 0) * price;
+            matTotal += cost;
+            if (showMat) {
+              matRowsHtml += `<tr>
+                <td>${escape(m.name)}</td>
+                <td style="text-align:right;">${(m.quantity || 0)} ${escape(m.unit)}</td>
+                <td style="text-align:right;">${price > 0 ? eurFmt(price) + '/' + escape(m.unit) : '<span style="color:#94a3b8">–</span>'}</td>
+                <td style="text-align:right;font-weight:600;">${price > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
+              </tr>`;
+            }
+          });
+        }
+
+        // === Maschinen-Kosten ===
+        let macTotal = 0;
+        let macRowsHtml = '';
+        if (showMac || showSum) {
+          ((report.machines || []) as any[]).forEach(m => {
+            const master = macMaster.find((mm: any) =>
+              (m.master_id && mm.id === m.master_id) || mm.name?.toLowerCase() === (m.name || '').toLowerCase()
+            );
+            const rate = master?.hourly_rate || 0;
+            const hours = m.hours || 0;
+            const cost = hours * rate;
+            macTotal += cost;
+            if (showMac) {
+              macRowsHtml += `<tr>
+                <td>${escape(m.name)}</td>
+                <td style="text-align:right;">${hours.toFixed(2)} h</td>
+                <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
+                <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
+              </tr>`;
+            }
+          });
+        }
+
+        const grandTotal = empTotal + matTotal + macTotal;
+
+        return `
+          <div class="section keep-together">
+            <div class="section-title" style="background:#dcfce7;color:#166534;">💰 Kosten-Übersicht</div>
+            ${showEmp && empRowsHtml ? `
+              <div style="margin-top:6px;font-size:11px;font-weight:700;color:#0f172a;">Mitarbeiter-Lohnkosten</div>
+              <table class="material-table" style="margin-top:4px;">
+                <thead><tr>
+                  <th>Mitarbeiter</th><th>Funktion</th>
+                  <th style="text-align:right;">Stunden</th><th style="text-align:right;">Satz</th><th style="text-align:right;">Summe</th>
+                </tr></thead>
+                <tbody>${empRowsHtml}</tbody>
+                <tfoot><tr><td colspan="4" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
+              </table>
+            ` : ''}
+            ${showMat && matRowsHtml ? `
+              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Material-Kosten</div>
+              <table class="material-table" style="margin-top:4px;">
+                <thead><tr>
+                  <th>Material</th>
+                  <th style="text-align:right;">Menge</th><th style="text-align:right;">Einzelpreis</th><th style="text-align:right;">Summe</th>
+                </tr></thead>
+                <tbody>${matRowsHtml}</tbody>
+                <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(matTotal)}</td></tr></tfoot>
+              </table>
+            ` : ''}
+            ${showMac && macRowsHtml ? `
+              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Maschinen-Kosten</div>
+              <table class="material-table" style="margin-top:4px;">
+                <thead><tr>
+                  <th>Maschine / Gerät</th>
+                  <th style="text-align:right;">Stunden</th><th style="text-align:right;">Satz</th><th style="text-align:right;">Summe</th>
+                </tr></thead>
+                <tbody>${macRowsHtml}</tbody>
+                <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(macTotal)}</td></tr></tfoot>
+              </table>
+            ` : ''}
+            ${showSum ? `
+              <div style="margin-top:12px;padding:12px 14px;background:#16a34a;color:#fff;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:14px;font-weight:700;">Gesamtsumme</span>
+                <span style="font-size:18px;font-weight:800;">${eurFmt(grandTotal)}</span>
+              </div>
+              <div style="font-size:9px;color:#64748b;margin-top:4px;font-style:italic;">Hinweis: Preise ohne Mehrwertsteuer. Tatsächliche Kosten können abweichen.</div>
+            ` : ''}
+          </div>
+        `;
+      })()}
 
       <div class="section info-grid">
         ${(weatherText || tempText) ? `
@@ -805,6 +947,9 @@ export const generateReportHtml = async (
   let companyFax = '';
   let companyEmail = '';
   let reportTitle = 'Rapport';
+  let employeesMaster: any[] = [];
+  let materialsMaster: any[] = [];
+  let machinesMaster: any[] = [];
   try {
     const s = await SettingsService.get();
     const sAny = s as any;
@@ -819,6 +964,12 @@ export const generateReportHtml = async (
     companyFax = sAny.fax || sAny.company_fax || '';
     companyEmail = sAny.email || sAny.company_email || '';
     reportTitle = s.report_title || 'Rapport';
+    // Master-Daten für Preisberechnung laden (nur wenn nötig)
+    if (report.show_employee_costs || report.show_material_costs || report.show_machine_costs || report.show_total_sum) {
+      employeesMaster = await EmployeeMasterService.getAll();
+      materialsMaster = await MaterialMasterService.getAll();
+      machinesMaster = await MachineMasterService.getAll();
+    }
   } catch (e) {
     console.warn('[generateReportHtml] settings load error:', e);
   }
@@ -835,7 +986,7 @@ export const generateReportHtml = async (
       </style>
     </head>
     <body>
-      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, companySubtitle, companyStreet, companyZip, companyCity, companyPhone, companyMobile, companyFax, companyEmail, reportTitle, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
+      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, companySubtitle, companyStreet, companyZip, companyCity, companyPhone, companyMobile, companyFax, companyEmail, reportTitle, employeesMaster, materialsMaster, machinesMaster, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
     </body>
     </html>
   `;

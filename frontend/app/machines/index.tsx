@@ -1043,6 +1043,22 @@ export default function MachinesIndex() {
                   ))}
                 </View>
 
+                {/* Stundensatz für Kostenberechnung im Rapport */}
+                <Text style={styles.label}>Stundensatz (€/h, optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.hourly_rate != null && form.hourly_rate > 0 ? String(form.hourly_rate).replace('.', ',') : ''}
+                  onChangeText={(v) => {
+                    const num = parseFloat(v.replace(',', '.'));
+                    setForm({ ...form, hourly_rate: isNaN(num) ? undefined : num });
+                  }}
+                  placeholder="z.B. 45,00"
+                  keyboardType="decimal-pad"
+                />
+                <Text style={{ fontSize: 11, color: '#64748b', marginTop: -4, marginBottom: 8 }}>
+                  Wird nur im Rapport-PDF angezeigt, wenn „Maschinen-Kosten anzeigen" aktiv ist.
+                </Text>
+
                 {/* Inspektionen */}
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>

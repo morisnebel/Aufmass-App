@@ -1075,19 +1075,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
           )}
 
-          {/* Stunden-Dashboard - nur in Pro Version */}
-          {Features.showReportTab && (
-          <TouchableOpacity
-            style={[styles.quickButton, isPhoneDevice && styles.quickButtonPhone]}
-            onPress={() => router.push('/hours/')}
-          >
-            <View style={[styles.quickIconContainer, isPhoneDevice && styles.quickIconContainerPhone, { backgroundColor: '#dcfce7' }]}>
-              <Ionicons name="time-outline" size={isPhoneDevice ? 18 : 20} color="#16a34a" />
-            </View>
-            <Text style={[styles.quickButtonText, isPhoneDevice && styles.quickButtonTextPhone]}>Stunden</Text>
-          </TouchableOpacity>
-          )}
-
           {/* Maschinen / Geräte - nur in Pro Version */}
           {Features.showReportTab && (
           <TouchableOpacity

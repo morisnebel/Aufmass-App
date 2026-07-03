@@ -115,8 +115,9 @@ interface Sketch {
   sketch_data: string;
   title?: string;
   metadata?: string;
-  notes?: string;
-  memos?: string;
+  notes?: string;         // Memo-Sprechblasen
+  memos?: string;         // Memo-Pfeile/Pointer
+  generalNotes?: string;  // Allgemeine Notizen (Notizen-Button)
   pdf_size?: string;
 }
 
@@ -1779,6 +1780,7 @@ export default function ProjectDetailScreen() {
       let size = sketch.pdf_size || 'large';
       let sketchNotes = sketch.notes || '';
       let sketchMemos = sketch.memos || '';
+      let sketchGeneralNotes = sketch.generalNotes || '';
       
       // Metadata aus separatem Storage laden (zuverlässiger als sketch.metadata)
       try {
@@ -1795,9 +1797,9 @@ export default function ProjectDetailScreen() {
             size = metadata.pdf_size;
           }
         }
-        // Notes aus metadata als Fallback
-        if (!sketchNotes && metadata.notes) {
-          sketchNotes = metadata.notes;
+        // Allgemeine Notizen aus metadata (vom Notizen-Button)
+        if (!sketchGeneralNotes && metadata.notes) {
+          sketchGeneralNotes = metadata.notes;
         }
         // Memos und Notizen separat extrahieren aus elements
         if (metadata.elements && Array.isArray(metadata.elements)) {
@@ -1836,13 +1838,21 @@ export default function ProjectDetailScreen() {
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
       
-      // Notizen und Memos separat anzeigen mit benutzerdefinierten Labels
+      // Allgemeine Notizen (vom Notizen-Button) - blauer Hintergrund
+      const generalNotesHtml = sketchGeneralNotes.trim()
+        ? `<div class="sketch-notes sketch-general-notes-filled">
+            <span class="sketch-general-notes-label">Allgemeine Notizen: </span><span class="sketch-general-notes-text">${sketchGeneralNotes.replace(/\n/g, '<br>')}</span>
+          </div>`
+        : '';
+      
+      // Notizen (Sprechblasen) - gelber Hintergrund
       const notesHtml = sketchNotes.trim() 
         ? `<div class="sketch-notes sketch-notes-filled">
             <span class="sketch-notes-label">${noteToolLabel}: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>
           </div>`
         : '';
       
+      // Memos (Pfeile) - roter Hintergrund
       const memosHtml = sketchMemos.trim()
         ? `<div class="sketch-notes sketch-memos-filled">
             <span class="sketch-memos-label">${memoToolLabel}: </span><span class="sketch-memos-text">${sketchMemos.replace(/\n/g, '<br>')}</span>
@@ -1854,6 +1864,7 @@ export default function ProjectDetailScreen() {
           ${index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
+          ${generalNotesHtml}
           ${notesHtml}
           ${memosHtml}
         </div>
@@ -4221,6 +4232,10 @@ export default function ProjectDetailScreen() {
             background: #fef2f2;
             border-top: 1px solid #fecaca;
           }
+          .sketch-general-notes-filled {
+            background: #dbeafe;
+            border-top: 1px solid #93c5fd;
+          }
           .sketch-notes-label {
             font-size: 9px;
             font-weight: 600;
@@ -4231,6 +4246,11 @@ export default function ProjectDetailScreen() {
             font-weight: 600;
             color: #dc2626;
           }
+          .sketch-general-notes-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: #1d4ed8;
+          }
           .sketch-notes-text {
             font-size: 9px;
             color: #333;
@@ -4239,6 +4259,11 @@ export default function ProjectDetailScreen() {
           .sketch-memos-text {
             font-size: 9px;
             color: #7f1d1d;
+            line-height: 1.4;
+          }
+          .sketch-general-notes-text {
+            font-size: 9px;
+            color: #1e40af;
             line-height: 1.4;
           }
           .sketch-notes-lines {
@@ -6160,7 +6185,14 @@ export default function ProjectDetailScreen() {
                       </View>
                     )}
                     
-                    {/* Notizen anzeigen */}
+                    {/* Allgemeine Notizen anzeigen (vom Notizen-Button) */}
+                    {sketch.generalNotes ? (
+                      <Text style={{ fontSize: 12, color: '#007AFF', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
+                        Allgemeine Notizen: {sketch.generalNotes}
+                      </Text>
+                    ) : null}
+                    
+                    {/* Notizen (Memo-Sprechblasen) anzeigen */}
                     {sketch.notes ? (
                       <Text style={{ fontSize: 12, color: '#666', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
                         {noteToolLabel}: {sketch.notes}

@@ -628,9 +628,10 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
             const meta = JSON.parse(metaStr);
             // Notizen aus metadata.notes übernehmen
             if (meta.notes) {
-              sketches[i].notes = meta.notes;
+              // Allgemeine Notizen (vom Notizen-Button) -> generalNotes
+              sketches[i].generalNotes = meta.notes;
             }
-            // Memo-Elemente (pointer/memo arrows): Separat extrahieren für Zusatzleistungen
+            // Memo-Elemente (pointer/memo arrows): Separat extrahieren
             if (meta.elements && Array.isArray(meta.elements)) {
               // Memos/Pointer = Zusatzleistungen (rote Pfeile mit Text)
               const memoTexts = meta.elements
@@ -647,9 +648,7 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
                 .map((el: any) => el.data.text.trim())
                 .filter((t: string) => t.length > 0);
               if (noteTexts.length > 0) {
-                if (!sketches[i].notes) {
-                  sketches[i].notes = noteTexts.join(' | ');
-                }
+                sketches[i].notes = noteTexts.join(' | ');
               }
             }
             // pdf_size aus metadata übernehmen falls nicht bereits vorhanden
@@ -1137,8 +1136,9 @@ export interface Sketch {
   project_id: string;
   name?: string;
   title?: string;
-  notes?: string;
-  memos?: string; // Separate field for memo-arrow content
+  notes?: string;           // Memo-Sprechblasen (elements)
+  memos?: string;           // Memo-Pfeile/Pointer (elements)
+  generalNotes?: string;    // Allgemeine Notizen (Notizen-Button)
   sketch_data?: string;
   metadata?: string;
   pdf_size?: string;

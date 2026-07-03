@@ -459,6 +459,72 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* Skizzen-Werkzeuge benennen Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Skizzen-Werkzeuge benennen</Text>
+            <Text style={styles.toolsDescription}>
+              Der Name erscheint in der Vorschau und im PDF (z.B. „Vermerk"), das Kürzel auf dem Button in der Skizze (z.B. „VM").
+            </Text>
+
+            {/* Memo-Pfeil */}
+            <View style={styles.toolSection}>
+              <View style={styles.toolHeader}>
+                <Ionicons name="arrow-forward" size={16} color="#dc2626" />
+                <Text style={styles.toolLabel}>Memo-Pfeil</Text>
+              </View>
+              <View style={styles.toolInputRow}>
+                <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={settings.memo_tool_name || 'Zusatzleistung'}
+                    onChangeText={(text) => setSettings({ ...settings, memo_tool_name: text })}
+                    placeholder="Zusatzleistung"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Kürzel</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={settings.memo_tool_short || 'Zusatzle'}
+                    onChangeText={(text) => setSettings({ ...settings, memo_tool_short: text })}
+                    placeholder="Zusatzle"
+                    maxLength={10}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Notiz */}
+            <View style={styles.toolSection}>
+              <View style={styles.toolHeader}>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#dc2626" />
+                <Text style={styles.toolLabel}>Notiz</Text>
+              </View>
+              <View style={styles.toolInputRow}>
+                <View style={[styles.inputGroup, { flex: 2, marginRight: 8 }]}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={settings.note_tool_name || 'Notiz'}
+                    onChangeText={(text) => setSettings({ ...settings, note_tool_name: text })}
+                    placeholder="Notiz"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Kürzel</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={settings.note_tool_short || 'Notiz'}
+                    onChangeText={(text) => setSettings({ ...settings, note_tool_short: text })}
+                    placeholder="Notiz"
+                    maxLength={10}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
           {/* Briefkopf Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('settings.pdfSettings')}</Text>
@@ -1904,5 +1970,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  // Skizzen-Werkzeuge Styles
+  toolsDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  toolSection: {
+    marginBottom: 16,
+  },
+  toolHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toolLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#dc2626',
+    marginLeft: 8,
+  },
+  toolInputRow: {
+    flexDirection: 'row',
   },
 });

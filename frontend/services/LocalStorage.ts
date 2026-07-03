@@ -1931,6 +1931,11 @@ export interface Settings {
   pdf_header_size?: 'small' | 'medium' | 'large';
   pdf_project_type_size?: 'small' | 'medium' | 'large';
   pdf_tools_size?: 'small' | 'medium' | 'large';
+  // Skizzen-Werkzeuge benennen
+  memo_tool_name?: string;
+  memo_tool_short?: string;
+  note_tool_name?: string;
+  note_tool_short?: string;
 }
 
 export const SettingsService = {

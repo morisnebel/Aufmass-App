@@ -7626,20 +7626,19 @@ export default function DrawSketchScreen() {
             
             svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
             
-            // Text-Position - AUSSERHALB des Winkels positionieren (nicht in der Mitte)
+            // Text-Position - AUSSERHALB des Winkels auf der GEGENSEITE
+            // Berechne die Mitte des Winkels und positioniere den Text auf der Außenseite
             const midAng = (ang1 + ang2) / 2;
-            // Berechne die "Außenseite" des Winkels
-            // Der Text soll auf der gegenüberliegenden Seite des Bogens stehen
-            let outerAngle = midAng + Math.PI; // Gegenüberliegende Seite
-            // Normalisieren
-            while (outerAngle > Math.PI) outerAngle -= 2 * Math.PI;
-            while (outerAngle < -Math.PI) outerAngle += 2 * Math.PI;
             
-            // Bei kleinen Winkeln (< 45°) Text weiter weg und oberhalb
-            const textOffset = angleValue < 45 ? Math.max(arcR + 40, 55) : (arcR + 25);
-            // Text oberhalb des Scheitelpunkts positionieren (nicht im Winkel)
-            const textX = v.x;
-            const textY = v.y - textOffset;
+            // Prüfe auf welcher Seite die "Außenseite" ist
+            // Bei sweepFlag=1 ist der Winkel im Uhrzeigersinn, Text nach außen = + PI
+            // Bei sweepFlag=0 ist der Winkel gegen Uhrzeigersinn, Text auf der anderen Seite
+            const outerAngle = sweepFlag === 1 ? midAng + Math.PI : midAng;
+            
+            // Text weiter weg vom Scheitelpunkt positionieren (außerhalb des Winkels)
+            const textOffset = arcR + 30;
+            const textX = v.x + textOffset * Math.cos(outerAngle);
+            const textY = v.y + textOffset * Math.sin(outerAngle);
             
             svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
           }

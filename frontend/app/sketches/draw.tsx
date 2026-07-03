@@ -8503,13 +8503,13 @@ export default function DrawSketchScreen() {
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
-              style={[styles.toolButtonInner, (drawMode === 'line' || drawMode === 'arrow') && styles.toolButtonActive]}
+              style={[styles.toolButtonInner, (drawMode === 'line' || drawMode === 'arrow' || drawMode === 'doubleArrow') && styles.toolButtonActive]}
               onPress={() => setShowLineTypeModal(true)}
             >
               <Ionicons 
                 name={selectedLineType === 'line' ? 'remove' : selectedLineType === 'arrow' ? 'arrow-forward' : 'swap-horizontal'} 
                 size={18} 
-                color={(drawMode === 'line' || drawMode === 'arrow') ? '#fff' : '#333'} 
+                color={(drawMode === 'line' || drawMode === 'arrow' || drawMode === 'doubleArrow') ? '#fff' : '#333'} 
               />
             </TouchableOpacity>
             <TouchableOpacity

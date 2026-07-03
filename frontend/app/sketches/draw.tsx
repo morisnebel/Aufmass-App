@@ -5676,6 +5676,13 @@ export default function DrawSketchScreen() {
                 };
               }
               // Winkel bleibt unverändert!
+            } else if (resizeHandle === 'text') {
+              // Text-Position verschieben
+              const v = originalElement.vertex;
+              newEl.textOffset = {
+                x: locationX - v.x,
+                y: locationY - v.y,
+              };
             }
             // Lupe aktualisieren
             if (showMagnifier) {
@@ -6067,12 +6074,35 @@ export default function DrawSketchScreen() {
         }
       }
     } else if (element.type === 'angle') {
-      // Winkel-Element: Handles für Vertex, Point1, Point2
+      // Winkel-Element: Handles für Vertex, Point1, Point2, und Text
       if (element.vertex && element.point1 && element.point2) {
         const v = element.vertex;
         const p1 = element.point1;
         const p2 = element.point2;
         
+        // Berechne Text-Position für Handle-Erkennung
+        const len1 = Math.sqrt(Math.pow(p1.x - v.x, 2) + Math.pow(p1.y - v.y, 2));
+        const len2 = Math.sqrt(Math.pow(p2.x - v.x, 2) + Math.pow(p2.y - v.y, 2));
+        const arcR = Math.min(len1, len2) * 0.3;
+        const ang1 = Math.atan2(p1.y - v.y, p1.x - v.x);
+        const ang2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+        const midAng = (ang1 + ang2) / 2;
+        
+        let textX: number, textY: number;
+        if (element.textOffset) {
+          textX = v.x + element.textOffset.x;
+          textY = v.y + element.textOffset.y;
+        } else {
+          const outerAngle = midAng + Math.PI;
+          const textDist = arcR + 35;
+          textX = v.x + textDist * Math.cos(outerAngle);
+          textY = v.y + textDist * Math.sin(outerAngle);
+        }
+        
+        // Text-Handle (höchste Priorität)
+        if (Math.sqrt(Math.pow(x - textX, 2) + Math.pow(y - textY, 2)) < handleRadius + 5) {
+          return { type: 'resize', handle: 'text' };
+        }
         // Vertex-Handle (größer)
         if (Math.sqrt(Math.pow(x - v.x, 2) + Math.pow(y - v.y, 2)) < handleRadius + 5) {
           return { type: 'resize', handle: 'vertex' };
@@ -6238,6 +6268,9 @@ export default function DrawSketchScreen() {
                 <Circle cx={p1.x} cy={p1.y} r={8} fill={element.color} stroke="#fff" strokeWidth={2} />
                 {/* Point2-Handle */}
                 <Circle cx={p2.x} cy={p2.y} r={8} fill={element.color} stroke="#fff" strokeWidth={2} />
+                {/* Text-Handle (verschiebbar) */}
+                <Circle cx={textX} cy={textY} r={12} fill="#2196f3" stroke="#fff" strokeWidth={2} opacity={0.8} />
+                <SvgText x={textX} y={textY + 4} fill="#fff" fontSize={10} fontWeight="bold" textAnchor="middle">T</SvgText>
               </>
             )}
           </G>

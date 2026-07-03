@@ -7626,10 +7626,12 @@ export default function DrawSketchScreen() {
             
             svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
             
-            // Text-Position
+            // Text-Position - bei kleinen Winkeln weiter weg positionieren
             const midAng = (ang1 + ang2) / 2;
-            const textX = v.x + (arcR + 20) * Math.cos(midAng);
-            const textY = v.y + (arcR + 20) * Math.sin(midAng);
+            // Bei kleinen Winkeln (< 30°) Text weiter weg positionieren
+            const textOffset = angleValue < 30 ? Math.max(arcR + 35, 50) : (arcR + 20);
+            const textX = v.x + textOffset * Math.cos(midAng);
+            const textY = v.y + textOffset * Math.sin(midAng);
             
             svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
           }
@@ -8401,6 +8403,9 @@ export default function DrawSketchScreen() {
                 setProtractorCenter({ x: 0, y: 0 });
                 setProtractorRefEnd({ x: 0, y: 0 });
                 setProtractorAngleEnd({ x: 0, y: 0 });
+                
+                // WICHTIG: Zoom/Pan automatisch zurücksetzen für präzise Winkelmessung
+                resetAndroidZoom();
               }
               setShowProtractor(!showProtractor);
             }}
@@ -11261,24 +11266,33 @@ export default function DrawSketchScreen() {
               while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
               const sweep = angleDiff > 0 ? 1 : 0;
               const largeArc = calculatedAngle > 180 ? 1 : 0;
+              
+              // Text-Position: in der Mitte des Bogens, bei kleinen Winkeln weiter weg
+              const midAngle = (refAng + angAng) / 2;
+              const textOffset = calculatedAngle < 30 ? Math.max(arcR + 30, 60) : (arcR + 20);
+              const textX = vertex.x + textOffset * Math.cos(midAngle);
+              const textY = vertex.y + textOffset * Math.sin(midAngle);
+              
               return (
-                <Path 
-                  d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
-                  fill="none" stroke="#4caf50" strokeWidth={3}
-                />
+                <>
+                  <Path 
+                    d={`M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArc} ${sweep} ${arcX2} ${arcY2}`}
+                    fill="none" stroke="#4caf50" strokeWidth={3}
+                  />
+                  {/* Winkelwert - in der Mitte des Bogens positioniert */}
+                  <SvgText
+                    x={textX}
+                    y={textY}
+                    fill="#FF5722"
+                    fontSize={18}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {calculatedAngle.toFixed(1)}°
+                  </SvgText>
+                </>
               );
             })()}
-            {/* Winkelwert */}
-            <SvgText
-              x={angleScreenCoords.vertex.x}
-              y={angleScreenCoords.vertex.y - 35}
-              fill="#FF5722"
-              fontSize={18}
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              {calculatedAngle.toFixed(1)}°
-            </SvgText>
           </Svg>
           
           {/* Touch-Handler - verwendet angleScreenCoords */}

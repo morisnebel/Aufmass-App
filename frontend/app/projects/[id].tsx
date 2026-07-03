@@ -1778,6 +1778,7 @@ export default function ProjectDetailScreen() {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
       let sketchNotes = sketch.notes || '';
+      let sketchMemos = sketch.memos || '';
       
       // Metadata aus separatem Storage laden (zuverlässiger als sketch.metadata)
       try {
@@ -1798,14 +1799,27 @@ export default function ProjectDetailScreen() {
         if (!sketchNotes && metadata.notes) {
           sketchNotes = metadata.notes;
         }
-        // Memo-Elemente UND Pointer-Elemente: Text extrahieren (visuelle Notizen auf der Zeichenfläche)
-        if (!sketchNotes && metadata.elements && Array.isArray(metadata.elements)) {
-          const noteTexts = metadata.elements
-            .filter((el: any) => (el.type === 'memo' || el.type === 'pointer') && el.data?.text)
-            .map((el: any) => el.data.text.trim())
-            .filter((t: string) => t.length > 0);
-          if (noteTexts.length > 0) {
-            sketchNotes = noteTexts.join(' | ');
+        // Memos und Notizen separat extrahieren aus elements
+        if (metadata.elements && Array.isArray(metadata.elements)) {
+          // Memos/Pointer = Zusatzleistungen (rote Pfeile mit Text)
+          if (!sketchMemos) {
+            const memoTexts = metadata.elements
+              .filter((el: any) => el.type === 'pointer' && el.data?.text)
+              .map((el: any) => el.data.text.trim())
+              .filter((t: string) => t.length > 0);
+            if (memoTexts.length > 0) {
+              sketchMemos = memoTexts.join(' | ');
+            }
+          }
+          // Notizen = memo type (Sprechblasen)
+          if (!sketchNotes) {
+            const noteTexts = metadata.elements
+              .filter((el: any) => el.type === 'memo' && el.data?.text)
+              .map((el: any) => el.data.text.trim())
+              .filter((t: string) => t.length > 0);
+            if (noteTexts.length > 0) {
+              sketchNotes = noteTexts.join(' | ');
+            }
           }
         }
       } catch (e) {
@@ -1822,10 +1836,16 @@ export default function ProjectDetailScreen() {
       // Titel für Skizze
       const sketchTitle = sketch.title || `Skizze ${index + 1}`;
       
-      // Notizen nur anzeigen wenn vorhanden - kompakt inline
+      // Notizen und Memos separat anzeigen mit benutzerdefinierten Labels
       const notesHtml = sketchNotes.trim() 
         ? `<div class="sketch-notes sketch-notes-filled">
-            <span class="sketch-notes-label">Notizen: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>
+            <span class="sketch-notes-label">${noteToolLabel}: </span><span class="sketch-notes-text">${sketchNotes.replace(/\n/g, '<br>')}</span>
+          </div>`
+        : '';
+      
+      const memosHtml = sketchMemos.trim()
+        ? `<div class="sketch-notes sketch-memos-filled">
+            <span class="sketch-memos-label">${memoToolLabel}: </span><span class="sketch-memos-text">${sketchMemos.replace(/\n/g, '<br>')}</span>
           </div>`
         : '';
       
@@ -1835,6 +1855,7 @@ export default function ProjectDetailScreen() {
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
           ${notesHtml}
+          ${memosHtml}
         </div>
       `;
     }));
@@ -4196,14 +4217,28 @@ export default function ProjectDetailScreen() {
             background: #fff8e1;
             border-top: 1px solid #ffe082;
           }
+          .sketch-memos-filled {
+            background: #fef2f2;
+            border-top: 1px solid #fecaca;
+          }
           .sketch-notes-label {
             font-size: 9px;
             font-weight: 600;
             color: #666;
           }
+          .sketch-memos-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: #dc2626;
+          }
           .sketch-notes-text {
             font-size: 9px;
             color: #333;
+            line-height: 1.4;
+          }
+          .sketch-memos-text {
+            font-size: 9px;
+            color: #7f1d1d;
             line-height: 1.4;
           }
           .sketch-notes-lines {

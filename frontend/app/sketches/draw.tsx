@@ -7626,19 +7626,10 @@ export default function DrawSketchScreen() {
             
             svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
             
-            // Text-Position - AUSSERHALB des Winkels auf der GEGENSEITE
-            // Berechne die Mitte des Winkels und positioniere den Text auf der Außenseite
-            const midAng = (ang1 + ang2) / 2;
-            
-            // Prüfe auf welcher Seite die "Außenseite" ist
-            // Bei sweepFlag=1 ist der Winkel im Uhrzeigersinn, Text nach außen = + PI
-            // Bei sweepFlag=0 ist der Winkel gegen Uhrzeigersinn, Text auf der anderen Seite
-            const outerAngle = sweepFlag === 1 ? midAng + Math.PI : midAng;
-            
-            // Text weiter weg vom Scheitelpunkt positionieren (außerhalb des Winkels)
-            const textOffset = arcR + 30;
-            const textX = v.x + textOffset * Math.cos(outerAngle);
-            const textY = v.y + textOffset * Math.sin(outerAngle);
+            // Text-Position - EXAKT wie in der Live-Ansicht: oberhalb des Scheitelpunkts
+            // Mit festem Abstand von 35 Pixeln (wie im Protractor-Overlay)
+            const textX = v.x;
+            const textY = v.y - 35;
             
             svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
           }

@@ -116,6 +116,7 @@ interface Sketch {
   title?: string;
   metadata?: string;
   notes?: string;
+  memos?: string;
   pdf_size?: string;
 }
 
@@ -168,6 +169,10 @@ export default function ProjectDetailScreen() {
   const [areaCalculations, setAreaCalculations] = useState<AreaCalculation[]>([]);
   const [checklistColumns, setChecklistColumns] = useState<number>(2);
   const [loading, setLoading] = useState(true);
+  
+  // Custom tool names from settings
+  const [memoToolLabel, setMemoToolLabel] = useState('Zusatzleistungen');
+  const [noteToolLabel, setNoteToolLabel] = useState('Notizen');
   
   // Determine initial tab from URL parameter
   const initialTab = (tab === 'sketches' || tab === 'roofs' || tab === 'photos' || tab === 'checklists' || tab === 'remarks' || tab === 'documents' | tab === 'calculator' || tab === 'imagemeter') ? tab : 'overview';
@@ -447,6 +452,13 @@ export default function ProjectDetailScreen() {
       }
       if (data.settings?.pdf_checklist_columns) {
         setChecklistColumns(data.settings.pdf_checklist_columns);
+      }
+      // Load custom tool names for sketch labels
+      if (data.settings?.memo_tool_name) {
+        setMemoToolLabel(data.settings.memo_tool_name);
+      }
+      if (data.settings?.note_tool_name) {
+        setNoteToolLabel(data.settings.note_tool_name);
       }
 
       // Lade die zuletzt verwendete Projektart
@@ -6116,14 +6128,14 @@ export default function ProjectDetailScreen() {
                     {/* Notizen anzeigen */}
                     {sketch.notes ? (
                       <Text style={{ fontSize: 12, color: '#666', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
-                        Notizen: {sketch.notes}
+                        {noteToolLabel}: {sketch.notes}
                       </Text>
                     ) : null}
                     
                     {/* Memos/Zusatzleistungen separat anzeigen */}
                     {sketch.memos ? (
                       <Text style={{ fontSize: 12, color: '#dc2626', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
-                        Zusatzleistungen: {sketch.memos}
+                        {memoToolLabel}: {sketch.memos}
                       </Text>
                     ) : null}
                     

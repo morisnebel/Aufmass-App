@@ -172,7 +172,7 @@ const perpendicularDistance = (
 
 interface DrawElement {
   id: string;
-  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'pointer' | 'polygon' | 'polyline' | 'memo' | 'angle';
+  type: 'path' | 'line' | 'circle' | 'rect' | 'text' | 'image' | 'arrow' | 'doubleArrow' | 'pointer' | 'polygon' | 'polyline' | 'memo' | 'angle';
   data: any;
   color: string;
   strokeWidth: number;
@@ -219,7 +219,7 @@ const FONT_FAMILIES: { id: FontFamily; label: string; style: string; svgFont: st
   ],
 }) as { id: FontFamily; label: string; style: string; svgFont: string }[];
 
-type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint' | 'removePoint';
+type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'doubleArrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint' | 'removePoint';
 
 // Verschiebbare Summenbox-Komponente für jedes Polyline-Element
 interface DraggableTotalBoxProps {
@@ -2001,6 +2001,8 @@ export default function DrawSketchScreen() {
   const [showEditTextModal, setShowEditTextModal] = useState(false);
   const [showEditPointerModal, setShowEditPointerModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showLineTypeModal, setShowLineTypeModal] = useState(false); // Auswahl Linie/Pfeil/Doppelpfeil
+  const [selectedLineType, setSelectedLineType] = useState<'line' | 'arrow' | 'doubleArrow'>('line');
   const [textInput, setTextInput] = useState('');
   const [arrowText, setArrowText] = useState('');
   const [arrowHeads, setArrowHeads] = useState<'single' | 'double'>('double');
@@ -4609,6 +4611,22 @@ export default function DrawSketchScreen() {
         setShowArrowModal(true);
         setStartPoint(null);
         setTempElement(null);
+      } else if (startPoint && drawMode === 'doubleArrow') {
+        // Doppelpfeil: direkt hinzufügen ohne Modal
+        const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
+        const { x: locationX, y: locationY } = getCanvasCoordinates(touch);
+        
+        const newElement: DrawElement = {
+          id: Date.now().toString(),
+          type: 'doubleArrow',
+          data: { x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY },
+          color: drawColor,
+          strokeWidth: editArrowStrokeWidth,
+          rotation: 0,
+        };
+        addToHistory([...elements, newElement]);
+        setStartPoint(null);
+        setTempElement(null);
       } else if (startPoint && drawMode === 'pointer') {
         const touch = event.nativeEvent.changedTouches ? event.nativeEvent.changedTouches[0] : event.nativeEvent;
         // Plattformspezifische Koordinaten-Berechnung
@@ -4687,6 +4705,16 @@ export default function DrawSketchScreen() {
           data: { x1: start.x, y1: start.y, x2: endX, y2: endY, text: '', heads: arrowHeads },
           color: drawColor,
           strokeWidth: editArrowStrokeWidth, // Gespeicherte Arrow-Strichstärke verwenden
+          rotation: 0,
+        };
+        break;
+      case 'doubleArrow':
+        element = {
+          id: 'temp',
+          type: 'doubleArrow',
+          data: { x1: start.x, y1: start.y, x2: endX, y2: endY },
+          color: drawColor,
+          strokeWidth: editArrowStrokeWidth,
           rotation: 0,
         };
         break;
@@ -6425,6 +6453,69 @@ export default function DrawSketchScreen() {
                 {text}
               </SvgText>
             )}
+            {isSelected && renderTransformHandles(element)}
+          </G>
+        );
+      
+      case 'doubleArrow':
+        // Doppelpfeil - Pfeilspitzen an beiden Enden
+        const daX1 = element.data.x1;
+        const daY1 = element.data.y1;
+        const daX2 = element.data.x2;
+        const daY2 = element.data.y2;
+        const daMidX = (daX1 + daX2) / 2;
+        const daMidY = (daY1 + daY2) / 2;
+        const daAngle = Math.atan2(daY2 - daY1, daX2 - daX1);
+        const daHeadSize = Math.max(10, element.strokeWidth * 3);
+        const daHeadAngle = Math.PI / 6;
+        
+        // Pfeilspitze am Ende (daX2, daY2)
+        const daTip2X = daX2;
+        const daTip2Y = daY2;
+        const daLeft2X = daX2 - daHeadSize * Math.cos(daAngle - daHeadAngle);
+        const daLeft2Y = daY2 - daHeadSize * Math.sin(daAngle - daHeadAngle);
+        const daRight2X = daX2 - daHeadSize * Math.cos(daAngle + daHeadAngle);
+        const daRight2Y = daY2 - daHeadSize * Math.sin(daAngle + daHeadAngle);
+        
+        // Pfeilspitze am Anfang (daX1, daY1) - entgegengesetzte Richtung
+        const daTip1X = daX1;
+        const daTip1Y = daY1;
+        const daLeft1X = daX1 + daHeadSize * Math.cos(daAngle - daHeadAngle);
+        const daLeft1Y = daY1 + daHeadSize * Math.sin(daAngle - daHeadAngle);
+        const daRight1X = daX1 + daHeadSize * Math.cos(daAngle + daHeadAngle);
+        const daRight1Y = daY1 + daHeadSize * Math.sin(daAngle + daHeadAngle);
+        
+        // Linie etwas verkürzt für die Pfeilspitzen
+        const daLineStart = { 
+          x: daX1 + daHeadSize * 0.5 * Math.cos(daAngle), 
+          y: daY1 + daHeadSize * 0.5 * Math.sin(daAngle) 
+        };
+        const daLineEnd = { 
+          x: daX2 - daHeadSize * 0.5 * Math.cos(daAngle), 
+          y: daY2 - daHeadSize * 0.5 * Math.sin(daAngle) 
+        };
+        
+        return (
+          <G key={element.id}>
+            {/* Linie */}
+            <Line
+              x1={daLineStart.x}
+              y1={daLineStart.y}
+              x2={daLineEnd.x}
+              y2={daLineEnd.y}
+              stroke={element.color}
+              strokeWidth={element.strokeWidth}
+            />
+            {/* Pfeilspitze Ende */}
+            <Polygon
+              points={`${daTip2X},${daTip2Y} ${daLeft2X},${daLeft2Y} ${daRight2X},${daRight2Y}`}
+              fill={element.color}
+            />
+            {/* Pfeilspitze Anfang */}
+            <Polygon
+              points={`${daTip1X},${daTip1Y} ${daLeft1X},${daLeft1Y} ${daRight1X},${daRight1Y}`}
+              fill={element.color}
+            />
             {isSelected && renderTransformHandles(element)}
           </G>
         );
@@ -8412,10 +8503,14 @@ export default function DrawSketchScreen() {
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
-              onPress={() => selectDrawMode('line')}
+              style={[styles.toolButtonInner, (drawMode === 'line' || drawMode === 'arrow') && styles.toolButtonActive]}
+              onPress={() => setShowLineTypeModal(true)}
             >
-              <Ionicons name="remove" size={18} color={drawMode === 'line' ? '#fff' : '#333'} />
+              <Ionicons 
+                name={selectedLineType === 'line' ? 'remove' : selectedLineType === 'arrow' ? 'arrow-forward' : 'swap-horizontal'} 
+                size={18} 
+                color={(drawMode === 'line' || drawMode === 'arrow') ? '#fff' : '#333'} 
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
@@ -8431,7 +8526,9 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.line')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>
+              {selectedLineType === 'line' ? t('sketches.line') : selectedLineType === 'arrow' ? 'Pfeil' : 'Doppel'}
+            </Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.circle')}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.rect')}</Text>
           </View>
@@ -8678,6 +8775,58 @@ export default function DrawSketchScreen() {
                 }}
               />
             ))}
+          </View>
+        </View>
+      )}
+
+      {/* Linientyp-Auswahl Modal */}
+      {showLineTypeModal && (
+        <View style={styles.lineTypeModal}>
+          <View style={styles.lineTypeModalContent}>
+            <Text style={styles.lineTypeModalTitle}>Linientyp wählen</Text>
+            
+            <TouchableOpacity
+              style={[styles.lineTypeOption, selectedLineType === 'line' && styles.lineTypeOptionActive]}
+              onPress={() => {
+                setSelectedLineType('line');
+                selectDrawMode('line');
+                setShowLineTypeModal(false);
+              }}
+            >
+              <Ionicons name="remove" size={24} color={selectedLineType === 'line' ? '#fff' : '#333'} />
+              <Text style={[styles.lineTypeOptionText, selectedLineType === 'line' && styles.lineTypeOptionTextActive]}>Linie</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.lineTypeOption, selectedLineType === 'arrow' && styles.lineTypeOptionActive]}
+              onPress={() => {
+                setSelectedLineType('arrow');
+                selectDrawMode('arrow');
+                setShowLineTypeModal(false);
+              }}
+            >
+              <Ionicons name="arrow-forward" size={24} color={selectedLineType === 'arrow' ? '#fff' : '#333'} />
+              <Text style={[styles.lineTypeOptionText, selectedLineType === 'arrow' && styles.lineTypeOptionTextActive]}>Pfeil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.lineTypeOption, selectedLineType === 'doubleArrow' && styles.lineTypeOptionActive]}
+              onPress={() => {
+                setSelectedLineType('doubleArrow');
+                selectDrawMode('doubleArrow');
+                setShowLineTypeModal(false);
+              }}
+            >
+              <Ionicons name="swap-horizontal" size={24} color={selectedLineType === 'doubleArrow' ? '#fff' : '#333'} />
+              <Text style={[styles.lineTypeOptionText, selectedLineType === 'doubleArrow' && styles.lineTypeOptionTextActive]}>Doppelpfeil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.lineTypeModalClose}
+              onPress={() => setShowLineTypeModal(false)}
+            >
+              <Text style={styles.lineTypeModalCloseText}>Abbrechen</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -13195,5 +13344,60 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#666',
     fontWeight: '500',
+  },
+  // Linientyp-Auswahl Modal Styles
+  lineTypeModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  lineTypeModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  lineTypeModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  lineTypeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+    marginBottom: 10,
+  },
+  lineTypeOptionActive: {
+    backgroundColor: '#007AFF',
+  },
+  lineTypeOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 12,
+  },
+  lineTypeOptionTextActive: {
+    color: '#fff',
+  },
+  lineTypeModalClose: {
+    marginTop: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  lineTypeModalCloseText: {
+    fontSize: 16,
+    color: '#666',
   },
 });

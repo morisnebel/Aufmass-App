@@ -477,7 +477,7 @@ export default function SettingsScreen() {
                   <Text style={styles.label}>Name</Text>
                   <TextInput
                     style={styles.input}
-                    value={settings.memo_tool_name || 'Zusatzleistung'}
+                    value={settings.memo_tool_name ?? ''}
                     onChangeText={(text) => setSettings({ ...settings, memo_tool_name: text })}
                     placeholder="Zusatzleistung"
                   />
@@ -486,7 +486,7 @@ export default function SettingsScreen() {
                   <Text style={styles.label}>Kürzel</Text>
                   <TextInput
                     style={styles.input}
-                    value={settings.memo_tool_short || 'Zusatzle'}
+                    value={settings.memo_tool_short ?? ''}
                     onChangeText={(text) => setSettings({ ...settings, memo_tool_short: text })}
                     placeholder="Zusatzle"
                     maxLength={10}
@@ -506,7 +506,7 @@ export default function SettingsScreen() {
                   <Text style={styles.label}>Name</Text>
                   <TextInput
                     style={styles.input}
-                    value={settings.note_tool_name || 'Notiz'}
+                    value={settings.note_tool_name ?? ''}
                     onChangeText={(text) => setSettings({ ...settings, note_tool_name: text })}
                     placeholder="Notiz"
                   />
@@ -515,7 +515,7 @@ export default function SettingsScreen() {
                   <Text style={styles.label}>Kürzel</Text>
                   <TextInput
                     style={styles.input}
-                    value={settings.note_tool_short || 'Notiz'}
+                    value={settings.note_tool_short ?? ''}
                     onChangeText={(text) => setSettings({ ...settings, note_tool_short: text })}
                     placeholder="Notiz"
                     maxLength={10}

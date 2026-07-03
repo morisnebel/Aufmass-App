@@ -29,7 +29,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as DocumentPicker from 'expo-document-picker';
 import { WebView } from 'react-native-webview';
 import { File } from 'expo-file-system/next';
-import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile, storage } from '../../services/LocalStorage';
+import { SketchService, PhotoService, saveImageToFile, loadImageFromFile, deleteImageFile, storage, SettingsService, Settings } from '../../services/LocalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
@@ -352,6 +352,12 @@ export default function DrawSketchScreen() {
   const [strokeWidth, setStrokeWidth] = useState(1);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // Schutz vor Doppelklicks beim Speichern
+  
+  // Custom tool names from settings
+  const [memoToolName, setMemoToolName] = useState('Zusatzleistung');
+  const [memoToolShort, setMemoToolShort] = useState('Memo');
+  const [noteToolName, setNoteToolName] = useState('Notiz');
+  const [noteToolShort, setNoteToolShort] = useState('Notiz');
   
   // Drawing state
   const [currentPath, setCurrentPath] = useState('');
@@ -766,6 +772,22 @@ export default function DrawSketchScreen() {
   
   // PDF-Größe für Export
   const [pdfSize, setPdfSize] = useState<string>('large');
+  
+  // Load custom tool names from settings
+  useEffect(() => {
+    const loadToolNames = async () => {
+      try {
+        const settings = await SettingsService.get();
+        if (settings.memo_tool_name) setMemoToolName(settings.memo_tool_name);
+        if (settings.memo_tool_short) setMemoToolShort(settings.memo_tool_short);
+        if (settings.note_tool_name) setNoteToolName(settings.note_tool_name);
+        if (settings.note_tool_short) setNoteToolShort(settings.note_tool_short);
+      } catch (error) {
+        console.log('Error loading tool names from settings:', error);
+      }
+    };
+    loadToolNames();
+  }, []);
   
   // Polyline Label Offsets - Position relativ zum Zentrum (für Verschiebbarkeit)
   const [labelOffsets, setLabelOffsets] = useState<{ [elementId: string]: { x: number; y: number } }>({});
@@ -8443,9 +8465,9 @@ export default function DrawSketchScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.toolGroupLabelRow}>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.memo')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{memoToolShort || t('sketches.memo')}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.text')}</Text>
-            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.note')}</Text>
+            <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{noteToolShort || t('sketches.note')}</Text>
             <Text style={[styles.toolButtonLabelSmall, { flex: 1, textAlign: 'center' }]}>{t('sketches.notes')}</Text>
           </View>
         </View>

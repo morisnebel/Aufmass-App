@@ -6179,10 +6179,19 @@ export default function DrawSketchScreen() {
         const sweepFlag = angDiff > 0 ? 1 : 0;
         const largeArcFlag = angleValue > 180 ? 1 : 0;
         
-        // Text-Position (Mitte des Bogens)
-        const midAng = (ang1 + ang2) / 2;
-        const textX = v.x + (arcR + 20) * Math.cos(midAng);
-        const textY = v.y + (arcR + 20) * Math.sin(midAng);
+        // Text-Position - verwendet textOffset falls vorhanden, sonst AUSSERHALB des Winkels
+        let textX: number, textY: number;
+        if (element.textOffset) {
+          textX = v.x + element.textOffset.x;
+          textY = v.y + element.textOffset.y;
+        } else {
+          // Text AUSSERHALB des Winkels positionieren (gegenüber der Bogen-Seite)
+          const midAng = (ang1 + ang2) / 2;
+          const outerAngle = midAng + Math.PI; // Gegenüberliegende Seite
+          const textDist = arcR + 35;
+          textX = v.x + textDist * Math.cos(outerAngle);
+          textY = v.y + textDist * Math.sin(outerAngle);
+        }
         
         return (
           <G key={element.id}>

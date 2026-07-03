@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +18,8 @@ export default function AboutScreen() {
   const insets = useSafeAreaInsets();
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
-  const buildNumber = Constants.expoConfig?.android?.versionCode || Constants.expoConfig?.ios?.buildNumber || '8';
+  const buildNumber = Constants.expoConfig?.android?.versionCode || Constants.expoConfig?.ios?.buildNumber || '9';
+  const bundleId = Constants.expoConfig?.android?.package || Constants.expoConfig?.ios?.bundleIdentifier || 'com.aufmassprofi.app';
 
   const openExpoWebsite = () => {
     Linking.openURL('https://expo.dev');
@@ -48,70 +50,53 @@ export default function AboutScreen() {
           <Text style={styles.subtitle}>Professionelle Aufmaß-App für Dachdecker</Text>
         </View>
 
-        {/* Version Info */}
+        {/* App Info Card */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="code-slash-outline" size={20} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Version</Text>
+            <Ionicons name="information-circle-outline" size={20} color="#007AFF" />
+            <Text style={styles.sectionTitle}>Über die App</Text>
           </View>
-          <View style={styles.versionCard}>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>App-Version</Text>
-              <Text style={styles.versionValue}>{appVersion}</Text>
-            </View>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>Build-Nummer</Text>
-              <Text style={styles.versionValue}>{buildNumber}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Developer Info */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={20} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Entwickler</Text>
-          </View>
-          <View style={styles.contactCard}>
-            <Text style={styles.companyName}>Nebel-Bedachung</Text>
-            <Text style={styles.contactText}>Moris Nebel</Text>
-            <Text style={styles.contactText}>37339 Leinefelde-Worbis</Text>
-          </View>
-        </View>
-
-        {/* Open Source */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="logo-github" size={20} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Open-Source-Hinweise</Text>
-          </View>
-          <Text style={styles.sectionText}>
-            Diese App wurde mit folgenden Open-Source-Technologien erstellt:
-          </Text>
           
-          <TouchableOpacity style={styles.techCard} onPress={openReactNativeWebsite}>
-            <View style={styles.techInfo}>
-              <Ionicons name="logo-react" size={24} color="#61DAFB" />
-              <View style={styles.techTextContainer}>
-                <Text style={styles.techName}>React Native</Text>
-                <Text style={styles.techDesc}>Framework für mobile Apps</Text>
-              </View>
-            </View>
-            <Ionicons name="open-outline" size={18} color="#007AFF" />
-          </TouchableOpacity>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Name</Text>
+            <Text style={styles.infoValue}>Aufmassprofi</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>{appVersion}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Build</Text>
+            <Text style={styles.infoValue}>{buildNumber}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Plattform</Text>
+            <Text style={styles.infoValue}>{Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'iOS / Android'}</Text>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Entwickler</Text>
+            <Text style={styles.infoValue}>Nebel-Bedachung</Text>
+          </View>
+          
+          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.infoLabel}>Bundle ID</Text>
+            <Text style={[styles.infoValue, styles.bundleId]}>{bundleId}</Text>
+          </View>
+        </View>
 
-          <TouchableOpacity style={styles.techCard} onPress={openExpoWebsite}>
-            <View style={styles.techInfo}>
-              <View style={styles.expoIcon}>
-                <Text style={styles.expoIconText}>E</Text>
-              </View>
-              <View style={styles.techTextContainer}>
-                <Text style={styles.techName}>Expo</Text>
-                <Text style={styles.techDesc}>Entwicklungsplattform</Text>
-              </View>
-            </View>
-            <Ionicons name="open-outline" size={18} color="#007AFF" />
-          </TouchableOpacity>
+        {/* Open Source Components */}
+        <View style={styles.openSourceBanner}>
+          <Ionicons name="code-slash" size={20} color="#8b5cf6" />
+          <View style={styles.openSourceTextContainer}>
+            <Text style={styles.openSourceTitle}>Open-Source-Komponenten</Text>
+            <Text style={styles.openSourceText}>
+              Diese App verwendet Open-Source-Bibliotheken (React Native, Expo, u.a.) unter ihren jeweiligen Lizenzen. Alle Bibliotheken werden im App-Bundle ausgeliefert und benötigen keine Internetverbindung.
+            </Text>
+          </View>
         </View>
 
         {/* Features */}
@@ -139,12 +124,62 @@ export default function AboutScreen() {
             </View>
             <View style={styles.featureItem}>
               <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+              <Text style={styles.featureText}>Rapporte & Zeiterfassung</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
               <Text style={styles.featureText}>100% Offline-fähig</Text>
             </View>
             <View style={styles.featureItem}>
               <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
-              <Text style={styles.featureText}>Lokale Datenspeicherung</Text>
+              <Text style={styles.featureText}>Lokale Datenspeicherung (DSGVO-konform)</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Technologies */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="code-outline" size={20} color="#007AFF" />
+            <Text style={styles.sectionTitle}>Technologien</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.techCard} onPress={openReactNativeWebsite}>
+            <View style={styles.techInfo}>
+              <Ionicons name="logo-react" size={24} color="#61DAFB" />
+              <View style={styles.techTextContainer}>
+                <Text style={styles.techName}>React Native</Text>
+                <Text style={styles.techDesc}>Framework für mobile Apps</Text>
+              </View>
+            </View>
+            <Ionicons name="open-outline" size={18} color="#007AFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.techCard} onPress={openExpoWebsite}>
+            <View style={styles.techInfo}>
+              <View style={styles.expoIcon}>
+                <Text style={styles.expoIconText}>E</Text>
+              </View>
+              <View style={styles.techTextContainer}>
+                <Text style={styles.techName}>Expo</Text>
+                <Text style={styles.techDesc}>Entwicklungsplattform</Text>
+              </View>
+            </View>
+            <Ionicons name="open-outline" size={18} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Developer Info */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="person-outline" size={20} color="#007AFF" />
+            <Text style={styles.sectionTitle}>Entwickler</Text>
+          </View>
+          <View style={styles.contactCard}>
+            <Text style={styles.companyName}>Nebel-Bedachung</Text>
+            <Text style={styles.contactText}>Moris Nebel</Text>
+            <Text style={styles.contactText}>37339 Leinefelde-Worbis</Text>
+            <Text style={styles.contactText}>OT Hundeshagen</Text>
           </View>
         </View>
 
@@ -228,47 +263,63 @@ const styles = StyleSheet.create({
     color: '#000',
     marginLeft: 8,
   },
-  sectionText: {
-    fontSize: 15,
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  versionCard: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 12,
-  },
-  versionRow: {
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  versionLabel: {
+  infoLabel: {
     fontSize: 15,
     color: '#666',
   },
-  versionValue: {
+  infoValue: {
     fontSize: 15,
     fontWeight: '600',
     color: '#000',
   },
-  contactCard: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 12,
+  bundleId: {
+    fontSize: 13,
+    color: '#8b5cf6',
   },
-  companyName: {
-    fontSize: 16,
+  openSourceBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f3ff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#8b5cf6',
+  },
+  openSourceTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  openSourceTitle: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#000',
+    color: '#8b5cf6',
     marginBottom: 4,
   },
-  contactText: {
+  openSourceText: {
     fontSize: 14,
-    color: '#666',
+    color: '#6b21a8',
     lineHeight: 20,
+  },
+  featureList: {
+    marginTop: 4,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureText: {
+    fontSize: 15,
+    color: '#333',
+    marginLeft: 10,
   },
   techCard: {
     flexDirection: 'row',
@@ -308,18 +359,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
-  featureList: {
-    marginTop: 4,
+  contactCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 12,
   },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+  companyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
-  featureText: {
-    fontSize: 15,
-    color: '#333',
-    marginLeft: 10,
+  contactText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
   footer: {
     textAlign: 'center',

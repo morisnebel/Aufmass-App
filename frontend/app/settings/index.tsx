@@ -13,6 +13,7 @@ import {
   Image,
   Switch,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -1025,6 +1026,22 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.legalItem, { borderBottomWidth: 0 }]}
+              onPress={() => Linking.openURL('https://nebel-bedachung.de/Aufmassprofi-Datenschutz-Impressum')}
+            >
+              <View style={styles.legalItemLeft}>
+                <View style={[styles.legalIconCircle, { backgroundColor: '#06b6d4' }]}>
+                  <Ionicons name="globe" size={18} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.legalItemTitle}>Online-Version</Text>
+                  <Text style={styles.legalItemSubtitle}>Vollständige Datenschutzerklärung im Web</Text>
+                </View>
+              </View>
+              <Ionicons name="open-outline" size={20} color="#007AFF" />
             </TouchableOpacity>
           </View>
         </View>

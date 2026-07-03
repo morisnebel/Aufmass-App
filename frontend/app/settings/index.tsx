@@ -955,6 +955,78 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Rechtliches Section */}
+          <View style={[styles.section, { marginTop: 20 }]}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="document-text-outline" size={20} color="#007AFF" />
+              <Text style={styles.sectionTitle}>Rechtliches</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.legalItem}
+              onPress={() => router.push('/settings/legal/privacy')}
+            >
+              <View style={styles.legalItemLeft}>
+                <View style={[styles.legalIconCircle, { backgroundColor: '#22c55e' }]}>
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.legalItemTitle}>Datenschutzerklärung</Text>
+                  <Text style={styles.legalItemSubtitle}>Welche Daten verarbeitet die App?</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.legalItem}
+              onPress={() => router.push('/settings/legal/disclaimer')}
+            >
+              <View style={styles.legalItemLeft}>
+                <View style={[styles.legalIconCircle, { backgroundColor: '#f59e0b' }]}>
+                  <Ionicons name="warning" size={18} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.legalItemTitle}>Haftungsausschluss</Text>
+                  <Text style={styles.legalItemSubtitle}>Maße, Berechnungen & Ergebnisse</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.legalItem}
+              onPress={() => router.push('/settings/legal/imprint')}
+            >
+              <View style={styles.legalItemLeft}>
+                <View style={[styles.legalIconCircle, { backgroundColor: '#6366f1' }]}>
+                  <Ionicons name="business" size={18} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.legalItemTitle}>Impressum</Text>
+                  <Text style={styles.legalItemSubtitle}>Angaben gem. § 5 TMG</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.legalItem}
+              onPress={() => router.push('/settings/legal/about')}
+            >
+              <View style={styles.legalItemLeft}>
+                <View style={[styles.legalIconCircle, { backgroundColor: '#007AFF' }]}>
+                  <Ionicons name="information" size={18} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.legalItemTitle}>Über die App</Text>
+                  <Text style={styles.legalItemSubtitle}>Version, Build & Open-Source-Hinweise</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
       
@@ -1778,5 +1850,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Legal/Rechtliches Section Styles
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  legalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  legalItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  legalIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  legalItemTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  legalItemSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
 });

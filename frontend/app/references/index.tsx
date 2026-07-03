@@ -386,11 +386,9 @@ export default function ReferencesScreen() {
 
   const addPhotoFromGallery = async () => {
     if (!currentFolder) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
-      return;
-    }
+    // Note: We don't request MediaLibrary permissions anymore because:
+    // 1. We use the system Photo Picker which doesn't require them
+    // 2. These permissions are blocked for Google Play Store compliance
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
@@ -442,11 +440,9 @@ export default function ReferencesScreen() {
 
   // Set folder thumbnail from gallery (without saving to folder)
   const setFolderThumbnailFromGallery = async (folder: ReferenceFolder) => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(t('customers.permissionRequired'), 'Bitte erlauben Sie den Zugriff auf Ihre Fotos');
-      return;
-    }
+    // Note: We don't request MediaLibrary permissions anymore because:
+    // 1. We use the system Photo Picker which doesn't require them
+    // 2. These permissions are blocked for Google Play Store compliance
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: false,

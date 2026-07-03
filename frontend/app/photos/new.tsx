@@ -46,12 +46,14 @@ export default function NewPhotoScreen() {
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+      // Note: We don't request MediaLibrary permissions anymore because:
+      // 1. We use the system Photo Picker which doesn't require them
+      // 2. These permissions are blocked for Google Play Store compliance
+      // Only camera permission is needed for taking photos
+      if (cameraStatus !== 'granted') {
         Alert.alert(
-          'Berechtigungen erforderlich',
-          'Bitte erlauben Sie den Zugriff auf Kamera und Galerie'
+          'Kamera-Berechtigung erforderlich',
+          'Bitte erlauben Sie den Zugriff auf die Kamera, um Fotos aufzunehmen'
         );
         return false;
       }

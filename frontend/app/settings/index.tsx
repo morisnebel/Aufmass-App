@@ -288,12 +288,9 @@ export default function SettingsScreen() {
   };
 
   const pickLogo = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert(t('customers.permissionRequired'), t('settings.photoPermission'));
-      return;
-    }
-
+    // Note: We don't request MediaLibrary permissions anymore because:
+    // 1. We use the system Photo Picker which doesn't require them
+    // 2. These permissions are blocked for Google Play Store compliance
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,

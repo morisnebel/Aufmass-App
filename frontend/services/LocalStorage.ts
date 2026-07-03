@@ -1099,7 +1099,7 @@ export const ProjectService = {
     const cleanupOps: Promise<void>[] = [];
     for (const sketch of sketchesToDelete) {
       cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${sketch.id}`));
-      cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${sketch.id}`));
+      cleanupOps.push(deleteImageFile(`sketch_bg_${sketch.id}`));
       // Clean up separately stored image elements
       try {
         const metaStr = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
@@ -1170,9 +1170,10 @@ export const SketchService = {
       console.log(`[loadSketchData] Loading data for sketch ${id}...`);
       
       // Try loading from separate optimized keys first
+      // FIX: Hintergrundbild dateibasiert laden (loadImageFromFile hat AsyncStorage-Fallback + Auto-Migration)
       const [metaStr, bgImage] = await Promise.all([
         AsyncStorage.getItem(`sketch_meta_${id}`),
-        AsyncStorage.getItem(`sketch_bg_${id}`),
+        loadImageFromFile(`sketch_bg_${id}`),
       ]);
       
       console.log(`[loadSketchData] sketch_meta_${id}: ${metaStr ? `${metaStr.length} chars` : 'NULL'}`);
@@ -1230,7 +1231,7 @@ export const SketchService = {
         delete metaWithoutBg.backgroundImage;
         await AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
         if (bg) {
-          await AsyncStorage.setItem(`sketch_bg_${id}`, bg);
+          await saveImageToFile(`sketch_bg_${id}`, bg);
         }
 
         // Clean heavy data from main array to speed up future loads
@@ -1263,12 +1264,16 @@ export const SketchService = {
         storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)),
       ];
 
-      // Save background image to its own key
+      // Save background image to its own key (dateibasiert)
       if (backgroundImage) {
-        saveOps.push(storage.setItem(`sketch_bg_${id}`, backgroundImage));
+        saveOps.push(
+          saveImageToFile(`sketch_bg_${id}`, backgroundImage).then((ok) => {
+            if (!ok) throw new Error('Hintergrundbild konnte nicht gespeichert werden');
+          })
+        );
       } else {
         // Remove old background if cleared
-        saveOps.push(storage.removeItem(`sketch_bg_${id}`));
+        saveOps.push(deleteImageFile(`sketch_bg_${id}`));
       }
 
       await Promise.all(saveOps);
@@ -1312,10 +1317,11 @@ export const SketchService = {
         await storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
         console.log(`[SketchService.create] ✓ Metadata saved for ${id}`);
         
-        // Then save background image if exists
+        // Then save background image if exists (dateibasiert)
         if (bg) {
           console.log(`[SketchService.create] Saving background image for ${id}`);
-          await storage.setItem(`sketch_bg_${id}`, bg);
+          const bgOk = await saveImageToFile(`sketch_bg_${id}`, bg);
+          if (!bgOk) throw new Error('Hintergrundbild konnte nicht gespeichert werden');
           console.log(`[SketchService.create] ✓ Background saved for ${id}`);
         }
       } catch (e: any) {
@@ -1373,11 +1379,12 @@ export const SketchService = {
         // Save metadata first
         await storage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg));
         
-        // Then handle background image
+        // Then handle background image (dateibasiert)
         if (bg) {
-          await storage.setItem(`sketch_bg_${id}`, bg);
+          const bgOk = await saveImageToFile(`sketch_bg_${id}`, bg);
+          if (!bgOk) throw new Error('Hintergrundbild konnte nicht gespeichert werden');
         } else {
-          await storage.removeItem(`sketch_bg_${id}`);
+          await deleteImageFile(`sketch_bg_${id}`);
         }
       } catch (e: any) {
         // If metadata save fails, throw error BEFORE updating the list
@@ -1494,7 +1501,7 @@ export const SketchService = {
             // Save heavy data to separate keys
             await AsyncStorage.setItem(`sketch_meta_${sketch.id}`, JSON.stringify(metaWithoutBg));
             if (bg) {
-              await AsyncStorage.setItem(`sketch_bg_${sketch.id}`, bg);
+              await saveImageToFile(`sketch_bg_${sketch.id}`, bg);
             }
 
             // Strip metadata from main array entry

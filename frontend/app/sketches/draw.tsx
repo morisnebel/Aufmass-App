@@ -8125,7 +8125,7 @@ export default function DrawSketchScreen() {
       
       {/* Header - dynamisches Padding via SafeArea, kompakt im Querformat */}
       <View style={[styles.header, { 
-        paddingTop: isPhoneLandscape ? Math.max(insets.top, 4) : (Platform.OS === 'ios' ? Math.max(insets.top, 20) : 12),
+        paddingTop: isPhoneLandscape ? Math.max(insets.top, 4) : (Platform.OS === 'ios' ? Math.max(insets.top, 20) : Math.max(insets.top, 12)),
         paddingVertical: isPhoneLandscape ? 4 : 12,
         paddingLeft: isPhoneLandscape ? Math.max(insets.left, 8) : 16,
         paddingRight: isPhoneLandscape ? Math.max(insets.right, 8) : 16,

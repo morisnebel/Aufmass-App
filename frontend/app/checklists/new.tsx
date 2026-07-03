@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService, ChecklistService } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TemplateItem {
   text: string;
@@ -57,6 +58,7 @@ interface ChecklistItem {
 export default function NewChecklistScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { projectId } = useLocalSearchParams();
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ChecklistTemplate | null>(null);
@@ -349,7 +351,7 @@ export default function NewChecklistScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.progressBar}>
           <View
             style={[

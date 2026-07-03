@@ -14,6 +14,7 @@ import {
   Animated,
   Image,
   Keyboard,
+  StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9416,7 +9417,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1976d2',
     paddingHorizontal: 6,
     paddingVertical: 4,
-    paddingTop: Platform.OS === 'ios' ? 44 : 4,
+    paddingTop: Platform.OS === 'ios' ? 44 : (StatusBar.currentHeight || 24) + 8,
   },
   headerButton: {
     padding: 6,

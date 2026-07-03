@@ -22,6 +22,7 @@ import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../service
 import * as ImagePicker from 'expo-image-picker';
 import { Features } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {
@@ -1009,7 +1010,7 @@ export default function EditTemplateScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[styles.saveButton, saving && styles.buttonDisabled]}
           onPress={saveTemplate}

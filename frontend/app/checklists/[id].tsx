@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChecklistService, ProjectService, ChecklistTemplateService } from '../../services/LocalStorage';
 import { getFeatures } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Rekursive Struktur für verschachtelte Unterpunkte
 interface Measurement {
@@ -56,6 +57,7 @@ interface Checklist {
 export default function EditChecklistScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
   
   // iPhone vs iPad Erkennung - für unterschiedliches Layout
@@ -1709,7 +1711,7 @@ export default function EditChecklistScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[styles.saveButton, saving && styles.buttonDisabled]}
           onPress={handleSave}

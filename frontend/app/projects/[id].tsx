@@ -6120,6 +6120,13 @@ export default function ProjectDetailScreen() {
                       </Text>
                     ) : null}
                     
+                    {/* Memos/Zusatzleistungen separat anzeigen */}
+                    {sketch.memos ? (
+                      <Text style={{ fontSize: 12, color: '#dc2626', paddingHorizontal: 8, paddingBottom: 6 }} numberOfLines={2}>
+                        Zusatzleistungen: {sketch.memos}
+                      </Text>
+                    ) : null}
+                    
                   </TouchableOpacity>
                   
                   {/* Delete Button */}

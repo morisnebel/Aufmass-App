@@ -630,14 +630,26 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
             if (meta.notes) {
               sketches[i].notes = meta.notes;
             }
-            // Memo-Elemente UND Pointer-Elemente: Text extrahieren (visuelle Notizen auf der Zeichenfläche)
-            if (!sketches[i].notes && meta.elements && Array.isArray(meta.elements)) {
+            // Memo-Elemente (pointer/memo arrows): Separat extrahieren für Zusatzleistungen
+            if (meta.elements && Array.isArray(meta.elements)) {
+              // Memos/Pointer = Zusatzleistungen (rote Pfeile mit Text)
+              const memoTexts = meta.elements
+                .filter((el: any) => el.type === 'pointer' && el.data?.text)
+                .map((el: any) => el.data.text.trim())
+                .filter((t: string) => t.length > 0);
+              if (memoTexts.length > 0) {
+                sketches[i].memos = memoTexts.join(' | ');
+              }
+              
+              // Notizen = memo type (Sprechblasen)
               const noteTexts = meta.elements
-                .filter((el: any) => (el.type === 'memo' || el.type === 'pointer') && el.data?.text)
+                .filter((el: any) => el.type === 'memo' && el.data?.text)
                 .map((el: any) => el.data.text.trim())
                 .filter((t: string) => t.length > 0);
               if (noteTexts.length > 0) {
-                sketches[i].notes = noteTexts.join(' | ');
+                if (!sketches[i].notes) {
+                  sketches[i].notes = noteTexts.join(' | ');
+                }
               }
             }
             // pdf_size aus metadata übernehmen falls nicht bereits vorhanden
@@ -1126,6 +1138,7 @@ export interface Sketch {
   name?: string;
   title?: string;
   notes?: string;
+  memos?: string; // Separate field for memo-arrow content
   sketch_data?: string;
   metadata?: string;
   pdf_size?: string;

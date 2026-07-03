@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, LogBox, Platform } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService, LocalStorage } from '../services/LocalStorage';
@@ -44,8 +45,9 @@ export default function RootLayout() {
   }, []);
   
   return (
-    <View style={{ flex: 1 }}>
-      <StatusBar style="auto" />
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <View style={{ flex: 1 }}>
+        <StatusBar style="auto" />
       <Stack
         screenOptions={{
           headerStyle: headerBgColor ? {
@@ -150,6 +152,7 @@ export default function RootLayout() {
         />
       </Stack>
       <KeyboardDismissButton />
-    </View>
+      </View>
+    </SafeAreaProvider>
   );
 }

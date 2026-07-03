@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, LogBox, Platform } from 'react-native';
+import { View, LogBox, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
@@ -50,6 +50,7 @@ export default function RootLayout() {
         <StatusBar style="auto" />
       <Stack
         screenOptions={{
+          headerStatusBarHeight: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) : undefined,
           headerStyle: headerBgColor ? {
             backgroundColor: headerBgColor,
           } : undefined,

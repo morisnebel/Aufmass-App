@@ -371,34 +371,35 @@ export default function ProjectDetailScreen() {
   const headerBackColor = isIPad ? '#000' : '#fff';
   
   useEffect(() => {
+    const backButton = () => (
+      <TouchableOpacity 
+        onPress={() => router.back()} 
+        style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          paddingRight: 8,
+          paddingVertical: 8,
+          minHeight: 44,
+        }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="chevron-back" size={28} color={headerBackColor} />
+        <Text style={{ color: headerBackColor, fontSize: 17, fontWeight: '600' }}>{t('common.back')}</Text>
+      </TouchableOpacity>
+    );
     if (activeTab !== 'overview') {
       navigation.setOptions({
         title: tabTitles[activeTab] || 'Projektdetails',
         headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
         headerTintColor: headerBackColor,
-        headerLeft: () => (
-          <TouchableOpacity 
-            onPress={() => handleTabChange('overview')} 
-            style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              paddingRight: 8,
-              paddingVertical: 8,
-              minHeight: 44,
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={28} color={headerBackColor} />
-            <Text style={{ color: headerBackColor, fontSize: 17, fontWeight: '600' }}>Projektdetails</Text>
-          </TouchableOpacity>
-        ),
+        headerLeft: backButton,
       });
     } else {
       navigation.setOptions({
         title: 'Projektdetails',
         headerStyle: isIPad ? undefined : { backgroundColor: '#1976d2' },
         headerTintColor: headerBackColor,
-        headerLeft: undefined,
+        headerLeft: backButton,
       });
     }
   }, [activeTab, navigation]);

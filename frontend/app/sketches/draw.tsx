@@ -190,6 +190,7 @@ interface DrawElement {
   point1?: { x: number; y: number };
   point2?: { x: number; y: number };
   angle?: number;
+  textOffset?: { x: number; y: number }; // Verschiebbare Text-Position relativ zum Vertex
 }
 
 // Verfügbare Schriftarten - Platform-spezifisch für React Native SVG
@@ -2526,6 +2527,7 @@ export default function DrawSketchScreen() {
     const newElements: DrawElement[] = [...elements];
     
     // Winkel als EINZELNES Element speichern (mit allen 3 Punkten)
+    // Text-Position: oberhalb des Scheitelpunkts (wie im Overlay: y - 35)
     newElements.push({
       id: angleId,
       type: 'angle',
@@ -2536,6 +2538,7 @@ export default function DrawSketchScreen() {
       point1: point1,
       point2: point2,
       angle: calculatedAngle,
+      textOffset: { x: 0, y: -50 }, // Text 50 Pixel oberhalb des Vertex (verschiebbar)
     });
     
     addToHistory(newElements);
@@ -7626,12 +7629,27 @@ export default function DrawSketchScreen() {
             
             svgElements += `<path d="M ${arcX1} ${arcY1} A ${arcR} ${arcR} 0 ${largeArcFlag} ${sweepFlag} ${arcX2} ${arcY2}" stroke="${angleColor}" stroke-width="${strokeWidth}" fill="none"/>`;
             
-            // Text-Position - EXAKT wie in der Live-Ansicht: oberhalb des Scheitelpunkts
-            // Mit festem Abstand von 35 Pixeln (wie im Protractor-Overlay)
-            const textX = v.x;
-            const textY = v.y - 35;
-            
-            svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+            // Text-Position - verwendet textOffset falls vorhanden
+            if (el.textOffset) {
+              const textX = v.x + el.textOffset.x;
+              const textY = v.y + el.textOffset.y;
+              svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+            } else {
+              // AUTOMATISCHE Positionierung: Text auf der AUSSENSEITE des Winkels
+              // Berechne die Winkelhalbierenden-Richtung und positioniere den Text GEGENÜBER
+              const midAng = (ang1 + ang2) / 2;
+              
+              // Die Außenseite ist gegenüber der Winkelfläche
+              // Wenn der Winkel von ang1 zu ang2 im Uhrzeigersinn (sweep=1), ist außen bei midAng + PI
+              const outerAngle = sweepFlag === 1 ? midAng + Math.PI : midAng + Math.PI;
+              
+              // Text außerhalb des Winkels positionieren
+              const textDist = arcR + 35;
+              const textX = v.x + textDist * Math.cos(outerAngle);
+              const textY = v.y + textDist * Math.sin(outerAngle);
+              
+              svgElements += `<text x="${textX}" y="${textY}" fill="${angleColor}" font-size="16" font-weight="bold" text-anchor="middle">${angleValue}°</text>`;
+            }
           }
         }
       } else if (el.type === 'polygon' && typeof el.data === 'string') {

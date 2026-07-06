@@ -5261,6 +5261,12 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.infoValue}>{project?.bauherr_phone || customer?.phone}</Text>
                 </View>
               )}
+              {(project?.bauherr_mobile || customer?.mobile) && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Mobil:</Text>
+                  <Text style={styles.infoValue}>{project?.bauherr_mobile || customer?.mobile}</Text>
+                </View>
+              )}
               {(project?.bauherr_email || customer?.email) && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{t('settings.email')}:</Text>

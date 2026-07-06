@@ -260,6 +260,7 @@ export default function ProjectDetailScreen() {
   const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
   // Objektadresse edit fields (separate)
   const [editObjektNumber, setEditObjektNumber] = useState(''); // OBJ-26001
+  const [editObjektAddressName, setEditObjektAddressName] = useState(''); // Bezeichnung, z.B. "Haupthaus"
   const [editObjektName, setEditObjektName] = useState('');
   const [editObjektDescription, setEditObjektDescription] = useState('');
   const [editObjektStreet, setEditObjektStreet] = useState('');
@@ -864,6 +865,7 @@ export default function ProjectDetailScreen() {
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
       setEditObjektNumber(project.objekt_number || '');
+      setEditObjektAddressName(project.objekt_address_name || '');
       setEditObjektName(project.objekt_name || '');
       setEditObjektDescription(project.objekt_description || '');
       setEditObjektStreet(project.objekt_street || '');
@@ -1022,7 +1024,7 @@ export default function ProjectDetailScreen() {
         objekt_contact_person: editObjektContactPerson || undefined,
         objekt_phone: editObjektPhone || undefined,
         objekt_email: editObjektEmail || undefined,
-        objekt_address_name: editProjectName || project?.objekt_address_name || undefined, // Projektname = Bezeichnung
+        objekt_address_name: editObjektAddressName || project?.objekt_address_name || undefined, // Bezeichnung, z.B. "Haupthaus"
         // Projektart-Überschrift
         project_type: editProjectType || undefined,
         project_type_date: editProjectTypeDate || undefined,
@@ -1126,13 +1128,13 @@ export default function ProjectDetailScreen() {
           const createNewObjectAddress = async () => {
             if (!existingCustomer) return;
             const newObjectNumber = editObjektNumber || await getNextAvailableObjectNumber(project.customer_id);
-            const newAddressName = editProjectName || editObjektName || `Adresse ${(existingCustomer.projectAddresses?.length || 0) + 1}`;
+            const newAddressName = editObjektAddressName || editProjectName || editObjektName || `Adresse ${(existingCustomer.projectAddresses?.length || 0) + 1}`;
             const newAddr: any = {
               id: `addr_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
               object_number: newObjectNumber,
               name: newAddressName,
               objectName: editObjektName || undefined,
-              description: editProjectDescription || undefined,
+              description: editObjektDescription || undefined,
               street: editObjektStreet || '',
               zip: editObjektPlz || '',
               city: editObjektCity || '',
@@ -1197,7 +1199,7 @@ export default function ProjectDetailScreen() {
                           ? { 
                               ...a, 
                               objectName: editObjektName || undefined,
-                              description: editProjectDescription || undefined, // Projekt-Beschreibung synchronisieren
+                              description: editObjektDescription || undefined, // Beschreibung der Objektadresse synchronisieren
                               street: editObjektStreet, 
                               zip: editObjektPlz, 
                               city: editObjektCity,
@@ -1230,9 +1232,9 @@ export default function ProjectDetailScreen() {
               console.log('Found matching address:', matchingAddress.name);
               // Prüfe ob sich Daten geändert haben
               const hasChanges = 
-                matchingAddress.name !== editProjectName || // Projektname/Bezeichnung geändert
+                matchingAddress.name !== editObjektAddressName || // Bezeichnung geändert
                 (matchingAddress.objectName || '') !== (editObjektName || '') ||
-                (matchingAddress.description || '') !== (editProjectDescription || '') || // Projekt-Beschreibung prüfen
+                (matchingAddress.description || '') !== (editObjektDescription || '') || // Beschreibung prüfen
                 matchingAddress.street !== editObjektStreet ||
                 matchingAddress.zip !== editObjektPlz ||
                 matchingAddress.city !== editObjektCity ||
@@ -1251,15 +1253,15 @@ export default function ProjectDetailScreen() {
                     { 
                       text: t('projects.yesSync'), 
                       onPress: async () => {
-                        // Aktualisiere beim Kunden: Bezeichnung bleibt gleich, aber Objektname und andere Daten werden aktualisiert
+                        // Aktualisiere beim Kunden mit ALLEN Objektadress-Feldern
                         const updatedAddresses = existingCustomer.projectAddresses!.map(addr => 
                           addr.id === matchingAddress!.id
                             ? { 
                                 ...addr, 
                                 object_number: editObjektNumber || addr.object_number, // Objektnummer synchronisieren
-                                name: editProjectName || addr.name, // Bezeichnung = Projektname (wenn geändert)
+                                name: editObjektAddressName || addr.name, // Bezeichnung
                                 objectName: editObjektName || undefined,
-                                description: editProjectDescription || undefined, // Projekt-Beschreibung synchronisieren
+                                description: editObjektDescription || undefined, // Beschreibung
                                 street: editObjektStreet, 
                                 zip: editObjektPlz, 
                                 city: editObjektCity,
@@ -1273,14 +1275,14 @@ export default function ProjectDetailScreen() {
                           ...existingCustomer,
                           projectAddresses: updatedAddresses,
                         });
-                        // Aktualisiere auch objekt_address_name falls Projektname geändert wurde
-                        if (editProjectName && editProjectName !== project?.objekt_address_name) {
+                        // Aktualisiere auch objekt_address_name falls Bezeichnung geändert wurde
+                        if (editObjektAddressName && editObjektAddressName !== project?.objekt_address_name) {
                           const projectId = Array.isArray(id) ? id[0] : id;
                           const currentProject = await ProjectService.getById(projectId);
                           if (currentProject) {
                             await ProjectService.update(projectId, {
                               ...currentProject,
-                              objekt_address_name: editProjectName,
+                              objekt_address_name: editObjektAddressName,
                             });
                           }
                         }
@@ -1380,6 +1382,7 @@ export default function ProjectDetailScreen() {
     const objektNumber = project?.objekt_number || ''; // OBJ-26001
     const objektName = project?.objekt_name || '';
     const objektAddressName = project?.objekt_address_name || ''; // z.B. "Haupthaus"
+    const objektDescription = project?.objekt_description || ''; // Beschreibung
     const objektStreet = project?.objekt_street || '';
     const objektPlz = project?.objekt_plz || '';
     const objektCity = project?.objekt_city || '';
@@ -4246,7 +4249,7 @@ export default function ProjectDetailScreen() {
               <span class="info-label">${t('projects.status')}:</span>
               <span class="info-value">${project?.status === 'aktiv' ? t('projects.statusActive') : project?.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}</span>
             </div>
-            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
+            ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektDescription || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
               <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #e0e0e0;">
                 <h4 style="color: #1976d2; margin: 0 0 3px 0; font-size: 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 2px;">
                   ${t('projects.objectAddress')}${objektAddressName ? ` (${objektAddressName})` : ''}
@@ -4257,9 +4260,15 @@ export default function ProjectDetailScreen() {
                     <span class="info-value" style="color: #ff9800; font-weight: 600;">${objektNumber}</span>
                   </div>
                 ` : ''}
+                ${objektDescription ? `
+                  <div class="info-row">
+                    <span class="info-label">Beschreibung:</span>
+                    <span class="info-value">${objektDescription}</span>
+                  </div>
+                ` : ''}
                 ${objektName ? `
                   <div class="info-row">
-                    <span class="info-label">Name:</span>
+                    <span class="info-label">Objektname:</span>
                     <span class="info-value">${objektName}</span>
                   </div>
                 ` : ''}
@@ -5277,7 +5286,7 @@ export default function ProjectDetailScreen() {
               )}
               
               {/* Objektadresse (separate Felder) */}
-              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email || project?.objekt_number) && (
+              {(project?.objekt_street || project?.objekt_plz || project?.objekt_city || project?.objekt_address_name || project?.objekt_name || project?.objekt_description || project?.objekt_contact_person || project?.objekt_phone || project?.objekt_email || project?.objekt_number) && (
                 <>
                   <View style={styles.sectionDivider} />
                   <Text style={styles.subSectionTitle}>
@@ -5290,9 +5299,15 @@ export default function ProjectDetailScreen() {
                       <Text style={[styles.infoValue, {color: '#ff9800', fontWeight: '600'}]}>{project.objekt_number}</Text>
                     </View>
                   )}
+                  {project?.objekt_description && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Beschreibung:</Text>
+                      <Text style={styles.infoValue}>{project.objekt_description}</Text>
+                    </View>
+                  )}
                   {project?.objekt_name && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Name:</Text>
+                      <Text style={styles.infoLabel}>Objektname:</Text>
                       <Text style={styles.infoValue}>{project.objekt_name}</Text>
                     </View>
                   )}
@@ -7587,9 +7602,31 @@ export default function ProjectDetailScreen() {
                       placeholderTextColor="#999" placeholder="z.B. OBJ-26001"
                     />
                   </View>
-                  
+
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Name</Text>
+                    <Text style={styles.compactLabel}>Bezeichnung</Text>
+                    <TextInput
+                      style={styles.compactInput}
+                      value={editObjektAddressName}
+                      onChangeText={setEditObjektAddressName}
+                      placeholderTextColor="#999" placeholder="z.B. Haupthaus, Garage"
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Beschreibung</Text>
+                    <TextInput
+                      style={[styles.compactInput, { minHeight: 60, textAlignVertical: 'top' }]}
+                      value={editObjektDescription}
+                      onChangeText={setEditObjektDescription}
+                      placeholderTextColor="#999" placeholder="Optionale Beschreibung"
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Objektname</Text>
                     <TextInput
                       style={styles.compactInput}
                       value={editObjektName}

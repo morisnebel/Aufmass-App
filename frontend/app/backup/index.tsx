@@ -51,11 +51,19 @@ export default function BackupScreen() {
             if (router.canGoBack()) router.back();
             else router.replace('/settings/');
           }}
-          style={{ paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            marginLeft: 8,
+          }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-          <Text style={{ color: '#fff', fontSize: 16, marginLeft: 2 }}>Einstellungen</Text>
+          <Ionicons name="chevron-back" size={20} color="#0f172a" />
+          <Text style={{ color: '#0f172a', fontSize: 15, fontWeight: '600', marginLeft: 2 }}>Einstellungen</Text>
         </TouchableOpacity>
       ),
     });

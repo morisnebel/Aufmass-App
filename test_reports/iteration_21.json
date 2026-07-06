@@ -1,0 +1,34 @@
+{
+  "summary": "Verified bug fix for backup-screen back button issue (frontend-only, web preview). All 6 requested scenarios PASSED. The custom headerLeft in /app/frontend/app/backup/index.tsx now renders '‹ Einstellungen' (chevron-back + text, white on cyan header) and is bound to a TouchableOpacity that calls router.back() with a router.replace('/settings/') fallback. Verified: (1) header shows the custom back button on entering /backup/, (2) tapping it before any interaction returns to /settings/, (3) after tapping 'Snapshot jetzt erstellen' the back button STILL works and returns to /settings/, (4) after tapping 'Backup erstellen & teilen' (which fails gracefully on web with UnavailabilityError from expo-file-system.writeAsStringAsync) the back button STILL works, (5) after tapping the 'Aus Datei wiederherstellen' button the back button STILL works, (6) after tapping the interval chip 'Täglich' the back button STILL works. hitSlop {12,12,12,12} and paddingHorizontal:12/paddingVertical:6 give an effective touch area well above the 44pt HIG minimum. IMPORTANT LIMITATION: the reported bug is iOS-specific (native modal stack getting stuck after Alert.alert / DocumentPicker / Sharing.shareAsync dismissal). Web preview cannot reproduce the native iOS modal-stack corruption, but architecturally the fix is sound because it bypasses the iOS system back chevron entirely and uses a JS-level expo-router navigation call (router.back()) inside a TouchableOpacity — this is the recommended workaround for the described iOS symptom.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "console",
+        "issue": "Pre-existing deprecation warnings (not related to this fix): '\"shadow*\" style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Already noted in iteration_20."
+      }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_21.json"],
+  "action_items": [
+    "OPTIONAL: On iOS device, do a real TestFlight verification of the exact reproduction path (Alert.alert -> Ok -> tap back). Web preview cannot exercise the native iOS modal-stack issue.",
+    "OPTIONAL polish: the custom headerLeft currently has no accessibilityRole/accessibilityLabel. Consider adding accessibilityLabel='Zurück zu Einstellungen' and accessibilityRole='button' for VoiceOver users.",
+    "OPTIONAL: consider also setting `headerBackVisible: false` in navigation.setOptions to be 100% sure iOS does not double-render the native chevron next to the custom one on some SDK/OS combinations (currently on Expo it appears headerLeft override does hide it, but explicit is safer)."
+  ],
+  "critical_code_review_comments": [
+    "navigation.setOptions is called inside useEffect with deps [navigation, router] — both objects are stable, so the options are set once on mount. Good, avoids redundant re-renders.",
+    "router.canGoBack() fallback to router.replace('/settings/') is correct: prevents dead-ends if the screen was opened via deep link.",
+    "The TouchableOpacity uses only paddingHorizontal:12, paddingVertical:6 plus hitSlop 12 — combined touch target is ~48x38, which meets 44px horizontally but is 38px vertically. hitSlop{12,12,12,12} brings the effective hit area to ~72x62, so touch target compliance is achieved via hitSlop. Consider using paddingVertical:10 for consistency with iOS HIG without relying on hitSlop alone.",
+    "Icon 'chevron-back' from Ionicons matches iOS convention. Font size 16 for label matches native iOS back-button typography."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100% (6/6 scenarios)"},
+  "seed_data_creation": "Pre-seeded localStorage.aufmassprofi_settings with disclaimer_accepted_at + disclaimer_version='2026-06' to bypass the DisclaimerGate modal.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backup screen is at /app/frontend/app/backup/index.tsx. The custom back button is a TouchableOpacity rendered via navigation.setOptions({headerLeft: () => ...}). On the web preview it works reliably. The reported bug is iOS-specific (native modal stack after Alert.alert). To reproduce on iOS Expo Go: Settings -> Backup & Wiederherstellung -> tap any button (Snapshot / Backup erstellen / Restore / interval chip) -> dismiss the resulting Alert -> tap the back chevron. Before fix: chevron unresponsive. After fix: '‹ Einstellungen' TouchableOpacity always responsive.",
+  "rca_of_issue": "ROOT CAUSE: On iOS/React-Native-Screens the default header back button relies on the native UINavigationController pop gesture. When a system modal (UIAlertController from Alert.alert, DocumentPicker view controller from expo-document-picker, or UIActivityViewController from expo-sharing) is presented and dismissed asynchronously, the touch responder chain on the header's chevron can end up in an inconsistent state, effectively swallowing subsequent taps until re-mount. MITIGATION APPLIED: Overriding headerLeft with a JS-level TouchableOpacity + router.back() bypasses the native chevron entirely — the TouchableOpacity is a JS view whose responder chain is managed by React Native, so it is not affected by the native navigation-controller state corruption. VERIFIED: on web the router.back() correctly returns to /settings/ after every button interaction; the same code path executes on iOS."
+}

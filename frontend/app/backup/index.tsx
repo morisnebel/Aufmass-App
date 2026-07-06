@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useNavigation, useFocusEffect } from 'expo-router';
+import { useNavigation, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackupService, AutoBackupSnapshot } from '../../services/BackupService';
@@ -31,6 +31,7 @@ const fmtDate = (iso: string): string => {
 
 export default function BackupScreen() {
   const navigation = useNavigation();
+  const router = useRouter();
   const [snapshots, setSnapshots] = useState<Omit<AutoBackupSnapshot, 'data_json'>[]>([]);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState('');
@@ -42,8 +43,23 @@ export default function BackupScreen() {
       title: 'Datensicherung',
       headerStyle: { backgroundColor: '#0891b2' },
       headerTintColor: '#fff',
+      // Expliziter Back-Button, damit er auch dann funktioniert, wenn iOS
+      // sich nach dem Schließen von Share-Sheets / Alerts "vergisst"
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/settings/');
+          }}
+          style={{ paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16, marginLeft: 2 }}>Einstellungen</Text>
+        </TouchableOpacity>
+      ),
     });
-  }, [navigation]);
+  }, [navigation, router]);
 
   const loadSnapshots = useCallback(async () => {
     const list = await BackupService.listAutoSnapshots();

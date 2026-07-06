@@ -24,6 +24,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus } from '../services/FeatureFlags';
+import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -78,6 +79,8 @@ export default function HomeScreen() {
   const [tuvMachines, setTuvMachines] = useState<MachineMaster[]>([]);
   const [lowStockMaterials, setLowStockMaterials] = useState<MaterialMaster[]>([]);
   const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | 'tuv' | 'lowstock' | null>(null);
+  // Backup-Erinnerungs-Banner
+  const [backupDueDays, setBackupDueDays] = useState<number | null>(null);
   const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
@@ -156,8 +159,33 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      // Backup-Erinnerung prüfen
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem('aufmassprofi_backup_reminder_days');
+          const days = raw != null ? parseInt(raw, 10) : 7;
+          if (!days || days <= 0) { setBackupDueDays(null); return; }
+          const status = await BackupService.isBackupDue(days);
+          if (status.due) {
+            setBackupDueDays(status.daysSince || 0);
+          } else {
+            setBackupDueDays(null);
+          }
+        } catch {
+          setBackupDueDays(null);
+        }
+      })();
     }, [])
   );
+
+  const handleBackupNow = async () => {
+    try {
+      await BackupService.exportFullBackup();
+      setBackupDueDays(null);
+    } catch (e: any) {
+      console.warn('[Backup] Home banner backup failed:', e);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -730,6 +758,42 @@ export default function HomeScreen() {
         />
         <Text style={styles.versionCode}>{AppName}</Text>
       </View>
+      )}
+
+      {/* Backup-Erinnerungs-Banner */}
+      {backupDueDays !== null && (
+        <TouchableOpacity
+          style={{
+            marginHorizontal: 16,
+            marginTop: 12,
+            backgroundColor: '#fef3c7',
+            borderRadius: 10,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            borderLeftWidth: 4,
+            borderLeftColor: '#d97706',
+          }}
+          onPress={handleBackupNow}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="save-outline" size={22} color="#d97706" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e' }}>Backup empfohlen</Text>
+            <Text style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>
+              {backupDueDays === 0
+                ? 'Sie haben noch nie ein Datei-Backup erstellt.'
+                : `Letzte Sicherung vor ${backupDueDays} ${backupDueDays === 1 ? 'Tag' : 'Tagen'}.`} Jetzt sichern?
+            </Text>
+          </View>
+          <View style={{ backgroundColor: '#d97706', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Sichern</Text>
+          </View>
+          <TouchableOpacity onPress={() => setBackupDueDays(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
+            <Ionicons name="close" size={18} color="#92400e" />
+          </TouchableOpacity>
+        </TouchableOpacity>
       )}
 
       {/* Pro: Hinweise auf ausgeliehene Maschinen, Inspektionen, TÜV & niedrigen Lagerbestand */}

@@ -1,0 +1,40 @@
+{
+  "summary": "Verified new Backup-Reminder feature (frontend only). All 8 requested scenarios PASSED. Home banner 'Backup empfohlen' correctly appears when no backup has ever been done (shows 'Sie haben noch nie ein Datei-Backup erstellt.'). The /backup/ screen renders the new 'Erinnerung an neues Backup' section with all 6 chips (Aus / Täglich / Alle 3 Tage / Wöchentlich / Alle 2 Wochen / Monatlich) and 'Wöchentlich' is the default active (green) chip. Tapping 'Aus (keine Erinnerung)' persists 0 to AsyncStorage key aufmassprofi_backup_reminder_days and hides the banner on home. Tapping 'Täglich' persists 1 and makes the banner reappear. The X-icon dismiss removes the banner in-session and it returns after reload. Setting aufmassprofi_last_file_backup to a recent ISO date shows 'Letztes Backup: ...' on /backup/ and hides the banner on home (daysSince < interval). Banner 'Sichern' tap does NOT crash the web preview (UnavailabilityError from expo-sharing is caught silently). No red screens, no regressions in home/backup loading.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "home (backup banner)",
+        "issues": [
+          "Dismiss (X) icon is only ~18px with hitSlop 8 => effective ~34px touch area, below 44px iOS minimum. Recommend increasing hitSlop to {top:12,bottom:12,left:12,right:12} or wrapping in a Pressable with padding:10.",
+          "Copy 'Letzte Sicherung vor 0 Tagen' would appear if a backup was done <24h ago AND interval=1. Consider a friendlier 'heute' / 'weniger als 1 Tag' string when daysSince=0 with an interval that already met threshold (edge case)."
+        ]
+      }
+    ],
+    "react_native_issues": [
+      {
+        "component": "console",
+        "issue": "Deprecation warnings observed on load: '\"shadow*\" style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Not caused by this feature but should be tracked. Reference: multiple components using shadowColor/shadowOffset."
+      }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_20.json"],
+  "action_items": [
+    "OPTIONAL polish: enlarge the banner-dismiss X touch target (currently 18px icon with hitSlop 8 → below 44px HIG guideline). Increase hitSlop or wrap in a padded TouchableOpacity.",
+    "OPTIONAL copy tweak in /app/frontend/app/index.tsx line ~787: when daysSince===0 and last backup exists but interval elapsed, current sentence would read 'Letzte Sicherung vor 0 Tagen.' – consider 'heute' phrasing."
+  ],
+  "critical_code_review_comments": [
+    "BackupService.exportFullBackup persists aufmassprofi_last_file_backup only after successful writeAsStringAsync + Sharing.shareAsync. On web preview Sharing.isAvailableAsync returns false so shareAsync is skipped and timestamp IS still written (good – tested indirectly).",
+    "In app/index.tsx handleBackupNow(): setBackupDueDays(null) is called only on success. On failure (web UnavailabilityError from FileSystem writeAsStringAsync via cacheDirectory being null) the error is only console.warned – no user-visible feedback. Acceptable per requirement, but on native an Alert would improve UX.",
+    "isBackupDue returns { due:true, daysSince:null } when no backup exists; home converts null to 0 via 'status.daysSince || 0'. UI then uses backupDueDays===0 to show the 'never backed up' copy. Works but is fragile — if a backup was actually 0 days ago and still due (impossible with current logic since 0 < any positive interval), the same '0' would mean two different things. Consider using an explicit sentinel (e.g. -1 for 'never')."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100%"},
+  "seed_data_creation": "During tests: seeded aufmassprofi_settings.disclaimer_accepted_at/disclaimer_version='2026-06' via localStorage to bypass disclaimer modal; toggled aufmassprofi_backup_reminder_days (0/1) and aufmassprofi_last_file_backup (ISO now) to exercise banner states.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature verified on Expo web preview. AsyncStorage on web maps to window.localStorage with identical keys. Disclaimer modal (DisclaimerGate v2026-06) blocks clicks – pre-seed aufmassprofi_settings with disclaimer_accepted_at + disclaimer_version='2026-06' before UI interaction. Banner state is driven by aufmassprofi_backup_reminder_days (0=off) and aufmassprofi_last_file_backup (ISO string).",
+  "rca_of_issue": "No bug — feature works as specified."
+}

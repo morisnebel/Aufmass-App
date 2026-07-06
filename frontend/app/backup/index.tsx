@@ -4,6 +4,17 @@ import { useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackupService, AutoBackupSnapshot } from '../../services/BackupService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const REMINDER_KEY = 'aufmassprofi_backup_reminder_days';
+const REMINDER_OPTIONS: { days: number; label: string }[] = [
+  { days: 0, label: 'Aus (keine Erinnerung)' },
+  { days: 1, label: 'Täglich' },
+  { days: 3, label: 'Alle 3 Tage' },
+  { days: 7, label: 'Wöchentlich' },
+  { days: 14, label: 'Alle 2 Wochen' },
+  { days: 30, label: 'Monatlich' },
+];
 
 const fmtSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -22,6 +33,8 @@ export default function BackupScreen() {
   const [snapshots, setSnapshots] = useState<Omit<AutoBackupSnapshot, 'data_json'>[]>([]);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState('');
+  const [reminderDays, setReminderDays] = useState<number>(7);
+  const [lastBackup, setLastBackup] = useState<string | null>(null);
 
   useEffect(() => {
     navigation.setOptions({
@@ -34,6 +47,12 @@ export default function BackupScreen() {
   const loadSnapshots = useCallback(async () => {
     const list = await BackupService.listAutoSnapshots();
     setSnapshots(list);
+    const last = await BackupService.getLastFileBackup();
+    setLastBackup(last);
+    try {
+      const raw = await AsyncStorage.getItem(REMINDER_KEY);
+      if (raw != null) setReminderDays(parseInt(raw, 10) || 0);
+    } catch {}
   }, []);
 
   useFocusEffect(useCallback(() => { loadSnapshots(); }, [loadSnapshots]));
@@ -44,6 +63,7 @@ export default function BackupScreen() {
     setBusyLabel('Backup wird erstellt…');
     try {
       const res = await BackupService.exportFullBackup();
+      setLastBackup(new Date().toISOString());
       Alert.alert(
         '✅ Backup erstellt',
         `Dateigröße: ${fmtSize(res.sizeBytes)}\n\nSpeichere die Datei in Google Drive, iCloud Drive, per E-Mail oder AirDrop – so hast du sie auch bei Neuinstallation zur Hand.`
@@ -198,6 +218,51 @@ export default function BackupScreen() {
             <Ionicons name="download-outline" size={22} color="#fff" />
             <Text style={styles.mainBtnText}>Aus Datei wiederherstellen</Text>
           </TouchableOpacity>
+
+          {/* Letztes Backup */}
+          <View style={styles.lastBackupInfo}>
+            <Ionicons name="time-outline" size={14} color="#64748b" />
+            <Text style={styles.lastBackupText}>
+              {lastBackup
+                ? `Letztes Backup: ${fmtDate(lastBackup)}`
+                : 'Noch kein Datei-Backup erstellt.'}
+            </Text>
+          </View>
+
+          {/* Erinnerungs-Intervall */}
+          <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#e2e8f0' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Ionicons name="notifications-outline" size={18} color="#0f172a" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f172a' }}>Erinnerung an neues Backup</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+              Zeigt auf der Startseite einen Hinweis, wenn wieder ein Backup fällig ist.
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {REMINDER_OPTIONS.map(opt => {
+                const active = reminderDays === opt.days;
+                return (
+                  <TouchableOpacity
+                    key={opt.days}
+                    onPress={async () => {
+                      setReminderDays(opt.days);
+                      try { await AsyncStorage.setItem(REMINDER_KEY, String(opt.days)); } catch {}
+                    }}
+                    style={{
+                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+                      backgroundColor: active ? '#16a34a' : '#f1f5f9',
+                      borderWidth: 1, borderColor: active ? '#16a34a' : '#e2e8f0',
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12, fontWeight: '700',
+                      color: active ? '#fff' : '#475569'
+                    }}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* ===== Option B: Auto-Snapshots ===== */}
@@ -275,6 +340,8 @@ const styles = StyleSheet.create({
   sectionSub: { fontSize: 12, color: '#64748b', lineHeight: 17, marginBottom: 14 },
   mainBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 14, borderRadius: 10 },
   mainBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  lastBackupInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10 },
+  lastBackupText: { fontSize: 12, color: '#64748b', fontStyle: 'italic' },
   emptyText: { textAlign: 'center', color: '#94a3b8', fontSize: 12, paddingVertical: 8, fontStyle: 'italic' },
   snapCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 8, padding: 10, marginBottom: 6, gap: 8 },
   snapDate: { fontSize: 13, fontWeight: '700', color: '#0f172a' },

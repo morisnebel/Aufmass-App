@@ -159,7 +159,34 @@ export const BackupService = {
         UTI: 'public.json',
       });
     }
+    // Zeitstempel des letzten Datei-Backups merken (für Erinnerungsbanner)
+    try {
+      await AsyncStorage.setItem('aufmassprofi_last_file_backup', new Date().toISOString());
+    } catch {}
     return { uri: fileUri, sizeBytes };
+  },
+
+  /**
+   * Zeitstempel des letzten manuellen Datei-Backups holen.
+   */
+  getLastFileBackup: async (): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem('aufmassprofi_last_file_backup');
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Prüft, ob laut Intervall ein Backup fällig ist.
+   * @param intervalDays 0 = deaktiviert
+   */
+  isBackupDue: async (intervalDays: number): Promise<{ due: boolean; daysSince: number | null }> => {
+    if (!intervalDays || intervalDays <= 0) return { due: false, daysSince: null };
+    const last = await BackupService.getLastFileBackup();
+    if (!last) return { due: true, daysSince: null };
+    const days = Math.floor((Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24));
+    return { due: days >= intervalDays, daysSince: days };
   },
 
   /**

@@ -893,7 +893,7 @@ export default function EditTemplateScreen() {
         {!collapsed && depth === 0 && Features.maxChecklistItems < 100 && item.subItems.length >= Features.maxChecklistItems && (
           <View style={styles.limitReachedBoxSmall}>
             <Ionicons name="information-circle" size={14} color="#f57c00" />
-            <Text style={styles.limitReachedTextSmall}>Max. {Features.maxChecklistItems} Unterpunkte (Basic)</Text>
+            <Text style={styles.limitReachedTextSmall}>Max. {Features.maxChecklistItems} Unterpunkte</Text>
           </View>
         )}
       </View>
@@ -995,7 +995,7 @@ export default function EditTemplateScreen() {
             <View style={styles.limitReachedBox}>
               <Ionicons name="information-circle" size={20} color="#f57c00" />
               <Text style={styles.limitReachedText}>
-                Maximum von {Features.maxMainItems} Hauptpunkten erreicht (Basic Version)
+                Maximum von {Features.maxMainItems} Hauptpunkten erreicht
               </Text>
             </View>
             )}

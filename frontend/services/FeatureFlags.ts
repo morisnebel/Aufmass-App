@@ -42,14 +42,14 @@ export const getProStatus = (): boolean => _isPro;
 export const isPro = _isPro;
 
 // App-Name basierend auf Version (dynamisch)
-export const getAppName = () => _isPro ? 'Aufmassprofi Pro' : 'Aufmassprofi Basic';
-export const getAppNameHeader = () => _isPro ? '- AUFMASSPROFI Pro -' : '- AUFMASSPROFI Basic -';
-export const getAppNameShort = () => _isPro ? 'Pro' : 'Basic';
+export const getAppName = () => _isPro ? 'Aufmassprofi Pro' : 'Aufmassprofi';
+export const getAppNameHeader = () => _isPro ? '- AUFMASSPROFI Pro -' : '- AUFMASSPROFI -';
+export const getAppNameShort = () => _isPro ? 'Pro' : '';
 
 // Legacy exports für Kompatibilität
-export const AppName = 'Aufmassprofi Basic'; // Wird dynamisch überschrieben
-export const AppNameHeader = '- AUFMASSPROFI Basic -';
-export const AppNameShort = 'Basic';
+export const AppName = 'Aufmassprofi'; // Wird dynamisch überschrieben
+export const AppNameHeader = '- AUFMASSPROFI -';
+export const AppNameShort = '';
 
 // Feature-Funktion die aktuellen Pro-Status prüft
 export const getFeatures = () => ({

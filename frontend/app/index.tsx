@@ -1335,22 +1335,23 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     backgroundColor: '#0a1628',
-    padding: 20,
+    padding: 0,
     alignItems: 'center',
+    justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   logoContainerLandscape: {
     flexDirection: 'row',
-    padding: 8,
+    padding: 0,
     paddingHorizontal: 16,
     gap: 10,
     justifyContent: 'center',
   },
   logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 20,
+    width: '100%',
+    height: 180,
+    borderRadius: 0,
   },
   logoLandscape: {
     width: 36,

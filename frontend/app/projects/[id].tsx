@@ -1033,38 +1033,73 @@ export default function ProjectDetailScreen() {
         await setLastUsedProjectType(editProjectType);
       }
 
-      // Synchronisiere Bauherr-Daten mit Kundenstamm
+      // Synchronisiere Bauherr-Daten mit Kundenstamm - jetzt mit Rückfrage
       if (project?.customer_id) {
         try {
           const existingCustomer = await CustomerService.getById(project.customer_id);
           if (existingCustomer) {
-            // Baue die Adresse zusammen
-            const newAddress = editBauherrStreet || editBauherrPlz || editBauherrCity
-              ? `${editBauherrStreet || ''}, ${editBauherrPlz || ''} ${editBauherrCity || ''}`.trim()
-              : existingCustomer.address;
-            
             const fullName = `${editBauherrSalutation} ${editBauherrFirstName} ${editBauherrLastName}`.trim();
-            
-            await CustomerService.update(project.customer_id, {
-              ...existingCustomer,
-              salutation: editBauherrSalutation || existingCustomer.salutation,
-              firstName: editBauherrFirstName || existingCustomer.firstName,
-              lastName: editBauherrLastName || existingCustomer.lastName,
-              name: fullName || existingCustomer.name,
-              phone: editBauherrPhone || existingCustomer.phone,
-              mobile: editBauherrMobile || existingCustomer.mobile,
-              email: editBauherrEmail || existingCustomer.email,
-              street: editBauherrStreet || existingCustomer.street,
-              zip: editBauherrPlz || existingCustomer.zip,
-              city: editBauherrCity || existingCustomer.city,
-              address: newAddress,
-              customer_number: customerNumber || existingCustomer.customer_number,
-              customerType: editBauherrCustomerType || existingCustomer.customerType,
-            });
+            // Prüfen ob sich etwas geändert hat vs. Kundenstamm
+            const hasCustomerChanges =
+              (editBauherrSalutation || '') !== (existingCustomer.salutation || '') ||
+              (editBauherrFirstName || '') !== (existingCustomer.firstName || '') ||
+              (editBauherrLastName || '') !== (existingCustomer.lastName || '') ||
+              (editBauherrPhone || '') !== (existingCustomer.phone || '') ||
+              (editBauherrMobile || '') !== (existingCustomer.mobile || '') ||
+              (editBauherrEmail || '') !== (existingCustomer.email || '') ||
+              (editBauherrStreet || '') !== (existingCustomer.street || '') ||
+              (editBauherrPlz || '') !== (existingCustomer.zip || '') ||
+              (editBauherrCity || '') !== (existingCustomer.city || '') ||
+              (editBauherrCustomerType || '') !== (existingCustomer.customerType || '') ||
+              (customerNumber || '') !== (existingCustomer.customer_number || '');
+
+            if (hasCustomerChanges) {
+              // Prüfen: Ist der Kundenstamm quasi leer (Bauherr wird "neu" angelegt)?
+              const customerIsEmpty = !existingCustomer.firstName && !existingCustomer.lastName &&
+                !existingCustomer.phone && !existingCustomer.mobile && !existingCustomer.email &&
+                !existingCustomer.street && !existingCustomer.zip && !existingCustomer.city;
+
+              const dialogTitle = customerIsEmpty ? 'Neuen Kunden anlegen?' : 'Kundendaten synchronisieren?';
+              const dialogMessage = customerIsEmpty
+                ? 'Die Kundendaten im Kundenstamm sind noch leer. Sollen die im Projekt eingegebenen Daten als neuer Kunde übernommen werden?'
+                : `Die Bauherr-/Kundendaten wurden im Projekt geändert. Sollen die Änderungen auch im Kundenstamm "${existingCustomer.name || 'Kunde'}" übernommen werden?`;
+
+              const newAddress = editBauherrStreet || editBauherrPlz || editBauherrCity
+                ? `${editBauherrStreet || ''}, ${editBauherrPlz || ''} ${editBauherrCity || ''}`.trim()
+                : existingCustomer.address;
+
+              const doCustomerSync = async () => {
+                await CustomerService.update(project.customer_id!, {
+                  ...existingCustomer,
+                  salutation: editBauherrSalutation || existingCustomer.salutation,
+                  firstName: editBauherrFirstName || existingCustomer.firstName,
+                  lastName: editBauherrLastName || existingCustomer.lastName,
+                  name: fullName || existingCustomer.name,
+                  phone: editBauherrPhone || existingCustomer.phone,
+                  mobile: editBauherrMobile || existingCustomer.mobile,
+                  email: editBauherrEmail || existingCustomer.email,
+                  street: editBauherrStreet || existingCustomer.street,
+                  zip: editBauherrPlz || existingCustomer.zip,
+                  city: editBauherrCity || existingCustomer.city,
+                  address: newAddress,
+                  customer_number: customerNumber || existingCustomer.customer_number,
+                  customerType: editBauherrCustomerType || existingCustomer.customerType,
+                });
+                await loadProjectData();
+              };
+
+              Alert.alert(
+                dialogTitle,
+                dialogMessage,
+                [
+                  { text: 'Nein', style: 'cancel' },
+                  { text: 'Ja, übernehmen', onPress: () => { doCustomerSync().catch(e => console.error('Customer sync error:', e)); } },
+                ]
+              );
+            }
           }
         } catch (syncError) {
-          console.error('Error syncing customer data:', syncError);
-          // Fehler bei Synchronisation nicht an Benutzer zeigen, Projekt wurde trotzdem gespeichert
+          console.error('Error checking customer sync:', syncError);
         }
       }
 
@@ -1086,7 +1121,44 @@ export default function ProjectDetailScreen() {
           const existingCustomer = await CustomerService.getById(project.customer_id);
           console.log('existingCustomer:', existingCustomer?.name);
           console.log('projectAddresses:', existingCustomer?.projectAddresses?.length);
-          
+
+          // Helper: Legt eine neue Projektadresse beim Kunden an und verknüpft das Projekt damit
+          const createNewObjectAddress = async () => {
+            if (!existingCustomer) return;
+            const newObjectNumber = editObjektNumber || await getNextAvailableObjectNumber(project.customer_id);
+            const newAddressName = editProjectName || editObjektName || `Adresse ${(existingCustomer.projectAddresses?.length || 0) + 1}`;
+            const newAddr: any = {
+              id: `addr_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+              object_number: newObjectNumber,
+              name: newAddressName,
+              objectName: editObjektName || undefined,
+              description: editProjectDescription || undefined,
+              street: editObjektStreet || '',
+              zip: editObjektPlz || '',
+              city: editObjektCity || '',
+              contactPerson: editObjektContactPerson || undefined,
+              phone: editObjektPhone || undefined,
+              email: editObjektEmail || undefined,
+            };
+            const updatedAddresses = [...(existingCustomer.projectAddresses || []), newAddr];
+            await CustomerService.update(project.customer_id!, {
+              ...existingCustomer,
+              projectAddresses: updatedAddresses,
+            });
+            // Projekt mit Adress-Namen verknüpfen, damit späteres Sync greift
+            const projectId = Array.isArray(id) ? id[0] : id;
+            const currentProject = await ProjectService.getById(projectId);
+            if (currentProject) {
+              await ProjectService.update(projectId, {
+                ...currentProject,
+                objekt_address_name: newAddressName,
+                objekt_number: newObjectNumber,
+              });
+            }
+            await loadProjectData();
+            Alert.alert(t('common.success'), `Neue Objektadresse "${newAddressName}" wurde beim Kunden angelegt.`);
+          };
+
           if (existingCustomer?.projectAddresses && existingCustomer.projectAddresses.length > 0) {
             // Finde passende Adresse - über Name oder über Straße/PLZ
             let matchingAddress = null;
@@ -1104,17 +1176,21 @@ export default function ProjectDetailScreen() {
               console.log('Match by street:', matchingAddress?.name);
             }
             
-            // Wenn immer noch kein Match, zeige alle Adressen zur Auswahl
+            // Wenn immer noch kein Match, zeige alle Adressen zur Auswahl + Neue anlegen
             if (!matchingAddress && existingCustomer.projectAddresses.length > 0) {
               console.log('No match found, showing selection dialog');
-              // Zeige Dialog mit allen Adressen
+              // Zeige Dialog mit allen Adressen + Option "Neu anlegen"
               Alert.alert(
-                t('projects.updateAddressAtCustomer'),
-                t('projects.whichAddressToUpdate'),
+                'Objektadresse zuordnen',
+                'Die eingegebene Objektadresse ist keiner gespeicherten Adresse zugeordnet. Möchtest du eine bestehende Adresse aktualisieren oder eine neue Adresse anlegen?',
                 [
-                  { text: 'Keine', style: 'cancel' },
+                  { text: 'Abbrechen', style: 'cancel' },
+                  {
+                    text: '➕ Neue Adresse anlegen',
+                    onPress: () => { createNewObjectAddress().catch(e => console.error('Create address error:', e)); }
+                  },
                   ...existingCustomer.projectAddresses.map(addr => ({
-                    text: addr.name || t('projects.unnamed'),
+                    text: `Update: ${addr.name || t('projects.unnamed')}`,
                     onPress: async () => {
                       const updatedAddresses = existingCustomer.projectAddresses!.map(a => 
                         a.id === addr.id
@@ -1216,6 +1292,20 @@ export default function ProjectDetailScreen() {
                 );
               }
             }
+          } else if (existingCustomer) {
+            // Kunde hat noch keine gespeicherten Objektadressen -> Neu anlegen anbieten
+            console.log('Kunde hat keine gespeicherten Objektadressen. Frage nach Neuanlage.');
+            Alert.alert(
+              'Neue Objektadresse anlegen?',
+              `Der Kunde "${existingCustomer.name || 'Kunde'}" hat noch keine gespeicherte Objektadresse. Soll die eingegebene Adresse als neue Objektadresse beim Kunden angelegt werden?`,
+              [
+                { text: 'Nein', style: 'cancel' },
+                {
+                  text: 'Ja, anlegen',
+                  onPress: () => { createNewObjectAddress().catch(e => console.error('Create address error:', e)); }
+                },
+              ]
+            );
           }
         } catch (syncError) {
           console.error('Error checking customer address sync:', syncError);

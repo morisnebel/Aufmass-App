@@ -756,7 +756,6 @@ export default function HomeScreen() {
           style={[styles.logo, isLandscape && isPhoneDevice && styles.logoLandscape]}
           resizeMode="contain"
         />
-        <Text style={styles.versionCode}>{AppName}</Text>
       </View>
       )}
 

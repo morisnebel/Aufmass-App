@@ -1028,6 +1028,28 @@ export default function SettingsScreen() {
             )}
           </View>
 
+          {/* ===== Datensicherung ===== */}
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#0891b2" />
+              <Text style={styles.sectionTitle}>Datensicherung</Text>
+            </View>
+            <TouchableOpacity
+              style={legalStyles.navRow}
+              onPress={() => router.push('/backup/')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#cffafe' }]}>
+                <Ionicons name="save-outline" size={18} color="#0891b2" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Backup &amp; Wiederherstellung</Text>
+                <Text style={legalStyles.navSub}>Alle Daten sichern und wiederherstellen</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+
           {/* ===== Rechtliches & Datenschutz ===== */}
           <View style={[styles.section, { marginTop: 8 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>

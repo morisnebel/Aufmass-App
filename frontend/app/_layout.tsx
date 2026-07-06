@@ -5,6 +5,7 @@ import { View, LogBox, Platform } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService } from '../services/LocalStorage';
+import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import { DisclaimerGate } from '../src/components/DisclaimerGate';
 import '../i18n'; // i18n initialisieren
@@ -27,6 +28,11 @@ export default function RootLayout() {
   useEffect(() => {
     SketchService.migrateAllSketches().catch(err => 
       console.error('[App] Sketch migration error:', err)
+    );
+    // Automatischer Backup-Snapshot beim App-Start (max. 1x pro 24h)
+    // Schützt vor Datenverlust bei App-Bugs / versehentlichem Löschen
+    BackupService.createAutoSnapshotIfNeeded(24).catch(err =>
+      console.warn('[App] Auto-snapshot error:', err)
     );
   }, []);
   return (

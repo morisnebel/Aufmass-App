@@ -4,6 +4,7 @@ import { useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackupService, AutoBackupSnapshot } from '../../services/BackupService';
+import { Features } from '../../services/FeatureFlags';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const REMINDER_KEY = 'aufmassprofi_backup_reminder_days';
@@ -310,8 +311,9 @@ export default function BackupScreen() {
         <View style={styles.footNote}>
           <Ionicons name="information-circle-outline" size={16} color="#64748b" />
           <Text style={styles.footText}>
-            Ein Backup enthält alle Projekte, Kunden, Skizzen (inkl. Zeichnungen), Fotos (Base64),
-            Aufmaße, Rapporte, Mitarbeiter, Material, Maschinen sowie deine Einstellungen und Firmendaten.
+            {Features.showReportTab
+              ? 'Ein Backup enthält alle Projekte, Kunden, Skizzen (inkl. Zeichnungen), Fotos (Base64), Aufmaße, Rapporte, Mitarbeiter, Materialien, Maschinen sowie deine Einstellungen und Firmendaten.'
+              : 'Ein Backup enthält alle Projekte, Kunden, Skizzen (inkl. Zeichnungen), Fotos (Base64), Aufmaße, Checklisten sowie deine Einstellungen und Firmendaten.'}
           </Text>
         </View>
       </ScrollView>

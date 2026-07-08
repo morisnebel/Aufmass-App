@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ReportService, ProjectService, CustomerService,
   EmployeeMasterService, MaterialMasterService, MachineMasterService, ChecklistService,
+  MaterialCategoryService,
   SettingsService, PhotoService,
   Report, ReportEmployee, ReportMaterial, ReportPhoto, ReportMachine, ReportWorkItem,
   Project, Customer, EmployeeMaster, MaterialMaster, MachineMaster, Checklist,
@@ -101,6 +102,12 @@ export default function ReportEditScreen() {
 
   const [showEmpPicker, setShowEmpPicker] = useState(false);
   const [showMatPicker, setShowMatPicker] = useState(false);
+  // Menge-Eingabe (Roh-String, damit Komma-Eingabe nicht springt)
+  const [matQtyDraft, setMatQtyDraft] = useState<Record<string, string>>({});
+  // Vollständiges Formular: Material in Stammdaten übernehmen
+  const [matMasterModal, setMatMasterModal] = useState<{ reportMatId: string } | null>(null);
+  const [matMasterForm, setMatMasterForm] = useState<any>({});
+  const [matMasterNum, setMatMasterNum] = useState<{ ek?: string; markup?: string; vk?: string }>({});
   const [showMachPicker, setShowMachPicker] = useState(false);
   const [showChecklistPicker, setShowChecklistPicker] = useState(false);
   // Auswahl-Modus für Checklisten-Items
@@ -474,25 +481,54 @@ export default function ReportEditScreen() {
       Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
       return;
     }
+    // Prüfe ob schon vorhanden
+    const existing = matMaster.find(mm => mm.name.toLowerCase() === m.name.toLowerCase() && mm.unit === m.unit);
+    if (existing) {
+      Alert.alert('Hinweis', `${m.name} ist bereits in den Stammdaten vorhanden.`);
+      setSavedMatIds(s => new Set([...s, m.id]));
+      return;
+    }
+    // Vollständiges Formular öffnen, damit alle Daten direkt erfasst werden können
+    setMatMasterForm({
+      name: m.name,
+      unit: m.unit || 'Stk',
+      default_quantity: m.quantity || 1,
+      category: '',
+      supplier: '',
+      article_number: '',
+    });
+    setMatMasterNum({});
+    setMatMasterModal({ reportMatId: m.id });
+  };
+
+  const saveMatMasterFromModal = async () => {
+    if (!matMasterModal) return;
+    if (!matMasterForm.name || !matMasterForm.name.trim()) {
+      Alert.alert('Hinweis', 'Bitte eine Bezeichnung eingeben.');
+      return;
+    }
     try {
-      // Prüfe ob schon vorhanden
-      const existing = matMaster.find(mm => mm.name.toLowerCase() === m.name.toLowerCase() && mm.unit === m.unit);
-      if (existing) {
-        Alert.alert('Hinweis', `${m.name} ist bereits in den Stammdaten vorhanden.`);
-        setSavedMatIds(s => new Set([...s, m.id]));
-        return;
-      }
       await MaterialMasterService.create({
-        name: m.name,
-        unit: m.unit || 'Stk',
-        default_quantity: m.quantity || 1,
+        name: matMasterForm.name.trim(),
+        unit: matMasterForm.unit || 'Stk',
+        default_quantity: matMasterForm.default_quantity || 1,
+        category: matMasterForm.category?.trim() || undefined,
+        supplier: matMasterForm.supplier?.trim() || undefined,
+        article_number: matMasterForm.article_number?.trim() || undefined,
+        purchase_price: matMasterNum.ek ? (parseFloat(matMasterNum.ek.replace(',', '.')) || undefined) : undefined,
+        markup_percent: matMasterNum.markup ? (parseFloat(matMasterNum.markup.replace(',', '.')) || undefined) : undefined,
+        price_per_unit: matMasterNum.vk ? (parseFloat(matMasterNum.vk.replace(',', '.')) || undefined) : undefined,
         active: true,
       } as any);
+      if (matMasterForm.category && matMasterForm.category.trim()) {
+        try { await MaterialCategoryService.add(matMasterForm.category.trim()); } catch { /* silent */ }
+      }
       // Aktualisiere Stammdaten-Liste
       const newList = await MaterialMasterService.getActive();
       setMatMaster(newList);
-      setSavedMatIds(s => new Set([...s, m.id]));
-      Alert.alert('Gespeichert', `${m.name} wurde in den Material-Stammdaten gespeichert.`);
+      setSavedMatIds(s => new Set([...s, matMasterModal.reportMatId]));
+      setMatMasterModal(null);
+      Alert.alert('Gespeichert', `${matMasterForm.name} wurde in den Material-Stammdaten gespeichert.`);
     } catch (e) {
       console.error(e);
       Alert.alert('Fehler', 'Speichern fehlgeschlagen.');
@@ -555,7 +591,7 @@ export default function ReportEditScreen() {
   };
   const updateMaterial = (id: string, field: keyof ReportMaterial, value: string) => {
     setMaterials(prev => prev.map(m => m.id === id
-      ? { ...m, [field]: field === 'quantity' ? (parseFloat(value) || 0) : value }
+      ? { ...m, [field]: field === 'quantity' ? (parseFloat(value.replace(',', '.')) || 0) : value }
       : m));
   };
   const removeMaterial = (id: string) => setMaterials(prev => prev.filter(m => m.id !== id));
@@ -1378,10 +1414,15 @@ export default function ReportEditScreen() {
                       />
                       <TextInput
                         style={[styles.itemInput, { width: 60, textAlign: 'right' }]}
-                        value={m.quantity ? String(m.quantity) : ''}
-                        onChangeText={(v) => updateMaterial(m.id, 'quantity', v)}
+                        value={matQtyDraft[m.id] ?? (m.quantity ? String(m.quantity).replace('.', ',') : '')}
+                        onChangeText={(v) => {
+                          const clean = v.replace(/[^0-9,.]/g, '');
+                          setMatQtyDraft(prev => ({ ...prev, [m.id]: clean }));
+                          updateMaterial(m.id, 'quantity', clean);
+                        }}
+                        onBlur={() => setMatQtyDraft(prev => { const d = { ...prev }; delete d[m.id]; return d; })}
                         placeholder="0"
-                        keyboardType="decimal-pad"
+                        keyboardType="numbers-and-punctuation"
                       />
                       <TextInput
                         style={[styles.itemInput, { width: 50, textAlign: 'center' }]}
@@ -2350,6 +2391,139 @@ export default function ReportEditScreen() {
                 <Text style={styles.modalCloseText}>Fertig</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </Modal>
+
+        {/* ===== Material in Stammdaten übernehmen (vollständiges Formular) ===== */}
+        <Modal visible={!!matMasterModal} transparent animationType="fade" onRequestClose={() => setMatMasterModal(null)}>
+          <View style={styles.modalOverlayCenter}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxWidth: 420 }}>
+              <View style={[styles.modalSmall, { maxWidth: 420, width: '100%' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[styles.modalTitle, { color: '#d97706' }]}>📦 In Materialstamm übernehmen</Text>
+                  <TouchableOpacity onPress={() => setMatMasterModal(null)}>
+                    <Ionicons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={{ maxHeight: 440 }} keyboardShouldPersistTaps="handled">
+                  <Text style={styles.miniLabel}>Bezeichnung *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={matMasterForm.name || ''}
+                    onChangeText={(v) => setMatMasterForm({ ...matMasterForm, name: v })}
+                    placeholder="z.B. Dachziegel rot"
+                  />
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>Einheit *</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterForm.unit || ''}
+                        onChangeText={(v) => setMatMasterForm({ ...matMasterForm, unit: v })}
+                        placeholder="Stk"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>Kategorie</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterForm.category || ''}
+                        onChangeText={(v) => setMatMasterForm({ ...matMasterForm, category: v })}
+                        placeholder="z.B. Dachziegel"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>EK-Preis (€)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterNum.ek ?? ''}
+                        onChangeText={(v) => {
+                          const clean = v.replace(/[^0-9,.]/g, '');
+                          const ek = clean ? parseFloat(clean.replace(',', '.')) : NaN;
+                          const markup = matMasterNum.markup ? parseFloat(matMasterNum.markup.replace(',', '.')) : NaN;
+                          if (!isNaN(ek) && !isNaN(markup)) {
+                            const vk = Math.round(ek * (1 + markup / 100) * 100) / 100;
+                            setMatMasterNum({ ...matMasterNum, ek: clean, vk: String(vk).replace('.', ',') });
+                          } else {
+                            setMatMasterNum({ ...matMasterNum, ek: clean });
+                          }
+                        }}
+                        placeholder="0,00"
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>Aufschlag (%)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterNum.markup ?? ''}
+                        onChangeText={(v) => {
+                          const clean = v.replace(/[^0-9,.]/g, '');
+                          const markup = clean ? parseFloat(clean.replace(',', '.')) : NaN;
+                          const ek = matMasterNum.ek ? parseFloat(matMasterNum.ek.replace(',', '.')) : NaN;
+                          if (!isNaN(ek) && !isNaN(markup)) {
+                            const vk = Math.round(ek * (1 + markup / 100) * 100) / 100;
+                            setMatMasterNum({ ...matMasterNum, markup: clean, vk: String(vk).replace('.', ',') });
+                          } else {
+                            setMatMasterNum({ ...matMasterNum, markup: clean });
+                          }
+                        }}
+                        placeholder="z.B. 15"
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>VK-Preis (€)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterNum.vk ?? ''}
+                        onChangeText={(v) => setMatMasterNum({ ...matMasterNum, vk: v.replace(/[^0-9,.]/g, '') })}
+                        placeholder="0,00"
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}>
+                    💡 VK wird automatisch aus EK + Aufschlag berechnet. Der VK-Preis wird für die Kostenberechnung verwendet.
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>Lieferant</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterForm.supplier || ''}
+                        onChangeText={(v) => setMatMasterForm({ ...matMasterForm, supplier: v })}
+                        placeholder="z.B. Dachbaustoffe GmbH"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>Artikel-Nr.</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={matMasterForm.article_number || ''}
+                        onChangeText={(v) => setMatMasterForm({ ...matMasterForm, article_number: v })}
+                        placeholder="z.B. DZ-1001"
+                      />
+                    </View>
+                  </View>
+                </ScrollView>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setMatMasterModal(null)}>
+                    <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#d97706' }]} onPress={saveMatMasterFromModal}>
+                    <Ionicons name="bookmark" size={16} color="#fff" />
+                    <Text style={styles.saveBtnText}>Speichern</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
           </View>
         </Modal>
 

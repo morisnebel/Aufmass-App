@@ -281,7 +281,7 @@ export default function ReportEditScreen() {
 
   // Gesamtstunden aller Mitarbeiter
   const totalAllHours = employees.reduce((sum, e) => {
-    const h = e.hours ?? calcEmpHours(e.time_from, e.time_to, e.pause_minutes);
+    const h = (e.time_from && e.time_to) ? calcEmpHours(e.time_from, e.time_to, e.pause_minutes) : (e.hours || 0);
     return sum + (h || 0);
   }, 0);
 
@@ -334,10 +334,10 @@ export default function ReportEditScreen() {
     if (saving) return null; // Schutz gegen Doppelklick
     setSaving(true);
     try {
-      // Stunden für jeden Mitarbeiter neu berechnen
+      // Stunden für jeden Mitarbeiter neu berechnen (Zeiten haben Vorrang vor gespeichertem Wert)
       const empsWithHours = employees.map(e => ({
         ...e,
-        hours: e.hours != null ? e.hours : calcEmpHours(e.time_from, e.time_to, e.pause_minutes),
+        hours: (e.time_from && e.time_to) ? calcEmpHours(e.time_from, e.time_to, e.pause_minutes) : e.hours,
       }));
 
       // Material-Lager: Delta-Berechnung gegen vorherigen Abzug
@@ -497,7 +497,7 @@ export default function ReportEditScreen() {
   const hoursByRole: { role: string; hours: number; count: number }[] = (() => {
     const map: Record<string, { hours: number; count: number }> = {};
     employees.forEach(e => {
-      const h = e.hours ?? calcEmpHours(e.time_from, e.time_to, e.pause_minutes);
+      const h = (e.time_from && e.time_to) ? calcEmpHours(e.time_from, e.time_to, e.pause_minutes) : (e.hours || 0);
       const role = (e.role || '').trim();
       if (!role) return;
       if (!map[role]) map[role] = { hours: 0, count: 0 };
@@ -527,7 +527,15 @@ export default function ReportEditScreen() {
     setShowEmpPicker(false);
   };
   const updateEmployee = (id: string, patch: Partial<ReportEmployee>) => {
-    setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    setEmployees(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      const merged = { ...e, ...patch };
+      // Bei Änderung von Zeiten/Pause die Stunden immer neu berechnen
+      if ('time_from' in patch || 'time_to' in patch || 'pause_minutes' in patch) {
+        merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
+      }
+      return merged;
+    }));
   };
   const removeEmployee = (id: string) => setEmployees(prev => prev.filter(e => e.id !== id));
 
@@ -1018,7 +1026,7 @@ export default function ReportEditScreen() {
             ) : (
               <>
                 {employees.map((emp) => {
-                  const hours = emp.hours ?? calcEmpHours(emp.time_from, emp.time_to, emp.pause_minutes);
+                  const hours = (emp.time_from && emp.time_to) ? calcEmpHours(emp.time_from, emp.time_to, emp.pause_minutes) : (emp.hours || 0);
                   const empDate = emp.entry_date || date;
                   const isOtherDay = empDate !== date;
                   return (
@@ -1756,8 +1764,7 @@ export default function ReportEditScreen() {
               const empRows = employees.map((e, idx) => {
                 const ea: any = e;
                 const calcH = (() => {
-                  if (e.hours != null) return e.hours;
-                  if (!ea.time_from || !ea.time_to) return 0;
+                  if (!ea.time_from || !ea.time_to) return e.hours != null ? e.hours : 0;
                   const [fh, fm] = ea.time_from.split(':').map(Number);
                   const [th, tm] = ea.time_to.split(':').map(Number);
                   let mins = (th * 60 + tm) - (fh * 60 + fm);

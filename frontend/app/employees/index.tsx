@@ -18,9 +18,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { EmployeeMasterService, EmployeeMaster } from '../../services/LocalStorage';
+import { EmployeeMasterService, EmployeeMaster, generateEmployeeNumber } from '../../services/LocalStorage';
 
 const EMPTY: Partial<EmployeeMaster> = {
+  employee_number: '',
   name: '',
   role: '',
   hourly_rate: undefined,
@@ -179,6 +180,7 @@ export default function EmployeesIndex() {
                 if (!emp || !emp.name) { skipped++; continue; }
                 if (existingNames.has(emp.name.toLowerCase().trim())) { skipped++; continue; }
                 await EmployeeMasterService.create({
+                  employee_number: emp.employee_number || '',
                   name: emp.name,
                   role: emp.role || '',
                   hourly_rate: emp.hourly_rate,
@@ -217,6 +219,10 @@ export default function EmployeesIndex() {
     setEditing(null);
     setForm({ ...EMPTY });
     setModalVisible(true);
+    // Nummer automatisch vorschlagen (anpassbar)
+    generateEmployeeNumber().then(num => {
+      setForm(prev => ({ ...prev, employee_number: num }));
+    }).catch(() => {});
   };
 
   const openEdit = (emp: EmployeeMaster) => {
@@ -310,6 +316,9 @@ export default function EmployeesIndex() {
                   </View>
                   {emp.role ? <Text style={styles.empRole}>{emp.role}</Text> : null}
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 2 }}>
+                    {emp.employee_number ? (
+                      <Text style={styles.empMeta}>#{emp.employee_number}</Text>
+                    ) : null}
                     {emp.hourly_rate ? (
                       <Text style={styles.empMeta}>{emp.hourly_rate.toFixed(2)} €/Std</Text>
                     ) : null}
@@ -443,6 +452,15 @@ export default function EmployeesIndex() {
                 </TouchableOpacity>
               </View>
               <ScrollView style={{ maxHeight: 500 }}>
+                <Text style={styles.label}>Personal-Nr.</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.employee_number || ''}
+                  onChangeText={(v) => setForm({ ...form, employee_number: v })}
+                  placeholder="z.B. MA-001"
+                  autoCapitalize="characters"
+                />
+
                 <Text style={styles.label}>Name *</Text>
                 <TextInput
                   style={styles.input}

@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ReportService, ProjectService, CustomerService,
   EmployeeMasterService, MaterialMasterService, MachineMasterService, ChecklistService,
-  MaterialCategoryService,
+  MaterialCategoryService, generateArticleNumber,
   SettingsService, PhotoService,
   Report, ReportEmployee, ReportMaterial, ReportPhoto, ReportMachine, ReportWorkItem,
   Project, Customer, EmployeeMaster, MaterialMaster, MachineMaster, Checklist,
@@ -516,6 +516,10 @@ export default function ReportEditScreen() {
     });
     setMatMasterNum({});
     setMatMasterModal({ reportMatId: m.id });
+    // Artikel-Nummer automatisch vorschlagen (anpassbar)
+    generateArticleNumber().then(num => {
+      setMatMasterForm((prev: any) => ({ ...prev, article_number: prev.article_number || num }));
+    }).catch(() => {});
   };
 
   const saveMatMasterFromModal = async () => {

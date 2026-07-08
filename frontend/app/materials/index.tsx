@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory, MaterialLocationService, MaterialLocation, MaterialSupplierService, MaterialSupplier } from '../../services/LocalStorage';
+import { MaterialMasterService, MaterialMaster, MaterialCategoryService, MaterialCategory, MaterialLocationService, MaterialLocation, MaterialSupplierService, MaterialSupplier, generateArticleNumber } from '../../services/LocalStorage';
 
 const UNIT_OPTIONS = ['Stk', 'm', 'm²', 'm³', 'kg', 'L', 'Pck', 'Pal', 'h', 't', 'Rolle', 'Paar'];
 
@@ -197,6 +197,10 @@ export default function MaterialsIndex() {
     setForm({ ...EMPTY });
     setNumStr({});
     setModalVisible(true);
+    // Artikel-Nummer automatisch vorschlagen (anpassbar)
+    generateArticleNumber().then(num => {
+      setForm(prev => ({ ...prev, article_number: num }));
+    }).catch(() => {});
   };
   const openEdit = (m: MaterialMaster) => {
     setEditing(m);

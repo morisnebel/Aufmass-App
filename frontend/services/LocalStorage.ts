@@ -2139,6 +2139,7 @@ export const ReportService = {
 
 export interface MachineMaster {
   id: string;
+  machine_number?: string; // z.B. MG-001, automatisch vergeben, anpassbar
   name: string;
   // Erweiterte Betriebsmittel-Felder
   equipment_category?: 'fahrzeug' | 'maschine' | 'werkzeug' | 'geruest' | 'anhaenger' | 'container' | 'sicherheit' | 'sonstiges';
@@ -2223,8 +2224,33 @@ export const MachineMasterService = {
 
 // ============ EMPLOYEES (Stammdaten Mitarbeiter) - Pro Feature ============
 
+// ===== Automatische Nummern für Stammdaten (anpassbar) =====
+const nextMasterNumber = (numbers: (string | undefined)[], prefix: string): string => {
+  const nums = numbers
+    .filter((n): n is string => !!n && n.startsWith(prefix))
+    .map(n => parseInt(n.substring(prefix.length), 10) || 0);
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
+};
+
+export const generateEmployeeNumber = async (): Promise<string> => {
+  const all = await getItems<EmployeeMaster>(KEYS.EMPLOYEES);
+  return nextMasterNumber(all.map(e => e.employee_number), 'MA-');
+};
+
+export const generateArticleNumber = async (): Promise<string> => {
+  const all = await getItems<MaterialMaster>(KEYS.MATERIALS);
+  return nextMasterNumber(all.map(m => m.article_number), 'MAT-');
+};
+
+export const generateMachineNumber = async (): Promise<string> => {
+  const all = await getItems<MachineMaster>(KEYS.MACHINES);
+  return nextMasterNumber(all.map(m => m.machine_number), 'MG-');
+};
+
 export interface EmployeeMaster {
   id: string;
+  employee_number?: string; // z.B. MA-001, automatisch vergeben, anpassbar
   name: string;
   role?: string; // z.B. "Dachdecker", "Geselle", "Azubi"
   hourly_rate?: number; // €/Stunde

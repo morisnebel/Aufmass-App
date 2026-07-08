@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { MachineMasterService, MachineMaster, SettingsService, MachineCategoryService, MachineCategory } from '../../services/LocalStorage';
+import { MachineMasterService, MachineMaster, SettingsService, MachineCategoryService, MachineCategory, generateMachineNumber } from '../../services/LocalStorage';
 import { DatePickerField } from '../../src/components/DatePickerField';
 
 // =================== STATUS / CATEGORY OPTIONS ===================
@@ -87,6 +87,7 @@ const isTuvOverdue = (iso?: string): boolean => {
 type TabKey = 'machines' | 'categories' | 'locations' | 'status';
 
 const EMPTY: Partial<MachineMaster> = {
+  machine_number: '',
   name: '', equipment_category: 'maschine', manufacturer: '', model: '',
   serial_number: '', license_plate: '', storage_location: '',
   responsible_employee: '', condition: 'gut', status: 'verfuegbar',
@@ -273,6 +274,7 @@ export default function MachinesIndex() {
       const s = search.toLowerCase();
       return (
         m.name.toLowerCase().includes(s) ||
+        (m.machine_number || '').toLowerCase().includes(s) ||
         (m.category || '').toLowerCase().includes(s) ||
         (m.manufacturer || '').toLowerCase().includes(s) ||
         (m.model || '').toLowerCase().includes(s) ||
@@ -288,6 +290,10 @@ export default function MachinesIndex() {
     setYearStr('');
     setRateStr('');
     setModalVisible(true);
+    // Geräte-Nummer automatisch vorschlagen (anpassbar)
+    generateMachineNumber().then(num => {
+      setForm(prev => ({ ...prev, machine_number: num }));
+    }).catch(() => {});
   };
   const openEdit = (m: MachineMaster) => {
     setEditing(m);
@@ -653,6 +659,7 @@ export default function MachinesIndex() {
                         ) : null}
                       </View>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
+                        {m.machine_number ? <Text style={styles.matMetaTag}>#{m.machine_number}</Text> : null}
                         {m.license_plate ? <Text style={styles.matMetaTag}>🚘 {m.license_plate}</Text> : null}
                         {m.serial_number ? <Text style={styles.matMetaTag}>📋 {m.serial_number}</Text> : null}
                         {m.storage_location ? <Text style={styles.matMetaTag}>📍 {m.storage_location}</Text> : null}
@@ -834,6 +841,15 @@ export default function MachinesIndex() {
                     <Text style={styles.photoAddText}>Galerie</Text>
                   </TouchableOpacity>
                 </ScrollView>
+
+                <Text style={styles.label}>Geräte-Nr.</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.machine_number || ''}
+                  onChangeText={(v) => setForm({ ...form, machine_number: v })}
+                  placeholder="z.B. MG-001"
+                  autoCapitalize="characters"
+                />
 
                 <Text style={styles.label}>Bezeichnung *</Text>
                 <TextInput style={styles.input} value={form.name || ''} onChangeText={(v) => setForm({ ...form, name: v })} placeholder="z.B. Liebherr Kran 132 EC-H" />

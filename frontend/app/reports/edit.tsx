@@ -124,6 +124,8 @@ export default function ReportEditScreen() {
   const [workDescription, setWorkDescription] = useState('');
   const [materials, setMaterials] = useState<ReportMaterial[]>([]);
   const [machines, setMachines] = useState<ReportMachine[]>([]);
+  // Drehrad für Maschinen-Einsatzzeit (Stunden:Minuten)
+  const [machineHoursPicker, setMachineHoursPicker] = useState<string | null>(null);
   const [travelKm, setTravelKm] = useState<string>('');
   // Erweiterte Fahrzeiten (Team) - Roh-Strings damit Eingabe nicht springt
   const [travelToHoursStr, setTravelToHoursStr] = useState<string>('');
@@ -1534,20 +1536,17 @@ export default function ReportEditScreen() {
                               <Text style={[styles.machineStatusText, { color: statusColor }]}>{statusLabel}</Text>
                             </View>
                           ) : null}
-                          <View style={styles.hoursInputWrap}>
-                            <Ionicons name="time-outline" size={12} color="#64748b" />
-                            <TextInput
-                              style={styles.hoursInput}
-                              value={m.hours != null ? String(m.hours).replace('.', ',') : ''}
-                              onChangeText={(v) => {
-                                const num = v ? parseFloat(v.replace(',', '.').replace(/[^\d.-]/g, '')) || 0 : undefined;
-                                updateMachine(m.id, 'hours', num as any);
-                              }}
-                              placeholder="0"
-                              keyboardType="numbers-and-punctuation"
-                            />
+                          <TouchableOpacity
+                            style={styles.hoursInputWrap}
+                            onPress={() => setMachineHoursPicker(m.id)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="time-outline" size={12} color="#7c3aed" />
+                            <Text style={[styles.hoursInput, { color: '#7c3aed' }]}>
+                              {formatHM(m.hours) || '0:00'}
+                            </Text>
                             <Text style={styles.hoursUnit}>h</Text>
-                          </View>
+                          </TouchableOpacity>
                         </View>
                       </View>
                       <TouchableOpacity onPress={() => removeMachine(m.id)} style={{ padding: 4 }}>
@@ -2548,6 +2547,52 @@ export default function ReportEditScreen() {
             </KeyboardAvoidingView>
           </View>
         </Modal>
+
+        {/* ===== Maschinen-Einsatzzeit Drehrad (H:MM) ===== */}
+        {machineHoursPicker && (() => {
+          const mach = machines.find(mm => mm.id === machineHoursPicker);
+          if (!mach) return null;
+          const totalMin = Math.round((mach.hours || 0) * 60);
+          const initDate = new Date();
+          initDate.setHours(Math.floor(totalMin / 60), totalMin % 60, 0, 0);
+          return (
+            <Modal visible transparent animationType="fade" onRequestClose={() => setMachineHoursPicker(null)}>
+              <View style={styles.modalOverlayCenter}>
+                <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                  <Text style={[styles.modalTitle, { color: '#7c3aed' }]}>🔧 Einsatzzeit</Text>
+                  <Text style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 4 }}>
+                    {mach.name || 'Maschine / Gerät'} · Stunden und Minuten wählen
+                  </Text>
+                  <DateTimePicker
+                    value={initDate}
+                    mode="time"
+                    is24Hour
+                    display="spinner"
+                    minuteInterval={5}
+                    onChange={(_, selected) => {
+                      if (!selected) return;
+                      const decimal = selected.getHours() + selected.getMinutes() / 60;
+                      updateMachine(mach.id, 'hours', decimal);
+                      if (Platform.OS === 'android') setMachineHoursPicker(null);
+                    }}
+                  />
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setMachineHoursPicker(null)}>
+                      <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#7c3aed' }]}
+                      onPress={() => setMachineHoursPicker(null)}
+                    >
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveBtnText}>Übernehmen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          );
+        })()}
 
         {/* Maschinen-Picker */}
         <Modal visible={showMachPicker} transparent animationType="slide" onRequestClose={() => setShowMachPicker(false)}>

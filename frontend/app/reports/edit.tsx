@@ -1174,6 +1174,32 @@ export default function ReportEditScreen() {
                   <Text style={styles.empSumLabel}>Gesamtstunden aller Mitarbeiter</Text>
                   <Text style={styles.empSumValue}>{totalAllHours.toFixed(2)} h</Text>
                 </View>
+                {/* Fahrzeit zu den Stunden (wie im PDF) */}
+                {(() => {
+                  const empCount = employees.length || 1;
+                  let travelSum = 0;
+                  if (travelPerEmployee) {
+                    employees.forEach((e: any) => { travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0); });
+                  } else if (travelInTotalHours) {
+                    const oneRound = (parseFloat((travelToHoursStr || '0').replace(',', '.')) || 0) + (parseFloat((travelBackHoursStr || '0').replace(',', '.')) || 0);
+                    travelSum = oneRound * empCount;
+                  }
+                  if (travelSum <= 0) return null;
+                  return (
+                    <>
+                      <View style={[styles.empSumRow, { paddingTop: 2 }]}>
+                        <Text style={[styles.empSumLabel, { color: '#0891b2', fontSize: 12 }]}>
+                          + Fahrzeit{!travelPerEmployee && empCount > 1 ? ` (Team × ${empCount} MA)` : ''}
+                        </Text>
+                        <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{travelSum.toFixed(2)} h</Text>
+                      </View>
+                      <View style={[styles.empSumRow, { backgroundColor: '#ecfeff', borderRadius: 8, paddingHorizontal: 8 }]}>
+                        <Text style={[styles.empSumLabel, { color: '#0e7490' }]}>Gesamt inkl. Fahrzeit</Text>
+                        <Text style={[styles.empSumValue, { color: '#0e7490' }]}>{(totalAllHours + travelSum).toFixed(2)} h</Text>
+                      </View>
+                    </>
+                  );
+                })()}
                 {/* Stunden pro Funktion */}
                 {hoursByRole.length > 0 && (
                   <View style={styles.roleGroup}>
@@ -1878,7 +1904,7 @@ export default function ReportEditScreen() {
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
                           <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
-                          {priceInput(r.rate, (v) => updateEmpRate(r.idx, v))}
+                          {priceInput(`emp-${r.idx}`, r.rate, (v) => updateEmpRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
                         </View>

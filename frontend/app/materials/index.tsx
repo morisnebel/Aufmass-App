@@ -91,8 +91,21 @@ export default function MaterialsIndex() {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
-              <Ionicons name="ellipsis-vertical" size={22} color="#0f172a" />
+            <TouchableOpacity
+              onPress={() => setMenuVisible(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 16,
+              }}
+            >
+              <Ionicons name="build-outline" size={16} color="#1976d2" />
+              <Text style={{ color: '#1976d2', fontSize: 13, fontWeight: '700' }}>Aktionen</Text>
+              <Ionicons name="chevron-down" size={14} color="#1976d2" />
             </TouchableOpacity>
           )}
         </View>

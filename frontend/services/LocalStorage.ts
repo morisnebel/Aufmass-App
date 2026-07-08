@@ -2228,6 +2228,7 @@ export interface EmployeeMaster {
   role?: string; // z.B. "Dachdecker", "Geselle", "Azubi"
   hourly_rate?: number; // €/Stunde
   phone?: string;
+  mobile?: string; // Handynummer
   email?: string;
   color?: string; // Optionale Farbe für Schnellauswahl
   active: boolean;

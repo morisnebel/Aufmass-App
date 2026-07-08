@@ -25,6 +25,7 @@ const EMPTY: Partial<EmployeeMaster> = {
   role: '',
   hourly_rate: undefined,
   phone: '',
+  mobile: '',
   email: '',
   active: true,
 };
@@ -182,6 +183,7 @@ export default function EmployeesIndex() {
                   role: emp.role || '',
                   hourly_rate: emp.hourly_rate,
                   phone: emp.phone || '',
+                  mobile: emp.mobile || '',
                   email: emp.email || '',
                   color: emp.color,
                   active: emp.active !== false,
@@ -312,6 +314,7 @@ export default function EmployeesIndex() {
                       <Text style={styles.empMeta}>{emp.hourly_rate.toFixed(2)} €/Std</Text>
                     ) : null}
                     {emp.phone ? <Text style={styles.empMeta}>📞 {emp.phone}</Text> : null}
+                    {emp.mobile ? <Text style={styles.empMeta}>📱 {emp.mobile}</Text> : null}
                   </View>
                 </View>
                 {!selectionMode && (
@@ -471,6 +474,15 @@ export default function EmployeesIndex() {
                   value={form.phone || ''}
                   onChangeText={(v) => setForm({ ...form, phone: v })}
                   placeholder="Telefonnummer"
+                  keyboardType="phone-pad"
+                />
+
+                <Text style={styles.label}>Handy</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.mobile || ''}
+                  onChangeText={(v) => setForm({ ...form, mobile: v })}
+                  placeholder="Handynummer"
                   keyboardType="phone-pad"
                 />
 

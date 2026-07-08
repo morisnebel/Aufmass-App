@@ -1909,7 +1909,7 @@ export default function ReportEditScreen() {
                       {macRows.map(r => (
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
-                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
                           {priceInput(`mac-${r.idx}`, r.rate, (v) => updateMacRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>

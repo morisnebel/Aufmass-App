@@ -271,7 +271,11 @@ export const generateReportSectionHtml = (
     ? `<div class="machines-list">
         ${machinesAny.map(m => {
           const h = (m.hours != null && !isNaN(m.hours) && m.hours > 0)
-            ? ` <strong>· ${String(m.hours).replace('.', ',')} h</strong>` : '';
+            ? (() => {
+                const tm = Math.round((m.hours as number) * 60);
+                return ` <strong>· ${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')} h</strong>`;
+              })()
+            : '';
           return `<span class="machine-tag">🔧 ${escapeHtml(m.name)}${h}</span>`;
         }).join('')}
        </div>`

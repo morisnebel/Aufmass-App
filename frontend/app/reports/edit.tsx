@@ -1939,31 +1939,34 @@ export default function ReportEditScreen() {
         {/* ====== Modals ====== */}
 
         {/* Time Picker für Mitarbeiter */}
-        {timePickerFor && (
-          <>
+        {timePickerFor && (() => {
+          const emp = employees.find(e => e.id === timePickerFor.empId);
+          const val = emp?.[timePickerFor.field] as string | undefined;
+          const initDate = (() => {
+            if (val) {
+              const [h, m] = val.split(':').map(Number);
+              const d = new Date(); d.setHours(h, m, 0, 0); return d;
+            }
+            const d = new Date();
+            d.setHours(timePickerFor.field === 'time_from' ? 7 : 16, 0, 0, 0);
+            return d;
+          })();
+          const picker = (
             <DateTimePicker
-              value={(() => {
-                const emp = employees.find(e => e.id === timePickerFor.empId);
-                const val = emp?.[timePickerFor.field] as string | undefined;
-                if (val) {
-                  const [h, m] = val.split(':').map(Number);
-                  const d = new Date(); d.setHours(h, m, 0, 0); return d;
-                }
-                return new Date();
-              })()}
+              value={initDate}
               mode="time"
               is24Hour
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              display={Platform.OS === 'android' ? 'default' : 'spinner'}
               onChange={(_, selected) => {
-                const isIos = Platform.OS === 'ios';
+                const isDialog = Platform.OS === 'android';
                 if (!selected) {
-                  if (!isIos) setTimePickerFor(null);
+                  if (isDialog) setTimePickerFor(null);
                   return;
                 }
                 const hh = String(selected.getHours()).padStart(2, '0');
                 const mm = String(selected.getMinutes()).padStart(2, '0');
                 updateEmployee(timePickerFor.empId, { [timePickerFor.field]: `${hh}:${mm}` } as any);
-                if (!isIos) {
+                if (isDialog) {
                   // Android auto-advance: bei 'from' direkt zu 'to'
                   if (timePickerFor.field === 'time_from') {
                     setTimeout(() => setTimePickerFor({ empId: timePickerFor.empId, field: 'time_to' }), 80);
@@ -1973,29 +1976,48 @@ export default function ReportEditScreen() {
                 }
               }}
             />
-            {Platform.OS === 'ios' && (
-              <View style={styles.iosTimeActions}>
-                <TouchableOpacity onPress={() => setTimePickerFor(null)} style={styles.iosTimeCancel}>
-                  <Text style={styles.iosTimeCancelText}>Abbrechen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (timePickerFor.field === 'time_from') {
-                      setTimePickerFor({ empId: timePickerFor.empId, field: 'time_to' });
-                    } else {
-                      setTimePickerFor(null);
-                    }
-                  }}
-                  style={styles.iosTimeDone}
-                >
-                  <Text style={styles.iosTimeDoneText}>
-                    {timePickerFor.field === 'time_from' ? 'Weiter zu Ende →' : 'Fertig'}
+          );
+          // Android zeigt den nativen Dialog selbst an
+          if (Platform.OS === 'android') return picker;
+          // iOS/Web: Zentriertes Modal, damit die Speichern-Leiste nicht versehentlich getroffen wird
+          return (
+            <Modal visible transparent animationType="fade" onRequestClose={() => setTimePickerFor(null)}>
+              <View style={styles.modalOverlayCenter}>
+                <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                  <Text style={[styles.modalTitle, { color: '#1976d2' }]}>
+                    {timePickerFor.field === 'time_from' ? '🕐 Beginn wählen' : '🕔 Ende wählen'}
                   </Text>
-                </TouchableOpacity>
+                  {emp?.name ? (
+                    <Text style={{ fontSize: 12, color: '#64748b', textAlign: 'center', marginBottom: 4 }}>
+                      {emp.name}
+                    </Text>
+                  ) : null}
+                  {picker}
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setTimePickerFor(null)}>
+                      <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#1976d2' }]}
+                      onPress={() => {
+                        if (timePickerFor.field === 'time_from') {
+                          setTimePickerFor({ empId: timePickerFor.empId, field: 'time_to' });
+                        } else {
+                          setTimePickerFor(null);
+                        }
+                      }}
+                    >
+                      <Ionicons name={timePickerFor.field === 'time_from' ? 'arrow-forward' : 'checkmark'} size={18} color="#fff" />
+                      <Text style={styles.saveBtnText}>
+                        {timePickerFor.field === 'time_from' ? 'Weiter zu Ende' : 'Fertig'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-            )}
-          </>
-        )}
+            </Modal>
+          );
+        })()}
 
         {/* Travel-Time-Picker (Drehrad) für Fahrzeiten */}
         {travelTimePicker && (() => {
@@ -2855,14 +2877,6 @@ const styles = StyleSheet.create({
   // --- iOS time pickers ---
   iosPickerDone: { alignSelf: 'flex-end', padding: 8, marginRight: 10 },
   iosPickerDoneText: { color: '#1976d2', fontWeight: '700' },
-  iosTimeActions: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingBottom: 6,
-  },
-  iosTimeCancel: { padding: 8 },
-  iosTimeCancelText: { color: '#94a3b8', fontWeight: '600' },
-  iosTimeDone: { backgroundColor: '#1976d2', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  iosTimeDoneText: { color: '#fff', fontWeight: '700' },
 
   // --- Action bar ---
   actionBar: {

@@ -2290,7 +2290,9 @@ export interface MaterialMaster {
   unit: string; // z.B. "Stk", "m", "m²", "kg", "L"
   default_quantity?: number;
   category?: string; // z.B. "Dachziegel", "Holz", "Verbindungsmittel"
-  price_per_unit?: number; // €
+  purchase_price?: number; // EK-Preis €
+  markup_percent?: number; // Aufschlag in % (EK -> VK)
+  price_per_unit?: number; // VK-Preis € (wird in Kostenberechnung verwendet)
   supplier?: string;
   article_number?: string;
   note?: string;

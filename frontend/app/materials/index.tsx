@@ -27,7 +27,7 @@ const formatGermanNumber = (n: number | undefined | null): string => {
 type TabKey = 'materials' | 'categories' | 'locations' | 'suppliers';
 
 const EMPTY: Partial<MaterialMaster> = {
-  name: '', unit: 'Stk', default_quantity: 1, category: '', price_per_unit: undefined,
+  name: '', unit: 'Stk', default_quantity: 1, category: '', price_per_unit: undefined, purchase_price: undefined, markup_percent: undefined,
   supplier: '', article_number: '', note: '', photo: '',
   stock_quantity: 0, low_stock_threshold: 0, storage_location: '',
   active: true,
@@ -187,6 +187,8 @@ export default function MaterialsIndex() {
       threshold: m.low_stock_threshold != null ? formatGermanNumber(m.low_stock_threshold) : '',
       defaultQty: m.default_quantity != null ? formatGermanNumber(m.default_quantity) : '',
       price: m.price_per_unit != null ? formatGermanNumber(m.price_per_unit) : '',
+      ek: m.purchase_price != null ? formatGermanNumber(m.purchase_price) : '',
+      markup: m.markup_percent != null ? formatGermanNumber(m.markup_percent) : '',
     });
     setModalVisible(true);
   };
@@ -549,6 +551,8 @@ export default function MaterialsIndex() {
                         {m.article_number ? <Text style={styles.matMetaSub}>Art.-Nr. {m.article_number}</Text> : null}
                         {m.category ? <Text style={styles.matMetaTag}>{m.category}</Text> : null}
                         {m.storage_location ? <Text style={styles.matMetaTag}>📍 {m.storage_location}</Text> : null}
+                        {m.purchase_price != null ? <Text style={styles.matMetaSub}>EK {formatGermanNumber(m.purchase_price)} €</Text> : null}
+                        {m.price_per_unit != null ? <Text style={styles.matMetaSub}>VK {formatGermanNumber(m.price_per_unit)} €</Text> : null}
                       </View>
                     </View>
                     <View style={styles.stockBlock}>
@@ -825,8 +829,55 @@ export default function MaterialsIndex() {
                       keyboardType="numbers-and-punctuation"
                     />
                   </View>
+                  <View style={{ flex: 1 }} />
+                </View>
+
+                {/* ===== Preise: EK / Aufschlag / VK ===== */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Preis (€/Einh.)</Text>
+                    <Text style={styles.label}>EK-Preis (€/Einh.)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={numStr.ek ?? ''}
+                      onChangeText={(v) => {
+                        const ek = v ? parseGermanNumber(v) : undefined;
+                        const markup = numStr.markup ? parseGermanNumber(numStr.markup) : undefined;
+                        if (ek != null && !isNaN(ek) && markup != null && !isNaN(markup)) {
+                          const vk = Math.round(ek * (1 + markup / 100) * 100) / 100;
+                          setNumStr(prev => ({ ...prev, ek: v, price: formatGermanNumber(vk) }));
+                          setForm({ ...form, purchase_price: ek, price_per_unit: vk });
+                        } else {
+                          setNumStr(prev => ({ ...prev, ek: v }));
+                          setForm({ ...form, purchase_price: ek });
+                        }
+                      }}
+                      placeholder="0,00"
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Aufschlag (%)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={numStr.markup ?? ''}
+                      onChangeText={(v) => {
+                        const markup = v ? parseGermanNumber(v) : undefined;
+                        const ek = numStr.ek ? parseGermanNumber(numStr.ek) : undefined;
+                        if (ek != null && !isNaN(ek) && markup != null && !isNaN(markup)) {
+                          const vk = Math.round(ek * (1 + markup / 100) * 100) / 100;
+                          setNumStr(prev => ({ ...prev, markup: v, price: formatGermanNumber(vk) }));
+                          setForm({ ...form, markup_percent: markup, price_per_unit: vk });
+                        } else {
+                          setNumStr(prev => ({ ...prev, markup: v }));
+                          setForm({ ...form, markup_percent: markup });
+                        }
+                      }}
+                      placeholder="z.B. 15"
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>VK-Preis (€/Einh.)</Text>
                     <TextInput
                       style={styles.input}
                       value={numStr.price ?? ''}
@@ -839,6 +890,9 @@ export default function MaterialsIndex() {
                     />
                   </View>
                 </View>
+                <Text style={styles.priceHint}>
+                  💡 VK wird automatisch aus EK + Aufschlag berechnet, kann aber manuell überschrieben werden. Der VK-Preis wird in der Kostenberechnung verwendet.
+                </Text>
 
                 <Text style={styles.label}>Kategorie</Text>
                 {(() => {
@@ -1086,6 +1140,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
   label: { fontSize: 13, color: '#374151', fontWeight: '600', marginTop: 10, marginBottom: 4 },
+  priceHint: { fontSize: 11, color: '#64748b', marginTop: 6, marginBottom: 4, lineHeight: 15 },
   input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, fontSize: 14 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#f3f4f6' },

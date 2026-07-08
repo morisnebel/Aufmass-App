@@ -1137,7 +1137,10 @@ export default function ReportEditScreen() {
             subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${employees.length > 1 ? ` (× ${employees.length} Mitarbeiter)` : ''}`}
             color="#0891b2"
             right={
-              <TouchableOpacity onPress={() => setTravelPerEmployee(!travelPerEmployee)} style={styles.travelToggle}>
+              <TouchableOpacity
+                onPress={() => setTravelPerEmployee(!travelPerEmployee)}
+                style={[styles.travelToggle, travelPerEmployee && { backgroundColor: '#0891b2' }]}
+              >
                 <Ionicons name={travelPerEmployee ? 'people' : 'people-outline'} size={14} color={travelPerEmployee ? '#fff' : '#0891b2'} />
                 <Text style={[styles.travelToggleText, travelPerEmployee && { color: '#fff' }]}>
                   {travelPerEmployee ? 'Pro MA' : 'Team'}

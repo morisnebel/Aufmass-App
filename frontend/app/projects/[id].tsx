@@ -1393,6 +1393,7 @@ export default function ProjectDetailScreen() {
     // Company info für Header - verwende die Felder aus den Einstellungen
     const companyName = settings.company_name || '';
     const companySubtitle = settings.company_subtitle || '';
+    const companyOwner = (settings as any).owner_name || '';
     const companyStreet = settings.street || '';
     const companyZipCode = settings.zip_code || '';
     const companyCity = settings.city || '';
@@ -4214,6 +4215,7 @@ export default function ProjectDetailScreen() {
               <div class="company-info">
                 <strong>${companyName}</strong>
                 ${companySubtitle ? `<br/><em>${companySubtitle}</em>` : ''}
+                ${companyOwner ? `<br/>${companyOwner}` : ''}
                 ${companyStreet ? `<br/>${companyStreet}` : ''}
                 ${companyZipCode || companyCity ? `<br/>${companyZipCode} ${companyCity}` : ''}
                 ${companyPhone ? `<br/>${t('pdf.phone')}: ${companyPhone}` : ''}
@@ -4471,6 +4473,7 @@ export default function ProjectDetailScreen() {
         logoData: s.logo_data || s.company_logo || '',
         companyName: s.company_name || '',
         companySubtitle: s.company_subtitle || '',
+        companyOwner: s.owner_name || '',
         companyStreet: s.street || s.company_street || s.company_address || '',
         companyZip: s.zip_code || s.company_zip || '',
         companyCity: s.city || s.company_city || '',

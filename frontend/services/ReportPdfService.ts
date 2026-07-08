@@ -433,6 +433,7 @@ export const generateReportSectionHtml = (
       ${(() => {
         // Firmendaten-Box (rechte Spalte neben Projekt & Kunde)
         const cName = (options as any).companyName || '';
+        const cOwner = (options as any).companyOwner || '';
         const street = (options as any).companyStreet || '';
         const zip = (options as any).companyZip || '';
         const city = (options as any).companyCity || '';
@@ -454,6 +455,7 @@ export const generateReportSectionHtml = (
           <div class="info-box" style="flex:1;min-width:0;">
             <div class="info-box-title">Firma</div>
             <div style="font-size:12px;color:#0f172a;font-weight:700;">${escapeHtml(cName)}</div>
+            ${cOwner ? `<div style="font-size:10px;color:#475569;margin-top:2px;">${escapeHtml(cOwner)}</div>` : ''}
             ${companyLines.length ? `<div style="font-size:10px;color:#475569;margin-top:4px;line-height:1.45;">${companyLines.join('<br/>')}</div>` : ''}
             ${contactParts.length ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.5;">${contactParts.join('<br/>')}</div>` : ''}
           </div>
@@ -973,6 +975,7 @@ export const generateReportHtml = async (
   let logoData = '';
   let companyName = '';
   let companySubtitle = '';
+  let companyOwner = '';
   let companyStreet = '';
   let companyZip = '';
   let companyCity = '';
@@ -1020,7 +1023,7 @@ export const generateReportHtml = async (
       </style>
     </head>
     <body>
-      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, companySubtitle, companyStreet, companyZip, companyCity, companyPhone, companyMobile, companyFax, companyEmail, reportTitle, employeesMaster, materialsMaster, machinesMaster, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
+      ${generateReportSectionHtml(report, project, customer, { standalone: true, logoData, companyName, companySubtitle, companyOwner, companyStreet, companyZip, companyCity, companyPhone, companyMobile, companyFax, companyEmail, reportTitle, employeesMaster, materialsMaster, machinesMaster, includeFooterText: `Erstellt mit ${escapeHtml(getAppName())} · ${new Date().toLocaleDateString('de-DE')}` } as any)}
     </body>
     </html>
   `;

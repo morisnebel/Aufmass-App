@@ -18,6 +18,13 @@ const escapeHtml = (text: string | undefined | null): string => {
     .replace(/'/g, '&#039;');
 };
 
+// Dezimalstunden -> "H:MM h" (z.B. 8.5 -> "8:30 h")
+const formatHoursHM = (hours: number | undefined | null): string => {
+  const h = typeof hours === 'number' && Number.isFinite(hours) ? hours : 0;
+  const totalMin = Math.round(h * 60);
+  return `${Math.floor(totalMin / 60)}:${String(totalMin % 60).padStart(2, '0')} h`;
+};
+
 const formatDate = (iso: string | undefined): string => {
   if (!iso) return '';
   try {
@@ -152,12 +159,12 @@ export const generateReportSectionHtml = (
               <td style="text-align:center;">${escapeHtml(empAny.time_from || '–')}</td>
               <td style="text-align:center;">${escapeHtml(empAny.time_to || '–')}</td>
               <td style="text-align:center;">${empAny.pause_minutes ? `${empAny.pause_minutes} min` : '–'}</td>
-              <td style="text-align:right;font-weight:600;">${calc.toFixed(2)} h</td>
+              <td style="text-align:right;font-weight:600;">${formatHoursHM(calc)}</td>
             </tr>`;
           }).join('')}
           <tr class="emp-total-row">
             <td colspan="6" style="text-align:right;font-weight:700;">Gesamtstunden:</td>
-            <td style="text-align:right;font-weight:800;color:#1976d2;">${(report.total_hours ?? report.employees.reduce((s, e) => {
+            <td style="text-align:right;font-weight:800;color:#1976d2;">${formatHoursHM(report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
               if (e.hours != null) return s + e.hours;
               if (!ea.time_from || !ea.time_to) return s;
@@ -167,7 +174,7 @@ export const generateReportSectionHtml = (
               if (mins < 0) mins += 24 * 60;
               mins -= ea.pause_minutes || 0;
               return s + Math.max(0, Math.round((mins / 60) * 100) / 100);
-            }, 0)).toFixed(2)} h</td>
+            }, 0))}</td>
           </tr>
           ${(() => {
             // Fahrzeit zur Gesamtarbeitszeit addieren:
@@ -212,11 +219,11 @@ export const generateReportSectionHtml = (
             return `
               <tr>
                 <td colspan="6" style="text-align:right;font-size:10px;color:#0891b2;">+ Fahrzeit${labelExtra}:</td>
-                <td style="text-align:right;font-weight:600;color:#0891b2;font-size:10px;">${travelSum.toFixed(2)} h</td>
+                <td style="text-align:right;font-weight:600;color:#0891b2;font-size:10px;">${formatHoursHM(travelSum)}</td>
               </tr>
               <tr style="background:#ecfeff;">
                 <td colspan="6" style="text-align:right;font-weight:800;color:#0e7490;">Gesamt inkl. Fahrzeit:</td>
-                <td style="text-align:right;font-weight:800;color:#0e7490;">${(baseHours + travelSum).toFixed(2)} h</td>
+                <td style="text-align:right;font-weight:800;color:#0e7490;">${formatHoursHM(baseHours + travelSum)}</td>
               </tr>`;
           })()}
         </tbody>
@@ -249,7 +256,7 @@ export const generateReportSectionHtml = (
         ${Object.keys(roleMap).map(role => `
           <div class="role-row">
             <span class="role-tag">${escapeHtml(role)} <span class="role-count">${roleMap[role].count}×</span></span>
-            <span class="role-hours">${roleMap[role].hours.toFixed(2)} h</span>
+            <span class="role-hours">${formatHoursHM(roleMap[role].hours)}</span>
           </div>
         `).join('')}
       </div>`
@@ -430,7 +437,7 @@ export const generateReportSectionHtml = (
         </div>
         <div class="report-meta">
           <div><b>Datum:</b> ${formatDate(report.date)}</div>
-          ${totalHours > 0 ? `<div><b>Stunden:</b> ${totalHours}</div>` : ''}
+          ${totalHours > 0 ? `<div><b>Stunden:</b> ${formatHoursHM(totalHours)}</div>` : ''}
         </div>
       </div>
 
@@ -552,7 +559,7 @@ export const generateReportSectionHtml = (
               empRowsHtml += `<tr>
                 <td>${escape(e.name)}</td>
                 <td style="color:#64748b;font-size:10px;">${escape(ea.role || '')}</td>
-                <td style="text-align:right;">${totalHrs.toFixed(2)} h</td>
+                <td style="text-align:right;">${formatHoursHM(totalHrs)}</td>
                 <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
                 <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
               </tr>`;
@@ -595,7 +602,7 @@ export const generateReportSectionHtml = (
             if (showMac) {
               macRowsHtml += `<tr>
                 <td>${escape(m.name)}</td>
-                <td style="text-align:right;">${hours.toFixed(2)} h</td>
+                <td style="text-align:right;">${formatHoursHM(hours)}</td>
                 <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
                 <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
               </tr>`;

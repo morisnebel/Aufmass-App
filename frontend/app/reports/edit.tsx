@@ -1163,7 +1163,7 @@ export default function ReportEditScreen() {
                         </TouchableOpacity>
                         <View style={styles.hoursCellBox}>
                           <Text style={styles.timeCellMini}>STD.</Text>
-                          <Text style={styles.hoursCellLg}>{hours.toFixed(2)}</Text>
+                          <Text style={styles.hoursCellLg}>{formatHM(hours) || '0:00'}</Text>
                         </View>
                       </View>
                     </View>
@@ -1172,7 +1172,7 @@ export default function ReportEditScreen() {
                 {/* Gesamtsumme */}
                 <View style={styles.empSumRow}>
                   <Text style={styles.empSumLabel}>Gesamtstunden aller Mitarbeiter</Text>
-                  <Text style={styles.empSumValue}>{totalAllHours.toFixed(2)} h</Text>
+                  <Text style={styles.empSumValue}>{formatHM(totalAllHours) || '0:00'} h</Text>
                 </View>
                 {/* Fahrzeit zu den Stunden (wie im PDF) */}
                 {(() => {
@@ -1181,7 +1181,7 @@ export default function ReportEditScreen() {
                   if (travelPerEmployee) {
                     employees.forEach((e: any) => { travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0); });
                   } else if (travelInTotalHours) {
-                    const oneRound = (parseFloat((travelToHoursStr || '0').replace(',', '.')) || 0) + (parseFloat((travelBackHoursStr || '0').replace(',', '.')) || 0);
+                    const oneRound = (parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0);
                     travelSum = oneRound * empCount;
                   }
                   if (travelSum <= 0) return null;
@@ -1191,11 +1191,11 @@ export default function ReportEditScreen() {
                         <Text style={[styles.empSumLabel, { color: '#0891b2', fontSize: 12 }]}>
                           + Fahrzeit{!travelPerEmployee && empCount > 1 ? ` (Team × ${empCount} MA)` : ''}
                         </Text>
-                        <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{travelSum.toFixed(2)} h</Text>
+                        <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{formatHM(travelSum) || '0:00'} h</Text>
                       </View>
                       <View style={[styles.empSumRow, { backgroundColor: '#ecfeff', borderRadius: 8, paddingHorizontal: 8 }]}>
                         <Text style={[styles.empSumLabel, { color: '#0e7490' }]}>Gesamt inkl. Fahrzeit</Text>
-                        <Text style={[styles.empSumValue, { color: '#0e7490' }]}>{(totalAllHours + travelSum).toFixed(2)} h</Text>
+                        <Text style={[styles.empSumValue, { color: '#0e7490' }]}>{formatHM(totalAllHours + travelSum) || '0:00'} h</Text>
                       </View>
                     </>
                   );
@@ -1210,7 +1210,7 @@ export default function ReportEditScreen() {
                           <Text style={styles.roleBadgeText}>{r.role}</Text>
                           <Text style={styles.roleBadgeCount}>{r.count}×</Text>
                         </View>
-                        <Text style={styles.roleHoursText}>{r.hours.toFixed(2)} h</Text>
+                        <Text style={styles.roleHoursText}>{formatHM(r.hours) || '0:00'} h</Text>
                       </View>
                     ))}
                   </View>
@@ -1822,7 +1822,7 @@ export default function ReportEditScreen() {
                   return Math.max(0, Math.round((mins / 60) * 100) / 100);
                 })();
                 const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
-                const teamTravel = (travelPerEmployee ? 0 : ((parseFloat((travelToHoursStr || '0').replace(',', '.')) || 0) + (parseFloat((travelBackHoursStr || '0').replace(',', '.')) || 0)));
+                const teamTravel = (travelPerEmployee ? 0 : ((parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0)));
                 const totalHrs = calcH + (travelPerEmployee ? travelExtra : (travelInTotalHours ? teamTravel : 0));
                 const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
                 const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
@@ -1903,7 +1903,7 @@ export default function ReportEditScreen() {
                       {empRows.map(r => (
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
-                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
                           {priceInput(`emp-${r.idx}`, r.rate, (v) => updateEmpRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>

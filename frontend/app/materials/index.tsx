@@ -55,7 +55,13 @@ export default function MaterialsIndex() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [menuVisible, setMenuVisible] = useState(false);
-  const [pendingAction, setPendingAction] = useState<null | 'export-all' | 'select-mode' | 'import'>(null);
+  const [pendingAction, setPendingAction] = useState<null | 'export-all' | 'select-mode' | 'import' | 'price-all' | 'price-select'>(null);
+  // ===== Zentrale Preis-Anpassung (%) =====
+  const [priceModalVisible, setPriceModalVisible] = useState(false);
+  const [priceScopeIds, setPriceScopeIds] = useState<string[] | null>(null); // null = alle Materialien
+  const [pricePercentStr, setPricePercentStr] = useState('');
+  const [priceTarget, setPriceTarget] = useState<'both' | 'ek' | 'vk'>('both');
+  const [priceSelectMode, setPriceSelectMode] = useState(false); // Auswahl-Modus für Preis-Anpassung statt Export
 
   React.useEffect(() => {
     navigation.setOptions({
@@ -78,7 +84,7 @@ export default function MaterialsIndex() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
+                onPress={() => { setSelectionMode(false); setPriceSelectMode(false); setSelectedIds(new Set()); }}
                 style={{ paddingHorizontal: 8, paddingVertical: 4 }}
               >
                 <Ionicons name="close" size={22} color="#0f172a" />
@@ -450,6 +456,52 @@ export default function MaterialsIndex() {
     await load();
   };
 
+  // ===== Zentrale Preis-Anpassung anwenden =====
+  const openPriceModal = (scopeIds: string[] | null) => {
+    setPriceScopeIds(scopeIds);
+    setPricePercentStr('');
+    setPriceTarget('both');
+    setPriceModalVisible(true);
+  };
+
+  const applyPriceAdjust = async () => {
+    const pct = pricePercentStr ? parseGermanNumber(pricePercentStr) : NaN;
+    if (pct == null || isNaN(pct) || pct === 0) {
+      Alert.alert('Hinweis', 'Bitte einen Prozentsatz eingeben (z.B. 5 oder -3).');
+      return;
+    }
+    const targets = priceScopeIds ? materials.filter(m => priceScopeIds.includes(m.id)) : materials;
+    if (targets.length === 0) {
+      Alert.alert('Hinweis', 'Keine Materialien ausgewählt.');
+      return;
+    }
+    const factor = 1 + pct / 100;
+    let updated = 0;
+    for (const m of targets) {
+      const patch: Partial<MaterialMaster> = {};
+      if ((priceTarget === 'both' || priceTarget === 'ek') && m.purchase_price != null) {
+        patch.purchase_price = Math.round(m.purchase_price * factor * 100) / 100;
+      }
+      if ((priceTarget === 'both' || priceTarget === 'vk') && m.price_per_unit != null) {
+        patch.price_per_unit = Math.round(m.price_per_unit * factor * 100) / 100;
+      }
+      if (Object.keys(patch).length > 0) {
+        await MaterialMasterService.update(m.id, patch);
+        updated++;
+      }
+    }
+    setPriceModalVisible(false);
+    setSelectionMode(false);
+    setPriceSelectMode(false);
+    setSelectedIds(new Set());
+    await load();
+    const skipped = targets.length - updated;
+    Alert.alert(
+      'Preise angepasst',
+      `✓ ${updated} Material(ien) um ${formatGermanNumber(Math.abs(pct))} % ${pct > 0 ? 'erhöht' : 'gesenkt'}.${skipped > 0 ? `\n⚠ ${skipped} ohne hinterlegten Preis übersprungen.` : ''}`
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 80 }}>
@@ -646,15 +698,26 @@ export default function MaterialsIndex() {
 
       {/* Floating Action Bar bei Selection-Mode */}
       {selectionMode && selectedIds.size > 0 && (
-        <View style={[matStyles.fab, { bottom: Math.max(insets.bottom, 12) + 12 }]}>
-          <TouchableOpacity
-            style={matStyles.fabBtn}
-            onPress={() => handleExport(Array.from(selectedIds))}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="share-outline" size={20} color="#fff" />
-            <Text style={matStyles.fabBtnText}>{selectedIds.size} exportieren</Text>
-          </TouchableOpacity>
+        <View style={[matStyles.fab, { bottom: Math.max(insets.bottom, 12) + 12, flexDirection: 'row', justifyContent: 'center', gap: 10 }]}>
+          {priceSelectMode ? (
+            <TouchableOpacity
+              style={[matStyles.fabBtn, { backgroundColor: '#7c3aed' }]}
+              onPress={() => openPriceModal(Array.from(selectedIds))}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trending-up-outline" size={20} color="#fff" />
+              <Text style={matStyles.fabBtnText}>{selectedIds.size} Preise anpassen</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={matStyles.fabBtn}
+              onPress={() => handleExport(Array.from(selectedIds))}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="share-outline" size={20} color="#fff" />
+              <Text style={matStyles.fabBtnText}>{selectedIds.size} exportieren</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -683,6 +746,21 @@ export default function MaterialsIndex() {
             }
           } else if (action === 'import') {
             handleImport();
+          } else if (action === 'price-all') {
+            if (materials.length === 0) {
+              Alert.alert('Hinweis', 'Keine Materialien vorhanden.');
+            } else {
+              openPriceModal(null);
+            }
+          } else if (action === 'price-select') {
+            if (materials.length === 0) {
+              Alert.alert('Hinweis', 'Keine Materialien vorhanden.');
+            } else {
+              setSelectionMode(true);
+              setPriceSelectMode(true);
+              setSelectedIds(new Set());
+              setTab('materials');
+            }
           }
         }}
       >
@@ -703,6 +781,21 @@ export default function MaterialsIndex() {
               </View>
             </TouchableOpacity>
             <View style={matStyles.menuDivider} />
+            <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('price-all'); setMenuVisible(false); }}>
+              <Ionicons name="trending-up-outline" size={20} color="#7c3aed" />
+              <View style={{ flex: 1 }}>
+                <Text style={matStyles.menuItemTitle}>Preise anpassen (alle)</Text>
+                <Text style={matStyles.menuItemSub}>Alle {materials.length} Material(ien) um X % ändern</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('price-select'); setMenuVisible(false); }}>
+              <Ionicons name="options-outline" size={20} color="#7c3aed" />
+              <View style={{ flex: 1 }}>
+                <Text style={matStyles.menuItemTitle}>Preise anpassen (Auswahl)</Text>
+                <Text style={matStyles.menuItemSub}>Bestimmte Materialien auswählen</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={matStyles.menuDivider} />
             <TouchableOpacity style={matStyles.menuItem} onPress={() => { setPendingAction('import'); setMenuVisible(false); }}>
               <Ionicons name="cloud-download-outline" size={20} color="#16a34a" />
               <View style={{ flex: 1 }}>
@@ -712,6 +805,86 @@ export default function MaterialsIndex() {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ===== Zentrale Preis-Anpassung Modal ===== */}
+      <Modal visible={priceModalVisible} transparent animationType="fade" onRequestClose={() => setPriceModalVisible(false)}>
+        <View style={styles.filterOverlay}>
+          <View style={styles.filterSheet}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={styles.modalTitle}>💰 Preise anpassen</Text>
+              <TouchableOpacity onPress={() => setPriceModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+              {priceScopeIds
+                ? `${priceScopeIds.length} ausgewählte(s) Material(ien)`
+                : `Alle ${materials.length} Material(ien)`} werden angepasst.
+            </Text>
+
+            <Text style={styles.label}>Prozentsatz (%)</Text>
+            <TextInput
+              style={styles.input}
+              value={pricePercentStr}
+              onChangeText={setPricePercentStr}
+              placeholder="z.B. 5 (Erhöhung) oder -3 (Senkung)"
+              keyboardType="numbers-and-punctuation"
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+              {['3', '5', '10', '15', '-5'].map(p => (
+                <TouchableOpacity
+                  key={p}
+                  style={[styles.suggestChip, pricePercentStr === p && styles.suggestChipActive]}
+                  onPress={() => setPricePercentStr(p)}
+                >
+                  <Text style={[styles.suggestChipText, pricePercentStr === p && styles.suggestChipTextActive]}>
+                    {p.startsWith('-') ? '' : '+'}{p} %
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Welche Preise?</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {([
+                { key: 'both', label: 'EK + VK' },
+                { key: 'ek', label: 'Nur EK' },
+                { key: 'vk', label: 'Nur VK' },
+              ] as const).map(o => (
+                <TouchableOpacity
+                  key={o.key}
+                  style={[styles.suggestChip, priceTarget === o.key && styles.suggestChipActive, { paddingHorizontal: 14, paddingVertical: 8 }]}
+                  onPress={() => setPriceTarget(o.key)}
+                >
+                  <Text style={[styles.suggestChipText, priceTarget === o.key && styles.suggestChipTextActive]}>{o.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {(() => {
+              const pct = pricePercentStr ? parseGermanNumber(pricePercentStr) : NaN;
+              if (pct == null || isNaN(pct) || pct === 0) return null;
+              const targetLabel = priceTarget === 'both' ? 'EK- und VK-Preise' : priceTarget === 'ek' ? 'EK-Preise' : 'VK-Preise';
+              return (
+                <Text style={{ fontSize: 12, color: pct > 0 ? '#16a34a' : '#ea580c', marginTop: 10, fontWeight: '600' }}>
+                  → {targetLabel} werden um {formatGermanNumber(Math.abs(pct))} % {pct > 0 ? 'erhöht' : 'gesenkt'}. Materialien ohne Preis werden übersprungen.
+                </Text>
+              );
+            })()}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setPriceModalVisible(false)}>
+                <Text style={styles.cancelBtnText}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#7c3aed' }]} onPress={applyPriceAdjust}>
+                <Ionicons name="checkmark" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Anwenden</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* ===== Filter Menu Modal ===== */}

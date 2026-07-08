@@ -1003,31 +1003,6 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Expertenmodus Section - unauffällig */}
-          <View style={[styles.section, { marginTop: 20, paddingVertical: 8 }]}>
-            {isProUnlocked ? (
-              <View>
-                <View style={styles.expertActiveContainer}>
-                  <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
-                  <Text style={styles.expertActiveText}>Pro aktiv</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.expertDeactivateButton}
-                  onPress={handleDeactivatePro}
-                >
-                  <Text style={styles.expertDeactivateText}>Deaktivieren</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.expertButtonSmall}
-                onPress={() => setShowExpertModal(true)}
-              >
-                <Text style={styles.expertButtonSmallText}>Erweitert...</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
           {/* ===== Datensicherung ===== */}
           <View style={[styles.section, { marginTop: 8 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -1149,6 +1124,31 @@ export default function SettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
             </TouchableOpacity>
+          </View>
+
+          {/* Expertenmodus Section - unauffällig, ganz unten */}
+          <View style={[styles.section, { marginTop: 8, paddingVertical: 8 }]}>
+            {isProUnlocked ? (
+              <View>
+                <View style={styles.expertActiveContainer}>
+                  <Ionicons name="checkmark-circle" size={20} color="#4caf50" />
+                  <Text style={styles.expertActiveText}>Pro aktiv</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.expertDeactivateButton}
+                  onPress={handleDeactivatePro}
+                >
+                  <Text style={styles.expertDeactivateText}>Deaktivieren</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.expertButtonSmall}
+                onPress={() => setShowExpertModal(true)}
+              >
+                <Text style={styles.expertButtonSmallText}>Erweitert...</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>

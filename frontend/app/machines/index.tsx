@@ -111,6 +111,7 @@ export default function MachinesIndex() {
   const [showFilterMenu, setShowFilterMenu] = useState<null | 'cat' | 'loc' | 'status'>(null);
   // Roh-Eingabe-Strings für Jahr (Komma-Bug-Prevention)
   const [yearStr, setYearStr] = useState<string>('');
+  const [rateStr, setRateStr] = useState<string>('');
   // Erinnerungs-Einstellungen (Tage Vorlauf für Warnungen)
   const [reminderDaysInspection, setReminderDaysInspection] = useState<number>(30);
   const [reminderDaysTuv, setReminderDaysTuv] = useState<number>(30);
@@ -285,12 +286,14 @@ export default function MachinesIndex() {
     setEditing(null);
     setForm({ ...EMPTY });
     setYearStr('');
+    setRateStr('');
     setModalVisible(true);
   };
   const openEdit = (m: MachineMaster) => {
     setEditing(m);
     setForm({ ...m });
     setYearStr(m.year ? String(m.year) : '');
+    setRateStr(m.hourly_rate != null && m.hourly_rate > 0 ? String(m.hourly_rate).replace('.', ',') : '');
     setModalVisible(true);
   };
 
@@ -1058,13 +1061,15 @@ export default function MachinesIndex() {
                 <Text style={styles.label}>Stundensatz (€/h, optional)</Text>
                 <TextInput
                   style={styles.input}
-                  value={form.hourly_rate != null && form.hourly_rate > 0 ? String(form.hourly_rate).replace('.', ',') : ''}
+                  value={rateStr}
                   onChangeText={(v) => {
-                    const num = parseFloat(v.replace(',', '.'));
+                    const clean = v.replace(/[^0-9,.]/g, '');
+                    setRateStr(clean);
+                    const num = parseFloat(clean.replace(',', '.'));
                     setForm({ ...form, hourly_rate: isNaN(num) ? undefined : num });
                   }}
                   placeholder="z.B. 45,00"
-                  keyboardType="decimal-pad"
+                  keyboardType="numbers-and-punctuation"
                 />
                 <Text style={{ fontSize: 11, color: '#64748b', marginTop: -4, marginBottom: 8 }}>
                   Wird nur im Rapport-PDF angezeigt, wenn „Maschinen-Kosten anzeigen" aktiv ist.

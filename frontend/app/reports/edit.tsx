@@ -148,6 +148,8 @@ export default function ReportEditScreen() {
   // Mehrwertsteuer
   const [showVat, setShowVat] = useState<boolean>(false);
   const [vatRateStr, setVatRateStr] = useState<string>('19');
+  // Roh-Strings für Preis-Eingaben in der Live-Kosten-Übersicht (Komma-Eingabe)
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   // Roh-Strings für km-Eingaben pro Mitarbeiter (Komma-Erhaltung)
   const [travelKmDraft, setTravelKmDraft] = useState<Record<string, string>>({});
   // Briefkopf-Felder (welche aus Projekt/Kunde im PDF gezeigt werden)
@@ -1846,12 +1848,17 @@ export default function ReportEditScreen() {
               };
 
               const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', gap: 6 };
-              const priceInput = (val: number, on: (v: string) => void) => (
+              const priceInput = (draftKey: string, val: number, on: (v: string) => void) => (
                 <TextInput
                   style={{ borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, width: 70, textAlign: 'right', fontSize: 12 }}
-                  value={val > 0 ? String(val).replace('.', ',') : ''}
-                  onChangeText={on}
-                  keyboardType="decimal-pad"
+                  value={priceDrafts[draftKey] ?? (val > 0 ? String(val).replace('.', ',') : '')}
+                  onChangeText={(v) => {
+                    const clean = v.replace(/[^0-9,.]/g, '');
+                    setPriceDrafts(prev => ({ ...prev, [draftKey]: clean }));
+                    on(clean);
+                  }}
+                  onBlur={() => setPriceDrafts(prev => { const d = { ...prev }; delete d[draftKey]; return d; })}
+                  keyboardType="numbers-and-punctuation"
                   placeholder="0,00"
                 />
               );
@@ -1883,7 +1890,7 @@ export default function ReportEditScreen() {
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
                           <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.quantity} {r.unit} ×</Text>
-                          {priceInput(r.price, (v) => updateMatPrice(r.idx, v))}
+                          {priceInput(`mat-${r.idx}`, r.price, (v) => updateMatPrice(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
                         </View>
@@ -1899,7 +1906,7 @@ export default function ReportEditScreen() {
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
                           <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{r.hours.toFixed(2)} h ×</Text>
-                          {priceInput(r.rate, (v) => updateMacRate(r.idx, v))}
+                          {priceInput(`mac-${r.idx}`, r.rate, (v) => updateMacRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
                         </View>
@@ -2198,7 +2205,8 @@ export default function ReportEditScreen() {
           return (
             <Modal visible transparent animationType="fade" onRequestClose={() => setEmpTravelModal(null)}>
               <View style={styles.modalOverlayCenter}>
-                <View style={[styles.modalSmall, { maxWidth: 400 }]}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxWidth: 400 }}>
+                <View style={[styles.modalSmall, { maxWidth: 400, width: '100%' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 28, height: 28, borderRadius: 14 }]}>
                       <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
@@ -2312,6 +2320,7 @@ export default function ReportEditScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+                </KeyboardAvoidingView>
               </View>
             </Modal>
           );
@@ -2320,7 +2329,8 @@ export default function ReportEditScreen() {
         {/* Pause Modal */}
         <Modal visible={!!pauseModal} transparent animationType="fade" onRequestClose={() => setPauseModal(null)}>
           <View style={styles.modalOverlayCenter}>
-            <View style={styles.modalSmall}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxWidth: 320 }}>
+            <View style={[styles.modalSmall, { width: '100%' }]}>
               <Text style={styles.modalTitle}>Pause in Minuten</Text>
               <TextInput
                 style={[styles.input, { fontSize: 18, textAlign: 'center', marginTop: 10 }]}
@@ -2348,6 +2358,7 @@ export default function ReportEditScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            </KeyboardAvoidingView>
           </View>
         </Modal>
 

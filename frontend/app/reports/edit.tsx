@@ -481,11 +481,24 @@ export default function ReportEditScreen() {
       Alert.alert('Hinweis', 'Bitte zuerst eine Bezeichnung eingeben.');
       return;
     }
-    // Prüfe ob schon vorhanden
+    // Prüfe ob schon vorhanden -> dann zum Bearbeiten öffnen
     const existing = matMaster.find(mm => mm.name.toLowerCase() === m.name.toLowerCase() && mm.unit === m.unit);
     if (existing) {
-      Alert.alert('Hinweis', `${m.name} ist bereits in den Stammdaten vorhanden.`);
-      setSavedMatIds(s => new Set([...s, m.id]));
+      const ex: any = existing;
+      setMatMasterForm({
+        name: existing.name,
+        unit: existing.unit || 'Stk',
+        default_quantity: existing.default_quantity || 1,
+        category: existing.category || '',
+        supplier: existing.supplier || '',
+        article_number: existing.article_number || '',
+      });
+      setMatMasterNum({
+        ek: ex.purchase_price != null ? String(ex.purchase_price).replace('.', ',') : undefined,
+        markup: ex.markup_percent != null ? String(ex.markup_percent).replace('.', ',') : undefined,
+        vk: ex.price_per_unit != null ? String(ex.price_per_unit).replace('.', ',') : undefined,
+      });
+      setMatMasterModal({ reportMatId: m.id, masterId: existing.id });
       return;
     }
     // Vollständiges Formular öffnen, damit alle Daten direkt erfasst werden können
@@ -508,7 +521,7 @@ export default function ReportEditScreen() {
       return;
     }
     try {
-      await MaterialMasterService.create({
+      const data: any = {
         name: matMasterForm.name.trim(),
         unit: matMasterForm.unit || 'Stk',
         default_quantity: matMasterForm.default_quantity || 1,
@@ -518,8 +531,12 @@ export default function ReportEditScreen() {
         purchase_price: matMasterNum.ek ? (parseFloat(matMasterNum.ek.replace(',', '.')) || undefined) : undefined,
         markup_percent: matMasterNum.markup ? (parseFloat(matMasterNum.markup.replace(',', '.')) || undefined) : undefined,
         price_per_unit: matMasterNum.vk ? (parseFloat(matMasterNum.vk.replace(',', '.')) || undefined) : undefined,
-        active: true,
-      } as any);
+      };
+      if (matMasterModal.masterId) {
+        await MaterialMasterService.update(matMasterModal.masterId, data);
+      } else {
+        await MaterialMasterService.create({ ...data, active: true });
+      }
       if (matMasterForm.category && matMasterForm.category.trim()) {
         try { await MaterialCategoryService.add(matMasterForm.category.trim()); } catch { /* silent */ }
       }
@@ -527,8 +544,12 @@ export default function ReportEditScreen() {
       const newList = await MaterialMasterService.getActive();
       setMatMaster(newList);
       setSavedMatIds(s => new Set([...s, matMasterModal.reportMatId]));
+      const wasUpdate = !!matMasterModal.masterId;
       setMatMasterModal(null);
-      Alert.alert('Gespeichert', `${matMasterForm.name} wurde in den Material-Stammdaten gespeichert.`);
+      Alert.alert(
+        wasUpdate ? 'Aktualisiert' : 'Gespeichert',
+        `${matMasterForm.name} wurde in den Material-Stammdaten ${wasUpdate ? 'aktualisiert' : 'gespeichert'}.`
+      );
     } catch (e) {
       console.error(e);
       Alert.alert('Fehler', 'Speichern fehlgeschlagen.');
@@ -1433,7 +1454,6 @@ export default function ReportEditScreen() {
                       <TouchableOpacity
                         onPress={() => handleSaveMaterialToMaster(m)}
                         style={styles.saveToMasterBtn}
-                        disabled={isSaved}
                       >
                         <Ionicons
                           name={isSaved ? "bookmark" : "bookmark-outline"}
@@ -2400,7 +2420,9 @@ export default function ReportEditScreen() {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxWidth: 420 }}>
               <View style={[styles.modalSmall, { maxWidth: 420, width: '100%' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={[styles.modalTitle, { color: '#d97706' }]}>📦 In Materialstamm übernehmen</Text>
+                  <Text style={[styles.modalTitle, { color: '#d97706' }]}>
+                    {matMasterModal?.masterId ? '📦 Material im Stamm bearbeiten' : '📦 In Materialstamm übernehmen'}
+                  </Text>
                   <TouchableOpacity onPress={() => setMatMasterModal(null)}>
                     <Ionicons name="close" size={24} color="#666" />
                   </TouchableOpacity>

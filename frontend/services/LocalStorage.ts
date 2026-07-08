@@ -2017,6 +2017,7 @@ export interface Report {
   show_employee_costs?: boolean;
   show_material_costs?: boolean;
   show_machine_costs?: boolean;
+  show_travel_costs?: boolean; // Spesen/Fahrtkosten in Kosten-Übersicht einrechnen
   show_total_sum?: boolean;
   // Mehrwertsteuer
   show_vat?: boolean;

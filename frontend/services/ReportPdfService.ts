@@ -509,8 +509,9 @@ export const generateReportSectionHtml = (
         const showEmp = !!(report as any).show_employee_costs;
         const showMat = !!(report as any).show_material_costs;
         const showMac = !!(report as any).show_machine_costs;
+        const showTravel = !!(report as any).show_travel_costs;
         const showSum = !!(report as any).show_total_sum;
-        if (!showEmp && !showMat && !showMac && !showSum) return '';
+        if (!showEmp && !showMat && !showMac && !showTravel && !showSum) return '';
 
         const empMaster: any[] = (options as any).employeesMaster || [];
         const matMaster: any[] = (options as any).materialsMaster || [];
@@ -598,7 +599,12 @@ export const generateReportSectionHtml = (
           });
         }
 
-        const grandTotal = empTotal + matTotal + macTotal;
+        // === Spesen / Fahrtkosten ===
+        const travelCostsTotal = report.travel_per_employee_enabled
+          ? (report.employees || []).reduce((s, e: any) => s + (e.travel_costs || 0), 0)
+          : ((report as any).travel_costs || 0);
+
+        const grandTotal = empTotal + matTotal + macTotal + (showTravel ? travelCostsTotal : 0);
 
         return `
           <div class="section keep-together">
@@ -634,6 +640,15 @@ export const generateReportSectionHtml = (
                 </tr></thead>
                 <tbody>${macRowsHtml}</tbody>
                 <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(macTotal)}</td></tr></tfoot>
+              </table>
+            ` : ''}
+            ${showTravel && travelCostsTotal > 0 ? `
+              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Spesen / Fahrtkosten</div>
+              <table class="material-table" style="margin-top:4px;">
+                <tbody><tr>
+                  <td>${report.travel_per_employee_enabled ? '🚗 Summe aus Mitarbeiter-Fahrten' : '🚗 Fahrtkosten / Spesen'}</td>
+                  <td style="text-align:right;font-weight:800;">${eurFmt(travelCostsTotal)}</td>
+                </tr></tbody>
               </table>
             ` : ''}
             ${showSum ? (() => {

@@ -126,11 +126,15 @@ export default function ReportEditScreen() {
   const [travelCosts, setTravelCosts] = useState<string>('');
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
+  // Dialog für Fahrzeiten pro Mitarbeiter
+  const [empTravelModal, setEmpTravelModal] = useState<string | null>(null);
+  const [empTravelPickerField, setEmpTravelPickerField] = useState<'to' | 'back' | null>(null);
   const [travelInTotalHours, setTravelInTotalHours] = useState<boolean>(false);
   // Preis-Anzeige im PDF
   const [showEmployeeCosts, setShowEmployeeCosts] = useState<boolean>(false);
   const [showMaterialCosts, setShowMaterialCosts] = useState<boolean>(false);
   const [showMachineCosts, setShowMachineCosts] = useState<boolean>(false);
+  const [showTravelCosts, setShowTravelCosts] = useState<boolean>(false);
   const [showTotalSum, setShowTotalSum] = useState<boolean>(false);
   // Mehrwertsteuer
   const [showVat, setShowVat] = useState<boolean>(false);
@@ -239,6 +243,7 @@ export default function ReportEditScreen() {
           setShowEmployeeCosts(!!r.show_employee_costs);
           setShowMaterialCosts(!!r.show_material_costs);
           setShowMachineCosts(!!r.show_machine_costs);
+          setShowTravelCosts(!!r.show_travel_costs);
           setShowTotalSum(!!r.show_total_sum);
           setShowVat(!!r.show_vat);
           setVatRateStr(r.vat_rate != null ? String(r.vat_rate).replace('.', ',') : '19');
@@ -392,6 +397,7 @@ export default function ReportEditScreen() {
         show_employee_costs: showEmployeeCosts || undefined,
         show_material_costs: showMaterialCosts || undefined,
         show_machine_costs: showMachineCosts || undefined,
+        show_travel_costs: showTravelCosts || undefined,
         show_total_sum: showTotalSum || undefined,
         show_vat: showVat || undefined,
         vat_rate: showVat ? (parseFloat(vatRateStr.replace(',', '.')) || 19) : undefined,
@@ -1196,93 +1202,40 @@ export default function ReportEditScreen() {
                   </Text>
                 ) : (
                   employees.map((emp) => {
-                    const updateEmp = (patch: Partial<ReportEmployee>) => {
-                      setEmployees(employees.map(e => e.id === emp.id ? { ...e, ...patch } : e));
-                    };
+                    const ea: any = emp;
+                    const parts: string[] = [];
+                    if (ea.travel_to_hours) parts.push(`🛣️ Hin ${formatHM(ea.travel_to_hours)}`);
+                    if (ea.travel_back_hours) parts.push(`↩️ Rück ${formatHM(ea.travel_back_hours)}`);
+                    const kmSum = (ea.travel_to_km || 0) + (ea.travel_back_km || 0);
+                    if (kmSum > 0) parts.push(`📏 ${String(kmSum).replace('.', ',')} km`);
+                    if (ea.travel_costs) parts.push(`💶 ${String(ea.travel_costs).replace('.', ',')} €`);
                     return (
-                      <View key={emp.id} style={styles.travelEmpRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <TouchableOpacity
+                        key={emp.id}
+                        style={styles.travelEmpRow}
+                        onPress={() => { setEmpTravelModal(emp.id); setEmpTravelPickerField(null); }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 22, height: 22, borderRadius: 11 }]}>
                             <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
                               {(emp.name || '?').slice(0, 1).toUpperCase()}
                             </Text>
                           </View>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
+                          <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{emp.name}</Text>
+                          <Ionicons name="create-outline" size={16} color="#0891b2" />
+                          <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
                         </View>
-                        <View style={{ flexDirection: 'row', gap: 6 }}>
-                          <TouchableOpacity
-                            style={[styles.travelTimeBtn, { flex: 1, paddingVertical: 8 }]}
-                            onPress={() => setTravelTimePicker({ kind: 'emp-to', empId: emp.id })}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="time-outline" size={14} color="#0891b2" />
-                            <Text style={styles.travelTimeBtnText}>
-                              {formatHM(emp.travel_to_hours) || 'Hin'}
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.travelTimeBtn, { flex: 1, paddingVertical: 8 }]}
-                            onPress={() => setTravelTimePicker({ kind: 'emp-back', empId: emp.id })}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="time-outline" size={14} color="#0891b2" />
-                            <Text style={styles.travelTimeBtnText}>
-                              {formatHM(emp.travel_back_hours) || 'Rück'}
-                            </Text>
-                          </TouchableOpacity>
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={travelKmDraft[`${emp.id}-km-to`] ?? (emp.travel_to_km != null ? String(emp.travel_to_km).replace('.', ',') : '')}
-                            onChangeText={(v) => {
-                              const clean = v.replace(/[^0-9,.]/g, '');
-                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-to`]: clean });
-                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
-                              updateEmp({ travel_to_km: Number.isFinite(num as number) ? num : undefined });
-                            }}
-                            onBlur={() => {
-                              const d = { ...travelKmDraft };
-                              delete d[`${emp.id}-km-to`];
-                              setTravelKmDraft(d);
-                            }}
-                            placeholder="km Hin"
-                            keyboardType="numbers-and-punctuation"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={travelKmDraft[`${emp.id}-km-back`] ?? (emp.travel_back_km != null ? String(emp.travel_back_km).replace('.', ',') : '')}
-                            onChangeText={(v) => {
-                              const clean = v.replace(/[^0-9,.]/g, '');
-                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-back`]: clean });
-                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
-                              updateEmp({ travel_back_km: Number.isFinite(num as number) ? num : undefined });
-                            }}
-                            onBlur={() => {
-                              const d = { ...travelKmDraft };
-                              delete d[`${emp.id}-km-back`];
-                              setTravelKmDraft(d);
-                            }}
-                            placeholder="km Rück"
-                            keyboardType="numbers-and-punctuation"
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1, paddingVertical: 8 }]}
-                            value={travelKmDraft[`${emp.id}-cost`] ?? (emp.travel_costs != null ? String(emp.travel_costs).replace('.', ',') : '')}
-                            onChangeText={(v) => {
-                              const clean = v.replace(/[^0-9,.]/g, '');
-                              setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-cost`]: clean });
-                              const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
-                              updateEmp({ travel_costs: Number.isFinite(num as number) ? num : undefined });
-                            }}
-                            onBlur={() => {
-                              const d = { ...travelKmDraft };
-                              delete d[`${emp.id}-cost`];
-                              setTravelKmDraft(d);
-                            }}
-                            placeholder="€"
-                            keyboardType="numbers-and-punctuation"
-                          />
-                        </View>
-                      </View>
+                        <Text style={{
+                          fontSize: 12,
+                          color: parts.length ? '#0e7490' : '#94a3b8',
+                          marginTop: 4,
+                          fontWeight: parts.length ? '600' : '400',
+                          fontStyle: parts.length ? 'normal' : 'italic',
+                        }}>
+                          {parts.length ? parts.join('  ·  ') : 'Keine Fahrzeiten – tippen zum Erfassen'}
+                        </Text>
+                      </TouchableOpacity>
                     );
                   })
                 )}
@@ -1735,6 +1688,7 @@ export default function ReportEditScreen() {
                   {toggle('Mitarbeiter-Lohnkosten', 'Stunden × Stundensatz pro Mitarbeiter', showEmployeeCosts, setShowEmployeeCosts, 'people-outline')}
                   {toggle('Material-Kosten', 'Menge × Einzelpreis pro Material', showMaterialCosts, setShowMaterialCosts, 'cube-outline')}
                   {toggle('Maschinen-Kosten', 'Einsatzstunden × Stundensatz', showMachineCosts, setShowMachineCosts, 'construct-outline')}
+                  {toggle('Spesen / Fahrtkosten', 'Erfasste Spesen zur Summe addieren', showTravelCosts, setShowTravelCosts, 'car-outline')}
                   {toggle('Gesamtsumme', 'Summe aller aktivierten Posten am Ende', showTotalSum, setShowTotalSum, 'calculator-outline')}
                   {toggle('Mehrwertsteuer anzeigen', 'Netto / MwSt / Brutto auf dem PDF', showVat, setShowVat, 'receipt-outline')}
                 </>
@@ -1805,7 +1759,12 @@ export default function ReportEditScreen() {
                 return { idx, name: m.name, hours, rate, cost };
               });
 
-              const netto = empTotal + matTotal + macTotal;
+              // Spesen / Fahrtkosten
+              const travelCostsTotal = travelPerEmployee
+                ? employees.reduce((s, e: any) => s + (e.travel_costs || 0), 0)
+                : (parseFloat((travelCosts || '0').replace(',', '.')) || 0);
+
+              const netto = empTotal + matTotal + macTotal + (showTravelCosts ? travelCostsTotal : 0);
               const vatRateNum = parseFloat(vatRateStr.replace(',', '.')) || 0;
               const vatAmount = showVat ? netto * (vatRateNum / 100) : 0;
               const brutto = netto + vatAmount;
@@ -1883,6 +1842,18 @@ export default function ReportEditScreen() {
                         </View>
                       ))}
                       <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'right', marginTop: 4 }}>Σ {eur(macTotal)}</Text>
+                    </View>
+                  )}
+
+                  {showTravelCosts && travelCostsTotal > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>Spesen / Fahrtkosten</Text>
+                      <View style={rowStyle}>
+                        <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }}>
+                          {travelPerEmployee ? '🚗 Summe aus Mitarbeiter-Fahrten' : '🚗 Team-Fahrt'}
+                        </Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(travelCostsTotal)}</Text>
+                      </View>
                     </View>
                   )}
 
@@ -2097,6 +2068,184 @@ export default function ReportEditScreen() {
                     >
                       <Ionicons name="checkmark" size={18} color="#fff" />
                       <Text style={styles.saveBtnText}>Übernehmen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          );
+        })()}
+
+        {/* ===== Fahrzeiten-Dialog pro Mitarbeiter ===== */}
+        {empTravelModal && (() => {
+          const emp = employees.find(e => e.id === empTravelModal);
+          if (!emp) return null;
+          const ea: any = emp;
+          const updateEmp = (patch: Partial<ReportEmployee>) => {
+            setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, ...patch } : e));
+          };
+          // Unter-Ansicht: Drehrad für Fahrzeit Hin/Rück
+          if (empTravelPickerField) {
+            const cur = empTravelPickerField === 'to' ? (ea.travel_to_hours || 0) : (ea.travel_back_hours || 0);
+            const totalMin = Math.round(cur * 60);
+            const initDate = new Date();
+            initDate.setHours(Math.floor(totalMin / 60), totalMin % 60, 0, 0);
+            return (
+              <Modal visible transparent animationType="fade" onRequestClose={() => setEmpTravelPickerField(null)}>
+                <View style={styles.modalOverlayCenter}>
+                  <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                    <Text style={[styles.modalTitle, { color: '#0891b2' }]}>
+                      {empTravelPickerField === 'to' ? '🛣️ Fahrzeit Hinweg' : '↩️ Fahrzeit Rückweg'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 4 }}>
+                      {emp.name} · Stunden und Minuten wählen
+                    </Text>
+                    <DateTimePicker
+                      value={initDate}
+                      mode="time"
+                      is24Hour
+                      display="spinner"
+                      minuteInterval={5}
+                      onChange={(_, selected) => {
+                        if (!selected) return;
+                        const decimal = selected.getHours() + selected.getMinutes() / 60;
+                        if (empTravelPickerField === 'to') updateEmp({ travel_to_hours: decimal });
+                        else updateEmp({ travel_back_hours: decimal });
+                        if (Platform.OS === 'android') setEmpTravelPickerField(null);
+                      }}
+                    />
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setEmpTravelPickerField(null)}>
+                        <Text style={styles.cancelBtnText}>Zurück</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#0891b2' }]}
+                        onPress={() => setEmpTravelPickerField(null)}
+                      >
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                        <Text style={styles.saveBtnText}>Übernehmen</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
+            );
+          }
+          // Haupt-Dialog mit beschrifteten Feldern (wie Team-Fahrzeiten)
+          return (
+            <Modal visible transparent animationType="fade" onRequestClose={() => setEmpTravelModal(null)}>
+              <View style={styles.modalOverlayCenter}>
+                <View style={[styles.modalSmall, { maxWidth: 400 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <View style={[styles.empAvatar, { backgroundColor: emp.color || '#1976d2', width: 28, height: 28, borderRadius: 14 }]}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                        {(emp.name || '?').slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.modalTitle, { color: '#0891b2', flex: 1 }]} numberOfLines={1}>
+                      🚗 Fahrzeiten – {emp.name}
+                    </Text>
+                    <TouchableOpacity onPress={() => setEmpTravelModal(null)}>
+                      <Ionicons name="close" size={24} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>🛣️ Fahrzeit Hin</Text>
+                      <TouchableOpacity
+                        style={styles.travelTimeBtn}
+                        onPress={() => setEmpTravelPickerField('to')}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="time-outline" size={16} color="#0891b2" />
+                        <Text style={styles.travelTimeBtnText}>{formatHM(ea.travel_to_hours) || '0:00'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>↩️ Fahrzeit Rück</Text>
+                      <TouchableOpacity
+                        style={styles.travelTimeBtn}
+                        onPress={() => setEmpTravelPickerField('back')}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="time-outline" size={16} color="#0891b2" />
+                        <Text style={styles.travelTimeBtnText}>{formatHM(ea.travel_back_hours) || '0:00'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>📏 km Hin</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={travelKmDraft[`${emp.id}-km-to`] ?? (emp.travel_to_km != null ? String(emp.travel_to_km).replace('.', ',') : '')}
+                        onChangeText={(v) => {
+                          const clean = v.replace(/[^0-9,.]/g, '');
+                          setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-to`]: clean });
+                          const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                          updateEmp({ travel_to_km: Number.isFinite(num as number) ? num : undefined });
+                        }}
+                        onBlur={() => {
+                          const d = { ...travelKmDraft };
+                          delete d[`${emp.id}-km-to`];
+                          setTravelKmDraft(d);
+                        }}
+                        placeholder="z.B. 12,5"
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniLabel}>📏 km Rück</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={travelKmDraft[`${emp.id}-km-back`] ?? (emp.travel_back_km != null ? String(emp.travel_back_km).replace('.', ',') : '')}
+                        onChangeText={(v) => {
+                          const clean = v.replace(/[^0-9,.]/g, '');
+                          setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-km-back`]: clean });
+                          const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                          updateEmp({ travel_back_km: Number.isFinite(num as number) ? num : undefined });
+                        }}
+                        onBlur={() => {
+                          const d = { ...travelKmDraft };
+                          delete d[`${emp.id}-km-back`];
+                          setTravelKmDraft(d);
+                        }}
+                        placeholder="z.B. 12,5"
+                        keyboardType="numbers-and-punctuation"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={travelKmDraft[`${emp.id}-cost`] ?? (emp.travel_costs != null ? String(emp.travel_costs).replace('.', ',') : '')}
+                      onChangeText={(v) => {
+                        const clean = v.replace(/[^0-9,.]/g, '');
+                        setTravelKmDraft({ ...travelKmDraft, [`${emp.id}-cost`]: clean });
+                        const num = clean ? parseFloat(clean.replace(',', '.')) : undefined;
+                        updateEmp({ travel_costs: Number.isFinite(num as number) ? num : undefined });
+                      }}
+                      onBlur={() => {
+                        const d = { ...travelKmDraft };
+                        delete d[`${emp.id}-cost`];
+                        setTravelKmDraft(d);
+                      }}
+                      placeholder="z.B. 12,50"
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#0891b2' }]}
+                      onPress={() => setEmpTravelModal(null)}
+                    >
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveBtnText}>Fertig</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

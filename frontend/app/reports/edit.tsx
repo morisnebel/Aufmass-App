@@ -597,6 +597,43 @@ export default function ReportEditScreen() {
     }]);
     setShowEmpPicker(false);
   };
+  // 👥 Team-Sync: Zeiten eines Mitarbeiters für alle anderen übernehmen
+  const syncTimesToAll = (sourceId: string) => {
+    const src = employees.find(e => e.id === sourceId);
+    if (!src) return;
+    if (employees.length < 2) {
+      Alert.alert('Hinweis', 'Es gibt keine weiteren Mitarbeiter zum Übernehmen.');
+      return;
+    }
+    const dateStr = (src.entry_date || date)
+      ? new Date(src.entry_date || date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+      : '';
+    Alert.alert(
+      '👥 Zeiten für alle übernehmen?',
+      `Datum${dateStr ? ` (${dateStr})` : ''}, Beginn (${src.time_from || '--:--'}), Ende (${src.time_to || '--:--'}) und Pause (${src.pause_minutes || 0} Min.) von ${src.name || 'diesem Mitarbeiter'} werden für alle ${employees.length - 1} anderen Mitarbeiter übernommen.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Ja, übernehmen',
+          onPress: () => {
+            setEmployees(prev => prev.map(e => {
+              if (e.id === sourceId) return e;
+              const merged = {
+                ...e,
+                entry_date: src.entry_date,
+                time_from: src.time_from,
+                time_to: src.time_to,
+                pause_minutes: src.pause_minutes,
+              };
+              merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
+              return merged;
+            }));
+          },
+        },
+      ]
+    );
+  };
+
   const updateEmployee = (id: string, patch: Partial<ReportEmployee>) => {
     setEmployees(prev => prev.map(e => {
       if (e.id !== id) return e;
@@ -1121,6 +1158,14 @@ export default function ReportEditScreen() {
                             placeholder="Funktion (z.B. Dachdecker)"
                           />
                         </View>
+                        {employees.length > 1 && (
+                          <TouchableOpacity
+                            onPress={() => syncTimesToAll(emp.id)}
+                            style={styles.itemRemoveBtn}
+                          >
+                            <Ionicons name="sync-outline" size={18} color="#1976d2" />
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.itemRemoveBtn}>
                           <Ionicons name="trash-outline" size={18} color="#ef4444" />
                         </TouchableOpacity>

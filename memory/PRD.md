@@ -43,3 +43,11 @@
 ## Open Items
 - Build 43 für TestFlight via Emergent Publish
 - Apple App Store Review-Notes: Pro-Code PROFI2024 angeben
+
+## Session Juni 2026 (Fork)
+- Selektive Mitarbeiter-Synchronisation im Rapport: Sync-Button (🔄) öffnet Modal mit
+  Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
+- ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für
+  App-Store-Stabilität (Guideline 2.1) eingebaut (DONE)
+- Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
+  Privacy-URL-Verifizierung durch User

@@ -616,53 +616,41 @@ export default function ReportEditScreen() {
     setSelectedEmpIds(new Set());
     setShowEmpPicker(false);
   };
-  // 👥 Team-Sync: Zeiten eines Mitarbeiters für andere übernehmen (alle oder nur gleicher Tag)
+  // 👥 Team-Sync: Auswahl-Dialog, welche Mitarbeiter synchronisiert werden
+  const [syncModal, setSyncModal] = useState<string | null>(null); // Quelle (Mitarbeiter-ID)
+  const [syncTargetIds, setSyncTargetIds] = useState<Set<string>>(new Set());
+  const [syncIncludeDate, setSyncIncludeDate] = useState(true);
+
   const syncTimesToAll = (sourceId: string) => {
-    const src = employees.find(e => e.id === sourceId);
-    if (!src) return;
     if (employees.length < 2) {
       Alert.alert('Hinweis', 'Es gibt keine weiteren Mitarbeiter zum Übernehmen.');
       return;
     }
-    const srcDate = src.entry_date || date;
-    const dateStr = srcDate
-      ? new Date(srcDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
-      : '';
-    const sameDayCount = employees.filter(e => e.id !== sourceId && (e.entry_date || date) === srcDate).length;
+    // Standard: alle anderen vorausgewählt
+    setSyncTargetIds(new Set(employees.filter(e => e.id !== sourceId).map(e => e.id)));
+    setSyncIncludeDate(true);
+    setSyncModal(sourceId);
+  };
 
-    const apply = (scope: 'day' | 'all') => {
-      setEmployees(prev => prev.map(e => {
-        if (e.id === sourceId) return e;
-        if (scope === 'day' && (e.entry_date || date) !== srcDate) return e;
-        const merged = {
-          ...e,
-          entry_date: scope === 'all' ? src.entry_date : e.entry_date,
-          time_from: src.time_from,
-          time_to: src.time_to,
-          pause_minutes: src.pause_minutes,
-        };
-        merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
-        return merged;
-      }));
-    };
-
-    const buttons: any[] = [{ text: 'Abbrechen', style: 'cancel' }];
-    if (sameDayCount > 0) {
-      buttons.push({
-        text: `Nur Tag ${dateStr} (${sameDayCount} MA)`,
-        onPress: () => apply('day'),
-      });
+  const applySync = () => {
+    const src = employees.find(e => e.id === syncModal);
+    if (!src || syncTargetIds.size === 0) {
+      setSyncModal(null);
+      return;
     }
-    buttons.push({
-      text: `Alle Mitarbeiter (${employees.length - 1})`,
-      onPress: () => apply('all'),
-    });
-
-    Alert.alert(
-      '👥 Zeiten übernehmen',
-      `Beginn (${src.time_from || '--:--'}), Ende (${src.time_to || '--:--'}) und Pause (${src.pause_minutes || 0} Min.) von ${src.name || 'diesem Mitarbeiter'} übernehmen für:\n\n• Nur Tag ${dateStr}: Mitarbeiter mit gleichem Datum\n• Alle: sämtliche Mitarbeiter (Datum wird auf ${dateStr} gesetzt)`,
-      buttons
-    );
+    setEmployees(prev => prev.map(e => {
+      if (!syncTargetIds.has(e.id) || e.id === src.id) return e;
+      const merged = {
+        ...e,
+        entry_date: syncIncludeDate ? src.entry_date : e.entry_date,
+        time_from: src.time_from,
+        time_to: src.time_to,
+        pause_minutes: src.pause_minutes,
+      };
+      merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
+      return merged;
+    }));
+    setSyncModal(null);
   };
 
   // Mitarbeiter im Rapport nach oben/unten verschieben
@@ -2508,6 +2496,96 @@ export default function ReportEditScreen() {
               </View>
             </View>
             </KeyboardAvoidingView>
+          </View>
+        </Modal>
+
+        {/* Team-Sync: Auswahl der Ziel-Mitarbeiter */}
+        <Modal visible={!!syncModal} transparent animationType="fade" onRequestClose={() => setSyncModal(null)}>
+          <View style={styles.modalOverlayCenter}>
+            <View style={[styles.modalSmall, { maxWidth: 360 }]}>
+              {(() => {
+                const src = employees.find(e => e.id === syncModal);
+                if (!src) return null;
+                const srcDate = src.entry_date || date;
+                return (
+                  <>
+                    <Text style={styles.modalTitle}>Zeiten übernehmen</Text>
+                    <View style={{ backgroundColor: '#eff6ff', borderRadius: 10, padding: 10, marginTop: 10 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1e40af' }}>Von: {src.name || 'Unbenannt'}</Text>
+                      <Text style={{ fontSize: 12, color: '#1e40af', marginTop: 2 }}>
+                        {new Date(srcDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {'  ·  '}{src.time_from || '--:--'} – {src.time_to || '--:--'}
+                        {'  ·  '}Pause {src.pause_minutes ?? 0} Min
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 4 }}
+                      onPress={() => setSyncIncludeDate(v => !v)}
+                    >
+                      <Ionicons
+                        name={syncIncludeDate ? 'checkbox' : 'square-outline'}
+                        size={22}
+                        color={syncIncludeDate ? '#1976d2' : '#94a3b8'}
+                      />
+                      <Text style={{ fontSize: 13, color: '#334155', fontWeight: '600' }}>Datum mit übernehmen</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 12, color: '#64748b', marginTop: 10, marginBottom: 4, fontWeight: '700', textTransform: 'uppercase' }}>
+                      An diese Mitarbeiter:
+                    </Text>
+                    <ScrollView style={{ maxHeight: 260 }}>
+                      {employees.filter(e => e.id !== syncModal).map(e => {
+                        const isSel = syncTargetIds.has(e.id);
+                        const eDate = e.entry_date || date;
+                        return (
+                          <TouchableOpacity
+                            key={e.id}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 4 }}
+                            onPress={() => {
+                              setSyncTargetIds(prev => {
+                                const next = new Set(prev);
+                                if (next.has(e.id)) next.delete(e.id); else next.add(e.id);
+                                return next;
+                              });
+                            }}
+                          >
+                            <Ionicons
+                              name={isSel ? 'checkbox' : 'square-outline'}
+                              size={22}
+                              color={isSel ? '#1976d2' : '#cbd5e1'}
+                            />
+                            <View style={[styles.empAvatar, { backgroundColor: e.color || '#1976d2', width: 28, height: 28, borderRadius: 14 }]}>
+                              <Text style={[styles.empAvatarText, { fontSize: 12 }]}>{(e.name || '?').charAt(0).toUpperCase()}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: '#0f172a' }}>{e.name || 'Unbenannt'}</Text>
+                              <Text style={{ fontSize: 11, color: '#64748b' }}>
+                                {new Date(eDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                                {'  ·  '}{e.time_from || '--:--'} – {e.time_to || '--:--'}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setSyncModal(null)}>
+                        <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalBtn, styles.saveBtn, syncTargetIds.size === 0 && { opacity: 0.5 }]}
+                        disabled={syncTargetIds.size === 0}
+                        onPress={applySync}
+                      >
+                        <Ionicons name="sync-outline" size={16} color="#fff" />
+                        <Text style={styles.saveBtnText}>
+                          {syncTargetIds.size > 0 ? `Übernehmen (${syncTargetIds.size})` : 'Übernehmen'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                );
+              })()}
+            </View>
           </View>
         </Modal>
 

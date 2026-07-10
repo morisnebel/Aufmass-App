@@ -8,6 +8,7 @@ import { SketchService } from '../services/LocalStorage';
 import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import { DisclaimerGate } from '../src/components/DisclaimerGate';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import '../i18n'; // i18n initialisieren
 
 // Ignore canvas render warnings from pdf.js in WebView
@@ -36,6 +37,7 @@ export default function RootLayout() {
     );
   }, []);
   return (
+    <ErrorBoundary>
     <View style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <DisclaimerGate>
@@ -166,5 +168,6 @@ export default function RootLayout() {
       </DisclaimerGate>
       <KeyboardDismissButton />
     </View>
+    </ErrorBoundary>
   );
 }

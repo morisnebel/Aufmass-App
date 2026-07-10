@@ -121,6 +121,7 @@ export default function EditCustomerScreen() {
   
   // Kundentyp
   const [customerType, setCustomerType] = useState('');
+  const [customerTypeName, setCustomerTypeName] = useState('');
   const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
   
   // Contact sync state
@@ -186,6 +187,9 @@ export default function EditCustomerScreen() {
         // Kundentyp laden
         if (customer.customerType) {
           setCustomerType(customer.customerType);
+        }
+        if ((customer as any).customerTypeName) {
+          setCustomerTypeName((customer as any).customerTypeName);
         }
         
         // Lade die importedContactId wenn vorhanden
@@ -434,6 +438,7 @@ export default function EditCustomerScreen() {
         address: fullAddress,
         importedContactId: importedContactId || undefined,
         customerType: customerType || undefined,
+        customerTypeName: customerTypeName.trim() || undefined,
       });
       
       // Prüfe, ob es Projekte gibt, die zu diesem Kunden gehören
@@ -717,6 +722,19 @@ export default function EditCustomerScreen() {
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
+
+          {/* Bezeichnung zum Kundentyp */}
+          {customerType ? (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bezeichnung {customerType}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                value={customerTypeName}
+                onChangeText={setCustomerTypeName}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('common.street')}</Text>

@@ -371,6 +371,7 @@ export interface Customer {
   notes?: string;
   customer_number?: string; // KD-25001 format - auto-generated
   customerType?: string; // Kundentyp: Privat, Firma, Hausverwaltung, etc.
+  customerTypeName?: string; // Bezeichnung zum Kundentyp, z.B. "Elektro Mustermann GmbH"
   importedContactId?: string; // ID des importierten Telefonkontakts für Synchronisation
   projectAddresses?: ProjectAddress[]; // Array von Projektadressen
   created_at: string;

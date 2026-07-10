@@ -120,6 +120,7 @@ export default function NewCustomerScreen() {
   
   // Kundentyp
   const [customerType, setCustomerType] = useState('');
+  const [customerTypeName, setCustomerTypeName] = useState('');
   const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
   
   // Import options modal
@@ -349,6 +350,7 @@ export default function NewCustomerScreen() {
         importedContactId: importedContactId || undefined,
         customer_number: finalCustomerNumber,
         customerType: customerType || undefined,
+        customerTypeName: customerTypeName.trim() || undefined,
       });
       
       // Hilfsfunktion für Navigation nach Kundenerstellung
@@ -588,6 +590,19 @@ export default function NewCustomerScreen() {
               <Ionicons name="chevron-down" size={20} color="#666" />
             </TouchableOpacity>
           </View>
+
+          {/* Bezeichnung zum Kundentyp */}
+          {customerType ? (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bezeichnung {customerType}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                value={customerTypeName}
+                onChangeText={setCustomerTypeName}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('settings.street')}</Text>

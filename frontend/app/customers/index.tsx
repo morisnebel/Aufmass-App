@@ -492,7 +492,8 @@ export default function CustomersScreen() {
       customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.phone?.includes(searchQuery) ||
       customer.customer_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.customerType?.toLowerCase().includes(searchQuery.toLowerCase())
+      customer.customerType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (customer as any).customerTypeName?.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -543,7 +544,9 @@ export default function CustomersScreen() {
                 <Text style={styles.customerNumberAbove}>{item.customer_number}</Text>
               )}
               {item.customerType && (
-                <Text style={{ color: '#1976d2', fontSize: 11, fontWeight: '600' }}>{item.customerType}</Text>
+                <Text style={{ color: '#1976d2', fontSize: 11, fontWeight: '600' }}>
+                  {item.customerType}{(item as any).customerTypeName ? ` · ${(item as any).customerTypeName}` : ''}
+                </Text>
               )}
               <Text style={styles.customerNamePhone} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
             </View>
@@ -553,7 +556,9 @@ export default function CustomersScreen() {
                 <Text style={styles.customerNumber}>{item.customer_number}</Text>
               )}
               {item.customerType && (
-                <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600', marginRight: 6 }}>{item.customerType}</Text>
+                <Text style={{ color: '#1976d2', fontSize: 12, fontWeight: '600', marginRight: 6 }}>
+                  {item.customerType}{(item as any).customerTypeName ? ` · ${(item as any).customerTypeName}` : ''}
+                </Text>
               )}
               <Text style={styles.customerName} numberOfLines={1} ellipsizeMode="tail">{item.name || 'Unbekannt'}</Text>
             </View>

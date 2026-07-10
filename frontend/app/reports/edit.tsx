@@ -214,6 +214,13 @@ export default function ReportEditScreen() {
         SettingsService.get(),
       ]);
       setProject(proj);
+      // Mitarbeiter-Stamm nach Reihenfolge sortieren (1 = zuerst)
+      emps.sort((a: any, b: any) => {
+        const ao = a.sort_order ?? 9999;
+        const bo = b.sort_order ?? 9999;
+        if (ao !== bo) return ao - bo;
+        return (a.name || '').localeCompare(b.name || '');
+      });
       setEmpMaster(emps);
       setMatMaster(mats);
       setMachMaster(machs);
@@ -588,7 +595,7 @@ export default function ReportEditScreen() {
       color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
     }]);
   };
-  // Mehrfachauswahl im Mitarbeiter-Picker
+  // Mehrfachauswahl im Mitarbeiter-Picker (in Stamm-Reihenfolge hinzufügen)
   const addSelectedEmployees = () => {
     const selected = empMaster.filter(m => selectedEmpIds.has(m.id));
     if (selected.length === 0) {
@@ -656,6 +663,18 @@ export default function ReportEditScreen() {
       `Beginn (${src.time_from || '--:--'}), Ende (${src.time_to || '--:--'}) und Pause (${src.pause_minutes || 0} Min.) von ${src.name || 'diesem Mitarbeiter'} übernehmen für:\n\n• Nur Tag ${dateStr}: Mitarbeiter mit gleichem Datum\n• Alle: sämtliche Mitarbeiter (Datum wird auf ${dateStr} gesetzt)`,
       buttons
     );
+  };
+
+  // Mitarbeiter im Rapport nach oben/unten verschieben
+  const moveEmployee = (id: string, dir: -1 | 1) => {
+    setEmployees(prev => {
+      const idx = prev.findIndex(e => e.id === id);
+      const target = idx + dir;
+      if (idx < 0 || target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
   };
 
   const updateEmployee = (id: string, patch: Partial<ReportEmployee>) => {
@@ -1172,7 +1191,7 @@ export default function ReportEditScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                {employees.map((emp) => {
+                {employees.map((emp, empIdx) => {
                   const hours = (emp.time_from && emp.time_to) ? calcEmpHours(emp.time_from, emp.time_to, emp.pause_minutes) : (emp.hours || 0);
                   const empDate = emp.entry_date || date;
                   const isOtherDay = empDate !== date;
@@ -1198,12 +1217,28 @@ export default function ReportEditScreen() {
                           />
                         </View>
                         {employees.length > 1 && (
-                          <TouchableOpacity
-                            onPress={() => syncTimesToAll(emp.id)}
-                            style={styles.itemRemoveBtn}
-                          >
-                            <Ionicons name="sync-outline" size={18} color="#1976d2" />
-                          </TouchableOpacity>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <TouchableOpacity
+                              onPress={() => moveEmployee(emp.id, -1)}
+                              disabled={empIdx === 0}
+                              style={[styles.itemRemoveBtn, { paddingHorizontal: 4 }]}
+                            >
+                              <Ionicons name="chevron-up" size={18} color={empIdx === 0 ? '#cbd5e1' : '#64748b'} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => moveEmployee(emp.id, 1)}
+                              disabled={empIdx === employees.length - 1}
+                              style={[styles.itemRemoveBtn, { paddingHorizontal: 4 }]}
+                            >
+                              <Ionicons name="chevron-down" size={18} color={empIdx === employees.length - 1 ? '#cbd5e1' : '#64748b'} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => syncTimesToAll(emp.id)}
+                              style={styles.itemRemoveBtn}
+                            >
+                              <Ionicons name="sync-outline" size={18} color="#1976d2" />
+                            </TouchableOpacity>
+                          </View>
                         )}
                         <TouchableOpacity onPress={() => removeEmployee(emp.id)} style={styles.itemRemoveBtn}>
                           <Ionicons name="trash-outline" size={18} color="#ef4444" />

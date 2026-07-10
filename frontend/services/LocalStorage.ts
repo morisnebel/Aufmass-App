@@ -2252,6 +2252,7 @@ export const generateMachineNumber = async (): Promise<string> => {
 export interface EmployeeMaster {
   id: string;
   employee_number?: string; // z.B. MA-001, automatisch vergeben, anpassbar
+  sort_order?: number; // Reihenfolge: 1 = zuerst (z.B. 1. Meister, 2. Vorarbeiter)
   name: string;
   role?: string; // z.B. "Dachdecker", "Geselle", "Azubi"
   hourly_rate?: number; // €/Stunde

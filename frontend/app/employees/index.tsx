@@ -22,6 +22,7 @@ import { EmployeeMasterService, EmployeeMaster, generateEmployeeNumber } from '.
 
 const EMPTY: Partial<EmployeeMaster> = {
   employee_number: '',
+  sort_order: undefined,
   name: '',
   role: '',
   hourly_rate: undefined,
@@ -84,6 +85,13 @@ export default function EmployeesIndex() {
 
   const load = useCallback(async () => {
     const all = await EmployeeMasterService.getAll();
+    // Nach Reihenfolge sortieren (1 = zuerst, ohne Reihenfolge ans Ende)
+    all.sort((a, b) => {
+      const ao = a.sort_order ?? 9999;
+      const bo = b.sort_order ?? 9999;
+      if (ao !== bo) return ao - bo;
+      return (a.name || '').localeCompare(b.name || '');
+    });
     setEmployees(all);
   }, []);
 
@@ -309,7 +317,9 @@ export default function EmployeesIndex() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={[styles.empName, !emp.active && { color: '#9ca3af' }]}>{emp.name}</Text>
+                    <Text style={[styles.empName, !emp.active && { color: '#9ca3af' }]}>
+                      {emp.sort_order != null ? `${emp.sort_order}. ` : ''}{emp.name}
+                    </Text>
                     {!emp.active && (
                       <View style={styles.inactiveBadge}><Text style={styles.inactiveText}>inaktiv</Text></View>
                     )}
@@ -475,6 +485,18 @@ export default function EmployeesIndex() {
                   value={form.role || ''}
                   onChangeText={(v) => setForm({ ...form, role: v })}
                   placeholder="z.B. Dachdecker, Geselle, Azubi"
+                />
+
+                <Text style={styles.label}>Reihenfolge (1 = zuerst)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.sort_order != null ? String(form.sort_order) : ''}
+                  onChangeText={(v) => {
+                    const num = parseInt(v.replace(/[^\d]/g, ''), 10);
+                    setForm({ ...form, sort_order: isNaN(num) ? undefined : num });
+                  }}
+                  placeholder="z.B. 1 (Meister), 2 (Vorarbeiter), 3 ..."
+                  keyboardType="number-pad"
                 />
 
                 <Text style={styles.label}>Stundenlohn (€)</Text>

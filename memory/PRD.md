@@ -60,5 +60,6 @@
   (Name + €/h, EmployeeMaster.wage_rates). Im Rapport pro Eintrag auswählbar über
   grünen Chip unter der Zeiten-Zeile → Modal (Standard + eigene Sätze). Gewählter Satz
   ersetzt hourly_rate für die Kostenberechnung; nur intern, nicht im PDF (DONE, getestet)
+- PDF Kosten-Übersicht: neue Spalte "Datum" (TT.MM.JJ) in der Mitarbeiter-Lohnkosten-Tabelle (DONE)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

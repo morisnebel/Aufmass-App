@@ -590,9 +590,14 @@ export const generateReportSectionHtml = (
             const cost = totalHrs * rate;
             empTotal += cost;
             if (showEmp) {
+              const entryDateStr = (() => {
+                const d = ea.entry_date || report.date;
+                try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' }); } catch { return ''; }
+              })();
               empRowsHtml += `<tr>
                 <td>${escape(e.name)}</td>
                 <td style="color:#64748b;font-size:10px;">${escape(ea.role || '')}</td>
+                <td style="color:#64748b;font-size:10px;">${entryDateStr}</td>
                 <td style="text-align:right;">${formatHoursHM(totalHrs)}</td>
                 <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
                 <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
@@ -658,11 +663,11 @@ export const generateReportSectionHtml = (
               <div style="margin-top:6px;font-size:11px;font-weight:700;color:#0f172a;">Mitarbeiter-Lohnkosten</div>
               <table class="material-table" style="margin-top:4px;">
                 <thead><tr>
-                  <th>Mitarbeiter</th><th>Funktion</th>
+                  <th>Mitarbeiter</th><th>Funktion</th><th>Datum</th>
                   <th style="text-align:right;">Stunden</th><th style="text-align:right;">Satz</th><th style="text-align:right;">Summe</th>
                 </tr></thead>
                 <tbody>${empRowsHtml}</tbody>
-                <tfoot><tr><td colspan="4" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
+                <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
               </table>
             ` : ''}
             ${showMat && matRowsHtml ? `

@@ -41,6 +41,8 @@
       },
       "permissions": [
         "CAMERA",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",

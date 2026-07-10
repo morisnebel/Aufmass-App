@@ -343,6 +343,13 @@ export const generateReportSectionHtml = (
 
   // Werte aus Project/Customer ziehen
   const customerName = customer ? (customer.name || [customer.salutation, customer.firstName, customer.lastName].filter(Boolean).join(' ')) : bauherrName;
+  // Kundentyp-Bezeichnung (z.B. "Firma Elektro Mustermann GmbH") als erste Zeile der Anschrift
+  const custTypeLine = (() => {
+    const c: any = customer || {};
+    if (!c.customerTypeName) return '';
+    const prefix = c.customerType && c.customerType !== 'Privat' ? `${c.customerType} ` : '';
+    return `${prefix}${c.customerTypeName}`;
+  })();
   const customerAddress = customer ? (customer.address || [customer.street, [customer.zip, customer.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')) : bauherrAddr;
   const customerPhone = customer ? (customer.phone || customer.mobile || '') : (project?.bauherr_phone || project?.bauherr_mobile || '');
   const customerEmail = customer ? (customer.email || '') : (project?.bauherr_email || '');
@@ -355,7 +362,11 @@ export const generateReportSectionHtml = (
   const projectContactEmail = (project as any)?.objekt_email || '';
 
   const headerRows: string[] = [];
-  if (hfSet.has('customer_name') && customerName) headerRows.push(`<div class="info-row"><b>Kunde:</b> ${escapeHtml(customerName)}</div>`);
+  if (hfSet.has('customer_name') && (customerName || custTypeLine)) {
+    const nameHtml = [custTypeLine, customerName && customerName !== custTypeLine ? customerName : '']
+      .filter(Boolean).map(escapeHtml).join('<br/>');
+    headerRows.push(`<div class="info-row"><b>Kunde:</b> ${nameHtml}</div>`);
+  }
   if (hfSet.has('customer_address') && customerAddress) headerRows.push(`<div class="info-row"><b>Adresse:</b> ${escapeHtml(customerAddress)}</div>`);
   if (hfSet.has('customer_phone') && customerPhone) headerRows.push(`<div class="info-row"><b>Telefon:</b> ${escapeHtml(customerPhone)}</div>`);
   if (hfSet.has('customer_email') && customerEmail) headerRows.push(`<div class="info-row"><b>E-Mail:</b> ${escapeHtml(customerEmail)}</div>`);

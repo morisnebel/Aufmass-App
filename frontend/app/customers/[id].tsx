@@ -295,6 +295,7 @@ export default function EditCustomerScreen() {
           Contacts.Fields.Name,
           Contacts.Fields.FirstName,
           Contacts.Fields.LastName,
+          Contacts.Fields.Company,
           Contacts.Fields.Emails,
           Contacts.Fields.PhoneNumbers,
           Contacts.Fields.Addresses,
@@ -353,8 +354,8 @@ export default function EditCustomerScreen() {
 
   // Prüfe ob der Kontakt aus Gerätekontakten importiert wurde
   const handleSave = async () => {
-    if (!lastName.trim()) {
-      Alert.alert(t('common.error'), t('customers.enterLastNameError'));
+    if (!lastName.trim() && !customerTypeName.trim()) {
+      Alert.alert(t('common.error'), 'Bitte Nachname oder Bezeichnung (z.B. Firmenname) eingeben.');
       return;
     }
 
@@ -428,7 +429,7 @@ export default function EditCustomerScreen() {
         salutation: salutation,
         firstName: firstName,
         lastName: lastName,
-        name: fullName,
+        name: fullName || customerTypeName.trim(),
         email: email,
         phone: phone,
         mobile: mobile,
@@ -552,10 +553,11 @@ export default function EditCustomerScreen() {
       // Kontaktdaten vorbereiten - Anrede separat als namePrefix
       const contactData: Partial<Contacts.Contact> = {
         contactType: Contacts.ContactTypes.Person,
-        name: fullName,
+        name: fullName || customerTypeName.trim(),
         namePrefix: salutation || '', // Anrede (Herr, Frau, Dr., etc.)
         firstName: firstName || '',
         lastName: lastName || '',
+        ...(customerTypeName.trim() ? { company: customerTypeName.trim() } : {}),
         emails: email ? [{ email: email, label: 'Arbeit' }] : [],
         phoneNumbers: [
           ...(mobile ? [{ number: mobile, label: 'Mobil' }] : []),
@@ -673,6 +675,33 @@ export default function EditCustomerScreen() {
             </View>
           </View>
 
+          {/* Kundentyp (vor dem Namen für bessere Anschrift) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Kundentyp</Text>
+            <TouchableOpacity 
+              style={styles.pickerButton}
+              onPress={() => setShowCustomerTypePicker(true)}
+            >
+              <Text style={customerType ? styles.pickerText : styles.pickerPlaceholder}>
+                {customerType || 'Kundentyp auswählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Bezeichnung zum Kundentyp */}
+          {customerType ? (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bezeichnung {customerType}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                value={customerTypeName}
+                onChangeText={setCustomerTypeName}
+              />
+            </View>
+          ) : null}
+
           {/* Anrede */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('common.salutation')}</Text>
@@ -699,7 +728,7 @@ export default function EditCustomerScreen() {
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>{t('common.lastName')} *</Text>
+              <Text style={styles.label}>{t('common.lastName')}{customerTypeName.trim() ? '' : ' *'}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={t('common.lastName')}
@@ -708,33 +737,6 @@ export default function EditCustomerScreen() {
               />
             </View>
           </View>
-
-          {/* Kundentyp */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Kundentyp</Text>
-            <TouchableOpacity 
-              style={styles.pickerButton}
-              onPress={() => setShowCustomerTypePicker(true)}
-            >
-              <Text style={customerType ? styles.pickerText : styles.pickerPlaceholder}>
-                {customerType || 'Kundentyp auswählen'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Bezeichnung zum Kundentyp */}
-          {customerType ? (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Bezeichnung {customerType}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
-                value={customerTypeName}
-                onChangeText={setCustomerTypeName}
-              />
-            </View>
-          ) : null}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('common.street')}</Text>

@@ -90,7 +90,7 @@ function extractContactData(contact: Contacts.Contact) {
     extractedCity = addr?.city || '';
   }
 
-  return { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity };
+  return { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity, extractedCompany };
 }
 
 export default function NewCustomerScreen() {
@@ -137,6 +137,7 @@ export default function NewCustomerScreen() {
     salutation?: string;
     firstName?: string;
     lastName?: string;
+    company?: string;
     email?: string;
     phone?: string;
     mobile?: string;
@@ -159,10 +160,11 @@ export default function NewCustomerScreen() {
 
       const contact: Contacts.Contact = {
         contactType: Contacts.ContactTypes.Person,
-        name: fullName,
+        name: fullName || customerData.company || '',
         namePrefix: customerData.salutation || '', // Anrede als Präfix
         firstName: customerData.firstName || '',
         lastName: customerData.lastName || '',
+        ...(customerData.company ? { company: customerData.company } : {}),
         ...(customerData.email && {
           emails: [{ email: customerData.email, label: 'Arbeit' }],
         }),
@@ -192,6 +194,7 @@ export default function NewCustomerScreen() {
     salutation?: string;
     firstName?: string;
     lastName?: string;
+    company?: string;
     email?: string;
     phone?: string;
     mobile?: string;
@@ -215,10 +218,11 @@ export default function NewCustomerScreen() {
       const updatedContact: Contacts.Contact = {
         id: contactId,
         contactType: Contacts.ContactTypes.Person,
-        name: fullName,
+        name: fullName || customerData.company || '',
         namePrefix: customerData.salutation || '',
         firstName: customerData.firstName || '',
         lastName: customerData.lastName || '',
+        ...(customerData.company ? { company: customerData.company } : {}),
         emails: customerData.email ? [{ email: customerData.email, label: 'Arbeit' }] : [],
         phoneNumbers: [
           ...(customerData.phone ? [{ number: customerData.phone, label: 'Arbeit' }] : []),
@@ -242,8 +246,8 @@ export default function NewCustomerScreen() {
   };
 
   const handleSave = async () => {
-    if (!lastName.trim()) {
-      Alert.alert(t('common.error'), t('customers.enterLastNameError'));
+    if (!lastName.trim() && !customerTypeName.trim()) {
+      Alert.alert(t('common.error'), 'Bitte Nachname oder Bezeichnung (z.B. Firmenname) eingeben.');
       return;
     }
 
@@ -339,7 +343,7 @@ export default function NewCustomerScreen() {
         salutation: salutation || undefined,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
-        name: fullName,
+        name: fullName || customerTypeName.trim(),
         email: email || undefined,
         phone: phone || undefined,
         mobile: mobile || undefined,
@@ -374,6 +378,7 @@ export default function NewCustomerScreen() {
           salutation: salutation || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
+          company: customerTypeName.trim() || undefined,
           email: email || undefined,
           phone: phone || undefined,
           mobile: mobile || undefined,
@@ -396,6 +401,7 @@ export default function NewCustomerScreen() {
           salutation: salutation || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
+          company: customerTypeName.trim() || undefined,
           email: email || undefined,
           phone: phone || undefined,
           mobile: mobile || undefined,
@@ -442,6 +448,7 @@ export default function NewCustomerScreen() {
           Contacts.Fields.Name,
           Contacts.Fields.FirstName,
           Contacts.Fields.LastName,
+          Contacts.Fields.Company,
           Contacts.Fields.Emails,
           Contacts.Fields.PhoneNumbers,
           Contacts.Fields.Addresses,
@@ -470,7 +477,7 @@ export default function NewCustomerScreen() {
 
   // Select contact and fill form
   const handleSelectContact = (contact: Contacts.Contact) => {
-    const { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity } = extractContactData(contact);
+    const { extractedFirstName, extractedLastName, extractedEmail, extractedPhone, extractedMobile, extractedStreet, extractedPlz, extractedCity, extractedCompany } = extractContactData(contact);
     
     setFirstName(extractedFirstName);
     setLastName(extractedLastName);
@@ -480,6 +487,11 @@ export default function NewCustomerScreen() {
     setStreet(extractedStreet);
     setPlz(extractedPlz);
     setCity(extractedCity);
+    // Firma aus dem Kontakt übernehmen
+    if (extractedCompany) {
+      setCustomerType(prev => prev || 'Firma');
+      setCustomerTypeName(prev => prev || extractedCompany);
+    }
     
     // Speichere die Kontakt-ID für spätere Synchronisation
     if ((contact as any).id) {
@@ -539,6 +551,33 @@ export default function NewCustomerScreen() {
             <Text style={styles.fieldHint}>{t('customers.autoAssignHint')}</Text>
           </View>
 
+          {/* Kundentyp (vor dem Namen für bessere Anschrift) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Kundentyp</Text>
+            <TouchableOpacity 
+              style={styles.pickerButton}
+              onPress={() => setShowCustomerTypePicker(true)}
+            >
+              <Text style={customerType ? styles.pickerText : styles.pickerPlaceholder}>
+                {customerType || 'Kundentyp auswählen'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Bezeichnung zum Kundentyp */}
+          {customerType ? (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bezeichnung {customerType}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                value={customerTypeName}
+                onChangeText={setCustomerTypeName}
+              />
+            </View>
+          ) : null}
+
           {/* Anrede */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('projects.salutation')}</Text>
@@ -566,7 +605,7 @@ export default function NewCustomerScreen() {
               />
             </View>
             <View style={styles.halfInput}>
-              <Text style={styles.label}>{t('common.lastName')} *</Text>
+              <Text style={styles.label}>{t('common.lastName')}{customerTypeName.trim() ? '' : ' *'}</Text>
               <TextInput
                 style={styles.input}
                 placeholder={t('common.lastName')}
@@ -576,33 +615,6 @@ export default function NewCustomerScreen() {
               />
             </View>
           </View>
-
-          {/* Kundentyp */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Kundentyp</Text>
-            <TouchableOpacity 
-              style={styles.pickerButton}
-              onPress={() => setShowCustomerTypePicker(true)}
-            >
-              <Text style={customerType ? styles.pickerText : styles.pickerPlaceholder}>
-                {customerType || 'Kundentyp auswählen'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Bezeichnung zum Kundentyp */}
-          {customerType ? (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Bezeichnung {customerType}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
-                value={customerTypeName}
-                onChangeText={setCustomerTypeName}
-              />
-            </View>
-          ) : null}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('settings.street')}</Text>

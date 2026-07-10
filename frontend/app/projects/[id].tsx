@@ -1377,6 +1377,7 @@ export default function ProjectDetailScreen() {
     const bauherrMobile = project?.bauherr_mobile || customer?.mobile || '';
     const bauherrEmail = project?.bauherr_email || customer?.email || '';
     const bauherrCustomerType = customer?.customerType || '';
+    const bauherrCustomerTypeName = (customer as any)?.customerTypeName || '';
     
     // Build objekt info - alle Felder
     const objektNumber = project?.objekt_number || ''; // OBJ-26001
@@ -4319,7 +4320,7 @@ export default function ProjectDetailScreen() {
             ${bauherrCustomerType ? `
               <div class="info-row">
                 <span class="info-label">Kundentyp:</span>
-                <span class="info-value" style="color: #1976d2; font-weight: 600;">${bauherrCustomerType}</span>
+                <span class="info-value" style="color: #1976d2; font-weight: 600;">${bauherrCustomerType}${bauherrCustomerTypeName ? ` ${bauherrCustomerTypeName}` : ''}</span>
               </div>
             ` : ''}
             ${bauherrName ? `

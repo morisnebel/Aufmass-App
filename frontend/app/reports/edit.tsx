@@ -597,7 +597,7 @@ export default function ReportEditScreen() {
     }]);
     setShowEmpPicker(false);
   };
-  // 👥 Team-Sync: Zeiten eines Mitarbeiters für alle anderen übernehmen
+  // 👥 Team-Sync: Zeiten eines Mitarbeiters für andere übernehmen (alle oder nur gleicher Tag)
   const syncTimesToAll = (sourceId: string) => {
     const src = employees.find(e => e.id === sourceId);
     if (!src) return;
@@ -605,32 +605,44 @@ export default function ReportEditScreen() {
       Alert.alert('Hinweis', 'Es gibt keine weiteren Mitarbeiter zum Übernehmen.');
       return;
     }
-    const dateStr = (src.entry_date || date)
-      ? new Date(src.entry_date || date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+    const srcDate = src.entry_date || date;
+    const dateStr = srcDate
+      ? new Date(srcDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
       : '';
+    const sameDayCount = employees.filter(e => e.id !== sourceId && (e.entry_date || date) === srcDate).length;
+
+    const apply = (scope: 'day' | 'all') => {
+      setEmployees(prev => prev.map(e => {
+        if (e.id === sourceId) return e;
+        if (scope === 'day' && (e.entry_date || date) !== srcDate) return e;
+        const merged = {
+          ...e,
+          entry_date: scope === 'all' ? src.entry_date : e.entry_date,
+          time_from: src.time_from,
+          time_to: src.time_to,
+          pause_minutes: src.pause_minutes,
+        };
+        merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
+        return merged;
+      }));
+    };
+
+    const buttons: any[] = [{ text: 'Abbrechen', style: 'cancel' }];
+    if (sameDayCount > 0) {
+      buttons.push({
+        text: `Nur Tag ${dateStr} (${sameDayCount} MA)`,
+        onPress: () => apply('day'),
+      });
+    }
+    buttons.push({
+      text: `Alle Mitarbeiter (${employees.length - 1})`,
+      onPress: () => apply('all'),
+    });
+
     Alert.alert(
-      '👥 Zeiten für alle übernehmen?',
-      `Datum${dateStr ? ` (${dateStr})` : ''}, Beginn (${src.time_from || '--:--'}), Ende (${src.time_to || '--:--'}) und Pause (${src.pause_minutes || 0} Min.) von ${src.name || 'diesem Mitarbeiter'} werden für alle ${employees.length - 1} anderen Mitarbeiter übernommen.`,
-      [
-        { text: 'Abbrechen', style: 'cancel' },
-        {
-          text: 'Ja, übernehmen',
-          onPress: () => {
-            setEmployees(prev => prev.map(e => {
-              if (e.id === sourceId) return e;
-              const merged = {
-                ...e,
-                entry_date: src.entry_date,
-                time_from: src.time_from,
-                time_to: src.time_to,
-                pause_minutes: src.pause_minutes,
-              };
-              merged.hours = calcEmpHours(merged.time_from, merged.time_to, merged.pause_minutes);
-              return merged;
-            }));
-          },
-        },
-      ]
+      '👥 Zeiten übernehmen',
+      `Beginn (${src.time_from || '--:--'}), Ende (${src.time_to || '--:--'}) und Pause (${src.pause_minutes || 0} Min.) von ${src.name || 'diesem Mitarbeiter'} übernehmen für:\n\n• Nur Tag ${dateStr}: Mitarbeiter mit gleichem Datum\n• Alle: sämtliche Mitarbeiter (Datum wird auf ${dateStr} gesetzt)`,
+      buttons
     );
   };
 

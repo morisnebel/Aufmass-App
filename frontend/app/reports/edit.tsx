@@ -136,6 +136,10 @@ export default function ReportEditScreen() {
   const [travelCosts, setTravelCosts] = useState<string>('');
   const [travelNote, setTravelNote] = useState<string>('');
   const [travelPerEmployee, setTravelPerEmployee] = useState<boolean>(false);
+  // Anzahl Fahrten/Tage (Team): auto aus unterschiedlichen Einsatz-Tagen, manuell überschreibbar
+  const [travelDaysStr, setTravelDaysStr] = useState<string>('');
+  const distinctTravelDays = Math.max(1, new Set(employees.map((e: any) => e.entry_date || date)).size);
+  const effTravelDays = travelDaysStr ? Math.max(1, parseInt(travelDaysStr, 10) || 1) : distinctTravelDays;
   // Dialog für Fahrzeiten pro Mitarbeiter
   const [empTravelModal, setEmpTravelModal] = useState<string | null>(null);
   const [empTravelPickerField, setEmpTravelPickerField] = useState<'to' | 'back' | null>(null);
@@ -258,6 +262,7 @@ export default function ReportEditScreen() {
           setTravelCosts(r.travel_costs != null ? String(r.travel_costs) : '');
           setTravelNote(r.travel_note || '');
           setTravelPerEmployee(!!r.travel_per_employee_enabled);
+          setTravelDaysStr((r as any).travel_days != null ? String((r as any).travel_days) : '');
           setTravelInTotalHours(r.travel_in_total_hours != null ? !!r.travel_in_total_hours : defaultTravelInTotal);
           setShowEmployeeCosts(!!r.show_employee_costs);
           setShowMaterialCosts(!!r.show_material_costs);
@@ -340,6 +345,7 @@ export default function ReportEditScreen() {
             setTravelCosts(prev.travel_costs != null ? String(prev.travel_costs) : '');
             setTravelNote(prev.travel_note || '');
             setTravelPerEmployee(!!prev.travel_per_employee_enabled);
+            setTravelDaysStr((prev as any).travel_days != null ? String((prev as any).travel_days) : '');
             if (prev.travel_in_total_hours != null) setTravelInTotalHours(!!prev.travel_in_total_hours);
             if (prev.header_fields && prev.header_fields.length > 0) setHeaderFields(new Set(prev.header_fields));
             setWeather(prev.weather || '');
@@ -412,6 +418,9 @@ export default function ReportEditScreen() {
         travel_costs: travelCosts ? parseFloat(travelCosts.replace(',', '.')) : undefined,
         travel_note: travelNote || undefined,
         travel_per_employee_enabled: travelPerEmployee || undefined,
+        travel_days: travelDaysStr
+          ? Math.max(1, parseInt(travelDaysStr, 10) || 1)
+          : (distinctTravelDays > 1 ? distinctTravelDays : undefined),
         travel_in_total_hours: travelInTotalHours || undefined,
         show_employee_costs: showEmployeeCosts || undefined,
         show_material_costs: showMaterialCosts || undefined,
@@ -1289,14 +1298,14 @@ export default function ReportEditScreen() {
                     employees.forEach((e: any) => { travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0); });
                   } else if (travelInTotalHours) {
                     const oneRound = (parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0);
-                    travelSum = oneRound * empCount;
+                    travelSum = oneRound * empCount * effTravelDays;
                   }
                   if (travelSum <= 0) return null;
                   return (
                     <>
                       <View style={[styles.empSumRow, { paddingTop: 2 }]}>
                         <Text style={[styles.empSumLabel, { color: '#0891b2', fontSize: 12 }]}>
-                          + Fahrzeit{!travelPerEmployee && empCount > 1 ? ` (Team × ${empCount} MA)` : ''}
+                          + Fahrzeit{!travelPerEmployee && (empCount > 1 || effTravelDays > 1) ? ` (Team × ${empCount} MA${effTravelDays > 1 ? ` × ${effTravelDays} Tage` : ''})` : ''}
                         </Text>
                         <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{formatHM(travelSum) || '0:00'} h</Text>
                       </View>
@@ -1332,7 +1341,7 @@ export default function ReportEditScreen() {
           <Section
             icon="car-sport-outline"
             title="Fahrzeiten / Anfahrt"
-            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${employees.length > 1 ? ` (× ${employees.length} Mitarbeiter)` : ''}`}
+            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${employees.length > 1 ? ` (× ${employees.length} Mitarbeiter)` : ''}${effTravelDays > 1 ? ` · ${effTravelDays} Fahrtage` : ''}`}
             color="#0891b2"
             right={
               <TouchableOpacity
@@ -1391,7 +1400,22 @@ export default function ReportEditScreen() {
                     <Text style={styles.miniLabel}>💶 Spesen / Fahrtkosten (€)</Text>
                     <TextInput style={styles.input} value={travelCosts} onChangeText={(v) => setTravelCosts(v.replace(/[^0-9,.]/g, ''))} placeholder="z.B. 12,50" keyboardType="numbers-and-punctuation" />
                   </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniLabel}>🗓️ Anzahl Fahrten (Tage)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={travelDaysStr}
+                      onChangeText={(v) => setTravelDaysStr(v.replace(/[^0-9]/g, ''))}
+                      placeholder={`Auto: ${distinctTravelDays}`}
+                      keyboardType="number-pad"
+                    />
+                  </View>
                 </View>
+                {effTravelDays > 1 && (
+                  <Text style={{ fontSize: 11, color: '#0891b2', marginTop: 6 }}>
+                    ℹ️ Fahrzeit & Spesen werden × {effTravelDays} Fahrtage gerechnet{!travelDaysStr ? ' (automatisch aus den Einsatz-Tagen)' : ''}
+                  </Text>
+                )}
                 <Text style={[styles.miniLabel, { marginTop: 8 }]}>Bemerkung zur Fahrt</Text>
                 <TextInput style={styles.input} value={travelNote} onChangeText={setTravelNote} placeholder="z.B. Stau auf A8" />
               </View>
@@ -1929,7 +1953,7 @@ export default function ReportEditScreen() {
                   return Math.max(0, Math.round((mins / 60) * 100) / 100);
                 })();
                 const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
-                const teamTravel = (travelPerEmployee ? 0 : ((parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0)));
+                const teamTravel = (travelPerEmployee ? 0 : ((parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0)) * effTravelDays);
                 const totalHrs = calcH + (travelPerEmployee ? travelExtra : (travelInTotalHours ? teamTravel : 0));
                 const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
                 const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
@@ -1964,7 +1988,7 @@ export default function ReportEditScreen() {
               // Spesen / Fahrtkosten
               const travelCostsTotal = travelPerEmployee
                 ? employees.reduce((s, e: any) => s + (e.travel_costs || 0), 0)
-                : (parseFloat((travelCosts || '0').replace(',', '.')) || 0);
+                : (parseFloat((travelCosts || '0').replace(',', '.')) || 0) * effTravelDays;
 
               const netto = empTotal + matTotal + macTotal + (showTravelCosts ? travelCostsTotal : 0);
               const vatRateNum = parseFloat(vatRateStr.replace(',', '.')) || 0;

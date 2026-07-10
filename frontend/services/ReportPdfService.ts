@@ -198,7 +198,8 @@ export const generateReportSectionHtml = (
               });
             } else {
               const oneRound = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
-              travelSum = oneRound * empCount;
+              const tDays = Math.max(1, (report as any).travel_days || 1);
+              travelSum = oneRound * empCount * tDays;
             }
             const baseHours = (report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
@@ -213,8 +214,9 @@ export const generateReportSectionHtml = (
             }, 0));
             if (travelSum <= 0) return '';
             const isTeamMode = !(report as any).travel_per_employee_enabled;
-            const labelExtra = isTeamMode && empCount > 1
-              ? ` (Team × ${empCount} MA)`
+            const lblDays = Math.max(1, (report as any).travel_days || 1);
+            const labelExtra = isTeamMode && (empCount > 1 || lblDays > 1)
+              ? ` (Team × ${empCount} MA${lblDays > 1 ? ` × ${lblDays} Tage` : ''})`
               : '';
             return `
               <tr>
@@ -426,7 +428,24 @@ export const generateReportSectionHtml = (
       if (r.travel_to_km != null && r.travel_to_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Hin</div><div class="info-mini-value">${r.travel_to_km} km</div></div>`);
       if (r.travel_back_km != null && r.travel_back_hours == null) items.push(`<div class="info-mini"><div class="info-mini-label">📏 Rück</div><div class="info-mini-value">${r.travel_back_km} km</div></div>`);
     }
-    if (r.travel_costs != null) items.push(`<div class="info-mini"><div class="info-mini-label">💶 Spesen</div><div class="info-mini-value">${(r.travel_costs.toFixed ? r.travel_costs.toFixed(2) : r.travel_costs)} €</div></div>`);
+    if (r.travel_costs != null) {
+      const tDaysCost = Math.max(1, (r as any).travel_days || 1);
+      const costPerTrip = (r.travel_costs.toFixed ? r.travel_costs.toFixed(2) : r.travel_costs);
+      const costTotal = (r.travel_costs * tDaysCost).toFixed(2);
+      items.push(`<div class="info-mini"><div class="info-mini-label">💶 Spesen</div><div class="info-mini-value">${tDaysCost > 1 ? `${costPerTrip} € × ${tDaysCost} = ${costTotal} €` : `${costPerTrip} €`}</div></div>`);
+    }
+    {
+      const tDays = Math.max(1, (r as any).travel_days || 1);
+      if (tDays > 1) {
+        items.push(`<div class="info-mini"><div class="info-mini-label">🗓️ Fahrten</div><div class="info-mini-value">${tDays} Tage</div></div>`);
+        const roundH = (r.travel_to_hours || 0) + (r.travel_back_hours || 0);
+        const roundKm = (r.travel_to_km || 0) + (r.travel_back_km || 0);
+        const totParts: string[] = [];
+        if (roundH > 0) totParts.push(fmtHM(roundH * tDays));
+        if (roundKm > 0) totParts.push(`${Math.round(roundKm * tDays * 10) / 10} km`);
+        if (totParts.length > 0) items.push(`<div class="info-mini"><div class="info-mini-label">Σ Gesamt</div><div class="info-mini-value">${totParts.join(' · ')}</div></div>`);
+      }
+    }
     travelHtml = `
       <div class="section keep-together">
         <div class="section-title">🚗 Fahrzeiten (Team)</div>
@@ -559,7 +578,7 @@ export const generateReportSectionHtml = (
               return Math.max(0, Math.round((mins / 60) * 100) / 100);
             })();
             const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
-            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)));
+            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)) * Math.max(1, (report as any).travel_days || 1));
             const teamTravelShare = teamTravelTeam && report.travel_in_total_hours ? teamTravelTeam : 0; // pro MA der Team-Anteil zur Lohnberechnung
             const totalHrs = calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare);
             const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
@@ -624,7 +643,7 @@ export const generateReportSectionHtml = (
         // === Spesen / Fahrtkosten ===
         const travelCostsTotal = report.travel_per_employee_enabled
           ? (report.employees || []).reduce((s, e: any) => s + (e.travel_costs || 0), 0)
-          : ((report as any).travel_costs || 0);
+          : (((report as any).travel_costs || 0) * Math.max(1, (report as any).travel_days || 1));
 
         const grandTotal = empTotal + matTotal + macTotal + (showTravel ? travelCostsTotal : 0);
 

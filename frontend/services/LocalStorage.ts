@@ -2011,6 +2011,7 @@ export interface Report {
   travel_to_km?: number;
   travel_back_km?: number;
   travel_costs?: number; // Spesen / Fahrtkosten EUR (Team)
+  travel_days?: number; // Anzahl Fahrten/Tage (Team) – Fahrzeit & Spesen werden damit multipliziert
   travel_note?: string;
   travel_per_employee_enabled?: boolean; // Pro-Mitarbeiter-Modus aktiv?
   travel_in_total_hours?: boolean; // Fahrzeit zur Gesamtarbeitszeit hinzuzählen?

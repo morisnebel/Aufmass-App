@@ -49,5 +49,8 @@
   Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
 - ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für
   App-Store-Stabilität (Guideline 2.1) eingebaut (DONE)
+- Fahrzeit Team: Neues Feld "Anzahl Fahrten (Tage)" – auto-vorgeschlagen aus den
+  unterschiedlichen Einsatz-Tagen der Mitarbeiter, manuell überschreibbar.
+  Fahrzeit, km & Spesen werden × Tage gerechnet (Live-Kosten + PDF) (DONE, getestet)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

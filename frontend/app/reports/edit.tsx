@@ -1963,7 +1963,7 @@ export default function ReportEditScreen() {
                 const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
                 const cost = totalHrs * rate;
                 empTotal += cost;
-                return { idx, name: e.name, hours: totalHrs, rate, cost };
+                return { idx, name: e.name, entryDate: (ea.entry_date || date) as string, hours: totalHrs, rate, cost };
               });
 
               // Material
@@ -2037,7 +2037,12 @@ export default function ReportEditScreen() {
                       <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', marginBottom: 4 }}>Mitarbeiter</Text>
                       {empRows.map(r => (
                         <View key={r.idx} style={rowStyle}>
-                          <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
+                            <Text style={{ fontSize: 10, color: '#94a3b8' }}>
+                              📅 {new Date(r.entryDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                            </Text>
+                          </View>
                           <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
                           {priceInput(`emp-${r.idx}`, r.rate, (v) => updateEmpRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>

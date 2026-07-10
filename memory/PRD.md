@@ -61,5 +61,8 @@
   grünen Chip unter der Zeiten-Zeile → Modal (Standard + eigene Sätze). Gewählter Satz
   ersetzt hourly_rate für die Kostenberechnung; nur intern, nicht im PDF (DONE, getestet)
 - PDF Kosten-Übersicht: neue Spalte "Datum" (TT.MM.JJ) in der Mitarbeiter-Lohnkosten-Tabelle (DONE)
+- Projekt-Export/-Import (.aufmass): Rapporte (reports) werden jetzt mit exportiert
+  (Einzel-Export in projects/[id].tsx + Mehrfach-Export in index.tsx) und beim Import
+  mit neuer project_id wiederhergestellt (DONE)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

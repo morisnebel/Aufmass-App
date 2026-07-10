@@ -4820,6 +4820,7 @@ export default function ProjectDetailScreen() {
         photos: photos || [],
         sketches: sketches || [],
         checklists: checklists || [],
+        reports: reports || [],
       };
       
       // Convert to JSON string
@@ -4856,6 +4857,7 @@ export default function ProjectDetailScreen() {
           photos: photos || [],
           sketches: sketches || [],
           checklists: checklists || [],
+          reports: reports || [],
         };
         const jsonString = JSON.stringify(exportData);
         await Share.share({

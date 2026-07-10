@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
@@ -246,11 +246,12 @@ export default function HomeScreen() {
         if (!project) continue;
         
         const customer = customers[project.customer_id];
-        const [roofs, photos, sketches, checklists] = await Promise.all([
+        const [roofs, photos, sketches, checklists, reports] = await Promise.all([
           RoofService.getByProjectId(projectId),
           PhotoService.getByProjectId(projectId),
           SketchService.getByProjectId(projectId),
           ChecklistService.getByProjectId(projectId),
+          ReportService.getByProjectId(projectId),
         ]);
         
         exportDataArray.push({
@@ -262,6 +263,7 @@ export default function HomeScreen() {
           photos: photos || [],
           sketches: sketches || [],
           checklists: checklists || [],
+          reports: reports || [],
         });
       }
       
@@ -491,6 +493,17 @@ export default function HomeScreen() {
           delete checklistData.created_at;
           delete checklistData.updated_at;
           await ChecklistService.create(checklistData);
+        }
+      }
+      
+      // Import reports (Rapporte)
+      if (importData.reports && importData.reports.length > 0) {
+        for (const report of importData.reports) {
+          const reportData = { ...report, project_id: newProject.id };
+          delete reportData.id;
+          delete reportData.created_at;
+          delete reportData.updated_at;
+          await ReportService.create(reportData);
         }
       }
       

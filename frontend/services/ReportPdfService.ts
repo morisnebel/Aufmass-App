@@ -562,6 +562,12 @@ export const generateReportSectionHtml = (
         const eurFmt = (n: number) => `${n.toFixed(2).replace('.', ',')} €`;
         const escape = (s: string) => escapeHtml(s || '');
 
+        // Fließt Fahrzeit in die Lohnkosten-Berechnung ein?
+        const costIsPerEmp = !!(report as any).travel_per_employee_enabled;
+        const costPerEmpTravel = costIsPerEmp && (report.employees || []).some((e: any) => (e.travel_to_hours || 0) > 0 || (e.travel_back_hours || 0) > 0);
+        const costTeamTravel = !costIsPerEmp && (((report as any).travel_to_hours || 0) > 0 || ((report as any).travel_back_hours || 0) > 0);
+        const travelIncludedInCosts = costPerEmpTravel || (costTeamTravel && !!(report as any).travel_in_total_hours);
+
         // === Mitarbeiter-Kosten ===
         let empTotal = 0;
         let empRowsHtml = '';
@@ -669,6 +675,7 @@ export const generateReportSectionHtml = (
                 <tbody>${empRowsHtml}</tbody>
                 <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
               </table>
+              ${!travelIncludedInCosts ? '<div style="font-size:9px;color:#94a3b8;font-style:italic;margin-top:2px;text-align:right;">ohne Berechnung der Fahrtzeiten</div>' : ''}
             ` : ''}
             ${showMat && matRowsHtml ? `
               <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Material-Kosten</div>

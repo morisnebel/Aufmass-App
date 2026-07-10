@@ -64,5 +64,7 @@
 - Projekt-Export/-Import (.aufmass): Rapporte (reports) werden jetzt mit exportiert
   (Einzel-Export in projects/[id].tsx + Mehrfach-Export in index.tsx) und beim Import
   mit neuer project_id wiederhergestellt (DONE)
+- PDF Kosten-Übersicht: Vermerk "ohne Berechnung der Fahrtzeiten" unter der
+  Mitarbeiter-Lohnkosten-Tabelle, wenn keine Fahrzeit in die Berechnung einfließt (DONE)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

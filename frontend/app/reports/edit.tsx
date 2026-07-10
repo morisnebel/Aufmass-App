@@ -626,8 +626,8 @@ export default function ReportEditScreen() {
       Alert.alert('Hinweis', 'Es gibt keine weiteren Mitarbeiter zum Übernehmen.');
       return;
     }
-    // Standard: alle anderen vorausgewählt
-    setSyncTargetIds(new Set(employees.filter(e => e.id !== sourceId).map(e => e.id)));
+    // Keine Vorauswahl: Nutzer wählt gezielt aus, wer synchronisiert wird
+    setSyncTargetIds(new Set());
     setSyncIncludeDate(true);
     setSyncModal(sourceId);
   };

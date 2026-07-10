@@ -1947,6 +1947,7 @@ export interface ReportEmployee {
   travel_costs?: number; // Spesen / Fahrtkosten EUR
   // Preis-Override für diesen Rapport (sonst aus Stammdaten)
   hourly_rate?: number; // €/Std
+  wage_rate_name?: string; // Name des gewählten Stundensatzes (nur intern, nicht im PDF)
 }
 
 export interface ReportMaterial {
@@ -2250,13 +2251,20 @@ export const generateMachineNumber = async (): Promise<string> => {
   return nextMasterNumber(all.map(m => m.machine_number), 'MG-');
 };
 
+export interface EmployeeWageRate {
+  id: string;
+  name: string; // z.B. "Satz 2", "Notdienst", "Verrechnungssatz"
+  rate: number; // €/Stunde
+}
+
 export interface EmployeeMaster {
   id: string;
   employee_number?: string; // z.B. MA-001, automatisch vergeben, anpassbar
   sort_order?: number; // Reihenfolge: 1 = zuerst (z.B. 1. Meister, 2. Vorarbeiter)
   name: string;
   role?: string; // z.B. "Dachdecker", "Geselle", "Azubi"
-  hourly_rate?: number; // €/Stunde
+  hourly_rate?: number; // €/Stunde (Standard-Satz)
+  wage_rates?: EmployeeWageRate[]; // Weitere Stundensätze, im Rapport auswählbar
   phone?: string;
   mobile?: string; // Handynummer
   email?: string;

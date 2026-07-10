@@ -56,5 +56,9 @@
   3 MA mit je 3 Tages-Einträgen = 3 MA × 3 Tage, nicht 9 MA. Lohnberechnung verteilt
   die Team-Fahrzeit einer Person auf ihre Einträge (DONE, getestet)
 - Live Kosten-Übersicht: Datum (📅 TT.MM.JJ) unter jedem Mitarbeiter-Eintrag (DONE, getestet)
+- Mehrere Stundensätze pro Mitarbeiter: Stammdaten-Editor "Weitere Stundensätze"
+  (Name + €/h, EmployeeMaster.wage_rates). Im Rapport pro Eintrag auswählbar über
+  grünen Chip unter der Zeiten-Zeile → Modal (Standard + eigene Sätze). Gewählter Satz
+  ersetzt hourly_rate für die Kostenberechnung; nur intern, nicht im PDF (DONE, getestet)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

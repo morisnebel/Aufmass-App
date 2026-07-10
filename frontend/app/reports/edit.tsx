@@ -628,6 +628,10 @@ export default function ReportEditScreen() {
     setSelectedEmpIds(new Set());
     setShowEmpPicker(false);
   };
+  // 💶 Stundensatz-Auswahl pro Mitarbeiter-Eintrag
+  const [rateModal, setRateModal] = useState<string | null>(null);
+  const findEmpMaster = (e: any) => empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
+
   // 👥 Team-Sync: Auswahl-Dialog, welche Mitarbeiter synchronisiert werden
   const [syncModal, setSyncModal] = useState<string | null>(null); // Quelle (Mitarbeiter-ID)
   const [syncTargetIds, setSyncTargetIds] = useState<Set<string>>(new Set());
@@ -1285,6 +1289,24 @@ export default function ReportEditScreen() {
                           <Text style={styles.hoursCellLg}>{formatHM(hours) || '0:00'}</Text>
                         </View>
                       </View>
+
+                      {/* Stundensatz-Auswahl (nur wenn der Mitarbeiter mehrere Sätze hat) */}
+                      {(() => {
+                        const master: any = findEmpMaster(emp);
+                        if (!master || !(master.wage_rates?.length > 0)) return null;
+                        const ea: any = emp;
+                        const curName = ea.wage_rate_name || 'Standard';
+                        const curRate = ea.hourly_rate != null ? ea.hourly_rate : (master.hourly_rate || 0);
+                        return (
+                          <TouchableOpacity style={styles.rateChip} onPress={() => setRateModal(emp.id)}>
+                            <Ionicons name="cash-outline" size={13} color="#16a34a" />
+                            <Text style={styles.rateChipText}>
+                              {curName}{curRate > 0 ? ` · ${String(curRate).replace('.', ',')} €/h` : ''}
+                            </Text>
+                            <Ionicons name="chevron-down" size={13} color="#16a34a" />
+                          </TouchableOpacity>
+                        );
+                      })()}
                     </View>
                   );
                 })}
@@ -1963,7 +1985,7 @@ export default function ReportEditScreen() {
                 const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
                 const cost = totalHrs * rate;
                 empTotal += cost;
-                return { idx, name: e.name, entryDate: (ea.entry_date || date) as string, hours: totalHrs, rate, cost };
+                return { idx, name: e.name, entryDate: (ea.entry_date || date) as string, rateName: ea.wage_rate_name as string | undefined, hours: totalHrs, rate, cost };
               });
 
               // Material
@@ -2040,7 +2062,7 @@ export default function ReportEditScreen() {
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
                             <Text style={{ fontSize: 10, color: '#94a3b8' }}>
-                              📅 {new Date(r.entryDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                              📅 {new Date(r.entryDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}{r.rateName ? ` · ${r.rateName}` : ''}
                             </Text>
                           </View>
                           <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
@@ -2615,6 +2637,63 @@ export default function ReportEditScreen() {
                         </Text>
                       </TouchableOpacity>
                     </View>
+                  </>
+                );
+              })()}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Stundensatz-Auswahl */}
+        <Modal visible={!!rateModal} transparent animationType="fade" onRequestClose={() => setRateModal(null)}>
+          <View style={styles.modalOverlayCenter}>
+            <View style={[styles.modalSmall, { maxWidth: 340 }]}>
+              {(() => {
+                const emp: any = employees.find(e => e.id === rateModal);
+                const master: any = emp ? findEmpMaster(emp) : null;
+                if (!emp || !master) return null;
+                const options = [
+                  { key: 'std', name: 'Standard', rate: master.hourly_rate || 0, isStd: true },
+                  ...(master.wage_rates || []).map((w: any) => ({ key: w.id, name: w.name, rate: w.rate, isStd: false })),
+                ];
+                const curName = emp.wage_rate_name || 'Standard';
+                return (
+                  <>
+                    <Text style={styles.modalTitle}>Stundensatz wählen</Text>
+                    <Text style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{emp.name} · {new Date(emp.entry_date || date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</Text>
+                    <View style={{ marginTop: 10 }}>
+                      {options.map(opt => {
+                        const isSel = opt.isStd ? !emp.wage_rate_name : curName === opt.name;
+                        return (
+                          <TouchableOpacity
+                            key={opt.key}
+                            style={{
+                              flexDirection: 'row', alignItems: 'center', gap: 10,
+                              paddingVertical: 12, paddingHorizontal: 10, borderRadius: 10,
+                              backgroundColor: isSel ? '#f0fdf4' : 'transparent',
+                              borderWidth: 1, borderColor: isSel ? '#86efac' : '#f1f5f9', marginBottom: 6,
+                            }}
+                            onPress={() => {
+                              if (opt.isStd) {
+                                updateEmployee(emp.id, { hourly_rate: undefined, wage_rate_name: undefined } as any);
+                              } else {
+                                updateEmployee(emp.id, { hourly_rate: opt.rate, wage_rate_name: opt.name } as any);
+                              }
+                              setRateModal(null);
+                            }}
+                          >
+                            <Ionicons name={isSel ? 'radio-button-on' : 'radio-button-off'} size={20} color={isSel ? '#16a34a' : '#cbd5e1'} />
+                            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#0f172a' }}>{opt.name}</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#16a34a' }}>
+                              {opt.rate > 0 ? `${String(opt.rate).replace('.', ',')} €/h` : '–'}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn, { marginTop: 8 }]} onPress={() => setRateModal(null)}>
+                      <Text style={styles.cancelBtnText}>Abbrechen</Text>
+                    </TouchableOpacity>
                   </>
                 );
               })()}
@@ -3668,4 +3747,11 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: '#555', fontWeight: '600' },
   saveBtn: { backgroundColor: '#16a34a' },
   saveBtnText: { color: '#fff', fontWeight: '700' },
+  rateChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    marginTop: 8, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 12, backgroundColor: '#f0fdf4',
+    borderWidth: 1, borderColor: '#bbf7d0',
+  },
+  rateChipText: { fontSize: 12, color: '#166534', fontWeight: '700' },
 });

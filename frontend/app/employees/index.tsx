@@ -39,6 +39,8 @@ export default function EmployeesIndex() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<EmployeeMaster | null>(null);
   const [form, setForm] = useState<Partial<EmployeeMaster>>(EMPTY);
+  // Weitere Stundensätze (Roh-Strings für Komma-Eingabe)
+  const [wageDrafts, setWageDrafts] = useState<{ id: string; name: string; rateStr: string }[]>([]);
   // ===== Export-Auswahl-Modus =====
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -226,6 +228,7 @@ export default function EmployeesIndex() {
   const openCreate = () => {
     setEditing(null);
     setForm({ ...EMPTY });
+    setWageDrafts([]);
     setModalVisible(true);
     // Nummer automatisch vorschlagen (anpassbar)
     generateEmployeeNumber().then(num => {
@@ -236,6 +239,7 @@ export default function EmployeesIndex() {
   const openEdit = (emp: EmployeeMaster) => {
     setEditing(emp);
     setForm({ ...emp });
+    setWageDrafts((emp.wage_rates || []).map(w => ({ id: w.id, name: w.name, rateStr: String(w.rate).replace('.', ',') })));
     setModalVisible(true);
   };
 
@@ -244,11 +248,16 @@ export default function EmployeesIndex() {
       Alert.alert('Hinweis', 'Bitte Namen eingeben.');
       return;
     }
+    // Weitere Stundensätze aus den Drafts übernehmen (nur gültige Einträge)
+    const wage_rates = wageDrafts
+      .map(w => ({ id: w.id, name: w.name.trim(), rate: parseFloat(w.rateStr.replace(',', '.')) }))
+      .filter(w => w.name && !isNaN(w.rate) && w.rate > 0);
+    const payload = { ...form, wage_rates: wage_rates.length > 0 ? wage_rates : undefined };
     try {
       if (editing) {
-        await EmployeeMasterService.update(editing.id, form);
+        await EmployeeMasterService.update(editing.id, payload);
       } else {
-        await EmployeeMasterService.create(form as any);
+        await EmployeeMasterService.create(payload as any);
       }
       setModalVisible(false);
       await load();
@@ -499,7 +508,7 @@ export default function EmployeesIndex() {
                   keyboardType="number-pad"
                 />
 
-                <Text style={styles.label}>Stundenlohn (€)</Text>
+                <Text style={styles.label}>Stundenlohn Standard (€)</Text>
                 <TextInput
                   style={styles.input}
                   value={form.hourly_rate != null ? String(form.hourly_rate) : ''}
@@ -507,6 +516,38 @@ export default function EmployeesIndex() {
                   placeholder="z.B. 45.00"
                   keyboardType="decimal-pad"
                 />
+
+                <Text style={styles.label}>Weitere Stundensätze (im Rapport auswählbar)</Text>
+                {wageDrafts.map((w, wi) => (
+                  <View key={w.id} style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                      value={w.name}
+                      onChangeText={(v) => setWageDrafts(prev => prev.map((x, i) => i === wi ? { ...x, name: v } : x))}
+                      placeholder={`z.B. Satz ${wi + 2}`}
+                    />
+                    <TextInput
+                      style={[styles.input, { width: 90, marginBottom: 0, textAlign: 'right' }]}
+                      value={w.rateStr}
+                      onChangeText={(v) => setWageDrafts(prev => prev.map((x, i) => i === wi ? { ...x, rateStr: v.replace(/[^0-9,.]/g, '') } : x))}
+                      placeholder="€/h"
+                      keyboardType="numbers-and-punctuation"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setWageDrafts(prev => prev.filter((_, i) => i !== wi))}
+                      style={{ padding: 6 }}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  onPress={() => setWageDrafts(prev => [...prev, { id: `wr-${Date.now()}-${prev.length}`, name: '', rateStr: '' }])}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 }}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#1976d2" />
+                  <Text style={{ color: '#1976d2', fontWeight: '700', fontSize: 13 }}>Stundensatz hinzufügen</Text>
+                </TouchableOpacity>
 
                 <Text style={styles.label}>Telefon</Text>
                 <TextInput

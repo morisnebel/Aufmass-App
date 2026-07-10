@@ -41,7 +41,7 @@
 - Pro Code: PROFI2024
 
 ## Open Items
-- Build 43 für TestFlight via Emergent Publish
+- Build 45 (v1.1.3) für App Store via Emergent Publish vorbereitet
 - Apple App Store Review-Notes: Pro-Code PROFI2024 angeben
 
 ## Session Juni 2026 (Fork)

@@ -255,6 +255,7 @@ export default function ProjectDetailScreen() {
   const [editBauherrPlz, setEditBauherrPlz] = useState('');
   const [editBauherrCity, setEditBauherrCity] = useState('');
   const [editBauherrCustomerType, setEditBauherrCustomerType] = useState('');
+  const [editBauherrCustomerTypeName, setEditBauherrCustomerTypeName] = useState('');
   const [showEditCustomerTypePicker, setShowEditCustomerTypePicker] = useState(false);
   // Anrede-Picker Modal für Bauherr
   const [showBauherrSalutationPicker, setShowBauherrSalutationPicker] = useState(false);
@@ -862,6 +863,7 @@ export default function ProjectDetailScreen() {
       setEditBauherrPlz(project.bauherr_plz || customer?.zip || customerAddr.plz || '');
       setEditBauherrCity(project.bauherr_city || customer?.city || customerAddr.city || '');
       setEditBauherrCustomerType(customer?.customerType || '');
+      setEditBauherrCustomerTypeName((customer as any)?.customerTypeName || '');
       
       // Objektadresse - leave empty if not set (will use bauherr as default)
       setEditObjektNumber(project.objekt_number || '');
@@ -1053,6 +1055,7 @@ export default function ProjectDetailScreen() {
               (editBauherrPlz || '') !== (existingCustomer.zip || '') ||
               (editBauherrCity || '') !== (existingCustomer.city || '') ||
               (editBauherrCustomerType || '') !== (existingCustomer.customerType || '') ||
+              (editBauherrCustomerTypeName || '') !== ((existingCustomer as any).customerTypeName || '') ||
               (customerNumber || '') !== (existingCustomer.customer_number || '');
 
             if (hasCustomerChanges) {
@@ -1086,7 +1089,8 @@ export default function ProjectDetailScreen() {
                   address: newAddress,
                   customer_number: customerNumber || existingCustomer.customer_number,
                   customerType: editBauherrCustomerType || existingCustomer.customerType,
-                });
+                  customerTypeName: editBauherrCustomerTypeName || (existingCustomer as any).customerTypeName,
+                } as any);
                 await loadProjectData();
               };
 
@@ -5252,7 +5256,9 @@ export default function ProjectDetailScreen() {
               {customer?.customerType && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Kundentyp:</Text>
-                  <Text style={[styles.infoValue, { color: '#1976d2', fontWeight: '600' }]}>{customer.customerType}</Text>
+                  <Text style={[styles.infoValue, { color: '#1976d2', fontWeight: '600' }]}>
+                    {customer.customerType}{(customer as any).customerTypeName ? ` ${(customer as any).customerTypeName}` : ''}
+                  </Text>
                 </View>
               )}
               <View style={styles.infoRow}>
@@ -7487,19 +7493,6 @@ export default function ProjectDetailScreen() {
                   </View>
                   
                   <View style={styles.compactInputGroup}>
-                    <Text style={styles.compactLabel}>Anrede</Text>
-                    <TouchableOpacity 
-                      style={styles.compactPickerButton}
-                      onPress={() => setShowBauherrSalutationPicker(true)}
-                    >
-                      <Text style={editBauherrSalutation ? styles.compactPickerText : styles.compactPickerPlaceholder}>
-                        {editBauherrSalutation || 'Anrede...'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Kundentyp</Text>
                     <TouchableOpacity 
                       style={styles.compactPickerButton}
@@ -7507,6 +7500,32 @@ export default function ProjectDetailScreen() {
                     >
                       <Text style={editBauherrCustomerType ? styles.compactPickerText : styles.compactPickerPlaceholder}>
                         {editBauherrCustomerType || 'Kundentyp...'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {editBauherrCustomerType ? (
+                    <View style={styles.compactInputGroup}>
+                      <Text style={styles.compactLabel}>Bezeichnung {editBauherrCustomerType}</Text>
+                      <TextInput
+                        style={styles.compactInput}
+                        value={editBauherrCustomerTypeName}
+                        onChangeText={setEditBauherrCustomerTypeName}
+                        placeholderTextColor="#999"
+                        placeholder={editBauherrCustomerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                      />
+                    </View>
+                  ) : null}
+
+                  <View style={styles.compactInputGroup}>
+                    <Text style={styles.compactLabel}>Anrede</Text>
+                    <TouchableOpacity 
+                      style={styles.compactPickerButton}
+                      onPress={() => setShowBauherrSalutationPicker(true)}
+                    >
+                      <Text style={editBauherrSalutation ? styles.compactPickerText : styles.compactPickerPlaceholder}>
+                        {editBauherrSalutation || 'Anrede...'}
                       </Text>
                       <Ionicons name="chevron-down" size={16} color="#666" />
                     </TouchableOpacity>

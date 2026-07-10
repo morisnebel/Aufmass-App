@@ -101,6 +101,7 @@ export default function ReportEditScreen() {
   const [projChecklists, setProjChecklists] = useState<Checklist[]>([]);
 
   const [showEmpPicker, setShowEmpPicker] = useState(false);
+  const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
   const [showMatPicker, setShowMatPicker] = useState(false);
   // Menge-Eingabe (Roh-String, damit Komma-Eingabe nicht springt)
   const [matQtyDraft, setMatQtyDraft] = useState<Record<string, string>>({});
@@ -587,14 +588,25 @@ export default function ReportEditScreen() {
       color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
     }]);
   };
-  const addEmployeeFromMaster = (emp: EmployeeMaster) => {
-    setEmployees(prev => [...prev, {
-      id: localId(), name: emp.name,
-      role: emp.role || undefined,
-      entry_date: date,
-      time_from: '07:00', time_to: '16:00', pause_minutes: 30,
-      color: AVATAR_COLORS[prev.length % AVATAR_COLORS.length],
-    }]);
+  // Mehrfachauswahl im Mitarbeiter-Picker
+  const addSelectedEmployees = () => {
+    const selected = empMaster.filter(m => selectedEmpIds.has(m.id));
+    if (selected.length === 0) {
+      setShowEmpPicker(false);
+      return;
+    }
+    setEmployees(prev => [
+      ...prev,
+      ...selected.map((emp, i) => ({
+        id: `${localId()}_${i}`,
+        name: emp.name,
+        role: emp.role || undefined,
+        entry_date: date,
+        time_from: '07:00', time_to: '16:00', pause_minutes: 30,
+        color: AVATAR_COLORS[(prev.length + i) % AVATAR_COLORS.length],
+      })),
+    ]);
+    setSelectedEmpIds(new Set());
     setShowEmpPicker(false);
   };
   // 👥 Team-Sync: Zeiten eines Mitarbeiters für andere übernehmen (alle oder nur gleicher Tag)
@@ -1098,24 +1110,39 @@ export default function ReportEditScreen() {
             </View>
           </View>
 
-          {showDatePicker && (
-            <>
+          {showDatePicker && (() => {
+            const picker = (
               <DateTimePicker
                 value={date ? new Date(date) : new Date()}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display={Platform.OS === 'android' ? 'default' : 'spinner'}
                 onChange={(_, selected) => {
-                  if (Platform.OS !== 'ios') setShowDatePicker(false);
+                  if (Platform.OS === 'android') setShowDatePicker(false);
                   if (selected) setDate(selected.toISOString().split('T')[0]);
                 }}
               />
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.iosPickerDone}>
-                  <Text style={styles.iosPickerDoneText}>Fertig</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
+            );
+            if (Platform.OS === 'android') return picker;
+            return (
+              <Modal visible transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
+                <View style={styles.modalOverlayCenter}>
+                  <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                    <Text style={[styles.modalTitle, { color: '#1976d2' }]}>📅 Datum wählen</Text>
+                    {picker}
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity
+                        style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#1976d2', flex: 1 }]}
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                        <Text style={styles.saveBtnText}>Fertig</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
+            );
+          })()}
 
           {/* ===== 2. Mitarbeiter & Arbeitszeiten (Tabelle) ===== */}
           <Section
@@ -2450,31 +2477,54 @@ export default function ReportEditScreen() {
         </Modal>
 
         {/* Mitarbeiter-Picker */}
-        <Modal visible={showEmpPicker} transparent animationType="slide" onRequestClose={() => setShowEmpPicker(false)}>
+        <Modal visible={showEmpPicker} transparent animationType="slide" onRequestClose={() => { setShowEmpPicker(false); setSelectedEmpIds(new Set()); }}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalSheet}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Mitarbeiter wählen</Text>
-                <TouchableOpacity onPress={() => setShowEmpPicker(false)}><Ionicons name="close" size={26} color="#666" /></TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowEmpPicker(false); setSelectedEmpIds(new Set()); }}><Ionicons name="close" size={26} color="#666" /></TouchableOpacity>
               </View>
+              <Text style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>Mehrfachauswahl möglich – einfach mehrere antippen.</Text>
               <ScrollView style={{ maxHeight: 400 }}>
                 {empMaster.length === 0 ? (
                   <Text style={styles.modalEmpty}>Keine Mitarbeiter angelegt.</Text>
-                ) : empMaster.map(emp => (
-                  <TouchableOpacity key={emp.id} style={styles.pickerRow} onPress={() => addEmployeeFromMaster(emp)}>
-                    <View style={[styles.empAvatar, { backgroundColor: AVATAR_COLORS[Math.abs(emp.id.charCodeAt(0)) % AVATAR_COLORS.length] }]}>
-                      <Text style={styles.empAvatarText}>{emp.name.charAt(0).toUpperCase()}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.pickerName}>{emp.name}</Text>
-                      {emp.role ? <Text style={styles.pickerSub}>{emp.role}</Text> : null}
-                    </View>
-                    <Ionicons name="add-circle" size={24} color="#1976d2" />
-                  </TouchableOpacity>
-                ))}
+                ) : empMaster.map(emp => {
+                  const isSel = selectedEmpIds.has(emp.id);
+                  return (
+                    <TouchableOpacity
+                      key={emp.id}
+                      style={[styles.pickerRow, isSel && { backgroundColor: '#eff6ff', borderRadius: 10 }]}
+                      onPress={() => {
+                        setSelectedEmpIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(emp.id)) next.delete(emp.id); else next.add(emp.id);
+                          return next;
+                        });
+                      }}
+                    >
+                      <View style={[styles.empAvatar, { backgroundColor: AVATAR_COLORS[Math.abs(emp.id.charCodeAt(0)) % AVATAR_COLORS.length] }]}>
+                        <Text style={styles.empAvatarText}>{emp.name.charAt(0).toUpperCase()}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pickerName}>{emp.name}</Text>
+                        {emp.role ? <Text style={styles.pickerSub}>{emp.role}</Text> : null}
+                      </View>
+                      <Ionicons
+                        name={isSel ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={26}
+                        color={isSel ? '#1976d2' : '#cbd5e1'}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowEmpPicker(false)}>
-                <Text style={styles.modalCloseText}>Fertig</Text>
+              <TouchableOpacity
+                style={[styles.modalCloseBtn, selectedEmpIds.size > 0 && { backgroundColor: '#1976d2' }]}
+                onPress={addSelectedEmployees}
+              >
+                <Text style={[styles.modalCloseText, selectedEmpIds.size > 0 && { color: '#fff' }]}>
+                  {selectedEmpIds.size > 0 ? `${selectedEmpIds.size} Mitarbeiter hinzufügen` : 'Fertig'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2901,30 +2951,48 @@ export default function ReportEditScreen() {
         </Modal>
 
         {/* Date Picker pro Mitarbeiter-Eintrag */}
-        {empDatePicker && (
-          <>
+        {empDatePicker && (() => {
+          const emp = employees.find(e => e.id === empDatePicker.empId);
+          const picker = (
             <DateTimePicker
               value={(() => {
-                const emp = employees.find(e => e.id === empDatePicker.empId);
                 const v = emp?.entry_date || date;
                 return v ? new Date(v) : new Date();
               })()}
               mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              display={Platform.OS === 'android' ? 'default' : 'spinner'}
               onChange={(_, selected) => {
-                if (Platform.OS !== 'ios') setEmpDatePicker(null);
+                if (Platform.OS === 'android') setEmpDatePicker(null);
                 if (selected && empDatePicker) {
                   updateEmployee(empDatePicker.empId, { entry_date: selected.toISOString().split('T')[0] });
                 }
               }}
             />
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity onPress={() => setEmpDatePicker(null)} style={styles.iosPickerDone}>
-                <Text style={styles.iosPickerDoneText}>Fertig</Text>
-              </TouchableOpacity>
-            )}
-          </>
-        )}
+          );
+          if (Platform.OS === 'android') return picker;
+          return (
+            <Modal visible transparent animationType="fade" onRequestClose={() => setEmpDatePicker(null)}>
+              <View style={styles.modalOverlayCenter}>
+                <View style={[styles.modalSmall, { paddingBottom: 8 }]}>
+                  <Text style={[styles.modalTitle, { color: '#1976d2' }]}>📅 Datum wählen</Text>
+                  {emp?.name ? (
+                    <Text style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 4 }}>{emp.name}</Text>
+                  ) : null}
+                  {picker}
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.saveBtn, { backgroundColor: '#1976d2', flex: 1 }]}
+                      onPress={() => setEmpDatePicker(null)}
+                    >
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Text style={styles.saveBtnText}>Fertig</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          );
+        })()}
 
         {/* Projektfoto-Picker */}
         <Modal visible={showProjectPhotoPicker} transparent animationType="slide" onRequestClose={() => { setShowProjectPhotoPicker(false); setSelectedProjPhotos(new Set()); }}>
@@ -3366,8 +3434,6 @@ const styles = StyleSheet.create({
   sigBlock: { marginBottom: 12 },
 
   // --- iOS time pickers ---
-  iosPickerDone: { alignSelf: 'flex-end', padding: 8, marginRight: 10 },
-  iosPickerDoneText: { color: '#1976d2', fontWeight: '700' },
 
   // --- Action bar ---
   actionBar: {

@@ -52,5 +52,8 @@
 - Fahrzeit Team: Neues Feld "Anzahl Fahrten (Tage)" – auto-vorgeschlagen aus den
   unterschiedlichen Einsatz-Tagen der Mitarbeiter, manuell überschreibbar.
   Fahrzeit, km & Spesen werden × Tage gerechnet (Live-Kosten + PDF) (DONE, getestet)
+- Fix: Fahrzeit-Berechnung zählt eindeutige Personen (gleicher Name) statt Einträge –
+  3 MA mit je 3 Tages-Einträgen = 3 MA × 3 Tage, nicht 9 MA. Lohnberechnung verteilt
+  die Team-Fahrzeit einer Person auf ihre Einträge (DONE, getestet)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User

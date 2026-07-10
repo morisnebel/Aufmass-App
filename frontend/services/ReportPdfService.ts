@@ -191,7 +191,8 @@ export const generateReportSectionHtml = (
 
             // Fahrzeit aggregieren
             let travelSum = 0;
-            const empCount = (report.employees || []).length || 1;
+            const personKeyOf = (e: any) => ((e.name || e.id || '') as string).trim().toLowerCase();
+            const distinctPersons = Math.max(1, new Set((report.employees || []).map(personKeyOf)).size);
             if (isPerEmp) {
               (report.employees || []).forEach((e: any) => {
                 travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0);
@@ -199,7 +200,7 @@ export const generateReportSectionHtml = (
             } else {
               const oneRound = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
               const tDays = Math.max(1, (report as any).travel_days || 1);
-              travelSum = oneRound * empCount * tDays;
+              travelSum = oneRound * distinctPersons * tDays;
             }
             const baseHours = (report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
@@ -215,8 +216,8 @@ export const generateReportSectionHtml = (
             if (travelSum <= 0) return '';
             const isTeamMode = !(report as any).travel_per_employee_enabled;
             const lblDays = Math.max(1, (report as any).travel_days || 1);
-            const labelExtra = isTeamMode && (empCount > 1 || lblDays > 1)
-              ? ` (Team × ${empCount} MA${lblDays > 1 ? ` × ${lblDays} Tage` : ''})`
+            const labelExtra = isTeamMode && (distinctPersons > 1 || lblDays > 1)
+              ? ` (Team × ${distinctPersons} MA${lblDays > 1 ? ` × ${lblDays} Tage` : ''})`
               : '';
             return `
               <tr>
@@ -578,7 +579,10 @@ export const generateReportSectionHtml = (
               return Math.max(0, Math.round((mins / 60) * 100) / 100);
             })();
             const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
-            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)) * Math.max(1, (report as any).travel_days || 1));
+            // Team-Fahrzeit pro Zeile: Gesamt-Fahrzeit der Person (Runde × Tage) auf ihre Einträge verteilt
+            const pKey = ((ea.name || e.id || '') as string).trim().toLowerCase();
+            const rowsOfPerson = Math.max(1, (report.employees || []).filter((x: any) => ((x.name || x.id || '') as string).trim().toLowerCase() === pKey).length);
+            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)) * Math.max(1, (report as any).travel_days || 1) / rowsOfPerson);
             const teamTravelShare = teamTravelTeam && report.travel_in_total_hours ? teamTravelTeam : 0; // pro MA der Team-Anteil zur Lohnberechnung
             const totalHrs = calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare);
             const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());

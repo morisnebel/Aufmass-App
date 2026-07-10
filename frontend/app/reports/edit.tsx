@@ -140,6 +140,9 @@ export default function ReportEditScreen() {
   const [travelDaysStr, setTravelDaysStr] = useState<string>('');
   const distinctTravelDays = Math.max(1, new Set(employees.map((e: any) => e.entry_date || date)).size);
   const effTravelDays = travelDaysStr ? Math.max(1, parseInt(travelDaysStr, 10) || 1) : distinctTravelDays;
+  // Eindeutige Personen (gleicher Name = mehrere Tages-Einträge derselben Person)
+  const empPersonKey = (e: any) => ((e.name || e.id || '') as string).trim().toLowerCase();
+  const distinctPersonCount = Math.max(1, new Set(employees.map(empPersonKey)).size);
   // Dialog für Fahrzeiten pro Mitarbeiter
   const [empTravelModal, setEmpTravelModal] = useState<string | null>(null);
   const [empTravelPickerField, setEmpTravelPickerField] = useState<'to' | 'back' | null>(null);
@@ -1292,20 +1295,19 @@ export default function ReportEditScreen() {
                 </View>
                 {/* Fahrzeit zu den Stunden (wie im PDF) */}
                 {(() => {
-                  const empCount = employees.length || 1;
                   let travelSum = 0;
                   if (travelPerEmployee) {
                     employees.forEach((e: any) => { travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0); });
                   } else if (travelInTotalHours) {
                     const oneRound = (parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0);
-                    travelSum = oneRound * empCount * effTravelDays;
+                    travelSum = oneRound * distinctPersonCount * effTravelDays;
                   }
                   if (travelSum <= 0) return null;
                   return (
                     <>
                       <View style={[styles.empSumRow, { paddingTop: 2 }]}>
                         <Text style={[styles.empSumLabel, { color: '#0891b2', fontSize: 12 }]}>
-                          + Fahrzeit{!travelPerEmployee && (empCount > 1 || effTravelDays > 1) ? ` (Team × ${empCount} MA${effTravelDays > 1 ? ` × ${effTravelDays} Tage` : ''})` : ''}
+                          + Fahrzeit{!travelPerEmployee && (distinctPersonCount > 1 || effTravelDays > 1) ? ` (Team × ${distinctPersonCount} MA${effTravelDays > 1 ? ` × ${effTravelDays} Tage` : ''})` : ''}
                         </Text>
                         <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{formatHM(travelSum) || '0:00'} h</Text>
                       </View>
@@ -1341,7 +1343,7 @@ export default function ReportEditScreen() {
           <Section
             icon="car-sport-outline"
             title="Fahrzeiten / Anfahrt"
-            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${employees.length > 1 ? ` (× ${employees.length} Mitarbeiter)` : ''}${effTravelDays > 1 ? ` · ${effTravelDays} Fahrtage` : ''}`}
+            subtitle={travelPerEmployee ? 'Pro Mitarbeiter erfasst' : `Für ganzes Team${distinctPersonCount > 1 ? ` (× ${distinctPersonCount} Mitarbeiter)` : ''}${effTravelDays > 1 ? ` · ${effTravelDays} Fahrtage` : ''}`}
             color="#0891b2"
             right={
               <TouchableOpacity
@@ -1953,7 +1955,9 @@ export default function ReportEditScreen() {
                   return Math.max(0, Math.round((mins / 60) * 100) / 100);
                 })();
                 const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
-                const teamTravel = (travelPerEmployee ? 0 : ((parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0)) * effTravelDays);
+                // Team-Fahrzeit pro Zeile: Gesamt-Fahrzeit der Person (Runde × Tage) auf ihre Einträge verteilt
+                const rowsOfPerson = Math.max(1, employees.filter((x: any) => empPersonKey(x) === empPersonKey(ea)).length);
+                const teamTravel = (travelPerEmployee ? 0 : ((parseTimeHM(travelToHoursStr) || 0) + (parseTimeHM(travelBackHoursStr) || 0)) * effTravelDays / rowsOfPerson);
                 const totalHrs = calcH + (travelPerEmployee ? travelExtra : (travelInTotalHours ? teamTravel : 0));
                 const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
                 const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);

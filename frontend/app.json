@@ -2,7 +2,7 @@
   "expo": {
     "name": "Aufmassprofi",
     "slug": "frontend",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
-      "buildNumber": "45",
+      "buildNumber": "46",
       "infoPlist": {
         "NSCameraUsageDescription": "Fotos für Aufmaße und Skizzen aufnehmen",
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",

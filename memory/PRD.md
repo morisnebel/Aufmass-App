@@ -41,7 +41,9 @@
 - Pro Code: PROFI2024
 
 ## Open Items
-- Build 45 (v1.1.3) für App Store via Emergent Publish vorbereitet
+- Build 46 (v1.1.4) für TestFlight via Emergent Publish vorbereitet
+  (Fixes: OOM-Crashes Auto-Backup/Export, extractedCompany, deviceName-Scope,
+  Skizzen-Bearbeitungsdaten im Projekt-Export)
 - Apple App Store Review-Notes: Pro-Code PROFI2024 angeben
 
 ## Session Juni 2026 (Fork)

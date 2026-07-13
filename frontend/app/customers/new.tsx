@@ -334,6 +334,7 @@ export default function NewCustomerScreen() {
   };
   
   const doSaveCustomer = async (saveToContacts: boolean, updateExisting: boolean, finalCustomerNumber: string | undefined) => {
+    const deviceName = Platform.OS === 'ios' && Platform.isPad ? 'Tablett' : 'Handy';
     setLoading(true);
     try {
       // Generiere den vollständigen Namen und die kombinierte Adresse

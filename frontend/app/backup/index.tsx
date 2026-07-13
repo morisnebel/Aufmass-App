@@ -297,7 +297,7 @@ export default function BackupScreen() {
             <Text style={styles.sectionTitle}>Automatische Snapshots</Text>
           </View>
           <Text style={styles.sectionSub}>
-            Zusätzliche Sicherheitsnetze – rollende letzte 5 Snapshots im App-Speicher.
+            Zusätzliche Sicherheitsnetze – rollende letzte 3 Snapshots im App-Speicher.
             Werden alle 24 Stunden beim App-Start erstellt.
             ⚠️ Gehen bei App-Deinstallation verloren – deshalb nicht als Hauptsicherung nutzen!
           </Text>

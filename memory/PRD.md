@@ -45,6 +45,13 @@
 - Apple App Store Review-Notes: Pro-Code PROFI2024 angeben
 
 ## Session Juni 2026 (Fork)
+- TestFlight-Crash-Analyse (iPad Pro, iOS 26): Root Cause = Hermes-OOM durch Auto-Backup.
+  Alt: bis zu 5 Snapshots mit kompletten App-Daten als data_json in EINEM AsyncStorage-Blob,
+  jeder App-Start parste/stringifizierte alles → bad_alloc/abort (JSON.stringify im Stack).
+- FIX BackupService.ts: Snapshots jetzt als Roh-String-Kopien pro Storage-Key
+  (aufmassprofi_snap_<id>_<key>) + leichter Index (aufmassprofi_auto_backups_index).
+  Kein JSON.stringify/parse großer Daten mehr. MAX 3 Snapshots. Alter Blob wird ohne
+  Parse gelöscht. exportFullBackup baut JSON durch Roh-String-Einbettung (kein Doppel-Parse).
 - Selektive Mitarbeiter-Synchronisation im Rapport: Sync-Button (🔄) öffnet Modal mit
   Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
 - ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für

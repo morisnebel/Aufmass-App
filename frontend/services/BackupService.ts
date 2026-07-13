@@ -35,8 +35,10 @@ const STORAGE_KEYS = [
   'aufmassprofi_material_suppliers',
 ];
 
-const AUTO_BACKUP_KEY = 'aufmassprofi_auto_backups';
-const MAX_AUTO_BACKUPS = 5;
+const AUTO_BACKUP_KEY = 'aufmassprofi_auto_backups'; // ALT: monolithischer Blob (OOM-Quelle, wird nur noch gelöscht)
+const AUTO_BACKUP_INDEX_KEY = 'aufmassprofi_auto_backups_index';
+const MAX_AUTO_BACKUPS = 3;
+const snapDataKey = (id: string, storageKey: string) => `aufmassprofi_snap_${id}_${storageKey}`;
 
 export interface BackupPayload {
   type: 'aufmassprofi-full-backup';
@@ -57,32 +59,21 @@ export interface AutoBackupSnapshot {
     photos: number;
     reports: number;
   };
-  // Kompakte Daten in einem JSON-String zur Speicheroptimierung
-  data_json: string;
+  // Welche Storage-Keys dieser Snapshot enthält (für Restore/Löschen)
+  keys?: string[];
+  // Veraltet (alte Snapshots): kompletter Daten-Blob – wird nicht mehr verwendet
+  data_json?: string;
 }
 
 // ============ Helpers ============
 const genId = () => `bak_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-const buildBackupPayload = async (): Promise<BackupPayload> => {
-  const data: Record<string, any> = {};
-  for (const key of STORAGE_KEYS) {
-    try {
-      const raw = await AsyncStorage.getItem(key);
-      if (raw != null) {
-        try { data[key] = JSON.parse(raw); }
-        catch { data[key] = raw; }
-      }
-    } catch (e) {
-      console.warn('[Backup] Skipping key', key, e);
-    }
-  }
-  return {
-    type: 'aufmassprofi-full-backup',
-    version: 1,
-    created_at: new Date().toISOString(),
-    data,
-  };
+// Zählt Vorkommen eines Substrings ohne JSON.parse (speicherschonend bei großen Strings)
+const countOccurrences = (raw: string, needle: string): number => {
+  let c = 0;
+  let i = 0;
+  while ((i = raw.indexOf(needle, i)) !== -1) { c++; i += needle.length; }
+  return c;
 };
 
 const restoreFromPayload = async (payload: BackupPayload, mode: 'replace' | 'merge' = 'replace'): Promise<void> => {
@@ -143,9 +134,22 @@ export const BackupService = {
    * Nutzer kann dann z.B. in Google Drive, iCloud Drive, WhatsApp etc. speichern.
    */
   exportFullBackup: async (): Promise<{ uri: string; sizeBytes: number }> => {
-    const payload = await buildBackupPayload();
-    const json = JSON.stringify(payload);
-    const sizeBytes = new Blob([json]).size;
+    // Speicherschonend: Roh-JSON-Strings direkt einbetten statt alles zu parsen
+    // und neu zu stringifizieren (verhindert Hermes-OOM bei großen Datenmengen).
+    const parts: string[] = [];
+    for (const key of STORAGE_KEYS) {
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        if (raw == null) continue;
+        const first = raw.trimStart().charAt(0);
+        const valueJson = (first === '{' || first === '[' || first === '"') ? raw : JSON.stringify(raw);
+        parts.push(`${JSON.stringify(key)}:${valueJson}`);
+      } catch (e) {
+        console.warn('[Backup] Skipping key', key, e);
+      }
+    }
+    const json = `{"type":"aufmassprofi-full-backup","version":1,"created_at":${JSON.stringify(new Date().toISOString())},"data":{${parts.join(',')}}}`;
+    const sizeBytes = json.length;
     const date = new Date().toISOString().slice(0, 10);
     const filename = `Aufmassprofi_Backup_${date}.json`;
     const dir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory;
@@ -219,26 +223,65 @@ export const BackupService = {
 
   // ============ OPTION B: Auto-Snapshots in AsyncStorage ============
   /**
-   * Erstellt automatisch einen Snapshot. Rollende max. 5 Snapshots.
-   * Wird beim App-Start aufgerufen (z.B. einmal alle 24h).
+   * Erstellt automatisch einen Snapshot (rollierend, max. 3).
+   * Speicherschonend: Roh-Strings werden pro Storage-Key 1:1 kopiert –
+   * KEIN JSON.stringify großer Datenmengen (verhindert Hermes-OOM-Crash).
    */
   createAutoSnapshot: async (): Promise<void> => {
     try {
-      const payload = await buildBackupPayload();
-      const dataJson = JSON.stringify(payload.data);
-      const sizeBytes = new Blob([dataJson]).size;
-      const snapshot: AutoBackupSnapshot = {
-        id: genId(),
+      // Alte monolithische Snapshots (OOM-Quelle) ohne Parse entsorgen
+      await AsyncStorage.removeItem(AUTO_BACKUP_KEY).catch(() => {});
+
+      const id = genId();
+      const savedKeys: string[] = [];
+      let sizeBytes = 0;
+      const counts = { projects: 0, customers: 0, sketches: 0, photos: 0, reports: 0 };
+
+      for (const key of STORAGE_KEYS) {
+        try {
+          const raw = await AsyncStorage.getItem(key);
+          if (raw == null) continue;
+          await AsyncStorage.setItem(snapDataKey(id, key), raw);
+          savedKeys.push(key);
+          sizeBytes += raw.length;
+          // Leichte Zählung ohne teures Parsen großer Strings
+          if (key === 'aufmassprofi_projects' || key === 'aufmassprofi_customers') {
+            try {
+              const v = JSON.parse(raw);
+              if (key === 'aufmassprofi_projects') counts.projects = Array.isArray(v) ? v.length : 0;
+              else counts.customers = Array.isArray(v) ? v.length : 0;
+            } catch {}
+          } else if (key === 'aufmassprofi_sketches') {
+            counts.sketches = countOccurrences(raw, '"project_id"');
+          } else if (key === 'aufmassprofi_photos') {
+            counts.photos = countOccurrences(raw, '"project_id"');
+          } else if (key === 'aufmassprofi_reports') {
+            counts.reports = countOccurrences(raw, '"report_number"');
+          }
+        } catch (e) {
+          console.warn('[AutoBackup] Skipping key', key, e);
+        }
+      }
+
+      const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+      const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+      const entry: AutoBackupSnapshot = {
+        id,
         created_at: new Date().toISOString(),
         size_bytes: sizeBytes,
-        counts: countItems(payload.data),
-        data_json: dataJson,
+        counts,
+        keys: savedKeys,
       };
-      const raw = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
-      const existing: AutoBackupSnapshot[] = raw ? JSON.parse(raw) : [];
-      // Neueste zuerst, älteste rausschmeißen
-      const updated = [snapshot, ...existing].slice(0, MAX_AUTO_BACKUPS);
-      await AsyncStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(updated));
+      const updated = [entry, ...index];
+      const keep = updated.slice(0, MAX_AUTO_BACKUPS);
+      const drop = updated.slice(MAX_AUTO_BACKUPS);
+      // Überzählige Snapshots samt Datenkopien löschen
+      for (const d of drop) {
+        for (const k of (d.keys || STORAGE_KEYS)) {
+          AsyncStorage.removeItem(snapDataKey(d.id, k)).catch(() => {});
+        }
+      }
+      await AsyncStorage.setItem(AUTO_BACKUP_INDEX_KEY, JSON.stringify(keep));
     } catch (e) {
       console.warn('[AutoBackup] Failed to create snapshot:', e);
     }
@@ -250,12 +293,11 @@ export const BackupService = {
    */
   createAutoSnapshotIfNeeded: async (minHoursSince = 24): Promise<boolean> => {
     try {
-      const raw = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
-      const existing: AutoBackupSnapshot[] = raw ? JSON.parse(raw) : [];
-      if (existing.length > 0) {
-        const last = new Date(existing[0].created_at).getTime();
-        const now = Date.now();
-        const hours = (now - last) / (1000 * 60 * 60);
+      const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+      const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+      if (index.length > 0) {
+        const last = new Date(index[0].created_at).getTime();
+        const hours = (Date.now() - last) / (1000 * 60 * 60);
         if (hours < minHoursSince) return false;
       }
       await BackupService.createAutoSnapshot();
@@ -266,17 +308,18 @@ export const BackupService = {
   },
 
   /**
-   * Listet alle vorhandenen Auto-Snapshots (ohne data_json für Performance).
+   * Listet alle vorhandenen Auto-Snapshots (nur Metadaten).
    */
   listAutoSnapshots: async (): Promise<Omit<AutoBackupSnapshot, 'data_json'>[]> => {
     try {
-      const raw = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
-      const existing: AutoBackupSnapshot[] = raw ? JSON.parse(raw) : [];
-      return existing.map(s => ({
+      const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+      const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+      return index.map(s => ({
         id: s.id,
         created_at: s.created_at,
         size_bytes: s.size_bytes,
         counts: s.counts,
+        keys: s.keys,
       }));
     } catch {
       return [];
@@ -284,21 +327,23 @@ export const BackupService = {
   },
 
   /**
-   * Stellt einen Auto-Snapshot wieder her (Datenverlust bei bestehenden Werten!).
+   * Stellt einen Auto-Snapshot wieder her (überschreibt bestehende Daten!).
+   * Kopiert Roh-Strings 1:1 zurück – kein Parse/Stringify großer Daten.
    */
   restoreAutoSnapshot: async (snapshotId: string): Promise<{ counts: any }> => {
-    const raw = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
-    const existing: AutoBackupSnapshot[] = raw ? JSON.parse(raw) : [];
-    const snap = existing.find(s => s.id === snapshotId);
+    const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+    const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+    const snap = index.find(s => s.id === snapshotId);
     if (!snap) throw new Error('Snapshot nicht gefunden.');
-    const data = JSON.parse(snap.data_json);
-    const payload: BackupPayload = {
-      type: 'aufmassprofi-full-backup',
-      version: 1,
-      created_at: snap.created_at,
-      data,
-    };
-    await restoreFromPayload(payload, 'replace');
+    for (const key of (snap.keys || [])) {
+      if (!STORAGE_KEYS.includes(key)) continue;
+      try {
+        const raw = await AsyncStorage.getItem(snapDataKey(snap.id, key));
+        if (raw != null) await AsyncStorage.setItem(key, raw);
+      } catch (e) {
+        console.warn('[AutoBackup] Restore failed for key', key, e);
+      }
+    }
     return { counts: snap.counts };
   },
 
@@ -306,16 +351,32 @@ export const BackupService = {
    * Löscht einen einzelnen Auto-Snapshot.
    */
   deleteAutoSnapshot: async (snapshotId: string): Promise<void> => {
-    const raw = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
-    const existing: AutoBackupSnapshot[] = raw ? JSON.parse(raw) : [];
-    const filtered = existing.filter(s => s.id !== snapshotId);
-    await AsyncStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(filtered));
+    const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+    const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+    const snap = index.find(s => s.id === snapshotId);
+    if (snap) {
+      for (const k of (snap.keys || STORAGE_KEYS)) {
+        AsyncStorage.removeItem(snapDataKey(snap.id, k)).catch(() => {});
+      }
+    }
+    const filtered = index.filter(s => s.id !== snapshotId);
+    await AsyncStorage.setItem(AUTO_BACKUP_INDEX_KEY, JSON.stringify(filtered));
   },
 
   /**
-   * Löscht alle Auto-Snapshots.
+   * Löscht alle Auto-Snapshots (inkl. Alt-Format).
    */
   clearAllAutoSnapshots: async (): Promise<void> => {
+    try {
+      const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+      const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+      for (const s of index) {
+        for (const k of (s.keys || STORAGE_KEYS)) {
+          AsyncStorage.removeItem(snapDataKey(s.id, k)).catch(() => {});
+        }
+      }
+    } catch {}
+    await AsyncStorage.removeItem(AUTO_BACKUP_INDEX_KEY);
     await AsyncStorage.removeItem(AUTO_BACKUP_KEY);
   },
 };

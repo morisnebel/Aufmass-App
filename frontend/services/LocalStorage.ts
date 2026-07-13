@@ -810,6 +810,26 @@ export const SketchService = {
     return sketches.filter(s => s.project_id === projectId);
   },
 
+  // Für Projekt-Export: Skizzen inkl. eingebetteter Bearbeitungsdaten
+  // (metadata + backgroundImage aus den optimierten Keys). Beim Import
+  // splittet create() die Daten automatisch wieder auf.
+  getByProjectIdWithData: async (projectId: string): Promise<Sketch[]> => {
+    const sketches = await SketchService.getByProjectId(projectId);
+    return Promise.all(sketches.map(async (s) => {
+      try {
+        const { metadata, backgroundImage } = await SketchService.loadSketchData(s.id);
+        if (metadata) {
+          const full: any = { ...metadata };
+          if (backgroundImage) full.backgroundImage = backgroundImage;
+          return { ...s, metadata: JSON.stringify(full) };
+        }
+      } catch (e) {
+        console.warn('[SketchService] Export: Skizzen-Daten fehlen für', s.id, e);
+      }
+      return s;
+    }));
+  },
+
   // ---- OPTIMIZED: Load heavy sketch data from separate storage keys ----
   // This avoids parsing all sketches just to load one sketch's elements/background
   loadSketchData: async (id: string): Promise<{ metadata: any | null; backgroundImage: string | null }> => {

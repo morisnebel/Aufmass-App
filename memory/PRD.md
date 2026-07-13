@@ -58,6 +58,10 @@
 - FIX customers/new.tsx: Render Error "Property 'extractedCompany' doesn't exist" –
   Variable war in extractContactData nie deklariert (jetzt: contact.company). Trat beim
   Öffnen der Kontakte-Liste (Import aus Adressbuch) auf.
+- FIX Projekt-Export: Skizzen-Bearbeitungsdaten (sketch_meta_<id>/sketch_bg_<id>) wurden
+  nicht exportiert → Skizze nach Import im Editor leer. Neu: SketchService.
+  getByProjectIdWithData() bettet metadata+backgroundImage in den Export ein;
+  create() splittet beim Import automatisch zurück in die optimierten Keys.
 - Selektive Mitarbeiter-Synchronisation im Rapport: Sync-Button (🔄) öffnet Modal mit
   Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
 - ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für

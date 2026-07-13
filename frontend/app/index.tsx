@@ -249,7 +249,7 @@ export default function HomeScreen() {
         const [roofs, photos, sketches, checklists, reports] = await Promise.all([
           RoofService.getByProjectId(projectId),
           PhotoService.getByProjectId(projectId),
-          SketchService.getByProjectId(projectId),
+          SketchService.getByProjectIdWithData(projectId),
           ChecklistService.getByProjectId(projectId),
           ReportService.getByProjectId(projectId),
         ]);

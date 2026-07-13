@@ -4810,6 +4810,11 @@ export default function ProjectDetailScreen() {
     try {
       setIsGeneratingPdf(true);
       
+      // Skizzen mit vollständigen Bearbeitungsdaten (metadata + Hintergrund) laden
+      const sketchesWithData = project?.id
+        ? await SketchService.getByProjectIdWithData(project.id)
+        : (sketches || []);
+
       // Gather all project data
       const exportData = {
         version: '1.0',
@@ -4818,7 +4823,7 @@ export default function ProjectDetailScreen() {
         customer: customer || {},
         roofs: roofs || [],
         photos: photos || [],
-        sketches: sketches || [],
+        sketches: sketchesWithData,
         checklists: checklists || [],
         reports: reports || [],
       };
@@ -4848,6 +4853,10 @@ export default function ProjectDetailScreen() {
       setIsGeneratingPdf(false);
       // Fallback: Share as text
       try {
+        let sketchesWithData: any = sketches || [];
+        try {
+          if (project?.id) sketchesWithData = await SketchService.getByProjectIdWithData(project.id);
+        } catch {}
         const exportData = {
           version: '1.0',
           exportDate: new Date().toISOString(),
@@ -4855,7 +4864,7 @@ export default function ProjectDetailScreen() {
           customer: customer || {},
           roofs: roofs || [],
           photos: photos || [],
-          sketches: sketches || [],
+          sketches: sketchesWithData,
           checklists: checklists || [],
           reports: reports || [],
         };

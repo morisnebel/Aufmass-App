@@ -8,6 +8,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { File, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -134,27 +136,71 @@ export const BackupService = {
    * Nutzer kann dann z.B. in Google Drive, iCloud Drive, WhatsApp etc. speichern.
    */
   exportFullBackup: async (): Promise<{ uri: string; sizeBytes: number }> => {
-    // Speicherschonend: Roh-JSON-Strings direkt einbetten statt alles zu parsen
-    // und neu zu stringifizieren (verhindert Hermes-OOM bei großen Datenmengen).
-    const parts: string[] = [];
-    for (const key of STORAGE_KEYS) {
-      try {
-        const raw = await AsyncStorage.getItem(key);
-        if (raw == null) continue;
-        const first = raw.trimStart().charAt(0);
-        const valueJson = (first === '{' || first === '[' || first === '"') ? raw : JSON.stringify(raw);
-        parts.push(`${JSON.stringify(key)}:${valueJson}`);
-      } catch (e) {
-        console.warn('[Backup] Skipping key', key, e);
-      }
-    }
-    const json = `{"type":"aufmassprofi-full-backup","version":1,"created_at":${JSON.stringify(new Date().toISOString())},"data":{${parts.join(',')}}}`;
-    const sizeBytes = json.length;
+    // Speicherschonend: Backup wird in Chunks direkt in die Datei gestreamt.
+    // Es wird NIE ein einziger riesiger JSON-String gebaut oder an das native
+    // Modul übergeben (verhindert Hermes-/Native-OOM-Crashes bei großen Daten).
     const date = new Date().toISOString().slice(0, 10);
     const filename = `Aufmassprofi_Backup_${date}.json`;
-    const dir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory;
-    const fileUri = `${dir}${filename}`;
-    await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });
+    const header = `{"type":"aufmassprofi-full-backup","version":1,"created_at":${JSON.stringify(new Date().toISOString())},"data":{`;
+
+    const rawValueFor = async (key: string): Promise<string | null> => {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw == null) return null;
+      const first = raw.trimStart().charAt(0);
+      return (first === '{' || first === '[' || first === '"') ? raw : JSON.stringify(raw);
+    };
+
+    let fileUri: string;
+    let sizeBytes = 0;
+
+    if (Platform.OS === 'web') {
+      // Web-Preview: einfacher Pfad (Datenmengen dort klein)
+      const parts: string[] = [];
+      for (const key of STORAGE_KEYS) {
+        try {
+          const valueJson = await rawValueFor(key);
+          if (valueJson != null) parts.push(`${JSON.stringify(key)}:${valueJson}`);
+        } catch (e) { console.warn('[Backup] Skipping key', key, e); }
+      }
+      const json = `${header}${parts.join(',')}}}`;
+      sizeBytes = json.length;
+      const dir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory;
+      fileUri = `${dir}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });
+    } else {
+      // Nativ: gestreamtes Schreiben in max. 512-KB-Chunks
+      const file = new File(Paths.cache, filename);
+      try { if (file.exists) file.delete(); } catch {}
+      file.create();
+      const handle = file.open();
+      const encoder = new TextEncoder();
+      const CHUNK = 512 * 1024;
+      const writeStr = (s: string) => {
+        for (let i = 0; i < s.length; i += CHUNK) {
+          const bytes = encoder.encode(s.slice(i, i + CHUNK));
+          handle.writeBytes(bytes);
+          sizeBytes += bytes.length;
+        }
+      };
+      try {
+        writeStr(header);
+        let firstEntry = true;
+        for (const key of STORAGE_KEYS) {
+          try {
+            const valueJson = await rawValueFor(key);
+            if (valueJson == null) continue;
+            writeStr(`${firstEntry ? '' : ','}${JSON.stringify(key)}:`);
+            writeStr(valueJson);
+            firstEntry = false;
+          } catch (e) { console.warn('[Backup] Skipping key', key, e); }
+        }
+        writeStr('}}');
+      } finally {
+        handle.close();
+      }
+      fileUri = file.uri;
+    }
+
     const canShare = await Sharing.isAvailableAsync();
     if (canShare) {
       await Sharing.shareAsync(fileUri, {

@@ -51,7 +51,10 @@
 - FIX BackupService.ts: Snapshots jetzt als Roh-String-Kopien pro Storage-Key
   (aufmassprofi_snap_<id>_<key>) + leichter Index (aufmassprofi_auto_backups_index).
   Kein JSON.stringify/parse großer Daten mehr. MAX 3 Snapshots. Alter Blob wird ohne
-  Parse gelöscht. exportFullBackup baut JSON durch Roh-String-Einbettung (kein Doppel-Parse).
+  Parse gelöscht. exportFullBackup streamt das Backup nativ in 512-KB-Chunks in die
+  Datei (expo-file-system new API: File/Paths + FileHandle.writeBytes + TextEncoder);
+  Web-Preview nutzt weiter den Legacy-Pfad. Grund: 4. Crash zeigte OOM bei
+  convertJSIStringToNSString (Riesen-String an natives Expo-Modul übergeben).
 - Selektive Mitarbeiter-Synchronisation im Rapport: Sync-Button (🔄) öffnet Modal mit
   Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
 - ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für

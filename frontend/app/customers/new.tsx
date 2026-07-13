@@ -48,6 +48,7 @@ function extractContactData(contact: Contacts.Contact) {
   let extractedStreet = '';
   let extractedPlz = '';
   let extractedCity = '';
+  const extractedCompany = contact.company || '';
 
   extractedFirstName = contact.firstName || '';
   extractedLastName = contact.lastName || '';

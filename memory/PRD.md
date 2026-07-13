@@ -55,6 +55,9 @@
   Datei (expo-file-system new API: File/Paths + FileHandle.writeBytes + TextEncoder);
   Web-Preview nutzt weiter den Legacy-Pfad. Grund: 4. Crash zeigte OOM bei
   convertJSIStringToNSString (Riesen-String an natives Expo-Modul übergeben).
+- FIX customers/new.tsx: Render Error "Property 'extractedCompany' doesn't exist" –
+  Variable war in extractContactData nie deklariert (jetzt: contact.company). Trat beim
+  Öffnen der Kontakte-Liste (Import aus Adressbuch) auf.
 - Selektive Mitarbeiter-Synchronisation im Rapport: Sync-Button (🔄) öffnet Modal mit
   Checkboxen zur Auswahl der Ziel-Mitarbeiter + Option "Datum mit übernehmen" (DONE, getestet)
 - ErrorBoundary im Root-Layout (/app/frontend/src/components/ErrorBoundary.tsx) für

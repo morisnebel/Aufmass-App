@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Features } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 
@@ -190,7 +191,21 @@ export default function EditTemplateScreen() {
       });
 
       if (!result.canceled && result.assets[0].base64) {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        let base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        // Große Bilder verkleinern (Speicherschutz): max. 1280px Breite, 60% Qualität
+        try {
+          const asset = result.assets[0];
+          if ((asset.width || 0) > 1280) {
+            const manipulated = await ImageManipulator.manipulateAsync(
+              asset.uri,
+              [{ resize: { width: 1280 } }],
+              { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            );
+            if (manipulated.base64) base64Image = `data:image/jpeg;base64,${manipulated.base64}`;
+          }
+        } catch (e) {
+          console.warn('Bild-Verkleinerung fehlgeschlagen, Original wird verwendet:', e);
+        }
         
         if (type === 'print') {
           setItems(updateItemAtPath(items, path, { printImage: base64Image }));

@@ -42,6 +42,19 @@ const AUTO_BACKUP_INDEX_KEY = 'aufmassprofi_auto_backups_index';
 const MAX_AUTO_BACKUPS = 3;
 const snapDataKey = (id: string, storageKey: string) => `aufmassprofi_snap_${id}_${storageKey}`;
 
+// Dynamische Bild-/Daten-Keys (Fotos, Skizzen, Checklisten-Bilder)
+const DYNAMIC_KEY_PREFIXES = ['photo_img_', 'sketch_meta_', 'sketch_bg_', 'chk_img_'];
+const isBackupKey = (key: string) => STORAGE_KEYS.includes(key) || DYNAMIC_KEY_PREFIXES.some(p => key.startsWith(p));
+const getAllBackupKeys = async (): Promise<string[]> => {
+  try {
+    const all = await AsyncStorage.getAllKeys();
+    const dyn = (all || []).filter(k => DYNAMIC_KEY_PREFIXES.some(p => k.startsWith(p)));
+    return [...STORAGE_KEYS, ...dyn];
+  } catch {
+    return [...STORAGE_KEYS];
+  }
+};
+
 export interface BackupPayload {
   type: 'aufmassprofi-full-backup';
   version: 1;
@@ -87,7 +100,7 @@ const restoreFromPayload = async (payload: BackupPayload, mode: 'replace' | 'mer
   }
   const keys = Object.keys(payload.data);
   for (const key of keys) {
-    if (!STORAGE_KEYS.includes(key)) continue; // Nur bekannte Keys zulassen
+    if (!isBackupKey(key)) continue; // Nur bekannte Keys zulassen
     try {
       const value = payload.data[key];
       if (mode === 'replace') {
@@ -152,11 +165,12 @@ export const BackupService = {
 
     let fileUri: string;
     let sizeBytes = 0;
+    const allKeys = await getAllBackupKeys();
 
     if (Platform.OS === 'web') {
       // Web-Preview: einfacher Pfad (Datenmengen dort klein)
       const parts: string[] = [];
-      for (const key of STORAGE_KEYS) {
+      for (const key of allKeys) {
         try {
           const valueJson = await rawValueFor(key);
           if (valueJson != null) parts.push(`${JSON.stringify(key)}:${valueJson}`);
@@ -185,7 +199,7 @@ export const BackupService = {
       try {
         writeStr(header);
         let firstEntry = true;
-        for (const key of STORAGE_KEYS) {
+        for (const key of allKeys) {
           try {
             const valueJson = await rawValueFor(key);
             if (valueJson == null) continue;
@@ -282,8 +296,9 @@ export const BackupService = {
       const savedKeys: string[] = [];
       let sizeBytes = 0;
       const counts = { projects: 0, customers: 0, sketches: 0, photos: 0, reports: 0 };
+      const allKeys = await getAllBackupKeys();
 
-      for (const key of STORAGE_KEYS) {
+      for (const key of allKeys) {
         try {
           const raw = await AsyncStorage.getItem(key);
           if (raw == null) continue;
@@ -382,7 +397,7 @@ export const BackupService = {
     const snap = index.find(s => s.id === snapshotId);
     if (!snap) throw new Error('Snapshot nicht gefunden.');
     for (const key of (snap.keys || [])) {
-      if (!STORAGE_KEYS.includes(key)) continue;
+      if (!isBackupKey(key)) continue;
       try {
         const raw = await AsyncStorage.getItem(snapDataKey(snap.id, key));
         if (raw != null) await AsyncStorage.setItem(key, raw);

@@ -315,7 +315,10 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     }
   }
   
-  const checklists = (allData.get(KEYS.CHECKLISTS) || []).filter((c: any) => c.project_id === projectId);
+  const checklists = await Promise.all(
+    ((allData.get(KEYS.CHECKLISTS) || []).filter((c: any) => c.project_id === projectId))
+      .map((c: any) => chkRestoreImages(c))
+  );
   const documents = (allData.get(KEYS.DOCUMENTS) || []).filter((d: any) => d.project_id === projectId);
   const areaCalculations = (allData.get(KEYS.AREA_CALCULATIONS) || []).filter((a: any) => a.project_id === projectId);
   
@@ -1349,6 +1352,100 @@ export interface Checklist {
   updated_at: string;
 }
 
+// ============ Checklisten-Bilder: separate Speicherung (OOM-Schutz) ============
+// Base64-Bilder werden NICHT mehr inline im Haupt-Array gespeichert, sondern
+// unter eigenen Keys (chk_img_<id>) mit Referenz-Markern im Array.
+const CHK_IMG_PREFIX = '@chkimg:';
+
+const chkStoreInline = (val: string | undefined, ops: Promise<any>[]): string | undefined => {
+  if (val && typeof val === 'string' && val.startsWith('data:')) {
+    const key = `chk_img_${generateId()}`;
+    ops.push(AsyncStorage.setItem(key, val));
+    return CHK_IMG_PREFIX + key;
+  }
+  return val;
+};
+
+const chkExtractItems = (items: any[], ops: Promise<any>[]): any[] =>
+  items.map(it => ({
+    ...it,
+    printImage: chkStoreInline(it.printImage, ops),
+    categoryLogo: chkStoreInline(it.categoryLogo, ops),
+    previewImages: Array.isArray(it.previewImages) ? it.previewImages.map((v: string) => chkStoreInline(v, ops)) : it.previewImages,
+    subItems: Array.isArray(it.subItems) ? chkExtractItems(it.subItems, ops) : it.subItems,
+  }));
+
+const chkExtractImages = <T extends { items?: any[]; templateLogo?: string }>(obj: T, ops: Promise<any>[]): T => {
+  const out: any = { ...obj };
+  if ('templateLogo' in out) out.templateLogo = chkStoreInline(out.templateLogo, ops);
+  if (Array.isArray(out.items)) out.items = chkExtractItems(out.items, ops);
+  return out as T;
+};
+
+const chkCollectRefs = (obj: any, out: string[]) => {
+  const check = (v: any) => { if (typeof v === 'string' && v.startsWith(CHK_IMG_PREFIX)) out.push(v.slice(CHK_IMG_PREFIX.length)); };
+  check(obj?.templateLogo);
+  const walk = (items?: any[]) => (items || []).forEach((it: any) => {
+    check(it?.printImage); check(it?.categoryLogo);
+    (Array.isArray(it?.previewImages) ? it.previewImages : []).forEach(check);
+    if (Array.isArray(it?.subItems)) walk(it.subItems);
+  });
+  walk(obj?.items);
+};
+
+const chkRestoreImages = async <T extends { items?: any[]; templateLogo?: string }>(obj: T): Promise<T> => {
+  const refs: string[] = [];
+  chkCollectRefs(obj, refs);
+  if (refs.length === 0) return obj;
+  const unique = Array.from(new Set(refs));
+  const pairs = await AsyncStorage.multiGet(unique);
+  const map = new Map(pairs as [string, string | null][]);
+  const resolve = (v: any) => (typeof v === 'string' && v.startsWith(CHK_IMG_PREFIX))
+    ? (map.get(v.slice(CHK_IMG_PREFIX.length)) || undefined)
+    : v;
+  const walk = (items: any[]): any[] => items.map(it => ({
+    ...it,
+    printImage: resolve(it.printImage),
+    categoryLogo: resolve(it.categoryLogo),
+    previewImages: Array.isArray(it.previewImages) ? it.previewImages.map(resolve).filter(Boolean) : it.previewImages,
+    subItems: Array.isArray(it.subItems) ? walk(it.subItems) : it.subItems,
+  }));
+  const out: any = { ...obj };
+  if ('templateLogo' in out) out.templateLogo = resolve(out.templateLogo);
+  if (Array.isArray(out.items)) out.items = walk(out.items);
+  return out as T;
+};
+
+const chkDeleteImages = (obj: any) => {
+  const refs: string[] = [];
+  chkCollectRefs(obj, refs);
+  refs.forEach(k => AsyncStorage.removeItem(k).catch(() => {}));
+};
+
+// Einmalige Migration: Inline-Base64-Bilder aus Checklisten/Vorlagen auslagern
+let chkMigrationRunning: Promise<void> | null = null;
+export const migrateChecklistImages = async (): Promise<void> => {
+  if (chkMigrationRunning) return chkMigrationRunning;
+  chkMigrationRunning = (async () => {
+    try {
+      for (const storageKey of [KEYS.CHECKLISTS, KEYS.CHECKLIST_TEMPLATES]) {
+        const raw = await AsyncStorage.getItem(storageKey);
+        if (!raw || raw.indexOf('data:image') === -1) continue; // nichts zu migrieren
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) continue;
+        const ops: Promise<any>[] = [];
+        const migrated = arr.map((entry: any) => chkExtractImages(entry, ops));
+        await Promise.all(ops);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(migrated));
+        console.log(`[migrateChecklistImages] ${ops.length} Bilder aus ${storageKey} ausgelagert`);
+      }
+    } catch (e) {
+      console.error('[migrateChecklistImages] Error:', e);
+    }
+  })();
+  return chkMigrationRunning;
+};
+
 export const ChecklistService = {
   getAll: async (): Promise<Checklist[]> => {
     return getItems<Checklist>(KEYS.CHECKLISTS);
@@ -1356,24 +1453,26 @@ export const ChecklistService = {
 
   getById: async (id: string): Promise<Checklist | null> => {
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
-    return checklists.find(c => c.id === id) || null;
+    const found = checklists.find(c => c.id === id);
+    return found ? chkRestoreImages(found) : null;
   },
 
   getByProjectId: async (projectId: string): Promise<Checklist[]> => {
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
-    return checklists.filter(c => c.project_id === projectId);
+    return Promise.all(checklists.filter(c => c.project_id === projectId).map(c => chkRestoreImages(c)));
   },
 
   create: async (data: Omit<Checklist, 'id' | 'created_at' | 'updated_at'>): Promise<Checklist> => {
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
+    const ops: Promise<any>[] = [];
     const newChecklist: Checklist = {
-      ...data,
+      ...chkExtractImages(data as any, ops),
       id: generateId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     checklists.push(newChecklist);
-    await setItems(KEYS.CHECKLISTS, checklists);
+    await Promise.all([setItems(KEYS.CHECKLISTS, checklists), ...ops]);
     return newChecklist;
   },
 
@@ -1381,13 +1480,24 @@ export const ChecklistService = {
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
     const index = checklists.findIndex(c => c.id === id);
     if (index === -1) return null;
-    checklists[index] = { ...checklists[index], ...data, updated_at: new Date().toISOString() };
-    await setItems(KEYS.CHECKLISTS, checklists);
+    const ops: Promise<any>[] = [];
+    const oldRefs: string[] = [];
+    chkCollectRefs(checklists[index], oldRefs);
+    const merged = { ...checklists[index], ...chkExtractImages(data as any, ops), updated_at: new Date().toISOString() };
+    // Nicht mehr referenzierte Bild-Keys aufräumen
+    const newRefs: string[] = [];
+    chkCollectRefs(merged, newRefs);
+    const still = new Set(newRefs);
+    oldRefs.filter(k => !still.has(k)).forEach(k => AsyncStorage.removeItem(k).catch(() => {}));
+    checklists[index] = merged;
+    await Promise.all([setItems(KEYS.CHECKLISTS, checklists), ...ops]);
     return checklists[index];
   },
 
   delete: async (id: string): Promise<boolean> => {
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
+    const toDelete = checklists.find(c => c.id === id);
+    if (toDelete) chkDeleteImages(toDelete);
     const filtered = checklists.filter(c => c.id !== id);
     await setItems(KEYS.CHECKLISTS, filtered);
     return true;
@@ -1407,7 +1517,18 @@ export interface ChecklistTemplate {
 export const ChecklistTemplateService = {
   getAll: async (): Promise<ChecklistTemplate[]> => {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
-    // Keine Standard-Vorlagen mehr erstellen - leere Liste zurückgeben wenn keine vorhanden
+    // Nur die (kleinen) Vorlagen-Logos auflösen – Item-Bilder bleiben als Referenz (Performance)
+    const logoRefs = templates
+      .map(t => t.templateLogo)
+      .filter((v): v is string => typeof v === 'string' && v.startsWith(CHK_IMG_PREFIX))
+      .map(v => v.slice(CHK_IMG_PREFIX.length));
+    if (logoRefs.length > 0) {
+      const pairs = await AsyncStorage.multiGet(Array.from(new Set(logoRefs)));
+      const map = new Map(pairs as [string, string | null][]);
+      return templates.map(t => (typeof t.templateLogo === 'string' && t.templateLogo.startsWith(CHK_IMG_PREFIX))
+        ? { ...t, templateLogo: map.get(t.templateLogo.slice(CHK_IMG_PREFIX.length)) || undefined }
+        : t);
+    }
     return templates;
   },
   
@@ -1447,20 +1568,22 @@ export const ChecklistTemplateService = {
   },
 
   getById: async (id: string): Promise<ChecklistTemplate | null> => {
-    const templates = await ChecklistTemplateService.getAll();
-    return templates.find(t => t.id === id) || null;
+    const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
+    const found = templates.find(t => t.id === id);
+    return found ? chkRestoreImages(found) : null;
   },
 
   create: async (data: Omit<ChecklistTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<ChecklistTemplate> => {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
+    const ops: Promise<any>[] = [];
     const newTemplate: ChecklistTemplate = {
-      ...data,
+      ...chkExtractImages(data as any, ops),
       id: generateId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     templates.push(newTemplate);
-    await setItems(KEYS.CHECKLIST_TEMPLATES, templates);
+    await Promise.all([setItems(KEYS.CHECKLIST_TEMPLATES, templates), ...ops]);
     return newTemplate;
   },
 
@@ -1468,13 +1591,23 @@ export const ChecklistTemplateService = {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
     const index = templates.findIndex(t => t.id === id);
     if (index === -1) return null;
-    templates[index] = { ...templates[index], ...data, updated_at: new Date().toISOString() };
-    await setItems(KEYS.CHECKLIST_TEMPLATES, templates);
+    const ops: Promise<any>[] = [];
+    const oldRefs: string[] = [];
+    chkCollectRefs(templates[index], oldRefs);
+    const merged = { ...templates[index], ...chkExtractImages(data as any, ops), updated_at: new Date().toISOString() };
+    const newRefs: string[] = [];
+    chkCollectRefs(merged, newRefs);
+    const still = new Set(newRefs);
+    oldRefs.filter(k => !still.has(k)).forEach(k => AsyncStorage.removeItem(k).catch(() => {}));
+    templates[index] = merged;
+    await Promise.all([setItems(KEYS.CHECKLIST_TEMPLATES, templates), ...ops]);
     return templates[index];
   },
 
   delete: async (id: string): Promise<boolean> => {
     const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
+    const toDelete = templates.find(t => t.id === id);
+    if (toDelete) chkDeleteImages(toDelete);
     const filtered = templates.filter(t => t.id !== id);
     await setItems(KEYS.CHECKLIST_TEMPLATES, filtered);
     return true;
@@ -1482,7 +1615,9 @@ export const ChecklistTemplateService = {
 
   // Alle Templates auf einmal speichern (für Sortierung)
   saveAll: async (templates: ChecklistTemplate[]): Promise<void> => {
-    await setItems(KEYS.CHECKLIST_TEMPLATES, templates);
+    const ops: Promise<any>[] = [];
+    const extracted = templates.map(t => chkExtractImages(t as any, ops));
+    await Promise.all([setItems(KEYS.CHECKLIST_TEMPLATES, extracted), ...ops]);
   },
 };
 

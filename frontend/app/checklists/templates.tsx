@@ -149,13 +149,15 @@ export default function ChecklistTemplatesScreen() {
   const exportTemplate = async (template: ChecklistTemplate) => {
     setIsExporting(true);
     try {
+      // Vollständige Vorlage inkl. ausgelagerter Bilder laden
+      const fullTemplate = (await ChecklistTemplateService.getById(template.id)) || template;
       const exportData = {
         type: 'aufmass_checklist_template',
         version: '1.0',
         exportDate: new Date().toISOString(),
         template: {
-          name: template.name,
-          items: template.items,
+          name: fullTemplate.name,
+          items: fullTemplate.items,
         },
       };
 

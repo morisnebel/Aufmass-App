@@ -47,6 +47,17 @@
 - Apple App Store Review-Notes: Pro-Code PROFI2024 angeben
 
 ## Session Juni 2026 (Fork)
+- Checklisten-OOM-Crash (AufmassprofiBasic-Reports, "Absturz bei Checklisten"):
+  Base64-Bilder (printImage/previewImages/categoryLogo/templateLogo) lagen inline in
+  aufmassprofi_checklists/_checklist_templates → jede Aktion parste/stringifizierte alles.
+  FIX: Bilder in separate Keys (chk_img_<id>) mit @chkimg:-Referenzen; Extraktion bei
+  create/update/saveAll, Restore bei getById/getByProjectId/loadAllProjectDataFast;
+  Template-getAll löst nur Logos auf. Migration migrateChecklistImages() beim App-Start
+  (_layout, mit In-Flight-Guard) + beim Projekt-Öffnen. Bild-Kompression beim Auswählen
+  (max 1280px, 60%). Backup/Restore inkludiert jetzt dynamische Keys
+  (photo_img_, sketch_meta_, sketch_bg_, chk_img_) via getAllBackupKeys().
+  HINWEIS: Crash-Binary war "AufmassprofiBasic 1.0.0" – falls Basic ein separates
+  Emergent-Projekt ist, braucht es denselben Fix dort.
 - TestFlight-Crash-Analyse (iPad Pro, iOS 26): Root Cause = Hermes-OOM durch Auto-Backup.
   Alt: bis zu 5 Snapshots mit kompletten App-Daten als data_json in EINEM AsyncStorage-Blob,
   jeder App-Start parste/stringifizierte alles → bad_alloc/abort (JSON.stringify im Stack).

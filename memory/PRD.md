@@ -58,6 +58,13 @@
   (photo_img_, sketch_meta_, sketch_bg_, chk_img_) via getAllBackupKeys().
   HINWEIS: Crash-Binary war "AufmassprofiBasic 1.0.0" – falls Basic ein separates
   Emergent-Projekt ist, braucht es denselben Fix dort.
+- Dokumente-OOM-Fix (gleiche Familie, Reports von Builds 111/118): originalPdfData
+  (Base64-PDF) + pages[].imageData lagen inline in aufmassprofi_documents; jeder
+  Annotations-Save schrieb alles neu. FIX: Auslagerung in doc_img_<id>-Keys
+  (@docimg:-Referenzen), Extraktion in create/update/updatePage, Restore in
+  getById/getByProjectId, Cleanup bei delete. Migration migrateDocumentImages()
+  beim App-Start. doc_img_ in Backup-DYNAMIC_KEY_PREFIXES aufgenommen.
+  Restrisiko (klein, bewusst offen): area_calculations.backgroundImage inline.
 - TestFlight-Crash-Analyse (iPad Pro, iOS 26): Root Cause = Hermes-OOM durch Auto-Backup.
   Alt: bis zu 5 Snapshots mit kompletten App-Daten als data_json in EINEM AsyncStorage-Blob,
   jeder App-Start parste/stringifizierte alles → bad_alloc/abort (JSON.stringify im Stack).

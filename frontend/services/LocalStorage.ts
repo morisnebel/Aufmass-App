@@ -1702,6 +1702,80 @@ export interface Document {
   updated_at: string;
 }
 
+// ============ Dokument-Bilder: separate Speicherung (OOM-Schutz) ============
+// PDF-Seiten (imageData) und Original-PDFs (originalPdfData) werden unter
+// eigenen Keys (doc_img_<id>) gespeichert – nicht mehr inline im Haupt-Array.
+const DOC_IMG_PREFIX = '@docimg:';
+
+const docStoreVal = (val: string | undefined, ops: Promise<any>[]): string | undefined => {
+  // Base64-Daten sind lang; Referenzen und kurze Strings unverändert lassen
+  if (val && typeof val === 'string' && val.length > 500 && !val.startsWith(DOC_IMG_PREFIX)) {
+    const key = `doc_img_${generateId()}`;
+    ops.push(AsyncStorage.setItem(key, val));
+    return DOC_IMG_PREFIX + key;
+  }
+  return val;
+};
+
+const docExtractImages = <T extends Partial<Document>>(doc: T, ops: Promise<any>[]): T => {
+  const out: any = { ...doc };
+  if ('originalPdfData' in out) out.originalPdfData = docStoreVal(out.originalPdfData, ops);
+  if (Array.isArray(out.pages)) {
+    out.pages = out.pages.map((p: DocumentPage) => ({ ...p, imageData: docStoreVal(p.imageData, ops) as string }));
+  }
+  return out as T;
+};
+
+const docCollectRefs = (doc: any, out: string[]) => {
+  const check = (v: any) => { if (typeof v === 'string' && v.startsWith(DOC_IMG_PREFIX)) out.push(v.slice(DOC_IMG_PREFIX.length)); };
+  check(doc?.originalPdfData);
+  (Array.isArray(doc?.pages) ? doc.pages : []).forEach((p: any) => check(p?.imageData));
+};
+
+const docRestoreImages = async (doc: Document): Promise<Document> => {
+  const refs: string[] = [];
+  docCollectRefs(doc, refs);
+  if (refs.length === 0) return doc;
+  const pairs = await AsyncStorage.multiGet(Array.from(new Set(refs)));
+  const map = new Map(pairs as [string, string | null][]);
+  const resolve = (v: any) => (typeof v === 'string' && v.startsWith(DOC_IMG_PREFIX))
+    ? (map.get(v.slice(DOC_IMG_PREFIX.length)) || '')
+    : v;
+  return {
+    ...doc,
+    originalPdfData: resolve(doc.originalPdfData),
+    pages: (doc.pages || []).map(p => ({ ...p, imageData: resolve(p.imageData) })),
+  };
+};
+
+// Einmalige Migration: Inline-Bilddaten aus Dokumenten auslagern
+let docMigrationRunning: Promise<void> | null = null;
+export const migrateDocumentImages = async (): Promise<void> => {
+  if (docMigrationRunning) return docMigrationRunning;
+  docMigrationRunning = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(KEYS.DOCUMENTS);
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr) || arr.length === 0) return;
+      // Nur migrieren, wenn noch lange Inline-Daten vorhanden sind
+      const needsMigration = arr.some((d: any) =>
+        (typeof d.originalPdfData === 'string' && d.originalPdfData.length > 500 && !d.originalPdfData.startsWith(DOC_IMG_PREFIX)) ||
+        (Array.isArray(d.pages) && d.pages.some((p: any) => typeof p.imageData === 'string' && p.imageData.length > 500 && !p.imageData.startsWith(DOC_IMG_PREFIX)))
+      );
+      if (!needsMigration) return;
+      const ops: Promise<any>[] = [];
+      const migrated = arr.map((d: any) => docExtractImages(d, ops));
+      await Promise.all(ops);
+      await AsyncStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(migrated));
+      console.log(`[migrateDocumentImages] ${ops.length} Bilddaten ausgelagert`);
+    } catch (e) {
+      console.error('[migrateDocumentImages] Error:', e);
+    }
+  })();
+  return docMigrationRunning;
+};
+
 export const DocumentService = {
   getAll: async (): Promise<Document[]> => {
     return getItems<Document>(KEYS.DOCUMENTS);
@@ -1709,24 +1783,26 @@ export const DocumentService = {
 
   getByProjectId: async (projectId: string): Promise<Document[]> => {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
-    return documents.filter((doc) => doc.project_id === projectId);
+    return Promise.all(documents.filter((doc) => doc.project_id === projectId).map(d => docRestoreImages(d)));
   },
 
   getById: async (id: string): Promise<Document | null> => {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
-    return documents.find((doc) => doc.id === id) || null;
+    const found = documents.find((doc) => doc.id === id);
+    return found ? docRestoreImages(found) : null;
   },
 
   create: async (data: Omit<Document, 'id' | 'created_at' | 'updated_at'>): Promise<Document> => {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const ops: Promise<any>[] = [];
     const newDocument: Document = {
-      ...data,
+      ...docExtractImages(data as Document, ops),
       id: generateId(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     documents.push(newDocument);
-    await setItems(KEYS.DOCUMENTS, documents);
+    await Promise.all([setItems(KEYS.DOCUMENTS, documents), ...ops]);
     return newDocument;
   },
 
@@ -1734,12 +1810,19 @@ export const DocumentService = {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
     const index = documents.findIndex((doc) => doc.id === id);
     if (index !== -1) {
+      const ops: Promise<any>[] = [];
+      const oldRefs: string[] = [];
+      docCollectRefs(documents[index], oldRefs);
       documents[index] = {
         ...documents[index],
-        ...data,
+        ...docExtractImages(data as Document, ops),
         updated_at: new Date().toISOString(),
       };
-      await setItems(KEYS.DOCUMENTS, documents);
+      const newRefs: string[] = [];
+      docCollectRefs(documents[index], newRefs);
+      const still = new Set(newRefs);
+      oldRefs.filter(k => !still.has(k)).forEach(k => AsyncStorage.removeItem(k).catch(() => {}));
+      await Promise.all([setItems(KEYS.DOCUMENTS, documents), ...ops]);
       return documents[index];
     }
     return null;
@@ -1749,6 +1832,14 @@ export const DocumentService = {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
     const docIndex = documents.findIndex((doc) => doc.id === documentId);
     if (docIndex !== -1) {
+      const ops: Promise<any>[] = [];
+      const patch: Partial<DocumentPage> = { ...pageData };
+      if (typeof patch.imageData === 'string') {
+        const oldPage = documents[docIndex].pages.find((p) => p.pageNumber === pageNumber);
+        const oldRef = oldPage && typeof oldPage.imageData === 'string' && oldPage.imageData.startsWith(DOC_IMG_PREFIX) ? oldPage.imageData.slice(DOC_IMG_PREFIX.length) : null;
+        patch.imageData = docStoreVal(patch.imageData, ops) as string;
+        if (oldRef) AsyncStorage.removeItem(oldRef).catch(() => {});
+      }
       let pageIndex = documents[docIndex].pages.findIndex((p) => p.pageNumber === pageNumber);
       
       // If page doesn't exist, create it
@@ -1756,19 +1847,19 @@ export const DocumentService = {
         const newPage: DocumentPage = {
           pageNumber,
           annotations: '',
-          ...pageData,
-        };
+          ...patch,
+        } as DocumentPage;
         documents[docIndex].pages.push(newPage);
         pageIndex = documents[docIndex].pages.length - 1;
       } else {
         documents[docIndex].pages[pageIndex] = {
           ...documents[docIndex].pages[pageIndex],
-          ...pageData,
+          ...patch,
         };
       }
       
       documents[docIndex].updated_at = new Date().toISOString();
-      await setItems(KEYS.DOCUMENTS, documents);
+      await Promise.all([setItems(KEYS.DOCUMENTS, documents), ...ops]);
       return documents[docIndex];
     }
     return null;
@@ -1776,6 +1867,12 @@ export const DocumentService = {
 
   delete: async (id: string): Promise<void> => {
     const documents = await getItems<Document>(KEYS.DOCUMENTS);
+    const toDelete = documents.find((doc) => doc.id === id);
+    if (toDelete) {
+      const refs: string[] = [];
+      docCollectRefs(toDelete, refs);
+      refs.forEach(k => AsyncStorage.removeItem(k).catch(() => {}));
+    }
     const filtered = documents.filter((doc) => doc.id !== id);
     await setItems(KEYS.DOCUMENTS, filtered);
   },

@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, LogBox, Platform } from 'react-native';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
-import { SketchService, migrateChecklistImages } from '../services/LocalStorage';
+import { SketchService, migrateChecklistImages, migrateDocumentImages } from '../services/LocalStorage';
 import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import { DisclaimerGate } from '../src/components/DisclaimerGate';
@@ -30,10 +30,10 @@ export default function RootLayout() {
     SketchService.migrateAllSketches().catch(err => 
       console.error('[App] Sketch migration error:', err)
     );
-    // Migration: Checklisten-Bilder in separate Keys auslagern (OOM-Schutz),
+    // Migration: Checklisten- & Dokument-Bilder in separate Keys auslagern (OOM-Schutz),
     // danach automatischer Backup-Snapshot (max. 1x pro 24h)
-    migrateChecklistImages()
-      .catch(err => console.error('[App] Checklist image migration error:', err))
+    Promise.allSettled([migrateChecklistImages(), migrateDocumentImages()])
+      .then(results => results.forEach(r => { if (r.status === 'rejected') console.error('[App] Migration error:', r.reason); }))
       .finally(() => {
         BackupService.createAutoSnapshotIfNeeded(24).catch(err =>
           console.warn('[App] Auto-snapshot error:', err)

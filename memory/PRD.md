@@ -124,3 +124,8 @@
   werden aufs 45°-Raster gerundet (Toleranz ±12°), damit handgezeichnete rechte Winkel
   exakt zählen (4×5m Viereck = exakt 25,00 m² statt 24,73). (2) Dreiecke werden exakt
   per Heron-Formel nur aus den 3 Seitenmaßen berechnet (DONE, getestet)
+- Fix Polygon-Fläche bei mehreren Punkten: Winkelschluss-Ausgleich ergänzt – die Summe
+  aller Drehwinkel eines geschlossenen Polygons muss ±360° sein; der Restfehler wird auf
+  die nicht eingerasteten (unsicher gezeichneten) Ecken verteilt. Dadurch exakte
+  Ergebnisse auch bei 5+ Punkten (L-Form 6 Punkte schief gezeichnet = exakt 10,00 m²,
+  U-Form 8 Punkte exakt, Haus-Pentagon exakt) (DONE, getestet)

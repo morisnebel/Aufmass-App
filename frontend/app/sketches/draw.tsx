@@ -1193,20 +1193,49 @@ export default function DrawSketchScreen() {
       return Math.round(heronArea * 100) / 100;
     }
 
-    // 1b) Winkel-Einrastung: Drehwinkel zwischen aufeinanderfolgenden Kanten auf
-    // 45°-Raster einrasten (Toleranz ±12°). So werden handgezeichnete rechte Winkel
-    // als exakt 90° gewertet → 4×5m Viereck = exakt 25,00 m².
+    // 1b) Winkel-Einrastung: Drehwinkel zwischen ALLEN aufeinanderfolgenden Kanten
+    // (inkl. Schluss-Drehung) aufs 45°-Raster einrasten (Toleranz ±12°)
     const SNAP_STEP = Math.PI / 4; // 45°
     const SNAP_TOL = (12 * Math.PI) / 180; // ±12°
-    const angles: number[] = [rawAngles[0]];
-    for (let i = 1; i < n; i++) {
-      let turn = rawAngles[i] - rawAngles[i - 1];
+    const turns: number[] = [];
+    const wasSnapped: boolean[] = [];
+    for (let i = 0; i < n; i++) {
+      const prevAngle = rawAngles[(i - 1 + n) % n];
+      let turn = rawAngles[i] - prevAngle;
       // Normalisieren auf (-180°, 180°]
       while (turn > Math.PI) turn -= 2 * Math.PI;
       while (turn <= -Math.PI) turn += 2 * Math.PI;
       const snapped = Math.round(turn / SNAP_STEP) * SNAP_STEP;
-      if (Math.abs(turn - snapped) <= SNAP_TOL) turn = snapped;
-      angles.push(angles[i - 1] + turn);
+      if (Math.abs(turn - snapped) <= SNAP_TOL) {
+        turns.push(snapped);
+        wasSnapped.push(true);
+      } else {
+        turns.push(turn);
+        wasSnapped.push(false);
+      }
+    }
+
+    // 1c) Winkelschluss-Ausgleich: Die Summe aller Drehwinkel eines geschlossenen
+    // Polygons muss exakt ±360° sein. Der Restfehler wird auf die NICHT eingerasteten
+    // (= unsicher gezeichneten) Ecken verteilt – so korrigieren sich schiefe Ecken selbst
+    const turnSum = turns.reduce((a, b) => a + b, 0);
+    const target = turnSum >= 0 ? 2 * Math.PI : -2 * Math.PI;
+    const residual = target - turnSum;
+    if (Math.abs(residual) > 1e-9) {
+      const freeIdx: number[] = [];
+      for (let i = 0; i < n; i++) {
+        if (!wasSnapped[i]) freeIdx.push(i);
+      }
+      const distributeOver = freeIdx.length > 0 ? freeIdx : turns.map((_, i) => i);
+      for (const i of distributeOver) {
+        turns[i] += residual / distributeOver.length;
+      }
+    }
+
+    // 1d) Kanten-Richtungen aus den korrigierten Drehwinkeln rekonstruieren
+    const angles: number[] = [rawAngles[0]];
+    for (let i = 1; i < n; i++) {
+      angles.push(angles[i - 1] + turns[i]);
     }
 
     // 2) Kanten-Vektoren aus eingegebener Länge + gezeichnetem Winkel

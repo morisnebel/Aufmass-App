@@ -114,3 +114,9 @@
   Mitarbeiter-Lohnkosten-Tabelle, wenn keine Fahrzeit in die Berechnung einfließt (DONE)
 - Offen: Projekt-Status/Phasen-Pipeline, Refactoring der Monolith-Dateien,
   Privacy-URL-Verifizierung durch User
+- Polygon-Flächenberechnung (m²) in Skizzen: Geschlossene Polygone (Polyline mit
+  closed=true) berechnen ihre Fläche via Shoelace-Formel, skaliert über die vom User
+  eingegebenen Segment-Maße (Verhältnis Meter/Pixel der gemessenen Kanten). Toggle
+  "Fläche anzeigen" im Maß-Eingabe-Panel (AN/AUS, pro Polygon, persistiert in
+  Metadaten als polygonAreaVisible). Anzeige: Box unter dem S-Label auf dem Canvas,
+  in der Übersicht-Legende ("S1 = 5 lfm • 20,83 m²") sowie im SVG/PDF-Export (DONE, getestet)

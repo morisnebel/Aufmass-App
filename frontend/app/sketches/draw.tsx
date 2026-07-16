@@ -602,6 +602,8 @@ export default function DrawSketchScreen() {
   // Polyline Linien-Maße (für Grundriss-Bemaßung)
   const [selectedLineSegment, setSelectedLineSegment] = useState<{ elementId: string; segmentIndex: number } | null>(null);
   const [lineSegmentMeasurements, setLineSegmentMeasurements] = useState<{ [key: string]: { [segmentIndex: number]: string } }>({});
+  // Polygon-Flächenanzeige (m²) pro Element ein-/ausschaltbar
+  const [polygonAreaVisible, setPolygonAreaVisible] = useState<{ [elementId: string]: boolean }>({});
   const [showLineMeasurementNumpad, setShowLineMeasurementNumpad] = useState(false);
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
@@ -1149,7 +1151,51 @@ export default function DrawSketchScreen() {
     }
     return Math.round(total * 100) / 100;
   };
-  
+
+  // Berechne die Fläche (m²) für ein geschlossenes Polygon (Polyline mit closed=true)
+  // Methode: Shoelace-Formel auf den Canvas-Koordinaten, skaliert über die vom
+  // Benutzer eingegebenen Segment-Maße (Verhältnis echtes Maß / Pixel-Länge)
+  const calculatePolygonAreaM2 = (element: DrawElement): number | null => {
+    if (element.type !== 'polyline' || !element.data?.closed) return null;
+    const points: { x: number; y: number }[] = element.data.points;
+    if (!points || points.length < 3) return null;
+    const measures = lineSegmentMeasurements[element.id];
+    if (!measures) return null;
+
+    // Skalierungsfaktor aus den gemessenen Segmenten ableiten
+    let measuredPx = 0;
+    let measuredM = 0;
+    Object.keys(measures).forEach((segIdxStr) => {
+      const segIdx = parseInt(segIdxStr, 10);
+      const meters = parseMeasurementToMeters(measures[segIdx]);
+      if (meters <= 0) return; // Text-Maße ohne Zahl überspringen
+      const p1 = points[segIdx];
+      const p2 = segIdx === points.length - 1 ? points[0] : points[segIdx + 1];
+      if (!p1 || !p2) return;
+      const pxLen = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+      if (pxLen <= 0) return;
+      measuredPx += pxLen;
+      measuredM += meters;
+    });
+    if (measuredPx <= 0 || measuredM <= 0) return null;
+    const metersPerPixel = measuredM / measuredPx;
+
+    // Shoelace-Formel (Pixel²)
+    let areaPx = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      areaPx += points[i].x * points[j].y - points[j].x * points[i].y;
+    }
+    areaPx = Math.abs(areaPx) / 2;
+
+    const areaM2 = areaPx * metersPerPixel * metersPerPixel;
+    if (!isFinite(areaM2) || areaM2 <= 0) return null;
+    return Math.round(areaM2 * 100) / 100;
+  };
+
+  // Formatiert eine Fläche für die Anzeige (deutsches Format)
+  const formatAreaM2 = (area: number): string => `${area.toFixed(2).replace('.', ',')} m²`;
+
   // Berechne Gesamtlänge aller Maße in lfm (für Preview/PDF)
   const calculateTotalLfm = (): number => {
     let total = 0;
@@ -1883,6 +1929,12 @@ export default function DrawSketchScreen() {
           } else {
             setLabelOffsets({});
           }
+          // Polygon-Flächen-Sichtbarkeit laden
+          if (metadata.polygonAreaVisible) {
+            setPolygonAreaVisible(metadata.polygonAreaVisible);
+          } else {
+            setPolygonAreaVisible({});
+          }
         } else if (sketch.metadata) {
           // Fallback: metadata still in main array (shouldn't happen after migration)
           try {
@@ -1911,6 +1963,9 @@ export default function DrawSketchScreen() {
             }
             if (parsedMeta.labelOffsets) {
               setLabelOffsets(parsedMeta.labelOffsets);
+            }
+            if (parsedMeta.polygonAreaVisible) {
+              setPolygonAreaVisible(parsedMeta.polygonAreaVisible);
             }
           } catch (e) {
             console.error('Error parsing fallback metadata:', e);
@@ -2300,6 +2355,8 @@ export default function DrawSketchScreen() {
           totalLfmBoxPositions,
           legendPosition,
           notes,
+          labelOffsets,
+          polygonAreaVisible,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
@@ -5781,6 +5838,42 @@ export default function DrawSketchScreen() {
                     r={scaledLabelRadius + 10}
                     fill="transparent"
                   />
+                  {/* Flächenanzeige (m²) unter dem Label wenn aktiviert */}
+                  {(() => {
+                    if (!polygonAreaVisible[element.id]) return null;
+                    const areaM2 = calculatePolygonAreaM2(element);
+                    if (areaM2 === null) return null;
+                    const areaText = formatAreaM2(areaM2);
+                    const areaFontSize = Math.max(6, 10 / Math.max(scale, 0.5));
+                    const areaBoxWidth = areaText.length * areaFontSize * 0.62 + areaFontSize;
+                    const areaBoxHeight = areaFontSize * 1.5;
+                    const areaY = labelY + scaledLabelRadius + areaBoxHeight * 0.75;
+                    return (
+                      <G key={`area-${element.id}`}>
+                        <Rect
+                          x={labelX - areaBoxWidth / 2}
+                          y={areaY - areaBoxHeight / 2}
+                          width={areaBoxWidth}
+                          height={areaBoxHeight}
+                          fill="white"
+                          stroke={labelColor}
+                          strokeWidth={scaledLabelStroke * 0.8}
+                          rx={3}
+                          ry={3}
+                        />
+                        <SvgText
+                          x={labelX}
+                          y={areaY + areaFontSize * 0.35}
+                          fill={labelColor}
+                          fontSize={areaFontSize}
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          {areaText}
+                        </SvgText>
+                      </G>
+                    );
+                  })()}
                 </G>
               );
             })()}
@@ -6566,6 +6659,17 @@ export default function DrawSketchScreen() {
           svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="${expStyle.color}" stroke="#fff" stroke-width="2"/>`;
           // Label text
           svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+          
+          // Flächenanzeige (m²) unter dem Label wenn aktiviert
+          if (polygonAreaVisible[el.id]) {
+            const exportAreaM2 = calculatePolygonAreaM2(el);
+            if (exportAreaM2 !== null) {
+              const areaText = formatAreaM2(exportAreaM2);
+              const areaBoxWidth = areaText.length * 8 + 12;
+              svgElements += `<rect x="${centerX - areaBoxWidth / 2}" y="${centerY + 24}" width="${areaBoxWidth}" height="20" fill="white" stroke="${expStyle.color}" stroke-width="1" rx="3" ry="3"/>`;
+              svgElements += `<text x="${centerX}" y="${centerY + 38}" fill="${expStyle.color}" font-size="12" font-weight="bold" text-anchor="middle">${areaText}</text>`;
+            }
+          }
         }
       } else if (el.type === 'polygon' && typeof el.data === 'string') {
         svgElements += `<path d="${el.data}" stroke="${el.color}" stroke-width="${strokeWidth}" fill="${el.color}" fill-opacity="0.3" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -6597,7 +6701,9 @@ export default function DrawSketchScreen() {
         svgElements += `<text x="${svgLegendXPos + 34}" y="${itemY + 2}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         
         // Value text - größere Schrift
-        svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">= ${totalForElement.toString().replace('.', ',')} lfm</text>`;
+        const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
+        const legendValueText = `= ${totalForElement.toString().replace('.', ',')} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
+        svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">${legendValueText}</text>`;
       });
     }
     
@@ -6631,6 +6737,7 @@ export default function DrawSketchScreen() {
         legendPosition, // Speichere Position der Übersicht-Legend
         notes, // Speichere die Notizen
         labelOffsets, // Speichere Polyline-Label-Positionen
+        polygonAreaVisible, // Speichere Polygon-Flächen-Sichtbarkeit
       };
 
       console.log('Saving sketch with', elements.length, 'elements, bgChanged:', backgroundImageChangedRef.current);
@@ -8106,12 +8213,16 @@ export default function DrawSketchScreen() {
           {getPolylineElementsWithMeasurements().map((element, index) => {
             const totalForElement = calculateTotalLfmForElement(element.id);
             if (totalForElement <= 0) return null;
+            const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
             return (
               <View key={`legend-${element.id}`} style={styles.sketchLegendRow}>
                 <View style={styles.sketchLegendLabel}>
                   <Text style={styles.sketchLegendLabelText}>S{index + 1}</Text>
                 </View>
-                <Text style={styles.sketchLegendValue}>= {totalForElement.toString().replace('.', ',')} lfm</Text>
+                <Text style={styles.sketchLegendValue}>
+                  = {totalForElement.toString().replace('.', ',')} lfm
+                  {legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}
+                </Text>
               </View>
             );
           })}
@@ -8193,6 +8304,35 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             )}
           </View>
+          
+          {/* Flächen-Toggle für geschlossene Polygone */}
+          {selectedLineSegment && (() => {
+            const polyEl = elements.find(e => e.id === selectedLineSegment.elementId);
+            if (!polyEl || polyEl.type !== 'polyline' || !polyEl.data?.closed || !polyEl.data.points || polyEl.data.points.length < 3) return null;
+            const areaM2 = calculatePolygonAreaM2(polyEl);
+            const isAreaVisible = !!polygonAreaVisible[polyEl.id];
+            return (
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  marginHorizontal: 10, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 7,
+                  backgroundColor: isAreaVisible ? '#e8f5e9' : '#f5f5f5',
+                  borderRadius: 8, borderWidth: 1, borderColor: isAreaVisible ? '#a5d6a7' : '#ddd',
+                }}
+                onPress={() => setPolygonAreaVisible(prev => ({ ...prev, [polyEl.id]: !prev[polyEl.id] }))}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <Ionicons name={isAreaVisible ? 'eye' : 'eye-off'} size={16} color={isAreaVisible ? '#2e7d32' : '#888'} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: isAreaVisible ? '#2e7d32' : '#666' }} numberOfLines={1}>
+                    {areaM2 !== null ? `Fläche: ${formatAreaM2(areaM2)}` : 'Fläche (m²) – Maß eingeben'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: isAreaVisible ? '#2e7d32' : '#999' }}>
+                  {isAreaVisible ? 'AN' : 'AUS'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
           
           {/* Tastatur-Bereich */}
           <View style={{ paddingHorizontal: 10 }}>

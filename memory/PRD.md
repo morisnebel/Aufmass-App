@@ -65,6 +65,12 @@
   getById/getByProjectId, Cleanup bei delete. Migration migrateDocumentImages()
   beim App-Start. doc_img_ in Backup-DYNAMIC_KEY_PREFIXES aufgenommen.
   Restrisiko (klein, bewusst offen): area_calculations.backgroundImage inline.
+- Backup-UX-Fix (Startseiten-Banner): "Sichern"-Button hatte keinen Lade-Zustand →
+  Mehrfach-Tipps/parallele Exporte. Neu: backupRunning-State (Spinner + "Backup wird
+  erstellt…"), Erfolgs-/Fehler-Alert, Service-seitiger In-Flight-Guard (exportInFlight).
+  Performance: Read-Pipeline (nächster Key lädt während des Schreibens).
+  Web: Backup jetzt als Browser-Download (writeAsStringAsync existiert auf Web nicht);
+  Sharing auf Web übersprungen.
 - TestFlight-Crash-Analyse (iPad Pro, iOS 26): Root Cause = Hermes-OOM durch Auto-Backup.
   Alt: bis zu 5 Snapshots mit kompletten App-Daten als data_json in EINEM AsyncStorage-Blob,
   jeder App-Start parste/stringifizierte alles → bad_alloc/abort (JSON.stringify im Stack).

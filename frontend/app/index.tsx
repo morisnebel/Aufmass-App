@@ -178,12 +178,20 @@ export default function HomeScreen() {
     }, [])
   );
 
+  const [backupRunning, setBackupRunning] = useState(false);
   const handleBackupNow = async () => {
+    if (backupRunning) return;
+    setBackupRunning(true);
     try {
-      await BackupService.exportFullBackup();
+      const res = await BackupService.exportFullBackup();
       setBackupDueDays(null);
+      const mb = res.sizeBytes / (1024 * 1024);
+      Alert.alert('Backup erstellt ✓', `Die Sicherung (${mb >= 1 ? mb.toFixed(1) + ' MB' : Math.max(1, Math.round(res.sizeBytes / 1024)) + ' KB'}) wurde erstellt.`);
     } catch (e: any) {
       console.warn('[Backup] Home banner backup failed:', e);
+      Alert.alert('Backup fehlgeschlagen', 'Bitte versuchen Sie es erneut.' + (e?.message ? `\n(${e.message})` : ''));
+    } finally {
+      setBackupRunning(false);
     }
   };
 
@@ -788,23 +796,30 @@ export default function HomeScreen() {
             borderLeftColor: '#d97706',
           }}
           onPress={handleBackupNow}
+          disabled={backupRunning}
           activeOpacity={0.85}
         >
           <Ionicons name="save-outline" size={22} color="#d97706" />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e' }}>Backup empfohlen</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e' }}>{backupRunning ? 'Backup wird erstellt…' : 'Backup empfohlen'}</Text>
             <Text style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>
-              {backupDueDays === 0
-                ? 'Sie haben noch nie ein Datei-Backup erstellt.'
-                : `Letzte Sicherung vor ${backupDueDays} ${backupDueDays === 1 ? 'Tag' : 'Tagen'}.`} Jetzt sichern?
+              {backupRunning
+                ? 'Bitte warten – bei vielen Projekten kann das etwas dauern.'
+                : `${backupDueDays === 0
+                    ? 'Sie haben noch nie ein Datei-Backup erstellt.'
+                    : `Letzte Sicherung vor ${backupDueDays} ${backupDueDays === 1 ? 'Tag' : 'Tagen'}.`} Jetzt sichern?`}
             </Text>
           </View>
-          <View style={{ backgroundColor: '#d97706', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Sichern</Text>
+          <View style={{ backgroundColor: '#d97706', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 60, alignItems: 'center' }}>
+            {backupRunning
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Sichern</Text>}
           </View>
-          <TouchableOpacity onPress={() => setBackupDueDays(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
-            <Ionicons name="close" size={18} color="#92400e" />
-          </TouchableOpacity>
+          {!backupRunning && (
+            <TouchableOpacity onPress={() => setBackupDueDays(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
+              <Ionicons name="close" size={18} color="#92400e" />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       )}
 

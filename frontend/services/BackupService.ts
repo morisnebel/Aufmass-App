@@ -143,12 +143,9 @@ const countItems = (data: Record<string, any>) => {
 };
 
 // ============ OPTION A: Manuelles Export/Import ============
-export const BackupService = {
-  /**
-   * Erstellt eine Backup-Datei und öffnet den iOS Share-Dialog.
-   * Nutzer kann dann z.B. in Google Drive, iCloud Drive, WhatsApp etc. speichern.
-   */
-  exportFullBackup: async (): Promise<{ uri: string; sizeBytes: number }> => {
+let exportInFlight: Promise<{ uri: string; sizeBytes: number }> | null = null;
+
+const doExportFullBackup = async (): Promise<{ uri: string; sizeBytes: number }> => {
     // Speicherschonend: Backup wird in Chunks direkt in die Datei gestreamt.
     // Es wird NIE ein einziger riesiger JSON-String gebaut oder an das native
     // Modul übergeben (verhindert Hermes-/Native-OOM-Crashes bei großen Daten).
@@ -168,7 +165,7 @@ export const BackupService = {
     const allKeys = await getAllBackupKeys();
 
     if (Platform.OS === 'web') {
-      // Web-Preview: einfacher Pfad (Datenmengen dort klein)
+      // Web: Backup als Browser-Download anbieten
       const parts: string[] = [];
       for (const key of allKeys) {
         try {
@@ -178,9 +175,16 @@ export const BackupService = {
       }
       const json = `${header}${parts.join(',')}}}`;
       sizeBytes = json.length;
-      const dir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory;
-      fileUri = `${dir}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      fileUri = filename;
     } else {
       // Nativ: gestreamtes Schreiben in max. 512-KB-Chunks
       const file = new File(Paths.cache, filename);
@@ -199,14 +203,15 @@ export const BackupService = {
       try {
         writeStr(header);
         let firstEntry = true;
-        for (const key of allKeys) {
-          try {
-            const valueJson = await rawValueFor(key);
-            if (valueJson == null) continue;
-            writeStr(`${firstEntry ? '' : ','}${JSON.stringify(key)}:`);
-            writeStr(valueJson);
-            firstEntry = false;
-          } catch (e) { console.warn('[Backup] Skipping key', key, e); }
+        // Pipeline: nächsten Key bereits laden, während der aktuelle geschrieben wird
+        let pending: Promise<string | null> | null = allKeys.length > 0 ? rawValueFor(allKeys[0]).catch(() => null) : null;
+        for (let i = 0; i < allKeys.length; i++) {
+          const valueJson = pending ? await pending : null;
+          pending = i + 1 < allKeys.length ? rawValueFor(allKeys[i + 1]).catch(() => null) : null;
+          if (valueJson == null) continue;
+          writeStr(`${firstEntry ? '' : ','}${JSON.stringify(allKeys[i])}:`);
+          writeStr(valueJson);
+          firstEntry = false;
         }
         writeStr('}}');
       } finally {
@@ -215,7 +220,7 @@ export const BackupService = {
       fileUri = file.uri;
     }
 
-    const canShare = await Sharing.isAvailableAsync();
+    const canShare = Platform.OS !== 'web' && await Sharing.isAvailableAsync();
     if (canShare) {
       await Sharing.shareAsync(fileUri, {
         mimeType: 'application/json',
@@ -228,6 +233,23 @@ export const BackupService = {
       await AsyncStorage.setItem('aufmassprofi_last_file_backup', new Date().toISOString());
     } catch {}
     return { uri: fileUri, sizeBytes };
+};
+
+export const BackupService = {
+  /**
+   * Erstellt eine Backup-Datei und öffnet den iOS Share-Dialog.
+   * Doppelstart-Schutz: laufender Export wird wiederverwendet (Mehrfach-Tipp).
+   */
+  exportFullBackup: async (): Promise<{ uri: string; sizeBytes: number }> => {
+    if (exportInFlight) return exportInFlight;
+    exportInFlight = (async () => {
+      try {
+        return await doExportFullBackup();
+      } finally {
+        exportInFlight = null;
+      }
+    })();
+    return exportInFlight;
   },
 
   /**

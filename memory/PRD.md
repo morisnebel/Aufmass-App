@@ -118,5 +118,5 @@
   closed=true) berechnen ihre Fläche via Shoelace-Formel, skaliert über die vom User
   eingegebenen Segment-Maße (Verhältnis Meter/Pixel der gemessenen Kanten). Toggle
   "Fläche anzeigen" im Maß-Eingabe-Panel (AN/AUS, pro Polygon, persistiert in
-  Metadaten als polygonAreaVisible). Anzeige: Box unter dem S-Label auf dem Canvas,
+  Metadaten als polygonAreaVisible). UPDATE: Berechnung nutzt NUR die eingegebenen Maße (alle Seiten müssen bemaßt sein) – Rekonstruktion aus Seitenlängen + gezeichneten Winkeln mit Bowditch-Ausgleich für exakte Ergebnisse (5m×4m = exakt 20,00 m²). Anzeige: Box unter dem S-Label auf dem Canvas,
   in der Übersicht-Legende ("S1 = 5 lfm • 20,83 m²") sowie im SVG/PDF-Export (DONE, getestet)

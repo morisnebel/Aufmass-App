@@ -1153,8 +1153,10 @@ export default function DrawSketchScreen() {
   };
 
   // Berechne die Fläche (m²) für ein geschlossenes Polygon (Polyline mit closed=true)
-  // Methode: Shoelace-Formel auf den Canvas-Koordinaten, skaliert über die vom
-  // Benutzer eingegebenen Segment-Maße (Verhältnis echtes Maß / Pixel-Länge)
+  // Methode: NUR mit den vom Benutzer eingegebenen Maßen – ALLE Seiten müssen bemaßt sein.
+  // Das Polygon wird aus den eingegebenen Seitenlängen + den gezeichneten Winkeln
+  // rekonstruiert (Bowditch-Ausgleich für den Schließfehler), dann Shoelace-Formel.
+  // So ergibt z.B. ein Rechteck mit 5m × 4m exakt 20,00 m².
   const calculatePolygonAreaM2 = (element: DrawElement): number | null => {
     if (element.type !== 'polyline' || !element.data?.closed) return null;
     const points: { x: number; y: number }[] = element.data.points;
@@ -1162,33 +1164,52 @@ export default function DrawSketchScreen() {
     const measures = lineSegmentMeasurements[element.id];
     if (!measures) return null;
 
-    // Skalierungsfaktor aus den gemessenen Segmenten ableiten
-    let measuredPx = 0;
-    let measuredM = 0;
-    Object.keys(measures).forEach((segIdxStr) => {
-      const segIdx = parseInt(segIdxStr, 10);
-      const meters = parseMeasurementToMeters(measures[segIdx]);
-      if (meters <= 0) return; // Text-Maße ohne Zahl überspringen
-      const p1 = points[segIdx];
-      const p2 = segIdx === points.length - 1 ? points[0] : points[segIdx + 1];
-      if (!p1 || !p2) return;
+    const n = points.length; // n Punkte = n Segmente (inkl. Schluss-Segment n-1)
+
+    // 1) Alle Segmente müssen ein numerisches Maß haben
+    const lengths: number[] = [];
+    const angles: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const meters = parseMeasurementToMeters(measures[i] || '');
+      if (!meters || meters <= 0) return null; // Maß fehlt oder nicht numerisch
+      const p1 = points[i];
+      const p2 = i === n - 1 ? points[0] : points[i + 1];
+      if (!p1 || !p2) return null;
       const pxLen = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-      if (pxLen <= 0) return;
-      measuredPx += pxLen;
-      measuredM += meters;
-    });
-    if (measuredPx <= 0 || measuredM <= 0) return null;
-    const metersPerPixel = measuredM / measuredPx;
-
-    // Shoelace-Formel (Pixel²)
-    let areaPx = 0;
-    for (let i = 0; i < points.length; i++) {
-      const j = (i + 1) % points.length;
-      areaPx += points[i].x * points[j].y - points[j].x * points[i].y;
+      if (pxLen <= 0) return null;
+      lengths.push(meters);
+      angles.push(Math.atan2(p2.y - p1.y, p2.x - p1.x)); // Richtung aus der Zeichnung
     }
-    areaPx = Math.abs(areaPx) / 2;
 
-    const areaM2 = areaPx * metersPerPixel * metersPerPixel;
+    // 2) Kanten-Vektoren aus eingegebener Länge + gezeichnetem Winkel
+    const edges = lengths.map((len, i) => ({
+      x: len * Math.cos(angles[i]),
+      y: len * Math.sin(angles[i]),
+    }));
+
+    // 3) Schließfehler berechnen und per Bowditch-Ausgleich auf die Ecken verteilen
+    const totalLength = lengths.reduce((a, b) => a + b, 0);
+    const closeErrX = edges.reduce((a, e) => a + e.x, 0);
+    const closeErrY = edges.reduce((a, e) => a + e.y, 0);
+
+    const vertices: { x: number; y: number }[] = [{ x: 0, y: 0 }];
+    for (let i = 0; i < n - 1; i++) {
+      // Korrigierte Kante: Anteil des Schließfehlers proportional zur Seitenlänge abziehen
+      const corr = lengths[i] / totalLength;
+      vertices.push({
+        x: vertices[i].x + edges[i].x - closeErrX * corr,
+        y: vertices[i].y + edges[i].y - closeErrY * corr,
+      });
+    }
+
+    // 4) Shoelace-Formel auf den rekonstruierten Ecken (in Metern)
+    let areaM2 = 0;
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      areaM2 += vertices[i].x * vertices[j].y - vertices[j].x * vertices[i].y;
+    }
+    areaM2 = Math.abs(areaM2) / 2;
+
     if (!isFinite(areaM2) || areaM2 <= 0) return null;
     return Math.round(areaM2 * 100) / 100;
   };
@@ -8324,7 +8345,7 @@ export default function DrawSketchScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                   <Ionicons name={isAreaVisible ? 'eye' : 'eye-off'} size={16} color={isAreaVisible ? '#2e7d32' : '#888'} />
                   <Text style={{ fontSize: 12, fontWeight: '600', color: isAreaVisible ? '#2e7d32' : '#666' }} numberOfLines={1}>
-                    {areaM2 !== null ? `Fläche: ${formatAreaM2(areaM2)}` : 'Fläche (m²) – Maß eingeben'}
+                    {areaM2 !== null ? `Fläche: ${formatAreaM2(areaM2)}` : 'Fläche (m²) – alle Seiten bemaßen'}
                   </Text>
                 </View>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: isAreaVisible ? '#2e7d32' : '#999' }}>

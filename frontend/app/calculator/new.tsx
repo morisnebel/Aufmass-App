@@ -3411,7 +3411,7 @@ export default function AreaCalculatorEditor() {
               padding-top: 15px;
               border-top: 1px solid #ddd;
               font-size: 10px;
-              color: #888;
+              color: #555;
               text-align: center;
             }
           </style>

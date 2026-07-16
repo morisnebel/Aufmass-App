@@ -675,7 +675,7 @@ export const generateReportSectionHtml = (
                 <tbody>${empRowsHtml}</tbody>
                 <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
               </table>
-              ${!travelIncludedInCosts ? '<div style="font-size:9px;color:#94a3b8;font-style:italic;margin-top:2px;text-align:right;">ohne Berechnung der Fahrtzeiten</div>' : ''}
+              ${!travelIncludedInCosts ? '<div style="font-size:10px;color:#475569;font-weight:600;font-style:italic;margin-top:3px;text-align:right;">ohne Berechnung der Fahrtzeiten</div>' : ''}
             ` : ''}
             ${showMat && matRowsHtml ? `
               <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Material-Kosten</div>
@@ -1091,7 +1091,7 @@ export const generateReportHtml = async (
         @page { margin: 14mm; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; color: #333; }
         ${REPORT_CSS}
-        .doc-footer { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 9px; color: #999; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
+        .doc-footer { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 10px; color: #555; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
       </style>
     </head>
     <body>

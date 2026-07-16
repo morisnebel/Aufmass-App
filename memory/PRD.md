@@ -71,6 +71,9 @@
   Performance: Read-Pipeline (nächster Key lädt während des Schreibens).
   Web: Backup jetzt als Browser-Download (writeAsStringAsync existiert auf Web nicht);
   Sharing auf Web übersprungen.
+- PDF-Lesbarkeit: "ohne Berechnung der Fahrtzeiten" (10px, #475569, fett-kursiv) und
+  Fußzeile "Erstellt mit Aufmassprofi Pro · Datum" (doc-footer 10px, #555) dunkler;
+  auch Calculator-PDF-Footer (#555).
 - TestFlight-Crash-Analyse (iPad Pro, iOS 26): Root Cause = Hermes-OOM durch Auto-Backup.
   Alt: bis zu 5 Snapshots mit kompletten App-Daten als data_json in EINEM AsyncStorage-Blob,
   jeder App-Start parste/stringifizierte alles → bad_alloc/abort (JSON.stringify im Stack).

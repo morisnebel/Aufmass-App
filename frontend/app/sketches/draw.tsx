@@ -1168,7 +1168,7 @@ export default function DrawSketchScreen() {
 
     // 1) Alle Segmente müssen ein numerisches Maß haben
     const lengths: number[] = [];
-    const angles: number[] = [];
+    const rawAngles: number[] = [];
     for (let i = 0; i < n; i++) {
       const meters = parseMeasurementToMeters(measures[i] || '');
       if (!meters || meters <= 0) return null; // Maß fehlt oder nicht numerisch
@@ -1178,7 +1178,35 @@ export default function DrawSketchScreen() {
       const pxLen = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
       if (pxLen <= 0) return null;
       lengths.push(meters);
-      angles.push(Math.atan2(p2.y - p1.y, p2.x - p1.x)); // Richtung aus der Zeichnung
+      rawAngles.push(Math.atan2(p2.y - p1.y, p2.x - p1.x)); // Richtung aus der Zeichnung
+    }
+
+    // Sonderfall Dreieck: Fläche ist durch die 3 Seiten EXAKT bestimmt (Heron-Formel),
+    // die gezeichneten Winkel werden nicht benötigt
+    if (n === 3) {
+      const [a, b, c] = lengths;
+      const s = (a + b + c) / 2;
+      const under = s * (s - a) * (s - b) * (s - c);
+      if (under <= 0) return null; // Seiten ergeben kein gültiges Dreieck
+      const heronArea = Math.sqrt(under);
+      if (!isFinite(heronArea) || heronArea <= 0) return null;
+      return Math.round(heronArea * 100) / 100;
+    }
+
+    // 1b) Winkel-Einrastung: Drehwinkel zwischen aufeinanderfolgenden Kanten auf
+    // 45°-Raster einrasten (Toleranz ±12°). So werden handgezeichnete rechte Winkel
+    // als exakt 90° gewertet → 4×5m Viereck = exakt 25,00 m².
+    const SNAP_STEP = Math.PI / 4; // 45°
+    const SNAP_TOL = (12 * Math.PI) / 180; // ±12°
+    const angles: number[] = [rawAngles[0]];
+    for (let i = 1; i < n; i++) {
+      let turn = rawAngles[i] - rawAngles[i - 1];
+      // Normalisieren auf (-180°, 180°]
+      while (turn > Math.PI) turn -= 2 * Math.PI;
+      while (turn <= -Math.PI) turn += 2 * Math.PI;
+      const snapped = Math.round(turn / SNAP_STEP) * SNAP_STEP;
+      if (Math.abs(turn - snapped) <= SNAP_TOL) turn = snapped;
+      angles.push(angles[i - 1] + turn);
     }
 
     // 2) Kanten-Vektoren aus eingegebener Länge + gezeichnetem Winkel

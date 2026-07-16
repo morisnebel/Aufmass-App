@@ -120,3 +120,7 @@
   "Fläche anzeigen" im Maß-Eingabe-Panel (AN/AUS, pro Polygon, persistiert in
   Metadaten als polygonAreaVisible). UPDATE: Berechnung nutzt NUR die eingegebenen Maße (alle Seiten müssen bemaßt sein) – Rekonstruktion aus Seitenlängen + gezeichneten Winkeln mit Bowditch-Ausgleich für exakte Ergebnisse (5m×4m = exakt 20,00 m²). Anzeige: Box unter dem S-Label auf dem Canvas,
   in der Übersicht-Legende ("S1 = 5 lfm • 20,83 m²") sowie im SVG/PDF-Export (DONE, getestet)
+- Fix Polygon-Fläche Genauigkeit: (1) Winkel-Einrastung – gezeichnete Ecken-Drehwinkel
+  werden aufs 45°-Raster gerundet (Toleranz ±12°), damit handgezeichnete rechte Winkel
+  exakt zählen (4×5m Viereck = exakt 25,00 m² statt 24,73). (2) Dreiecke werden exakt
+  per Heron-Formel nur aus den 3 Seitenmaßen berechnet (DONE, getestet)

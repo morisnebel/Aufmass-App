@@ -129,3 +129,8 @@
   die nicht eingerasteten (unsicher gezeichneten) Ecken verteilt. Dadurch exakte
   Ergebnisse auch bei 5+ Punkten (L-Form 6 Punkte schief gezeichnet = exakt 10,00 m²,
   U-Form 8 Punkte exakt, Haus-Pentagon exakt) (DONE, getestet)
+- Fix macOS Dark Mode Datumsauswahl: Alle 6 nativen DateTimePicker in reports/edit.tsx
+  (Datum, Uhrzeiten, Fahrzeiten, Maschinenstunden) haben jetzt themeVariant="light",
+  da sie in hellen Modals liegen (weißer Hintergrund + weiße Picker-Schrift im
+  macOS-Dunkelmodus = unsichtbar). DatePickerField.tsx und projects/[id].tsx hatten
+  das Prop bereits. Keine Logik-/Formatänderungen; Android ignoriert das Prop (DONE)

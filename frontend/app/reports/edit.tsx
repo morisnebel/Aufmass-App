@@ -1139,6 +1139,7 @@ export default function ReportEditScreen() {
                 value={date ? new Date(date) : new Date()}
                 mode="date"
                 display={Platform.OS === 'android' ? 'default' : 'spinner'}
+                themeVariant="light"
                 onChange={(_, selected) => {
                   if (Platform.OS === 'android') setShowDatePicker(false);
                   if (selected) setDate(selected.toISOString().split('T')[0]);
@@ -2190,6 +2191,7 @@ export default function ReportEditScreen() {
               mode="time"
               is24Hour
               display={Platform.OS === 'android' ? 'default' : 'spinner'}
+              themeVariant="light"
               onChange={(_, selected) => {
                 const isDialog = Platform.OS === 'android';
                 if (!selected) {
@@ -2299,6 +2301,7 @@ export default function ReportEditScreen() {
                     mode="time"
                     is24Hour
                     display="spinner"
+                    themeVariant="light"
                     minuteInterval={5}
                     onChange={(_, selected) => {
                       if (!selected) return;
@@ -2367,6 +2370,7 @@ export default function ReportEditScreen() {
                       mode="time"
                       is24Hour
                       display="spinner"
+                      themeVariant="light"
                       minuteInterval={5}
                       onChange={(_, selected) => {
                         if (!selected) return;
@@ -2941,6 +2945,7 @@ export default function ReportEditScreen() {
                     mode="time"
                     is24Hour
                     display="spinner"
+                    themeVariant="light"
                     minuteInterval={5}
                     onChange={(_, selected) => {
                       if (!selected) return;
@@ -3186,6 +3191,7 @@ export default function ReportEditScreen() {
               })()}
               mode="date"
               display={Platform.OS === 'android' ? 'default' : 'spinner'}
+              themeVariant="light"
               onChange={(_, selected) => {
                 if (Platform.OS === 'android') setEmpDatePicker(null);
                 if (selected && empDatePicker) {

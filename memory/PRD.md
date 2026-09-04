@@ -134,3 +134,11 @@
   da sie in hellen Modals liegen (weißer Hintergrund + weiße Picker-Schrift im
   macOS-Dunkelmodus = unsichtbar). DatePickerField.tsx und projects/[id].tsx hatten
   das Prop bereits. Keine Logik-/Formatänderungen; Android ignoriert das Prop (DONE)
+- Rapport-PDF Überarbeitung: (1) Alle Schriftgrößen in REPORT_CSS + Inline-Styles ~1-3px
+  reduziert (Titel 18→15, Tabellen 11→10, th 9, Sektionen 13→11, Brutto 18→15 usw.),
+  Paddings gestrafft, Info-Box-Titel uppercase. Gilt für Direkt-PDF UND eingebettete
+  Rapporte im Projekt-PDF (gemeinsames REPORT_CSS). (2) Direkt-Rapport-PDF: echte
+  Seitenränder via printToFileAsync margins-Option 36pt (~12,7mm) – iOS/macOS ignoriert
+  CSS @page! @page 14mm bleibt für Android. (3) Projekt-PDF: Print-Padding von
+  .page/.new-page von 0mm 5mm auf 4mm 12mm erhöht (DONE, HTML-Vorschau geprüft;
+  echte PDF-Ausgabe braucht neuen Build)

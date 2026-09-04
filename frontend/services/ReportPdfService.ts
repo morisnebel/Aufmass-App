@@ -153,9 +153,9 @@ export const generateReportSectionHtml = (
             })();
             const empDate = empAny.entry_date || report.date;
             return `<tr>
-              <td style="font-size:10px;">${formatDate(empDate)}</td>
+              <td style="font-size:9px;">${formatDate(empDate)}</td>
               <td style="font-weight:600;">${escapeHtml(e.name)}</td>
-              <td style="color:#64748b;font-size:10px;">${escapeHtml(empAny.role || '')}</td>
+              <td style="color:#64748b;font-size:9px;">${escapeHtml(empAny.role || '')}</td>
               <td style="text-align:center;">${escapeHtml(empAny.time_from || '–')}</td>
               <td style="text-align:center;">${escapeHtml(empAny.time_to || '–')}</td>
               <td style="text-align:center;">${empAny.pause_minutes ? `${empAny.pause_minutes} min` : '–'}</td>
@@ -221,8 +221,8 @@ export const generateReportSectionHtml = (
               : '';
             return `
               <tr>
-                <td colspan="6" style="text-align:right;font-size:10px;color:#0891b2;">+ Fahrzeit${labelExtra}:</td>
-                <td style="text-align:right;font-weight:600;color:#0891b2;font-size:10px;">${formatHoursHM(travelSum)}</td>
+                <td colspan="6" style="text-align:right;font-size:9px;color:#0891b2;">+ Fahrzeit${labelExtra}:</td>
+                <td style="text-align:right;font-weight:600;color:#0891b2;font-size:9px;">${formatHoursHM(travelSum)}</td>
               </tr>
               <tr style="background:#ecfeff;">
                 <td colspan="6" style="text-align:right;font-weight:800;color:#0e7490;">Gesamt inkl. Fahrzeit:</td>
@@ -231,7 +231,7 @@ export const generateReportSectionHtml = (
           })()}
         </tbody>
       </table>`
-    : '<p style="color:#999;font-style:italic;font-size:11px;">Keine Mitarbeiter angegeben</p>';
+    : '<p style="color:#999;font-style:italic;font-size:10px;">Keine Mitarbeiter angegeben</p>';
 
   // Stunden pro Funktion gruppieren
   const roleMap: Record<string, { hours: number; count: number }> = {};
@@ -460,7 +460,7 @@ export const generateReportSectionHtml = (
     <div class="report-page">
       <div class="report-header">
         <div style="display:flex;align-items:flex-start;gap:10px;flex:1;">
-          ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:50px;max-height:50px;width:auto;max-width:120px;object-fit:contain;" />` : ''}
+          ${(options as any).logoData ? `<img src="${(options as any).logoData}" style="height:42px;max-height:42px;width:auto;max-width:110px;object-fit:contain;" />` : ''}
           <div style="flex:1;">
             <div class="report-title">📝 ${escapeHtml((options as any).reportTitle || 'RAPPORT')}</div>
             ${report.report_number ? `<div class="report-number" style="margin-top:4px;">${escapeHtml(report.report_number)}</div>` : ''}
@@ -496,10 +496,10 @@ export const generateReportSectionHtml = (
         const companyHtml = hasCompany ? `
           <div class="info-box" style="flex:1;min-width:0;">
             <div class="info-box-title">Firma</div>
-            <div style="font-size:12px;color:#0f172a;font-weight:700;">${escapeHtml(cName)}</div>
-            ${cOwner ? `<div style="font-size:10px;color:#475569;margin-top:2px;">${escapeHtml(cOwner)}</div>` : ''}
-            ${companyLines.length ? `<div style="font-size:10px;color:#475569;margin-top:4px;line-height:1.45;">${companyLines.join('<br/>')}</div>` : ''}
-            ${contactParts.length ? `<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.5;">${contactParts.join('<br/>')}</div>` : ''}
+            <div style="font-size:11px;color:#0f172a;font-weight:700;">${escapeHtml(cName)}</div>
+            ${cOwner ? `<div style="font-size:9px;color:#475569;margin-top:2px;">${escapeHtml(cOwner)}</div>` : ''}
+            ${companyLines.length ? `<div style="font-size:9px;color:#475569;margin-top:4px;line-height:1.45;">${companyLines.join('<br/>')}</div>` : ''}
+            ${contactParts.length ? `<div style="font-size:9px;color:#475569;margin-top:3px;line-height:1.5;">${contactParts.join('<br/>')}</div>` : ''}
           </div>
         ` : '';
         const projectHtml = headerRows.length > 0 ? `
@@ -602,8 +602,8 @@ export const generateReportSectionHtml = (
               })();
               empRowsHtml += `<tr>
                 <td>${escape(e.name)}</td>
-                <td style="color:#64748b;font-size:10px;">${escape(ea.role || '')}</td>
-                <td style="color:#64748b;font-size:10px;">${entryDateStr}</td>
+                <td style="color:#64748b;font-size:9px;">${escape(ea.role || '')}</td>
+                <td style="color:#64748b;font-size:9px;">${entryDateStr}</td>
                 <td style="text-align:right;">${formatHoursHM(totalHrs)}</td>
                 <td style="text-align:right;">${rate > 0 ? eurFmt(rate) + '/h' : '<span style="color:#94a3b8">–</span>'}</td>
                 <td style="text-align:right;font-weight:600;">${rate > 0 ? eurFmt(cost) : '<span style="color:#94a3b8">–</span>'}</td>
@@ -666,7 +666,7 @@ export const generateReportSectionHtml = (
           <div class="section keep-together">
             <div class="section-title" style="background:#dcfce7;color:#166534;">💰 Kosten-Übersicht</div>
             ${showEmp && empRowsHtml ? `
-              <div style="margin-top:6px;font-size:11px;font-weight:700;color:#0f172a;">Mitarbeiter-Lohnkosten</div>
+              <div style="margin-top:6px;font-size:10px;font-weight:700;color:#0f172a;">Mitarbeiter-Lohnkosten</div>
               <table class="material-table" style="margin-top:4px;">
                 <thead><tr>
                   <th>Mitarbeiter</th><th>Funktion</th><th>Datum</th>
@@ -675,10 +675,10 @@ export const generateReportSectionHtml = (
                 <tbody>${empRowsHtml}</tbody>
                 <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;background:#f1f5f9;">Zwischensumme:</td><td style="text-align:right;font-weight:800;background:#f1f5f9;">${eurFmt(empTotal)}</td></tr></tfoot>
               </table>
-              ${!travelIncludedInCosts ? '<div style="font-size:10px;color:#475569;font-weight:600;font-style:italic;margin-top:3px;text-align:right;">ohne Berechnung der Fahrtzeiten</div>' : ''}
+              ${!travelIncludedInCosts ? '<div style="font-size:9px;color:#475569;font-weight:600;font-style:italic;margin-top:3px;text-align:right;">ohne Berechnung der Fahrtzeiten</div>' : ''}
             ` : ''}
             ${showMat && matRowsHtml ? `
-              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Material-Kosten</div>
+              <div style="margin-top:10px;font-size:10px;font-weight:700;color:#0f172a;">Material-Kosten</div>
               <table class="material-table" style="margin-top:4px;">
                 <thead><tr>
                   <th>Material</th>
@@ -689,7 +689,7 @@ export const generateReportSectionHtml = (
               </table>
             ` : ''}
             ${showMac && macRowsHtml ? `
-              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Maschinen-Kosten</div>
+              <div style="margin-top:10px;font-size:10px;font-weight:700;color:#0f172a;">Maschinen-Kosten</div>
               <table class="material-table" style="margin-top:4px;">
                 <thead><tr>
                   <th>Maschine / Gerät</th>
@@ -700,7 +700,7 @@ export const generateReportSectionHtml = (
               </table>
             ` : ''}
             ${showTravel && travelCostsTotal > 0 ? `
-              <div style="margin-top:10px;font-size:11px;font-weight:700;color:#0f172a;">Spesen / Fahrtkosten</div>
+              <div style="margin-top:10px;font-size:10px;font-weight:700;color:#0f172a;">Spesen / Fahrtkosten</div>
               <table class="material-table" style="margin-top:4px;">
                 <tbody><tr>
                   <td>${report.travel_per_employee_enabled ? '🚗 Summe aus Mitarbeiter-Fahrten' : '🚗 Fahrtkosten / Spesen'}</td>
@@ -714,8 +714,8 @@ export const generateReportSectionHtml = (
               const vatAmount = showVat ? grandTotal * (vatRate / 100) : 0;
               const brutto = grandTotal + vatAmount;
               return `
-                <div style="margin-top:12px;padding:12px 14px;background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;">
-                  <table style="width:100%;font-size:12px;">
+                <div style="margin-top:10px;padding:10px 12px;background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;">
+                  <table style="width:100%;font-size:11px;">
                     <tr>
                       <td style="padding:3px 0;color:#166534;font-weight:600;">Netto:</td>
                       <td style="text-align:right;padding:3px 0;color:#166534;font-weight:700;">${eurFmt(grandTotal)}</td>
@@ -727,8 +727,8 @@ export const generateReportSectionHtml = (
                       </tr>
                     ` : ''}
                     <tr style="border-top:1px solid #16a34a;">
-                      <td style="padding:6px 0 0;color:#166534;font-weight:800;font-size:14px;">${showVat ? 'Brutto' : 'Gesamtsumme'}:</td>
-                      <td style="text-align:right;padding:6px 0 0;color:#16a34a;font-weight:900;font-size:18px;">${eurFmt(brutto)}</td>
+                      <td style="padding:6px 0 0;color:#166534;font-weight:800;font-size:12px;">${showVat ? 'Brutto' : 'Gesamtsumme'}:</td>
+                      <td style="text-align:right;padding:6px 0 0;color:#16a34a;font-weight:900;font-size:15px;">${eurFmt(brutto)}</td>
                     </tr>
                   </table>
                 </div>
@@ -798,31 +798,31 @@ export const generateReportSectionHtml = (
 export const REPORT_CSS = `
   .report-page {
     background: #fff;
-    padding: 8px 0 16px 0;
+    padding: 4px 0 12px 0;
   }
   .report-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     border-bottom: 2px solid #1976d2;
-    padding-bottom: 8px;
-    margin-bottom: 12px;
+    padding-bottom: 7px;
+    margin-bottom: 10px;
   }
-  .report-header img { height: 50px !important; max-height: 50px !important; max-width: 120px !important; width: auto !important; object-fit: contain !important; }
-  .report-title { font-size: 18px; font-weight: bold; color: #1976d2; }
-  .report-number { font-size: 12px; color: #666; margin-top: 2px; }
-  .report-meta { font-size: 12px; text-align: right; line-height: 1.5; }
+  .report-header img { height: 42px !important; max-height: 42px !important; max-width: 110px !important; width: auto !important; object-fit: contain !important; }
+  .report-title { font-size: 15px; font-weight: bold; color: #1976d2; letter-spacing: 0.2px; }
+  .report-number { font-size: 10px; color: #666; margin-top: 2px; }
+  .report-meta { font-size: 10px; text-align: right; line-height: 1.55; }
   .info-box {
     background: #f5f7fa;
-    border-left: 4px solid #1976d2;
-    padding: 8px 12px;
-    margin-bottom: 12px;
+    border-left: 3px solid #1976d2;
+    padding: 7px 10px;
+    margin-bottom: 10px;
     border-radius: 4px;
     page-break-inside: avoid;
   }
-  .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 12px; }
-  .info-row { font-size: 11px; margin: 2px 0; }
-  .section { margin-bottom: 12px; orphans: 3; widows: 3; }
+  .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .info-row { font-size: 10px; margin: 2px 0; line-height: 1.45; }
+  .section { margin-bottom: 10px; orphans: 3; widows: 3; }
   /* Atomare Sektionen (Überschrift + kurzer Inhalt) — niemals zwischen Seiten zerreißen */
   .keep-together {
     page-break-inside: avoid !important;
@@ -831,13 +831,13 @@ export const REPORT_CSS = `
     display: block;
   }
   .section-title {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: bold;
     color: #333;
     background: #e3f2fd;
-    padding: 5px 10px;
+    padding: 4px 9px;
     border-radius: 4px;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     page-break-after: avoid !important;
     break-after: avoid-page !important;
     page-break-inside: avoid;
@@ -860,28 +860,28 @@ export const REPORT_CSS = `
   }
   /* Generisches "single-line" Element für kurze 1-Zeilen-Inhalte (z.B. "10 km" Anfahrt, "Zu warm" Besonderheiten) */
   .single-line {
-    font-size: 12px;
-    padding: 6px 10px;
+    font-size: 10px;
+    padding: 5px 9px;
     background: #fafafa;
     border-radius: 4px;
     border-left: 3px solid #f59e0b;
     page-break-inside: avoid;
   }
-  .employees-list { margin: 4px 0 0 18px; font-size: 12px; }
+  .employees-list { margin: 4px 0 0 16px; font-size: 10px; }
   .employees-list li { margin: 2px 0; }
   .emp-table {
-    width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px;
+    width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px;
     page-break-inside: avoid;
   }
-  .emp-table th { background: #1976d2; color: #fff; padding: 5px 8px; text-align: left; font-size: 10px; }
-  .emp-table td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+  .emp-table th { background: #1976d2; color: #fff; padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
+  .emp-table td { padding: 4px 7px; border-bottom: 1px solid #e0e0e0; }
   .emp-table tr { page-break-inside: avoid; }
-  .emp-total-row td { background: #e0f2fe; padding: 6px 8px; font-size: 12px; border-top: 2px solid #1976d2; }
+  .emp-total-row td { background: #e0f2fe; padding: 5px 7px; font-size: 10.5px; border-top: 2px solid #1976d2; }
   .work-items {
     list-style: none;
     padding-left: 0;
     margin: 4px 0 0 0;
-    font-size: 11px;
+    font-size: 10px;
     /* font-size:0 verhindert Whitespace zwischen inline-block Items */
     font-size: 0;
     page-break-inside: avoid;
@@ -893,7 +893,7 @@ export const REPORT_CSS = `
     width: 49%;
     margin-right: 1%;
     padding: 2px 0;
-    font-size: 11px;
+    font-size: 10px;
     page-break-inside: avoid;
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
@@ -905,7 +905,7 @@ export const REPORT_CSS = `
   /* Bei mehr als 12 Items: 3 Spalten (jeweils ~33%) */
   .work-items.dense li {
     width: 32%;
-    font-size: 10px;
+    font-size: 9px;
   }
   .work-items li .check-box {
     display: inline-block;
@@ -915,21 +915,21 @@ export const REPORT_CSS = `
   .work-items li > span {
     vertical-align: middle;
   }
-  .work-items .check-box { font-size: 14px; color: #16a34a; }
+  .work-items .check-box { font-size: 12px; color: #16a34a; }
   .work-items li.unchecked .check-box { color: #94a3b8; }
   .work-items .strike { text-decoration: line-through; color: #94a3b8; }
   .machines-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
   .machine-tag {
     background: #ede9fe; color: #5b21b6;
-    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 600;
   }
   .role-summary {
-    background: #f8fafc; border-radius: 6px; padding: 8px 10px; margin-top: 8px;
+    background: #f8fafc; border-radius: 6px; padding: 7px 9px; margin-top: 7px;
     border-left: 3px solid #1976d2;
     page-break-inside: avoid;
   }
   .role-summary-title {
-    font-size: 10px; font-weight: 700; color: #475569;
+    font-size: 9px; font-weight: 700; color: #475569;
     letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px;
   }
   .role-row {
@@ -938,14 +938,14 @@ export const REPORT_CSS = `
   }
   .role-tag {
     background: #dbeafe; color: #1d4ed8;
-    padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
   }
-  .role-count { color: #64748b; font-weight: 400; font-size: 10px; margin-left: 4px; }
-  .role-hours { font-size: 12px; font-weight: 800; color: #0f172a; }
+  .role-count { color: #64748b; font-weight: 400; font-size: 9px; margin-left: 4px; }
+  .role-hours { font-size: 11px; font-weight: 800; color: #0f172a; }
   .work-desc {
-    font-size: 12px;
+    font-size: 10px;
     line-height: 1.5;
-    padding: 6px 10px;
+    padding: 5px 9px;
     background: #fafafa;
     border-radius: 4px;
     white-space: pre-wrap;
@@ -955,24 +955,24 @@ export const REPORT_CSS = `
   .material-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 10px;
     margin-top: 4px;
     page-break-inside: avoid;
   }
-  .material-table th { background: #1976d2; color: #fff; padding: 5px 8px; text-align: left; }
-  .material-table td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; }
+  .material-table th { background: #1976d2; color: #fff; padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
+  .material-table td { padding: 4px 7px; border-bottom: 1px solid #e0e0e0; }
   .material-table tr { page-break-inside: avoid; }
-  .info-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+  .info-grid { display: flex; gap: 10px; flex-wrap: wrap; }
   .info-mini {
     flex: 1;
-    min-width: 140px;
-    padding: 6px 10px;
+    min-width: 130px;
+    padding: 5px 9px;
     background: #fff8e1;
     border-radius: 4px;
     border-left: 3px solid #ffa000;
   }
-  .info-mini-label { font-size: 10px; color: #888; }
-  .info-mini-value { font-size: 12px; font-weight: 600; color: #333; }
+  .info-mini-label { font-size: 9px; color: #888; }
+  .info-mini-value { font-size: 11px; font-weight: 600; color: #333; }
   /* Foto-Layout via Tabelle: <tr> wird in Chromium-Print zuverlässig nicht zwischen Seiten zerrissen */
   .photo-table {
     width: 100%;
@@ -1018,7 +1018,7 @@ export const REPORT_CSS = `
     display: flex;
     justify-content: space-between;
     gap: 16px;
-    margin-top: 14px;
+    margin-top: 12px;
     page-break-inside: avoid;
   }
   .signature-block { flex: 1; text-align: center; }
@@ -1091,7 +1091,7 @@ export const generateReportHtml = async (
         @page { margin: 14mm; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; color: #333; }
         ${REPORT_CSS}
-        .doc-footer { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 10px; color: #555; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
+        .doc-footer { margin-top: 14px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 9px; color: #555; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
       </style>
     </head>
     <body>
@@ -1113,6 +1113,9 @@ export const exportReportAsPdf = async (
   const { uri } = await Print.printToFileAsync({
     html,
     base64: false,
+    // iOS/macOS ignoriert das CSS @page-Margin → echte Seitenränder nativ setzen
+    // (36pt ≈ 12,7mm pro Seite; gilt für ALLE Seiten inkl. Folgeseiten)
+    margins: { left: 36, top: 36, right: 36, bottom: 36 },
   });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {

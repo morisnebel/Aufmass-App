@@ -670,6 +670,8 @@ export interface Project {
   description?: string;
   address?: string;
   status: string;
+  // Notizen/Bemerkungen zum Projekt
+  remarks?: string;
   // Projektart (Überschrift für PDF)
   project_type?: string; // z.B. "Sturmschaden", "Wartung", "Neueindeckung"
   project_type_date?: string; // Optionales Datum für die Überschrift (ISO-String)

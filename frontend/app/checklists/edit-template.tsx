@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Features } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 
 // Rekursive Struktur für verschachtelte Punkte
 interface RecursiveTemplateItem {
@@ -76,6 +77,19 @@ export default function EditTemplateScreen() {
 
   // State für "Punkte aus anderer Vorlage kopieren"
   const [showCopyFromModal, setShowCopyFromModal] = useState(false);
+
+  // ===== Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.) =====
+  const formFingerprint = JSON.stringify([templateName, items, templateLogo]);
+  const savedSnapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loading && savedSnapshotRef.current === null) {
+      savedSnapshotRef.current = formFingerprint;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, formFingerprint]);
+  const hasUnsavedChanges =
+    !loading && savedSnapshotRef.current !== null && formFingerprint !== savedSnapshotRef.current;
+  const leaveGuard = useUnsavedChangesGuard(hasUnsavedChanges && !saving, () => saveTemplate());
   const [otherTemplates, setOtherTemplates] = useState<ChecklistTemplate[]>([]);
   const [selectedCopyTemplate, setSelectedCopyTemplate] = useState<ChecklistTemplate | null>(null);
   const [selectedCopyItems, setSelectedCopyItems] = useState<Set<string>>(new Set());
@@ -660,11 +674,13 @@ export default function EditTemplateScreen() {
       if (templateId) {
         const tplId = Array.isArray(templateId) ? templateId[0] : templateId;
         await ChecklistTemplateService.update(tplId || '', payload);
+        leaveGuard.allowLeave();
         Alert.alert(t('common.success'), t('checklists.templateUpdated'), [
           { text: t('common.ok'), onPress: () => router.back() },
         ]);
       } else {
         await ChecklistTemplateService.create(payload);
+        leaveGuard.allowLeave();
         Alert.alert(t('common.success'), t('checklists.templateCreated'), [
           { text: t('common.ok'), onPress: () => router.back() },
         ]);

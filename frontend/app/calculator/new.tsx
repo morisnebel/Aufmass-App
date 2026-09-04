@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 import Svg, { 
   Path, 
   Circle, 
@@ -1264,8 +1265,15 @@ export default function AreaCalculatorEditor() {
     if (polygons.length > 0 || calculationId) {
       await saveCalculation(false); // Save silently without alert
     }
+    leaveGuard.allowLeave();
     router.back();
   };
+
+  // Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.) - speichert still wie der Zurück-Button
+  const hasCalcContent =
+    polygons.length > 0 || lines.length > 0 || annotationShapes.length > 0 ||
+    textAnnotations.length > 0 || memoPointers.length > 0 || !!calculationId;
+  const leaveGuard = useUnsavedChangesGuard(hasCalcContent && !saving, handleBackWithSave, { autoSave: true });
 
   // Calculate intersections of guide lines
   const calculateGuideLineIntersections = (): AreaPoint[] => {

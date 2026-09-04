@@ -20,6 +20,7 @@ import * as Contacts from 'expo-contacts/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerService, ProjectService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -149,6 +150,22 @@ export default function EditCustomerScreen() {
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ===== Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.) =====
+  const formFingerprint = JSON.stringify([
+    customerNumber, salutation, firstName, lastName, email, phone, mobile,
+    street, zip, city, customerType, customerTypeName,
+  ]);
+  const savedSnapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loading && savedSnapshotRef.current === null) {
+      savedSnapshotRef.current = formFingerprint;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, formFingerprint]);
+  const hasUnsavedChanges =
+    !loading && savedSnapshotRef.current !== null && formFingerprint !== savedSnapshotRef.current;
+  const leaveGuard = useUnsavedChangesGuard(hasUnsavedChanges, () => handleSave());
   
   const isImportingRef = useRef(false);
 
@@ -461,7 +478,7 @@ export default function EditCustomerScreen() {
               style: 'cancel',
               onPress: () => {
                 Alert.alert(t('common.success'), successMessage, [
-                  { text: t('common.ok'), onPress: () => router.back() },
+                  { text: t('common.ok'), onPress: () => { leaveGuard.allowLeave(); router.back(); } },
                 ]);
               },
             },
@@ -486,12 +503,12 @@ export default function EditCustomerScreen() {
                     });
                   }
                   Alert.alert(t('common.success'), `${successMessage} ${t('customers.projectsUpdatedMessage', { count: customerProjects.length })}`, [
-                    { text: t('common.ok'), onPress: () => router.back() },
+                    { text: t('common.ok'), onPress: () => { leaveGuard.allowLeave(); router.back(); } },
                   ]);
                 } catch (syncError) {
                   console.error('Error syncing projects:', syncError);
                   Alert.alert(t('common.partialSuccess'), t('customers.projectsSyncError'), [
-                    { text: t('common.ok'), onPress: () => router.back() },
+                    { text: t('common.ok'), onPress: () => { leaveGuard.allowLeave(); router.back(); } },
                   ]);
                 }
               },
@@ -500,7 +517,7 @@ export default function EditCustomerScreen() {
         );
       } else {
         Alert.alert(t('common.success'), successMessage, [
-          { text: t('common.ok'), onPress: () => router.back() },
+          { text: t('common.ok'), onPress: () => { leaveGuard.allowLeave(); router.back(); } },
         ]);
       }
     } catch (error) {

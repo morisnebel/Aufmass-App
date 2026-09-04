@@ -19,10 +19,11 @@ import {
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Contacts from 'expo-contacts';
+import * as Contacts from 'expo-contacts/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 
 // Customer type is imported from LocalStorage service
 
@@ -733,6 +734,7 @@ export default function NewProjectScreen() {
         ? t('projects.projectCreatedAndAddressSaved')
         : t('projects.projectCreated');
         
+      leaveGuard.allowLeave();
       Alert.alert(t('common.success'), successMessage, [
         { text: t('common.ok'), onPress: () => router.replace(`/projects/${newProject.id}`) },
       ]);
@@ -751,9 +753,19 @@ export default function NewProjectScreen() {
       await handleSave();
     } else {
       // Pflichtfelder fehlen - einfach zurück gehen
+      leaveGuard.allowLeave();
       router.back();
     }
   };
+
+  // Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.)
+  const hasUnsavedChanges = !!(
+    name.trim() || description.trim() || selectedCustomer ||
+    objektAddressName.trim() || objektName.trim() || objektStreet.trim() ||
+    objektPlz.trim() || objektCity.trim() || objektContactPerson.trim() ||
+    objektPhone.trim() || objektEmail.trim()
+  );
+  const leaveGuard = useUnsavedChangesGuard(hasUnsavedChanges && !loading, handleBackWithSave);
 
   if (loadingCustomers) {
     return (

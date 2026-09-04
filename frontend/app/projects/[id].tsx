@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
@@ -227,6 +228,26 @@ export default function ProjectDetailScreen() {
   const [remarksNumpadMode, setRemarksNumpadMode] = useState<'numbers' | 'letters'>('numbers');
   const [remarksNumpadCaps, setRemarksNumpadCaps] = useState(false);
   const remarksInputRef = useRef<TextInput>(null);
+
+  // Schutz vor Datenverlust: nicht gespeicherte Notizen beim Verlassen (Wisch-Geste etc.)
+  const remarksChanged = !!project && remarks !== (project.remarks || '');
+  const leaveGuard = useUnsavedChangesGuard(remarksChanged, async () => {
+    if (project) {
+      try {
+        await ProjectService.update(project.id, {
+          customer_id: project.customer_id,
+          name: project.name,
+          description: project.description || '',
+          status: project.status,
+          remarks: remarks,
+        });
+      } catch (e) {
+        console.error('Error saving remarks on leave:', e);
+      }
+    }
+    leaveGuard.allowLeave();
+    router.back();
+  });
   
   // Numpad-Taste drücken Handler
   const handleRemarksNumpadPress = (key: string) => {
@@ -357,6 +378,18 @@ export default function ProjectDetailScreen() {
   // Tab-Wechsel mit sofortiger Ladeanzeige für schwere Tabs
   const handleTabChange = useCallback((newTab: typeof activeTab) => {
     if (newTab === activeTab) return;
+    // Ungespeicherte Notizen beim Tab-Wechsel still sichern
+    if (activeTab === 'remarks' && project && remarks !== (project.remarks || '')) {
+      ProjectService.update(project.id, {
+        customer_id: project.customer_id,
+        name: project.name,
+        description: project.description || '',
+        status: project.status,
+        remarks: remarks,
+      })
+        .then(() => setProject(prev => (prev ? { ...prev, remarks } : prev)))
+        .catch(e => console.error('Error auto-saving remarks on tab change:', e));
+    }
     if (newTab === 'sketches' || newTab === 'photos') {
       setIsTabLoading(true);
       setActiveTab(newTab);
@@ -365,7 +398,9 @@ export default function ProjectDetailScreen() {
     } else {
       setActiveTab(newTab);
     }
-  }, [activeTab]);
+  }, [activeTab, project, remarks]);
+  const handleTabChangeRef = useRef(handleTabChange);
+  handleTabChangeRef.current = handleTabChange;
 
   // Einheitlicher Header: Weißer Hintergrund, schwarze Schrift (wie iPad)
   useEffect(() => {
@@ -380,7 +415,7 @@ export default function ProjectDetailScreen() {
         headerBackVisible: false,
         headerLeft: () => (
           <TouchableOpacity 
-            onPress={() => handleTabChange('overview')} 
+            onPress={() => handleTabChangeRef.current('overview')} 
             style={{ 
               flexDirection: 'row', 
               alignItems: 'center', 
@@ -1596,12 +1631,16 @@ export default function ProjectDetailScreen() {
       const checkedCategories = checklist.items.filter((item: any) => item.checked);
       
       if (checkedCategories.length === 0) {
-        return `
-          <div class="checklist-card">
-            <div class="checklist-main-header">${checklist.template_name}</div>
-            <p class="empty">Keine Positionen abgehakt</p>
-          </div>
-        `;
+        // Wichtig: gleiche Objekt-Struktur wie unten zurückgeben,
+        // sonst crasht item.categoriesHtml.split() ("split of undefined")
+        return {
+          categoriesHtml: '<!--CATEGORY_SPLIT--><p class="empty">Keine Positionen abgehakt</p>',
+          totalChecked: 0,
+          totalItems: countTotalForPdf(checklist.items),
+          templateLogoHtml: (checklist as any).templateLogo
+            ? `<img src="${(checklist as any).templateLogo}" class="pdf-template-logo" alt="Logo" />`
+            : '',
+        };
       }
       
       // Build categories HTML
@@ -1688,6 +1727,7 @@ export default function ProjectDetailScreen() {
     // Alle Checklisten als einfache divs generieren
     const checklistsHtml = checklistItems.length > 0 ? checklistItems.map((item, idx) => {
       if (!item) return '';
+      if (typeof item === 'string') return item;
       
       const categoryHtmls = item.categoriesHtml.split('<!--CATEGORY_SPLIT-->').filter(Boolean);
       

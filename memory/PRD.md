@@ -340,3 +340,29 @@
   funktioniert. Statuswechsel via Edit-Modal geht überall. Optionaler späterer Fix: Modal-Chooser für Web.
 - Bekannte Console-Warnung (low): "Unexpected text node: ." irgendwo <View>-Kind auf allen Routen.
 - User baut als nächstes TestFlight-Build; nativ zu verifizieren: Auto-Save-Pill, Swipe-Prompt, Kontakte.
+
+## Session 05.09. Teil 3 - Verlassen-Schutz überall + PDF-Crash-Fix
+- NEU src/hooks/useUnsavedChangesGuard.ts: wiederverwendbarer Hook (usePreventRemove aus
+  'expo-router/react-navigation'). API: useUnsavedChangesGuard(hasUnsavedChanges, onSaveAndLeave?, {autoSave?})
+  -> gibt { allowLeave() } zurück (vor programmatischem router.back() aufrufen!).
+  Prompt: Abbrechen/Verwerfen/Speichern (Web: window.confirm). autoSave-Modus = still speichern.
+- Guard eingebaut in:
+  - projects/new.tsx (Felder-Dirty-Check; onSave=handleBackWithSave; allowLeave im else + vor Erfolgs-Alert)
+  - reports/edit.tsx (JSON-Fingerprint aller Formularfelder + savedSnapshotRef nach Laden/Speichern;
+    onSave=handleSave(false); allowLeave vor router.back)
+  - customers/new.tsx (Felder-Dirty; allowLeave in handleNavigateBack)
+  - customers/[id].tsx (Fingerprint; allowLeave in den 4 Erfolgs-Alert-OK-Buttons)
+  - calculator/new.tsx (autoSave-Modus, onSave=handleBackWithSave - wie Zurück-Button, still)
+  - checklists/edit-template.tsx (Fingerprint [templateName, items, templateLogo]; allowLeave vor Erfolgs-Alerts)
+  - projects/[id].tsx (Notizen/remarks-Dirty; onSave speichert remarks + back). ZUSÄTZLICH:
+    handleTabChange sichert ungespeicherte remarks still beim Tab-Wechsel (Header-"Projektdetails"-Pfeil
+    ist nur Tab-Wechsel, kein Route-Pop!); handleTabChangeRef gegen stale closure im setOptions-Header.
+- checklists/[id].tsx braucht KEINEN Guard (speichert bereits still bei Blur/Unfocus via useFocusEffect-Cleanup).
+- projects/new.tsx: Kontakt-Import ebenfalls auf 'expo-contacts/legacy' umgestellt (war beim 1. Fix übersehen!).
+- Project-Interface in LocalStorage.ts: remarks?: string ergänzt.
+- PDF-CRASH-FIX (User-Screenshot "split of undefined"): In generatePdfHtml (projects/[id].tsx ~1619)
+  gab der Checklisten-Map bei 0 abgehakten Positionen einen STRING statt {categoriesHtml,...} zurück
+  -> item.categoriesHtml.split() crashte bei Auto-Regenerate/Preview. Jetzt Objekt-Struktur + typeof-Guard.
+- GETESTET: iteration_25.json - PDF-Fix PASS, Guards customers/new + customers/[id] + Notizen PASS.
+  Bekannt: Browser-Back im Web triggert Guard nicht zuverlässig (Web-Limitation, nativ = Ziel-Plattform).
+- Nativ zu verifizieren (User/Build): Swipe-Back-Prompt auf allen Formular-Seiten.

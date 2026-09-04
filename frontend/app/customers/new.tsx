@@ -21,6 +21,7 @@ import * as Contacts from 'expo-contacts/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, generateFullName, generateFullAddress, isCustomerNumberDuplicate, getNextAvailableCustomerNumber } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 
 // Anrede-Optionen
 const SALUTATION_OPTIONS = ['Herr', 'Frau', 'Firma', 'Familie', 'Dr.', 'Prof.'];
@@ -246,12 +247,19 @@ export default function NewCustomerScreen() {
     }
   };
 
+  // Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.)
+  const hasUnsavedChanges = !!(
+    salutation || firstName.trim() || lastName.trim() || email.trim() || phone.trim() ||
+    mobile.trim() || street.trim() || plz.trim() || city.trim() ||
+    customerType || customerTypeName.trim()
+  );
+  const leaveGuard = useUnsavedChangesGuard(hasUnsavedChanges && !loading, () => handleSave());
+
   const handleSave = async () => {
     if (!lastName.trim() && !customerTypeName.trim()) {
       Alert.alert(t('common.error'), 'Bitte Nachname oder Bezeichnung (z.B. Firmenname) eingeben.');
       return;
     }
-
     // Gerätetyp für Kontakt-Meldungen
     const deviceName = Platform.OS === 'ios' && Platform.isPad ? 'Tablett' : 'Handy';
 
@@ -361,6 +369,7 @@ export default function NewCustomerScreen() {
       
       // Hilfsfunktion für Navigation nach Kundenerstellung
       const handleNavigateBack = async () => {
+        leaveGuard.allowLeave();
         if (selectMode && newCustomer?.id) {
           // Im selectMode: Speichere die ID und gehe 2x zurück (zur Projekterstellung)
           await AsyncStorage.setItem('selectedCustomerId', newCustomer.id);

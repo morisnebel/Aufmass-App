@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
   ActivityIndicator, Modal, Platform, KeyboardAvoidingView, Image,
@@ -20,6 +20,7 @@ import {
 } from '../../services/LocalStorage';
 import { SignaturePad } from '../../src/components/SignaturePad';
 import { exportReportAsPdf } from '../../services/ReportPdfService';
+import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 
 const WEATHER_OPTIONS: { value: Report['weather']; label: string; icon: string }[] = [
   { value: 'sunny', label: 'Sonnig', icon: '☀️' },
@@ -191,6 +192,29 @@ export default function ReportEditScreen() {
   const [empDatePicker, setEmpDatePicker] = useState<{ empId: string } | null>(null);
   // Material → "Als Stammdaten speichern"
   const [savedMatIds, setSavedMatIds] = useState<Set<string>>(new Set());
+
+  // ===== Schutz vor Datenverlust beim Verlassen (Wisch-Geste etc.) =====
+  const formFingerprint = JSON.stringify([
+    reportNumber, date, contactPerson, employees, workItems, workDescription,
+    materials, machines, travelKm, travelToHoursStr, travelBackHoursStr, travelToKm,
+    travelBackKm, travelCosts, travelNote, travelPerEmployee, travelDaysStr,
+    travelInTotalHours, showEmployeeCosts, showMaterialCosts, showMachineCosts,
+    showTravelCosts, showTotalSum, showVat, vatRateStr, Array.from(headerFields),
+    weather, temperature, obstacles, remarks, signatureCustomer, signatureCustomerName,
+    signatureWorker, signatureWorkerName, photos,
+  ]);
+  const fingerprintRef = useRef(formFingerprint);
+  fingerprintRef.current = formFingerprint;
+  const savedSnapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loading && savedSnapshotRef.current === null) {
+      savedSnapshotRef.current = formFingerprint;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, formFingerprint]);
+  const hasUnsavedChanges =
+    !loading && savedSnapshotRef.current !== null && formFingerprint !== savedSnapshotRef.current;
+  const leaveGuard = useUnsavedChangesGuard(hasUnsavedChanges, async () => { await handleSave(false); });
 
   useEffect(() => {
     navigation.setOptions({
@@ -452,6 +476,8 @@ export default function ReportEditScreen() {
       } else {
         saved = await ReportService.create(dataToSave);
       }
+      // Änderungen als gespeichert markieren (für Verlassen-Schutz)
+      savedSnapshotRef.current = fingerprintRef.current;
       // Spinner sofort zurücksetzen
       setSaving(false);
       // Kurzes Feedback bei Lager-Updates (nur wenn relevant)
@@ -475,6 +501,7 @@ export default function ReportEditScreen() {
           Alert.alert('PDF-Fehler', 'PDF konnte nicht erstellt werden, der Rapport wurde aber gespeichert.');
         }
       } else {
+        leaveGuard.allowLeave();
         router.back();
       }
       return saved;

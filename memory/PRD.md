@@ -254,3 +254,11 @@
   Touch-Steuerung bleibt auf dem Overlay (Handler unverändert). Web nutzt weiter nur
   das Overlay (getestet, ok). Falls Griffe-Positionen auf iPad versetzt wirken:
   screenToCanvas-Zweige prüfen (canvasLayout via measureInWindow enthält Scroll).
+- FIX Runde 5 (Winkelmesser-Drag, Gerätetest ausstehend): User bestätigt Winkel WIRD
+  jetzt angezeigt, aber Drag/Anpassen vor 'Hinzufügen' ging nativ nicht (PanResponder
+  auf transparentem absoluteFill-View feuert auf Fabric nicht). Fix am Drag-View
+  (draw.tsx ~10214): collapsable={false} + backgroundColor transparent (gegen View-
+  Flattening) + onTouchStart/Move/End jetzt auch NATIV aktiv (zusätzlich zu
+  panHandlers; Handler sind idempotent). Web-Drag regressionsgetestet OK.
+  Falls immer noch kein Drag auf iPad: PanResponder entfernen und NUR onTouch* nutzen,
+  oder Drag-Handling in den Haupt-Canvas-Responder integrieren (drawMode-Weiche).

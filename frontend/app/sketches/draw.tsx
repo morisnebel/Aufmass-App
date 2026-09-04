@@ -10212,16 +10212,17 @@ export default function DrawSketchScreen() {
         <View style={styles.protractorOverlay} pointerEvents="box-none">
           {/* Vollbild-Drag-Bereich */}
           <View 
-            style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+            style={[StyleSheet.absoluteFillObject, { zIndex: 1, backgroundColor: 'transparent' }]}
+            collapsable={false}
             {...(Platform.OS !== 'web' ? protractorPanResponder.current.panHandlers : {})}
             // @ts-ignore - Web-only events
             onMouseDown={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
             onMouseMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onMouseUp={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
-            onTouchStart={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
-            onTouchMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
-            onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
+            onTouchStart={handleProtractorDragStart}
+            onTouchMove={handleProtractorDragMove}
+            onTouchEnd={handleProtractorDragEnd}
           >
             {/* Vollbild-SVG für Linien und Griffe (Wrapper-View statt Svg-Prop für pointerEvents – Fabric-Bug) */}
             <View style={StyleSheet.absoluteFillObject} pointerEvents="none">

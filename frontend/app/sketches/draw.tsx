@@ -7535,7 +7535,7 @@ export default function DrawSketchScreen() {
             >
               <View style={styles.notesButtonContainer}>
                 <Ionicons name="document-text-outline" size={18} color={showNotesModal ? '#fff' : notes.trim() ? '#4caf50' : '#333'} />
-                {notes.trim() && (
+                {notes.trim().length > 0 && (
                   <View style={styles.notesBadge}>
                     <Ionicons name="checkmark" size={8} color="#fff" />
                   </View>
@@ -9854,7 +9854,7 @@ export default function DrawSketchScreen() {
               >
                 <Text style={styles.notesModalButtonText}>{t('common.close')}</Text>
               </TouchableOpacity>
-              {notes.trim() && (
+              {notes.trim().length > 0 && (
                 <TouchableOpacity
                   style={[styles.notesModalButton, styles.notesModalButtonDelete]}
                   onPress={() => {

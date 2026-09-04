@@ -11,7 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { File, Paths } from 'expo-file-system/next';
+import { File, Paths } from 'expo-file-system';
 import { DocumentService } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
 

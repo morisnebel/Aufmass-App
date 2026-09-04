@@ -1,0 +1,39 @@
+{
+  "summary": "SDK 57 upgrade smoke/regression test on Expo web preview: ALL 8 requested scenarios PASSED. Verified actually-installed versions: expo@57.0.19, react-native@0.86.3, react@19.2.3, expo-router@57.0.18 (package.json = source of truth; the 'expo@54' lines in supervisor logs are stale pre-restart output). Zero red screens, zero 'Class extends value undefined', zero module resolution failures, zero expo-router/react-navigation incompatibility errors, zero pageerror events across all screens. Confirmed working: (1) App boot + disclaimer bypass via localStorage seed of aufmassprofi_settings (disclaimer_accepted_at + disclaimer_version='2026-06'); home renders with '- AUFMASSPROFI -' header, backup banner, All/Active/Compl./Canc. filter chips, 'New Project' blue button, Customers/Checklists/Settings tiles. (2) Customer list renders seeded TESTKunde (KD-26099). (3) New Project form loads with Projektnummer/Project Name/Kunde picker/Objektadresse/Description; customer picker opens sub-screen and returns 'Herr Max TESTKunde' into the field. (4) Project detail screen /projects/test-p-1 renders with 5 tabs (Info, Photos, Sketches, Checklists, Notes) - each tab clicked and re-rendered without crash. (5) /sketches/draw canvas mounts with complete toolbar (Photo/PDF/Position/Crop/Zoom/Edit/Measure Line/Polygon/+Pt/-Pt/Delete Element/Edit Style/Pen/Line/Circle/Rectangle/Angle/Memo/Text/Notiz/Notes/Grid/Undo/Redo/Delete Page); Polygon tool selection toggles the active state correctly. (6) /reports/edit renders all sections (Rapport header, DATUM field, WETTER emoji row, Mitarbeiter & Arbeitszeiten, Fahrzeiten/Anfahrt, Ausgeführte Arbeiten, Materialverbrauch, Maschinen/Geräte, Besonderheiten, Fotos, bottom action bar: Vortag/PDF/Speichern). 'Datum wählen' modal opens on date tap and closes cleanly via 'Fertig' button. (7) /settings loads with Logo/Language (DE/EN toggle)/Skizzen-Werkzeuge/PDF Settings sections + Save header button. (8) Back navigation via expo-router works from Customers -> Home and from tab-to-tab (natural history).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "sketches/draw canvas screen",
+        "issue": "React 19.2 / RN-Web console error x2 on mount: 'Unexpected text node: . A text node cannot be a child of a <View>.' — a stray whitespace/character is being rendered directly inside a <View> instead of being wrapped in <Text>. React 19's stricter tree validation surfaces this. Non-fatal (screen renders) but should be fixed. Reference: /app/frontend/app/sketches/draw.tsx (search for JSX like `<View>{' '}</View>`, `<View>.</View>`, or template strings/whitespace next to conditional renders inside a View)."
+      },
+      {
+        "component": "global (multiple screens)",
+        "issue": "Pre-existing RN-Web deprecation warnings still present after SDK 57 upgrade: '\"shadow*\" style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Tracked since iteration_20/21. Not blocking, but will become errors in a future RN-Web major."
+      }
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_22.json"],
+  "action_items": [
+    "FIX (small): resolve the two 'Unexpected text node' warnings in app/sketches/draw.tsx — locate the bare text/whitespace nodes inside a <View> and wrap them in <Text> (or remove). React 19.2 surfaces this more strictly, so it appeared after the SDK 57 upgrade even though the underlying JSX pattern predates it.",
+    "OPTIONAL cleanup: migrate remaining shadowColor/shadowOffset/shadowOpacity/shadowRadius styles to boxShadow and props.pointerEvents to style.pointerEvents. Grepping StyleSheets should reveal the offenders quickly.",
+    "OPTIONAL: If Expo doctor still reports minor version drift (log tail showed stale 'expo@54.0.35' warnings from before restart), run `npx expo install --check` and commit the pin bumps — no code impact expected."
+  ],
+  "critical_code_review_comments": [
+    "Package versions in package.json align with SDK 57 target: expo@^57, react-native@0.86.3, react@19.2.3, expo-router@~57.0.18, react-native-safe-area-context@~5.7.0, react-native-screens@~4.26.0, react-native-svg@15.15.4. Actually-installed versions match. Upgrade is consistent.",
+    "app.json splash config correctly migrated to expo-splash-screen plugin block (image/resizeMode/backgroundColor); 'splash' key at root removed as required by SDK 57.",
+    "The 'GO_BACK not handled by any navigator' warning observed once when programmatically deep-linking to /projects/test-p-1 and pressing 'Zurück' with no history — this is expo-router (which sits on react-navigation) behaving correctly for a rootless deep-link. Not a regression, but consider using router.canGoBack() before rendering the back chevron on screens that can be entered via deep link (project detail, report edit, sketches/draw).",
+    "SketchService batch migration log ('Migrated 0 sketches / Migration already completed, skipping') fires on every mount — cheap but noisy. Consider gating behind AsyncStorage flag to avoid the log spam on hot reloads.",
+    "No @react-navigation/* imports found via prior review — the requested migration to expo-router equivalents (useFocusEffect from expo-router) is complete."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only per request)", "frontend": "100% (8/8 scenarios)"},
+  "seed_data_creation": "Pre-seeded localStorage before each nav: aufmassprofi_settings={disclaimer_accepted_at:<isoNow>, disclaimer_version:'2026-06'} to bypass DisclaimerGate; aufmassprofi_customers=[{id:'test-c-1', name:'Herr Max TESTKunde', firstName:'Max', lastName:'TESTKunde', salutation:'Herr', customer_number:'KD-26099', ...}]; aufmassprofi_projects=[{id:'test-p-1', name:'TEST_Projekt_SDK57', customer_id:'test-c-1', status:'active', ...}]. Schema derived from /app/frontend/services/LocalStorage.ts:360 (Customer interface uses name+firstName+lastName+customer_number, NOT customerNumber).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "SDK 57 upgrade verified stable on web preview. When testing, ALWAYS pre-seed disclaimer via localStorage (see seed_data_creation) — the disclaimer gate requires scrolling to bottom before checkbox works. Customer schema requires `name` (full string) + `customer_number` (snake_case) fields, not `customerNumber`. Playwright mouse.click on the RN-Web SVG sketch canvas does NOT reliably fire the PanResponder / SVG onPress handlers, so 'Elemente: 0' after coordinate clicks is a TEST-TOOL limitation, not a code bug — verify polygon drawing manually via Expo Go on iOS/Android for that specific interaction. Also note: 'The action GO_BACK was not handled by any navigator' warning appears only for direct deep-links with no browser history — expected.",
+  "rca_of_issue": "No SDK 57 upgrade regressions found. The only new frontend issue introduced (or newly surfaced) is the 'Unexpected text node' RN-Web warning on the sketch draw screen — root cause is a JSX fragment in app/sketches/draw.tsx that emits a bare string/whitespace child inside a <View>. React 19.2's stricter reconciler surfaces this as a console.error where React 18 would have silently rendered/ignored it. Fix: wrap the offending literal in <Text> or remove the stray whitespace."
+}

@@ -142,3 +142,15 @@
   CSS @page! @page 14mm bleibt für Android. (3) Projekt-PDF: Print-Padding von
   .page/.new-page von 0mm 5mm auf 4mm 12mm erhöht (DONE, HTML-Vorschau geprüft;
   echte PDF-Ausgabe braucht neuen Build)
+- Expo SDK 54 → 57 Upgrade (DONE): expo@57.0.19, react-native@0.86.3, react@19.2.3,
+  expo-router@57.0.18, typescript 6.0.3. Vorgehen: yarn expo install expo@^57 +
+  yarn expo install --fix + expo-doctor (21/21 checks pass). Breaking Changes behoben:
+  (1) @react-navigation/native-Importe (useFocusEffect in 4 Dateien) → expo-router;
+  @react-navigation/native + bottom-tabs deinstalliert (SDK 56+ verbietet Mischung).
+  (2) expo-media-library Root-Import crashte auf Web ("Class extends value undefined")
+  → auf expo-media-library/legacy umgestellt ([id].tsx, gleiche alte API).
+  (3) expo-file-system/next → Root-Import (documents/new.tsx); /legacy bleibt gültig.
+  (4) app.json: top-level "splash" → expo-splash-screen Plugin-Config (Schema-Pflicht).
+  (5) package-lock.json entfernt (Yarn ist Package Manager). Zusätzlich Fix: React 19.2
+  "Unexpected text node" auf Skizzen-Screen ({notes.trim() && ...} → .length > 0).
+  Testing-Agent Regression: 8/8 Szenarien PASS (iteration_22.json).

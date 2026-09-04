@@ -17,7 +17,7 @@ import {
   InteractionManager,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import AsyncStorage from '@react-native-async-storage/async-storage';

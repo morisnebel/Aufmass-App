@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
@@ -66,7 +61,18 @@
       "./plugins/withExcludePdfThumbnailAndroid",
       "./plugins/withAndroidFullScreen",
       "@react-native-community/datetimepicker",
-      "expo-localization"
+      "expo-localization",
+      "expo-image",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

@@ -34,7 +34,7 @@ import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API_URL removed - using local storage now

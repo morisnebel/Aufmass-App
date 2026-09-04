@@ -15,7 +15,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber, isCustomerNumberDuplicate, isObjectNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';

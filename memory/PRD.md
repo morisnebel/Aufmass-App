@@ -271,3 +271,49 @@
   (onMouse*/onTouch* web-only). protractorPanResponder ist jetzt unbenutzt (nur Warnung).
   Web regressionsgetestet: Anzeige + Mittelpunkt-Drag OK. Hinweis: solange Winkelmesser
   offen ist, ist Zeichnen auf dem Canvas nativ deaktiviert (Touches gehen an Protraktor).
+- USER BESTÄTIGT (04.09.): WINKELMESSER FUNKTIONIERT KOMPLETT (Anzeige + Drag). Skizzen,
+  Fotos, Checklisten OK. => Alle SDK-57-Zeichen-Regressionen gelöst.
+- 4 NEUE OFFENE PUNKTE (User-Screenshots, nächste Session SOFORT angehen):
+  (1) P0 Skizzen-Seite lässt sich nach RECHTS wegschieben (iOS Swipe-Back-Geste!) –
+      Gefahr von Datenverlust wenn ungespeichert. FIX: in sketches/draw.tsx bzw.
+      app/_layout.tsx für den Screen Stack.Screen options gestureEnabled:false
+      (expo-router: <Stack.Screen options={{ gestureEnabled: false }} /> im Screen).
+  (2) P1 Fehlermeldung 'Error loading/checking expert code: TypeError: Cannot read
+      property reload of undefined' auf Home + Settings: kommt vom Expertenmodus-Code,
+      der expo-updates (Updates.reload) nutzt – in Expo Go undefined. FIX: grep nach
+      "expert" / "Updates.reload" (vermutl. src/ oder app/settings) – Updates-Import
+      absichern (try/catch + optional chaining, reload nur wenn verfügbar, sonst
+      Hinweis 'App neu starten'). Behebt auch Punkt (4).
+  (3) P1 Kontakte laden nicht: 'Method getContactsAsync imported from expo-contacts is
+      deprecated' – SDK 57 hat die alte API entfernt. FIX: alle expo-contacts Aufrufe
+      (grep getContactsAsync, app/customers/*) via integration_expert/Doku auf die
+      NEUE expo-contacts API migrieren (Contacts.getContactsAsync ersetzt durch neue
+      Methode gem. SDK-57-Docs, ggf. import aus 'expo-contacts' neue Funktionsnamen).
+  (4) P1 Expertenmodus-Freischaltung (Code PROFI2024) schlägt fehl – GLEICHE Ursache
+      wie (2) (Updates.reload undefined in Expo Go). Nach Fix (2) erneut testen.
+- DANACH: Version 1.1.5 (Build 47) für TestFlight vorbereiten + Voll-Regression.
+
+## Session 05.09. - 4 offene Punkte behoben
+- (1) FIXED Swipe-Back-Datenverlust in Skizzen: usePreventRemove (import aus
+  'expo-router/react-navigation') in sketches/draw.tsx (~Z.1790). Geste bleibt ERLAUBT
+  (User-Wunsch), aber bei Inhalt (elements>0 || backgroundImage) kommt Alert
+  "Skizze verlassen?" mit Abbrechen/Verwerfen/Speichern. allowLeaveRef.current=true
+  wird vor jedem programmatischen router.back() gesetzt (handleBackPress + saveSketch),
+  Callback lässt diese Navigation via navigation.dispatch(data.action) durch.
+  Web-Fallback: window.confirm (Alert.alert ist no-op im Web).
+- (2)+(4) FIXED Expertenmodus + Fehlermeldung auf Screenshot: Ursache war der dynamische
+  `await import('@react-native-async-storage/async-storage')` in settings/index.tsx
+  (loadExpertCode/handleExpertCodeSubmit/handleResetCode) -> warf nativ
+  "TypeError: Cannot read property 'reload' of undefined" (LogBox-Error auf dem
+  User-Screenshot). Ersetzt durch statischen AsyncStorage-Import. Zusätzlich: Expert-
+  und Reset-Modal in echte <Modal>-Komponenten mit KeyboardAvoidingView gewandelt,
+  Inline-Fehlertext statt nur Alert, Code wird getrimmt, onSubmitEditing am Input.
+  Web-verifiziert: falscher Code -> Inline-Fehler, PROFI2024 -> "Pro aktiv".
+- (3) FIXED iPad-Kontakte: expo-contacts >=56.0.6 hat Legacy-API (getContactsAsync,
+  requestPermissionsAsync, addContactAsync...) nach 'expo-contacts/legacy' verschoben;
+  Root-Import WIRFT zur Laufzeit (Deprecation-Throw). Imports in app/customers/[id].tsx
+  und app/customers/new.tsx auf 'expo-contacts/legacy' umgestellt. (Später optional:
+  Migration auf neue OO-API Contact.getAll()).
+- Hinweis: app/calculator/new.tsx nutzt noch einen dynamischen import() (Z.~3242) -
+  falls dort nativ Fehler auftauchen, ebenfalls auf statischen Import umstellen.
+- Nativ-Verifikation (iPad) durch User ausstehend: Swipe-Prompt, Kontakte, Expertenmodus.

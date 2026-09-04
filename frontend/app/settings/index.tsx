@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Switch,
+  Modal,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { saveLanguage, getCurrentLanguage } from '../../i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSketchLabels, saveSketchLabels, DEFAULT_SKETCH_LABELS, SketchLabelSettings } from '../../services/SketchLabels';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface CompanySettings {
   company_name: string;
@@ -137,6 +139,7 @@ export default function SettingsScreen() {
   // Expertenmodus
   const [showExpertModal, setShowExpertModal] = useState(false);
   const [expertCode, setExpertCode] = useState('');
+  const [expertError, setExpertError] = useState('');
   const [showResetCodeModal, setShowResetCodeModal] = useState(false);
   const [masterCode, setMasterCode] = useState('');
   const [newExpertCode, setNewExpertCode] = useState('');
@@ -170,7 +173,6 @@ export default function SettingsScreen() {
   // Expert-Code aus AsyncStorage laden
   const loadExpertCode = async () => {
     try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedCode = await AsyncStorage.getItem('aufmassprofi_expert_code');
       if (savedCode) {
         // Code existiert bereits
@@ -183,16 +185,16 @@ export default function SettingsScreen() {
   // Expert-Code prüfen und Pro aktivieren
   const handleExpertCodeSubmit = async () => {
     try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const savedCode = await AsyncStorage.getItem('aufmassprofi_expert_code');
       const correctCode = savedCode || DEFAULT_EXPERT_CODE;
       
-      if (expertCode.toUpperCase() === correctCode.toUpperCase()) {
+      if (expertCode.trim().toUpperCase() === correctCode.trim().toUpperCase()) {
         await setProStatus(true);
         setIsProUnlocked(true);
         updateFeatures();
         setShowExpertModal(false);
         setExpertCode('');
+        setExpertError('');
         
         Alert.alert(
           '🎉 Expertenmodus aktiviert!',
@@ -200,10 +202,11 @@ export default function SettingsScreen() {
           [{ text: t('common.ok') }]
         );
       } else {
-        Alert.alert(t('settings.wrongCode'), t('settings.wrongCodeMessage'));
+        setExpertError(t('settings.wrongCodeMessage'));
       }
     } catch (e) {
       console.error('Error checking expert code:', e);
+      setExpertError('Fehler beim Prüfen des Codes. Bitte erneut versuchen.');
     }
   };
   
@@ -250,7 +253,6 @@ export default function SettingsScreen() {
     }
     
     try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       await AsyncStorage.setItem('aufmassprofi_expert_code', newExpertCode.toUpperCase());
       
       setShowResetCodeModal(false);
@@ -1154,26 +1156,49 @@ export default function SettingsScreen() {
       </ScrollView>
       
       {/* Expert Code Modal */}
-      {showExpertModal && (
-        <View style={styles.modalOverlay}>
+      <Modal
+        visible={showExpertModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowExpertModal(false);
+          setExpertCode('');
+          setExpertError('');
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.expertModal}>
             <Text style={styles.expertModalTitle}>Expertenmodus freischalten</Text>
             <Text style={styles.expertModalSubtitle}>Geben Sie Ihren Freischaltcode ein:</Text>
             <TextInput
               style={styles.expertCodeInput}
               value={expertCode}
-              onChangeText={setExpertCode}
+              onChangeText={(text) => {
+                setExpertCode(text);
+                if (expertError) setExpertError('');
+              }}
               placeholder="Code eingeben..."
               placeholderTextColor="#999"
               autoCapitalize="characters"
               autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleExpertCodeSubmit}
             />
+            {expertError ? (
+              <Text style={{ color: '#dc2626', fontSize: 14, marginTop: 8, textAlign: 'center' }}>
+                {expertError}
+              </Text>
+            ) : null}
             <View style={styles.expertModalButtons}>
               <TouchableOpacity
                 style={styles.expertModalCancelButton}
                 onPress={() => {
                   setShowExpertModal(false);
                   setExpertCode('');
+                  setExpertError('');
                 }}
               >
                 <Text style={styles.expertModalCancelText}>Abbrechen</Text>
@@ -1186,12 +1211,25 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      )}
+        </KeyboardAvoidingView>
+      </Modal>
       
       {/* Reset Code Modal (versteckt - 5x auf Einstellungen tippen) */}
-      {showResetCodeModal && (
-        <View style={styles.modalOverlay}>
+      <Modal
+        visible={showResetCodeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowResetCodeModal(false);
+          setMasterCode('');
+          setNewExpertCode('');
+          setConfirmNewCode('');
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.expertModal}>
             <Text style={styles.expertModalTitle}>Expert-Code zurücksetzen</Text>
             <Text style={styles.expertModalSubtitle}>Master-Code:</Text>
@@ -1241,8 +1279,8 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      )}
+        </KeyboardAvoidingView>
+      </Modal>
 
       <View style={styles.footer}>
         <TouchableOpacity

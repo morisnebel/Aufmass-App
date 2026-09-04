@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -1782,6 +1783,41 @@ export default function DrawSketchScreen() {
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const backgroundImageChangedRef = useRef(false); // Track if bg image changed since load
 
+  // Schutz vor versehentlichem Verlassen (Wisch-Geste/Zurück): Nachfrage mit Speichern-Option
+  const navigation = useNavigation();
+  const allowLeaveRef = useRef(false);
+  const handleBackPressRef = useRef<() => void>(() => {});
+  usePreventRemove(elements.length > 0 || !!backgroundImage, ({ data }) => {
+    if (allowLeaveRef.current) {
+      // Programmatische Navigation nach dem Speichern - durchlassen
+      navigation.dispatch(data.action);
+      return;
+    }
+    if (Platform.OS === 'web') {
+      // Alert.alert funktioniert nicht im Web - window.confirm nutzen
+      if (window.confirm('Skizze verlassen? Ihre Änderungen werden gespeichert.')) {
+        handleBackPressRef.current();
+      }
+      return;
+    }
+    Alert.alert(
+      'Skizze verlassen?',
+      'Möchten Sie Ihre Änderungen speichern, bevor Sie die Skizze verlassen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Verwerfen',
+          style: 'destructive',
+          onPress: () => {
+            allowLeaveRef.current = true;
+            navigation.dispatch(data.action);
+          },
+        },
+        { text: 'Speichern', onPress: () => handleBackPressRef.current() },
+      ]
+    );
+  });
+
   // Generate unique ID
   const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -2600,9 +2636,11 @@ export default function DrawSketchScreen() {
     // SOFORT zurück navigieren - Speichern läuft im Hintergrund
     console.log('=== NAVIGATION DEBUG v2 === handleBackPress calling router.back(), projectId:', projectId, 'sketchId:', sketchId);
     if (isMountedRef.current) {
+      allowLeaveRef.current = true;
       router.back();
     }
   };
+  handleBackPressRef.current = handleBackPress;
 
   // Delete selected element (or entire angle group if part of one)
   const deleteSelectedElement = () => {
@@ -6973,6 +7011,7 @@ export default function DrawSketchScreen() {
         showAlert(t('common.success'), t('sketches.sketchSaved'));
       }
 
+      allowLeaveRef.current = true;
       router.back();
     } catch (error) {
       console.error('Error saving sketch:', error);

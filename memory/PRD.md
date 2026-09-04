@@ -246,3 +246,11 @@
   Zeichnen, Protraktor-Anzeige + Drag funktionieren. Checklisten laut User WIEDER OK.
   FALLS Winkelmesser auf iPad weiterhin unsichtbar: Grafik testweise ins Haupt-Canvas-Svg
   verlagern (das rendert nachweislich auf Gerät).
+- FIX Runde 4 (Winkelmesser, Gerätetest ausstehend): User bestätigt FOTOS OK,
+  CHECKLISTEN OK. Winkelmesser-Live-Grafik weiterhin nativ unsichtbar → jetzt wird die
+  Grafik (Ref-/Winkellinie, 3 Griffe, Gradzahl) auf NATIVE zusätzlich DIREKT im
+  Haupt-Canvas-Svg gerendert (das nachweislich auf dem iPad zeichnet), mit derselben
+  screenToCanvas-Umrechnung wie addProtractorToSketch (Zoom/Layout/androidViewBox).
+  Touch-Steuerung bleibt auf dem Overlay (Handler unverändert). Web nutzt weiter nur
+  das Overlay (getestet, ok). Falls Griffe-Positionen auf iPad versetzt wirken:
+  screenToCanvas-Zweige prüfen (canvasLayout via measureInWindow enthält Scroll).

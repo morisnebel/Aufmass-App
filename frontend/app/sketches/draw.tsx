@@ -8004,6 +8004,52 @@ export default function DrawSketchScreen() {
               })()}
             </>
           )}
+          {/* Winkelmesser-Live-Grafik im Haupt-Canvas (nur nativ): das separate Overlay-Svg
+              rendert auf Fabric/iPad nicht zuverlässig – das Haupt-Canvas nachweislich schon.
+              Touch-Steuerung bleibt auf dem (unsichtbaren) Overlay, hier nur die Anzeige. */}
+          {Platform.OS !== 'web' && showProtractor && (() => {
+            const pScale = scaleRef.current || 1;
+            const pLayout = canvasLayoutRef.current || canvasLayout;
+            const s2c = (sx: number, sy: number) => {
+              if (Platform.OS === 'android' && androidViewBox.w > 0 && androidViewBox.w !== screenWidth) {
+                const lx = pLayout ? pLayout.x : 0;
+                const ly = pLayout ? pLayout.y : 0;
+                return {
+                  x: androidViewBox.x + ((sx - lx) / screenWidth) * androidViewBox.w,
+                  y: androidViewBox.y + ((sy - ly) / canvasHeight) * androidViewBox.h,
+                };
+              } else if (pLayout && pScale !== 1) {
+                return { x: (sx - pLayout.x) / pScale, y: (sy - pLayout.y) / pScale };
+              } else if (pLayout) {
+                return { x: sx - pLayout.x, y: sy - pLayout.y };
+              }
+              const topOffset = (Platform.OS === 'ios' ? 62 : 24) + 70;
+              return { x: sx, y: sy - topOffset };
+            };
+            const pc = s2c(protractorCenter.x, protractorCenter.y);
+            const pr = s2c(protractorRefEnd.x, protractorRefEnd.y);
+            const pa = s2c(protractorAngleEnd.x, protractorAngleEnd.y);
+            const a1 = Math.atan2(protractorRefEnd.y - protractorCenter.y, protractorRefEnd.x - protractorCenter.x);
+            const a2 = Math.atan2(protractorAngleEnd.y - protractorCenter.y, protractorAngleEnd.x - protractorCenter.x);
+            let innerDeg = Math.abs((a2 - a1) * 180 / Math.PI);
+            if (innerDeg > 180) innerDeg = 360 - innerDeg;
+            const shownDeg = protractorUseComplementary ? Math.round(360 - innerDeg) : Math.round(innerDeg);
+            const sw = 3 / pScale;
+            const hr = 12 / pScale;
+            const pfs = 16 / pScale;
+            return (
+              <G>
+                <Line x1={pc.x} y1={pc.y} x2={pr.x} y2={pr.y} stroke="#2196f3" strokeWidth={sw} />
+                <Line x1={pc.x} y1={pc.y} x2={pa.x} y2={pa.y} stroke="#ff5722" strokeWidth={sw} />
+                <Circle cx={pr.x} cy={pr.y} r={hr} fill="#2196f3" stroke="#fff" strokeWidth={sw * 0.7} />
+                <Circle cx={pa.x} cy={pa.y} r={hr} fill="#ff5722" stroke="#fff" strokeWidth={sw * 0.7} />
+                <Circle cx={pc.x} cy={pc.y} r={hr * 0.8} fill="#ff5722" stroke="#fff" strokeWidth={sw * 0.7} />
+                <SvgText x={pc.x - 22 / pScale} y={pc.y - 14 / pScale} fill="#ff5722" fontSize={pfs} fontWeight="bold" textAnchor="end">
+                  {`${shownDeg}°`}
+                </SvgText>
+              </G>
+            );
+          })()}
           {/* Fabric-Invalidierungs-Workaround: unsichtbares Element mit neuem Key pro Render */}
           {Platform.OS !== 'web' && (
             <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-99999} cy={-99999} r={0.1} fill="none" stroke="none" opacity={0} />
